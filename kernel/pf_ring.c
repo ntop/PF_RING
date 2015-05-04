@@ -1453,7 +1453,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
   if(m->private == NULL) {
     /* /proc/net/pf_ring/info */
-    seq_printf(m, "PF_RING Version          : %s ($Revision: %s$)\n", RING_VERSION, GIT_REV);
+    seq_printf(m, "PF_RING Version          : %s (%s)\n", RING_VERSION, GIT_REV);
     seq_printf(m, "Total rings              : %d\n", atomic_read(&ring_table_size));
     seq_printf(m, "\nStandard (non DNA/ZC) Options\n");
     seq_printf(m, "Ring slots               : %d\n", min_num_slots);
