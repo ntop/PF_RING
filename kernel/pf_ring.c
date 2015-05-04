@@ -116,8 +116,8 @@
 
 #include <linux/pf_ring.h>
 
-#ifndef SVN_REV
-#define SVN_REV ""
+#ifndef GIT_REV
+#define GIT_REV ""
 #endif
 
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
@@ -1457,7 +1457,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
   if(m->private == NULL) {
     /* /proc/net/pf_ring/info */
-    seq_printf(m, "PF_RING Version          : %s ($Revision: %s$)\n", RING_VERSION, SVN_REV);
+    seq_printf(m, "PF_RING Version          : %s ($Revision: %s$)\n", RING_VERSION, GIT_REV);
     seq_printf(m, "Total rings              : %d\n", atomic_read(&ring_table_size));
     seq_printf(m, "\nStandard (non DNA/ZC) Options\n");
     seq_printf(m, "Ring slots               : %d\n", min_num_slots);
@@ -9530,7 +9530,7 @@ static int __init ring_init(void)
 
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
 	 "(C) 2004-14 ntop.org\n",
-	 RING_VERSION, SVN_REV);
+	 RING_VERSION, GIT_REV);
 
 #if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
   if((rc = proto_register(&ring_proto, 0)) != 0)
@@ -9596,7 +9596,7 @@ module_init(ring_init);
 module_exit(ring_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Luca Deri <deri@ntop.org>");
+MODULE_AUTHOR("ntop.org");
 MODULE_DESCRIPTION("Packet capture acceleration and analysis");
 
 MODULE_ALIAS_NETPROTO(PF_RING);

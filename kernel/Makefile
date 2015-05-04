@@ -1,11 +1,15 @@
 #
-# (C) 2009-10 - Luca Deri <deri@ntop.org>
+# (C) 2009-15 - ntop.org
 #
 
 obj-m := pf_ring.o
 
-ifneq (, $(shell which svnversion))
-SVNDEF := -DSVN_REV="\"$(shell svnversion -n .)\""
+ifneq (, $(shell which git))
+ ifeq (, $(shell echo ${SUBDIRS}))
+  GIT_BRANCH=$(shell git branch --no-color|cut -d ' ' -f 2)
+  GIT_HASH=$(shell git rev-parse HEAD)
+  GITDEF := -DGIT_REV="\"${GIT_BRANCH}:${GIT_HASH}\""
+ endif
 endif
 
 ifeq (,$(BUILD_KERNEL))
@@ -13,7 +17,7 @@ BUILD_KERNEL=$(shell uname -r)
 endif
 
 PWD := $(shell pwd)
-EXTRA_CFLAGS += -I${PWD} $(SVNDEF)
+EXTRA_CFLAGS += -I${PWD} ${GITDEF}
 
 HERE=${PWD}
 
