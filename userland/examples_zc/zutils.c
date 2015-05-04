@@ -69,7 +69,7 @@ int max_packet_len(char *device) {
   pfring *ring;
   pfring_card_settings settings;
 
-  ring = pfring_open(device, 1536, PF_RING_PROMISC);
+  ring = pfring_open(device, 1536, PF_RING_PROMISC | PF_RING_ZC_NOT_REPROGRAM_RSS);
 
   if (ring == NULL)
     return 1536;

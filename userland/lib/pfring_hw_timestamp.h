@@ -11,6 +11,8 @@
  *
  */
 
+#define IXIA_TS_LEN            19
+
 struct ixia_hw_ts {
   u_int8_t type;
   u_int8_t timestamp_len;
@@ -19,5 +21,15 @@ struct ixia_hw_ts {
   u_int8_t trailer_len;
   u_int16_t signature;
   u_int16_t fcs;
+} __attribute__((__packed__));
+
+/* *********************************************** */
+
+#define VSS_APCON_TS_LEN       sizeof(struct vss_apcon_hw_ts)
+
+struct vss_apcon_hw_ts {
+  u_int32_t sec;
+  u_int32_t nsec;
+  u_int32_t crc;
 } __attribute__((__packed__));
 

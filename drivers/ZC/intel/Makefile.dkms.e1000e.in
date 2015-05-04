@@ -16,7 +16,7 @@ build: add
 	dkms build -m @E1000E@-zc -v @E1000E_VERSION@.@REVISION@
 
 install: build
-	dkms install -m @E1000E@-zc -v @E1000E_VERSION@.@REVISION@
+	dkms install --force -m @E1000E@-zc -v @E1000E_VERSION@.@REVISION@
 
 deb: add add_deb install
 	dkms mkdeb -m @E1000E@-zc -v @E1000E_VERSION@.@REVISION@ --source-only
@@ -32,6 +32,7 @@ add_deb:
 
 remove:
 	-dkms remove -m @E1000E@-zc -v @E1000E_VERSION@.@REVISION@ --all
+	\/bin/rm -fv /lib/modules/*/weak-updates/e1000e*ko /lib/modules/*/extra/e1000e*ko
 
 veryclean: remove
 	\/bin/rm -fr /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@

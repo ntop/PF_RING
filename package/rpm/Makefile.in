@@ -17,7 +17,7 @@ all:
 
 dkms:
 	cd ../../kernel; ./configure; make dkms-rpm
-	cp /var/lib/dkms/pfring/@VERS@/rpm/pfring-dkms-@VERS@-dkms.noarch.rpm .
+	cp /var/lib/dkms/pfring/@VERS@/rpm/pfring-dkms-@VERS@-@REVISION@.noarch.rpm .
 	cd ../../drivers/DNA; ./configure; make dkms-rpm
 	cp /var/lib/dkms/*-dna/*/rpm/*.noarch.rpm .
 	cp ../../drivers/DNA/*.rpm .

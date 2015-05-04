@@ -10,7 +10,7 @@ build: add
 	dkms build -m pfring -v @VERS@
 
 install: build
-	dkms install -m pfring -v @VERS@
+	dkms install --force -m pfring -v @VERS@
 
 deb: add add_deb install
 	dkms mkdeb -m pfring -v @VERS@ --source-only

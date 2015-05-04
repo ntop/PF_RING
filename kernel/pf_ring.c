@@ -124,10 +124,6 @@
 #define PDE_DATA(a) PDE(a)->data
 #endif
 
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
-#define netdev_notifier_info_to_dev(a) ((struct net_device*)a)
-#endif
-
 /* ************************************************* */
 
 #define TH_FIN_MULTIPLIER	0x01
@@ -1794,7 +1790,7 @@ static inline int ring_insert(struct sock *sk)
   struct pf_ring_socket *pfr;
 
   if(unlikely(enable_debug))
-    printk("[PF_RING] ring_insert()\n");
+    printk("[PF_RING] ring_insert\n");
 
   if(lockless_list_add(&ring_table, sk) == -1)
     return -1;
@@ -1802,7 +1798,6 @@ static inline int ring_insert(struct sock *sk)
   atomic_inc(&ring_table_size);
 
   pfr = (struct pf_ring_socket *)ring_sk(sk);
-  pfr->ring_pid = current->pid;
   bitmap_zero(pfr->netdev_mask, MAX_NUM_DEVICES_ID), pfr->num_bound_devices = 0;
 
   return 0;
@@ -2931,7 +2926,8 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
       //         pfr->slot_header_len);
 
       if((__vlan_hwaccel_get_tag(skb, &vlan_tci) == 0) /* The packet is tagged (hw offload)... */
-	 && (hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0 /* but we have seen no tag -> it has been stripped */
+	 && ((hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0 /* but we have seen no tag -> it has been stripped */
+              || hdr->extended_hdr.parsed_pkt.vlan_id != vlan_tci /* multiple tags -> just first one has been stripped */)
              || (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL /* in case of multiple destination rings */))) {
 	/* VLAN-tagged packet with stripped VLAN tag */
         u_int16_t *b;
@@ -4827,9 +4823,10 @@ static int ring_create(
   struct sock *sk;
   struct pf_ring_socket *pfr;
   int err = -ENOMEM;
+  int pid = current->pid;
 
   if(unlikely(enable_debug))
-    printk("[PF_RING] %s()\n", __FUNCTION__);
+    printk("[PF_RING] %s() [pid=%d]\n", __FUNCTION__, pid);
 
   /* Are you root, superuser or so ? */
   if(!capable(CAP_NET_ADMIN))
@@ -4894,6 +4891,8 @@ static int ring_create(
   rwlock_init(&pfr->tx.consume_tx_packets_lock);
   pfr->tx.enable_tx_with_bounce = 0;
   pfr->tx.last_tx_dev_idx = UNKNOWN_INTERFACE, pfr->tx.last_tx_dev = NULL;
+
+  pfr->ring_pid = pid;
 
   if(ring_insert(sk) == -1)
     goto free_pfr;
@@ -7322,9 +7321,9 @@ static void purge_idle_rules(struct pf_ring_socket *pfr,
 static int ring_proc_stats_read(struct seq_file *m, void *data_not_used)
 {
   if(m->private != NULL) {
-    struct pf_ring_socket *s = (struct pf_ring_socket*)m->private;
+    struct pf_ring_socket *pfr = (struct pf_ring_socket*)m->private;
 
-    seq_printf(m, "%s\n", s->statsString);
+    seq_printf(m, "%s\n", pfr->statsString);
   }
 
   return(0);
@@ -7347,22 +7346,22 @@ static const struct file_operations ring_proc_stats_fops = {
 
 /* ************************************* */
 
-int setSocketStats(struct pf_ring_socket *s) 
+int setSocketStats(struct pf_ring_socket *pfr) 
 {
   /* 1 - Check if the /proc entry exists otherwise create it */
   if((ring_proc_stats_dir != NULL)
-     && (s->sock_proc_stats_name[0] == '\0')) {
+     && (pfr->sock_proc_stats_name[0] == '\0')) {
     struct proc_dir_entry *entry;
 
-    snprintf(s->sock_proc_stats_name, sizeof(s->sock_proc_stats_name),
-	     "%d-%s.%d", s->ring_pid,
-	     s->ring_netdev->dev->name, s->ring_id);
+    snprintf(pfr->sock_proc_stats_name, sizeof(pfr->sock_proc_stats_name),
+	     "%d-%s.%d", pfr->ring_pid,
+	     pfr->ring_netdev->dev->name, pfr->ring_id);
 
-    if((entry = proc_create_data(s->sock_proc_stats_name,
+    if((entry = proc_create_data(pfr->sock_proc_stats_name,
 				 0 /* ro */,
 				 ring_proc_stats_dir,
-				 &ring_proc_stats_fops, s)) == NULL) {
-      s->sock_proc_stats_name[0] = '\0';
+				 &ring_proc_stats_fops, pfr)) == NULL) {
+      pfr->sock_proc_stats_name[0] = '\0';
       return(-1);
     }
   }

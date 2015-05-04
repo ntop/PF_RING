@@ -89,7 +89,9 @@ struct strmatch {
 struct strmatch *matching_strings = NULL;
 
 u_int8_t wait_for_packet = 1, do_shutdown = 0, add_drop_rule = 0, show_crc = 0;
-u_int8_t use_extended_pkt_header = 0, touch_payload = 0, enable_hw_timestamp = 0, dont_strip_timestamps = 0;
+u_int8_t use_extended_pkt_header = 0, touch_payload = 0, enable_hw_timestamp = 0, dont_strip_timestamps = 0, memcpy_test = 0;
+
+volatile char memcpy_test_buffer[9216];
 
 static void openDump();
 static void dumpMatch(char *str);
@@ -436,9 +438,11 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h,
 
   if(touch_payload) {
     volatile int __attribute__ ((unused)) i;
-
     i = p[12] + p[13];
   }
+
+  if(memcpy_test)
+    memcpy((void *) memcpy_test_buffer, p, h->caplen);
 
   if(unlikely(automa != NULL)) {
     if(unlikely(do_close_dump)) openDump();
@@ -502,7 +506,8 @@ void printHelp(void) {
   printf("-r              Rehash RSS packets\n");
   printf("-s              Enable hw timestamping\n");
   printf("-S              Do not strip hw timestamps (if present)\n");
-  printf("-t              Touch payload (for force packet load on cache)\n");
+  printf("-t              Touch payload (to force packet load on cache)\n");
+  printf("-M              Packet memcpy (to test memcpy speed)\n");
   printf("-T              Dump CRC (test and DNA only)\n");
   printf("-C              Work in chunk mode (test only)\n");
   printf("-x <path>       File containing strings to search string (case sensitive) on payload.\n");
@@ -703,7 +708,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:Cd:l:v:ae:n:w:o:p:qb:rg:u:mtsSTx:f:z:N:")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:Cd:l:v:ae:n:w:o:p:qb:rg:u:mtsSTx:f:z:N:M")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -773,6 +778,9 @@ int main(int argc, char* argv[]) {
       break;
     case 't':
       touch_payload = 1;
+      break;
+    case 'M':
+      memcpy_test = 1;
       break;
     case 's':
       enable_hw_timestamp = 1;

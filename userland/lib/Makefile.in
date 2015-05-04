@@ -44,10 +44,15 @@ NT_OBJS  = @NT_OBJS@
 MLX_OBJS  = @MLX_OBJS@
 
 #
+# Accolade
+#
+ACCOLADE_OBJS  = @ACCOLADE_OBJS@
+
+#
 # Object files
 #
 OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
-	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${ZERO_OBJS} ${DNA_OBJS} ${PF_RING_ZC_OBJS} ${DAG_OBJS} ${NT_OBJS} ${MLX_OBJS}
+	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${ZERO_OBJS} ${DNA_OBJS} ${PF_RING_ZC_OBJS} ${DAG_OBJS} ${NT_OBJS} ${MLX_OBJS} ${ACCOLADE_OBJS}
 
 #
 # C compiler and flags
@@ -56,9 +61,9 @@ OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_fi
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC        = ${CROSS_COMPILE}gcc
-CFLAGS    =  @CFLAGS@ -Wall -fPIC ${INCLUDE} @HAVE_ZERO@ @HAVE_DNA@ @HAVE_PF_RING_ZC@ @HAVE_DAG@ @NT_INC@ @HAVE_BPF@ @HAVE_REDIRECTOR@ @HAVE_HW_TIMESTAMP@ @HAVE_LIBNUMA@ @HAVE_NT@ @HAVE_MLX@ -O2 # -g
+CFLAGS    =  @CFLAGS@ -Wall -fPIC ${INCLUDE} @HAVE_ZERO@ @HAVE_DNA@ @HAVE_PF_RING_ZC@ @HAVE_DAG@ @NT_INC@ @HAVE_ACCOLADE@ @ACCOLADE_INC@ @HAVE_BPF@ @HAVE_REDIRECTOR@ @HAVE_HW_TIMESTAMP@ @HAVE_LIBNUMA@ @HAVE_NT@ @HAVE_MLX@ -O2 # -g
 LDFLAGS   = -g -shared
-SYSLIBS   = -lpthread @SYSLIBS@ @NT_LIB@
+SYSLIBS   = -lpthread @SYSLIBS@ @NT_LIB@ @ACCOLADE_LIB@
 
 # How to make an object file
 %.o: %.c %.h Makefile

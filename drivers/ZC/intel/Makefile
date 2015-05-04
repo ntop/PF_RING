@@ -37,14 +37,14 @@ dkms-deb: cleanup dkms-deb-virtual
 	cp /var/lib/dkms/igb-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.ixgbe deb
 	cp /var/lib/dkms/ixgbe-zc/*/deb/*.deb .
-	#sudo make -f Makefile.dkms.i40e deb
-	#cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
+	sudo make -f Makefile.dkms.i40e deb
+	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
 
 dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.e1000e rpm
 	sudo make -f Makefile.dkms.igb rpm
 	sudo make -f Makefile.dkms.ixgbe rpm
-	#sudo make -f Makefile.dkms.i40e rpm
+	sudo make -f Makefile.dkms.i40e rpm
 
 dkms-rpm-virtual:
 	rpmbuild -ba pfring-zc-rpm.spec

@@ -42,8 +42,8 @@
 
 /* Versioning */
 /* NOTE: remember to update dkms.conf */
-#define RING_VERSION                "6.0.3"
-#define RING_VERSION_NUM           0x060003
+#define RING_VERSION                "6.1.0"
+#define RING_VERSION_NUM           0x060100
 
 /* Set */
 #define SO_ADD_TO_CLUSTER                 99
@@ -895,6 +895,10 @@ struct send_msg_to_plugin_info {
 
 #ifdef __KERNEL__
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+#define netdev_notifier_info_to_dev(a) ((struct net_device*)a)
+#endif
+
 #define CLUSTER_LEN       32
 
 /*
@@ -1098,8 +1102,7 @@ struct pf_ring_socket {
   ring_device_element *ring_netdev;
 
   DECLARE_BITMAP(netdev_mask, MAX_NUM_DEVICES_ID /* bits */);
-  u_short ring_pid;
-  u_short ring_table_slot_id;
+  int ring_pid;
   u_int32_t ring_id;
   char *appl_name; /* String that identifies the application bound to the socket */
   packet_direction direction; /* Specify the capture direction for packets */
@@ -1482,8 +1485,16 @@ void remove_plugin_from_device_list(struct net_device *dev) {
 
 static int ring_plugin_notifier(struct notifier_block *this, unsigned long msg, void *data)
 {
-  struct net_device *dev = data;
+  struct net_device *dev;
   struct pfring_hooks *hook;
+
+  if (data == NULL)
+    return NOTIFY_DONE;
+
+  dev = netdev_notifier_info_to_dev(data);
+
+  if (dev == NULL)
+    return NOTIFY_DONE;
 
   switch(msg) {
   case NETDEV_REGISTER:

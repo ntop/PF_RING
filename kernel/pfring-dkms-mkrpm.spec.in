@@ -11,7 +11,7 @@ Summary:	%{module_name} %{version} dkms package
 Name:		%{module_name}-dkms
 Version:	%{version}
 License:	%license
-Release:	dkms
+Release:	@SVN_RELEASE@
 BuildArch:	noarch
 Group:		System/Kernel
 Requires: 	dkms >= 1.95
@@ -70,6 +70,7 @@ exit 1
 echo -e
 echo -e "Uninstall of %{module_name} module (version %{version}) beginning:"
 dkms remove -m %{module_name} -v %{version} --all --rpm_safe_upgrade
+\/bin/rm -fv /lib/modules/$kernel/weak-updates/%{module_name}* /lib/modules/$kernel/extra/%{module_name}*
 exit 0
 
 %files

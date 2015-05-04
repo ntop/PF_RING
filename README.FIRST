@@ -1,3 +1,8 @@
+PF_RING is a Linux kernel module and user-space framework that allows
+you to process packets at high-rates while providing you a consistent
+API for packet processing applications.
+
+
 PF_RING Drivers Models
 ----------------------
 
@@ -15,7 +20,7 @@ to be immediately available for standard Linux networking. In order to open
 it in ZC you must prepend 'zc:' to the interface name, example: 
 pfcount -i zc:eth1
 
-2. DNA drivers
+2. DNA/ZC drivers
 These drivers have been used to implement kernel bypass until PF_RING 5.x
 and since the ZC introduction they will be available for some more time
 but they are deprecated in favour of ZC that offer the same performance
@@ -74,4 +79,7 @@ The API documentation is available via doxygen, running
 it will be generated in doc/html.
 
 -------------------------------------
-2011-15 - ntop.org
+2011-14 - ntop.org
+
+
+

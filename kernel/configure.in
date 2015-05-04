@@ -1,6 +1,6 @@
 AC_INIT([Makefile.in], 1.0)
 
-SVN_RELEASE=`svn info .. | grep "^Revision"|cut -d " " -f 2`
+SVN_RELEASE=`svn info .. | grep "^Last Changed Rev" | cut -d ":" -f 2 | cut -d " " -f 2`
 VERS=`cat ./linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 
 AC_SUBST(VERS)

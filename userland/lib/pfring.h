@@ -177,6 +177,7 @@ struct __pfring {
   u_int8_t initialized, enabled, long_header, rss_mode;
   u_int8_t force_timestamp, strip_hw_timestamp, disable_parsing,
     disable_timestamp, ixia_timestamp_enabled,
+    vss_apcon_timestamp_enabled,
     chunk_mode_enabled, userspace_bpf, force_userspace_bpf;
   packet_direction direction; /* Specify the capture direction for packets */
   socket_mode mode;
@@ -334,26 +335,34 @@ struct __pfring {
   /* Reflector socket (copy RX packets onto it) */
   pfring *reflector_socket;
 
-  /* Semi-DNA devices (1- copy) */
+  /* Semi-ZC/DNA devices (1-copy) */
   pfring *one_copy_rx_pfring;
 };
 
 /* ********************************* */
 
-#define PF_RING_DNA_SYMMETRIC_RSS    1 << 0  /**< pfring_open() flag: Set the hw RSS function to symmetric mode (both directions of the same flow go to the same hw queue). Supported by DNA drivers only. This option is also available with the PF_RING-aware libpcap via the PCAP_PF_RING_DNA_RSS environment variable. */
+#define PF_RING_ZC_SYMMETRIC_RSS     1 << 0  /**< pfring_open() flag: Set the hw RSS function to symmetric mode (both directions of the same flow go to the same hw queue). Supported by ZC/DNA drivers only. This option is also available with the PF_RING-aware libpcap via the PCAP_PF_RING_DNA_RSS environment variable. */
 #define PF_RING_REENTRANT            1 << 1  /**< pfring_open() flag: The device is open in reentrant mode. This is implemented by means of semaphores and it results is slightly worse performance. Use reentrant mode only for multithreaded applications. */
 #define PF_RING_LONG_HEADER          1 << 2  /**< pfring_open() flag: If uset, PF_RING does not fill the field extended_hdr of struct pfring_pkthdr. If set, the extended_hdr field is also properly filled. In case you do not need extended information, set this value to 0 in order to speedup the operation. */
 #define PF_RING_PROMISC              1 << 3  /**< pfring_open() flag: The device is open in promiscuous mode. */
 #define PF_RING_TIMESTAMP            1 << 4  /**< pfring_open() flag: Force PF_RING to set the timestamp on received packets (usually it is not set when using zero-copy, for optimizing performance). */
 #define PF_RING_HW_TIMESTAMP         1 << 5  /**< pfring_open() flag: Enable hw timestamping, when available. */
 #define PF_RING_RX_PACKET_BOUNCE     1 << 6  /**< pfring_open() flag: Enable fast forwarding support (see pfring_send_last_rx_packet()). */
-#define PF_RING_DNA_FIXED_RSS_Q_0    1 << 7  /**< pfring_open() flag: Set hw RSS to send all traffic to queue 0. Other queues can be selected using hw filters (DNA cards with hw filtering only). */
+#define PF_RING_ZC_FIXED_RSS_Q_0     1 << 7  /**< pfring_open() flag: Set hw RSS to send all traffic to queue 0. Other queues can be selected using hw filters (ZC/DNA cards with hw filtering only). */
 #define PF_RING_STRIP_HW_TIMESTAMP   1 << 8  /**< pfring_open() flag: Strip hw timestamp from the packet. */
 #define PF_RING_DO_NOT_PARSE         1 << 9  /**< pfring_open() flag: Disable packet parsing also when 1-copy is used. (parsing already disabled in zero-copy) */
 #define PF_RING_DO_NOT_TIMESTAMP     1 << 10 /**< pfring_open() flag: Disable packet timestamping also when 1-copy is used. (sw timestamp already disabled in zero-copy) */
 #define PF_RING_CHUNK_MODE           1 << 11 /**< pfring_open() flag: Enable chunk mode operations. This mode is supported only by specific adapters and it's not for general purpose. */
-#define PF_RING_IXIA_TIMESTAMP	     1 << 12 /**< pfring_open() flag: Enable ixiacom.com hardware timestemp support+stripping. */
-#define PF_RING_USERSPACE_BPF	     1 << 13 /**< pfring_open() flag: Force userspace bpf even with standard drivers (not only with DNA/ZC). */
+#define PF_RING_IXIA_TIMESTAMP	     1 << 12 /**< pfring_open() flag: Enable ixiacom.com hardware timestamp support+stripping. */
+#define PF_RING_USERSPACE_BPF	     1 << 13 /**< pfring_open() flag: Force userspace bpf even with standard drivers (not only with ZC/DNA). */
+#define PF_RING_ZC_NOT_REPROGRAM_RSS 1 << 14 /**< pfring_open() flag: Do not touch/reprogram hw RSS */ 
+#define PF_RING_VSS_APCON_TIMESTAMP  1 << 14 /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
+
+/* ********************************* */
+
+/* backward compatibility */
+#define PF_RING_DNA_SYMMETRIC_RSS PF_RING_ZC_SYMMETRIC_RSS
+#define PF_RING_DNA_FIXED_RSS_Q_0 PF_RING_ZC_FIXED_RSS_Q_0
 
 /* ********************************* */
 
@@ -507,7 +516,7 @@ int pfring_set_tx_watermark(pfring *ring, u_int16_t watermark);
  * Some multi-queue modern network adapters feature "packet steering" capabilities. Using them it is possible to 
  * instruct the hardware NIC to assign selected packets to a specific RX queue. If the specified queue has an Id 
  * that exceeds the maximum queueId, such packet is discarded thus acting as a hardware firewall filter.
- * Note: kernel packet filtering is not supported by DNA.
+ * Note: kernel packet filtering is not supported by ZC/DNA.
  * @param ring The PF_RING handle on which the rule will be added. 
  * @param rule The filtering rule to be set in the NIC as defined in the last chapter of this document. 
  *             All rule parameters should be defined, and if set to zero they do not participate to filtering.
@@ -585,7 +594,7 @@ int pfring_bind(pfring *ring, char *device_name);
  * Depending on the driver being used, packet transmission happens differently:
  * - Vanilla and PF_RING aware drivers: PF_RING does not accelerate the TX so the standard Linux transmission facilities are used. 
  *   Do not expect speed advantage when using PF_RING in this mode.
- * - DNA: line rate transmission is supported.
+ * - ZC/DNA: line rate transmission is supported.
  * @param ring         The PF_RING handle on which the packet has to be sent.
  * @param pkt          The buffer containing the packet to send.
  * @param pkt_len      The length of the pkt buffer.
@@ -1304,6 +1313,24 @@ int pfring_read_ixia_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct t
  * @return 0 on success, a negative value otherwise.
  */
 void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
+
+ /**
+ * Reads a VSS/APCON-formatted timestamp from an incoming packet and puts it into the timestamp variable.
+ * @param buffer            Incoming packet buffer.
+ * @param buffer_len        Incoming packet buffer length.
+ * @param ts                If found the hardware timestamp will be placed here
+ * @return The length of the VSS/APCON timestamp
+ */
+int pfring_read_vss_apcon_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts);
+
+ /**
+ * Strip an VSS/APCON-formatted timestamp from an incoming packet. If the timestamp is found, the
+ * hdr parameter (caplen and len fields) are decreased by the size of the timestamp.
+ * @param buffer            Incoming packet buffer.
+ * @param hdr               This is an in/out parameter: it is used to read the original packet len, and it is updated (size decreased) if the hw timestamp is found
+ * @return 0 on success, a negative value otherwise.
+ */
+void pfring_handle_vss_apcon_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
 /* ********************************* */
 

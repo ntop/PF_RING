@@ -1,4 +1,4 @@
-Summary: PF_RING kernel module and drivers
+Summary: PF_RING user-space tools
 Name: pfring
 Version: @VERS@
 Release: %{buildrev}
@@ -30,7 +30,7 @@ mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
 mkdir -p $RPM_BUILD_ROOT/etc/init
 # Kernel module
-cp $HOME/PF_RING/kernel/pf_ring.ko $RPM_BUILD_ROOT/usr/local/pfring/kernel
+#cp $HOME/PF_RING/kernel/pf_ring.ko $RPM_BUILD_ROOT/usr/local/pfring/kernel
 cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
 # Userland
 cp $HOME/PF_RING/README.FIRST                  $RPM_BUILD_ROOT/usr/local/pfring/
@@ -67,7 +67,6 @@ cp $HOME/PF_RING/userland/examples_zc/zcount_ipc $RPM_BUILD_ROOT/usr/local/bin
 rm -fr $RPM_BUILD_ROOT
 
 %files
-/usr/local/pfring/kernel/pf_ring.ko
 /usr/local/include/linux/pf_ring.h
 /usr/local/lib/libpfring.a
 /usr/local/lib/libpfring.so

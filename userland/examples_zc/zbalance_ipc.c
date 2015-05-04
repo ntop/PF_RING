@@ -147,8 +147,8 @@ void print_stats() {
       tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
 
   if (!daemon_mode && !proc_stats_only) {
-    trace(TRACE_NORMAL, "=========================\n"
-            "Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
+    trace(TRACE_NORMAL, "=========================");
+    trace(TRACE_NORMAL, "Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
             pfring_format_numbers((double)tot_recv, buf1, sizeof(buf1), 0),
 	    pfring_format_numbers((double)tot_drop, buf2, sizeof(buf2), 0),
 	    pfring_format_numbers((double)tot_slave_recv, buf3, sizeof(buf3), 0),

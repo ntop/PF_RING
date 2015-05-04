@@ -33,14 +33,19 @@
 #include "pfring_mod_nt.h"
 #endif
 
+#ifdef HAVE_DAG
+/* Endace DAG */
+#include "pfring_mod_dag.h"
+#endif
+
 #ifdef HAVE_MELLANOX
 /* Mellanox */
 #include "pfring_mod_mlx.h"
 #endif
 
-#ifdef HAVE_DAG
-/* Endace DAG */
-#include "pfring_mod_dag.h"
+#ifdef HAVE_ACCOLADE
+/* Accolade */
+#include "pfring_mod_accolade.h"
 #endif
 
 #ifdef HAVE_DNA
@@ -82,6 +87,13 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "mlx",
     .open = pfring_mlx_open,
+  },
+#endif
+
+#ifdef HAVE_ACCOLADE
+  {
+    .name = "accolade",
+    .open = pfring_accolade_open,
   },
 #endif
 
@@ -134,8 +146,9 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->promisc             = !!(flags & PF_RING_PROMISC);
   ring->reentrant           = !!(flags & PF_RING_REENTRANT);
   ring->long_header         = !!(flags & PF_RING_LONG_HEADER);
-  ring->rss_mode            = (flags & PF_RING_DNA_SYMMETRIC_RSS) ? PF_RING_DNA_SYMMETRIC_RSS : (
-                              (flags & PF_RING_DNA_FIXED_RSS_Q_0) ? PF_RING_DNA_FIXED_RSS_Q_0 : 0);
+  ring->rss_mode            = (flags & PF_RING_ZC_NOT_REPROGRAM_RSS) ? PF_RING_ZC_NOT_REPROGRAM_RSS : (
+                              (flags & PF_RING_DNA_SYMMETRIC_RSS) ? PF_RING_DNA_SYMMETRIC_RSS : (
+                              (flags & PF_RING_DNA_FIXED_RSS_Q_0) ? PF_RING_DNA_FIXED_RSS_Q_0 : 0));
   ring->force_timestamp     = !!(flags & PF_RING_TIMESTAMP);
   ring->strip_hw_timestamp  = !!(flags & PF_RING_STRIP_HW_TIMESTAMP);
   ring->hw_ts.enable_hw_timestamp = !!(flags & PF_RING_HW_TIMESTAMP);
@@ -144,6 +157,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->disable_timestamp   = !!(flags & PF_RING_DO_NOT_TIMESTAMP);
   ring->chunk_mode_enabled  = !!(flags & PF_RING_CHUNK_MODE);
   ring->ixia_timestamp_enabled = !!(flags & PF_RING_IXIA_TIMESTAMP);
+  ring->vss_apcon_timestamp_enabled = !!(flags & PF_RING_VSS_APCON_TIMESTAMP);
   ring->force_userspace_bpf = !!(flags & PF_RING_USERSPACE_BPF);
 
 #ifdef RING_DEBUG
@@ -411,6 +425,8 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
 #endif
         if(unlikely(ring->ixia_timestamp_enabled))
           pfring_handle_ixia_hw_timestamp(buffer, &hdr);
+        else if(unlikely(ring->vss_apcon_timestamp_enabled))
+          pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
 
 	looper(&hdr, buffer, user_bytes);
       } else {
@@ -631,6 +647,8 @@ recv_next:
 
     if(unlikely(ring->ixia_timestamp_enabled))
       pfring_handle_ixia_hw_timestamp(*buffer, hdr);
+    else if(unlikely(ring->vss_apcon_timestamp_enabled))
+      pfring_handle_vss_apcon_hw_timestamp(*buffer, hdr);
 
 #ifdef ENABLE_BPF
     if (unlikely(rc > 0 && ring->userspace_bpf && bpf_filter(ring->userspace_bpf_filter.bf_insns, *buffer, hdr->caplen, hdr->len) == 0))

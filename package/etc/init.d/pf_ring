@@ -119,7 +119,15 @@ load_old_dna() {
 }
 
 rebuild_dkms() {
-	/usr/sbin/dkms autoinstall
+	# Get module version
+	MOD_VERSION=`ls -1d /usr/src/${1}* | tail -1 | cut -d '/' -f 4 | sed -e "s/${1}-//"`
+	echo "Uninstalling old ${1} version"
+	/usr/sbin/dkms uninstall -m ${1} -v ${MOD_VERSION} > /dev/null
+	/usr/sbin/dkms remove    -m ${1} -v ${MOD_VERSION} -k `uname -r` > /dev/null
+	echo "Compiling new ${1} driver"
+	/usr/sbin/dkms build     -m ${1} -v ${MOD_VERSION} > /dev/null
+	echo "Installing new ${1} driver"
+	/usr/sbin/dkms install   -m ${1} -v ${MOD_VERSION} > /dev/null
 }
 
 check_hugepages() {
@@ -179,15 +187,27 @@ set_interface_mtu() {
 }
 
 start_interfaces() {
-    # Enable all interfaces DNA and non DNA
-    INTERFACES="$(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g')"
-    for D in $INTERFACES ; do
-        /sbin/ifconfig $D up
-        if [ "$D" != "$MGMT_INTERFACE" ]; then
-            /sbin/ethtool -K $D sg off tso off gso off gro off
-        fi
-        set_interface_mtu ${D}
-    done
+	# Enable all interfaces DNA and non DNA
+	INTERFACES="$(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g')"
+	for D in $INTERFACES ; do
+		/sbin/ifconfig $D up
+		if [ "$D" != "$MGMT_INTERFACE" ]; then
+			# Disabling offloads
+			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
+
+			# Disabling VLAN stripping
+			/sbin/ethtool -K $D rxvlan off > /dev/null 2>&1
+
+			if [ `cat /proc/net/pf_ring/dev/$D/info | grep ZC | wc -l` -eq 1 ]; then
+				# ZC interface, setting max number of RX/TX slots
+				MAX_RX_SLOTS=$(/sbin/ethtool -g $D | grep "RX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
+				MAX_TX_SLOTS=$(/sbin/ethtool -g $D | grep "TX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
+				/sbin/ethtool -G $D rx $MAX_RX_SLOTS
+				/sbin/ethtool -G $D tx $MAX_TX_SLOTS
+			fi
+		fi
+		set_interface_mtu ${D}
+	done
 }
 
 load_driver() {
@@ -219,12 +239,13 @@ load_driver() {
 		/sbin/modprobe ${1}_${2} ${DRV_PARAM}
 		if [ `echo $?` -gt 0 ]; then
 			echo "Error loading driver ${1}-${2}"
+			# last resort: try rebuilding dkms driver
+			rebuild_dkms ${1}-${2}
 		else 
 			DRIVER_INSTALLED=1
 		fi
 	else
 		echo "Driver ${1}-${2} not available"
-	### to do: try rebuilding dkms driver
 	fi
 }
 
@@ -304,10 +325,13 @@ start_pf_ring() {
 
     KERNEL_VERSION=$(uname -r)
 
-    PFRING_CONFIG="/etc/pf_ring/pfring.conf"
+    PFRING_CONFIG="/etc/pf_ring/pf_ring.conf"
+    PFRING_CONFIG_OLD="/etc/pf_ring/pfring.conf"
     PARAM=""
     if [ -f $PFRING_CONFIG ]; then
         PARAM="$(cat $PFRING_CONFIG)"
+    elif [ -f $PFRING_CONFIG_OLD ]; then
+        PARAM="$(cat $PFRING_CONFIG_OLD)"
     fi
 
     PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
@@ -315,7 +339,7 @@ start_pf_ring() {
 
     check_pf_ring start
     
-    if [ ! -f "${DRIVERS_CONFIG_DIR}/pfring.start" ]; then
+    if [ ! -f "${DRIVERS_CONFIG_DIR}/pf_ring.start" ] && [ ! -f "${DRIVERS_CONFIG_DIR}/pfring.start" ]; then
     	# remove pf_ring in any case
     	/sbin/modprobe -r pf_ring
     	#
@@ -325,17 +349,23 @@ start_pf_ring() {
 	    return
     fi
 
-    if [ -f $PF_RING_MOD ]; then
-        /sbin/insmod $PF_RING_MOD $PARAM
-    elif [ -f $PF_RING_MOD_LOCAL ]; then
-        /sbin/insmod $PF_RING_MOD_LOCAL $PARAM
-    else
-		if [ ! `/sbin/modinfo pf_ring|wc -l` -gt 1 ]; then
-	   		# try building dkms
-	   		/usr/sbin/dkms autoinstall
-		fi
+	# Try loading pfring
+	/sbin/modprobe pf_ring $PARAM
+
+	if [ `echo $?` -gt 0 ]; then
+		# try building dkms
+		rebuild_dkms pfring
 		/sbin/modprobe pf_ring $PARAM
-    fi
+		
+		# try with local copies in case of failure
+		if [ `echo $?` -gt 0 ]; then
+		    if [ -f $PF_RING_MOD ]; then
+    		    /sbin/insmod $PF_RING_MOD $PARAM
+		    elif [ -f $PF_RING_MOD_LOCAL ]; then
+    	    	/sbin/insmod $PF_RING_MOD_LOCAL $PARAM
+			fi
+		fi
+	fi
    
     if [ `lsmod | grep ^${PFRING} | wc -l ` -le 0 ] ; then
 	   # PFRING not loaded. Exiting

@@ -2656,10 +2656,10 @@ static int i40e_configure_rx_ring(struct i40e_ring *ring)
 	i40e_status err = 0;
 
 #ifdef HAVE_PF_RING
-	if(unlikely(enable_debug))
-	  printk("[PF_RING-ZC] %s:%d %s base-queue=%u queue-index=%u\n", 
-            __FUNCTION__, __LINE__, vsi->netdev? vsi->netdev->name : "null", 
-            vsi->base_queue, ring->queue_index);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s:%d %s base-queue=%u queue-index=%u\n", 
+        		__FUNCTION__, __LINE__, vsi->netdev? vsi->netdev->name : "null", 
+        		vsi->base_queue, ring->queue_index);
 #endif
 
 	ring->state = 0;
@@ -2685,8 +2685,8 @@ static int i40e_configure_rx_ring(struct i40e_ring *ring)
 
 #ifdef HAVE_PF_RING
 	if (unlikely(enable_debug))
-	  printk("[PF_RING-ZC] %s:%u dtype %X %u %s\n", __FUNCTION__, __LINE__, 
-	    vsi->dtype, rx_ctx.dsize, rx_ctx.dsize ? "- bytes" : "16 bytes");
+		printk("[PF_RING-ZC] %s:%u dtype %X %u %s\n", __FUNCTION__, __LINE__, 
+			vsi->dtype, rx_ctx.dsize, rx_ctx.dsize ? "- bytes" : "16 bytes");
 #endif
 
 	rx_ctx.dtype = vsi->dtype;
@@ -2889,7 +2889,6 @@ int ring_is_not_empty(struct i40e_ring *rx_ring) {
 	u32 rx_status;
 	int i;
 
-#if 1
 	/* Tail is write-only on i40e, checking all descriptors (or we need a shadow tail from userspace) */
 	for (i = 0; i < rx_ring->count; i++) {
 		rx_desc = I40E_RX_DESC(rx_ring, i);    
@@ -2898,29 +2897,6 @@ int ring_is_not_empty(struct i40e_ring *rx_ring) {
 		if (rx_status & (1 << I40E_RX_DESC_STATUS_DD_SHIFT))
 			return 1;
 	}
-#else
-	unsigned int last_read = readl(rx_ring->tail);
-
-	if(unlikely(enable_debug)) 
-		printk("[PF_RING-ZC] %s() called [last_read=%u]\n", __FUNCTION__, last_read);
-	
-	if(++last_read == rx_ring->count) last_read = 0;
-
-	rx_desc = I40E_RX_DESC(rx_ring, last_read);    
-	qword = le64_to_cpu(rx_desc->wb.qword1.status_error_len);
-	rx_status = (qword & I40E_RXD_QW1_STATUS_MASK) >> I40E_RXD_QW1_STATUS_SHIFT;
-    
-	/* trick for appplications calling poll/select directly (indexes not in sync of one position at most) */
-	if(!(rx_status & (1 << I40E_RX_DESC_STATUS_DD_SHIFT))) {
-		if(++last_read == rx_ring->count) last_read = 0;
-		rx_desc = I40E_RX_DESC(rx_ring, last_read);
-		qword = le64_to_cpu(rx_desc->wb.qword1.status_error_len);
-		rx_status = (qword & I40E_RXD_QW1_STATUS_MASK) >> I40E_RXD_QW1_STATUS_SHIFT;
-	}
-
-	if(rx_status & (1 << I40E_RX_DESC_STATUS_DD_SHIFT))
-		return 1;
-#endif
 
 	return 0;
 }
@@ -3085,98 +3061,98 @@ static int i40e_control_txq(struct i40e_vsi *vsi, int pf_q, bool enable)
 
 void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
-  struct i40e_ring  *rx_ring = (struct i40e_ring *) rx_data;
-  struct i40e_ring  *tx_ring = (struct i40e_ring *) tx_data;
-  struct i40e_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
-  struct i40e_pf    *adapter;
-  int i;
+	struct i40e_ring  *rx_ring = (struct i40e_ring *) rx_data;
+	struct i40e_ring  *tx_ring = (struct i40e_ring *) tx_data;
+	struct i40e_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
+	struct i40e_pf    *adapter;
+	int i;
  
-  if(unlikely(enable_debug))
-    printk("[PF_RING-ZC] %s %s\n", __FUNCTION__, device_in_use ? "open" : "close");
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s %s\n", __FUNCTION__, device_in_use ? "open" : "close");
 
-  if(xx_ring == NULL) return; /* safety check */
+	if (xx_ring == NULL) return; /* safety check */
 
-  adapter = i40e_netdev_to_pf(xx_ring->netdev);
+	adapter = i40e_netdev_to_pf(xx_ring->netdev);
 
-  if(device_in_use) { /* free all memory */
+	if (device_in_use) { /* free all memory */
 
-    if(atomic_inc_return(&adapter->pfring_zc.usage_counter) == 1 /* first user */)
-      try_module_get(THIS_MODULE); /* ++ */
+		if (atomic_inc_return(&adapter->pfring_zc.usage_counter) == 1 /* first user */)
+			try_module_get(THIS_MODULE); /* ++ */
     
-    if(rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-      struct i40e_vsi *vsi = rx_ring->vsi;
-      u16 pf_q = vsi->base_queue + rx_ring->queue_index;
+		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
+			struct i40e_vsi *vsi = rx_ring->vsi;
+			u16 pf_q = vsi->base_queue + rx_ring->queue_index;
 
-      if(unlikely(enable_debug))
-        printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
+			if (unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
 
-      i40e_control_rxq(vsi, pf_q, false /* stop */);
+			i40e_control_rxq(vsi, pf_q, false /* stop */);
 
-      i40e_clean_rx_ring(rx_ring);
+			i40e_clean_rx_ring(rx_ring);
 
-      i40e_control_rxq(vsi, pf_q, true /* start */);
+			i40e_control_rxq(vsi, pf_q, true /* start */);
 
-      /* disabling irqs, they will be enabled on-demand*/
-      i40e_disable_irq(rx_ring->q_vector);
-    }
+			/* disabling irqs, they will be enabled on-demand */
+			i40e_disable_irq(rx_ring->q_vector);
+		}
 
-    if(tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-      /* nothing to do besides increasing the counter */
+		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
+			/* nothing to do besides increasing the counter */
 
-      if(unlikely(enable_debug))
-        printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
-    }
+			if(unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
+		}
 
-  } else { /* restore card memory */
-    if(rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-      struct i40e_vsi *vsi = rx_ring->vsi;
-      u16 pf_q = vsi->base_queue + rx_ring->queue_index;
-      struct i40e_hw *hw = &vsi->back->hw;
+	} else { /* restore card memory */
+		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
+			struct i40e_vsi *vsi = rx_ring->vsi;
+			u16 pf_q = vsi->base_queue + rx_ring->queue_index;
+			struct i40e_hw *hw = &vsi->back->hw;
       
-      i40e_control_rxq(vsi, pf_q, false /* stop */);
+			i40e_control_rxq(vsi, pf_q, false /* stop */);
 
-      for(i = 0; i<rx_ring->count; i++) {
-	union i40e_rx_desc *rx_desc = I40E_RX_DESC(rx_ring, i);
+			for (i = 0; i<rx_ring->count; i++) {
+				union i40e_rx_desc *rx_desc = I40E_RX_DESC(rx_ring, i);
 	
-	rx_desc->read.pkt_addr = 0, rx_desc->read.hdr_addr = 0;
-      }
-      rmb();
+				rx_desc->read.pkt_addr = 0, rx_desc->read.hdr_addr = 0;
+			}
+			rmb();
 
-      rx_ring->tail = hw->hw_addr + I40E_QRX_TAIL(pf_q);
-      writel(0, rx_ring->tail);
-      rx_ring->next_to_use = rx_ring->next_to_clean = 0;
-      i40e_alloc_rx_buffers(rx_ring, I40E_DESC_UNUSED(rx_ring));
+			rx_ring->tail = hw->hw_addr + I40E_QRX_TAIL(pf_q);
+			writel(0, rx_ring->tail);
+			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
+			i40e_alloc_rx_buffers(rx_ring, I40E_DESC_UNUSED(rx_ring));
     
-      //i40e_vsi_enable_irq(rx_ring->vsi);
-      i40e_control_rxq(vsi, pf_q, true /* start */);
-    }
+			//i40e_vsi_enable_irq(rx_ring->vsi);
+			i40e_control_rxq(vsi, pf_q, true /* start */);
+		}
 
-    if(tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-      /* Restore TX */
+		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
+			/* Restore TX */
 
-      tx_ring->next_to_use = tx_ring->next_to_clean = readl(tx_ring->tail);
+			tx_ring->next_to_use = tx_ring->next_to_clean = readl(tx_ring->tail);
 
-      if(unlikely(enable_debug))
-        printk("[PF_RING-ZC] %s:%d Restoring TX Tail=%u\n", __FUNCTION__, __LINE__, tx_ring->next_to_use);
+			if (unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s:%d Restoring TX Tail=%u\n", __FUNCTION__, __LINE__, tx_ring->next_to_use);
        
-      for (i = 0; i < tx_ring->count; i++) {
-	struct i40e_tx_buffer *tx_buffer = &tx_ring->tx_bi[i];
-	tx_buffer->next_to_watch = NULL;
-	tx_buffer->skb = NULL;
-      }
+			for (i = 0; i < tx_ring->count; i++) {
+				struct i40e_tx_buffer *tx_buffer = &tx_ring->tx_bi[i];
+				tx_buffer->next_to_watch = NULL;
+				tx_buffer->skb = NULL;
+			}
 
-      //i40e_configure_tx_ring(tx_ring);
-      rmb();
-    }
+			//i40e_configure_tx_ring(tx_ring);
+			rmb();
+		}
 
-    if(atomic_dec_return(&adapter->pfring_zc.usage_counter) == 0 /* last user */)
-      module_put(THIS_MODULE);  /* -- */
-  }
+		if (atomic_dec_return(&adapter->pfring_zc.usage_counter) == 0 /* last user */)
+			module_put(THIS_MODULE);  /* -- */
+	}
 
-  if(unlikely(enable_debug))
-    printk("[PF_RING-ZC] %s %s@%d is %sIN use (%p counter: %u)\n", __FUNCTION__,
-	   xx_ring->netdev->name, xx_ring->queue_index, device_in_use ? "" : "NOT ", 
-           adapter, atomic_read(&adapter->pfring_zc.usage_counter));
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s %s@%d is %sIN use (%p counter: %u)\n", __FUNCTION__,
+			xx_ring->netdev->name, xx_ring->queue_index, device_in_use ? "" : "NOT ", 
+			adapter, atomic_read(&adapter->pfring_zc.usage_counter));
 }
 
 #endif
@@ -4332,7 +4308,8 @@ static void i40e_vsi_close(struct i40e_vsi *vsi)
 	if (!test_and_set_bit(__I40E_DOWN, &vsi->state))
 #ifdef HAVE_PF_RING
 	{
-		if (unlikely(enable_debug)) printk("[PF_RING-ZC] %s(%s) called -> i40e_down\n", __FUNCTION__, vsi->netdev->name);
+		if (unlikely(enable_debug))
+			printk("[PF_RING-ZC] %s(%s) called -> i40e_down\n", __FUNCTION__, vsi->netdev->name);
 #endif
 		i40e_down(vsi);
 #ifdef HAVE_PF_RING
@@ -4831,7 +4808,8 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 	int err;
 
 #ifdef HAVE_PF_RING
-	if (unlikely(enable_debug)) printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	if (pf->flags & I40E_FLAG_MSIX_ENABLED)
@@ -4878,64 +4856,64 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 	i40e_service_event_schedule(pf);
 
 #ifdef HAVE_PF_RING
-	if(vsi->netdev) {
-	  struct pfring_hooks *hook = (struct pfring_hooks*)vsi->netdev->pfring_ptr;
+	if (vsi->netdev) {
+		struct pfring_hooks *hook = (struct pfring_hooks*)vsi->netdev->pfring_ptr;
 
-	  if(hook != NULL) {
-	    int i;
-	    u16 cache_line_size;
-	    struct i40e_pf *pf = vsi->back;
+		if (hook != NULL) {
+			int i;
+			u16 cache_line_size;
+			struct i40e_pf *pf = vsi->back;
 
-	    pci_read_config_word(pf->pdev, I40E_PCI_DEVICE_CACHE_LINE_SIZE, &cache_line_size);
-	    cache_line_size &= 0x00FF;
-	    cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
-	    if(cache_line_size == 0) cache_line_size = 64;
+			pci_read_config_word(pf->pdev, I40E_PCI_DEVICE_CACHE_LINE_SIZE, &cache_line_size);
+			cache_line_size &= 0x00FF;
+			cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
+			if(cache_line_size == 0) cache_line_size = 64;
 
-	    if(unlikely(enable_debug))  
-	      printk("[PF_RING-ZC] %s() attach [cache_line_size=%u]\n", __FUNCTION__, cache_line_size);
+			if(unlikely(enable_debug))  
+				printk("[PF_RING-ZC] %s() attach [cache_line_size=%u]\n", __FUNCTION__, cache_line_size);
 
-	    for (i = 0; i < vsi->num_queue_pairs; i++) {
-	      struct i40e_ring *rx_ring = vsi->rx_rings[i];
-	      struct i40e_ring *tx_ring = vsi->tx_rings[i];	     
-	      mem_ring_info rx_info = { 0 };
-	      mem_ring_info tx_info = { 0 };
+			for (i = 0; i < vsi->num_queue_pairs; i++) {
+				struct i40e_ring *rx_ring = vsi->rx_rings[i];
+				struct i40e_ring *tx_ring = vsi->tx_rings[i];
+				mem_ring_info rx_info = { 0 };
+				mem_ring_info tx_info = { 0 };
 
-	      init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
+				init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 
-	      rx_info.packet_memory_num_slots     = rx_ring->count;
-	      rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
-	      rx_info.descr_packet_memory_tot_len = rx_ring->size;
-	      rx_info.registers_index		  = rx_ring->reg_idx;
-	      rx_info.stats_index		  = vsi->info.stat_counter_idx;
+				rx_info.packet_memory_num_slots     = rx_ring->count;
+				rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
+				rx_info.descr_packet_memory_tot_len = rx_ring->size;
+				rx_info.registers_index		    = rx_ring->reg_idx;
+				rx_info.stats_index		    = vsi->info.stat_counter_idx;
  
-	      tx_info.packet_memory_num_slots     = tx_ring->count;
-	      tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
-	      tx_info.descr_packet_memory_tot_len = tx_ring->size;
-	      tx_info.registers_index		  = tx_ring->reg_idx;
-	      
-	      hook->zc_dev_handler(add_device_mapping,
-				   zc_driver,
-				   &rx_info,
-				   &tx_info,
-				   0, /* rx packet memory */
-				   rx_ring->desc, /* rx packet descriptors */
-				   0, /* tx packet memory */
-				   tx_ring->desc, /* tx packet descriptors */
-				   (void *) pci_resource_start(pf->pdev, 0),
-				   pci_resource_len(pf->pdev, 0),
-				   rx_ring->queue_index, /* channel id */
-				   rx_ring->netdev,
-				   rx_ring->dev, /* for DMA mapping */
-				   intel_i40e,
-				   rx_ring->netdev->dev_addr,
-				   &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
-				   &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
-				   (void *) rx_ring,
-				   (void *) tx_ring,
-				   wait_packet_function_ptr,
-				   notify_function_ptr);
-	    }
-	  }
+				tx_info.packet_memory_num_slots     = tx_ring->count;
+				tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
+				tx_info.descr_packet_memory_tot_len = tx_ring->size;
+				tx_info.registers_index		    = tx_ring->reg_idx;
+
+				hook->zc_dev_handler(add_device_mapping,
+					zc_driver,
+					&rx_info,
+					&tx_info,
+					0, /* rx packet memory */
+					rx_ring->desc, /* rx packet descriptors */
+					0, /* tx packet memory */
+					tx_ring->desc, /* tx packet descriptors */
+					(void *) pci_resource_start(pf->pdev, 0),
+					pci_resource_len(pf->pdev, 0),
+					rx_ring->queue_index, /* channel id */
+					rx_ring->netdev,
+					rx_ring->dev, /* for DMA mapping */
+					intel_i40e,
+					rx_ring->netdev->dev_addr,
+					&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
+					&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
+					(void *) rx_ring,
+					(void *) tx_ring,
+					wait_packet_function_ptr,
+					notify_function_ptr);
+			}
+		}
 	}
 #endif
 	return 0;
@@ -4953,7 +4931,8 @@ static void i40e_vsi_reinit_locked(struct i40e_vsi *vsi)
 	struct i40e_pf *pf = vsi->back;
 
 #ifdef HAVE_PF_RING
-	if (unlikely(enable_debug)) printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	WARN_ON(in_interrupt());
@@ -4980,7 +4959,8 @@ int i40e_up(struct i40e_vsi *vsi)
 	int err;
 
 #ifdef HAVE_PF_RING
-	if (unlikely(enable_debug)) printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	err = i40e_vsi_configure(vsi);
@@ -4999,7 +4979,8 @@ void i40e_down(struct i40e_vsi *vsi)
 	int i;
 
 #ifdef HAVE_PF_RING
-	if (unlikely(enable_debug)) printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	/* It is assumed that the caller of this function
@@ -5019,11 +5000,11 @@ void i40e_down(struct i40e_vsi *vsi)
 	}
 
 #ifdef HAVE_PF_RING
-	if(vsi->netdev) {
+	if (vsi->netdev) {
 		struct pfring_hooks *hook = (struct pfring_hooks*)vsi->netdev->pfring_ptr;
 		struct i40e_pf *pf = vsi->back;
 
-		if(hook != NULL) {
+		if (hook != NULL) {
 			int i;
 			
 			if(unlikely(enable_debug))
@@ -5222,7 +5203,8 @@ int i40e_vsi_open(struct i40e_vsi *vsi)
 	}
 
 #ifdef HAVE_PF_RING
-	if (unlikely(enable_debug)) printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+	if (unlikely(enable_debug)) 
+		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	err = i40e_up_complete(vsi);
@@ -5390,7 +5372,8 @@ void i40e_do_reset(struct i40e_pf *pf, u32 reset_flags)
 			    test_bit(__I40E_DOWN_REQUESTED, &vsi->state)) {
 				set_bit(__I40E_DOWN, &vsi->state);
 #ifdef HAVE_PF_RING
-				if (unlikely(enable_debug)) printk("[PF_RING-ZC] %s() called -> i40e_down\n", __FUNCTION__);
+				if (unlikely(enable_debug)) 
+					printk("[PF_RING-ZC] %s() called -> i40e_down\n", __FUNCTION__);
 #endif
 				i40e_down(vsi);
 				clear_bit(__I40E_DOWN_REQUESTED, &vsi->state);

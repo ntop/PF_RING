@@ -676,14 +676,14 @@ static bool i40e_clean_tx_irq(struct i40e_ring *tx_ring, int budget)
 	unsigned int total_bytes = 0;
 
 #ifdef HAVE_PF_RING	
-	if(unlikely(enable_debug))
-	  printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u][head=%u]\n", 
-	         __FUNCTION__, tx_ring->netdev->name,
-	         atomic_read(&i40e_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter),
-	         i40e_get_head(tx_ring));
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u][head=%u]\n", 
+	        	__FUNCTION__, tx_ring->netdev->name,
+	        	atomic_read(&i40e_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter),
+	        	i40e_get_head(tx_ring));
 
-	if(atomic_read(&i40e_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter) > 0)
-	  return(true);
+	if (atomic_read(&i40e_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter) > 0)
+		return true;
 #endif
 
 	tx_buf = &tx_ring->tx_bi[i];
@@ -1075,10 +1075,10 @@ int i40e_setup_rx_descriptors(struct i40e_ring *rx_ring)
 		goto err;
 
 #ifdef HAVE_PF_RING
-	if(unlikely(enable_debug))
-	  printk("[PF_RING-ZC] %s:%d allocating %u %lu bytes descriptors - packet split %s\n", 
-            __FUNCTION__, __LINE__, rx_ring->count, 
-            ring_is_16byte_desc_enabled(rx_ring) ? sizeof(union i40e_16byte_rx_desc) : sizeof(union i40e_32byte_rx_desc), ring_is_ps_enabled(rx_ring) ? "enabled" : "disabled");
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s:%d allocating %u %lu bytes descriptors - packet split %s\n", 
+        		__FUNCTION__, __LINE__, rx_ring->count, 
+         		ring_is_16byte_desc_enabled(rx_ring) ? sizeof(union i40e_16byte_rx_desc) : sizeof(union i40e_32byte_rx_desc), ring_is_ps_enabled(rx_ring) ? "enabled" : "disabled");
 #endif
 
 	/* Round up to nearest 4K */
@@ -1113,10 +1113,9 @@ err:
 static inline void i40e_release_rx_desc(struct i40e_ring *rx_ring, u32 val)
 {
 #ifdef HAVE_PF_RING
-	if(unlikely(enable_debug))
-	  printk("[PF_RING-ZC] %s(%s) setting tail to %u\n",
-		 __FUNCTION__, rx_ring->netdev->name,
-		 val);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) setting tail to %u\n",
+			__FUNCTION__, rx_ring->netdev->name, val);
 #endif
 
 	rx_ring->next_to_use = val;
@@ -1146,10 +1145,10 @@ void i40e_alloc_rx_buffers(struct i40e_ring *rx_ring, u16 cleaned_count)
 		return;
 
 #ifdef HAVE_PF_RING
-	if(unlikely(enable_debug))
-	  printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",
-		 __FUNCTION__, rx_ring->netdev->name,
-		 cleaned_count, rx_ring->count);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",
+			__FUNCTION__, rx_ring->netdev->name,
+			cleaned_count, rx_ring->count);
 #endif
 
 	while (cleaned_count--) {
@@ -1516,13 +1515,13 @@ static int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget)
 	u64 qword;
 
 #ifdef HAVE_PF_RING
-	if(unlikely(enable_debug))
-	  printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", __FUNCTION__, rx_ring->netdev->name,
-                 atomic_read(&i40e_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter));
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", __FUNCTION__, rx_ring->netdev->name,
+        		atomic_read(&i40e_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter));
 
-	if(atomic_read(&i40e_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter) > 0) {
-	  wake_up_pfring_zc_socket(rx_ring);
-	  return (budget);
+	if (atomic_read(&i40e_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter) > 0) {
+		wake_up_pfring_zc_socket(rx_ring);
+		return budget;
 	}
 #endif
 
@@ -1764,7 +1763,7 @@ int i40e_napi_poll(struct napi_struct *napi, int budget)
 	/* Work is done so exit the polling mode and re-enable the interrupt */
 	napi_complete(napi);
 #ifdef HAVE_PF_RING
-	if(atomic_read(&i40e_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0) {
+	if (atomic_read(&i40e_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0) {
 #endif
 	if (ITR_IS_DYNAMIC(vsi->rx_itr_setting) ||
 	    ITR_IS_DYNAMIC(vsi->tx_itr_setting))

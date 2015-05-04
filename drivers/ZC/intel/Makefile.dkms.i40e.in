@@ -16,7 +16,7 @@ build: add
 	dkms build -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
 
 install: build
-	dkms install -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
+	dkms install --force -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
 
 deb: add add_deb install
 	dkms mkdeb -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --source-only
@@ -33,6 +33,7 @@ add_deb:
 
 remove:
 	-dkms remove -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --all
+	\/bin/rm -fv /lib/modules/*/weak-updates/i40e*ko /lib/modules/*/extra/i40e*ko
 
 veryclean: remove
 	\/bin/rm -fr /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@

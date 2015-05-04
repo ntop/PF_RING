@@ -305,7 +305,7 @@ int main(int argc, char* argv[]) {
   printf("Sending packets on %s. Receiving on %s\n", out_dev,in_dev);
 
   pdo = pfring_open(out_dev, 1500, PF_RING_PROMISC);
-  pdi = in_dev ? pfring_open(in_dev, 1500, PF_RING_PROMISC) : pdo;
+  pdi = (in_dev && strcmp(out_dev, in_dev) != 0) ? pfring_open(in_dev, 1500, PF_RING_PROMISC) : pdo;
   if(pdo == NULL) {
     printf("pfring_open %s error [%s]\n", out_dev, strerror(errno));
     return(-1);

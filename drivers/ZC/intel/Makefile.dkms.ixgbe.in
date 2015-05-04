@@ -16,7 +16,7 @@ build: add
 	dkms build -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@
 
 install: build
-	dkms install -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@
+	dkms install --force -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@
 
 deb: add add_deb install
 	dkms mkdeb -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@ --source-only
@@ -32,6 +32,7 @@ add_deb:
 
 remove:
 	-dkms remove -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@ --all
+	\/bin/rm -fv /lib/modules/*/weak-updates/ixgbe*ko /lib/modules/*/extra/ixgbe*ko
 
 veryclean: remove
 	\/bin/rm -fr /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@

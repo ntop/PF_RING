@@ -1,7 +1,7 @@
-pfring-drivers-zc (1.0) stable; urgency=low
+pfring-drivers-zc (1.2) stable; urgency=low
 
   * Virtual package for drivers automatically packaged by DKMS.
 
- -- Luca Deri <deri@ntop.org>  Fri, 12 Sep 2014 12:08:14 +0200
+ -- Luca Deri <deri@ntop.org>  Wed, 15 Apr 2015 09:35:37 +0200
 	
 

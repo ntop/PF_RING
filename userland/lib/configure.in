@@ -211,6 +211,23 @@ fi
 LIBS=$OLD_LIBS
 ])
 
+ACCOLADE_HOME="/opt/accolade"
+AC_MSG_CHECKING([Accolade support])
+if test -d "$ACCOLADE_HOME"; then
+   ACCOLADE_INC="-I $ACCOLADE_HOME/include"
+   ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
+   ACCOLADE_OBJS="pfring_mod_accolade.o"
+   HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+   AC_MSG_RESULT(yes)
+   AC_DEFINE_UNQUOTED(HAVE_ACCOLADE, 1, [Accolade support is present])
+else
+   ACCOLADE_INC=
+   ACCOLADE_LIB=
+   ACCOLADE_OBJS=
+   HAVE_ACCOLADE=
+   AC_MSG_RESULT(no)
+fi
+
 dnl BPF - Default disabled
 dnl AC_ARG_ENABLE([bpf], AS_HELP_STRING([--enable-bpf], [Enable BPF support in PF_RING]))
 dnl AS_IF([test "x$enable_bpf" = "xyes"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
@@ -256,6 +273,10 @@ AC_SUBST(NT_OBJS)
 AC_SUBST(NT_INC)
 AC_SUBST(NT_LIB)
 AC_SUBST(NT_DEP)
+AC_SUBST(ACCOLADE_INC)
+AC_SUBST(ACCOLADE_LIB)
+AC_SUBST(ACCOLADE_OBJS)
+AC_SUBST(HAVE_ACCOLADE)
 AC_SUBST(HAVE_MLX)
 AC_SUBST(MLX_OBJS)
 AC_SUBST(HAVE_NT)

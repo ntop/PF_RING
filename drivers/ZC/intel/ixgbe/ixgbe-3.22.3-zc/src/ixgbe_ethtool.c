@@ -57,6 +57,12 @@ static int ixgbe_set_rx_ntuple(struct net_device *dev, struct ethtool_rx_ntuple 
 
 #define IXGBE_ALL_RAR_ENTRIES 16
 
+#ifdef HAVE_PF_RING /* RETA Patch */
+#ifdef HAVE_RHEL6_ETHTOOL_OPS_EXT_STRUCT
+#define IXGBE_RETA_SIZE 128
+#endif
+#endif
+
 #ifdef ETHTOOL_OPS_COMPAT
 #include "kcompat_ethtool.c"
 #endif
@@ -833,6 +839,99 @@ static void ixgbe_get_regs(struct net_device *netdev, struct ethtool_regs *regs,
 	/* 82599 X540 specific registers  */
 	regs_buff[1128] = IXGBE_READ_REG(hw, IXGBE_MFLCN);
 }
+
+#ifdef HAVE_PF_RING /* RETA Patch */
+#ifdef HAVE_RHEL6_ETHTOOL_OPS_EXT_STRUCT
+extern int reta_via_ethtool;
+
+static u32 ixgbe_get_rxfh_indir_size(struct net_device *netdev)
+{
+	return IXGBE_RETA_SIZE;
+}
+
+static int ixgbe_get_rxfh_indir(struct net_device *netdev, u32 *indir)
+{
+	struct ixgbe_adapter *adapter = netdev_priv(netdev);
+	struct ixgbe_hw *hw = &adapter->hw;
+	int i, j, d, indices_multi;
+	u32 reta = 0;
+
+	/* Read out the redirection table as follows:
+	 * 82598: 128 (8 bit wide) entries containing pair of 4 bit RSS indices
+	 * 82599/X540: 128 (8 bit wide) entries containing 4 bit RSS index
+	 */
+	if (adapter->hw.mac.type == ixgbe_mac_82598EB)
+		indices_multi = 0x11;
+	else
+		indices_multi = 0x1;
+
+	/* Read out the redirection table */
+	for (i = 0, j = 0; i < IXGBE_RETA_SIZE / 4; i++) {
+		reta = IXGBE_READ_REG(hw, IXGBE_RETA(i));
+		j += 4;
+		for (d = 1; d < 5; d++) {
+			indir[j - d] = reta & 0x0F;
+			reta = reta >> 8;
+		}
+	}
+	return 0;
+}
+
+static int ixgbe_set_rxfh_indir(struct net_device *netdev, const u32 *indir)
+{
+	struct ixgbe_adapter *adapter = netdev_priv(netdev);
+	struct ixgbe_hw *hw = &adapter->hw;
+	u32 reta = 0;
+	int i, indices_multi;
+	u32 num_queues;
+
+	num_queues = adapter->num_rx_queues;
+
+	/*
+	 * Allow at least 2 queues w/ SR-IOV.
+	 */
+	if ((adapter->flags & IXGBE_FLAG_SRIOV_ENABLED) && (num_queues < 2))
+		num_queues = 2;
+
+	/* Verify user input. */
+	for (i = 0; i < IXGBE_RETA_SIZE; i++)
+		if (indir[i] >= num_queues)
+			return -EINVAL;
+
+	/* Fill out the redirection table as follows:
+	 * 82598: 128 (8 bit wide) entries containing pair of 4 bit RSS indices
+	 * 82599/X540: 128 (8 bit wide) entries containing 4 bit RSS index
+	 */
+	if (adapter->hw.mac.type == ixgbe_mac_82598EB)
+		indices_multi = 0x11;
+	else
+		indices_multi = 0x1;
+
+	/* Fill out the redirection table */
+	for (i = 0; i < IXGBE_RETA_SIZE; i++) {
+		reta = (reta << 8) | (indir[i] * indices_multi);
+		if ((i & 3) == 3) {
+			if (i < 128)
+				IXGBE_WRITE_REG(hw, IXGBE_RETA(i >> 2), reta);
+		}
+	}
+	return 0;
+}
+
+#if 0 /* TODO >=2.6.32-504.12.2.el6 */
+static u32 ixgbe_get_rxfh_key_size(struct net_device *netdev)
+{
+	struct ixgbe_adapter *adapter = netdev_priv(netdev);
+
+	if (adapter->hw.mac.type == ixgbe_mac_82599EB || 
+            adapter->hw.mac.type == ixgbe_mac_X540)
+		return 40;
+
+	return 0;
+}
+#endif
+#endif
+#endif
 
 static int ixgbe_get_eeprom_len(struct net_device *netdev)
 {
@@ -3589,6 +3688,14 @@ static const struct ethtool_ops_ext ixgbe_ethtool_ops_ext = {
 #ifdef ETHTOOL_GMODULEINFO
 	.get_module_info	= ixgbe_get_module_info,
 	.get_module_eeprom	= ixgbe_get_module_eeprom,
+#endif
+#ifdef HAVE_PF_RING /* RETA Patch */
+	.get_rxfh_indir_size	= ixgbe_get_rxfh_indir_size,
+	.get_rxfh_indir		= ixgbe_get_rxfh_indir,
+	.set_rxfh_indir		= ixgbe_set_rxfh_indir,
+#if 0 /* TODO >=2.6.32-504.12.2.el6 */
+	.get_rxfh_key_size	= ixgbe_get_rxfh_key_size
+#endif
 #endif
 };
 

@@ -634,6 +634,10 @@ MOD_NT_LIB
 HAVE_NT
 MLX_OBJS
 HAVE_MLX
+HAVE_ACCOLADE
+ACCOLADE_OBJS
+ACCOLADE_LIB
+ACCOLADE_INC
 NT_DEP
 NT_LIB
 NT_INC
@@ -3910,6 +3914,30 @@ LIBS=$OLD_LIBS
 
 fi
 
+ACCOLADE_HOME="/opt/accolade"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Accolade support" >&5
+$as_echo_n "checking Accolade support... " >&6; }
+if test -d "$ACCOLADE_HOME"; then
+   ACCOLADE_INC="-I $ACCOLADE_HOME/include"
+   ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
+   ACCOLADE_OBJS="pfring_mod_accolade.o"
+   HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_ACCOLADE 1
+_ACEOF
+
+else
+   ACCOLADE_INC=
+   ACCOLADE_LIB=
+   ACCOLADE_OBJS=
+   HAVE_ACCOLADE=
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
 
 # Check whether --enable-bpf was given.
 if test "${enable_bpf+set}" = set; then :
@@ -3930,6 +3958,10 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
+
+
+
+
 
 
 
