@@ -1,13 +1,19 @@
 AC_INIT([Makefile.in], 1.0)
 
-SVN_RELEASE=`svn info .. | grep "^Last Changed Rev" | cut -d ":" -f 2 | cut -d " " -f 2`
+GIT_COMMIT_COUNT=`git rev-list --count HEAD`
+GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
+GIT_HASH=`git log --pretty=format:"%H (%ad)"|head -1`
 VERS=`cat ./linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 
 AC_SUBST(VERS)
-AC_SUBST(SVN_RELEASE)
+AC_SUBST(GIT_COMMIT_COUNT)
+AC_SUBST(GIT_BRANCH)
+AC_SUBST(GIT_HASH)
 
 AC_CONFIG_FILES(Makefile.dkms)
 AC_CONFIG_FILES(dkms.conf)
 AC_CONFIG_FILES(pfring-dkms-mkrpm.spec)
+AC_CONFIG_FILES(pfring-dkms-mkdeb/debian/changelog)
+AC_CONFIG_FILES(pfring-dkms-mkdeb/debian/control)
 
 AC_OUTPUT

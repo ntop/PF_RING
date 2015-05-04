@@ -14,6 +14,7 @@ Requires: pfring-dkms = @VERS@, numactl-devel, net-tools
 
 %description
 PF_RING kernel module and drivers for high-speed RX/TX package processing
+GIT info: @GIT_BRANCH@:@GIT_HASH@
 
 %install
 PATH=/usr/bin:/bin:/usr/sbin:/sbin
