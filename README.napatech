@@ -1,6 +1,8 @@
 Napatech support in PF_RING
 ---------------------------
 
+Prerequisite: Napatech drivers and SDK installed.
+
 PF_RING has native support for Napatech adapters, due to the dependency
 to the Napatech library, a configure parameter --enable-nt is required 
 in order to enable the Napatech module when compiling the pf_ring library.
