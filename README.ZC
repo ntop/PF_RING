@@ -1,0 +1,28 @@
+With PF_RING ZC you can achieve 1/10G wire rate at any packet size and create 
+inter-process and inter-VM clusters (PF_RING ZC is not just a driver, it provides a 
+simple yet powerful API). It can be considered as the successor of DNA/LibZero
+that offers a single and consistent API based on the lessons learnt on the past 
+few years.
+
+Sample applications for testing are available in userland/examples_zc.
+
+The PF_RING library is able to handle ZC adapters using the prefix 'zc:' before their 
+name. Example "pfcount -i zc:eth0". If you omit 'zc:' (example "pfcount -i eth0") you
+will open the device in PF_RING mode (no ZC).
+
+In order to exploit ZC, you need a PF_RING aware driver with ZC support, identified by 
+the '-zc' suffix. Three driver families are currently available:
+
+1 Gbit
+- e1000e (RX and TX)
+- igb    (RX and TX)
+
+10 Gbit
+- ixgbe (RX and TX)
+
+These drivers can be found in drivers/PF_RING_aware 
+
+Note: ZC needs hugepages for memory allocation, they are automatically initialised by 
+the load_dna_driver.sh script you can use to load the driver. For more informations 
+please read README.hugepages.
+

@@ -1,0 +1,16 @@
+Available PF_RING-aware drivers:
+
+e1000 drivers
+- e1000-8.0.35/
+
+e1000e (PCI Express-only) driver
+- e1000e-2.5.4-zc/
+
+igb (1 Gbit) 82575/6
+- igb-5.0.6-zc/
+
+ixgbe (10 Gbit) 82598/9
+- ixgbe-3.18.7-zc/
+
+Drivers with the 'zc' suffix do support PF_RING ZC.
+

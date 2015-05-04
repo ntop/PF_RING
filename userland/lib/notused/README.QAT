@@ -1,0 +1,13 @@
+If you want to use Intel QAT PM with PF_RING do
+
+cp pfring_qat.* ../
+cd ../..
+svn co https://svn.ntop.org/svn/ntop/trunk/intel/
+cd intel/qat
+make
+cd ../../lib
+
+then run ./configure again
+
+------------------------------------------
+January 2013 - Luca Deri <deri@ntop.org>

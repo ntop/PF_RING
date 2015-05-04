@@ -1,0 +1,51 @@
+.\" LICENSE
+.\"
+.\" This software program is released under the terms of a license agreement between you ('Licensee') and Intel.  Do not use or load this software or any associated materials (collectively, the 'Software') until you have carefully read the full terms and conditions of the LICENSE located in this software package.  By loading or using the Software, you agree to the terms of this Agreement.  If you do not agree with the terms of this Agreement, do not install or use the Software.
+.\"
+.\" * Other names and brands may be claimed as the property of others.
+.\"
+.TH i40e 1 "November 5, 2013"
+
+.SH NAME
+i40e \- This file describes the Linux* Base Driver for the Intel Ethernet
+Controller XL710 Family of Controllers.
+.SH SYNOPSIS
+.PD 0.4v
+modprobe i40e [<option>=<VAL1>,<VAL2>,...]
+.br
+.PD 1v
+.LP
+.SH DESCRIPTION
+This driver supports the \fB2.6.32\fR and newer kernels, and includes support
+for any 64 bit Linux supported system, including Itanium(R)2, x86_64, PPC64,
+ARM, etc.
+.LP
+This driver is only supported as a loadable module at this time.  Intel is not
+supplying patches against the kernel source to allow for static linking of the
+driver.  For questions related to hardware requirements, refer to the
+documentation supplied with your adapter.  All hardware requirements listed
+apply to use with Linux.
+.SH JUMBO FRAMES
+The driver supports Jumbo Frames.  Jumbo Frames support is enabled by changing
+the MTU to a value larger than the default of 1500.  Use the ifconfig command
+to increase the MTU size.  For example, enter the following where ethX is the
+interface name:
+.IP
+ifconfig ethX mtu 9000 up
+.LP
+The maximum MTU setting for Jumbo Frames is 9710.  This value coincides with
+the maximum Jumbo Frames size of 9728.  This driver will attempt to use
+multiple page sized buffers to receive each jumbo packet.  This should help to
+avoid buffer starvation issues when allocating receive packets.
+.SH SUPPORT
+For additional information, including supported adapters, building, and
+installation, see the README file included with the driver.
+.LP
+For general information and support, go to the Intel support website at:
+.IP
+.B http://support.intel.com
+.LP
+If an issue is identified with the released source code on a supported kernel
+with a supported adapter, email the specific information related to the issue
+to e1000-devel@lists.sourceforge.net.
+.LP

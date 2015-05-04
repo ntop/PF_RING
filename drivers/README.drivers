@@ -1,0 +1,19 @@
+This directory contains two family of drivers:
+
+- PF_RING_aware/
+Standard drivers that have been enhanced with PF_RING native support.
+These drivers support PF_RING ZC, they can be used as standard drivers, 
+or in zero-copy mode (same as DNA) opening the device with the 'zc:' 
+prefix (e.g. zc:eth1). 
+Please note that opening the device in zero-copy mode disconnects it from 
+the system.
+
+- DNA/
+DNA (Direct NIC Access) drivers that allow applications to completely
+bypass the kernel and access the card directly for maximum speed. This
+means that an application sitting on top of the DNA driver can both send
+and receive packets only using the PF_RING API, with no general purpose
+networking (e.g. ping or web surfing) support. DNA drivers are limited
+to selected network adapters. Please check its availability prior to
+use them.
+

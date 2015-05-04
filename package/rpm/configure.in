@@ -1,0 +1,34 @@
+AC_INIT([Makefile.in], 1.0)
+
+VERS=`cat ../../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
+PLATFORM=`uname -p`
+
+if which svn >/dev/null; then
+  REVISION=`svn info ../..| grep "^Last Changed Rev" | cut -d ":" -f 2|cut -d " " -f 2`
+else
+  REVISION=nr
+fi
+
+MACHINE=`uname -m`
+
+if test $MACHINE = "x86_64"; then
+   EXTN="amd64"
+else
+   EXTN="i386"
+fi
+
+DATE=`date -R`
+KERNEL=`uname -r`
+
+AC_SUBST(VERS)
+AC_SUBST(EXTN)
+AC_SUBST(DATE)
+AC_SUBST(KERNEL)
+AC_SUBST(PLATFORM)
+AC_SUBST(REVISION)
+
+
+AC_CONFIG_FILES(Makefile)
+AC_CONFIG_FILES(pfring.spec)
+
+AC_OUTPUT

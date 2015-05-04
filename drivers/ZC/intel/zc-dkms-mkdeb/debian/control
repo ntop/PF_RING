@@ -1,0 +1,12 @@
+Source: DEBIAN_PACKAGE-dkms
+Section: free
+Priority: optional
+Maintainer: Luca Deri <deri@ntop.org>
+Build-Depends: debhelper (>= 7), dkms
+Standards-Version: 3.8.1
+
+Package: DEBIAN_PACKAGE-dkms
+Architecture: all
+Depends: dkms (>= 1.95), ${misc:Depends}
+Description: DEBIAN_PACKAGE driver in DKMS format (http://www.ntop.org/pf_ring/).
+

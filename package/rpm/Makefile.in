@@ -1,0 +1,45 @@
+# 
+# RPM Build Process
+#
+APPL=pfring
+PLATFORM=@PLATFORM@
+REVISION=@REVISION@
+PACKAGE_VERSION=@VERS@
+PACKAGE=$(APPL)-$(PACKAGE_VERSION)-$(REVISION).$(PLATFORM).rpm
+PACKAGE_PATH=$(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
+
+
+package: all cleanup-rpm build-rpm dkms
+
+all:
+	cd ../..;make all; make snort
+
+
+dkms:
+	cd ../../kernel; ./configure; make dkms-rpm
+	cp /var/lib/dkms/pfring/@VERS@/rpm/pfring-dkms-@VERS@-dkms.noarch.rpm .
+	cd ../../drivers/DNA; ./configure; make dkms-rpm
+	cp /var/lib/dkms/*-dna/*/rpm/*.noarch.rpm .
+	cp ../../drivers/DNA/*.rpm .
+	cd ../../drivers/PF_RING_aware/intel/; ./configure; make dkms-rpm
+	cp /var/lib/dkms/*-zc/*/rpm/*.noarch.rpm .
+	cp ../../drivers/PF_RING_aware/intel/*.rpm .
+	/bin/ls *.rpm | xargs ./rpm-sign.exp
+
+build-rpm: 
+# Do NOT build package as root (http://wiki.centos.org/HowTos/SetupRpmBuildEnvironment)
+#	mkdir -p $(HOME)/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+#	echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
+	@rpmbuild -bb ./$(APPL).spec --define "pfring_version $(PACKAGE_VERSION)" --define "buildrev $(REVISION)" --define "nodna 0"
+	@./rpm-sign.exp $(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
+	@echo ""
+	@echo "Package contents:"
+	@rpm -qpl $(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
+	@echo "The package is now available in $(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)"
+
+
+cleanup-rpm:
+	rm -f $(PACKAGE_PATH)
+	rm -f $(HOME)/rpmbuild/BUILD/$(PACKAGE)
+
+

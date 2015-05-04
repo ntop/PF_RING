@@ -1,0 +1,32 @@
+all: install
+
+add: remove
+	\/bin/rm -rf /usr/src/pfring-@VERS@
+	mkdir /usr/src/pfring-@VERS@
+	cp -r Makefile dkms.conf pf_ring.c linux/ /usr/src/pfring-@VERS@
+	dkms add -m pfring -v @VERS@
+
+build: add
+	dkms build -m pfring -v @VERS@
+
+install: build
+	dkms install -m pfring -v @VERS@
+
+deb: add add_deb install
+	dkms mkdeb -m pfring -v @VERS@ --source-only
+
+rpm: add add_rpm install
+	dkms mkrpm -m pfring -v @VERS@ --source-only
+
+add_rpm:
+	cp -r pfring-dkms-*.spec /usr/src/pfring-@VERS@/
+
+add_deb:
+	cp -r pfring-dkms-mkdeb /usr/src/pfring-@VERS@/
+
+remove:
+	-dkms remove -m pfring -v @VERS@ --all
+
+veryclean: remove
+	\/bin/rm -fr /usr/src/pfring-@VERS@
+	

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ "$1" = "purge" ] ; then
+  update-rc.d pf_ring remove >/dev/null
+fi
+
+/sbin/ldconfig >/dev/null 2>&1
+
+exit 0

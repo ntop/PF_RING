@@ -1,0 +1,25 @@
+DNA Support
+-----------
+
+In order to enable DNA support you need to copy on this directory
+the user-space DNA library (e.g. libpfring_dna_x86_64.a) prior
+to run configure and then make
+
+
+User-Space Ring
+---------------
+
+As of PF_RING 5.3 you can use user-space rings so that two apps
+can send/receive packets by communicating directly. In order to
+do that the following steps are necessary
+
+1. Start receiver that creates a user-space ring
+   pfcount -i usr0
+
+2. Start receiver that attaches to the previously created user-space ring
+   pfsend -i userspace:usr0
+
+
+
+-------------------
+(C) 2012 - ntop.org

@@ -1,0 +1,115 @@
+Summary: PF_RING kernel module and drivers
+Name: pfring
+Version: @VERS@
+Release: %{buildrev}
+License: GPL
+Group: Networking/Utilities
+URL: http://www.ntop.org/products/pf_ring/
+Packager: Luca Deri <deri@ntop.org>
+# Temporary location where the RPM will be built
+BuildRoot:  %{_tmppath}/%{name}-%{version}-root
+Requires: pfring-dkms = @VERS@, numactl-devel, net-tools
+# 
+
+
+%description
+PF_RING kernel module and drivers for high-speed RX/TX package processing
+
+%install
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+if [ -d $RPM_BUILD_ROOT ]; then
+	\rm -rf $RPM_BUILD_ROOT
+fi
+
+mkdir -p $RPM_BUILD_ROOT/usr/local/pfring
+mkdir -p $RPM_BUILD_ROOT/usr/local/pfring/kernel
+mkdir -p $RPM_BUILD_ROOT/usr/local/include/linux
+mkdir -p $RPM_BUILD_ROOT/usr/local/lib
+mkdir -p $RPM_BUILD_ROOT/usr/local/bin
+mkdir -p $RPM_BUILD_ROOT/etc/init.d
+mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
+mkdir -p $RPM_BUILD_ROOT/etc/init
+# Kernel module
+cp $HOME/PF_RING/kernel/pf_ring.ko $RPM_BUILD_ROOT/usr/local/pfring/kernel
+cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
+# Userland
+cp $HOME/PF_RING/README.FIRST                  $RPM_BUILD_ROOT/usr/local/pfring/
+cp $HOME/PF_RING/userland/snort/pfring-daq-module/README.1st $RPM_BUILD_ROOT/usr/local/pfring/README-DAQ.1st
+cp $HOME/PF_RING/userland/lib/libpfring.a      $RPM_BUILD_ROOT/usr/local/lib
+cp $HOME/PF_RING/userland/lib/libpfring.so     $RPM_BUILD_ROOT/usr/local/lib
+cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/local/include
+cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/local/include
+cp $HOME/PF_RING/userland/libpcap/libpcap.a    $RPM_BUILD_ROOT/usr/local/lib
+cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
+cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
+cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
+cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
+# DNA
+mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
+#cp $HOME/PF_RING/userland/snort/pfring-daq-module/.libs/daq_pfring.la $RPM_BUILD_ROOT/usr/local/lib/daq
+cp $HOME/PF_RING/userland/snort/pfring-daq-module/.libs/daq_pfring.so $RPM_BUILD_ROOT/usr/local/lib/daq
+cp $HOME/PF_RING/userland/snort/pfring-daq-module/.libs/daq_pfring.so $RPM_BUILD_ROOT/usr/local/lib/daq
+cp -a $HOME/daq-2.0.0/sfbpf/.libs/libsfbpf.so.0 $HOME/daq-2.0.0/sfbpf/.libs/libsfbpf.so.0.0.1 $RPM_BUILD_ROOT/usr/local/lib
+%if %nodna == 0
+cp $HOME/PF_RING/userland/examples_libzero/pfdnabounce $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/userland/examples_libzero/pfdnacluster_master $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/userland/examples_zc/zbalance_ipc $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/userland/examples_zc/zsend $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/userland/examples_zc/zcount $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/userland/examples_zc/zcount_ipc $RPM_BUILD_ROOT/usr/local/bin
+%endif
+
+
+# Clean out our build directory
+%clean
+rm -fr $RPM_BUILD_ROOT
+
+%files
+/usr/local/pfring/kernel/pf_ring.ko
+/usr/local/include/linux/pf_ring.h
+/usr/local/lib/libpfring.a
+/usr/local/lib/libpfring.so
+/usr/local/lib/libpcap.a
+/usr/local/include/pfring.h
+/usr/local/include/pfring_zc.h
+#/usr/local/lib/daq/daq_pfring.la
+/usr/local/lib/daq/daq_pfring.so
+/usr/local/lib/libsfbpf.so.0
+/usr/local/lib/libsfbpf.so.0.0.1
+%if %nodna == 0
+/usr/local/bin/pfdnabounce
+/usr/local/bin/pfdnacluster_master
+%endif
+/usr/local/bin/pfcount
+/usr/local/bin/pfsend
+/usr/local/bin/zbalance_ipc
+/usr/local/bin/zsend
+/usr/local/bin/zcount
+/usr/local/bin/zcount_ipc
+/usr/local/pfring/README.FIRST
+/usr/local/pfring/README-DAQ.1st
+/etc/init.d/pf_ring
+/etc/init.d/cluster
+/etc/init/pf_ring.conf
+/etc/ld.so.conf.d/pf_ring.conf
+
+# Set the default attributes of all of the files specified to have an
+# owner and group of root and to inherit the permissions of the file
+# itself.
+%defattr(-, root, root)
+
+%post
+/sbin/chkconfig pf_ring on > /dev/null 2>&1
+/sbin/chkconfig cluster on > /dev/null 2>&1
+/sbin/ldconfig > /dev/null 2>&1
+ 
+%changelog
+* Wed Dec  5 2012  <deri@centos.ntop.org> - @VERS@-%{buildrev}
+- 
+
+* Sat Mar 10 2012 Luca Deri <deri@ntop.org>
+- Original upstream version
+
+

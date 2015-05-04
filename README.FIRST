@@ -1,0 +1,77 @@
+PF_RING Drivers Models
+----------------------
+
+1. PF_RING-aware/ZC drivers
+These drivers are called "aware" as they are optimized for PF_RING. They
+can be used in two ways. As standard drivers (packets continue to pass
+inside the Linux stack), example: 
+pfcount -i eth1
+or in zero copy, for completely bypassing the Linux stack in both RX and 
+TX, and thus achieve line rate. As soon as one application opens the 
+interface in zero copy (ZC), such interface (while still visible by 
+ifconfig) cannot longer be used for standard networking (e.g. ping or SSH); 
+this until the interface is open in ZC, and once it is closed it returns 
+to be immediately available for standard Linux networking. In order to open 
+it in ZC you must prepend 'zc:' to the interface name, example: 
+pfcount -i zc:eth1
+
+2. DNA drivers
+These drivers have been used to implement kernel bypass until PF_RING 5.x
+and since the ZC introduction they will be available for some more time
+but they are deprecated in favour of ZC that offer the same performance
+while featuring much better flexibility. In future PF_RING releases, we
+expect to discontinue thes drivers.
+
+PF_RING from Virtual Machines (KVM)
+-----------------------------------
+With the introduction of PF_RING ZC, you can finally exploit acceleration
+even from withing a KVM virtual machine without using techniques such as
+PCIe bypass. This means that a VM can dynamically open network interfaces
+in ZC, implement complex packet processing topologies, all at 10 Gbit
+line rate. Please refer to userland/examples_zc/README.kvm for more
+information on how to exploit PF_RING ZC from KVM.
+
+As future activity, we might evaluate to port it to other hypervisors,
+but at the moment we target only KVM.
+
+Compilation
+-----------
+You need to have installed the basic compilation tools and libraries.
+On Ubuntu you can do
+# apt-get install build-essential bison flex linux-headers-$(uname -r) libnuma-dev
+
+At this point you can compile the module
+# make
+
+Installation
+------------
+# sudo su
+# cd kernel; make install
+# cd ../userland/lib; make install
+
+Testing PF_RING
+---------------
+In PF_RING/userland/examples we have coded several applications you can use
+for testing PF_RING. In particular
+- pfcount allows you to capture packets
+- pfsend to replay (or generate) traffic
+
+You can look at the application source code for learning how you can use
+the PF_RING API.
+
+Remember that before running any appliction, you need to load the pf_ring.ko
+kernel modules:
+# sudo su
+# insmod ./kernel/pf_ring.ko
+
+Documentation
+-------------
+If you need an extensive documentation, you can refer to the manual that
+is stored in the doc/ directory.
+
+The API documentation is available via doxygen, running
+# make documentation
+it will be generated in doc/html.
+
+-------------------------------------
+2011-15 - ntop.org

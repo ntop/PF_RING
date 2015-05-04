@@ -1,0 +1,79 @@
+Introduction
+------------
+The DNA driver allows you bypass the kernel and let your applications manipulate the card directly.
+This means that as soon as you have installed this driver, only DNA-aware applications will be 
+able to play with the card. 
+
+Prerequisites
+-------------
+
+We support DNA on modern kernels that have full multi-queue support. Please use
+kernel 2.6.26 or newer (we suggest 2.6.32 or better). No support will be offered
+on older kernels.
+
+
+Compilation and Installation
+----------------------------
+1. compile PF_RING
+- untar the PF_RING distribution on your home directory (e.g. ~/PF_RING)
+- cd PF_RING
+- make
+
+2. compile the DNA driver. Example for ixgbe do:
+- cd ./ixgbe/ixgbe-3.3.9-DNA/src/
+- make
+
+3. load PF_RING and the DNA driver
+- (as root) run ./load_dna_driver.sh
+
+Note that
+
+- you might need to change the interface names into your script
+
+- you can decide which adapters to enable as follows
+
+  insmod ./ixgbe.ko adapters_to_enable=<MAC addresses>
+
+  where adapters_to_enable contains the comma-separated list of adapters to enable with DNA
+
+- you can change the default number of rx/tx slots as follows
+
+  insmod ./ixgbe.ko num_rx_slots=8192 num_tx_slots=4096
+
+- you can change the MTU as follows
+
+  insmod ./ixgbe.ko mtu=9000
+
+- you can set the coreId of the numa node where memory has to be allocated as follows
+
+  insmod ./ixgbe.ko numa_cpu_affinity=0,0,0,0
+
+Packaging
+---------
+
+# ./configure
+
+- Ubuntu
+# make dkms-deb
+
+- CentoOS/Fedora/RedHat
+# make dkms-rpm
+
+
+Testing DNA
+-----------
+Supposing that you have cross-connected the DNA interfaces dnaX and dnaY, you can send packet 
+on one interface and receive them from the other. Example
+
+[Sender]
+# cd ~/PF_RING/userland/examples/
+# sudo ./pfsend -i dnaX -n 0
+
+[Receiver]
+# cd ~/PF_RING/userland/examples/
+# sudo ./pfcount -i dnaY
+(optionally you can add '-a' for maximum performance)
+
+---------------------------------------
+September 2011 - Luca Deri <deri@ntop.org>
+

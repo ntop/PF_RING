@@ -1,0 +1,271 @@
+DNA/Lizero Examples
+-------------------
+
+This file contains some examples that introduce you to libzero. 
+
+PF_RING ZC is the successor of libzero, so we encourage you to migrate to it when possible.
+
+We suppose that you have installed the DNA drivers and loaded them up in single RX queue.
+I also assume that there are two ports, dna0 and dna1, that are connected directly (loopback).
+
+PF_RING/kernel# insmod ./pf_ring.ko 
+PF_RING/drivers/DNA/ixgbe-XXX-DNA/src# rmmod ixgbe; insmod ./ixgbe.ko RSS=1,1; ifconfig dna1 up; ifconfig dna0 up
+
+We use single-RX queues to demonstrate the packet distributing capabilities of libzero and to show that in all
+our tests we have never used Intel's RSS.
+
+
+The hardware used for tests is:
+- Server: Supermicro X9SCL (Intel Corporation C202 chipset)
+- CPU:    Xeon E31230 @ 3.20GHz (4 cores + HyperThreading)
+- NICs:   10 Gbit Dual port 82599-based adapter
+
+
+Prerequisite (for all test):
+
+Start the traffic generator and leave it running as follows:
+	- pfsend -i dna1 -g 0 -b 4
+
+or (better) use a traffic generator and send traffic that can be balanced across cores (e.g. packets with rotating addresses).
+In order to test the code in the worst possible case, please send 60+4 bytes packets.
+
+*******************************************************************************
+*******************************************************************************
+
+Test 1. Hash incoming packets and read them on 1 thread
+
+Goal: Receive packets on one thread, hash them based on the IPs, and distribute them to consumer threads. In this example one 
+thread will receive and hash packets, and one consumer thread will count them.
+
+Command: pfdnacluster_multithread -i dna0 -c 1 -n 1
+
+Test Results:
+=========================
+Thread 0
+Absolute Stats: [1690596097 pkts rcvd][142010072148 bytes rcvd]
+                [1690596097 total pkts][0 pkts dropped (0.0 %)]
+                [10'245'583.66 pkt/sec][6885.03 Mbit/sec]
+Actual   Stats: [14882394 pkts][1000.1 ms][14'881'605.27 pkt/sec]
+=========================
+Aggregate Actual stats: [Captured 14'881'605.27 pkt/sec][Processed 14'881'771.26 pkt/sec][Sent 0.00 pkt/sec]
+
+*******************************************************************************
+*******************************************************************************
+
+Test 2. Hash incoming packets and read them on 2 threads
+
+Goal: Receive packets on one thread, hash them based on the IPs, and distribute them to consumer threads. In this example
+on thread will receive and hash packets, and two (-n) consumer thread will count them.
+
+Command: pfdnacluster_multithread -i dna0 -c 1 -n 2
+
+Test Results:
+=========================
+Thread 0
+Absolute Stats: [111614721 pkts rcvd][9375636564 bytes rcvd]
+                [111614721 total pkts][0 pkts dropped (0.0 %)]
+                [7'971'638.49 pkt/sec][5356.94 Mbit/sec]
+Actual   Stats: [7441408 pkts][1000.1 ms][7'440'559.77 pkt/sec]
+=========================
+Thread 1
+Absolute Stats: [111611137 pkts rcvd][9375335508 bytes rcvd]
+                [111615098 total pkts][0 pkts dropped (0.0 %)]
+                [7'971'382.52 pkt/sec][5356.77 Mbit/sec]
+Actual   Stats: [7441420 pkts][1000.1 ms][7'440'571.77 pkt/sec]
+=========================
+Aggregate Actual stats: [Captured 14'881'406.51 pkt/sec][Processed 14'881'497.50 pkt/sec][Sent 0.00 pkt/sec]
+=========================
+
+
+*******************************************************************************
+*******************************************************************************
+
+Test 3. Deliver each incoming packet to all threads and read them (2 threads)
+
+Goal: Same as test 2 with the difference that here we test fan-out: the same packet is sent to two threads in zero-copy.
+
+Command: pfdnacluster_multithread -i dna0 -c 1 -n 2 -m 2 [fan out]
+
+Test Results:
+=========================
+Thread 0
+Absolute Stats: [463617281 pkts rcvd][38943851604 bytes rcvd]
+                [463617281 total pkts][0 pkts dropped (0.0 %)]
+                [13'634'753.67 pkt/sec][9162.55 Mbit/sec]
+Actual   Stats: [14881484 pkts][1000.1 ms][14'880'263.81 pkt/sec]
+=========================
+Thread 1
+Absolute Stats: [463617722 pkts rcvd][38943888648 bytes rcvd]
+                [463617722 total pkts][0 pkts dropped (0.0 %)]
+                [13'634'765.79 pkt/sec][9162.56 Mbit/sec]
+Actual   Stats: [14881528 pkts][1000.1 ms][14'880'307.81 pkt/sec]
+=========================
+Aggregate Actual stats: [Captured 14'880'469.80 pkt/sec][Processed 29'761'006.59 pkt/sec][Sent 0.00 pkt/sec]
+=========================
+
+
+*******************************************************************************
+*******************************************************************************
+
+Test 4. Hash incoming packets and read them from 2 applications
+
+Goal: Same as test 2 with the difference that here we test the ability to distribute packets in zero copy to applications. The master application (pfdnacluster_master) will read packets via DNA, hash them and distribute them to applications in zero copy. The consumer applications (slaves) will read them via a special PF_RING socket. As the master application is responsible for setting up the cluster, it must be started before any slave; furthermore, slaves will live as long as the cluster is active (i.e. the master application is running).
+
+Commands:
+- Master:  pfdnacluster_master -i dna0 -c 10 -n 2
+- Slave 1: pfcount -i dnacluster:10 -g 2
+- Slave 2: pfcount -i dnacluster:10 -g 3
+
+
+Test Results:
+=========================
+Master
+
+Actual Stats:   RX 14'881'939 pkts [1'000.06 ms][14'880'912.21 pps] RX Processed 14'882'119 pkts [1'000.06 ms][14'881'092.20 pps]
+---
+Absolute Stats: RX 549'177'282 pkts [15'253'766.90 pkt/sec] RX Processed 266'712'322 pkts [7'408'113.41 pkt/sec]
+Actual Stats:   RX 14'880'430 pkts [1'000.07 ms][14'879'254.53 pps] RX Processed 14'880'256 pkts [1'000.07 ms][14'879'080.55 pps]
+=========================
+
+Slave 1
+=========================
+Absolute Stats: [267877377 pkts rcvd][0 pkts dropped]
+Total Pkts=375719002/Dropped=0.0 %
+267'877'377 pkts - 22'501'699'668 bytes [7'653'330.14 pkt/sec - 5'143.03 Mbit/sec]
+=========================
+Actual Stats: 7440896 pkts [1'000.04 ms][7'440'590.93 pps/5.00 Gbps]
+=========================
+
+
+Slave 2
+=========================
+pfcount -i dnacluster:10 -g 3
+
+=========================
+Absolute Stats: [312524801 pkts rcvd][0 pkts dropped]
+Total Pkts=487147829/Dropped=0.0 %
+312'524'801 pkts - 26'252'083'284 bytes [7'622'183.00 pkt/sec - 5'122.10 Mbit/sec]
+=========================
+Actual Stats: 7440640 pkts [1'000.05 ms][7'440'223.34 pps/5.00 Gbps]
+
+
+*******************************************************************************
+*******************************************************************************
+
+Test 5. Send packets through a cluster to an interface
+
+Goal: demonstrate transmission capabilities of applications via a libzero cluster. As the cluster is designed to handle multiple DNA interfaces, the sender application (pfsend in this test) must specify the interface id of the egress interface. The current pfdnacluster_master demo application is limited to one interface (-i): this is a limitation of the demo application, not of the cluster.
+
+Commands:
+- Master:  pfdnacluster_master -i dna0 -c 10 -n 1 -s
+- Slave transmitter: pfsend -i dnacluster:10 -x <dna0 output interface index>
+
+You can get the dna0 interface id (the same interface of the pfdnacluster_master application) as follows:
+
+# grep Index /proc/net/pf_ring/dev/dna0/info 
+Index:             6
+
+so in this case you need to do "pfsend -i dnacluster:10 -x 6"
+
+Test Results:
+=========================
+Master
+
+Absolute Stats: RX 0 pkts [0.00 pkt/sec] RX Processed 0 pkts [0.00 pkt/sec] TX 81'448'623 pkts [11'634'465.48 pkt/sec]
+Actual Stats:   RX 0 pkts [1'000.07 ms][0.00 pps] RX Processed 0 pkts [1'000.07 ms][0.00 pps] TX 14882292 pkts [1'000.07 ms][14'881'116.39 pps]
+
+
+Slave
+=========================
+
+Sending packets on dnacluster:10
+Using PF_RING v.5.3.1
+NOT using zero-copy TX
+TX rate: [current 14'863'525.81 pps/9.99 Gbps][average 14'863'525.81 pps/9.99 Gbps][total 14'863'615.00 pkts]
+TX rate: [current 14'881'527.14 pps/10.00 Gbps][average 14'872'526.61 pps/9.99 Gbps][total 29'745'663.00 pkts]
+TX rate: [current 14'880'910.61 pps/10.00 Gbps][average 14'875'321.28 pps/10.00 Gbps][total 44'626'901.00 pkts]
+TX rate: [current 14'881'476.84 pps/10.00 Gbps][average 14'876'860.17 pps/10.00 Gbps][total 59'508'735.00 pkts]
+TX rate: [current 14'880'440.63 pps/10.00 Gbps][average 14'877'576.26 pps/10.00 Gbps][total 74'389'503.00 pkts]
+
+
+*******************************************************************************
+*******************************************************************************
+
+Test 6. Demonstrate the flexibility user-specified hashing
+
+Goal: Show how to create a custom hashing function so that users can write their own hashes. We have coded into the pfdnacluster_master three different hashing functions.
+
+-m <hash mode>  Hashing modes:
+                0 - IP hash (default)
+                1 - MAC Address hash
+                2 - IP protocol hash
+ 
+Commands:
+- Master:  pfdnacluster_master -i dna0 -c 10 -n 2 -m X (where X is 0, 1, or 2)
+- Slave 1: pfcount -i dnacluster:10 -g 2
+- Slave 2: pfcount -i dnacluster:10 -g 3
+
+Test Results:
+=========================
+Based on the input traffic pattern/type you should see traffic going to slave 1, slave 2 or both.
+
+
+*******************************************************************************
+*******************************************************************************
+
+Test 7. Demonstrate flexible packet-forward capabilities across interfaces
+
+Goal: Demonstrate how to forward packets at line rate across interfaces using a custom function that accesses the packet payload and can decide which packets to forward, and which to filter/drop.
+
+Command: pfdnabounce -i dna0 -o dna1 -a (forward packets at line rate dna0 -> dna1)
+
+Test Results:
+See http://www.ntop.org/wp-content/uploads/2012/04/DNA_ip_forward_RFC2544.pdf
+
+*******************************************************************************
+*******************************************************************************
+
+Test 8. Aggregate traffic from multiple interfaces, hash packets and read them on 2 threads
+
+Goal: Receive packets from multiple interfaces on one thread in a Round-Robin manner, hash them based on the IPs, and distribute them to consumer threads. In this example one thread will receive and hash packets, and two (-n) consumer thread will count them.
+
+Command: pfdnacluster_multithread -i dna0,dna1 -c 1 -n 2
+
+*******************************************************************************
+*******************************************************************************
+
+Test 9. Aggregate traffic from multiple interfaces, hash packets, read them on 2 threads, forward them directly to an egress interface using RSS queues
+
+Goal: Receive packets from multiple interfaces on one thread in a Round-Robin manner, hash them based on the IPs, and distribute them to consumer threads. In this example one thread will receive and hash packets, and two (-n) consumer thread will count and transmit them to an egress interface using per-thread RSS queues with standard DNA in zero-copy.
+
+Command: ./pfdnacluster_mt_rss_frwd -i dna0 -o dna1 -c 1 -n 2 -r 1 -g 2:3 
+
+*******************************************************************************
+*******************************************************************************
+
+Test 10. Aggregate traffic from multiple interfaces, hash packets, balance them across 2 instances on one application, send a full copy to another application, forward all the traffic to an egress interface using a slave thread
+
+Goal: Same as test 4 with the difference that here we distribute packets in zero copy to several applications and an egress interface (dna1) at the same time. The master application (pfdnacluster_master) will read packets via DNA, hash them and distribute them to applications in zero copy (every application receives a full copy of the traffic, packets are distributed across the instances of each application). The consumer applications (slaves) will read them via a special PF_RING socket. As the master application is responsible for setting up the cluster, it must be started before any slave; furthermore, slaves will live as long as the cluster is active (i.e. the master application is running).
+
+Commands:
+- Master:  pfdnacluster_master -i dna0 -c 10 -n 2,1 -o dna1 -r 0 -f 1
+- Slave 1 Instance 1: pfcount -i dnacluster:10@0 -g 2
+- Slave 1 Instance 2: pfcount -i dnacluster:10@1 -g 3
+- Slave 2 Instance 1: tcpdump -i dnacluster:10@2
+
+
+*******************************************************************************
+*******************************************************************************
+
+Additional tests
+
+The above tests are just a few examples of what you can do with DNA and libzero. The best is that you link you favourite application (e.g. snort, nProbe, or tcpdump) with libzero and see yourself what you can do with it.
+
+Examples:
+- nprobe -i dnacluster:10 
+- tcpdump -i dnacluster:10 
+
+*******************************************************************************
+*******************************************************************************
+
+May 2012 - ntop.org

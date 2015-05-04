@@ -1,0 +1,119 @@
+
+This EULA applies ONLY to binary libraries stored on this directory
+that can be optionally linked with PF_RING but are not integral part of it.
+
+--------------------------------------------------------------------------------
+
+                        NTOP END USER LICENSE AGREEMENT
+
+THIS "END USER LICENSE AGREEMENT" ("EULA") IS A BINDING LEGAL AGREEMENT. BY
+USING THE "SOFTWARES PROVIDED TOGETHER WITH THIS EULA" (THE "SOFTWARE"), OR
+USING ANY AUTHORIZATION CODE PROVIDED BY THE LICENSOR, YOU ACKNOWLEDGE THAT YOU
+HAVE READ THIS EULA, THAT YOU UNDERSTAND IT, AND THAT YOU AGREE TO BE BOUND BY
+ITS TERMS. IF YOU DO NOT AGREE WITH THE TERMS AND CONDITIONS OF THIS EULA, DO
+NOT MAKE ANY USE OF THE SOFTWARE OR ANY USE OF AUTHORIZATION CODES. YOUR USE OF
+THE SOFTWARE AND YOUR USE OF ANY AUTHORIZATION CODE IS SUBJECT AT ALL TIMES TO
+THE TERMS AND CONDITIONS HERE, INCLUDING ALL PROVISIONS REGARDING THE
+LIMITATIONS OF THE LICENSOR LIABILITY.
+
+1. Grant of License in Favour of Registered Users. "NTOP di Deri Luca"
+("Licensor") grants you a non-exclusive license to use the Software (including
+any updates of the Software that the Licensor may make available to you at his
+own discretion) and any "documentation files pertaining to the Software"
+("Documentation"), only in connection with a single hardware unit with a unique
+"Media Access Control" ("MAC") address or unique system identifier of any kind.
+All copyright notices in the Software and Documentation must be retained at all
+times. The Software and Documentation shall be used only for your own personal,
+non-commercial use and not for the benefit of any other person or entity. You
+may also make one copy of the Software in machine-readable form only for back-up
+purposes, provided you properly reproduce also both any Licensor's copyright
+notices/credits and any proprietary legends/disclaimers.
+
+2. IP Ownership. All the intellectual property rights pertaining to Software and
+Documentation shall be reserved to the Licensor, at all times. Provided the
+Section 1 above, any other use of the Software by any person or entity of any
+kind is strictly forbidden and is a violation of this EULA. All the rights not
+expressly granted to you herein are reserved to the Licensor. You are not
+allowed to remove any Licensor's copyright notices/credits and any proprietary
+legends/disclaimers from any copy of Software, Documentation or any component
+thereof.
+
+3. Restrictions. You are not allowed to or permit/assist any third party to: (a)
+publish, display, disclose, rent, lease, modify, copy, loan, distribute, or
+create derivative works based on the Software or any part thereof; (b) reverse
+engineer, decompile, translate, adapt, or disassemble the Software or any part
+thereof; (c) attempt to create or otherwise reproduce in any form the source
+code from the object code of any portion or component of the licensed Software;
+(d) sublicense the Software or permit the exploitation of the Software by more
+than a single hardware unit with a unique MAC address or unique system
+identifier of any kind; (e) attempt to disable or circumvent any technological
+protection measure of the Software or assist third parties to do so.
+
+4. No Warranty. Software is provided "as it is". To the maximum extent permitted
+by applicable laws, Licensor disclaims warranties of any kind, either explicit
+or implied, including, without limitation, implied warranties of merchantability
+and fitness for a particular purpose. Licensor does not warrant that the
+functions contained in the Software will meet any requirements or needs you may
+have, or that the Software will operate error free, or in an uninterrupted
+fashion, or that any defects or errors in the Software will be corrected, or
+that the Software is compatible with any particular platform. Licensor is not
+obligated to provide any updates to the Software.
+
+5. Limitation of Liability. To the extent not prohibited by applicable laws, in
+no event shall the Licensor be liable to you or any third party for any
+incidental or consequential damages (including - without limitation - indirect,
+special, punitive or exemplary damages for loss of business, loss of profits,
+business interruption or loss of business information) arising out of or related
+to the use of or the inability to use the Software, or for any claim by any
+other party, even if the Licensor has been advised of the possibility of such
+damages. In no event shall Licensor's total liability to you for all damages
+exceed the amount of the license fee paid by you to Licensor for Software and
+Documentation.
+
+6. Export Restrictions. You may not export Software and Documentation in
+violation of applicable laws and regulations.
+
+7. High Risk Activities. The licensed Software is not fault-tolerant and is not
+designed, manufactured or intended for any kind of use with on-line control
+equipment in hazardous environments requiring fail-safe performance (such as in
+the operation of nuclear facilities, aircraft navigation or communication
+systems, air traffic control, direct life support machines or weapon systems in
+which the failure of the Software could lead directly to death, personal injury
+or severe physical or environmental damage: all the so called "High Risk
+Activities"). Accordingly, Licensor specifically disclaims any express or
+implied warranty of fitness for High Risk Activities.
+
+8. Ethics. The licensor commits itself to use the Software in compliance with
+all applicable local, national and international laws, rules and
+regulations, including any laws regarding the transmission of technical data
+exported from its country of residence. In no case the licensed Software can
+be used to track, spy, intercept or collect evidence of network
+communications to be used against individuals or organizations, to prosecute
+individuals or organizations, or to restrict their freedom.
+
+9. Termination. Licensor may terminate this Agreement at any time if you violate
+its terms. Upon termination, you must immediately destroy or return to Licensor
+the Software and Documentation. The provisions of Sections 2 (IP Ownership), 3
+(Restrictions), 4 (No Warranty), 5 (Limitation of Liability) and the provisions
+of this Section 9 (Termination) shall in any case survive the termination
+or expiration hereof.
+
+10. General Provisions, Governing Law, Jurisdiction. This EULA shall be governed
+by, construed and interpreted in accordance with Italian Law. The licensee
+agrees that any dispute arising from or connected to this EULA shall be
+submitted to the exclusive jurisdiction of the Italian Specialized IP Courts.
+Therefore, the jurisdiction of any other court is expressly excluded. This EULA
+shall constitute the entire agreement between the parties; any waiver or
+modification of this EULA shall be effective only if it is in writing and signed
+by both parties. Should any part of this EULA be found invalid or unenforceable
+by an Italian Specialized IP Court, the remainder of this EULA shall be
+interpreted so as to reasonably effect the intention of the parties.
+
+EACH PARTY IS HEREBY CONFIRMING ITS AGREEMENT WITH THE FOREGOING BY SIGNING AND
+RETURNING ONE COPY OF THIS EULA TO THE OTHER PARTY.
+
+PURSUANT TO ARTICLES 1341 AND 1342 OF THE ITALIAN CIVIL CODE, THE PARTIES HEREBY
+ACKNOWLEDGE AND EXPRESSLY APPROVE SECTIONS 1 (Grant of License in Favour of
+Registered Users), 2 (IP Ownership), 3 (Restrictions), 4 (No Warranty), 5
+(Limitation of Liability), 6 (Export Restrictions), 7 (High Risk Activities), 
+8 (Ethics), 9 (Termination) AND 10 (General Provisions, Governing Law, Jurisdiction).

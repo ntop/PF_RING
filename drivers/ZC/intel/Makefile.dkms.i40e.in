@@ -1,0 +1,39 @@
+all: install
+
+add: veryclean
+	\/bin/rm -rf /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@
+	mkdir -p /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
+	cd @I40E@/@I40E@-@I40E_VERSION@/src/ ; make clean; cp -r i40e/* /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
+	cd @I40E@/@I40E@-@I40E_VERSION@/src/i40e/ ; cp ../../../../../../../kernel/linux/pf_ring.h /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
+	cd @I40E@/@I40E@-@I40E_VERSION@/src/ ; cp Makefile /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
+	sed -i -e 's|../../../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/*.c
+	sed -i -e 's|../../../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/*.h
+	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-objs/i40e_zc-objs/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/Kbuild
+	cp dkms.conf.@I40E@ /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/dkms.conf 
+	dkms add -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
+
+build: add
+	dkms build -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
+
+install: build
+	dkms install -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
+
+deb: add add_deb install
+	dkms mkdeb -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --source-only
+
+rpm: add add_rpm install
+	dkms mkrpm -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --source-only
+
+add_rpm:
+	cp -f zc.spec /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/@I40E@-zc-dkms-mkrpm.spec
+
+add_deb:
+	cp -r zc-dkms-mkdeb /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/@I40E@-zc-dkms-mkdeb
+	-cd  /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/@I40E@-zc-dkms-mkdeb ; find . -type d -name ".svn" -exec rm -fr {} \;
+
+remove:
+	-dkms remove -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --all
+
+veryclean: remove
+	\/bin/rm -fr /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@
+	

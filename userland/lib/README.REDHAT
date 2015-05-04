@@ -1,0 +1,4 @@
+On RedHat systems it is compulsory to install libnl-devel package (e.g. yum install libnl-devel).
+This because on this platform this is prerequisite due to package dependencies.
+
+After you have installed such package you can compile the applications stored on this directory.

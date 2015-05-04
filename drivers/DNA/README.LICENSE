@@ -1,0 +1,17 @@
+DNA is split in two parts:
+    - DNA kernel driver
+    - DNA user-space library
+
+This directory contains the DNA drivers distributed in source format. The user-space
+library is distributed as binary library under PF_RING/userland/lib.
+
+As our work is self-funded, we need some income in order to continue with our research.
+For this reason the user-space library (and only that one, the drivers are free)
+requires a per-MAC address unlock code. On the other hand you are free to test it:
+with no unlock-code the application can work for a few minutes in order to allow 
+you to evaluate it.
+
+As usual, we give avay free unlock codes to universities and researchers.
+
+Please go to http://www.ntop.org/pf_ring/dna/ for all details.
+

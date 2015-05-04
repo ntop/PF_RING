@@ -1,0 +1,641 @@
+i40e Linux* Base Driver for the Intel(R) XL710 Ethernet Controller Family
+===============================================================================
+
+
+===============================================================================
+
+September 29, 2014
+
+===============================================================================
+
+
+Contents
+--------
+
+- Overview
+- Identifying Your Adapter
+- Building and Installation
+- Command Line Parameters
+- Intel(R) i40e Ethernet Flow Director
+- Additional Features & Configurations
+- Known Issues
+
+
+===============================================================================
+
+
+Overview
+--------
+
+This document describes the i40e Linux* Base Driver for the XL710 Ethernet
+Controller Family of Adapters. The Linux base driver supports the 2.6.32 and
+newer kernels and includes support for Linux supported x86_64 systems.
+
+The following features are available in supported kernels:
+
+- Native VLANs
+- Channel Bonding (teaming)
+- SNMP
+- Generic Receive Offload
+
+Adapter teaming is implemented using the native Linux Channel bonding
+module. This is included in supported Linux kernels. Channel Bonding
+documentation can be found in the Linux kernel source:
+/Documentation/networking/bonding.txt
+
+Driver information can be obtained using the ethtool, lspci, or iproute2
+ip command. Instructions on updating ethtool can be found in the
+Additional Features & Configurations section later on this page.
+
+
+Identifying Your Adapter
+------------------------
+
+The driver in this release is compatible with XL710 and X710-based Intel
+Ethernet Network Connections.
+
+For more information on how to identify your adapter, go to the Adapter &
+Driver ID Guide at:
+http://support.intel.com/support/go/network/adapter/proidguide.htm
+
+For the latest Intel network drivers for Linux, refer to the following
+website. Select the link for your adapter.
+http://support.intel.com/support/go/network/adapter/home.htm
+
+
+SFP+ Devices with Pluggable Optics
+----------------------------------
+
+SR Modules
+----------
+  Intel     DUAL RATE 1G/10G SFP+ SR (bailed)    FTLX8571D3BCV-IT
+  Intel     DUAL RATE 1G/10G SFP+ SR (bailed)    AFBR-703SDZ-IN2
+
+LR Modules
+----------
+  Intel     DUAL RATE 1G/10G SFP+ LR (bailed)    FTLX1471D3BCV-IT
+  Intel     DUAL RATE 1G/10G SFP+ LR (bailed)    AFCT-701SDZ-IN2
+
+QSFP+ Modules
+-------------
+  Intel     TRIPLE RATE 1G/10G/40G QSFP+ SR (bailed)    E40GQSFPSR
+  Intel     TRIPLE RATE 1G/10G/40G QSFP+ SR (bailed)    E40GQSFPLR
+    QSFP+ 1G speed is not supported on XL710 based devices.
+
+X710/XL710 Based SFP+ adapters support all passive and active limiting direct
+attach cables that comply with SFF-8431 v4.1 and SFF-8472 v10.4 specifications.
+
+
+===============================================================================
+
+
+Building and Installation
+-------------------------
+
+To build a binary RPM* package of this driver, run 'rpmbuild -tb i40e*.tar.gz'.
+
+NOTES:
+  - For the build to work properly, the currently running kernel MUST match
+    the version and configuration of the installed kernel sources. If you have
+    just recompiled the kernel, reboot the system before building.
+  - RPM functionality has only been tested in Red Hat distributions.
+
+1. Move the base driver tar file to the directory of your choice. For
+   example, use '/home/username/i40e' or '/usr/local/src/i40e'.
+
+2. Untar/unzip the archive, where <x.x.x> is the version number for the
+   driver tar file:
+
+     tar zxf i40e-<x.x.x>.tar.gz
+
+3. Change to the driver src directory, where <x.x.x> is the version number
+   for the driver tar:
+
+     cd i40e-<x.x.x>/src/
+
+4. Compile the driver module:
+
+     # make install
+
+   The binary will be installed as:
+
+     /lib/modules/`uname -r`/kernel/drivers/net/i40e/i40e.ko
+
+   The install location listed above is the default location. This may differ
+   for various Linux distributions.
+
+5. Load the module using the modprobe command:
+
+     modprobe i40e <parameter>=<value>
+
+   Make sure that any older i40e drivers are removed from the kernel before
+   loading the new module:
+
+     rmmod i40e; modprobe i40e
+
+6. Assign an IP address to the interface by entering the following, where ethX
+   is the interface name that was shown in dmesg after modprobe:
+
+     ip address add <IP_address>/<netmask bits> dev ethX
+
+7. Verify that the interface works. Enter the following, where IP_address
+   is the IP address for another machine on the same subnet as the interface
+   that is being tested:
+
+     ping <IP_address>
+
+NOTE:
+   For certain distributions like (but not limited to) RedHat Enterprise
+   Linux 7 and Ubuntu, once the driver is installed the initrd/initramfs
+   file may need to be updated to prevent the OS loading old versions
+   of the i40e driver. The dracut utility may be used on RedHat
+   distributions:
+	# dracut --force
+   For Ubuntu:
+	# update-initramfs -u
+
+
+==============================================================================
+
+
+Command Line Parameters
+-----------------------
+
+In general, ethtool and other OS specific commands are used to configure user
+changeable parameters after the driver is loaded. The i40e driver only supports
+the max_vfs kernel parameter on older kernels that do not have the standard
+sysfs interface. The only other module parameter supported is the debug
+parameter that can control the default logging verbosity of the driver.
+
+If the driver is built as a module, the following optional parameters are used
+by entering them on the command line with the modprobe command using this
+syntax:
+
+      modprobe i40e [<option>=<VAL1>]
+
+For example:  modprobe i40e max_vfs=7
+
+The default value for each parameter is generally the recommended setting
+unless otherwise noted.
+
+max_vfs
+-------
+Valid Range:     1-32 (X710 based devices)
+                 1-64 (XL710 based devices)
+
+Default Value:   0
+
+NOTE: This parameter is only used on kernel 3.7.x and below. On kernel 3.8.x
+and above, use sysfs to enable VFs. For example:
+#echo $num_vf_enabled > /sys/class/net/$dev/device/sriov_numvfs   //enable VFs
+#echo 0 > /sys/class/net/$dev/device/sriov_numvfs                 //disable VFs
+
+This parameter adds support for SR-IOV. It causes the driver to spawn up
+to max_vfs worth of virtual functions. Some hardware configurations
+support fewer SR-IOV instances, as the whole XL710 controller (all
+functions) is limited to 128 SR-IOV interfaces in total.
+
+NOTE: When SR-IOV mode is enabled, hardware VLAN filtering and VLAN tag
+stripping/insertion will remain enabled. The old VLAN filter should be
+removed before the new VLAN filter is added. For example:
+
+    ip link set eth0 vf 0 vlan 100     // set vlan 100 for VF 0
+    ip link set eth0 vf 0 vlan 0       // delete vlan 100
+    ip link set eth0 vf 0 vlan 200     // set a new vlan 200 for VF 0
+
+
+
+Intel(R) i40e Ethernet Flow Director
+------------------------------------
+
+The Flow Director performs the following tasks:
+
+  - Directs receive packets according to their flows to different queues.
+  - Enables tight control on routing a flow in the platform.
+  - Matches flows and CPU cores for flow affinity.
+  - Supports multiple parameters for flexible flow classification and load
+    balancing.
+
+NOTES:
+
+  - The Flow Director is enabled only if the kernel supports multiple
+    transmit queues.
+  - An included script (set_irq_affinity) automates setting the IRQ to
+    CPU affinity.
+  - The i40e Linux driver does not support configuration of the mask field.
+    It only accepts rules that completely qualify a certain flow type.
+
+ethtool commands:
+
+  - To enable or disable the Flow Director
+
+	# ethtool -K ethX ntuple <on|off>
+
+    When disabling ntuple filters all the user programed filters are flushed
+    from the driver cache and hardware. Filters must be re-added if they are
+    needed when ntuple is re-enabled.
+
+  - To add a filter that directs packet to queue 2, use -U or -N switch
+
+        # ethtool -N ethX flow-type tcp4 src-ip 192.168.10.1 dst-ip \
+          192.168.10.2 src-port 2000 dst-port 2001  action 2 [loc 1]
+
+  - To see the list of filters currently present
+	# ethtool <-u|-n> ethX
+
+  Application Targeted Routing (ATR) Perfect Filters
+  --------------------------------------------------
+  ATR is enabled by default when the kernel is in multiple transmit queue mode.
+  An ATR flow director filter rule is added when a TCP-IP flow starts and is
+  deleted when the flow ends. When a TCP-IP Flow Director rule is added from
+  ethtool (Sideband filter), ATR is turned off by the driver. To re-enable ATR,
+  the sideband can be disabled with the ethtool -K option. If sideband is
+  re-enabled after ATR is re-enabled, ATR remains enabled until a TCP-IP flow
+  is added. When all TCP-IP sideband rules are deleted, ATR is automatically
+  re-enabled.
+
+  Packets that match the ATR rules are counted in fdir_atr_match stats in
+  ethtool, which also can be used to verify whether ATR rules still exist.
+
+  Sideband Perfect Filters
+  ------------------------
+  Sideband Perfect Filters is an interface for loading the filter table that
+  funnels all flow into queue_0 unless an alternative queue is specified
+  using "action." If action is used, any flow that matches the filter criteria
+  will be directed to the appropriate queue. Rules may be deleted from the
+  table. This is done via
+
+        ethtool -U ethX delete N
+
+  where N is the rule number to be deleted, as specified in the loc value in
+  the filter add command.
+
+  If the queue is defined as -1, the filter drops matching packets. To account
+  for Sideband filter matches, the fdir_sb_match stats in ethtool can be used.
+
+  In addition, rx-N.rx_packets shows the number of packets processed by the
+  Nth queue.
+
+  NOTES:
+
+    - Receive Packet Steering (RPS) and Receive Flow Steering (RFS) are not
+      compatible with Flow Director. If Flow Director is enabled, these will
+      be disabled.
+    - The VLAN field for Flow Director is not explicitly  supported in the i40e
+      driver.
+
+  When filter rules are added from Sideband or ATR and the Flow Director filter
+  table is full, the ATR rule is turned off by the driver. Subsequently, the
+  Sideband filter rule is then turned off. When space becomes available in the
+  filter table through filter rule deletion (i.e., an ATR rule or Sideband rule
+  is deleted), the Sideband and ATR rule additions are turned back on.
+
+  Occasionally, when the filter table is full, you will notice HW errors when
+  you try to add new rules. The i40e driver will call for a filter flush and
+  sideband filter list replay. This will help flush any stale ATR rules and 
+  create space.
+
+
+==============================================================================
+
+
+Additional Features & Configurations
+------------------------------------
+
+Configuring the Driver on Different Distributions
+-------------------------------------------------
+Configuring a network driver to load properly when the system is started is
+distribution dependent. Typically, the configuration process involves adding
+an alias line to /etc/modules.conf or /etc/modprobe.conf as well as editing
+other system startup scripts and/or configuration files. Many popular Linux
+distributions ship with tools to make these changes for you. To learn the
+proper way to configure a network device for your system, refer to your
+distribution documentation. If during this process you are asked for the
+driver or module name, the name for the Linux Base Driver for the
+Intel(R) 40 Gigabit PCI Express Family of Adapters is i40e.
+
+Viewing Link Messages
+---------------------
+Link messages will not be displayed to the console if the distribution is
+restricting system messages. In order to see network driver link messages on
+your console, set dmesg to eight by entering the following:
+
+    # dmesg -n 8
+
+NOTE: This setting is not saved across reboots.
+
+Jumbo Frames
+------------
+Jumbo Frames support is enabled by changing the MTU to a value larger than
+the default of 1500 bytes. The maximum value for the MTU is 9710. Use the
+ifconfig command to increase the MTU size. For example, enter the following
+where <x> is the interface number:
+
+    # ifconfig ethx mtu 9000 up
+
+This setting is not saved across reboots. The setting change can be made
+permanent by adding MTU = 9000 to the file
+/etc/sysconfig/network-scripts/ifcfg-eth<x> for RHEL or to the file
+/etc/sysconfig/network/<config_file> for SLES.
+
+The maximum MTU setting for Jumbo Frames is 9710. This value coincides with
+the maximum Jumbo Frames size of 9728. This driver will attempt to use
+multiple page sized buffers to receive each jumbo packet. This should help
+avoid buffer starvation issues when allocating receive packets.
+
+ethtool
+-------
+The driver uses the ethtool interface for driver configuration and
+diagnostics, as well as displaying statistical information. The latest
+ethtool version is required for this functionality.
+
+The latest release of ethtool can be found at:
+http://sourceforge.net/projects/gkernel
+
+  Supported ethtool Commands and Options
+  --------------------------------------
+  -n --show-nfc
+    Retrieves the receive network flow classification configurations.
+
+  rx-flow-hash tcp4|udp4|ah4|esp4|sctp4|tcp6|udp6|ah6|esp6|sctp6
+    Retrieves the hash options for the specified network traffic type.
+
+  -N --config-nfc
+    Configures the receive network flow classification.
+
+  rx-flow-hash tcp4|udp4|ah4|esp4|sctp4|tcp6|udp6|ah6|esp6|sctp6 m|v|t|s|d|f|n|r...
+    Configures the hash options for the specified network traffic type.
+
+    udp4 UDP over IPv4
+    udp6 UDP over IPv6
+
+    f Hash on bytes 0 and 1 of the Layer 4 header of the rx packet.
+    n Hash on bytes 2 and 3 of the Layer 4 header of the rx packet.
+
+NAPI
+----
+NAPI (Rx polling mode) is supported in the i40e driver.
+
+See ftp://robur.slu.se/pub/Linux/net-development/NAPI/usenix-paper.tgz for
+more information on NAPI.
+
+Flow Control
+------------
+Flow control is disabled by default. To enable it, use ethtool:
+
+    # ethtool -A eth? autoneg off rx on tx on
+
+NOTE: You must have a flow control capable link partner.
+
+MAC and VLAN Anti-spoofing Feature
+----------------------------------
+When a malicious driver attempts to send a spoofed packet, it is dropped by
+the hardware and not transmitted. 
+
+NOTE: This feature can be disabled for a specific Virtual Function (VF).
+  ip link set <pf dev> vf <vf id> spoofchk {off|on}
+
+Support for UDP RSS
+-------------------
+This feature adds an on/off switch for hashing over certain flow types. The
+default setting is enabled.
+
+IEEE 1588 PTP
+-------------
+Precision Time Protocol (PTP) is used to synchronize clocks in a computer
+network and is supported in the i40e driver.
+
+The I40E_PTP is a compile time flag. The user may enable PTP at compile time
+by adding CFLAGS_EXTRA="-DI40E_PTP" to the make file when it is being
+compiled:
+
+  make CFLAGS_EXTRA="-DI40E_PTP" install
+
+VXLAN Overlay HW Offloading
+---------------------------
+VXLAN Overlay HW Offloading is enabled by default. The i40e Linux driver
+features VXLAN Overlay HW Offloading support. To view and configure
+VXLAN on a VXLAN-overlay offload enabled device,  use the following
+commands:
+
+  # ethtool -k ethX
+    (This command displays the offloads and their current state.)
+  # ethtool -K ethX tx-udp_tnl-segmentation [off|on]
+    (This enables/disables VXLAN support in the driver.)
+
+For more information on configuring your network for VXLAN overlay support,
+refer to the Intel Technical Brief, "Creating Overlay Networks Using Intel
+Ethernet Converged Network Adapters" (Intel Networking Division, August 2013):
+
+  http://www.intel.com/content/dam/www/public/us/en/documents/technology-briefs/
+  overlay-networks-using-converged-network-adapters-brief.pdf
+
+
+===============================================================================
+********************************************************************************
+
+Known Issues
+------------
+
+Virtual machine does not get link
+---------------------------------
+If the virtual machine has more than one virtual port assigned to it, and those
+virtual ports are bound to different physical ports, you may not get link on all
+of the virtual ports. The following command may work around the issue:
+  ethtool –r <PF>
+Where <PF> is the PF interface in the host, for example: p5p1. You may need to
+run the command more than once to get link on all virtual ports.
+
+
+Enabling TSO may cause data integrity issues
+--------------------------------------------
+Enabling TSO on kernel 3.14 or newer may cause data integrity issues. 
+Kernel 3.10 and older do not exhibit this behavior.
+
+
+Changing the number of Rx or Tx queues with ethtool -L may cause a kernel panic
+-------------------------------------------------------------------------------
+Changing the number of Rx or Tx queues with ethtool -L while traffic is flowing 
+and the interface is up may cause a kernel panic. Bring the interface down first
+to avoid the issue. For example:
+  ip link set ethx down
+  ethtool -L ethx combined 4
+
+Adding a Flow Director Sideband rule fails incorrectly
+------------------------------------------------------
+If you try to add a Flow Director rule when no more sideband rule space is
+available, i40e logs an error that the rule could not be added, but ethtool
+returns success. You can remove rules to free up space. In addition, remove
+the rule that failed. This will evict it from the driver's cache.
+
+Flow Director Sideband Logic adds duplicate filter
+--------------------------------------------------
+The Flow Director Sideband Logic adds a duplicate filter in the software filter
+list if the location is not specified or the specified location differs from
+the previous location but has the same filter criteria. In this case, the
+second of the two filters that appear is the valid one in hardware and it
+decides the filter action.
+
+Multiple Interfaces on Same Ethernet Broadcast Network
+------------------------------------------------------
+Due to the default ARP behavior on Linux, it is not possible to have one
+system on two IP networks in the same Ethernet broadcast domain
+(non-partitioned switch) behave as expected. All Ethernet interfaces will
+respond to IP traffic for any IP address assigned to the system. This results
+in unbalanced receive traffic.
+
+If you have multiple interfaces in a server, turn on ARP filtering by
+entering: echo 1 > /proc/sys/net/ipv4/conf/all/arp_filter
+
+This only works if your kernel's version is higher than 2.4.5.
+
+NOTE: This setting is not saved across reboots. The configuration change can
+be made permanent by adding the following line to the /etc/sysctl.conf file:
+
+    net.ipv4.conf.all.arp_filter = 1
+
+The change can also be made permanent by installing the interfaces in
+separate broadcast domains (either in different switches or in a switch
+partitioned to VLANs).
+
+UDP Stress Test Dropped Packet Issue
+------------------------------------
+Under small packets UDP stress test with the i40e driver, the Linux system may
+drop UDP packets due to the fullness of socket buffers. The driver Flow
+Control variables may be changed to the minimum value for controlling packet
+reception, or the kernel's default buffer sizes can be increased for UDP by
+changing the values in /proc/sys/net/core/rmem_default and rmem_max.
+
+Unplugging network cable while ethtool -p is running
+----------------------------------------------------
+In kernel versions 2.6.32 and later, unplugging the network cable while
+ethtool -p is running will cause the system to become unresponsive to keyboard
+commands, except for control-alt-delete. Restarting the system appears to be
+the only remedy.
+
+Rx page allocation errors
+-------------------------
+"order:0" errors may occur under stress with kernels 2.6.25 and newer. This is
+caused by the way the Linux kernel reports this stressed condition.
+
+Disable GRO when routing/bridging
+---------------------------------
+Due to a known kernel issue, GRO must be turned off when routing/bridging.
+GRO can be disabled using ethtool:
+
+  # ethtool -K ethXgro off
+
+where ethX is the Ethernet interface to be modified.
+
+Lower than expected performance
+-------------------------------
+Some PCIe x8 slots are actually configured as x4 slots. These slots have
+insufficient bandwidth for full line rate with dual port and quad port
+devices. In addition, if you put a PCIe Generation 3-capable adapter
+into a PCIe Generation 2 slot, you cannot get full bandwidth. The driver
+detects this situation and writes the following message in the system log:
+
+  "PCI-Express bandwidth available for this card is not sufficient for optimal
+  performance. For optimal performance a x8 PCI-Express slot is required."
+
+If this error occurs, moving your adapter to a true PCIe Generation 3 x8 slot 
+will resolve the issue.
+
+ethtool may incorrectly display SFP+ fiber module as direct attached cable
+--------------------------------------------------------------------------
+Due to kernel limitations, port type can only be correctly displayed on kernel
+2.6.33 or newer.
+
+Running ethtool -t ethX command causes break between PF and test client
+-----------------------------------------------------------------------
+When there are active VFs, "ethtool -t" performs a full diagnostic. In the
+process, it resets itself and all attached VFs. The VF drivers encouter a
+disruption, but are able to recover.
+
+Enabling SR-IOV in a 64-bit Microsoft* Windows Server* 2012/R2 guest OS
+under Linux KVM
+------------------------------------------------------------------------
+KVM Hypervisor/VMM supports direct assignment of a PCIe device to a VM. This
+includes traditional PCIe devices, as well as SR-IOV-capable devices using
+Intel XL710-based controllers.
+
+Unable to obtain DHCP lease on boot with RedHat
+-----------------------------------------------
+For configurations where the auto-negotiation process takes more than 5
+seconds, the boot script may fail with the following message:
+
+  "ethX: failed. No link present. Check cable?"
+
+If this error appears even though the presence of a link can be confirmed
+using ethtool ethX, try setting LINKDELAY to 5 seconds (LINKDELAY=5) in
+/etc/sysconfig/network-scripts/ifcfg-ethX.
+
+NOTE: Link time can take up to 30 seconds. The LINKDELAY value should be
+adjusted accordingly.
+
+Alternatively, NetworkManager can be used to configure the interfaces, which
+avoids the set timeout. For configuration instructions of NetworkManager
+refer to the documentation provided by your distribution.
+
+Loading i40e driver in 3.2.x and newer kernels displays kernel tained message
+-----------------------------------------------------------------------------
+Due to recent kernel changes, loading an out of tree driver causes the kernel
+to be tainted.
+
+Software bridging does not work with SR-IOV Virtual Functions
+-------------------------------------------------------------
+SR-IOV Virtual Functions are unable to send or receive traffic between VMs
+using emulated connections on a Linux Software bridge and connections that use
+SR-IOV VFs.
+
+Packet Filter cannot forward packets to emulated device when it is in bridge 
+mode and SR-IOV is enabled or for NPAR enabled adapter
+----------------------------------------------------------------------------
+In SR-IOV enabled or NPAR enabled adapters, Physical Function (PF) does not 
+work in bridge mode. When a bridge is created on the PF device, an emulation 
+device in the Virtual Machine (VM) connects to this bridge cannot receive any 
+unicast packets. 
+
+To avoid this from occurring, for each emulated device (software Virtual 
+Station Interface [VSI]) added to the bridge the MAC address of the emulated
+device (software Virtual Ethernet Bridge [VEB] VSI) needs to be added manually 
+to the forwarding database (FDB) filter table using the iproute2 package 
+bridge tool. This can be done by executing the following command:
+
+  # bridge fdb add <MAC ADDR> dev <PF device interface> self permanent
+
+The FDB entry when the emulated device is no longer in use or the guest to 
+which it is assigned is moved to a different host must be deleted using this
+command:
+
+  # bridge fdb del <MAC ADDR> dev <PF device interface>
+
+
+
+===============================================================================
+
+
+Support
+-------
+For general information, go to the Intel support website at:
+www.intel.com/support/
+
+or the Intel Wired Networking project hosted by Sourceforge at:
+http://sourceforge.net/projects/e1000
+
+If an issue is identified with the released source code on the supported
+kernel with a supported adapter, email the specific information related to the
+issue to e1000-devel@lists.sf.net.
+
+
+===============================================================================
+
+
+Trademarks
+----------
+Intel, Itanium, and Pentium are trademarks or registered trademarks of Intel
+Corporation or its subsidiaries in the United States and other countries.
+
+* Other names and brands may be claimed as the property of others.
+
+

@@ -1,0 +1,26 @@
+In order to compile the PF_RING kernel module you need to install the kernel headers
+
+- RedHat/CentOS
+# yum install kernel-devel
+
+- Debian/Ubuntu
+# apt-get install linux-headers-$(uname -r)
+
+
+Building dkms packages
+---------------------
+
+- Add your username (replace XXXXXX with your account) to the sudo list so that
+  you do not have to type the password when building the package
+
+# sudo visudo
+XXXXXX ALL=NOPASSWD: /usr/bin/make
+
+- As standard user (no sudo) do 
+# configure
+
+- Ubuntu
+# sudo make -f Makefile.dkms deb
+
+- CentoOS/Fedora/RedHat
+# sudo make -f Makefile.dkms rpm

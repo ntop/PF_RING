@@ -1,0 +1,8 @@
+Section: misc
+Priority: optional
+Maintainer: Luca Deri <deri@ntop.org>
+Version: 1.0
+Package: pfring-drivers-dna-dkms
+Architecture: all
+Depends: e1000e-dna-dkms, igb-dna-dkms, ixgbe-dna-dkms
+Description: Virtual package for DNA drivers in DKMS format (http://www.ntop.org/pf_ring/).

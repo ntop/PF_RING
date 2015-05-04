@@ -1,0 +1,418 @@
+---------------------------------------                                                                                                                                                                             
+2015-03-30 PF_RING 6.0.3
+
+* PF_RING Library
+ - New pfring_open() flag PF_RING_USERSPACE_BPF to force userspace BPF instead of in-kernel BPF with standard drivers
+ - New API pfring_get_card_settings() to read max packet length and NIC rx/tx ring size
+ - New Napatech support
+ - Support for up to 64 channels with standard drivers, pfring_set_channel_mask() has a 64bit channel mask parameter now
+ - Reworked IPv6 parsing
+ - Configure parameter --disable-numa to remove libnuma dependency
+ - ARM fixes
+ - Minor bpf memory leak fix
+ 
+* ZC Library
+ - New pfring_zc_open_device() flag PF_RING_ZC_DEVICE_SW_TIMESTAMP to force sw timestamp
+ - New API pfring_zc_get_queue_id() to read SPSC queue ID or interface index
+ - New DAQ module for ZC
+ - pfring_zc_send() is now returning errno=EMSGSIZE on packet too long
+ - Fix for receiving packets from stack using
+ - Fix for send_pkt_burst() with IPC SPSC queues
+ - Fix for drop stats when using SPSC queues over the standard pf_ring API
+ - Fix for /proc stats in IPC mode when using the standard pf_ring API
+ - Fix for packet timestamp when using SPSC queues over the standard pf_ring API
+ - Fix for stats when inter-process SPSC queues are used
+
+* PF_RING-aware Libpcap
+ - New PF_RING-aware libpcap v.1.6.2
+ - New .npcap (compressed pcap) files support
+ - Fix for libpcap over ZC, reworked poll support
+
+* PF_RING kernel module
+ - New eth_type field in kernel filters
+ - Reworked BPF support
+ - Polling Mode/Breed under /proc is now "ZC" for ZC devices (in place of DNA)
+ - Increased max dev name size
+ - transparent_mode is now deprecated
+ - Fix for 'any' device
+ - Fix for kernel >=3.19
+ - Fix for hw vlan strip in case of multiple sockets on the same device (standard drivers)
+ - Fix for kernel Oops (rx vlan offload check)
+
+* PF_RING-aware/ZC Drivers
+ - New Intel i40e (X710/XL710) ZC drivers
+ - New ixgbe ZC driver v.3.22.3
+ - ixgbe poll fix
+ - Fixes for Centos/RH 6.6
+ - Fixes for kernel >=3.16
+
+* Examples
+ - New zbalance_DC_ipc: a master process balancing packets to multiple consumer processes, 
+   using multiple threads for packet filtering in a Divide-and-Conquer fashion,
+   with an optional stage for sorting filtered packets before distribution
+ - New zreplicator: example application receiving packets from n ingress interfaces and replicating them to m egress interfaces
+ - pfcount: -N <num> parameter to exit after reading <num> packets
+ - zsend: 
+   - IPC support to attach to an external cluster/queue
+   - added -P <core> to use pulse-time thread for tx rate control
+   - added -Q <sock> to enable VM support (to attach a consumer running in a VM)
+ - zbalance_ipc: 
+   - ability to create ingress sw queues (instead of opening interfaces) with -i Q (comma-separated list of Q and interfaces is allowed)
+   - added daemon mode
+   - added pid file
+   - proc stats fix
+   - interface and per-queue stats with -p
+ - pflatency: 
+   - added -o <device> and -c <count>
+   - max/min/avg stats
+ - zfifo fixes
+
+---------------------------------------                                                                                                                                                                             
+2014-09-24 PF_RING 6.0.2
+
+* PF_RING Library
+ - New Ixia hw timestamp support
+ - New sysdig module
+ - Userspace bpf filtering with pfring_set_bpf_filter() when kernel-bypass is used (DNA/Libzero/ZC)
+ - Fixed fd leak
+
+* ZC Library
+ - New API to add/remove hw filters: pfring_zc_add_hw_rule()/pfring_zc_remove_hw_rule()
+ - New API to check tx queue status: pfring_zc_queue_is_full()
+ - New API to sort traffic based on hw ts: pfring_zc_run_fifo()
+ - New API to export stats in /proc: pfring_zc_set_proc_stats()
+ - New API to hash packets based on GTP: pfring_zc_builtin_gtp_hash()
+ - Hw ts support: new PF_RING_ZC_DEVICE_HW_TIMESTAMP, PF_RING_ZC_DEVICE_STRIP_HW_TIMESTAMP flags
+ - Ixia ts support: new PF_RING_ZC_DEVICE_IXIA_TIMESTAMP flag
+ - PPPoE support in pfring_zc_builtin_ip_hash()
+ - Fix for huge memory allocation
+ - Fix for stack injection
+ - Fix for ZC cluster destroy
+
+* PF_RING kernel module
+ - MPLS support
+ - Support for huge rings (new ring version 16)
+ - Fixed send for packet len = max frame size + vlan
+ - Fix for huge memory allocation with standard pf_ring/libzero
+ - Fixed 64 bit division on 32 bit systems
+ - Fixed cluster hash
+ - Fix for multichannel devices
+ - DKMS support
+
+* PF_RING-aware/ZC Drivers
+ - Hw filtering support in ixgbe-ZC driver (Intel 82599-based cards)
+ - e1000e driver update v.3.0.4.1
+ - ixgbe  driver update v.3.21.2
+   - numa node fix
+   - new parameter allow_tap_1g to handle 1gbit/s TAP
+ - DKMS support
+
+* DNA Drivers
+ - e1000e driver v.2.5.4 vlan stripping disabled
+ - DKMS support
+
+* PF_RING-aware Libpcap
+ - New PCAP_PF_RING_RECV_ONLY env var to open socket in rx only
+ - Fix for libpcap VLAN issues with LINUX_SLL
+ - Fix for cpu spinning on pcap_read_packet()
+ - Fix for userspace bpf with libzero/zc virtual interfaces
+ - Fix for VLAN filtering
+
+* Examples
+ - pfcount: userspace bpf fix
+ - pfsend: fixed division by 0 with empty pcaps
+ - pfbridge: added bpf support
+ - pfdnacluster_master: added PPPoE support to hash
+ - New zfifo example
+ - zbalance: round-robin mode fix
+ - zbalance_ipc
+   - ability to spread packets across multiple instances of multiple applications in IP and GTP hash mode
+   - ability to configure queue len
+   - added support for n2disk10g multithread
+ - Added zbalance_ipc zsend zcount zcount_ipc to the Ubuntu package
+ - Added zbalance_ipc zsend zcount zcount_ipc to the RPM package
+
+---------------------------------------                                                                                                                                                                             
+2014-05-06 PF_RING 6.0.1
+
+* PF_RING ZC
+ - New pfring_zc_send_pkt_burst()
+ - Fix for e1000e rx
+ - Added ZC version in demo apps help
+
+* DNA
+ - Fix for pfring_set_tx_watermark()
+
+* Drivers
+ - Added numa_cpu_affinity parameter to PF_RING-aware/ZC ixgbe driver
+ - PF_RING-aware/ZC drivers update:
+   - ixgbe-zc v.3.21.2
+   - igb-zc v.5.2.5
+ - DNA drivers update:
+  - ixgbe-dna v.3.21.2
+
+* Examples
+ - pfcount:
+   - Added ability to search strings on the payload
+   - Added ability to dump on a pcap file the traffic matching strings (-x)
+   - Improved ability to dump (-o) traffic on disk and create a log file
+   - Handling SIGHUP with -o to close exising dump and create a new one
+ - Fixed numa affinity
+
+* PF_RING Kernel module
+ - added checksum offload flags to the packet header (when enabled)
+
+---------------------------------------
+2014-04-14 PF_RING 6.0.0
+
+* PF_RING ZC
+ - Say hello to the new PF_RING ZC library!
+
+* PF_RING API
+ - New chunk mode API (for supported cards only):
+   - Added PF_RING_CHUNK_MODE pfring_open() flag
+   - New pfring_recv_chunk()
+ - New pfring_set_bound_dev_name() for setting custom bound device name
+ - Added libnuma support for numa node affinity
+
+* Drivers
+ - New generation PF_RING-aware drivers with ZC support:
+   - e1000e-2.5.4-zc
+   - igb-5.0.6-zc
+   - ixgbe-3.18.7-zc
+ - PF_RING-aware e1000e driver update (v.3.0.4.1)
+
+* Examples
+ - New PF_RING ZC examples in userland/examples_zc
+ - Moved libzero examples to userland/examples_libzero
+
+---------------------------------------
+2014-02-01 PF_RING 5.6.2
+
+* PF_RING Kernel module
+ - Added compatibility for new kernels (post 3.10)
+ - Redhat compilation fixes
+
+* PF_RING library
+ - New pfring_print_pkt()/pfring_print_parsed_pkt()
+ - pfring_get_selectable_fd fix: returning -1 on error
+ - Doxygen documentation
+
+* Libzero
+ - Time-pulse thread support in DNA Cluster (sw nsec ts)
+ - Application stats fix for libzero DNA Cluster slave sockets
+ - Added libnuma support to DNA Cluster for memory binding
+
+* Libpcap
+ - Setting selectable fd via pfring_get_selectable_fd()
+
+* Examples
+ - pfdnacluster_master
+   - New -o <device> and -f <core id> options to forward packets both to applications and an egress interface
+   - Ability to drop privileges with -D <username>
+   - Stats under /proc/net/pf_ring/stats
+   - New option -q <queue len>
+ - Applications stats have duration with msec resolution now
+
+* Drivers
+ - New PF_RING-aware netxtreme2-7.8.37 driver (courtesy of Rob G <rgagnon24@gmail.com>)
+ - PF_RING-aware igb (5.1.2) and ixgbe (3.19.1) drivers update (courtesy of Pablo Nebrera <pablonebrera@eneotecnologia.com>)
+ - ixgbe DNA driver update (3.18.7)
+ - igb DNA driver update (5.0.6)
+ - e1000e DNA driver update (2.5.4)
+ - ixgbe DNA driver pause frames fix
+ - igb/ixgbe DNA drivers compilation fixes for Redhat 6.5
+ - igb DNA jumbo mtu fix
+ - igb DNA drop stats fix
+ - DNA drivers fixes for applications calling poll/select directly (e.g. tshark)
+
+---------------------------------------
+2013-08-30 PF_RING 5.6.1
+
+* PF_RING Kernel module
+ - Added enable_frag_coherence param: handle fragments to keep flow coherence in clusters
+ - Cluster add/remove fix
+
+* PF_RING API
+ - New pfring_get_link_status() call to check link status up/down
+
+* Examples
+ - pfwrite
+   - Added cluster id (-c) support
+   - Added daemon mode (-b) support
+   - Added redis PUBLISH/SUBSCRIBE for IMSI registration/delete
+   - Enhanced IMSI tracking
+   - Performance fix for GTP tunnels
+   - Fixed buffer length issue
+ - pfsend
+   - Added daemon mode (-d) support
+   - Added pid file (-P) support
+ - pfdnacluster_master 
+   - Added pid file (-P) support
+
+* Libzero
+ - DNA Bouncer fix: sometimes the decision function was accessing the wrong buffer
+
+* Snort DAQ
+ - Fix for honouring cnt in pfring_daq_acquire()
+ - Stats fix
+
+---------------------------------------
+2013-06-07 PF_RING 5.6.0
+
+* PF_RING Kernel module
+ - Fixed bug that prevented the PF_RING cluster to work properly with specific traffic
+
+* Documentation
+ - User's guide translated to russian (courtesy of ridervka@yandex.ru)
+
+* Libzero
+ - Fixed bug that caused the DNA bouncer to process the correct packet
+
+* Examples 
+ - pfwrite
+   - Added support for the microcloud so that for GTP traffic it is possible to dump traffic of specific IMSI phone
+   - Added support for mobile networks (2G/3G/LTE) so that we can dump traffic of specific GTP tunnels
+ - pfdump: added cluster id support (courtesy of Doug Burks <doug.burks@gmail.com>)
+
+* Snort (PF_RING DAQ)
+ - Added microcloud support for notifying into the microcloud those hosts that are victims/attackers
+	
+---------------------------------------
+2013-05-22 PF_RING 5.5.3
+
+* PF_RING Kernel module
+ - Support for injecting packets to the stack
+ - Added ability to balance tunneled/fragmented packets with the cluster
+ - Improved init.d script
+ - Packet len fix with GSO enabled, caplen fix with multiple clusters
+ - Bug fixes for race condition with rss rehash, memory corruption, transparent mode and tx capture, kernels >= 3.7.
+
+* Drivers
+ - Added PF_RING-aware driver for Chelsio cards (cxgb3-2.0.0.1)
+ - New release for PF_RING-aware igb (igb-4.1.2)
+
+* DNA
+ - Added support for Silicom 10 Gbit hw timestamping commodity NIC card
+ - Added pfring_flush_tx_packets() for flushing queued tx packets
+ - Fixes for cutting packets to snaplen, e1000-dna rx
+
+* Libzero
+ - pfdnacluster_master support for multiple instances of multiple applications
+ - Added dna_cluster_set_thread_name() to name the master rx/tx threads
+ - Fix for direct forwarding with the DNA Cluster
+ - Changed len to a ptr in DNA Bouncer decision function to allow user change forwarded packet content and lenght
+
+* Examples
+ - Added ability to replay a packet with pfsend passing hex from stdin
+ - Added pfwrite to the package
+ - Fix for rate control with huge files in pfsend
+
+---------------------------------------
+2013-01-09 PF_RING 5.5.2
+
+* PF_RING library
+ - New pfring_open() flag PF_RING_DNA_FIXED_RSS_Q_0 to send all traffic to queue 0.
+   Other queues can be selected using hw filters (DNA cards with hw filtering only).
+ - Added ability to create a stats file under /proc/net/pf_ring/stats so that
+   applications can report stats via the /proc filesystem.
+  - pfring_set_application_stats() for reporting stats
+  - pfring_get_appl_stats_file_name() for getting the exac filename where the app sets the statistics
+
+* DNA drivers
+ - Flow Control disabled by default with the ixgbe-dna driver
+
+* Sample apps
+ - New pfdump.c sample app
+ - Userspace BPF support with DNA in pfcount.c
+ - pfcount.c and pfsend.c update to report stats using pfring_set_application_stats()
+
+* Libzero
+ - New experimental pfring_register_zerocopy_tx_ring()
+ - New pfdnacluster_mt_rss_frwd sample app (packet forwarding using Libzero
+ DNA Cluster for rx/balancing and standard DNA with zero-copy on RSS queues for tx)
+
+* Libpcap
+ - pcap_get_pfring_id()
+ - pcap_set_master_id()
+ - pcap_set_master()
+ - pcap_set_application_name()
+ - pcap_set_watermark()
+
+* BUG fixes
+ - Fix for corrupted VLAN tagged packets
+ - Fix for wrong packet len with vlan stripping offload
+
+---------------------------------------
+2012-11-24 PF_RING 5.5.1
+
+- updated ixgbe driver to release 3.11.33
+- Fixed bug that was causing ixgbe driver not to disable interrupts. This was causing
+  a high load on the core handling the interrupts for ixgbe-based card
+- libzero: various hugepages improvements and bug fixes
+- Added ability to specify PF_RING_RX_PACKET_BOUNCE in pfring_open
+- Fixed minor memory leak
+- Various improvements to support of hardware timestamp on Silicom Intel-based 10 Gbit adapters
+- DNA Bouncer: added direction to pfring_dna_bouncer_decision_func callback (useful in bidirectional mode)
+- DNA Cluster: added dna_cluster_set_hugepages_mountpoint() to manually select the hugepages mount point when several are available
+- Created architecture specific versions of libzero/DNA for exploiting latest generation of CPUs and thus improve performance
+- Update PF_RING-aware igb update (4.0.17)
+- Added pf_ring calls to pcap apps
+
+---------------------------------------
+2012-11-01 PF_RING 5.5.0
+
+* New libzero features:
+  - DNA Cluster: number of per-consumer rx/tx queue slots and number of additional buffers can be configured via dna_cluster_low_level_settings()
+  - hugepages support (pfdnacluster_master/pfdnacluster_multithread -u option)
+
+* New PF_RING-aware libpcap features:
+  - added PF_RING_ACTIVE_POLL environmental variable to enable active polling when defined to 1
+  - enable rehash rss setting env var PF_RING_RSS_REHASH=1
+  - cluster type selectable via env vars:
+    - PCAP_PF_RING_USE_CLUSTER_PER_FLOW
+    - PCAP_PF_RING_USE_CLUSTER_PER_FLOW_2_TUPLE
+    - PCAP_PF_RING_USE_CLUSTER_PER_FLOW_4_TUPLE
+    - PCAP_PF_RING_USE_CLUSTER_PER_FLOW_TCP_5_TUPLE
+    - PCAP_PF_RING_USE_CLUSTER_PER_FLOW_5_TUPLE
+
+* New PF_RING-aware drivers
+  - Updated Intel drivers to make them compatible with newer kernels
+
+* New PF_RING library features:
+  - new pfring_open() flag PF_RING_HW_TIMESTAMP for enabling hw timestamp
+
+* New PF_RING kernel module features:
+  - handle_user_msg hook for sending msg to plugins
+  - SO_SEND_MSG_TO_PLUGIN setsockopt for sending msgs from userspace
+  - pf_ring_inject_packet_to_ring for inserting packets in a ring identified by <if_index, channel_id>)
+  - possibility to redefine the rehash_rss function
+
+* Snort PF_RING-DAQ module:
+  - new configure --with-pfring-kernel-includes option
+  - fix for -u <uid> -g <gid>
+
+* DNA drivers fixes:
+  - Compilation with RHEL 6.3
+  - igb drop stats fix
+
+* Sample app new features:
+  - new pfcount.c -s option for enabling hw timestamp
+  - new pfdnacluster_multithread option for absolute per-interface stats
+
+* Sample apps fixes:
+  - vlan parsing
+  - compilation fix for HAVE_ZERO not set
+  - pfcount fix for reentrant mode
+  - core binding fixes
+
+* PF_RING kernel module fixes:
+  - channel_id handling
+  - fix for hash with cluster type in cluster_per_flow_*
+  - important fix for standard pf_ring (BUG #252: extra packets with wrong size)
+  - max caplen 16384 increased to 65535 (max 16 bit)
+  - fix for handling packets with stripped VLAN IDs
+
+* Misc changes
+  - Initial work on changelog maintenance
+

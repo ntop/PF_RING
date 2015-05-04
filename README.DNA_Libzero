@@ -1,0 +1,47 @@
+Migrating from DNA to ZC
+------------------------
+
+DNA/Libzero have been replaced by PF_RING ZC that includes a superset of both technologies.
+We have decided to allow you to migrate your existing DNA/libzero licenses to ZC at no cost.
+All ypu have to do it so go to http://www.nmon.net/dnatozc/ and specify the MAC address for
+which an existing DNA license has been created and you will receive an equivalent ZC license.
+
+Introduction
+------------
+
+With DNA you can dramatically increase the packet capture and transmission speed as the 
+kernel layer is bypassed and applications can communicate directly with drivers.
+
+LibZero is a library that sits onto of DNA that implements several operations in zero
+copy over DNA.
+
+In order to exploit DNA, you need a DNA driver. Three driver families are currently 
+available:
+
+1 Gbit
+- e1000e (RX and TX)
+- igb    (RX and TX)
+
+10 Gbit
+- ixgbe (RX and TX)
+
+These drivers can be found in drivers/DNA. Please refer to drivers/DNA/README.DNA 
+for additional information about this matter.
+
+With these drivers you can achieve wire rate at any packet size. You can test RX
+using the pfcount application, and TX using the pfsend application.
+
+Migrating from DNA/LibZero to ZC
+--------------------------------
+Please refer to README.MIGRATE_DNA_to_ZC
+
+IMPORTANT
+---------
+Note that in case of TX, the transmission speed is limited by the RX performance. This is 
+because when the receiver cannot keep-up with the capture speed, the ethernet NIC sends
+ethernet PAUSE frames back to the sender to slow it down. If you want to ignore these frames
+and thus send at full speed, you need to disable autonegotiation and ignore them
+(ethtool -A eth? autoneg off rx off tx off).
+
+-------------------------
+2003-14 - ntop.org

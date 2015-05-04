@@ -1,0 +1,10 @@
+--- hw/misc/ivshmem.c.orig	2013-11-08 20:20:17.000000000 +0100
++++ hw/misc/ivshmem.c	2013-11-08 20:20:22.000000000 +0100
+@@ -292,7 +292,6 @@
+         fprintf(stderr, "creating eventfd for eventfd %d failed\n", eventfd);
+         exit(-1);
+     }
+-    qemu_chr_fe_claim_no_fail(chr);
+ 
+     /* if MSI is supported we need multiple interrupts */
+     if (ivshmem_has_feature(s, IVSHMEM_MSI)) {

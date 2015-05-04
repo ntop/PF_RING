@@ -1,0 +1,117 @@
+#
+# Makefile for both static and dynamic PF_RING user libraries
+#
+#
+
+#
+# Installation directory
+#
+INSTDIR   = ${DESTDIR}/@INSTALL_PREFIX@
+
+#
+# Search directories
+#
+INCLUDE   = -I../../kernel @BPF_INCLUDE@
+
+#
+# Zero ToolKit
+#
+ZERO_OBJS  = @ZERO_OBJS@
+
+#
+# DNA
+#
+DNA_OBJS  = @DNA_OBJS@
+
+#
+# PF_RING ZC
+#
+PF_RING_ZC_OBJS  = @PF_RING_ZC_OBJS@
+
+#
+# DAG
+#
+DAG_OBJS  = @DAG_OBJS@
+
+#
+# NT
+#
+NT_OBJS  = @NT_OBJS@
+
+#
+# Mellanox (MLX)
+#
+MLX_OBJS  = @MLX_OBJS@
+
+#
+# Object files
+#
+OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
+	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${ZERO_OBJS} ${DNA_OBJS} ${PF_RING_ZC_OBJS} ${DAG_OBJS} ${NT_OBJS} ${MLX_OBJS}
+
+#
+# C compiler and flags
+#
+#
+# CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
+#
+CC        = ${CROSS_COMPILE}gcc
+CFLAGS    =  @CFLAGS@ -Wall -fPIC ${INCLUDE} @HAVE_ZERO@ @HAVE_DNA@ @HAVE_PF_RING_ZC@ @HAVE_DAG@ @NT_INC@ @HAVE_BPF@ @HAVE_REDIRECTOR@ @HAVE_HW_TIMESTAMP@ @HAVE_LIBNUMA@ @HAVE_NT@ @HAVE_MLX@ -O2 # -g
+LDFLAGS   = -g -shared
+SYSLIBS   = -lpthread @SYSLIBS@ @NT_LIB@
+
+# How to make an object file
+%.o: %.c %.h Makefile
+#	@echo "=*= making object $@ =*="
+	${CC} ${CFLAGS} -c $< -o $@
+
+#
+# Main targets
+#
+STATICLIB  = libpfring.a
+DYNAMICLIB = libpfring.so
+TARGETS    = ${STATICLIB} ${DYNAMICLIB}
+RING_H     = ../../kernel/linux/pf_ring.h
+
+all: ${TARGETS}
+
+${STATICLIB}: Makefile @ZERO_DEP@ @DNA_DEP@ @PF_RING_ZC_DEP@ @NT_DEP@ ${OBJS} pfring.h ${RING_H}
+	@echo "=*= making library $@ =*="
+	ar rs $@ ${OBJS}
+	ranlib $@
+
+${DYNAMICLIB}: ${OBJS} @ZERO_DEP@ @DNA_DEP@ @PF_RING_ZC_DEP@ @NT_DEP@ pfring.h ${RING_H} Makefile
+	@echo "=*= making library $@ =*="
+	${CC} ${LDFLAGS} ${OBJS} ${SYSLIBS} -o $@
+
+extract_dna_lib:
+	ar x @DNA_LIB@
+
+extract_zero_lib:
+	ar x @ZERO_LIB@
+
+extract_pfring_zc_lib:
+	ar x @PF_RING_ZC_LIB@
+
+extract_nt_lib:
+	ar x @MOD_NT_LIB@
+
+install: install-static install-shared
+
+install-includes:
+	mkdir -p ${INSTDIR}/include
+	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ ${INSTDIR}/include/
+
+install-static: ${STATICLIB} install-includes
+	mkdir -p ${INSTDIR}/lib
+	cp ${STATICLIB} ${INSTDIR}/lib/
+
+install-shared:	${DYNAMICLIB} install-includes
+	mkdir -p ${INSTDIR}/lib
+	cp ${DYNAMICLIB} ${INSTDIR}/lib/
+	@if test "$(USER)" = "root"; then \
+		ldconfig; \
+	fi
+
+clean:
+	@rm -f ${TARGETS} *.o *~

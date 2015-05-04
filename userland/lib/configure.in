@@ -1,0 +1,282 @@
+AC_INIT([pfring.c], 1.0)
+
+AC_PROG_CC
+AC_CONFIG_FILES(Makefile)
+
+AC_CHECK_HEADERS([linux/net_tstamp.h librdi.h])
+
+CFLAGS=""
+SYS_LIBS=""
+
+GCC_VERSION=`$CC --version |grep ^gcc |sed 's/^.* //g'`
+if test -n "$GCC_VERSION"; then
+  ARCH=`uname -m`
+  if test "$ARCH" = "x86_64"; then
+    GCCMAJOR=`echo $GCC_VERSION |cut -d'.' -f1`
+    GCCMINOR=`echo $GCC_VERSION |cut -d'.' -f2`
+    if test "$GCCMAJOR" -eq 4 && test "$GCCMINOR" -ge 6; then
+      CPUSSE42=`grep -m 1 flags /proc/cpuinfo | grep -o sse4_2 | uniq`
+      if test "$CPUSSE42" = "sse4_2"; then
+        CPUAVX=`grep -m 1 flags /proc/cpuinfo | grep -o avx2 | uniq`
+        if test "$CPUAVX" = "avx2"; then
+          CFLAGS="-march=core-avx2 -mtune=core-avx2 $CFLAGS"
+          LIBARCH="_core-avx2"
+        else
+          if test "$CPUAVX" = "avx"; then
+            CFLAGS="-march=corei7-avx -mtune=corei7-avx $CFLAGS"
+            LIBARCH="_corei7-avx"
+  	  else
+            CFLAGS="-march=corei7 -mtune=corei7 $CFLAGS"
+            LIBARCH="_corei7"
+          fi
+        fi
+      fi
+    fi
+  fi
+fi
+
+MACHINE=`uname -m`
+PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
+ZERO_LIB="libs/libpfring_zero_$MACHINE$LIBARCH.a"
+DNA_LIB="libs/libpfring_dna_$MACHINE$LIBARCH.a"
+MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
+
+dnl> Check for a modern pthread library
+AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
+
+if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
+
+AC_MSG_CHECKING([PF_RING ZC support])
+if test -f $PF_RING_ZC_LIB; then
+  HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
+  PF_RING_ZC_OBJS=`ar t $PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
+  PF_RING_ZC_DEP="extract_pfring_zc_lib"
+  PF_RING_ZC_H="pfring_zc.h"
+  AC_MSG_RESULT(yes)
+else
+  PF_RING_ZC_LIB=""
+  HAVE_PF_RING_ZC=""
+  PF_RING_ZC_OBJS=""
+  PF_RING_ZC_DEP=""
+  PF_RING_ZC_H=""
+  AC_MSG_RESULT(no)
+fi
+
+AC_MSG_CHECKING([Zero support])
+if test -f $ZERO_LIB; then
+  HAVE_ZERO="-D HAVE_ZERO"
+  ZERO_OBJS=`ar t $ZERO_LIB | grep -F .o | tr '\n' ' '`
+  ZERO_DEP="extract_zero_lib"
+  AC_MSG_RESULT(yes)
+else
+  ZERO_LIB=""
+  AC_MSG_RESULT(no)
+fi
+
+if test -f pfring_mod_mlx.c; then
+   AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
+   AC_MSG_CHECKING([Mellanox support])
+   if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
+      MLX_OBJS="pfring_mod_mlx.o"
+      HAVE_MLX="-DHAVE_MELLANOX"
+      SYSLIBS="$SYSLIBS -libverbs"   
+      AC_MSG_RESULT(yes)
+   else
+     MLX_OBJS=""
+     HAVE_MLX=""
+     AC_MSG_RESULT(no)
+   fi
+fi
+
+dnl> R/W locks are broken on some BSD releases
+if test "$IS_FREEBSD" != "1"; then
+AC_MSG_CHECKING([if r/w locks are supported])
+AC_TRY_RUN([
+#include <pthread.h>
+
+int main()
+{
+        pthread_rwlock_t t;
+        return 0;
+}
+
+]
+, [ AC_MSG_RESULT(yes) AC_DEFINE_UNQUOTED(HAVE_RW_LOCK, 1, [pthread has rw locks]) ], [AC_MSG_RESULT(no)]
+)
+fi
+
+AC_MSG_CHECKING([DNA support])
+if test -f $DNA_LIB; then
+  HAVE_DNA="-D HAVE_DNA"
+  DNA_OBJS=`ar t $DNA_LIB | tr '\n' ' '`
+  DNA_OBJS="pfring_mod_dna.o "$DNA_OBJS
+  DNA_DEP="extract_dna_lib"
+  AC_MSG_RESULT(yes)
+else
+  DNA_LIB=""
+  AC_MSG_RESULT(no)
+fi
+
+dnl> end of pthread_setaffinity_np check
+fi
+
+AC_CHECK_HEADERS([librdi.h])
+
+dnl> Silicom Redirector NIC - Default enabled
+AC_ARG_ENABLE([rdi], AS_HELP_STRING([--disable-rdi], [Disable Silicom Redirector support in PF_RING]))
+
+if test "x$enable_rdi" != "xno"; then :
+  if test "x$ac_cv_header_librdi_h" = x""yes; then :
+    AC_CHECK_LIB( [rdi], [rdi_init])
+
+    AC_MSG_CHECKING([Silicom Redirector support])
+    if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
+      HAVE_REDIRECTOR="-D HAVE_REDIRECTOR"
+      SILICOM_LIBS="-lrdi"
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+  fi
+fi
+
+AC_CHECK_LIB([hiredis], [redisCommand])
+if test "x$ac_cv_lib_hiredis_redisCommand" = xyes; then :
+REDIS_LIB="-lhiredis"
+AC_DEFINE_UNQUOTED(HAVE_REDIS, 1, [redis is present])
+else
+REDIS_LIB=""
+fi
+
+dnl Disable NUMA for ARM platforms
+SHORT_MACHINE=`uname -m | cut -b1-3`
+if test "$SHORT_MACHINE" = "arm"; then
+   enable_numa="no"
+fi
+
+dnl libnuma - Default enabled
+AC_ARG_ENABLE([numa], AS_HELP_STRING([--disable-numa], [Disable NUMA support]))
+AS_IF([test "x$enable_numa" != "xno"], 
+  AC_CHECK_LIB([numa], [numa_available], HAVE_LIBNUMA="-D HAVE_LIBNUMA")
+  AC_MSG_CHECKING([if libnuma is present])
+  if test "x$ac_cv_lib_numa_numa_available" = xyes; then :
+    LIBNUMA="-lnuma"
+    HAVE_LIBNUMA="-D HAVE_LIBNUMA"
+    AC_MSG_RESULT([yes])
+  else
+    AC_MSG_RESULT(no)
+    echo "Please install libnuma-dev in order to use PF_RING"
+    exit 0
+  fi
+)
+
+AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])
+AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
+
+AC_CHECK_LIB( [dag], 
+              [dag_get_stream_erf_types], 
+              [HAVE_DAG="-D HAVE_DAG"; DAG_OBJS="pfring_mod_dag.o"; DAG_LIB="-L/usr/local/lib -ldag -lm"], 
+              [], [] )
+
+AC_ARG_ENABLE([nt], AS_HELP_STRING([--enable-nt], [Enable Napatech support in PF_RING]))
+AS_IF([test "x$enable_nt" = "xyes"], [
+OLD_LIBS=$LIBS
+
+LIBS="-L/opt/napatech3/lib $LIBS"
+AC_CHECK_LIB([ntapi], [NT_Init], )
+AC_MSG_CHECKING([if ntapi is present])
+if test "x$ac_cv_lib_ntapi_NT_Init" = xyes; then :
+    AC_MSG_RESULT([yes])
+
+    AC_MSG_CHECKING([Napatech support])
+    if test -f $MOD_NT_LIB; then
+      AC_MSG_RESULT(yes)
+      NT_INC="-I/opt/napatech3/include"
+      NT_LIB="-L/opt/napatech3/lib -lntapi"
+      HAVE_NT="-D HAVE_NT"
+      NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
+      NT_DEP="extract_nt_lib"
+    else
+      AC_MSG_RESULT(no)
+      echo "No Napatech library available"
+      exit
+    fi
+
+else
+    AC_MSG_RESULT(no)
+    echo "Please install Napatech driver/library"
+    exit
+fi
+
+LIBS=$OLD_LIBS
+])
+
+dnl BPF - Default disabled
+dnl AC_ARG_ENABLE([bpf], AS_HELP_STRING([--enable-bpf], [Enable BPF support in PF_RING]))
+dnl AS_IF([test "x$enable_bpf" = "xyes"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
+
+dnl BPF - Default enabled
+AC_ARG_ENABLE([bpf], AS_HELP_STRING([--disable-bpf], [Disable BPF support in PF_RING]))
+AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
+
+dnl BPF - Dynamic
+dnl AC_CHECK_LIB( [pcap], 
+dnl               [pcap_compile_nopcap], 
+dnl               [HAVE_BPF="-D ENABLE_BPF"], 
+dnl               [], [] )
+
+if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
+  HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
+fi
+
+if test ".${prefix}" = ".NONE"; then
+   INSTALL_PREFIX=${ac_default_prefix};
+else
+   INSTALL_PREFIX=${prefix};
+fi
+
+AC_SUBST(CFLAGS)
+AC_SUBST(HAVE_PF_RING_ZC)
+AC_SUBST(PF_RING_ZC_LIB)
+AC_SUBST(PF_RING_ZC_OBJS)
+AC_SUBST(PF_RING_ZC_DEP)
+AC_SUBST(PF_RING_ZC_H)
+AC_SUBST(HAVE_ZERO)
+AC_SUBST(ZERO_LIB)
+AC_SUBST(ZERO_OBJS)
+AC_SUBST(ZERO_DEP)
+AC_SUBST(HAVE_DNA)
+AC_SUBST(DNA_LIB)
+AC_SUBST(DNA_OBJS)
+AC_SUBST(DNA_DEP)
+AC_SUBST(HAVE_DAG)
+AC_SUBST(DAG_LIB)
+AC_SUBST(DAG_OBJS)
+AC_SUBST(NT_OBJS)
+AC_SUBST(NT_INC)
+AC_SUBST(NT_LIB)
+AC_SUBST(NT_DEP)
+AC_SUBST(HAVE_MLX)
+AC_SUBST(MLX_OBJS)
+AC_SUBST(HAVE_NT)
+AC_SUBST(MOD_NT_LIB)
+AC_SUBST(HAVE_BPF)
+AC_SUBST(BPF_INCLUDE)
+dnl AC_SUBST(BPF_LIB)
+AC_SUBST(REDIS_LIB)
+AC_SUBST(HAVE_LIBNUMA)
+AC_SUBST(LIBNUMA)
+AC_SUBST(SYSLIBS)
+AC_SUBST(INSTALL_PREFIX)
+AC_SUBST(SILICOM_LIBS)
+AC_SUBST(HAVE_REDIRECTOR)
+AC_SUBST(HAVE_HW_TIMESTAMP)
+
+dnl> AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([../examples/Makefile])
+AC_CONFIG_FILES([../examples_zc/Makefile])
+AC_CONFIG_FILES([../examples_libzero/Makefile])
+AC_CONFIG_FILES([../c++/Makefile])
+
+AC_CONFIG_HEADERS(config.h)
+AC_OUTPUT

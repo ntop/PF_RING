@@ -1,0 +1,12 @@
+Source: pfring
+Section: free
+Priority: optional
+Maintainer: Luca Deri <deri@ntop.org>
+Standards-Version: @VERS@
+Build-Depends: 
+Build-Conflicts:
+
+Package: pfring
+Architecture: @EXTN@
+Depends: linux-image-@KERNEL@, linux-headers-@KERNEL@, pfring-dkms
+Description: PF_RING (http://www.ntop.org/pf_ring/)

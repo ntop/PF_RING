@@ -1,0 +1,5 @@
+#! /bin/sh
+
+/etc/init.d/pf_ring stop
+
+exit 0

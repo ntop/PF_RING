@@ -1,0 +1,246 @@
+.\" LICENSE
+.\"
+.\" This software program is released under the terms of a license agreement between you ('Licensee') and Intel.  Do not use or load this software or any associated materials (collectively, the 'Software') until you have carefully read the full terms and conditions of the LICENSE located in this software package.  By loading or using the Software, you agree to the terms of this Agreement.  If you do not agree with the terms of this Agreement, do not install or use the Software.
+.\"
+.\" * Other names and brands may be claimed as the property of others.
+.\"
+.TH igb 1 "June 3, 2013"
+
+.SH NAME
+igb \-This file describes the Linux* Base Driver for the Gigabit Family of Adapters.
+.SH SYNOPSIS
+.PD 0.4v
+modprobe igb [<option>=<VAL1>,<VAL2>,...]
+.PD 1v
+.SH DESCRIPTION
+This driver is intended for \fB2.4.x\fR and \fB2.6.x\fR kernels.  This driver includes support for Intel(R) Itanium(R)2-based systems.
+.LP
+This driver is only supported as a loadable module at this time.  Intel is not supplying patches against the kernel source toallow for static linking of the driver.  For questions related to hardware requirements, refer to the documentation supplied with your Intel adapter.  All hardware requirements listed apply to use with Linux.
+.LP
+This driver supports 2.5 Gbps operating speed on 2500BASE-KX only for I354-based network connections.
+.SH OPTIONS
+The following optional parameters are used by entering them on the command line with the modprobe command.  
+For example:
+.IP
+modprobe igb InterruptThrottleRate=16000,16000
+.LP
+.B InterruptThrottleRate
+.IP
+.B Valid Range: 
+0,1,3,100-100000 (0=off, 1=dynamic, 3=dynamic conservative)
+.IP
+.B Default Value: 
+3
+This represents the maximum number of interrupts per second the controller generates.  InterruptThrottleRate is another setting used in interrupt moderation.  Dynamic mode uses a heuristic algorithm to adjust InterruptThrottleRate based on the current traffic load.
+.IP
+The default setting is configured to optimize interrupts for bulk 
+throughput while keeping CPU utilization low.  However this setting may 
+result in slower overall transfer speeds if network traffic consists 
+mostly of small packets.  If this is the case, change this value to 0. 
+.IP
+InterrupThrottleRate (ITR) should be set to dynamic. When ITR=0, DMA Coalescing is automatically disabled. A whitepaper containing information on how to best configure your platform is available on the Intel website.
+.IP
+Un-supported Adapters: InterruptThrottleRate is NOT supported by 82542, 82543 or 82544-based adapters.
+.IP
+.B NOTE: 
+InterruptThrottleRate takes precedence over the TxAbsIntDelay and RxAbsIntDelay parameters.  Inother words, minimizing the receive and/or transmit absolute delays does not force the controller to generate more interrupts than what the Interrupt Throttle Rate allows.
+.IP
+See the section "InterruptThrottleRate" in README.
+.LP
+.B LLIPort
+.IP
+.B Valid Range:
+0-65535 (0=off)
+.IP
+.B Default Value:
+0
+.IP
+LLI is configured with the LLIPort command-line parameter, which specifies which TCP port should generate Low Latency Interrupts.
+.IP
+For example, using LLIPort=80 would cause the board to generate an immediate interrupt upon receipt of any packet sent to TCPport 80 on the local machine.
+.LP
+.B LLIPush
+.IP
+.B Valid Range:
+0-1 (0=off)
+.IP
+.B Default Value:
+0
+.IP
+Can be set to be enabled or disabled (default). It is most effective in an environment with many small transactions.
+.IP
+NOTE: Enabling LLIPush may allow a denial of service attack.
+.LP
+.B LLISize
+.IP
+.B Valid Range:
+0-1500 (0=off)
+.IP
+.B Default Value:
+0
+.IP
+Causes an immediate interrupt if the board receives a packet smaller than the specified size. 
+.LP
+.B IntMode
+.IP
+.B Valid Range:    
+0-2 (0 = Legacy Int, 1 = MSI and 2 = MSI-X)
+.IP
+.B Default Value:
+2
+.IP
+IntMode controls allow load time control over the type of interrupt
+registered for by the driver.  MSI-X is required for multiple queue
+support, and some kernels and combinations of kernel .config options will
+force a lower level of interrupt support.  'cat /proc/interrupts' will show
+different values for each type of interrupt.
+.LP
+.B RSS
+.IP
+.B Valid Range:   
+0-8
+.IP
+.B Default Value: 
+1
+.IP
+0 - Assign up to whichever is less, number of CPUS or number of queues
+X - Assign X queues where X is less than or equal to maximum number of queues.
+    The driver allows maximum supported queue value. For example, I350-based 
+    adapters allow RSS=8 (where 8-queues is the maximum allowable queues).
+.IP
+Note: for 82575-based adapters the maximum number of queues is 4; for 
+82576-based and newer adapters it is 8; for I210-based adapters it is 4 queues;
+and for I211-based adapters it is 2 queues.
+.IP
+This parameter is also affected by the VMDq parameter in that it will limit the
+queues more.
+.LP
+VMDQ
+.IP
+Model 0  1  2  3+
+82575 4  4  3  1
+82576 8  2  2  2
+82580 8  1  1  1
+.LP
+.B VMDQ
+.IP
+.B Valid Range:  
+0 - 4 on 82575-based adapters; and 0 - 8 for 82576 and 
+82580-based adapters.
+.IP
+.B Default Value: 
+0
+.IP
+Supports enabling VMDq pools as this is needed to support SR-IOV.
+.IP
+0 = disabled
+1 = sets the netdev as pool 0
+2+ = add additional queues but they currently are not used.
+.IP
+This parameter is forced to 1 or more if the max_vfs module parameter is used. 
+In addition the number of queues available for RSS is limited if this is set to 1 or greater.
+.LP
+.B max_vfs
+.IP
+.B Valid Range:   
+0-7
+.IP
+.B Default Value: 
+0
+.IP
+If the value is greater than 0 it will also force the VMDq parameter to be 1 or
+more.
+.IP
+This parameter adds support for SR-IOV.  It causes the driver to spawn up to 
+max_vfs worth of virtual function.  
+.LP
+.B QueuePairs
+.IP
+.B Valid Range:  
+0-1
+.IP
+.B Default Value:  
+1 (TX and RX will be paired onto one interrupt vector)
+.IP
+If set to 0, when MSI-X is enabled, the TX and RX will attempt to occupy
+separate vectors.    
+.IP
+This option can be overridden to 1 if there are not sufficient interrupts
+available.  This can occur if any combination of RSS, VMDQ, and max_vfs 
+results in more than 4 queues being used. 
+.LP
+.B Node
+.IP
+.B Valid Range:   
+0-n
+.IP
+.B Default Value: 
+-1 (off)
+.IP
+0 - n: where n is the number of the NUMA node that should be used to allocate memory for this adapter port.
+.IP
+-1: uses the driver default of allocating memory on whichever processor is running modprobe. 
+.IP
+The Node parameter will allow you to pick which NUMA node you want to have 
+the adapter allocate memory from.  All driver structures, in-memory queues, and receive buffers will be allocated on the node specified.  This parameter is onlyuseful when interrupt affinity is specified, otherwise some portion of the time the interrupt could run on a different core than the memory is allocated on, causing slower memory access and impacting throughput, CPU, or both.
+.LP
+.B EEE
+.IP
+.B Valid Range:
+0-1
+.IP
+.B Default Value: 
+1 (enabled)
+.IP
+A link between two EEE-compliant devices will result in periodic bursts of 
+data followed by periods where the link is in an idle state. This Low
+Power Idle (LPI) state is supported in both 1Gbps and 100Mbps link speeds.
+.IP
+NOTE: EEE support requires autonegotiation.
+.LP
+.B DMAC
+.IP
+.B Valid Range: 
+0, 250, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000.
+.IP
+.B Default Value: 
+0 (disabled)
+.IP
+Enables or disables DMA Coalescing feature. Values are in usec’s and increase the internal DMA Coalescing feature’s internal timer. DMA (Direct Memory Access) allows the network device to move packet data directly to the system's memory, reducing CPU utilitzation. However, the frequency and random intervals at which packets arrive do not allow the system to enter a lower power state. DMA Coalescing allows the adapter to collect packets before it initiates a DMA event. This may increase network latency but also increases the chances that the system will enter a lower power state.
+.IP
+Turning on DMA Coalescing may save energy with kernel 2.6.32 and newer. This will impart the greatest chance for your system to consume less power. DMA Coalescing is effective in helping potentially saving the platform power only when it is enabled across all active ports.
+.LP
+.B MDD (Malicious Driver Detection)
+.IP
+.B Valid Range: 
+0, 1; 0 = Disable, 1 = Enable
+.B Default Value:
+1
+.IP
+This parameter is only relevant for I350 devices operating in SR-IOV mode. When
+this parameter is set, the driver detects malicious VF driver and disables its
+TX/RX queues until a VF driver reset occurs.
+.SH JUMBO FRAMES
+Jumbo Frames support is enabled by changing the MTU to a value larger than the default of 1500.Use the ifconfig command to increase the MTU size.  For example:
+.IP
+ifconfig ethx mtu 9000 up
+.LP
+.B NOTE: 
+Using Jumbo frames at 10 or 100 Mbps is not supported and may result in poor performance or loss of link.
+.LP
+Some Intel gigabit adapters that support Jumbo Frames have a frame size limit of 9238 bytes, with a corresponding MTU size limit of 9216 bytes. 
+.LP
+See the section "Jumbo Frames" in README.
+.SH ethtool
+The driver utilizes the ethtool interface for driver configuration and diagnostics, as well as displaying statistical information.  ethtool version 1.8.1 or later is required for this functionality.
+.LP
+The latest release of ethtool can be found from http://ftp.kernel.org/pub/software/network/ethtool/.  The driver then must be recompiled in order to take advantage of the latest ethtool features.
+.LP
+ethtool 1.6 only supports a limited set of ethtool options.  Support for a more complete ethtool feature set can be enabled by upgrading ethtool to ethtool-1.8.1.  
+.SH SUPPORT
+For additional information, including supported adapters, building, and installation, see the README file included with the driver.
+.LP
+For general information, go to the Intel support website at:
+.IP
+.B http://support.intel.com
+.LP

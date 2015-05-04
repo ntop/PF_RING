@@ -1,0 +1,35 @@
+# updates for the system pci.ids file
+#
+# IMPORTANT!  Entries in this list must be sorted as they
+#             would appear in the system pci.ids file.  Entries
+#             are sorted by ven, dev, subven, subdev
+#             (numerical order).
+#
+8086  Intel Corporation
+	154c  XL710/X710 Virtual Function
+	1571  XL710/X710 Virtual Function
+	1572  Ethernet Controller X710 for 10GbE SFP+
+		1028 1f99  Ethernet 10G 4P X710/I350 rNDC
+		8086 0000  Ethernet Converged Network Adapter X710
+		8086 0001  Ethernet Converged Network Adapter X710-4
+		8086 0002  Ethernet Converged Network Adapter X710-4
+		8086 0004  Ethernet Converged Network Adapter X710-4
+		8086 0005  Ethernet 10G 4P X710 Adapter
+		8086 0006  Ethernet 10G 2P X710 Adapter
+		8086 0007  Ethernet Converged Network Adapter X710-2
+		8086 0008  Ethernet Converged Network Adapter X710-2
+	1580  Ethernet Controller XL710 for 40GbE backplane
+	1581  Ethernet Controller X710 for 10GbE backplane
+		1028 1f98  Ethernet 10G 4P X710-k bNDC
+	1583  Ethernet Controller XL710 for 40GbE QSFP+
+		8086 0000  Ethernet Converged Network Adapter XL710-Q2
+		8086 0001  Ethernet Converged Network Adapter XL710-Q2
+		8086 0002  Ethernet Converged Network Adapter XL710-Q2
+		8086 0003  Ethernet I/O Module XL710-Q2
+	1584  Ethernet Controller XL710 for 40GbE QSFP+
+		8086 0000  Ethernet Converged Network Adapter XL710-Q1
+		8086 0001  Ethernet Converged Network Adapter XL710-Q1
+		8086 0002  Ethernet Converged Network Adapter XL710-Q1
+		8086 0003  Ethernet I/O Module XL710-Q1
+	1585  Ethernet Controller XL710 for 10GbE QSFP+
+	1586  Ethernet Controller X710 for 10GBASE-T

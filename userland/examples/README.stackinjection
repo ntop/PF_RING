@@ -1,0 +1,13 @@
+Linux TCP/IP Stack injection
+----------------------------
+
+The PF_RING "stack" module can be used to inject/capture packets to/from the Linux 
+TCP/IP Stack, simulating the arrival/sending of those packets from/to an interface. 
+The application has to open a ring by using as device name "stack:dnaX", where dnaX 
+is the interface bound to the packets injected into the stack. 
+In order to inject a packet to the stack pfring_send() has to be used, in order to 
+capture outgoing packets pfring_recv() has to be used.
+
+Example of injecting an ARP into the stack simulating reception from dna0:
+
+ $ echo "ffffffffffff0026444fb191080600010800060400010026444fb191c0a801fe000000000000a9fecbe1" | pfsend -i stack:dna0

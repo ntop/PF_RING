@@ -1,0 +1,7 @@
+This folder contains various DAQ modules for PF_RING
+
+pfring-daq-module - for standard/pf_ring-aware drivers
+pfring-daq-module-zc - for kernel-bypass (ZC) drivers
+
+We encourage you to use these DAQ modules with snort 2.9.x
+

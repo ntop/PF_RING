@@ -1,0 +1,177 @@
+#! /bin/bash
+#
+# cluster          Pfring clustering script
+#
+# chkconfig: 2345 40 60
+# (C) 2003-13 - ntop.org
+#
+### BEGIN INIT INFO
+# Provides:          cluster
+# Required-Start:    $local_fs $remote_fs $network $syslog $pf_ring
+# Required-Stop:     $local_fs $remote_fs $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start/stop cluster web
+### END INIT INFO
+
+start_cluster_id() {
+    CLUSTER_ID=$1
+    FORCE=$2
+
+    CLUSTER_MASTER_BINARY=/usr/local/bin/pfdnacluster_master
+
+    if [ -f /etc/cluster/cluster-${CLUSTER_ID}.start ] || [ $FORCE -eq 1 ]; then
+	echo "Starting cluster $CLUSTER_ID"
+
+	IF_LIST=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep "\-i="|cut -d '=' -f2)       
+	for i in $(echo $IF_LIST | tr "," "\n"); do
+        	if [[ ! $i == *dna* ]]; then
+			# Not all interfaces are DNA, it is supposed to be a ZC cluster
+			CLUSTER_MASTER_BINARY=/usr/local/bin/zbalance_ipc
+	      	fi
+	done
+
+	PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
+        if [ -f $PID_FILE ]; then
+	    PID=$(cat $PID_FILE)
+            if [ $PID -gt 0 ]; then
+		IS_EXISTING=$(ps auxw | grep -v grep| grep $PID|wc -l)
+		if [ $IS_EXISTING -gt 0 ]; then
+		    echo "cluster $CLUSTER_ID is already running [pid $PID]: not started"
+		    return 0
+		fi
+	    fi
+	fi
+	$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf > /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
+    else
+	echo "cluster $CLUSTER_ID not started: missing /etc/cluster/cluster-${CLUSTER_ID}.start"
+    fi
+    return 1
+}
+
+stop_cluster_id() {
+    CLUSTER_ID=$1
+
+    if [ ! -d "/etc/cluster" ]; then
+	echo "Configuration directory /etc/cluster does not exist: quitting..."
+	return 0
+    fi
+
+    if [ -f /etc/cluster/cluster-${CLUSTER_ID}.conf ]; then
+	PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
+	if [ -f $PID_FILE ]; then
+	    PID=$(cat $PID_FILE)
+	    if [ $PID -gt 0 ]; then
+		echo "Stopping cluster $CLUSTER_ID"
+		kill -15 $PID > /dev/null
+		/bin/rm $PID_FILE
+	    else
+		echo "Unable to stop cluster $CLUSTER_ID: invalid pid [$PID][$PID_FILE]"
+	    fi
+	#else
+	#    echo "Unable to stop cluster $CLUSTER_ID: missing pid $PID_FILE"
+	fi
+    else
+	echo "cluster $CLUSTER_ID can't be stopped: missing /etc/cluster/cluster-${CLUSTER_ID}.conf"
+    fi
+
+    return 0
+}
+
+start_cluster() {
+    CLUSTER_ID=$1
+    FORCE=$2
+
+    if [ ! -d "/etc/cluster" ]; then
+	echo "Configuration directory /etc/cluster does not exist: quitting..."
+	return 0
+    fi
+
+    if [ ! -d "/var/log/cluster" ]; then
+	mkdir -p /var/log/cluster
+    fi
+
+    NUM_TO_START="$(find /etc/cluster/ -name "*.start"|wc -l)"
+    if [ "$NUM_TO_START" -eq 0 ] && [ $FORCE -eq 0 ]; then
+	# No instances to start
+	return 0
+    fi
+
+    if [ -z $CLUSTER_ID ]; then
+	IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+    else
+ 	IDS=$CLUSTER_ID
+    fi
+
+    for E in $IDS ; do
+	start_cluster_id $E $FORCE
+    done
+
+    sleep 5
+}
+
+
+stop_cluster() {
+    CLUSTER_ID=$1
+
+    if [ ! -d "/etc/cluster" ]; then
+	echo "Configuration directory /etc/cluster does not exist: quitting..."
+	return 0
+    fi
+
+    if [ -z $CLUSTER_ID ]; then
+	NUM_TO_START="$(find /etc/cluster/ -name "*.start"|wc -l)"
+	if [ "$NUM_TO_START" -eq 0 ]; then
+	    # No instances to start
+	    return 0
+	fi
+	IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+    else
+ 	IDS=$CLUSTER_ID
+    fi
+
+    for E in $IDS ; do
+	stop_cluster_id $E
+    done
+}
+
+########
+
+PARAM_CLUSTER_ID=$2
+
+logger "cluster $1 $2"
+
+case "$1" in
+  start)
+	start_cluster "$PARAM_CLUSTER_ID" 0;
+	;;
+
+  force-start | forcestart)
+	if [ -z $PARAM_CLUSTER_ID ]; then
+	    echo "ERROR: no cluster id specified"
+	    exit 1
+	fi
+
+	if [ ! -f /etc/cluster/cluster-$PARAM_CLUSTER_ID.conf ]; then
+	    echo "ERROR: No configuration file found for cluster $PARAM_CLUSTER_ID"
+	    exit 1
+	fi
+	start_cluster "$PARAM_CLUSTER_ID" 1;
+	;;
+
+  stop)
+       	stop_cluster "$PARAM_CLUSTER_ID";
+	;;
+
+  restart)
+        stop_cluster "$PARAM_CLUSTER_ID";
+	sleep 5
+	start_cluster "$PARAM_CLUSTER_ID" 0;
+	;;
+
+  *)
+	echo "Usage: /etc/init.d/cluster {start|force-start|stop|restart} [cluster id(s)]"
+	exit 1
+esac
+
+exit 0

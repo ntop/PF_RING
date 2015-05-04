@@ -1,0 +1,126 @@
+PF_RING ZC Examples
+-------------------
+
+This file contains some examples that introduce you to PF_RING ZC. 
+
+For sysdig examples please jump to the end of this file.
+
+We suppose that you have loaded one of the PF_RING-aware drivers with ZC support in single RX queue mode.
+I also assume that there are two ports, eth1 and eth2, that are connected directly (loopback).
+
+PF_RING/kernel# insmod ./pf_ring.ko
+PF_RING/drivers/PF_RING_aware/intel/ixgbe/ixgbe-XXX-zc/src# ./load_driver.sh
+
+We use single-RX queues to demonstrate the packet distribution capabilities of ZC and to show that in all
+our tests we have never used Intel's RSS.
+
+Start the traffic generator and leave it running as follows:
+
+PF_RING/userland/examples_zc# ./zsend -i zc:eth1 -c 1 -g 0 -b 8 -l 60
+
+or (better) use a traffic generator and send traffic that can be balanced across cores (e.g. packets with rotating addresses).
+In order to test the code in the worst possible case, please send 60+4 bytes packets.
+
+---
+
+Example 1. Hash incoming packets and read them on 2 threads
+
+PF_RING/userland/examples_zc# ./zbalance -i zc:eth4 -c 4 -m 0 -r 1 -g 2:3
+
+---
+
+Example 2. Hash incoming packets and read them on 2 processes
+
+PF_RING/userland/examples_zc# ./zbalance_ipc -i zc:eth2 -c 99 -n 2 -m 0 -g 1
+
+PF_RING/userland/examples_zc# ./zcount_ipc -c 99 -i 0 -g 2
+PF_RING/userland/examples_zc# ./zcount_ipc -c 99 -i 1 -g 3
+
+---
+
+Example 3. Hash incoming packets and read them on 2 legacy pcap-based applications
+
+PF_RING/userland/examples_zc# ./zbalance_ipc -i zc:eth2 -c 99 -n 2 -m 0 -g 1
+
+PF_RING/userland/tcpdump-4.1.1# ./tcpdump -i zc:99@0
+PF_RING/userland/tcpdump-4.1.1# ./tcpdump -i zc:99@1
+
+---
+
+Example 4. Enqueue incoming packets to a pipeline with 2 threads
+
+PF_RING/userland/examples_zc# ./zpipeline -i zc:eth2 -c 99 -g 2:3 
+
+---
+
+Example 5. Enqueue incoming packets to a queue, on another process forward packets from the queue to another queue, send packets from the second queue to an egress interface 
+
+PF_RING/userland/examples_zc# ./zpipeline_ipc -i zc:eth2;0 -o zc:eth3;1 -n 2 -c 99 -r 1 -t 2
+
+PF_RING/userland/examples_zc# ./zbounce_ipc -c 99 -i 0 -o 1 -g 3
+
+(note that the zbounce_ipc application can run on a VM, a pipeline with multiple VMs can be created allocating more queues)
+
+
+PF_RING ZC Sysdig Examples
+--------------------------
+
+We suppose that you have
+1. already loaded the pf_rig.ko module
+2. installed sysdig (http://sysdig.org) and that the sysdig kernel module 
+   has been also loaded. You can verify this by doing
+   # lsmod  |grep sysdig
+   sysdig_probe          205269  0 
+
+As PF_RING ZC needs huge-pages to work, you need to make sure they have been setup
+already as follows:
+
+# echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+# mkdir /mnt/huge
+# mount -t hugetlbfs nodev /mnt/huge
+
+Note that:
+1. Depending on your setup you might need to increase the number of huge pages
+2. If you plan to use PF_RING ZC for network releated activities, the load_driver.sh
+   script discussed at the top of this document already setups the huge pages
+   on your behalf.
+
+---
+
+Example 1. Hash incoming sysdig events and read them on 2 threads balancing them per PID
+
+PF_RING/userland/examples_zc# ./zbalance -i sysdig -c 4 -m 0 -r 1 -g 2:3
+
+---
+
+Example 2. Hash incoming packets and read them on 2 processes
+
+PF_RING/userland/examples_zc# ./zbalance_ipc -i sysdig -c 99 -n 2 -m 0 -g 1
+
+PF_RING/userland/examples_zc# ./zcount_ipc -c 99 -i 0 -g 2 -s
+PF_RING/userland/examples_zc# ./zcount_ipc -c 99 -i 1 -g 3 -s
+
+---
+
+Example 3. Hash incoming packets and read them on 2 non-ZC applications
+
+PF_RING/userland/examples_zc# ./zbalance_ipc -i zc:eth2 -c 99 -n 2 -m 0 -g 1
+
+PF_RING/userland/examples# ./pfcount -i zc:99@0 -v 1 -q
+PF_RING/userland/examples# ./pfcount -i zc:99@1 -v 1 -q
+
+---
+
+Example 4. Enqueue incoming sysdig events to a pipeline with 2 threads
+
+PF_RING/userland/examples_zc# ./zpipeline -i sysdig -c 99 -g 2:3 
+
+---
+
+Example 5. Enqueue incoming sysdig events to a queue, on another process forward packets from the queue to another queue, send packets from the second queue to an egress interface (perhaps we should first encapsulate the events into a ethernet frame for best results)
+
+PF_RING/userland/examples_zc# ./zpipeline_ipc -i sysdig;0 -o zc:eth3;1 -n 2 -c 99 -r 1 -t 2
+
+PF_RING/userland/examples_zc# ./zbounce_ipc -c 99 -i 0 -o 1 -g 3
+
+(note that the zbounce_ipc application can run on a VM, a pipeline with multiple VMs can be created allocating more queues)

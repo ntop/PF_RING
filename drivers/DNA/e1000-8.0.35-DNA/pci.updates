@@ -1,0 +1,112 @@
+# updates for the system pci.ids file
+#
+# IMPORTANT!  Entries in this list must be sorted as they
+#             would appear in the system pci.ids file.  Entries
+#             are sorted by ven, dev, subven, subdev
+#             (numerical order).
+#
+8086  Intel Corporation
+	1000  82542 Gigabit Ethernet Controller (Fiber)
+		8086 1000  PRO/1000 Gigabit Server Adapter
+	1001  82543GC Gigabit Ethernet Controller (Fiber)
+		8086 1003  PRO/1000 F Server Adapter
+	1004  82543GC Gigabit Ethernet Controller (Copper)
+		8086 1004  PRO/1000 T Server Adapter
+		8086 2004  PRO/1000 T Server Adapter
+	1008  82544EI Gigabit Ethernet Controller (Copper)
+		8086 1107  PRO/1000 XT Server Adapter
+		8086 2107  PRO/1000 XT Server Adapter
+		8086 2110  PRO/1000 XT Desktop Adapter
+		8086 3108  PRO/1000 XT Network Connection
+	1009  82544EI Gigabit Ethernet Controller (Fiber)
+		8086 1109  PRO/1000 XF Server Adapter
+		8086 2109  PRO/1000 XF Server Adapter
+	100c  82544GC Gigabit Ethernet Controller (Copper)
+		8086 1112  PRO/1000 T Desktop Adapter
+		8086 2112  PRO/1000 T Desktop Adapter
+	100d  82544GC Gigabit Ethernet Controller (LOM)
+		8086 110d  82544GC Based Network Connection
+	100e  82540EM Gigabit Ethernet Controller
+		8086 001e  PRO/1000 MT Desktop Adapter
+		8086 002e  PRO/1000 MT Desktop Adapter
+	100f  82545EM Gigabit Ethernet Controller (Copper)
+		8086 1000  PRO/1000 MT Network Connection
+		8086 1001  PRO/1000 MT Server Adapter
+	1010  82546EB Gigabit Ethernet Controller (Copper)
+		8086 1011  PRO/1000 MT Dual Port Server Adapter
+		8086 1012  PRO/1000 MT Dual Port Server Adapter
+		8086 101a  PRO/1000 MT Dual Port Network Connection
+	1011  82545EM Gigabit Ethernet Controller (Fiber)
+		8086 1002  PRO/1000 MF Server Adapter
+		8086 1003  PRO/1000 MF Server Adapter (LX)
+	1012  82546EB Gigabit Ethernet Controller (Fiber)
+		8086 1012  PRO/1000 MF Dual Port Server Adapter
+	1013  82541EI Gigabit Ethernet Controller
+		8086 1013  PRO/1000 MT Network Connection
+	1014  82541ER Gigabit Ethernet Controller
+		8086 0014  PRO/1000 MT Desktop Connection
+		8086 1014  PRO/1000 MT Network Connection
+	1015  82540EM Gigabit Ethernet Controller (LOM)
+		8086 1015  PRO/1000 MT Mobile Connection
+	1016  82540EP Gigabit Ethernet Controller
+		8086 1016  PRO/1000 MT Mobile Connection
+	1017  82540EP Gigabit Ethernet Controller
+		8086 1017  PR0/1000 MT Desktop Connection
+	1018  82541EI Gigabit Ethernet Controller
+		8086 1018  PRO/1000 MT Mobile Connection
+	1019  82547EI Gigabit Ethernet Controller
+		8086 1019  PRO/1000 CT Desktop Connection
+	101a  82547EI Gigabit Ethernet Controller
+		8086 101a  PRO/1000 CT Mobile Connection
+	101d  82546EB Gigabit Ethernet Controller
+		8086 1000  PRO/1000 MT Quad Port Server Adapter
+	101e  82540EP Gigabit Ethernet Controller
+		8086 101e  PRO/1000 MT Mobile Connection
+	1026  82545GM Gigabit Ethernet Controller
+		8086 1000  PRO/1000 MT Server Connection
+		8086 1001  PRO/1000 MT Server Adapter
+		8086 1002  PRO/1000 MT Server Adapter
+		8086 1003  PRO/1000 GT Server Adapter
+		8086 1026  PRO/1000 MT Server Connection
+	1027  82545GM Gigabit Ethernet Controller
+		8086 1001  PRO/1000 MF Server Adapter(LX)
+		8086 1002  PRO/1000 MF Server Adapter(LX)
+		8086 1003  PRO/1000 MF Server Adapter(LX)
+		8086 1027  PRO/1000 MF Server Adapter
+	1028  82545GM Gigabit Ethernet Controller
+		8086 1028  PRO/1000 MB Server Connection
+	1075  82547GI Gigabit Ethernet Controller
+		8086 0075  PRO/1000 CT Network Connection
+		8086 1075  PRO/1000 CT Network Connection
+	1076  82541GI Gigabit Ethernet Controller
+		8086 0076  PRO/1000 MT Network Connection
+		8086 1076  PRO/1000 MT Network Connection
+		8086 1176  PRO/1000 MT Desktop Adapter
+		8086 1276  PRO/1000 MT Network Adapter
+	1077  82541GI Gigabit Ethernet Controller
+		8086 0077  PRO/1000 MT Mobile Connection
+		8086 1077  PRO/1000 MT Mobile Connection
+	1078  82541ER Gigabit Ethernet Controller
+		8086 1078  82541ER-based Network Connection
+	1079  82546GB Gigabit Ethernet Controller
+		8086 0079  PRO/1000 MT Dual Port Network Connection
+		8086 1079  PRO/1000 MT Dual Port Network Connection
+		8086 1179  PRO/1000 MT Dual Port Server Adapter
+		8086 117a  PRO/1000 MT Dual Port Server Adapter
+	107a  82546GB Gigabit Ethernet Controller
+		8086 107a  PRO/1000 MF Dual Port Server Adapter
+		8086 127a  PRO/1000 MF Dual Port Server Adapter
+	107b  82546GB Gigabit Ethernet Controller
+		8086 007b  PRO/1000 MB Dual Port Server Connection
+		8086 107b  PRO/1000 MB Dual Port Server Connection
+	107c  82541PI Gigabit Ethernet Controller
+		8086 1376  PRO/1000 GT Desktop Adapter
+		8086 1476  PRO/1000 GT Desktop Adapter
+	108a  82546GB Gigabit Ethernet Controller
+		8086 108a  PRO/1000 P Dual Port Server Adapter
+		8086 118a  PRO/1000 P Dual Port Server Adapter
+	1099  82546GB Gigabit Ethernet Controller (Copper)
+		8086 1099  PRO/1000 GT Quad Port Server Adapter
+	10b5  82546GB Gigabit Ethernet Controller (Copper)
+		8086 1099  PRO/1000 GT Quad Port Server Adapter
+		8086 1199  PRO/1000 GT Quad Port Server Adapter

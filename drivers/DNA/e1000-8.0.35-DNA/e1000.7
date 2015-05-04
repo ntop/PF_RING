@@ -1,0 +1,379 @@
+.\" LICENSE
+.\"
+.\" This software program is released under the terms of a license agreement between you ('Licensee') and Intel.  Do not use or load this software or any associated materials (collectively, the 'Software') until you have carefully read the full terms and conditions of the LICENSE located in this software package.  By loading or using the Software, you agree to the terms of this Agreement.  If you do not agree with the terms of this Agreement, do not install or use the Software.
+.\"
+.\" * Other names and brands may be claimed as the property of others.
+.\"
+.TH e1000 1 "March 5, 2007"
+
+.SH NAME
+e1000 \-This file describes the Linux* Base Driver for the Gigabit Family of Adapters.
+
+.SH SYNOPSIS
+.PD 0.4v
+modprobe e1000 [<option>=<VAL1>,<VAL2>,...]
+.PD 1v
+
+.SH DESCRIPTION
+This driver is intended for \fB2.4.x\fR and \fB2.6.x\fR kernels.  This driver includes support for Intel(R) Itanium(R)2-based systems.
+.LP
+
+This driver is only supported as a loadable module at this time.  Intel is not supplying patches against the kernel source to allow for static linking of the driver.  For questions related to hardware requirements, refer to the documentation supplied with your Intel adapter.  All hardware requirements listed apply to use with Linux.
+
+
+.SH OPTIONS
+The following optional parameters are used by entering them on the command line with the modprobe command.  
+For example, with two Gigabit PCI adapters, entering:
+.IP
+.B modprobe e1000 TxDescriptors=80,128
+.LP
+This loads the e1000 driver with 80 TX descriptors for the first adapter and 128 TX descriptors for the second adapter.
+.PP
+.LP
+
+.B AutoNeg
+.IP
+.B Valid Range: 
+0x01-0x0F, 0x20-0x2F
+.br
+.B Default Value: 
+0x2F
+.IP
+This is the bit-mask that specifies the speed and duplex settings advertised by the adapter.  When AutoNeg is not set to the default, the Speed and Duplex parameters must not be specified.  This parameter only applies to adapters using copper connections.
+.IP
+See the section "Speed and Duplex Configuration" in Readme.
+.LP
+
+.B Duplex
+.IP
+.B Valid Range: 
+0-2 (0=auto-negotiate, 1=half, 2=full)
+.br
+.B Default Value: 
+0
+.IP
+This defines the direction in which data is allowed to flow.  Can be either one or two-directional.  If both Duplex and the link partner are set to auto-negotiate, the board auto-detects the correct duplex.  If the link partner is forced (either full or half), Duplex defaults to half-duplex.  This parameter only applies to adapters using copper connections.
+.IP
+See the section "Speed and Duplex Configuration" in Readme.
+.LP
+
+.B FlowControl
+.IP
+.B Valid Range: 
+0-3 (0 = none, 1 = Rx only, 2 = Tx only, 3 = Rx and Tx)
+.br
+.B Default Value: 
+Read flow control settings from the EEPROM
+.IP
+This controls the automatic generation(Tx) and response(Rx) to Ethernet PAUSE frames.
+.LP
+
+.B InterruptThrottleRate
+.IP
+.B Valid Range: 
+0,1,3,4, 100-100000 (0=off, 1=dynamic, 3=dynamic conservative
+                     4=simplified balancing)
+.IP
+.B Default Value: 
+3
+.IP
+This represents the maximum number of interrupts per second the controller generates.  InterruptThrottleRate is another setting used in interrupt moderation.  Dynamic mode uses a heuristic algorithm to adjust InterruptThrottleRate based on the current traffic load.
+.IP
+The default setting is configured to optimize interrupts for bulk 
+throughput while keeping CPU utilization low.  However this setting may 
+result in slower overall transfer speeds if network traffic consists 
+mostly of small packets.  If this is the case, change this value to 0. 
+.IP
+Un-supported Adapters: InterruptThrottleRate is NOT supported by 82542, 82543 or 82544-based adapters.
+.IP
+.B NOTE: 
+InterruptThrottleRate takes precedence over the TxAbsIntDelay and RxAbsIntDelay parameters.  In other words, minimizing the receive and/or transmit absolute delays does not force the controller to generate more interrupts than what the Interrupt Throttle Rate allows.
+.IP
+See the section "InterruptThrottleRate" in Readme.
+.LP
+
+.B RxDescriptors
+.IP
+.B Valid Range: 
+80-256 for 82542 and 82543-based adapters, 80-4096 for all other supported adapters
+.br
+.B Default Value: 
+256
+.IP
+This value specifies the number of receive buffer descriptors allocated by the driver.  Increasing this value allows the driver to buffer more incoming packets, at the expense of increased system memory utilization.  
+.br
+.br
+Each descriptor is 16 bytes.  A receive buffer is also allocated for each
+descriptor and can be either 2048, 4096, 8192, or 16384 bytes, depending 
+on the MTU setting. The maximum MTU size is 16110.
+.br
+.br
+.B NOTE:  
+MTU designates the frame size.  It only needs to be set for Jumbo 
+Frames.  Depending on the available system resources, the request 
+for a higher number of receive descriptors may be denied.  In this 
+case, use a lower number.
+.LP
+
+.B RxIntDelay
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+0
+.IP
+This sets the delay of the generation of receive interrupts, in units of 1.024 microseconds.  Receive interrupt reduction can improve CPU efficiency if properly tuned for specific network traffic.  Increasing this value adds extra latency to frame reception and can end up decreasing the throughput of TCP traffic.  If the system is reporting dropped receives, this value may be set too high, causing the driver to run out of available receive descriptors.
+.IP
+CAUTION: When setting RxIntDelay to a value other than 0, adapters may hang (stop transmitting) under certain network conditions.  If this occurs a NETDEV WATCHDOG message is logged in the system event log.  In addition, the controller is automatically reset, restoring the network connection.  To eliminate the potential for the hang ensure that RxIntDelay is set to zero.
+.LP
+
+.B RxAbsIntDelay 
+(82540, 82545, and later adapters only)
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+128
+.IP
+This limits the delay in which a receive interrupt is generated (in units of 1.024 microseconds).  Useful only if RxIntDelay is non-zero, this value ensures that an interrupt is generated after the initial packet is received within the set amount of time.  Proper tuning, along with RxIntDelay, may improve traffic throughput in specific network conditions.
+.LP
+
+.B Speed
+.IP
+.B Valid Settings: 
+0, 10, 100, 1000
+.br
+.B Default Value: 
+0 (auto-negotiate at all supported speeds)
+.IP
+This forces the line speed to the specified value in megabits per second (Mbps).  If this parameter is not specified or is set to 0 and the link partner is set to auto-negotiate, the board auto-detects the correct speed.  Duplex must also be set when Speed is set to either 10 or 100.  This parameter only applies to adapters using copper connections.
+.IP
+See the section "Speed and Duplex Configuration" in Readme.
+.LP
+
+.B TxIntDelay
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+64
+.IP
+This sets the delay of the generation of transmit interrupts, in units of 1.024 microseconds.  Transmit interrupt reduction can improve CPU efficiency if properly tuned for specific network traffic.  If the system is reporting dropped transmits, this value may be set too high causing the driver to run out of available transmit descriptors.
+.LP
+
+.B TxAbsIntDelay 
+(82540, 82545, and later adapters only)
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+64
+.IP
+This limits the delay in which a transmit interrupt is generated (in units of 1.024 microseconds).  Useful only if TxIntDelay is non-zero, this value ensures that an interrupt is generated after the initial packet is sent on the wire within the set amount of time.  Proper tuning, along with TxIntDelay, may improve traffic throughput in specific network conditions.
+.LP
+
+.B TxDescriptors
+.IP
+.B Valid Range: 
+80-256 for 82542 and 82543-based adapters, 80-4096 for all other supported adapters
+.br
+.B Default Value: 
+256
+.IP
+This is the number of transmit descriptors allocated by the driver.  Increasing this value allows the driver to queue more transmits.  Each descriptor is 16 bytes.
+.IP
+.B NOTE: 
+Depending on the available system resources, the request for a higher number of transmit descriptors may be denied.  In this case, use a lower number.
+.LP
+
+.B TxDescriptorStep
+.IP
+.B Valid Range:
+1 (use every Tx Descriptor)
+4 (use every 4th Tx Descriptor)
+.br
+.B Default Value:
+1 (use every Tx Descriptor)
+.IP
+On certain non-Intel architectures, it has been observed that intense TX 
+traffic bursts of short packets may result in an improper descriptor 
+writeback. If this occurs, the driver will report a "TX Timeout" and reset 
+the adapter, after which the transmit flow will restart, though data may 
+have stalled for as much as 10 seconds before it resumes.
+.IP
+The improper writeback does not occur on the first descriptor in a system
+memory cache-line, which is typically 32 bytes, or 4 descriptors long. 
+.IP
+Setting TxDescriptorStep to a value of 4 will ensure that all TX descriptors
+are aligned to the start of a system memory cache line, and so this problem
+will not occur. 
+.IP
+NOTES: Setting TxDescriptorStep to 4 effectively reduces the number of 
+       TxDescriptors available for transmits to 1/4 of the normal allocation. 
+       This has a possible negative performance impact, which may be 
+       compensated for by allocating more descriptors using the TxDescriptors
+       module parameter.
+.IP
+       There are other conditions which may result in "TX Timeout", which will 
+       not be resolved by the use of the TxDescriptorStep parameter. As the 
+       issue addressed by this parameter has never been observed on Intel 
+       Architecture platforms, it should not be used on Intel platforms.
+.LP
+
+.B XsumRX
+.IP
+.B Valid Range: 
+0-1
+.br
+.B Default Value: 
+1
+.IP
+This enables IP checksum offload for received packets (both UDP and TCP) to the adapter hardware when set to 1.  This parameter is not available on the 82542-based adapter.
+.LP
+
+.B Copybreak
+.IP
+.B Valid Range:   
+0-xxxxxxx (0=off)
+.br
+.B Default Value: 
+256
+.IP
+.B Usage: 
+insmod e1000.ko copybreak=128
+.IP
+Driver copies all packets below or equaling this size to a fresh rx buffer before handing it up the stack.
+.IP
+This parameter is different than other parameters, in that it is a single (not 1,1,1 etc.) parameter applied to all driver instances and it is also available during runtime at /sys/module/e1000/parameters/copybreak
+.LP
+
+.B SmartPowerDownEnable
+.IP
+.B Valid Range: 
+0-1
+.br
+.B Default Value: 
+1 (uses EEPROM settings); 0 (disabled for 82571EB and 82572-based network connections) 
+.IP
+Allows Phy to turn off in lower power states. The user can turn off this parameter in supported chipsets.
+.LP
+
+.B KumeranLockLoss
+.IP
+.B Valid Range: 
+0-1
+.br
+.B Default Value: 
+1 (enabled)
+.IP
+This workaround skips resetting the Phy at shutdown for the initial silicon releases of ICH8 systems.
+.LP
+
+.B TxDescPower
+.IP
+.B Valid Range: 
+6-12
+.br
+.B Default Value: 
+12
+.IP
+This value represents the size-order of each transmit descriptor. The valid size for descriptors would 
+be 2^6 (64) to 2^12 (4096) bytes each.  As this value decreases one may want to consider increasing
+the TxDescriptors value to maintain the same amount of frame memory.
+.LP
+
+
+.B ignore_64bit_dma
+.IP
+.B Valid Range: 
+0-xxxxxxx (0=off)
+.br
+.B Default Value: 
+0
+.IP
+Usage: insmod e1000.ko ignore_64bit_dma=1
+.IP
+When non zero the driver will only request DMA mapping of host memory
+in the lower 4GB region. This provides a workaround for users of AMD platforms
+GA-MA78G-DS3H & SM4021M-T2R+ that have reported TXHangs on system that have
+>4GB RAM, suspected caused by some (no deep root cause) issue in the Dual 
+Address Cycle (DAC) DMA mechanism needed to access addresses above 4GB.
+Setting ignore_64bit_dma to 1 activates the workaround.
+.IP
+This parameter is different than other parameters, in that it is a
+single (not 1,1,1 etc.) parameter applied to all driver instances and
+it is also available during runtime at 
+/sys/module/e1000/parameters/ignore_64bit_dma
+.LP
+
+.SH SPEED AND DUPLEX SETTINGS
+.LP
+Three keywords are used to control the speed and duplex configuration.  
+These keywords are Speed, Duplex, and AutoNeg.
+.LP
+If the board uses a fiber interface, these keywords are ignored, and the fiber interface board only links at 1000 Mbps full-duplex.
+.LP
+For copper-based boards, the keywords interact as follows:
+.IP
+  The default operation is auto-negotiate.  The board advertises all supported speed and duplex combinations, and it links at the highest common speed and duplex mode IF the link partner is set to auto-negotiate.
+.IP
+  If Speed = 1000, limited auto-negotiation is enabled and only 1000 Mbps is advertised (The 1000BaseT spec requires auto-negotiation.)
+.IP
+  If Speed = 10 or 100, then both Speed and Duplex should be set.  Auto-negotiation is disabled, and the AutoNeg parameter is ignored.  Partner SHOULD also be forced.
+.LP
+The AutoNeg parameter is used when more control is required over the auto-negotiation process.  It should be used when you wish to control which speed and duplex combinations are advertised during the auto-negotiation process.  
+.LP
+See the section "Speed and Duplex Settings" in Readme.
+
+
+.SH JUMBO FRAMES
+.LP
+Jumbo Frames support is enabled by changing the MTU to a value larger than the default of 1500.  Use the ifconfig command to increase the MTU size.  For example:
+.IP
+ifconfig ethx mtu 9000 up
+.LP
+.B NOTE: 
+Using Jumbo frames at 10 or 100 Mbps is not supported and may result in poor performance or loss of link.
+.LP
+Some Intel gigabit adapters that support Jumbo Frames have a frame size limit of 9238 bytes, with a corresponding MTU size limit of 9216 bytes.  Adapters with this limitation are based on the Intel(R) 82571EB, 82573L and 80003ES2LAN controller.
+.LP
+Adapters based on the Intel(R) 82542 and 82573V/E controllers do not support Jumbo Frames.
+.LP
+See the section "Jumbo Frames" in Readme.
+
+
+.SH ethtool
+.LP
+The driver utilizes the ethtool interface for driver configuration and diagnostics, as well as displaying statistical information.  ethtool version 1.8.1 or later is required for this functionality.
+.LP
+The latest release of ethtool can be found from http://ftp.kernel.org/pub/software/network/ethtool/.  The driver then must be recompiled in order to take advantage of the latest ethtool features.
+.LP
+ethtool 1.6 only supports a limited set of ethtool options.  Support for a more complete ethtool feature set can be enabled by upgrading ethtool to ethtool-1.8.1.  
+
+.SH NAPI
+.LP
+NAPI (Rx polling mode) is supported in the e1000 driver.  NAPI is enabled or disabled based on the configuration of the kernel.  To override the default, use the following compile-time flags.  
+.IP
+To enable NAPI, compile the driver module, passing in a configuration option:
+.IP
+make CFLAGS_EXTRA=-DE1000_NAPI install
+.IP
+To disable NAPI, compile the driver module, passing in a configuration option:
+.IP
+make CFLAGS_EXTRA=-DE1000_NO_NAPI install
+.LP
+See www.cyberus.ca/~hadi/usenix-paper.tgz for more information on NAPI.
+
+
+.SH SUPPORT
+.LP
+For additional information, including supported adapters, building, and installation, see the Readme file included with the driver.
+.LP
+For general information, go to the Intel support website at:
+.IP
+.B http://support.intel.com
+.LP

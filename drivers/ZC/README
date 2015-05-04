@@ -1,0 +1,2 @@
+This directory contains drivers for popular 1 and 10 Gbit adapters with PF_RING ZC support.
+

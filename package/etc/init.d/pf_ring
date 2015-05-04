@@ -1,0 +1,473 @@
+#!/bin/bash
+#
+# pf_ring          Load the pfring driver
+#
+# chkconfig: 2345 30 60
+#
+# (C) 2003-13 - ntop.org
+#
+### BEGIN INIT INFO
+# Provides:          pf_ring
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $n2disk $nprobe
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start/stop pf_ring
+### END INIT INFO
+
+if [ -f /lib/lsb/init-functions ]; then
+   DISTRO="debian"
+   . /lib/lsb/init-functions
+fi
+if [ -f /etc/init.d/functions ]; then
+   DISTRO="centos"
+   . /etc/init.d/functions
+fi
+
+MGMT_INTERFACE="$(/sbin/route | grep default | tr -s ' ' | cut -d ' ' -f 8)"
+if [ ${MGMT_INTERFACE} == "" ]; then
+  MGMT_INTERFACE="eth0"
+fi
+MGMT_INTERFACE_DRIVER="$(/sbin/ethtool -i $MGMT_INTERFACE | grep driver | cut -d ' ' -f 2)"
+PFRING="pf_ring"
+DNA_DRIVERS_DIR="/usr/local/pfring/drivers/DNA"
+DRIVERS_CONFIG_DIR="/etc/pf_ring"
+DRIVERS_FLAVOR=("dna" "zc")
+DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe')
+ERROR=0
+DRIVER_INSTALLED=0
+OLD_HUGEPAGES_CONFIG="/etc/pf_ring/hugepages"
+HUGEPAGES_CONFIG="/etc/pf_ring/hugepages.conf"
+HUGEPAGES_SIZE=`grep Hugepagesize /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'` # KB
+HUGEPAGES_MOUNTPOINT="/mnt/hugepages"
+MTU_CONFIG="/etc/pf_ring/mtu.conf"
+FORCESTART=0
+FORCESTART_FILE="/etc/pf_ring/forcestart"
+DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
+LOAD_HUGEPAGES=0
+
+function dkms_installed {
+  if [ ${DISTRO} == "debian" ]; then
+    if [ `dpkg -l |grep $1-dna-dkms |wc -l` -gt 0 ]; then
+      return 1
+    fi
+  elif [ ${DISTRO} == "centos" ]; then
+    if [ `rpm -qa | grep $1-dna | wc -l` -gt 0 ]; then
+      return 1
+    fi
+  fi
+  return 0
+}
+
+check_pf_ring() {
+   # check the module status
+   RETVAL=0
+   if [ $1 == "start" ] && [ `lsmod | grep ^${PFRING} | wc -l ` -gt 0 ]; then
+       MSG="PF_RING already loaded. Exiting"
+       ERROR=1
+       RETVAL=1
+   elif [ $1 == "stop" ] && [ `lsmod | grep ^${PFRING} | wc -l ` -le 0 ]; then
+       MSG="PF_RING already unloaded Exiting"
+       ERROR=0 
+       RETVAL=0
+       [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+       [ ${DISTRO} == "centos" ] && echo_success && echo
+       exit 0
+   fi
+
+   if [ ${ERROR} -gt 0 ]; then
+      if [ ${DISTRO} == "debian" ]; then
+         log_failure_msg "${MSG}"
+         log_end_msg $ERROR
+         exit 99
+      elif [ ${DISTRO} == "centos" ]; then
+         echo -n ${MSG} 
+         echo_failure; echo
+         exit 99
+      fi
+   fi
+}
+
+
+load_old_dna() {
+	if [ -d ${DNA_DRIVERS_DIR} ] && [ `ls -A $DNA_DRIVERS_DIR` ]; then
+		DNA_DRIVERS="$(/bin/ls $DNA_DRIVERS_DIR|cut -d '.' -f 1)"
+		for D in $DNA_DRIVERS ; do
+			DRIVER_CONFIG="/etc/pf_ring/dna-$D.conf"
+			if [ -f $DRIVER_CONFIG ]; then
+				ADAPTERS_LISTED="$(grep adapters_to_enable $DRIVER_CONFIG|wc -l)"
+				if [ "$D" == "$MGMT_INTERFACE_DRIVER" ] && [ $ADAPTERS_LISTED -eq 0 ]; then
+						echo "Unable to replace $D as it is used by the management interface"
+				else
+					PARAM="$(cat $DRIVER_CONFIG)"
+					# Remove the driver first as the original vanilla driver might be the one we want to overwrite	    
+					NUM="$(grep $D /proc/modules|wc -l)"
+					if [ $NUM -gt 0 ]; then
+						/sbin/rmmod $D
+					fi
+					if [ -f $DNA_DRIVERS_DIR/$D.ko ]; then
+						/sbin/insmod $DNA_DRIVERS_DIR/$D.ko $PARAM
+					else
+						# trying with dkms
+						/sbin/modprobe $D-dna $PARAM
+					fi
+				fi
+				DRIVER_INSTALLED=1
+			fi
+		done
+	fi
+}
+
+rebuild_dkms() {
+	/usr/sbin/dkms autoinstall
+}
+
+check_hugepages() {
+	if [ `cat /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages` -gt 0 ]; then # hugepages already loaded
+		LOAD_HUGEPAGES=0
+		return
+	fi
+}
+
+unload_hugepages() {
+	umount ${HUGEPAGES_MOUNTPOINT}
+	echo 0 > /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
+}
+
+load_hugepages() {
+	check_hugepages
+	HUGEPAGES_NUMBER=0
+	if [ ${LOAD_HUGEPAGES} -eq 0 ]; then
+		return
+		#hugepages already loaded
+	else
+		if [ -f ${HUGEPAGES_CONFIG} ]; then
+			cat ${HUGEPAGES_CONFIG} | while read node ; do
+				HUGEPAGES_NODE=`echo ${node} | cut -d ' ' -f 1 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
+				HUGEPAGES_NUMBER=`echo ${node} | cut -d ' ' -f 2 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
+				if [ ${HUGEPAGES_NUMBER} -gt 0 ] && [ -f /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages ]; then
+					echo ${HUGEPAGES_NUMBER} >  /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
+				fi
+                HUGEPAGES_NODE=""
+                HUGEPAGES_NUMBER=""
+			done
+		else # set it to max available
+			#MEM_AVAIL=`grep MemFree /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'`;
+			#MEM_AVAIL=$(( MEM_AVAIL - 524288 ))
+			MEM_AVAIL=1048576 # 1GB Hugepages (this avoids consuming all memory at boot time, causing kernel panic)
+			HUGEPAGES_NUMBER=$(( MEM_AVAIL / HUGEPAGES_SIZE ))
+			if [ ${HUGEPAGES_NUMBER} -gt 0 ]; then
+				echo ${HUGEPAGES_NUMBER} > /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
+			fi
+		fi
+		if [ ! -d ${HUGEPAGES_MOUNTPOINT} ]; then
+			mkdir ${HUGEPAGES_MOUNTPOINT}
+		fi
+		mount -t hugetlbfs none ${HUGEPAGES_MOUNTPOINT}
+	fi
+}
+
+set_interface_mtu() {
+	MTU=""
+	if [ -f ${MTU_CONFIG} ]; then 
+		HWADDR=`ifconfig ${1} |grep -w HWaddr |awk '{print $5}'`
+		MTU=`grep -w "${HWADDR}" ${MTU_CONFIG} | cut -d ' ' -f 2`
+		if [ ! -z ${MTU} ] && [ ${MTU} != "" ]; then
+			/sbin/ifconfig ${1} mtu ${MTU} > /dev/null 2>&1
+		fi
+	fi
+}
+
+start_interfaces() {
+    # Enable all interfaces DNA and non DNA
+    INTERFACES="$(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g')"
+    for D in $INTERFACES ; do
+        /sbin/ifconfig $D up
+        if [ "$D" != "$MGMT_INTERFACE" ]; then
+            /sbin/ethtool -K $D sg off tso off gso off gro off
+        fi
+        set_interface_mtu ${D}
+    done
+}
+
+load_driver() {
+	DRV_PARAM=""
+
+	if [ `/sbin/modinfo ${1}-${2} | wc -l` -gt 1 ]; then
+		# driver is available
+		DRV_PARAM=`cat ${DRIVERS_CONFIG_DIR}/${2}/${1}/${1}.conf`
+		if [ ${MGMT_INTERFACE_DRIVER} == ${1} ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
+			echo "Skipping driver ${1}: driver matches ${MGMT_INTERFACE}"
+			return
+		fi
+		# unload old module if needed
+		if [ `lsmod |grep -w ^${1} | wc -l` -eq 1 ]; then
+			/sbin/modprobe -r ${1}
+			if [ `echo $?` -gt 0 ]; then
+				echo "Error unloading driver ${1}"
+				return
+			fi
+		fi
+			
+		# check if already loaded
+		if [ `lsmod |grep -w ^${1}_${2} | wc -l` -eq 1 ]; then
+			echo "Driver ${1}-${2} already installed"
+			DRIVER_INSTALLED=1
+			return				
+		fi
+			
+		/sbin/modprobe ${1}_${2} ${DRV_PARAM}
+		if [ `echo $?` -gt 0 ]; then
+			echo "Error loading driver ${1}-${2}"
+		else 
+			DRIVER_INSTALLED=1
+		fi
+	else
+		echo "Driver ${1}-${2} not available"
+	### to do: try rebuilding dkms driver
+	fi
+}
+
+load_dna_zc() {
+	# load dkms drivers
+	# search for file under /etc/pf_ring/{dna,zc}/{e1000e,igb,ixgbe}/{e1000e,igb,ixgbe}.conf
+	for F in ${DRIVERS_FLAVOR[@]} ; do
+		for D in ${DKMS_DRIVERS[@]} ; do
+			if [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
+				load_driver ${D} ${F}
+				if [ ${F} == "zc" ] && [ ${DO_NOT_LOAD_HUGEPAGES} -eq 0 ]; then
+					LOAD_HUGEPAGES=1
+				fi
+			fi
+		done
+	done
+	
+	if [ ${DRIVER_INSTALLED} -eq 0 ]; then
+		load_old_dna
+	fi
+	
+	if [ ${DRIVER_INSTALLED} -eq 0 ]; then
+		echo "DNA/ZC drivers not loaded: missing driver or configuration"
+	fi
+
+        CLUSTER_HUGEPAGES=0
+        if [ `grep '\-u\=' /etc/cluster/cluster-*conf|wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
+                LOAD_HUGEPAGES=1
+        fi
+
+	if [ ${LOAD_HUGEPAGES} -eq 1 ]; then
+		load_hugepages
+	fi
+}
+
+unload_driver() {
+	/sbin/modprobe -r ${1}_${2}
+	if [ `echo $?` -gt 0 ]; then
+		echo "Error unloading driver ${1}"
+		return
+	fi
+	# Restore vanilla driver
+	/sbin/modprobe ${1}
+}
+
+unload_dna_zc() {
+	UNLOAD_HUGEPAGES=0
+	for F in ${DRIVERS_FLAVOR[@]} ; do
+		for D in ${DKMS_DRIVERS[@]} ; do
+			if [ `/sbin/lsmod | grep -w ^${D}_${F} |wc -l ` -eq 1 ]; then
+				unload_driver ${D} ${F}
+				if [ ${F} == "zc" ] && [ ${DO_NOT_LOAD_HUGEPAGES} -eq 0 ]; then
+					UNLOAD_HUGEPAGES=1
+				fi
+			fi
+		done
+	done
+	if [ ${UNLOAD_HUGEPAGES} -eq 1 ]; then
+		unload_hugepages
+	fi
+	start_interfaces
+}
+
+start_pf_ring() {
+
+    # Update driver directory structure
+
+    old_config_migration
+
+    [ ${DISTRO} == "debian" ] && log_daemon_msg "Starting PF_RING module"
+    [ ${DISTRO} == "centos" ] && echo -n "Starting PF_RING module: "
+
+    # Set CPU freq to performance useful in particular
+    # on CPUs with aggressive scaling such as Intel E5
+    
+    find /sys/devices/system/cpu/ -name scaling_governor -exec sh -c 'echo performance > {}' \;
+
+    KERNEL_VERSION=$(uname -r)
+
+    PFRING_CONFIG="/etc/pf_ring/pfring.conf"
+    PARAM=""
+    if [ -f $PFRING_CONFIG ]; then
+        PARAM="$(cat $PFRING_CONFIG)"
+    fi
+
+    PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
+    PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
+
+    check_pf_ring start
+    
+    if [ ! -f "${DRIVERS_CONFIG_DIR}/pfring.start" ]; then
+    	# remove pf_ring in any case
+    	/sbin/modprobe -r pf_ring
+    	#
+    	echo "PF_RING not enabled"
+        [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+	    [ ${DISTRO} == "centos" ] && echo_success && echo
+	    return
+    fi
+
+    if [ -f $PF_RING_MOD ]; then
+        /sbin/insmod $PF_RING_MOD $PARAM
+    elif [ -f $PF_RING_MOD_LOCAL ]; then
+        /sbin/insmod $PF_RING_MOD_LOCAL $PARAM
+    else
+		if [ ! `/sbin/modinfo pf_ring|wc -l` -gt 1 ]; then
+	   		# try building dkms
+	   		/usr/sbin/dkms autoinstall
+		fi
+		/sbin/modprobe pf_ring $PARAM
+    fi
+   
+    if [ `lsmod | grep ^${PFRING} | wc -l ` -le 0 ] ; then
+	   # PFRING not loaded. Exiting
+       MSG="Unable to load PF_RING. Exiting"
+       ERROR=1
+       RETVAL=1
+       if [ ${DISTRO} == "debian" ]; then
+           log_failure_msg "${MSG}"
+           log_end_msg $ERROR
+           exit 99
+       elif [ ${DISTRO} == "centos" ]; then
+           echo -n ${MSG} 
+           echo_failure; echo
+           exit 99
+      fi
+    fi
+
+    ## Load NTOP drivers ##
+    load_dna_zc
+    ## Load NTOP drivers ##
+    sleep 1
+    
+    start_interfaces
+
+    [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+    [ ${DISTRO} == "centos" ] && echo_success && echo
+}
+
+
+stop_pf_ring() {
+
+    RETVAL=0
+    [ ${DISTRO} == "debian" ] && log_daemon_msg "Stopping PF_RING module"
+    [ ${DISTRO} == "centos" ] && echo -n "Stopping PF_RING module: "
+
+    check_pf_ring stop
+
+    if [ -f /etc/init.d/nprobe ]; then
+		/etc/init.d/nprobe stop
+		sleep 1
+    fi
+
+    if [ -f /etc/init.d/n2disk ]; then
+		/etc/init.d/n2disk stop
+		sleep 1
+    fi
+
+    if [ -f /etc/init.d/ntop ]; then
+		/etc/init.d/ntop stop
+		sleep 1
+    fi
+
+    if [ -f /etc/init.d/ntopng ]; then
+		/etc/init.d/ntopng stop
+		sleep 1
+    fi
+
+    ## Unload NTOP drivers ##
+    unload_dna_zc
+    ## Unload NTOP drivers ##
+	
+
+    NUM="$(grep pf_ring /proc/modules|wc -l)"
+    if [ $NUM -gt 0 ]; then
+	/sbin/modprobe -r pf_ring
+        NUM="$(grep pf_ring /proc/modules|wc -l)"
+	if [ ${NUM} -gt 0 ]; then
+	   MSG="unable to unload PF_RING module"
+           [ ${DISTRO} == "debian" ] && log_failure_msg "$MSG"
+           [ ${DISTRO} == "centos" ] && echo_failure
+           ERROR=1
+	fi
+    fi
+    [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+    [ ${DISTRO} == "centos" ] && echo_success && echo
+}
+
+old_config_migration() {
+	for F in ${DRIVERS_FLAVOR[@]} ; do
+		for D in ${DKMS_DRIVERS[@]} ; do
+			if [ ! -d ${DRIVERS_CONFIG_DIR}/${F}/${D} ]; then
+				mkdir -p ${DRIVERS_CONFIG_DIR}/${F}/${D}
+			fi
+		done
+	done
+	if [ `ls ${DRIVERS_CONFIG_DIR}/dna-*.conf 2>/dev/null | wc -l` -eq 0 ]; then
+		return
+	fi
+	for FILES in `ls ${DRIVERS_CONFIG_DIR}/dna-*.conf` ; do
+		DRV_FLAVOR=`echo ${FILES} | cut -d '-' -f 2 | tr -d '.conf'`
+		if [ -f ${FILES} ] && [ ! -L ${FILES} ]; then # if it is not a link - migration already done
+			mv ${FILES} ${DRIVERS_CONFIG_DIR}/dna/${DRV_FLAVOR}/${DRV_FLAVOR}.conf
+			touch ${DRIVERS_CONFIG_DIR}/dna/${DRV_FLAVOR}/${DRV_FLAVOR}.start
+			ln -s ${DRIVERS_CONFIG_DIR}/dna/${DRV_FLAVOR}/${DRV_FLAVOR}.conf ${FILES}
+		fi
+	done
+	if [ -f ${OLD_HUGEPAGES_CONFIG} ] && [ ! -f ${HUGEPAGES_CONFIG} ]; then 
+		mv ${OLD_HUGEPAGES_CONFIG} ${HUGEPAGES_CONFIG}
+	fi
+}
+########
+
+INTERFACE_NAME=$2
+
+case "$1" in
+  start)
+	start_pf_ring;
+	;;
+
+  stop)
+  	stop_pf_ring;
+	;;
+
+  restart)
+    stop_pf_ring;
+	start_pf_ring;
+	;;
+
+  forcestart)
+	FORCESTART=1
+	start_pf_ring;
+	;;
+
+  forcerestart)
+	FORCESTART=1
+    stop_pf_ring;
+	start_pf_ring;
+	;;
+
+  *)
+	echo "Usage: /etc/init.d/pf_ring {start|stop|restart|forcestart|forcerestart}"
+	exit 1
+esac
+
+exit 0

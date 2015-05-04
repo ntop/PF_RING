@@ -1,0 +1,33 @@
+Quick Start Guide
+-----------------
+
+0. Load the PF_RING kernel module
+
+ $ cd PF_RING/kernel; make
+ $ insmod pf_ring.ko
+
+1. Load the PF_RING ZC-aware driver for zero-copy Direct NIC Access, any other driver works in 1-copy mode (zc device emulation).
+   PF_RING ZC-aware drivers can be found in drivers/PF_RING_aware (identified by the '-zc' suffix)
+
+ $ cd PF_RING/drivers/PF_RING_aware/intel/ixgbe/ixgbe-3.18.7-zc/src; make
+ $ ./load_driver.sh
+
+2. Enable and mount enough hugepages, they are needed for memory allocation (please read PF_RING/README.hugepages). 
+   Note: hugepages are automatically initialised by the load_driver.sh script you can use to load the driver.
+
+ $ echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+ $ mkdir /mnt/huge
+ $ mount -t hugetlbfs nodev /mnt/huge
+
+3. Run one of the PF_RING ZC sample applications available. Please use a unique cluster id per application (unless you are using a multi-process application).
+
+ $ cd PF_RING/userland; make
+ $ cd examples_zc
+ $ ./zcount -i zc:eth1 -c 1
+
+If you have eth1 and eth2 cross connected, you can do
+ $ ./zcount -i zc:eth1 -c 1
+ $ ./zsend -i zc:eth2 -c 2
+
+Please refer to the application help (-h) for a description.
+
