@@ -583,6 +583,8 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+GIT_HASH
+GIT_BRANCH
 REVISION
 PLATFORM
 KERNEL
@@ -1671,10 +1673,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 VERS=`cat ../../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 PLATFORM=`uname -p`
 
-if which svn >/dev/null; then
-  REVISION=`svn info ../..| grep "^Last Changed Rev" | cut -d ":" -f 2|cut -d " " -f 2`
+if which git >/dev/null; then
+   REVISION=`git rev-list --count HEAD`
+   GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
+   GIT_HASH=`git log --pretty=format:"%H (%ad)"|head -1`
 else
-  REVISION=nr
+   REVISION=nr
 fi
 
 MACHINE=`uname -m`
@@ -1687,6 +1691,7 @@ fi
 
 DATE=`date -R`
 KERNEL=`uname -r`
+
 
 
 

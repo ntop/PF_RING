@@ -3,10 +3,12 @@ AC_INIT([Makefile.in], 1.0)
 VERS=`cat ../../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 PLATFORM=`uname -p`
 
-if which svn >/dev/null; then
-  REVISION=`svn info ../..| grep "^Last Changed Rev" | cut -d ":" -f 2|cut -d " " -f 2`
+if which git >/dev/null; then
+   REVISION=`git rev-list --count HEAD`
+   GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
+   GIT_HASH=`git log --pretty=format:"%H (%ad)"|head -1`
 else
-  REVISION=nr
+   REVISION=nr
 fi
 
 MACHINE=`uname -m`
@@ -26,7 +28,8 @@ AC_SUBST(DATE)
 AC_SUBST(KERNEL)
 AC_SUBST(PLATFORM)
 AC_SUBST(REVISION)
-
+AC_SUBST(GIT_BRANCH)
+AC_SUBST(GIT_HASH)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(pfring.spec)

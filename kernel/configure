@@ -583,7 +583,9 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-SVN_RELEASE
+GIT_HASH
+GIT_BRANCH
+GIT_COMMIT_COUNT
 VERS
 target_alias
 host_alias
@@ -1664,8 +1666,12 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-SVN_RELEASE=`svn info .. | grep "^Revision"|cut -d " " -f 2`
+GIT_COMMIT_COUNT=`git rev-list --count HEAD`
+GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
+GIT_HASH=`git log --pretty=format:"%H (%ad)"|head -1`
 VERS=`cat ./linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
+
+
 
 
 
@@ -1675,6 +1681,10 @@ ac_config_files="$ac_config_files Makefile.dkms"
 ac_config_files="$ac_config_files dkms.conf"
 
 ac_config_files="$ac_config_files pfring-dkms-mkrpm.spec"
+
+ac_config_files="$ac_config_files pfring-dkms-mkdeb/debian/changelog"
+
+ac_config_files="$ac_config_files pfring-dkms-mkdeb/debian/control"
 
 
 cat >confcache <<\_ACEOF
@@ -2385,6 +2395,8 @@ do
     "Makefile.dkms") CONFIG_FILES="$CONFIG_FILES Makefile.dkms" ;;
     "dkms.conf") CONFIG_FILES="$CONFIG_FILES dkms.conf" ;;
     "pfring-dkms-mkrpm.spec") CONFIG_FILES="$CONFIG_FILES pfring-dkms-mkrpm.spec" ;;
+    "pfring-dkms-mkdeb/debian/changelog") CONFIG_FILES="$CONFIG_FILES pfring-dkms-mkdeb/debian/changelog" ;;
+    "pfring-dkms-mkdeb/debian/control") CONFIG_FILES="$CONFIG_FILES pfring-dkms-mkdeb/debian/control" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

@@ -11,7 +11,7 @@ Summary:	%{module_name} %{version} dkms package
 Name:		%{module_name}-dkms
 Version:	%{version}
 License:	%license
-Release:	dkms
+Release:	@GIT_COMMIT_COUNT@
 BuildArch:	noarch
 Group:		System/Kernel
 Requires: 	dkms >= 1.95
@@ -21,6 +21,7 @@ BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-root/
 
 %description
 Kernel modules for %{module_name} %{version} in a DKMS wrapper.
+GIT info: @GIT_BRANCH@:@GIT_HASH@
 
 %prep
 if [ "%mktarball_line" != "none" ]; then

@@ -1,5 +1,5 @@
-pfring (@VERS@-@SVN_RELEASE@) unstable; urgency=high
+pfring (@VERS@-@REVISION@) unstable; urgency=high
 
-  * fixed last packages
+  * GIT info: @GIT_BRANCH@:@GIT_HASH@
 
  -- Luca Deri <deri@ntop.org>  @DATE@
