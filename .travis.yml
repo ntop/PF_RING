@@ -1,7 +1,6 @@
 language: c
 
 compiler:
-  - clang
   - gcc
 
 install: 
