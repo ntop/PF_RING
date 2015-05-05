@@ -8,7 +8,7 @@ IGB="igb"
 IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
 E1000E="e1000e"
 E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
-REVISION=`git rev-list --count HEAD`
+REVISION=`git rev-list --all |wc -l`
 
 AC_SUBST(I40E)
 AC_SUBST(I40E_VERSION)

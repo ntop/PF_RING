@@ -13,7 +13,7 @@ cp debian/control.$UBUNTU_RELEASE.in debian/control.in
 
 VERS=`cat ../../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MACHINE=`uname -m`
-REVISION=`git rev-list --count HEAD`
+REVISION=`git rev-list --all |wc -l`
 GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
 GIT_HASH=`git log --pretty=format:"%H (%ad)"|head -1`
 
