@@ -5,8 +5,8 @@ compiler:
 
 install: 
   - sudo apt-get update || true
-  - sudo apt-get install build-essential linux-headers-$(uname -r)
+  - sudo apt-get install build-essential
 
 script:
-  - make
+  - cd userland; make
  
