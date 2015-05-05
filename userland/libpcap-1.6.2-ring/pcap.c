@@ -876,6 +876,10 @@ void
 pcap_breakloop(pcap_t *p)
 {
 	p->break_loop = 1;
+#ifdef HAVE_PF_RING
+	 if (p->ring != NULL)
+		pfring_breakloop(p->ring);
+#endif
 }
 
 int
