@@ -2874,13 +2874,8 @@ static void i40e_disable_irq(struct i40e_q_vector *q_vector) {
 static void i40e_enable_irq(struct i40e_q_vector *q_vector) {
 	struct i40e_vsi *vsi = q_vector->vsi;
 
-	//if (ITR_IS_DYNAMIC(vsi->rx_itr_setting) ||
-	//    ITR_IS_DYNAMIC(vsi->tx_itr_setting))
-	//	i40e_update_dynamic_itr(q_vector);
-
-	if (!test_bit(__I40E_DOWN, &vsi->state)) {
+	if (!test_bit(__I40E_DOWN, &vsi->state))
 		i40e_irq_dynamic_enable(vsi, q_vector->v_idx + vsi->base_vector);
-	}
 }
 
 int ring_is_not_empty(struct i40e_ring *rx_ring) {
@@ -4870,7 +4865,8 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 			if(cache_line_size == 0) cache_line_size = 64;
 
 			if(unlikely(enable_debug))  
-				printk("[PF_RING-ZC] %s() attach [cache_line_size=%u]\n", __FUNCTION__, cache_line_size);
+				printk("[PF_RING-ZC] %s() attach [cache_line_size=%u][MSIX %s]\n", __FUNCTION__, 
+					cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
 
 			for (i = 0; i < vsi->num_queue_pairs; i++) {
 				struct i40e_ring *rx_ring = vsi->rx_rings[i];
@@ -4885,6 +4881,7 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 				rx_info.descr_packet_memory_tot_len = rx_ring->size;
 				rx_info.registers_index		    = rx_ring->reg_idx;
 				rx_info.stats_index		    = vsi->info.stat_counter_idx;
+				rx_info.vector			    = rx_ring->q_vector->v_idx + vsi->base_vector;
  
 				tx_info.packet_memory_num_slots     = tx_ring->count;
 				tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
