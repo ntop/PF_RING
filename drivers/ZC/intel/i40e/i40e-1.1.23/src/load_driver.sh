@@ -31,10 +31,10 @@ modprobe vxlan
 insmod ./i40e.ko
 
 # Enable debugging
-find /sys/kernel/debug/i40e/ -name command -exec sh -c 'echo  "msg_enable 16" > {}' {} ';'
+#find /sys/kernel/debug/i40e/ -name command -exec sh -c 'echo  "msg_enable 16" > {}' {} ';'
 
 # Disable multiqueue
-find /sys/kernel/debug/i40e/ -name command -exec sh -c 'echo  "set rss_size 1" > {}' {} ';'
+#find /sys/kernel/debug/i40e/ -name command -exec sh -c 'echo  "set rss_size 1" > {}' {} ';'
 
 sleep 1
 
@@ -45,9 +45,9 @@ for IF in $INTERFACES ; do
 	TOCONFIG=$(ethtool -i $IF|grep $FAMILY|wc -l)
         if [ "$TOCONFIG" -eq 1 ]; then
 		printf "Configuring %s\n" "$IF"
-		ifconfig $IF up
-		sleep 1
-		bash ../scripts/set_irq_affinity $IF
+
+		# Set number of RSS queues
+		ethtool -L $IF combined 1
 
 		# Max number of RX slots
 		ethtool -G $IF rx 4096
@@ -66,6 +66,10 @@ for IF in $INTERFACES ; do
 
 		# Enable n-tuple hw filters
 		#ethtool -K $IF ntuple on
+
+		ifconfig $IF up
+		sleep 1
+		bash ../scripts/set_irq_affinity $IF
 	fi
 done
 
