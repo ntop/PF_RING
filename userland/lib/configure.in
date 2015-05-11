@@ -212,19 +212,23 @@ LIBS=$OLD_LIBS
 ])
 
 ACCOLADE_HOME="/opt/accolade"
+ACCOLADE_INC=
+ACCOLADE_LIB=
+ACCOLADE_OBJS=
+HAVE_ACCOLADE=
 AC_MSG_CHECKING([Accolade support])
 if test -d "$ACCOLADE_HOME"; then
-   ACCOLADE_INC="-I $ACCOLADE_HOME/include"
-   ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
-   ACCOLADE_OBJS="pfring_mod_accolade.o"
-   HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-   AC_MSG_RESULT(yes)
-   AC_DEFINE_UNQUOTED(HAVE_ACCOLADE, 1, [Accolade support is present])
+   if test -f pfring_mod_accolade.c; then
+      ACCOLADE_INC="-I $ACCOLADE_HOME/include"
+      ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
+      ACCOLADE_OBJS="pfring_mod_accolade.o"
+      HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+      AC_MSG_RESULT(yes)
+      AC_DEFINE_UNQUOTED(HAVE_ACCOLADE, 1, [Accolade support is present])
+    else
+      AC_MSG_RESULT(no)
+    fi
 else
-   ACCOLADE_INC=
-   ACCOLADE_LIB=
-   ACCOLADE_OBJS=
-   HAVE_ACCOLADE=
    AC_MSG_RESULT(no)
 fi
 
