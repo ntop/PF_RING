@@ -1875,7 +1875,7 @@ static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t proto,
 {
   //if(unlikely(enable_debug))
   //  printk("[PF_RING] hash_pkt(vlan_id=%u, proto=%u, port_peer_a=%u, port_peer_b=%u)\n",
-  //	   vlan_id,proto, port_peer_a, port_peer_b);
+  //	   vlan_id, proto, port_peer_a, port_peer_b);
 
   return(vlan_id+proto+
 	 host_peer_a.v6.s6_addr32[0]+host_peer_a.v6.s6_addr32[1]+
@@ -1894,7 +1894,7 @@ static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t proto,
 #define HASH_PKT_HDR_MASK_PROTO 1<<4
 #define HASH_PKT_HDR_MASK_VLAN  1<<5
 
-static inline u_int32_t hash_pkt_header(struct pfring_pkthdr * hdr, u_int32_t flags)
+static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t flags)
 {
   if(hdr->extended_hdr.pkt_hash == 0 || flags & HASH_PKT_HDR_RECOMPUTE) {
     u_int8_t use_tunneled_peers = hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id == NO_TUNNEL_ID ? 0 : 1;
@@ -2339,6 +2339,9 @@ static int parse_pkt(struct sk_buff *skb,
 
   rc = parse_raw_pkt(buffer, data_len, hdr, ip_id);
 
+  if (!hdr->extended_hdr.parsed_pkt.vlan_id) /* check for stripped vlan id */
+    __vlan_hwaccel_get_tag(skb, &hdr->extended_hdr.parsed_pkt.vlan_id);
+
   return(rc);
 }
 
@@ -2392,9 +2395,9 @@ static int hash_bucket_match(sw_filtering_hash_bucket * hash_bucket,
 	  && (hash_bucket->rule.host4_peer_b == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_src))
 	  && (hash_bucket->rule.port_peer_a == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.l4_dst_port))
 	  && (hash_bucket->rule.port_peer_b == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.l4_src_port)))))
-    {
-      if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
-	if(((memcmp(&hash_bucket->rule.host6_peer_a,
+  {
+    if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
+      if(((memcmp(&hash_bucket->rule.host6_peer_a,
 		    (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
 		    sizeof(ip_addr) == 0))
 	    && (memcmp(&hash_bucket->rule.host6_peer_b,
@@ -2407,14 +2410,14 @@ static int hash_bucket_match(sw_filtering_hash_bucket * hash_bucket,
 	    && (memcmp(&hash_bucket->rule.host6_peer_b,
 		       (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
 		       sizeof(ip_addr) == 0)))) {
-	  return(1);
-	} else {
-	  return(0);
-	}
+        return(1);
       } else {
-	return(1);
+        return(0);
       }
     } else {
+      return(1);
+    }
+  } else {
     return(0);
   }
 }
@@ -3623,7 +3626,14 @@ int check_perfect_rules(struct sk_buff *skb,
   sw_filtering_hash_bucket *hash_bucket;
   u_int8_t hash_found = 0;
 
-  hash_idx = hash_pkt_header(hdr, 0) % perfect_rules_hash_size;
+  hash_idx = hash_pkt(
+    hdr->extended_hdr.parsed_pkt.vlan_id,
+    hdr->extended_hdr.parsed_pkt.l3_proto,
+    hdr->extended_hdr.parsed_pkt.ip_src,
+    hdr->extended_hdr.parsed_pkt.ip_dst,
+    hdr->extended_hdr.parsed_pkt.l4_src_port,
+    hdr->extended_hdr.parsed_pkt.l4_dst_port) 
+    % perfect_rules_hash_size;
   hash_bucket = pfr->sw_filtering_hash[hash_idx];
 
   while(hash_bucket != NULL) {
@@ -3687,8 +3697,6 @@ int check_perfect_rules(struct sk_buff *skb,
       hash_found = 0;	/* This way we also evaluate the list of rules */
       break;
     }
-  } else {
-    /* printk("[PF_RING] Packet not found\n"); */
   }
 
   return(hash_found);
@@ -4052,12 +4060,13 @@ static int add_skb_to_ring(struct sk_buff *skb,
   /* [2] Filter packet according to rules */
 
   /* [2.1] Search the hash */
-  if(pfr->sw_filtering_hash != NULL)
+  if(pfr->sw_filtering_hash != NULL) {
     hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, &free_parse_mem,
 				     parse_memory_buffer, displ, &last_matched_plugin);
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] check_perfect_rules() returned %d\n", hash_found);
+    //if(unlikely(enable_debug))
+    //  printk("[PF_RING] check_perfect_rules() returned %d\n", hash_found);
+  }
 
   /* [2.2] Search rules list */
   if((!hash_found) && (pfr->num_sw_filtering_rules > 0)) {
@@ -7686,7 +7695,7 @@ static int ring_setsockopt(struct socket *sock,
       if(unlikely(enable_debug))
 	printk("[PF_RING] Allocating memory [filtering_rule]\n");
 
-      rule =(sw_filtering_rule_element *)
+      rule = (sw_filtering_rule_element *)
 	kcalloc(1, sizeof(sw_filtering_rule_element), GFP_KERNEL);
 
       if(rule == NULL)
