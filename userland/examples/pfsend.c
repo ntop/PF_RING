@@ -332,7 +332,7 @@ int main(int argc, char* argv[]) {
   u_int32_t num_to_send = 0;
   int bind_core = -1;
   u_int16_t cpu_percentage = 0;
-  double gbit_s = 0, td, pps;
+  double gbit_s = 0, td, pps = 0;
   ticks tick_start = 0, tick_delta = 0;
   ticks hz = 0;
   struct packet *tosend;
@@ -343,7 +343,7 @@ int main(int argc, char* argv[]) {
   char *pidFileName = NULL;
   int send_error_once = 1;
 
-  while((c = getopt(argc, argv, "b:dhi:n:g:l:af:r:vm:P:w:zx:")) != -1) {
+  while((c = getopt(argc, argv, "b:dhi:n:g:l:af:r:vm:p:P:w:zx:")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -378,6 +378,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'r':
       sscanf(optarg, "%lf", &gbit_s);
+      break;
+    case 'p':
+      sscanf(optarg, "%lf", &pps);
       break;
     case 'm':
       if(sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &mac_a, &mac_b, &mac_c, &mac_d, &mac_e, &mac_f) != 6) {
@@ -454,7 +457,7 @@ int main(int argc, char* argv[]) {
   if(send_len < 60)
     send_len = 60;
 
-  if(gbit_s != 0) {
+  if(gbit_s != 0 || pps != 0) {
     /* computing usleep delay */
     tick_start = getticks();
     usleep(1);
@@ -588,11 +591,19 @@ int main(int argc, char* argv[]) {
   if(gbit_s > 0) {
     /* computing max rate */
     pps = ((gbit_s * 1000000000) / 8 /*byte*/) / (8 /*Preamble*/ + send_len + 4 /*CRC*/ + 12 /*IFG*/);
+  } else if (gbit_s < 0) {
+    /* capture rate */
+    pps = -1;
+  } /* else use pps */
 
-    td = (double)(hz / pps);
+  if (pps > 0) {
+    td = (double) (hz / pps);
     tick_delta = (ticks)td;
 
-    printf("Number of %d-byte Packet Per Second at %.2f Gbit/s: %.2f\n", (send_len + 4 /*CRC*/), gbit_s, pps);
+    if (gbit_s > 0)
+      printf("Rate set to %.2f Gbit/s, %d-byte packets, %.2f pps\n", gbit_s, (send_len + 4 /*CRC*/), pps);
+    else
+      printf("Rate set to %.2f pps\n", pps);
   }
 
   if(bind_core >= 0)
@@ -665,7 +676,7 @@ int main(int argc, char* argv[]) {
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
     fprintf(stderr, "Dumping statistics on %s\n", path);
 
-  if(gbit_s != 0)
+  if(pps != 0)
     tick_start = getticks();
 
   while((num_to_send == 0) 
@@ -685,12 +696,12 @@ int main(int argc, char* argv[]) {
       break;
 
     if (if_index != -1)
-      rc = pfring_send_ifindex(pd, tosend->pkt, tosend->len, gbit_s < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */, if_index);
+      rc = pfring_send_ifindex(pd, tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */, if_index);
     else if(use_zero_copy_tx)
       /* We pre-filled the TX slots */
-      rc = pfring_send(pd, NULL, tosend->len, gbit_s < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
+      rc = pfring_send(pd, NULL, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
     else
-      rc = pfring_send(pd, tosend->pkt, tosend->len, gbit_s < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
+      rc = pfring_send(pd, tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
 
     if (unlikely(verbose))
       printf("[%d] pfring_send(%d) returned %d\n", i, tosend->len, rc);
@@ -718,11 +729,11 @@ int main(int argc, char* argv[]) {
 	&& (num_pkt_good_sent == num_tx_slots))
       tosend = pkt_head;
 
-    if(gbit_s > 0) {
+    if(pps > 0) {
       /* rate set */
       while((getticks() - tick_start) < (num_pkt_good_sent * tick_delta))
         if (unlikely(do_shutdown)) break;
-    } else if (gbit_s < 0) {
+    } else if (pps < 0) {
       /* real pcap rate */
       if (tosend->ticks_from_beginning == 0)
         tick_start = getticks(); /* first packet, resetting time */
