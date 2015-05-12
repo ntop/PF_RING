@@ -208,7 +208,7 @@ void drop_packet_rule(const struct pfring_pkthdr *h) {
     rule.port_peer_a = hdr->l4_src_port, rule.port_peer_b = hdr->l4_dst_port;
 
     if(pfring_handle_hash_filtering_rule(pd, &rule, 1 /* add_rule */) < 0)
-      fprintf(stderr, "pfring_add_hash_filtering_rule(1) failed\n");
+      fprintf(stderr, "pfring_handle_hash_filtering_rule(1) failed\n");
     else
       printf("Added filtering rule %d\n", rule.rule_id);
   } else {
@@ -227,7 +227,7 @@ void drop_packet_rule(const struct pfring_pkthdr *h) {
     rule.core_fields.dport_low = rule.core_fields.dport_high = hdr->l4_dst_port;
 
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
-      fprintf(stderr, "pfring_add_hash_filtering_rule(2) failed\n");
+      fprintf(stderr, "pfring_add_filtering_rule(2) failed\n");
     else
       printf("Rule %d added successfully...\n", rule.rule_id);
   }
@@ -796,6 +796,7 @@ int main(int argc, char* argv[]) {
 	add_drop_rule = 2;
 	break;
       }
+      break;
     case 'x':
       load_strings(optarg);      
       break;
@@ -925,7 +926,7 @@ int main(int argc, char* argv[]) {
   }
 
   if(clusterId > 0) {
-    rc = pfring_set_cluster(pd, clusterId, cluster_round_robin);
+    rc = pfring_set_cluster(pd, clusterId, cluster_per_flow_5_tuple);
     printf("pfring_set_cluster returned %d\n", rc);
   }
 
