@@ -1379,6 +1379,7 @@ zc_dev_model pfring_zc_dev_model(struct ixgbe_hw *hw)
 	switch (hw->mac.type) {
 		case ixgbe_mac_82598EB: return intel_ixgbe_82598;
 		case ixgbe_mac_82599EB: return (hw->silicom.has_hw_ts_card ? intel_ixgbe_82599_ts : intel_ixgbe_82599);
+		case ixgbe_mac_X540:	return intel_ixgbe_82599;
 		default:		return intel_ixgbe;
 	}
 }
