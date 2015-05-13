@@ -209,6 +209,9 @@ void print_packet(pfring_zc_pkt_buff *buffer) {
 
 
 void *packet_consumer_thread(void *user) {
+#ifdef USE_BURST_API
+  int i, n;
+#endif
 
   if (bind_core >= 0)
     bind2core(bind_core);
