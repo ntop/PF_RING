@@ -721,14 +721,13 @@ typedef enum {
   add_device_mapping = 0, remove_device_mapping
 } zc_dev_operation;
 
+/* IMPORTANT NOTE
+ * add new family types ALWAYS at the end
+ * (i.e. append) of this datatype */
 typedef enum {
   intel_e1000e = 0,
   intel_igb,
   intel_ixgbe,
-  /* IMPORTANT NOTE
-     add new family types ALWAYS at the end
-     (i.e. append) of this datatype
-  */
   intel_ixgbe_82598,
   intel_ixgbe_82599,
   intel_igb_82580,
