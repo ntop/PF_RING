@@ -41,9 +41,8 @@
 #define pfring_ptr ax25_ptr
 
 /* Versioning */
-/* NOTE: remember to update dkms.conf */
-#define RING_VERSION                "6.1.0"
-#define RING_VERSION_NUM           0x060100
+#define RING_VERSION                "6.1.1"
+#define RING_VERSION_NUM           0x060101
 
 /* Set */
 #define SO_ADD_TO_CLUSTER                 99
