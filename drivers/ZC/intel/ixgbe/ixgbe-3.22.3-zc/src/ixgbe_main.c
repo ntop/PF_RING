@@ -1187,6 +1187,8 @@ static bool ixgbe_alloc_mapped_page(struct ixgbe_ring *rx_ring,
 static void ixgbe_irq_enable_queues(struct ixgbe_adapter *adapter, u64 qmask);
 static void ixgbe_irq_disable_queues(struct ixgbe_adapter *adapter, u64 qmask);
 
+static void ixgbe_enable_rx_drop(struct ixgbe_adapter *adapter, struct ixgbe_ring *ring);
+
 int ring_is_not_empty(struct ixgbe_ring *rx_ring) {
 	union ixgbe_adv_rx_desc *rx_desc;
 	u32 staterr;
@@ -1299,6 +1301,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct ixgbe_ring    *tx_ring = (struct ixgbe_ring *) tx_data;
 	struct ixgbe_ring    *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
 	struct ixgbe_adapter *adapter;
+	int i;
   
 	if (xx_ring == NULL) return; /* safety check*/
 
@@ -1314,8 +1317,14 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDH(rx_ring->reg_idx), 0);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDT(rx_ring->reg_idx), 0);
 
-			if(adapter->hw.mac.type != ixgbe_mac_82598EB)
+			if (adapter->hw.mac.type != ixgbe_mac_82598EB)
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
+
+
+			/* force DROP_EN on all queues */
+			if (adapter->hw.mac.type != ixgbe_mac_82598EB)
+				for (i = 0; i < adapter->num_rx_queues; i++)
+					ixgbe_enable_rx_drop(adapter, adapter->rx_ring[i]);
 		}
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
@@ -1323,7 +1332,6 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		}
 
 	} else { /* restore card memory */
-		int i;
 
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			u32 rxctrl;
@@ -1332,7 +1340,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rxctrl = IXGBE_READ_REG(&adapter->hw, IXGBE_RXCTRL);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RXCTRL, rxctrl & ~IXGBE_RXCTRL_RXEN);
    
-			for(i=0; i<rx_ring->count; i++) {
+			for (i=0; i<rx_ring->count; i++) {
 				union ixgbe_adv_rx_desc *rx_desc = IXGBE_RX_DESC(rx_ring, i);
 				rx_desc->read.pkt_addr = 0;
 				rx_desc->read.hdr_addr = 0;
@@ -1345,7 +1353,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rxctrl |= IXGBE_RXCTRL_RXEN;
 			adapter->hw.mac.ops.enable_rx_dma(&adapter->hw, rxctrl);
 
-			if(adapter->hw.mac.type != ixgbe_mac_82598EB)
+			if (adapter->hw.mac.type != ixgbe_mac_82598EB)
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
 		}
 
