@@ -4044,6 +4044,9 @@ void ixgbe_set_rx_drop_en(struct ixgbe_adapter *adapter)
 			ixgbe_enable_rx_drop(adapter, adapter->rx_ring[i]);
 	} else {
 		for (i = 0; i < adapter->num_rx_queues; i++)
+#ifdef HAVE_PF_RING
+			if (adapter->hw.mac.type == ixgbe_mac_82598EB) /* Do not clear the DROP_EN bit on 82599/X540 */
+#endif
 			ixgbe_disable_rx_drop(adapter, adapter->rx_ring[i]);
 	}
 }
@@ -4094,12 +4097,12 @@ static void ixgbe_configure_srrctl(struct ixgbe_adapter *adapter,
 			rxctl |= ~IXGBE_RXCTRL_DMBYPS;
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RXCTRL, rxctl);
 
-			//printk("[PF_RING-ZC] 82598 [# queues: %u][flag: %02X][RXCTRL: %02X]\n",
+			//printk("[PF_RING-ZC] 82598: DROPEN bit set [# queues: %u][flag: %02X][RXCTRL: %02X]\n",
 			//       adapter->num_rx_queues, flag, IXGBE_READ_REG(&adapter->hw, IXGBE_RXCTRL));
+
 			/* NOTE: this code does not seem to work as it should, thus we need to handle clean_rx_irq for 82598 */
 		}
 #endif
-
 	}
 
 	/* configure header buffer length, needed for RSC */
@@ -4118,9 +4121,8 @@ static void ixgbe_configure_srrctl(struct ixgbe_adapter *adapter,
 
 #ifdef HAVE_PF_RING
 	/* This is used for 82599 to drop packets when a queue is full */
-	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0
-	    && adapter->hw.mac.type != ixgbe_mac_82598EB)
-		srrctl |= IXGBE_SRRCTL_DROP_EN;
+	if (adapter->hw.mac.type != ixgbe_mac_82598EB)
+		ixgbe_enable_rx_drop(adapter, rx_ring);
 #endif
 
 	IXGBE_WRITE_REG(hw, IXGBE_SRRCTL(reg_idx), srrctl);
