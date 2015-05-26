@@ -12,7 +12,7 @@ HERE=$(shell pwd)
 PF_RING_HOME=$(HERE)/../../
 
 
-all: clean pre build
+all: clean @PRE_DEP@ build
 
 pre-drivers: pre-dna pre-zc
 
@@ -32,7 +32,9 @@ pre-zc:
 pre: pre-kernel pre-build
 pre-nodrivers: pre-kernel-nodrivers pre-build
 
-pre-build:
+pre-build: pre-build-core @PRE_BUILD_EXAMPLES@
+
+pre-build-core:
 	-mv *.deb packages
 	cat /dev/null > debian/files
 	@echo "************************************************************"
@@ -47,11 +49,13 @@ pre-build:
 	cd $(PF_RING_HOME)/userland/lib; make install DESTDIR=$(HERE)/debian
 	cd $(PF_RING_HOME)/userland/libpcap; ./configure; make; cp libpcap* $(HERE)/debian/usr/local/lib/; cd $(HERE)/debian/usr/local/lib/; ln -sf libpcap.so.?.?.? libpcap.so
 	cd $(PF_RING_HOME)/kernel/linux/; cp pf_ring.h $(HERE)/debian/usr/local/include/linux/
+	@find $(HERE)/debian -name "*~" -exec /bin/rm {} ';' 
+
+pre-build-examples:
 	cd $(PF_RING_HOME)/userland/tcpdump/ ; ./configure; make; cp tcpdump $(HERE)/debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland/examples; cp pfcount pfsend pfwrite $(HERE)/debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland/examples_libzero; cp pfdnacluster_master $(HERE)/debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland/examples_zc; cp zbalance_ipc zsend zcount zcount_ipc $(HERE)/debian/usr/local/bin
-	@find $(HERE)/debian -name "*~" -exec /bin/rm {} ';' 
 
 build-nodrivers: pre-kernel-nodrivers build
 
