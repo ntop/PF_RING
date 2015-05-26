@@ -46,7 +46,7 @@ CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} ${DNA_DEFINE} @HAVE_ZERO@ @HAVE
 #
 # User and System libraries
 #
-LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ -lpthread @SYSLIBS@ @SILICOM_LIBS@ @REDIS_LIB@ @LIBNUMA@ -lrt
+LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ -lpthread @SYSLIBS@ @SILICOM_LIBS@ @REDIS_LIB@ @LIBNUMA@ -lrt
 
 # How to make an object file
 %.o: %.c pfutils.c
