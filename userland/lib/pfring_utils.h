@@ -18,18 +18,16 @@
 
 struct iphdr {
 #if defined(__LITTLE_ENDIAN_BITFIELD)
-  u_int32_t	tot_len:16,
-  		tos:8,
-  		ihl:4,
-  		version:4;
+  u_int8_t	ihl:4,
+		version:4;
 #elif defined (__BIG_ENDIAN_BITFIELD)
-  u_int32_t	version:4,
-  		ihl:4,
-  		tos:8,
-  		tot_len:16;
+  u_int8_t	version:4,
+		ihl:4;
 #else
 #error	"Please fix <asm/byteorder.h>"
 #endif
+  u_int8_t	tos;
+  u_int16_t	tot_len;
   u_int16_t	id;
 #define IP_CE		0x8000
 #define IP_DF		0x4000
