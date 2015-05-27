@@ -818,6 +818,13 @@ static int pfring_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t callbac
       case MAX_DAQ_VERDICT:
 	/* No way we can reach this point */
 	break;
+
+#ifdef TODO
+	/* We need to handle this case at some point */
+      case DAQ_VERDICT_RETRY:
+	/* Nothing to do this time */
+	break;
+#endif
       }
 
       context->stats.verdicts[verdict]++;

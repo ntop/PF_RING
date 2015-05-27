@@ -201,10 +201,14 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfsend - (C) 2011-14 ntop.org\n");
+  printf("pfsend - (C) 2011-15 ntop.org\n");
   printf("Replay synthetic traffic, or a pcap, or a packet in hex format from standard input.\n\n"); 
   printf("pfsend -i out_dev [-a] [-f <.pcap file>] [-g <core_id>] [-h]\n"
-         "       [-l <length>] [-n <num>][-r <rate>] [-m <dst MAC>]\n"
+         "       [-l <length>] [-n <num>] "
+#if !(defined(__arm__) || defined(__mips__))
+	 "[-r <rate>] [-p <rate>] "
+#endif
+	 "[-m <dst MAC>]\n"
 	 "       [-w <TX watermark>] [-v]\n\n");
   printf("-a              Active send retry\n");
 #if 0
@@ -216,7 +220,10 @@ void printHelp(void) {
   printf("-i <device>     Device name. Use device\n");
   printf("-l <length>     Packet length to send. Ignored with -f\n");
   printf("-n <num>        Num pkts to send (use 0 for infinite)\n");
-  printf("-r <rate>       Rate to send (example -r 2.5 sends 2.5 Gbit/sec, -r -1 pcap capture rate)\n");
+#if !(defined(__arm__) || defined(__mips__))
+  printf("-r <Gbps rate>  Rate to send (example -r 2.5 sends 2.5 Gbit/sec, -r -1 pcap capture rate)\n");
+  printf("-p <pps rate>   Rate to send (example -p 100 send 100 pps)\n");
+#endif
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Number of different IPs (balanced traffic)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on DNA]\n");
@@ -332,8 +339,11 @@ int main(int argc, char* argv[]) {
   u_int32_t num_to_send = 0;
   int bind_core = -1;
   u_int16_t cpu_percentage = 0;
-  double gbit_s = 0, td, pps = 0;
+  double pps = 0;
+#if !(defined(__arm__) || defined(__mips__))
+  double gbit_s = 0, td;
   ticks tick_start = 0, tick_delta = 0;
+#endif
   ticks hz = 0;
   struct packet *tosend;
   u_int num_tx_slots = 0;
@@ -376,12 +386,14 @@ int main(int argc, char* argv[]) {
     case 'a':
       active_poll = 1;
       break;
+#if !(defined(__arm__) || defined(__mips__))
     case 'r':
       sscanf(optarg, "%lf", &gbit_s);
       break;
     case 'p':
       sscanf(optarg, "%lf", &pps);
       break;
+#endif
     case 'm':
       if(sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &mac_a, &mac_b, &mac_c, &mac_d, &mac_e, &mac_f) != 6) {
 	printf("Invalid MAC address format (XX:XX:XX:XX:XX:XX)\n");
@@ -457,6 +469,7 @@ int main(int argc, char* argv[]) {
   if(send_len < 60)
     send_len = 60;
 
+#if !(defined(__arm__) || defined(__mips__))
   if(gbit_s != 0 || pps != 0) {
     /* computing usleep delay */
     tick_start = getticks();
@@ -469,6 +482,7 @@ int main(int argc, char* argv[]) {
     hz = (getticks() - tick_start - tick_delta) * 1000 /*kHz -> Hz*/;
     printf("Estimated CPU freq: %lu Hz\n", (long unsigned int)hz);
   }
+#endif
 
   if(pcap_in) {
     char ebuf[256];
@@ -588,6 +602,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
+#if !(defined(__arm__) || defined(__mips__))
   if(gbit_s > 0) {
     /* computing max rate */
     pps = ((gbit_s * 1000000000) / 8 /*byte*/) / (8 /*Preamble*/ + send_len + 4 /*CRC*/ + 12 /*IFG*/);
@@ -605,6 +620,7 @@ int main(int argc, char* argv[]) {
     else
       printf("Rate set to %.2f pps\n", pps);
   }
+#endif
 
   if(bind_core >= 0)
     bind2core(bind_core);
@@ -676,8 +692,10 @@ int main(int argc, char* argv[]) {
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
     fprintf(stderr, "Dumping statistics on %s\n", path);
 
+#if !(defined(__arm__) || defined(__mips__))
   if(pps != 0)
     tick_start = getticks();
+#endif
 
   while((num_to_send == 0) 
 	|| (i < num_to_send)) {
@@ -729,6 +747,7 @@ int main(int argc, char* argv[]) {
 	&& (num_pkt_good_sent == num_tx_slots))
       tosend = pkt_head;
 
+#if !(defined(__arm__) || defined(__mips__))
     if(pps > 0) {
       /* rate set */
       while((getticks() - tick_start) < (num_pkt_good_sent * tick_delta))
@@ -740,6 +759,7 @@ int main(int argc, char* argv[]) {
       while((getticks() - tick_start) < tosend->ticks_from_beginning)
         if (unlikely(do_shutdown)) break;
     }
+#endif
 
     if(num_to_send > 0) i++;
   } /* for */

@@ -36,7 +36,16 @@ AC_ARG_WITH( libpfring_libraries,
 
 if test -d "${HOME}/PF_RING/"; then
 	CPPFLAGS="${CPPFLAGS} -I ${HOME}/PF_RING/userland/lib -I ${HOME}/PF_RING/kernel"
-	LDFLAGS="${LDFLAGS} -L${HOME}/PF_RING/userland/lib -lpthread -lnuma"
+	LDFLAGS="${LDFLAGS} -L${HOME}/PF_RING/userland/lib -lpthread"
+
+	SHORT_MACHINE=`uname -m | cut -b1-3`
+	if test "$SHORT_MACHINE" = "x86"; then
+	  LDFLAGS="${LDFLAGS} -lnuma"
+	else 
+	   if test "$SHORT_MACHINE" = "i68"; then
+   	     LDFLAGS="${LDFLAGS} -lnuma"
+	   fi
+	fi
 fi
 
 if test "x$with_pfring_includes" != "xno"; then
