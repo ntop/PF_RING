@@ -26,6 +26,7 @@
 #define PF_RING_ZC_DEVICE_IXIA_TIMESTAMP     1 << 5   /**< pfring_zc_open_device() flag: extract IXIA timestamp from packet */
 #define PF_RING_ZC_DEVICE_NOT_REPROGRAM_RSS  1 << 6   /**< pfring_zc_open_device() flag: do not reprogram RSS redirection table */
 #define PF_RING_ZC_DEVICE_CAPTURE_TX         1 << 7   /**< pfring_zc_open_device() flag: capture RX+TX traffic (ignored in kernel-bypass mode) */
+#define PF_RING_ZC_DEVICE_IPONLY_RSS         1 << 8   /**< pfring_zc_open_device() flag: compute RSS hash on IP only (not 4-tuple) */
 
 #define UNDEFINED_QUEUEID  UINT32_MAX       /**< pfring_zc_get_queue_id() return val: queue id is not valid */
 #define QUEUE_IS_DEVICE(i) (i > UINT16_MAX) /**< pfring_zc_get_queue_id() return val: queue id is an encoded device index */

@@ -356,7 +356,8 @@ struct __pfring {
 #define PF_RING_IXIA_TIMESTAMP	     1 << 12 /**< pfring_open() flag: Enable ixiacom.com hardware timestamp support+stripping. */
 #define PF_RING_USERSPACE_BPF	     1 << 13 /**< pfring_open() flag: Force userspace bpf even with standard drivers (not only with ZC/DNA). */
 #define PF_RING_ZC_NOT_REPROGRAM_RSS 1 << 14 /**< pfring_open() flag: Do not touch/reprogram hw RSS */ 
-#define PF_RING_VSS_APCON_TIMESTAMP  1 << 14 /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
+#define PF_RING_VSS_APCON_TIMESTAMP  1 << 15 /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
+#define PF_RING_ZC_IPONLY_RSS	     1 << 16 /**< pfring_open() flag: Compute RSS on src/dst IP only (not 4-tuple) */ 
 
 /* ********************************* */
 

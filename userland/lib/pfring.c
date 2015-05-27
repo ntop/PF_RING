@@ -150,6 +150,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->rss_mode            = (flags & PF_RING_ZC_NOT_REPROGRAM_RSS) ? PF_RING_ZC_NOT_REPROGRAM_RSS : (
                               (flags & PF_RING_DNA_SYMMETRIC_RSS) ? PF_RING_DNA_SYMMETRIC_RSS : (
                               (flags & PF_RING_DNA_FIXED_RSS_Q_0) ? PF_RING_DNA_FIXED_RSS_Q_0 : 0));
+  if (flags & PF_RING_ZC_IPONLY_RSS) ring->rss_mode |= PF_RING_ZC_IPONLY_RSS;
   ring->force_timestamp     = !!(flags & PF_RING_TIMESTAMP);
   ring->strip_hw_timestamp  = !!(flags & PF_RING_STRIP_HW_TIMESTAMP);
   ring->hw_ts.enable_hw_timestamp = !!(flags & PF_RING_HW_TIMESTAMP);
