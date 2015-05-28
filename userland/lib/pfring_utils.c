@@ -84,6 +84,7 @@ static u_int32_t pfring_hash_pkt(struct pfring_pkthdr *hdr) {
     return
       hdr->extended_hdr.parsed_pkt.vlan_id +
       hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto +
+      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[0] +
       hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[1] +
       hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[2] +
       hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[3] +
@@ -651,31 +652,35 @@ static int pfring_promisc(const char *device, int set_promisc) {
   int sock_fd, ret = 0;
   struct ifreq ifr;
 
-  if(device == NULL) return(-3);
+  if (device == NULL) 
+    return -3;
 
   sock_fd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-  if(sock_fd <= 0) return(-1);
+
+  if (sock_fd <= 0)
+    return -1;
 
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, device, sizeof(ifr.ifr_name));
-  if(ioctl(sock_fd, SIOCGIFFLAGS, &ifr) == -1) {
+
+  if (ioctl(sock_fd, SIOCGIFFLAGS, &ifr) == -1) {
     close(sock_fd);
-    return(-2);
+    return -2;
   }
 
   ret = ifr.ifr_flags & IFF_PROMISC;
-  if(set_promisc) {
-    if(ret == 0) ifr.ifr_flags |= IFF_PROMISC;
-  } else {
-    /* Remove promisc */
-    if(ret != 0) ifr.ifr_flags &= ~IFF_PROMISC;
+
+  if (set_promisc) {
+    if (ret == 0) ifr.ifr_flags |= IFF_PROMISC;
+  } else { /* remove promisc */
+    if (ret != 0) ifr.ifr_flags &= ~IFF_PROMISC;
   }
 
-  if(ioctl(sock_fd, SIOCSIFFLAGS, &ifr) == -1)
-    return(-1);
+  if (ioctl(sock_fd, SIOCSIFFLAGS, &ifr) == -1)
+    return -1;
 
   close(sock_fd);
-  return(ret);
+  return ret;
 }
 
 /* ******************************* */
@@ -689,19 +694,20 @@ int pfring_set_if_promisc(const char *device, int set_promisc) {
   pos = NULL;
   elem = strtok_r(name_copy, ";,", &pos);
 
-  while(elem != NULL) {
+  while (elem != NULL) {
     char *at = strchr(elem, '@');
 
-    if(at != NULL) at[0] = '\0';
+    if (at != NULL) at[0] = '\0';
 
     ret = pfring_promisc(elem, set_promisc);
 
-    if(ret < 0) return(ret);
+    if (ret < 0) 
+      return ret;
 
     elem = strtok_r(NULL, ";,", &pos);
   }
 
-  return(ret);
+  return ret;
 }
 
 /* *************************************** */
