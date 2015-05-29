@@ -1317,14 +1317,13 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDH(rx_ring->reg_idx), 0);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDT(rx_ring->reg_idx), 0);
 
-			if (adapter->hw.mac.type != ixgbe_mac_82598EB)
+			if (adapter->hw.mac.type != ixgbe_mac_82598EB) {
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
 
-
-			/* force DROP_EN on all queues */
-			if (adapter->hw.mac.type != ixgbe_mac_82598EB)
+				/* force DROP_EN on all queues */
 				for (i = 0; i < adapter->num_rx_queues; i++)
 					ixgbe_enable_rx_drop(adapter, adapter->rx_ring[i]);
+			}
 		}
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
@@ -1353,8 +1352,12 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rxctrl |= IXGBE_RXCTRL_RXEN;
 			adapter->hw.mac.ops.enable_rx_dma(&adapter->hw, rxctrl);
 
-			if (adapter->hw.mac.type != ixgbe_mac_82598EB)
+			if (adapter->hw.mac.type != ixgbe_mac_82598EB) {
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
+				
+				/* force DROP_EN on current queue (queue reset clean the bit) */
+				ixgbe_enable_rx_drop(adapter, adapter->rx_ring[rx_ring->reg_idx]);
+			}
 		}
 
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
