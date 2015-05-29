@@ -3330,7 +3330,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rx_ring->tail = hw->hw_addr + I40E_QRX_TAIL(pf_q);
 			writel(0, rx_ring->tail);
 			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
-			i40e_alloc_rx_buffers(rx_ring, I40E_DESC_UNUSED(rx_ring));
+			i40e_alloc_rx_buffers_1buf(rx_ring, I40E_DESC_UNUSED(rx_ring));
     
 			//i40e_vsi_enable_irq(rx_ring->vsi);
 			i40e_control_rxq(vsi, pf_q, true /* start */);
