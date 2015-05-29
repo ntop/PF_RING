@@ -6769,6 +6769,7 @@ static void i40e_enable_pf_switch_lb(struct i40e_pf *pf)
 	}
 }
 
+#ifdef HAVE_BRIDGE_ATTRIBS
 /**
  * i40e_disable_pf_switch_lb
  * @pf: pointer to the PF structure
@@ -6802,6 +6803,7 @@ static void i40e_disable_pf_switch_lb(struct i40e_pf *pf)
 			 __func__, vsi->back->hw.aq.asq_last_status);
 	}
 }
+#endif
 
 /**
  * i40e_config_bridge_mode - Configure the HW bridge mode
