@@ -494,6 +494,10 @@ int main(int argc, char* argv[]) {
 
     if(pt) {
       struct packet *last = NULL;
+      int datalink = pcap_datalink(pt);
+
+      if (datalink == DLT_LINUX_SLL)
+        printf("Linux 'cooked' packets detected, stripping 2 bytes from header..\n");
 
       while(1) {
 	struct packet *p;
@@ -509,6 +513,7 @@ int main(int argc, char* argv[]) {
 	p = (struct packet*)malloc(sizeof(struct packet));
 	if(p) {
 	  p->len = h->caplen;
+          if (datalink == DLT_LINUX_SLL) p->len -= 2;
 	  p->ticks_from_beginning = (((h->ts.tv_sec - beginning.tv_sec) * 1000000) + (h->ts.tv_usec - beginning.tv_usec)) * hz / 1000000;
 	  p->next = NULL;
 	  p->pkt = (char*)malloc(p->len);
@@ -517,7 +522,12 @@ int main(int argc, char* argv[]) {
 	    printf("Not enough memory\n");
 	    break;
 	  } else {
-	    memcpy(p->pkt, pkt, p->len);
+            if (datalink == DLT_LINUX_SLL) {
+	      memcpy(p->pkt, pkt, 12);
+              memcpy(&p->pkt[12], &pkt[14], p->len - 14);
+	    } else {
+	      memcpy(p->pkt, pkt, p->len);
+            }
 	    if(reforge_mac) memcpy(p->pkt, mac_address, 6);
 	  }
 
