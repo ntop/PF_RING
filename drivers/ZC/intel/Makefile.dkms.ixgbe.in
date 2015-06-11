@@ -32,7 +32,9 @@ add_deb:
 
 remove:
 	-dkms remove -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@ --all
-	\/bin/rm -fv /lib/modules/*/weak-updates/ixgbe*ko /lib/modules/*/extra/ixgbe*ko
+	\/bin/rm -f /lib/modules/*/weak-updates/ixgbe*ko
+	\/bin/rm -f /lib/modules/*/extra/ixgbe*ko
+	\/bin/rm -rf /var/lib/dkms/ixgbe-zc
 
 veryclean: remove
 	\/bin/rm -fr /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@

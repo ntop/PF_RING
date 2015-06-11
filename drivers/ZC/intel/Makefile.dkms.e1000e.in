@@ -32,7 +32,9 @@ add_deb:
 
 remove:
 	-dkms remove -m @E1000E@-zc -v @E1000E_VERSION@.@REVISION@ --all
-	\/bin/rm -fv /lib/modules/*/weak-updates/e1000e*ko /lib/modules/*/extra/e1000e*ko
+	\/bin/rm -f /lib/modules/*/weak-updates/e1000e*ko
+	\/bin/rm -f /lib/modules/*/extra/e1000e*ko
+	\/bin/rm -rf /var/lib/dkms/e1000e-zc
 
 veryclean: remove
 	\/bin/rm -fr /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@

@@ -32,7 +32,10 @@ add_deb:
 
 remove:
 	-dkms remove -m @IGB@-dna -v @IGB_VERSION@.@REVISION@ --all
-	\/bin/rm -fv /lib/modules/*/weak-updates/igb*ko /lib/modules/*/extra/igb*ko
+	\/bin/rm -f /lib/modules/*/weak-updates/igb*ko
+	\/bin/rm -f /lib/modules/*/extra/igb*ko
+	\/bin/rm -rf /var/lib/dkms/igb-dna
+
 
 veryclean: remove
 	\/bin/rm -fr /usr/src/@IGB@-dna-@IGB_VERSION@.@REVISION@
