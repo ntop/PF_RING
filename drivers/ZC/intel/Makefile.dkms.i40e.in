@@ -33,6 +33,9 @@ add_deb:
 
 remove:
 	-dkms remove -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --all
+	\/bin/rm -f /lib/modules/*/weak-updates/i40e*ko
+	\/bin/rm -f /lib/modules/*/extra/i40e*ko
+	\/bin/rm -rf /var/lib/dkms/i40e-zc
 
 veryclean: remove
 	\/bin/rm -fr /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@
