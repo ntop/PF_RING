@@ -285,6 +285,14 @@ pfring_zc_remove_hw_rule(
 
 /* **************************************************************************************** */
 
+void 
+pfring_zc_set_rxfh_indir(
+	pfring_zc_queue *queue,
+	u_int8_t *indir_table
+);
+
+/* **************************************************************************************** */
+
 /**
  * Read the queue id. If the actual queue is a device, it is possible to convert the ID to the device index using QUEUEID_TO_IFINDEX(id)
  * @param queue The queue handle.
