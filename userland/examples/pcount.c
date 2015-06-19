@@ -130,6 +130,7 @@ void print_stats() {
 void sigproc(int sig) {
   static int called = 0;
 
+  fprintf(stderr, "Leaving...\n");
   if (called) return; else called = 1;
 
   print_stats();
@@ -442,6 +443,7 @@ int main(int argc, char* argv[]) {
   pcap_set_application_name(pd, "pcount");
 
   signal(SIGINT, sigproc);
+  signal(SIGTERM, sigproc);
 
   if(!verbose) {
     signal(SIGALRM, my_sigalarm);
