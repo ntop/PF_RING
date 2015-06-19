@@ -966,7 +966,6 @@ int main(int argc, char* argv[]) {
 
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
-  signal(SIGINT, sigproc);
 
   if(!verbose) {
     signal(SIGALRM, my_sigalarm);
