@@ -130,11 +130,11 @@ void print_stats() {
 void sigproc(int sig) {
   static int called = 0;
 
-  if(called) return; else called = 1;
+  if (called) return; else called = 1;
 
   print_stats();
-  pcap_close(pd);
-  exit(0);
+
+  pcap_breakloop(pd);
 }
 
 /* ******************************** */
@@ -451,6 +451,7 @@ int main(int argc, char* argv[]) {
   pcap_set_watermark(pd, 128);
 
   pcap_loop(pd, -1, dummyProcesssPacket, NULL);
+
   pcap_close(pd);
 
   return(0);
