@@ -149,7 +149,7 @@ void print_stats() {
 	    (unsigned int)pfringStat.recv,
 	    (unsigned int)pfringStat.drop,
 	    (unsigned int)(pfringStat.recv+pfringStat.drop),
-	    pfringStat.recv == 0 ? 0 :
+	    pfringStat.drop == 0 ? 0 :
 	    (double)(pfringStat.drop*100)/(double)(pfringStat.recv+pfringStat.drop));
     fprintf(stderr, "%s pkts - %s bytes",
 	    pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
