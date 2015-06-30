@@ -8,13 +8,15 @@
 #include "pfring_mod_accolade.h"
 #include "pfring_mod.h" /* to print stats under /proc */
 
+#define DEBUG 0
+
 void *anic_hugepageGet(anic_handle_t anic_handle, int count, int *shmidP);
 int anic_hugepageDmaMap(anic_handle_t anic_handle, void *virtualP, int hugepageCount, struct anic_dma_info *dmacbP);
 
 /* **************************************************** */
 
 static void accolade_release_resources(pfring *ring) {
-  pfring_accolade *accolade = (pfring_accolade *)ring->priv_data;
+  pfring_anic *accolade = (pfring_anic *)ring->priv_data;
 
   if(accolade) {
     anic_close(accolade->anic_handle);
@@ -25,18 +27,18 @@ static void accolade_release_resources(pfring *ring) {
 
 /* **************************************************** */
 
-int pfring_accolade_open(pfring *ring) {
-  pfring_accolade *accolade;
+int pfring_anic_open(pfring *ring) {
+  pfring_anic *accolade;
   int i;
   u_int32_t page, block;
 
-  ring->close              = pfring_accolade_close;
-  ring->stats              = pfring_accolade_stats;
-  ring->recv               = pfring_accolade_recv;
-  ring->poll               = pfring_accolade_poll;
-  ring->set_direction      = pfring_accolade_set_direction;
-  ring->enable_ring        = pfring_accolade_enable_ring;
-  ring->get_bound_device_ifindex = pfring_accolade_get_bound_device_ifindex;
+  ring->close              = pfring_anic_close;
+  ring->stats              = pfring_anic_stats;
+  ring->recv               = pfring_anic_recv;
+  ring->poll               = pfring_anic_poll;
+  ring->set_direction      = pfring_anic_set_direction;
+  ring->enable_ring        = pfring_anic_enable_ring;
+  ring->get_bound_device_ifindex = pfring_anic_get_bound_device_ifindex;
 
   /* Inherited from pfring_mod.c */
   ring->set_socket_mode          = pfring_mod_set_socket_mode;
@@ -50,27 +52,33 @@ int pfring_accolade_open(pfring *ring) {
   ring->fd = socket(PF_RING, SOCK_RAW, htons(ETH_P_ALL)); /* opening PF_RING socket to priaccolade stats under /proc */
   if(ring->fd < 0) return(-1);
 
-  ring->priv_data = calloc(1, sizeof(pfring_accolade));
+  ring->priv_data = calloc(1, sizeof(pfring_anic));
 
   if(ring->priv_data == NULL)
     goto free_private;
 
-  accolade = (pfring_accolade*)ring->priv_data;
+  accolade = (pfring_anic *) ring->priv_data;
 
   /*
-    Device name accoladeX@Y where
+   * Device name anicX@Y where
+   * X deviceId
+   * Y ringId
+   */
 
-    X   deviceId
-    Y   ringId
-  */
+  sscanf(&ring->device_name[4], "%u@%u", &accolade->device_id, &accolade->ring_id);
 
-  sscanf(&ring->device_name[8], "%u@%u",
-	 &accolade->device_id, &accolade->ring_id);
+#ifdef DEBUG
+  printf("[ANIC] Opening anic device=%u, ring=%u\n", accolade->device_id, accolade->ring_id);
+#endif
 
   accolade->anic_handle = anic_open("/dev/anic", accolade->device_id);
   if(anic_error_code(accolade->anic_handle) != ANIC_ERR_NONE) {
     goto free_private;
   }
+
+#ifdef DEBUG
+  printf("[ANIC] Open device /dev/anic\n");
+#endif
 
   if(accolade->anic_handle->is40k3) {
     if(anic_k325t_aurora_train(accolade->anic_handle)) {
@@ -78,22 +86,49 @@ int pfring_accolade_open(pfring *ring) {
     }
   }
 
+#ifdef DEBUG
+  printf("[ANIC] Done aurora train\n");
+#endif
+
+
   /* Reset the NIC */
   anic_reset_and_restart_pipeline(accolade->anic_handle);
   sleep(2);
 
+#ifdef DEBUG
+  printf("[ANIC] NIC just reset\n");
+#endif
+
+  if (accolade->anic_handle->product_info.product_id == ANIC_PRODUCT_ID_40K3_QUAD10G_PACKET_CAPTURE_NIC) {
+    accolade->portCount = 4;
+  } else if (accolade->anic_handle->product_info.product_id == ANIC_PRODUCT_ID_200K_DUAL100G_PACKET_CAPTURE_NIC) {
+    accolade->portCount = 2;
+  } else {
+    fprintf(stderr, "Unsupportd product_id:0x%02x\n", accolade->anic_handle->product_info.product_id);
+    goto free_private; 
+  }
+
+  if ((accolade->anic_handle->product_info.major_version & 0xf0) != 0x40) {
+    fprintf(stderr, "Unsupported firmware revision\n");
+    goto free_private;
+  }
+
   anic_pduproc_steer(accolade->anic_handle, ANIC_STEERLB);
   anic_pduproc_dma_pktseq(accolade->anic_handle, 1);
 
-  if(anic_setup_rings_largelut(accolade->anic_handle, accolade->ring_id, 0, NULL)) {
+  accolade->ringCount = 1;
+  if(anic_setup_rings_largelut(accolade->anic_handle, accolade->ringCount, 0, NULL)) {
     // if large LUT is not supported, fall back to normal LUT
-    if(anic_setup_rings(accolade->anic_handle, accolade->ring_id, 0, NULL)) {
-      fprintf(stderr, "ERROR: unsupported firmware revision\n");
-      abort();
+    if(anic_setup_rings(accolade->anic_handle, accolade->ringCount, 0, NULL)) {
+      fprintf(stderr, "Unsupported firmware revision\n");
+      goto free_private;
     }
   }
 
+  accolade->blocksize_e = ANIC_BLOCK_2MB;
   anic_block_set_blocksize(accolade->anic_handle, accolade->blocksize_e);
+
+  /*
   switch(accolade->blocksize_e) {
   case ANIC_BLOCK_4MB:
     accolade->blocksize = 2 * ACCOLADE_HUGEPAGE_SIZE;
@@ -101,9 +136,11 @@ int pfring_accolade_open(pfring *ring) {
     accolade->pageblocks = 1;
     break;
   case ANIC_BLOCK_2MB:
+  */
     accolade->blocksize = ACCOLADE_HUGEPAGE_SIZE;
     accolade->pages = ACCOLADE_BUFFER_COUNT;
     accolade->pageblocks = 1;
+  /*
     break;
   case ANIC_BLOCK_1MB:
     accolade->blocksize = ACCOLADE_HUGEPAGE_SIZE / 2;
@@ -113,6 +150,7 @@ int pfring_accolade_open(pfring *ring) {
   default:
     goto free_private;
   }
+  */
 
   for(page = 0, block = 0; page < accolade->pages; page++) {
     void *vP;
@@ -152,23 +190,39 @@ int pfring_accolade_open(pfring *ring) {
 
 /* **************************************************** */
 
-void pfring_accolade_close(pfring *ring) {
+void pfring_anic_close(pfring *ring) {
   accolade_release_resources(ring);
   close(ring->fd);
 }
 
 /* **************************************************** */
 
-int pfring_accolade_stats(pfring *ring, pfring_stat *stats) {
-  //pfring_accolade *accolade = (pfring_accolade *) ring->priv_data;
+int pfring_anic_stats(pfring *ring, pfring_stat *stats) {
+  pfring_anic *accolade = (pfring_anic *) ring->priv_data;
+  struct anic_port_pkt_counts_type tCounts;
+  u_int64_t drops = 0;
 
-  //stats->recv = accolade->ring.stats.total_packets, stats->drop = 0; /* TODO */
+  anic_port_get_cnts(accolade->anic_handle, accolade->device_id, ANIC_STID_PORT_PKT_COUNTS_TYPE, &tCounts);
+
+  //packets += tCounts.enet_rx_count;
+  //bytes   += tCounts.enet_rx_bytes;
+  drops   += tCounts.enet_rx_drop_count;
+  //malfs   += tCounts.enet_rx_malf_count;
+  //rsrcs   += tCounts.enet_rx_rsrc_count;
+
+  //accolade->rstats.bytes;
+  //accolade->rstats.packet_errors;
+  //accolade->rstats.timestamp_errors;
+
+  stats->recv = accolade->rstats.packets;
+  stats->drop = drops;
+
   return(0);
 }
 
 /* **************************************************** */
 
-int pfring_accolade_set_direction(pfring *ring, packet_direction direction) {
+int pfring_anic_set_direction(pfring *ring, packet_direction direction) {
   if(direction == rx_only_direction || direction == rx_and_tx_direction) {
     return(setsockopt(ring->fd, 0, SO_SET_PACKET_DIRECTION, &direction, sizeof(direction)));
   }
@@ -178,37 +232,35 @@ int pfring_accolade_set_direction(pfring *ring, packet_direction direction) {
 
 /* **************************************************** */
 
-int pfring_accolade_enable_ring(pfring *ring) {
-  pfring_accolade *accolade = (pfring_accolade *) ring->priv_data;
+int pfring_anic_get_bound_device_ifindex(pfring *ring, int *if_index) {
+  //pfring_anic *accolade = (pfring_anic *) ring->priv_data;
+
+  *if_index = 0; /* TODO */
+  return 0;
+}
+
+/* **************************************************** */
+
+int pfring_anic_enable_ring(pfring *ring) {
+  pfring_anic *accolade = (pfring_anic *) ring->priv_data;
+  struct rx_rmon_counts_s rmonTmp;
 
   /* Enable ring */
   anic_block_set_ring_nodetag(accolade->anic_handle, accolade->ring_id, 0);
   anic_block_ena_ring(accolade->anic_handle, accolade->ring_id, 1);
 
+  anic_get_rx_rmon_counts(accolade->anic_handle, accolade->device_id, 1, &rmonTmp);
+
   /* Set 1 msec block timeouts */
   anic_block_set_timeouts(accolade->anic_handle, 1000, 1000);
+
+  /* turn on XGE port */
+  anic_port_ena_disa(accolade->anic_handle, accolade->device_id, 1);
 
   return(0);
 }
 
 /* **************************************************** */
-
-int pfring_accolade_poll(pfring *ring, u_int wait_duration) {
-  /* TODO */
-  return 1;
-}
-
-/* ******************************* */
-
-int pfring_accolade_get_bound_device_ifindex(pfring *ring, int *if_index) {
-  //pfring_accolade *accolade = (pfring_accolade *) ring->priv_data;
-
-  *if_index = 0; /* FIX */
-  return 0;
-}
-
-/* ******************************* */
-/* ******************************* */
 
 /* External functions (anic_hugepage_support.c) */
 
@@ -218,22 +270,19 @@ int pfring_accolade_get_bound_device_ifindex(pfring *ring, int *if_index) {
 // At the moment, the ANIC only supports up to 2**35 (32 Gbyte) physical memory. This corresponds to at most 16K 2Mbyte segments.
 # define MAX_SEGMENTS 16384
 
-
-
 // file scoped globals
 static jmp_buf l_jumpEnv;
 static void (*l_savedHandler)(int);
 
+/* **************************************************** */
 
-
-static void l_sigbusHandler(int signum)
-{
+static void l_sigbusHandler(int signum) {
   // restore saved signal handler and force error handling
   signal(signum, l_savedHandler);
   longjmp(l_jumpEnv, 1);
 }
 
-
+/* **************************************************** */
 
 /*
   This function returns a virtual address to a congiguous set of allocated huge pages that don't cross a 1GB boundary.
@@ -261,9 +310,9 @@ static void l_sigbusHandler(int signum)
   capablity to avoid hugepage leaking.
 */
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-void *anic_hugepageGetAt(anic_handle_t anic_handle, int count, void *atP, int *shmidP)
-{
+/* **************************************************** */
+
+void *anic_hugepageGetAt(anic_handle_t anic_handle, int count, void *atP, int *shmidP) {
   void *virtAddress[MAX_SEGMENTS];
   unsigned long physAddress[MAX_SEGMENTS];
   int i, k;
@@ -459,140 +508,198 @@ void *anic_hugepageGetAt(anic_handle_t anic_handle, int count, void *atP, int *s
       }
     }
     return rtn;
-  }
+}
 
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  void *anic_hugepageGet(anic_handle_t anic_handle, int count, int *shmidP)
-  {
-    return anic_hugepageGetAt(anic_handle, count, NULL, shmidP);
-  }
+/* **************************************************** */
 
+void *anic_hugepageGet(anic_handle_t anic_handle, int count, int *shmidP) {
+  return anic_hugepageGetAt(anic_handle, count, NULL, shmidP);
+}
 
+/* **************************************************** */
 
-  /*
-    This function creates a DMA mapping for a set of contiguous 2MB hugepages and returns an ANIC DMA descriptor with
-    the DMA address to be used by the ANIC as well as state information needed for the kernel to unmap DMA.
-  */
+/*
+ * This function creates a DMA mapping for a set of contiguous 2MB hugepages and returns an ANIC DMA descriptor with
+ * the DMA address to be used by the ANIC as well as state information needed for the kernel to unmap DMA.
+ */
 
-  int anic_hugepageDmaMap(anic_handle_t anic_handle, void *virtualP, int hugepageCount, struct anic_dma_info *dmacbP)
-  {
-    struct anic_dma_info iocb;
-    int rtn;
+int anic_hugepageDmaMap(anic_handle_t anic_handle, void *virtualP, int hugepageCount, struct anic_dma_info *dmacbP) {
+  struct anic_dma_info iocb;
+  int rtn;
 
-    iocb.userVirtualAddress = virtualP;
-    iocb.length = hugepageCount * HUGEPAGE_SIZE;
-    iocb.pageShift = ANIC_2M_PAGE;
-    rtn = anic_map_dma(anic_handle, &iocb);
-    *dmacbP = iocb;
-    return rtn;
-  }
+  iocb.userVirtualAddress = virtualP;
+  iocb.length = hugepageCount * HUGEPAGE_SIZE;
+  iocb.pageShift = ANIC_2M_PAGE;
+  rtn = anic_map_dma(anic_handle, &iocb);
+  *dmacbP = iocb;
+  return rtn;
+}
 
+/* **************************************************** */
 
+/* This function removes a DMA mapping for a set of contiguous hugepages previously mapped with anic_hugepageDmaMap(). */
+#if 0
+int anic_hugepageDmaUnmap(anic_handle_t anic_handle, struct anic_dma_info *dmacbP) {
+  return anic_unmap_dma(anic_handle, dmacbP);
+}
+#endif
 
-  /*
-    This function removes a DMA mapping for a set of contiguous hugepages previously mapped with anic_hugepageDmaMap().
-  */
+/* **************************************************** */
 
-  int anic_hugepageDmaUnmap(anic_handle_t anic_handle, struct anic_dma_info *dmacbP)
-  {
-    return anic_unmap_dma(anic_handle, dmacbP);
-  }
+static inline void l_createHeader(unsigned blocksize, struct anic_blkstatus_s *status_p) {
+  uint8_t *buf_p = status_p->buf_p;
+  struct block_header_s *header_p = (struct block_header_s *)buf_p;
+  struct anic_descriptor_rx_packet_data *desc_p;
 
-  // ------------------------------------------------------------------------------
+  header_p->block_size = blocksize;
+  header_p->packet_count = status_p->pktcnt;
+  desc_p = (struct anic_descriptor_rx_packet_data *)&buf_p[status_p->firstpkt_offset];
+  header_p->first_timestamp = desc_p->timestamp;
+  desc_p = (struct anic_descriptor_rx_packet_data *)&buf_p[status_p->lastpkt_offset];
+  header_p->last_timestamp = desc_p->timestamp;
+  header_p->byte_count = status_p->lastpkt_offset + desc_p->length;
+}
 
-  static inline void l_createHeader(unsigned blocksize, struct anic_blkstatus_s *status_p)
-  {
-    uint8_t *buf_p = status_p->buf_p;
-    struct blkheader_s *header_p = (struct blkheader_s *)buf_p;
-    struct anic_descriptor_rx_packet_data *desc_p;
+/* **************************************************** */
 
-    header_p->block_size = blocksize;
-    header_p->packet_count = status_p->pktcnt;
-    desc_p = (struct anic_descriptor_rx_packet_data *)&buf_p[status_p->firstpkt_offset];
-    header_p->first_timestamp = desc_p->timestamp;
-    desc_p = (struct anic_descriptor_rx_packet_data *)&buf_p[status_p->lastpkt_offset];
-    header_p->last_timestamp = desc_p->timestamp;
-    header_p->byte_count = status_p->lastpkt_offset + desc_p->length;
-  }
+static int __pfring_anic_ready(pfring *ring) {
+  pfring_anic *accolade = (pfring_anic *)ring->priv_data;
+  int blk, i, blocks_ready;
+  struct anic_blkstatus_s blkstatus;
+  struct block_status *blkstatusP;
 
-  /* **************************************************** */
+  if (accolade->currentblock.processing) 
+    return 1;
 
-  uint64_t l_validateBlk(int blk, uint64_t ts) {
-    printf("%s\n", __FUNCTION__);
+prepare_anic_block:
+  if (accolade->wq.tail != accolade->wq.head) {
+    /* Block ready to be processed in the queue */
 
-    return(0); // TODO
-  }
+    accolade->currentblock.blk = accolade->wq.entryA[accolade->wq.tail];
 
-  /* **************************************************** */
-  int pfring_accolade_recv(pfring *ring, u_char **buffer,
-			   u_int buffer_len,
-			   struct pfring_pkthdr *hdr,
-			   u_int8_t wait_for_incoming_packet) {
-    pfring_accolade *accolade = (pfring_accolade *)ring->priv_data;
-    int blk, i, we_have_something_to_do;
-    struct anic_blkstatus_s blkstatus;
-    struct blkstatus *blkstatusP;
-
-    printf("%s\n", __FUNCTION__);
-
-  do_pfring_accolade_recv:
-    if(accolade->wq.tail != accolade->wq.head) {
-      /* Looks like there is something to do */
-      int ring_id;
-
-      blk = accolade->wq.entryA[accolade->wq.tail];
-
-      if(accolade->wq.tail < ACCOLADE_BUFFER_COUNT)
-	accolade->wq.tail++;
-      else
+    if (++accolade->wq.tail > ACCOLADE_BUFFER_COUNT)
 	accolade->wq.tail = 0;
 
-      blkstatusP = &accolade->l_blkStatusA[blk];
-      ring_id = blkstatusP->blkStatus.ringid;
-      accolade->lastTs[ring_id] = l_validateBlk(blk, accolade->lastTs[ring_id]);
-      blkstatusP->refcount = 0;
-      anic_block_add(accolade->anic_handle, 0 /* threadId */, blk,
-		     0, accolade->l_blkA[blk].dma_address);
-      return(1);
-    }
+    accolade->currentblock.blkstatus_p = &accolade->l_blkStatusA[accolade->currentblock.blk].blkStatus;
+    accolade->currentblock.buf_p = &accolade->currentblock.blkstatus_p->buf_p[accolade->currentblock.blkstatus_p->firstpkt_offset];
 
-    // work queue is empty, service anic rings
-    we_have_something_to_do = 0;
-    for(i = 0; i < 3; i++) {   // pull up to 4 blocks off for each ring
-      int blkcnt = anic_block_get(accolade->anic_handle, 0 /* threadId */,
-				  accolade->ring_id, &blkstatus);
-
-      if(blkcnt > 0) {
-	we_have_something_to_do = 1;
-	blk = blkstatus.blkid;
-	// patch in the virtual address of the block base
-	blkstatus.buf_p = accolade->l_blkA[blk].buf_p;
-	// create the block header
-	l_createHeader(accolade->blocksize, &blkstatus);
-	blkstatusP = &accolade->l_blkStatusA[blk];
-	if(blkstatusP->refcount != 0) {
-	  printf("refcount:%u not zero blk:%u\n", blkstatusP->refcount, blk);
-	  return(-1);
-	}
-	blkstatusP->refcount = 1;
-	blkstatusP->blkStatus = blkstatus;
-	accolade->wq.entryA[accolade->wq.head] = blk;
-	if(accolade->wq.head < ACCOLADE_BUFFER_COUNT)
-	  accolade->wq.head++;
-	else
-	  accolade->wq.head = 0;
-      }
-      else
-	break;  // next ring
-    }
-
-    if(we_have_something_to_do)
-      goto do_pfring_accolade_recv;
-
-    if(wait_for_incoming_packet) {
-      usleep(1000);
-      goto do_pfring_accolade_recv;
-    }
-
-    return(0);
+    accolade->currentblock.processing = 1;
+    return 1;
   }
+
+  /* Work queue is empty, service anic rings */
+  blocks_ready = 0;
+  for (i = 0; i < 3; i++) { /* pull up to 4 blocks off for each ring */
+    if (anic_block_get(accolade->anic_handle, 0 /* threadId */, accolade->ring_id, &blkstatus) > 0) {
+      blocks_ready = 1;
+      blk = blkstatus.blkid;
+      blkstatus.buf_p = accolade->l_blkA[blk].buf_p; /* virtual address of the block */
+      l_createHeader(accolade->blocksize, &blkstatus);
+      blkstatusP = &accolade->l_blkStatusA[blk];
+      if (blkstatusP->refcount != 0) {
+        printf("refcount:%u not zero blk:%u\n", blkstatusP->refcount, blk);
+        return -1;
+      }
+      blkstatusP->refcount = 1;
+      blkstatusP->blkStatus = blkstatus;
+      accolade->wq.entryA[accolade->wq.head] = blk;
+      if (++accolade->wq.head > ACCOLADE_BUFFER_COUNT)
+        accolade->wq.head = 0;
+    } else break;
+  }
+
+  if (blocks_ready)
+    goto prepare_anic_block;
+
+  return 0;
+}
+
+/* **************************************************** */
+
+void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, struct pfring_pkthdr *hdr) {
+  pfring_anic *accolade = (pfring_anic *)ring->priv_data;
+  struct anic_descriptor_rx_packet_data *desc_p = (struct anic_descriptor_rx_packet_data *) accolade->currentblock.buf_p;
+  struct block_status *blkstatusP = &accolade->l_blkStatusA[accolade->currentblock.blk];
+  uint64_t ts = accolade->lastTs;
+
+  hdr->len = hdr->caplen = desc_p->length - 16;
+
+  if (likely(buffer_len == 0)) {
+    *buffer = (uint8_t *) &desc_p[1];
+  } else {
+    if (buffer_len < hdr->caplen) 
+      hdr->caplen = buffer_len;
+    memcpy(*buffer, (uint8_t *) &desc_p[1], hdr->caplen);
+    memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
+    pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
+  }
+
+  hdr->caplen = min_val(hdr->caplen, ring->caplen);
+  hdr->extended_hdr.pkt_hash = 0; //TODO available?
+  hdr->extended_hdr.rx_direction = 1;
+  hdr->extended_hdr.timestamp_ns = desc_p->timestamp; //TODO nsec?
+
+  accolade->rstats.packets++;
+  accolade->rstats.bytes += hdr->len;
+  if (desc_p->anyerr)
+    accolade->rstats.packet_errors++;
+  if (desc_p->timestamp < ts)
+    accolade->rstats.timestamp_errors++;
+
+  accolade->lastTs = desc_p->timestamp;
+
+  accolade->currentblock.buf_p += (desc_p->length + 7) & ~7;
+  if (accolade->currentblock.buf_p > &accolade->currentblock.blkstatus_p->buf_p[accolade->currentblock.blkstatus_p->lastpkt_offset]) { 
+    /* Done with this block */
+    accolade->currentblock.processing = 0;
+    blkstatusP->refcount = 0;
+    anic_block_add(accolade->anic_handle, 0 /* threadId */, accolade->currentblock.blk, 0, 
+      accolade->l_blkA[accolade->currentblock.blk].dma_address);
+  }
+}
+
+/* **************************************************** */
+
+int pfring_anic_recv(pfring *ring, u_char **buffer,
+		     u_int buffer_len,
+		     struct pfring_pkthdr *hdr,
+		     u_int8_t wait_for_incoming_packet) {
+
+check_pfring_anic_ready:
+  if (__pfring_anic_ready(ring) > 0) {
+    __pfring_anic_recv_pkt(ring, buffer, buffer_len, hdr);
+    return 1;
+  }
+
+  if (wait_for_incoming_packet) {
+    if (unlikely(ring->break_recv_loop)) {
+      ring->break_recv_loop = 0;
+      return -1;
+    }
+
+    usleep(1000);
+    goto check_pfring_anic_ready;
+  }
+
+  return 0;
+}
+
+/* **************************************************** */
+
+int pfring_anic_poll(pfring *ring, u_int wait_duration) {
+  u_int64_t elapsed = 0, wait_duration_usec = wait_duration > 0 ? (wait_duration * 1000) : 0;
+
+  if (wait_duration == 0)
+    return __pfring_anic_ready(ring);
+
+  while (likely(!ring->break_recv_loop && (wait_duration < 0 || elapsed++ < wait_duration_usec))) {
+    if (__pfring_anic_ready(ring))
+      return 1;
+    usleep(1);
+  }
+
+  return 0;
+}
+
+/* **************************************************** */
+

@@ -92,8 +92,8 @@ static pfring_module_info pfring_module_list[] = {
 
 #ifdef HAVE_ACCOLADE
   {
-    .name = "accolade",
-    .open = pfring_accolade_open,
+    .name = "anic",
+    .open = pfring_anic_open,
   },
 #endif
 

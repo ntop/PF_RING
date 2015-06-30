@@ -33,7 +33,7 @@ struct block_ref {
   u_int64_t dma_address;
 };
 
-struct blkheader_s {
+struct block_header_s {
   u_int32_t block_size;
   u_int32_t packet_count;
   u_int32_t byte_count;
@@ -42,20 +42,16 @@ struct blkheader_s {
   u_int64_t last_timestamp;
 };
 
-struct blkstatus {
+struct block_status {
   struct anic_blkstatus_s blkStatus;
   int refcount;
 };
 
 struct ring_stats {
-  struct {
-    uint64_t packets;
-    uint64_t bytes;
-    uint64_t packet_errors;
-    uint64_t timestamp_errors;
-    uint64_t validation_errors;
-    uint64_t pad[3];  // use full cache lines
-  } ring[ACCOLADE_MAX_RINGS];
+  uint64_t packets;
+  uint64_t bytes;
+  uint64_t packet_errors;
+  uint64_t timestamp_errors;
 };
 
 struct workqueue {
@@ -64,38 +60,47 @@ struct workqueue {
   int entryA[ACCOLADE_BUFFER_COUNT+1];  // bounded queue (can never have more entries than there are blks)
 };
 
+struct block_processing {
+  int processing;
+  uint8_t *buf_p;
+  struct anic_blkstatus_s *blkstatus_p;
+  int blk;
+};
+
 typedef struct {
   anic_handle_t anic_handle;
 
   /* ***************************** */
 
   struct block_ref l_blkA[ACCOLADE_BUFFER_COUNT];
-  u_int8_t *l_patternBuffer;
-  struct blkstatus l_blkStatusA[ACCOLADE_BUFFER_COUNT];
-  struct ring_stats l_rstats;
-  u_int32_t device_id, ring_id, blocksize, pages, pageblocks;
+  struct block_status l_blkStatusA[ACCOLADE_BUFFER_COUNT];
+  struct ring_stats rstats;
+  u_int32_t device_id, ring_id, blocksize, pages, pageblocks, portCount, ringCount;
   anic_blocksize_e blocksize_e;
-
   struct workqueue wq;
-  u_int64_t lastTs[64]; 
+  u_int64_t lastTs; 
+
+  /* ***************************** */
+
+  struct block_processing currentblock;
 
   /* ***************************** */
 
   struct anic_dma_info dmaInfo;
-} pfring_accolade;
+} pfring_anic;
 
 
-int  pfring_accolade_open(pfring *ring);
-void pfring_accolade_close(pfring *ring);
-int  pfring_accolade_stats(pfring *ring, pfring_stat *stats);
-int  pfring_accolade_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet);
-int  pfring_accolade_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet);
-int  pfring_accolade_set_poll_watermark(pfring *ring, u_int16_t watermark);
-int  pfring_accolade_set_poll_duration(pfring *ring, u_int duration);
-int  pfring_accolade_poll(pfring *ring, u_int wait_duration);
-int  pfring_accolade_set_direction(pfring *ring, packet_direction direction);
-int  pfring_accolade_enable_ring(pfring *ring);
-int  pfring_accolade_set_socket_mode(pfring *ring, socket_mode mode);
-int  pfring_accolade_get_bound_device_ifindex(pfring *ring, int *if_index);
+int  pfring_anic_open(pfring *ring);
+void pfring_anic_close(pfring *ring);
+int  pfring_anic_stats(pfring *ring, pfring_stat *stats);
+int  pfring_anic_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet);
+int  pfring_anic_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet);
+int  pfring_anic_set_poll_watermark(pfring *ring, u_int16_t watermark);
+int  pfring_anic_set_poll_duration(pfring *ring, u_int duration);
+int  pfring_anic_poll(pfring *ring, u_int wait_duration);
+int  pfring_anic_set_direction(pfring *ring, packet_direction direction);
+int  pfring_anic_enable_ring(pfring *ring);
+int  pfring_anic_set_socket_mode(pfring *ring, socket_mode mode);
+int  pfring_anic_get_bound_device_ifindex(pfring *ring, int *if_index);
 
 #endif /* _PFRING_MOD_ACCOLADE_H_ */

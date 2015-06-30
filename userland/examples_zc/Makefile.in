@@ -19,7 +19,7 @@ INCLUDE    = -I${PFRINGDIR} -I${PFRING_KERNEL}
 #
 # User and System libraries
 #
-LIBS       = ${LIBPFRING} @DAG_LIB@ @NT_LIB@ $(LIBPCAP) -lpthread @SYSLIBS@ @LIBNUMA@
+LIBS       = ${LIBPFRING} @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ $(LIBPCAP) -lpthread @SYSLIBS@ @LIBNUMA@
 
 #
 # C compiler and flags
