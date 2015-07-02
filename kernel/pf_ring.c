@@ -2929,6 +2929,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
       //         pfr->slot_header_len);
 
       if((__vlan_hwaccel_get_tag(skb, &vlan_tci) == 0) /* The packet is tagged (hw offload)... */
+	 && (vlan_tci != 0)
 	 && ((hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0 /* but we have seen no tag -> it has been stripped */
               || hdr->extended_hdr.parsed_pkt.vlan_id != vlan_tci /* multiple tags -> just first one has been stripped */)
              || (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL /* in case of multiple destination rings */))) {
