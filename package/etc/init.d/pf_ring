@@ -272,7 +272,7 @@ load_dna_zc() {
 	fi
 
         CLUSTER_HUGEPAGES=0
-        if [ `grep '\-u\=' /etc/cluster/cluster-*conf|wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
+        if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null |wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
                 LOAD_HUGEPAGES=1
         fi
 
@@ -339,11 +339,11 @@ start_pf_ring() {
 
     check_pf_ring start
     
-    if [ ! -f "${DRIVERS_CONFIG_DIR}/pf_ring.start" ] && [ ! -f "${DRIVERS_CONFIG_DIR}/pfring.start" ]; then
+    if [ ! -f "${DRIVERS_CONFIG_DIR}/pf_ring.start" ] && [ ! -f "${DRIVERS_CONFIG_DIR}/pfring.start" ] && [ ${FORCESTART} -eq 0 ]; then
     	# remove pf_ring in any case
     	/sbin/modprobe -r pf_ring
     	#
-    	echo "PF_RING not enabled"
+        echo "PF_RING not enabled: please touch /etc/pf_ring/pf_ring.start"
         [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
 	    [ ${DISTRO} == "centos" ] && echo_success && echo
 	    return
