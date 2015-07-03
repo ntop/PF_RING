@@ -18,13 +18,15 @@
 #include <sys/types.h>
 #include <linux/pf_ring.h> /* needed for hw_filtering_rule */
 
-#define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     1 << 0   /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
-#define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0      1 << 1   /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
-#define PF_RING_ZC_DEVICE_SW_TIMESTAMP       1 << 2   /**< pfring_zc_open_device() flag: compute sw timestamp (please note: this adds per-packet overhead). */
-#define PF_RING_ZC_DEVICE_HW_TIMESTAMP       1 << 3   /**< pfring_zc_open_device() flag: enable hw timestamp, when available */
-#define PF_RING_ZC_DEVICE_STRIP_HW_TIMESTAMP 1 << 4   /**< pfring_zc_open_device() flag: strip hw timestamp from packet, when available */
-#define PF_RING_ZC_DEVICE_IXIA_TIMESTAMP     1 << 5   /**< pfring_zc_open_device() flag: extract IXIA timestamp from packet */
-#define PF_RING_ZC_DEVICE_NOT_REPROGRAM_RSS  1 << 6   /**< pfring_zc_open_device() flag: do not reprogram RSS redirection table */
+#define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     (1 <<  0) /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
+#define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0      (1 <<  1) /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
+#define PF_RING_ZC_DEVICE_SW_TIMESTAMP       (1 <<  2) /**< pfring_zc_open_device() flag: compute sw timestamp (please note: this adds per-packet overhead). */
+#define PF_RING_ZC_DEVICE_HW_TIMESTAMP       (1 <<  3) /**< pfring_zc_open_device() flag: enable hw timestamp, when available */
+#define PF_RING_ZC_DEVICE_STRIP_HW_TIMESTAMP (1 <<  4) /**< pfring_zc_open_device() flag: strip hw timestamp from packet, when available */
+#define PF_RING_ZC_DEVICE_IXIA_TIMESTAMP     (1 <<  5) /**< pfring_zc_open_device() flag: extract IXIA timestamp from packet */
+#define PF_RING_ZC_DEVICE_NOT_REPROGRAM_RSS  (1 <<  6) /**< pfring_zc_open_device() flag: do not reprogram RSS redirection table */
+#define PF_RING_ZC_DEVICE_CAPTURE_TX         (1 <<  7) /**< pfring_zc_open_device() flag: capture RX+TX traffic (ignored in kernel-bypass mode) */
+#define PF_RING_ZC_DEVICE_IPONLY_RSS         (1 <<  8) /**< pfring_zc_open_device() flag: compute RSS hash on IP only (not 4-tuple) */
 
 #define UNDEFINED_QUEUEID  UINT32_MAX       /**< pfring_zc_get_queue_id() return val: queue id is not valid */
 #define QUEUE_IS_DEVICE(i) (i > UINT16_MAX) /**< pfring_zc_get_queue_id() return val: queue id is an encoded device index */
@@ -279,6 +281,14 @@ int
 pfring_zc_remove_hw_rule(
 	pfring_zc_queue *queue,
 	u_int16_t rule_id
+);
+
+/* **************************************************************************************** */
+
+void 
+pfring_zc_set_rxfh_indir(
+	pfring_zc_queue *queue,
+	u_int8_t *indir_table
 );
 
 /* **************************************************************************************** */

@@ -1187,6 +1187,8 @@ static bool ixgbe_alloc_mapped_page(struct ixgbe_ring *rx_ring,
 static void ixgbe_irq_enable_queues(struct ixgbe_adapter *adapter, u64 qmask);
 static void ixgbe_irq_disable_queues(struct ixgbe_adapter *adapter, u64 qmask);
 
+static void ixgbe_enable_rx_drop(struct ixgbe_adapter *adapter, struct ixgbe_ring *ring);
+
 int ring_is_not_empty(struct ixgbe_ring *rx_ring) {
 	union ixgbe_adv_rx_desc *rx_desc;
 	u32 staterr;
@@ -1299,6 +1301,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct ixgbe_ring    *tx_ring = (struct ixgbe_ring *) tx_data;
 	struct ixgbe_ring    *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
 	struct ixgbe_adapter *adapter;
+	int i;
   
 	if (xx_ring == NULL) return; /* safety check*/
 
@@ -1314,8 +1317,13 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDH(rx_ring->reg_idx), 0);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDT(rx_ring->reg_idx), 0);
 
-			if(adapter->hw.mac.type != ixgbe_mac_82598EB)
+			if (adapter->hw.mac.type != ixgbe_mac_82598EB) {
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
+
+				/* force DROP_EN on all queues */
+				for (i = 0; i < adapter->num_rx_queues; i++)
+					ixgbe_enable_rx_drop(adapter, adapter->rx_ring[i]);
+			}
 		}
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
@@ -1323,7 +1331,6 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		}
 
 	} else { /* restore card memory */
-		int i;
 
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			u32 rxctrl;
@@ -1332,7 +1339,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rxctrl = IXGBE_READ_REG(&adapter->hw, IXGBE_RXCTRL);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RXCTRL, rxctrl & ~IXGBE_RXCTRL_RXEN);
    
-			for(i=0; i<rx_ring->count; i++) {
+			for (i=0; i<rx_ring->count; i++) {
 				union ixgbe_adv_rx_desc *rx_desc = IXGBE_RX_DESC(rx_ring, i);
 				rx_desc->read.pkt_addr = 0;
 				rx_desc->read.hdr_addr = 0;
@@ -1345,8 +1352,12 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rxctrl |= IXGBE_RXCTRL_RXEN;
 			adapter->hw.mac.ops.enable_rx_dma(&adapter->hw, rxctrl);
 
-			if(adapter->hw.mac.type != ixgbe_mac_82598EB)
+			if (adapter->hw.mac.type != ixgbe_mac_82598EB) {
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
+				
+				/* force DROP_EN on current queue (queue reset clean the bit) */
+				ixgbe_enable_rx_drop(adapter, adapter->rx_ring[rx_ring->reg_idx]);
+			}
 		}
 
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
@@ -1379,6 +1390,7 @@ zc_dev_model pfring_zc_dev_model(struct ixgbe_hw *hw)
 	switch (hw->mac.type) {
 		case ixgbe_mac_82598EB: return intel_ixgbe_82598;
 		case ixgbe_mac_82599EB: return (hw->silicom.has_hw_ts_card ? intel_ixgbe_82599_ts : intel_ixgbe_82599);
+		case ixgbe_mac_X540:	return intel_ixgbe_82599;
 		default:		return intel_ixgbe;
 	}
 }
@@ -4043,6 +4055,9 @@ void ixgbe_set_rx_drop_en(struct ixgbe_adapter *adapter)
 			ixgbe_enable_rx_drop(adapter, adapter->rx_ring[i]);
 	} else {
 		for (i = 0; i < adapter->num_rx_queues; i++)
+#ifdef HAVE_PF_RING
+			if (adapter->hw.mac.type == ixgbe_mac_82598EB) /* Do not clear the DROP_EN bit on 82599/X540 */
+#endif
 			ixgbe_disable_rx_drop(adapter, adapter->rx_ring[i]);
 	}
 }
@@ -4093,12 +4108,12 @@ static void ixgbe_configure_srrctl(struct ixgbe_adapter *adapter,
 			rxctl |= ~IXGBE_RXCTRL_DMBYPS;
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RXCTRL, rxctl);
 
-			//printk("[PF_RING-ZC] 82598 [# queues: %u][flag: %02X][RXCTRL: %02X]\n",
+			//printk("[PF_RING-ZC] 82598: DROPEN bit set [# queues: %u][flag: %02X][RXCTRL: %02X]\n",
 			//       adapter->num_rx_queues, flag, IXGBE_READ_REG(&adapter->hw, IXGBE_RXCTRL));
+
 			/* NOTE: this code does not seem to work as it should, thus we need to handle clean_rx_irq for 82598 */
 		}
 #endif
-
 	}
 
 	/* configure header buffer length, needed for RSC */
@@ -4117,9 +4132,8 @@ static void ixgbe_configure_srrctl(struct ixgbe_adapter *adapter,
 
 #ifdef HAVE_PF_RING
 	/* This is used for 82599 to drop packets when a queue is full */
-	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0
-	    && adapter->hw.mac.type != ixgbe_mac_82598EB)
-		srrctl |= IXGBE_SRRCTL_DROP_EN;
+	if (adapter->hw.mac.type != ixgbe_mac_82598EB)
+		ixgbe_enable_rx_drop(adapter, rx_ring);
 #endif
 
 	IXGBE_WRITE_REG(hw, IXGBE_SRRCTL(reg_idx), srrctl);

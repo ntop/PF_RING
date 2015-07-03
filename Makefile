@@ -11,9 +11,9 @@ clean:
 
 snort:
 	cd userland/snort/pfring-daq-module; autoreconf -ivf; ./configure; make
+	cd userland/snort/pfring-daq-module-zc; autoreconf -ivf; ./configure; make
 
 changelog:
-	#svn -v -r {`curl -s http://sourceforge.net/projects/ntop/files/PF_RING/|grep -o "<td headers=\"files_date_h\" class=\"opt\"><abbr title=\"[^\"]*\">[^<]*</abbr></td>"|head -n 3|tail -n 1|egrep -o "[0-9]+\-[0-9]+\-[0-9]+"|head -n 1`}:"HEAD" --xml log | ./doc/svn2changelog.py > ./doc/Changelog.txt
 	git log --since={`curl -s http://sourceforge.net/projects/ntop/files/PF_RING/|grep -o "<td headers=\"files_date_h\" class=\"opt\"><abbr title=\"[^\"]*\">[^<]*</abbr></td>"|head -n 3|tail -n 1|egrep -o "[0-9]+\-[0-9]+\-[0-9]+"|head -n 1`} --name-only --pretty=format:"==> %b <==" > ./doc/Changelog.txt
 
 documentation:

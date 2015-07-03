@@ -209,6 +209,9 @@ void print_packet(pfring_zc_pkt_buff *buffer) {
 
 
 void *packet_consumer_thread(void *user) {
+#ifdef USE_BURST_API
+  int i, n;
+#endif
 
   if (bind_core >= 0)
     bind2core(bind_core);
@@ -259,7 +262,7 @@ void *packet_consumer_thread(void *user) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
-  int i, cluster_id = -1;
+  int i, cluster_id = -1, rc = 0;
   pthread_t my_thread;
   struct timeval timeNow, lastTime;
   pthread_t time_thread;
@@ -327,7 +330,8 @@ int main(int argc, char* argv[]) {
   if(zq == NULL) {
     fprintf(stderr, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
 	    strerror(errno), device);
-    return -1;
+    rc = -1;
+    goto cleanup;
   }
 
   for (i = 0; i < NBUFF; i++) { 
@@ -336,7 +340,8 @@ int main(int argc, char* argv[]) {
 
     if (buffers[i] == NULL) {
       fprintf(stderr, "pfring_zc_get_packet_handle error\n");
-      return -1;
+      rc = -1;
+      goto cleanup;
     }
   }
 
@@ -391,8 +396,10 @@ int main(int argc, char* argv[]) {
   if (time_pulse)
     pthread_join(time_thread, NULL);
 
+cleanup:
+
   pfring_zc_destroy_cluster(zc);
 
-  return 0;
+  return rc;
 }
 

@@ -40,6 +40,7 @@ binary-arch: build install
 	dh_installman
 #	dh_installdebconf -n
 # Install sources
+	mkdir -p ./debian/tmp/
 	cp -r ./debian/usr  ../etc ./debian/tmp/
 	-find ./debian/tmp -name "\.svn" -type d -exec /bin/rm -rf {} ';'
 	-find ./debian/tmp -name "*~" -type d -exec /bin/rm -rf {} ';'

@@ -3915,25 +3915,30 @@ LIBS=$OLD_LIBS
 fi
 
 ACCOLADE_HOME="/opt/accolade"
+ACCOLADE_INC=
+ACCOLADE_LIB=
+ACCOLADE_OBJS=
+HAVE_ACCOLADE=
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking Accolade support" >&5
 $as_echo_n "checking Accolade support... " >&6; }
 if test -d "$ACCOLADE_HOME"; then
-   ACCOLADE_INC="-I $ACCOLADE_HOME/include"
-   ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
-   ACCOLADE_OBJS="pfring_mod_accolade.o"
-   HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+   if test -f pfring_mod_accolade.c; then
+      ACCOLADE_INC="-I $ACCOLADE_HOME/include"
+      ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
+      ACCOLADE_OBJS="pfring_mod_accolade.o"
+      HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_ACCOLADE 1
 _ACEOF
 
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
 else
-   ACCOLADE_INC=
-   ACCOLADE_LIB=
-   ACCOLADE_OBJS=
-   HAVE_ACCOLADE=
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi

@@ -41,9 +41,8 @@
 #define pfring_ptr ax25_ptr
 
 /* Versioning */
-/* NOTE: remember to update dkms.conf */
-#define RING_VERSION                "6.1.0"
-#define RING_VERSION_NUM           0x060100
+#define RING_VERSION                "6.1.1"
+#define RING_VERSION_NUM           0x060101
 
 /* Set */
 #define SO_ADD_TO_CLUSTER                 99
@@ -191,9 +190,9 @@ struct eth_vlan_hdr {
 #define NEXTHDR_MOBILITY	135
 
 struct kcompact_ipv6_hdr {
-  u_int8_t          priority:4,
+  u_int32_t         flow_lbl:24,
+		    priority:4,
                     version:4;
-  u_int8_t          flow_lbl[3];
   u_int16_t         payload_len;
   u_int8_t          nexthdr;
   u_int8_t          hop_limit;
@@ -721,14 +720,13 @@ typedef enum {
   add_device_mapping = 0, remove_device_mapping
 } zc_dev_operation;
 
+/* IMPORTANT NOTE
+ * add new family types ALWAYS at the end
+ * (i.e. append) of this datatype */
 typedef enum {
   intel_e1000e = 0,
   intel_igb,
   intel_ixgbe,
-  /* IMPORTANT NOTE
-     add new family types ALWAYS at the end
-     (i.e. append) of this datatype
-  */
   intel_ixgbe_82598,
   intel_ixgbe_82599,
   intel_igb_82580,
@@ -745,6 +743,8 @@ typedef struct {
   u_int32_t descr_packet_memory_tot_len;
   u_int16_t registers_index;
   u_int16_t stats_index;
+  u_int32_t vector;
+  u_int32_t reserved; /* future use */
 } mem_ring_info;
 
 typedef enum {

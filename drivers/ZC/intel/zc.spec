@@ -75,7 +75,9 @@ exit 1
 echo -e
 echo -e "Uninstall of %{module_name} module (version %{version}) beginning:"
 dkms remove -m %{module_name} -v %{version} --all --rpm_safe_upgrade
-rm -fr /var/lib/dkms/%{module_name}
+\/bin/rm -f /lib/modules/$kernel/weak-updates/%{module_name}*
+\/bin/rm -f /lib/modules/$kernel/extra/%{module_name}*
+\/bin/rm -fr /var/lib/dkms/%{module_name}
 exit 0
 
 %files
