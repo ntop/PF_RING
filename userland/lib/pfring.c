@@ -334,6 +334,8 @@ void pfring_close(pfring *ring) {
 
   pfring_shutdown(ring);
 
+  pfring_sync_indexes_with_kernel(ring);
+
   if(ring->close)
     ring->close(ring);
 
