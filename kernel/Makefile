@@ -4,16 +4,25 @@
 
 obj-m := pf_ring.o
 
-ifneq (, $(shell which git))
- ifeq (, $(shell echo ${SUBDIRS}))
-  GIT_BRANCH=$(shell git branch --no-color|cut -d ' ' -f 2)
-  GIT_HASH=$(shell git rev-parse HEAD)
-  GITDEF := -DGIT_REV="\"${GIT_BRANCH}:${GIT_HASH}\""
+# assigned by Makefile.dkms
+GIT_REV:=
+
+ifndef GIT_REV
+ ifneq (, $(shell which git))
+  ifeq (, $(shell echo ${SUBDIRS}))
+   GIT_BRANCH=$(shell git branch --no-color|cut -d ' ' -f 2)
+   GIT_HASH=$(shell git rev-parse HEAD)
+   GIT_REV:=${GIT_BRANCH}:${GIT_HASH}
+  endif
  endif
 endif
 
+ifdef GIT_REV
+ GITDEF:=-DGIT_REV="\"${GIT_REV}\""
+endif
+
 ifeq (,$(BUILD_KERNEL))
-BUILD_KERNEL=$(shell uname -r)
+ BUILD_KERNEL=$(shell uname -r)
 endif
 
 PWD := $(shell pwd)

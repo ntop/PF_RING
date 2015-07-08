@@ -1,9 +1,19 @@
+GIT_REV:=unknown
+ifneq (, $(shell which git))
+ ifeq (, $(shell echo ${SUBDIRS}))
+  GIT_BRANCH=$(shell git branch --no-color|cut -d ' ' -f 2)
+  GIT_HASH=$(shell git rev-parse HEAD)
+  GIT_REV:=${GIT_BRANCH}:${GIT_HASH}
+ endif
+endif
+
 all: install
 
 add: remove
 	\/bin/rm -rf /usr/src/pfring-@VERS@
 	mkdir /usr/src/pfring-@VERS@
 	cp -r Makefile dkms.conf pf_ring.c linux/ /usr/src/pfring-@VERS@
+	cat Makefile | sed -e "s/GIT_REV:=$$/GIT_REV:=${GIT_REV}/" > /usr/src/pfring-@VERS@/Makefile
 	dkms add -m pfring -v @VERS@
 
 build: add
