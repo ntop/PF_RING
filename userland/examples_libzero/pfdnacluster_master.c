@@ -659,6 +659,7 @@ int main(int argc, char* argv[]) {
       break;
     case 'R':
       time_pulse_resolution = atoi(optarg);
+      break;
     case 'u':
       use_hugepages = 1;
       if (optarg != NULL) hugepages_mountpoint = strdup(optarg);
