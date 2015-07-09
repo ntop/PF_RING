@@ -7380,7 +7380,9 @@ static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	int i;
-
+#ifdef HAVE_PF_RING
+	struct ixgbe_hw_stats *hwstats = &adapter->stats;
+#endif
 	rcu_read_lock();
 	for (i = 0; i < adapter->num_rx_queues; i++) {
 		struct ixgbe_ring *ring = ACCESS_ONCE(adapter->rx_ring[i]);
@@ -7397,6 +7399,14 @@ static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 			stats->rx_bytes   += bytes;
 		}
 	}
+
+#ifdef HAVE_PF_RING
+	/* Using stats from registers which contain actual stats also in ZC mode */
+	//if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+	stats->rx_bytes = hwstats->gorc;
+	stats->rx_packets = hwstats->gprc;
+	//}
+#endif
 
 	for (i = 0; i < adapter->num_tx_queues; i++) {
 		struct ixgbe_ring *ring = ACCESS_ONCE(adapter->tx_ring[i]);
@@ -7509,18 +7519,14 @@ void ixgbe_update_stats(struct ixgbe_adapter *adapter)
 	adapter->alloc_rx_page_failed = alloc_rx_page_failed;
 	adapter->alloc_rx_buff_failed = alloc_rx_buff_failed;
 	adapter->hw_csum_rx_error = hw_csum_rx_error;
-#ifdef HAVE_PF_RING
-	/* Avoid that the stats updated in userspace are cleared 
-	   with those (wrong) that are inside the driver */
-	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
-		net_stats->rx_bytes = hwstats->gorc;
-		net_stats->rx_packets = hwstats->gprc;
-	} else {
-#endif
 	net_stats->rx_bytes = bytes;
 	net_stats->rx_packets = packets;
 #ifdef HAVE_PF_RING
-	}
+	/* Using stats from registers which contain actual stats also in ZC mode */
+	//if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+	net_stats->rx_bytes = hwstats->gorc;
+	net_stats->rx_packets = hwstats->gprc;
+	//}
 #endif
 
 	bytes = 0;
