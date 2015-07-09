@@ -6107,13 +6107,9 @@ void igb_update_stats(struct igb_adapter *adapter)
 #endif
 	}
 
-#ifdef HAVE_PF_RING
-	if(atomic_read(&adapter->pfring_zc.usage_counter) == 0) {
-#endif
+#ifndef HAVE_PF_RING
 	net_stats->rx_bytes = bytes;
 	net_stats->rx_packets = packets;
-#ifdef HAVE_PF_RING
-	}
 #endif
 
 	bytes = 0;
@@ -6131,13 +6127,9 @@ void igb_update_stats(struct igb_adapter *adapter)
 #endif
 	}
 
-#ifdef HAVE_PF_RING
-	if(atomic_read(&adapter->pfring_zc.usage_counter) == 0) {
-#endif
+#ifndef HAVE_PF_RING
 	net_stats->tx_bytes = bytes;
 	net_stats->tx_packets = packets;
-#ifdef HAVE_PF_RING 
-	}
 #endif
 
 	/* read stats registers */
@@ -6225,12 +6217,10 @@ void igb_update_stats(struct igb_adapter *adapter)
 	net_stats->collisions = adapter->stats.colc;
 
 #ifdef HAVE_PF_RING
-	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
-		net_stats->rx_bytes = adapter->stats.gorc;
-		net_stats->rx_packets = adapter->stats.gprc;
-		net_stats->tx_bytes = adapter->stats.gotc;
-		net_stats->tx_packets = adapter->stats.gptc;
-	}
+	net_stats->rx_bytes = adapter->stats.gorc;
+	net_stats->rx_packets = adapter->stats.gprc;
+	net_stats->tx_bytes = adapter->stats.gotc;
+	net_stats->tx_packets = adapter->stats.gptc;
 #endif
 
 	/* Rx Errors */
