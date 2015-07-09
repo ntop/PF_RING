@@ -7395,17 +7395,17 @@ static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 				packets = ring->stats.packets;
 				bytes   = ring->stats.bytes;
 			} while (u64_stats_fetch_retry_irq(&ring->syncp, start));
+#ifndef HAVE_PF_RING
 			stats->rx_packets += packets;
 			stats->rx_bytes   += bytes;
+#endif
 		}
 	}
 
 #ifdef HAVE_PF_RING
 	/* Using stats from registers which contain actual stats also in ZC mode */
-	//if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
 	stats->rx_bytes = hwstats->gorc;
 	stats->rx_packets = hwstats->gprc;
-	//}
 #endif
 
 	for (i = 0; i < adapter->num_tx_queues; i++) {
@@ -7519,14 +7519,13 @@ void ixgbe_update_stats(struct ixgbe_adapter *adapter)
 	adapter->alloc_rx_page_failed = alloc_rx_page_failed;
 	adapter->alloc_rx_buff_failed = alloc_rx_buff_failed;
 	adapter->hw_csum_rx_error = hw_csum_rx_error;
-	net_stats->rx_bytes = bytes;
-	net_stats->rx_packets = packets;
 #ifdef HAVE_PF_RING
 	/* Using stats from registers which contain actual stats also in ZC mode */
-	//if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
 	net_stats->rx_bytes = hwstats->gorc;
 	net_stats->rx_packets = hwstats->gprc;
-	//}
+#else
+	net_stats->rx_bytes = bytes;
+	net_stats->rx_packets = packets;
 #endif
 
 	bytes = 0;
