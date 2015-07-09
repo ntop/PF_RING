@@ -72,6 +72,7 @@ int metadata_len = 0;
 int bind_worker_core = -1;
 int bind_time_pulse_core = -1;
 
+u_int32_t time_pulse_resolution = 0;
 volatile u_int64_t *pulse_timestamp_ns;
 
 static struct timeval start_time;
@@ -88,9 +89,7 @@ u_int32_t n2disk_threads;
 void *time_pulse_thread(void *data) {
   u_int64_t ns;
   struct timespec tn;
-#if 1
   u_int64_t pulse_clone = 0;
-#endif
 
   bind2core(bind_time_pulse_core);
 
@@ -100,14 +99,14 @@ void *time_pulse_thread(void *data) {
 
     ns = ((u_int64_t) ((u_int64_t) tn.tv_sec * 1000000000) + (tn.tv_nsec));
 
-#if 1 /* reduce cache thrashing*/ 
-    if(ns >= pulse_clone + 100 /* nsec precision (avoid updating each cycle) */ ) {
-#endif
+    if (ns >= pulse_clone + 100 /* nsec precision (avoid updating each cycle to reduce cache thrashing) */ ) {
       *pulse_timestamp_ns = ((u_int64_t) ((u_int64_t) tn.tv_sec << 32) | tn.tv_nsec);
-#if 1
       pulse_clone = ns;
     }
-#endif
+
+    if (ns < (pulse_clone + time_pulse_resolution) &&
+        (pulse_clone + time_pulse_resolution) - ns >= 100000 /* usleep takes ~55 usec */)
+      usleep(1); /* optimisation to reduce load */
   }
 
   return NULL;
@@ -271,6 +270,8 @@ void printHelp(void) {
          "                3 - Fan-out (1st) + Round-Robin (2nd, 3rd, ..)\n"
          "                4 - GTP hash (Inner IP/Port or Seq-Num)\n");
   printf("-S <core id>    Enable Time Pulse thread and bind it to a core\n");
+  printf("-R <nsec>       Time resolution (nsec) when using Time Pulse thread\n"
+         "                Note: in non-time-sensitive applications use >= 100usec to reduce cpu load\n");
   printf("-g <core_id>    Bind this app to a core\n");
   printf("-q <len>        Number of slots in each queue (default: %u)\n", QUEUE_LEN);
   printf("-N <num>        Producer for n2disk multi-thread (<num> threads)\n");
@@ -401,10 +402,10 @@ int main(int argc, char* argv[]) {
     opt_argv = argv;
   }
 
-  while((c = getopt(opt_argc, opt_argv,"ac:dg:hi:m:n:pQ:q:N:P:S:z")) != '?') {
-    if((c == 255) || (c == -1)) break;
+  while ((c = getopt(opt_argc, opt_argv,"ac:dg:hi:m:n:pQ:q:N:P:R:S:z")) != '?') {
+    if ((c == 255) || (c == -1)) break;
 
-    switch(c) {
+    switch (c) {
     case 'h':
       printHelp();
       break;
@@ -445,6 +446,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'P':
       pid_file = strdup(optarg);
+      break;
+    case 'R':
+      time_pulse_resolution = atoi(optarg);
       break;
     case 'S':
       time_pulse = 1;
