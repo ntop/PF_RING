@@ -7401,7 +7401,6 @@ static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 #endif
 		}
 	}
-
 #ifdef HAVE_PF_RING
 	/* Using stats from registers which contain actual stats also in ZC mode */
 	stats->rx_bytes = hwstats->gorc;
@@ -7419,10 +7418,18 @@ static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 				packets = ring->stats.packets;
 				bytes   = ring->stats.bytes;
 			} while (u64_stats_fetch_retry_irq(&ring->syncp, start));
+#ifndef HAVE_PF_RING
 			stats->tx_packets += packets;
 			stats->tx_bytes   += bytes;
+#endif
 		}
 	}
+#ifdef HAVE_PF_RING
+	/* Using stats from registers which contain actual stats also in ZC mode */
+	stats->tx_packets = hwstats->gptc;
+	stats->tx_bytes = hwstats->gotc;
+#endif
+
 	rcu_read_unlock();
 	/* following stats updated by ixgbe_watchdog_task() */
 	stats->multicast	= netdev->stats.multicast;
@@ -7541,17 +7548,12 @@ void ixgbe_update_stats(struct ixgbe_adapter *adapter)
 	adapter->restart_queue = restart_queue;
 	adapter->tx_busy = tx_busy;
 #ifdef HAVE_PF_RING
-	/* Avoid that the stats updated in userspace are cleared 
-	   with those (wrong) that are inside the driver */
-	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
-		net_stats->tx_bytes = hwstats->gotc;
-		net_stats->tx_packets = hwstats->gptc;
-	} else {
-#endif
+	/* Using stats from registers which contain actual stats also in ZC mode */
+	net_stats->tx_bytes = hwstats->gotc;
+	net_stats->tx_packets = hwstats->gptc;
+#else
 	net_stats->tx_bytes = bytes;
 	net_stats->tx_packets = packets;
-#ifdef HAVE_PF_RING
-	}
 #endif
 
 	hwstats->crcerrs += IXGBE_READ_REG(hw, IXGBE_CRCERRS);
