@@ -42,6 +42,7 @@ cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/libpcap/libpcap.a    $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/libpcap/libpcap.so.1.6.2	$RPM_BUILD_ROOT/usr/local/lib
+cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
@@ -87,6 +88,7 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/bin/pfdnabounce
 /usr/local/bin/pfdnacluster_master
 %endif
+/usr/local/bin/tcpdump
 /usr/local/bin/pfcount
 /usr/local/bin/pfsend
 /usr/local/bin/zbalance_ipc
