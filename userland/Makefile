@@ -1,4 +1,4 @@
-all: libpfring pcap ring_examples libzero_examples zc_examples tcpdump lib_c++
+all: libpfring pcap ring_examples libzero_examples zc_examples tcpdump_build lib_c++
 
 ###################
 
@@ -20,7 +20,7 @@ zc_examples:
 lib_c++:
 	cd c++; make
 
-tcpdump:
+tcpdump_build:
 	cd tcpdump-4.1.1; ./configure ; make
 
 ###################
