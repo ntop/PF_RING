@@ -88,8 +88,8 @@ VSP :=  $(KOBJ)/include/generated/utsrelease.h \
         /boot/vmlinuz.version.h
 
 # Config file Search Path
-CSP :=  $(KSRC)/include/generated/autoconf.h \
-        $(KSRC)/include/linux/autoconf.h \
+CSP :=  $(KOBJ)/include/generated/autoconf.h \
+        $(KOBJ)/include/linux/autoconf.h \
         /boot/vmlinuz.autoconf.h
 
 # prune the lists down to only files that exist
