@@ -7491,16 +7491,22 @@ static int ring_setsockopt(struct socket *sock,
   case SO_ATTACH_FILTER:
     ret = -EINVAL;
 
-    if(unlikely(enable_debug))
-      printk("[PF_RING] BPF filter (%d)\n", 0);
+    if (unlikely(enable_debug))
+      printk("[PF_RING] BPF filter\n");
 
-    if(optlen == sizeof(struct sock_fprog)) {
+    if (optlen == sizeof(struct sock_fprog)) {
       struct sock_fprog fprog;
 
       ret = -EFAULT;
 
       if (copy_from_user(&fprog, optval, sizeof(fprog)))
         break;
+
+      if (fprog.len <= 1) /* empty filter */
+        break;
+
+      if (unlikely(enable_debug))
+        printk("[PF_RING] BPF filter (len = %u)\n", fprog.len);
 
       ret = sk_attach_filter(&fprog, pfr->sk);
 
