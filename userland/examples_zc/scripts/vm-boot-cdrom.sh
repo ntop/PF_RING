@@ -1,6 +1,6 @@
 
 /usr/local/kvm/bin/qemu-system-x86_64 \
--k it \
+-k en-us \
 -drive file=ubuntu-amd64.img,if=virtio \
 -cdrom /root/ubuntu-12.04.2-server-amd64.iso \
 -boot d \

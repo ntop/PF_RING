@@ -2,7 +2,7 @@
 /usr/local/kvm/bin/qemu-system-x86_64 \
 -enable-kvm \
 -cpu host \
--k en \
+-k en-us \
 -drive file=ubuntu-amd64.img,if=virtio \
 -boot c \
 -m 512 \
