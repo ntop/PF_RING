@@ -16,6 +16,9 @@ IF[7]=dna7
 rmmod igb
 rmmod pf_ring
 
+# Loading ptp module (hw ts support)
+modprobe ptp
+
 # We assume that you have compiled PF_RING
 insmod ../../../../kernel/pf_ring.ko
 
