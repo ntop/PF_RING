@@ -41,6 +41,11 @@ ifeq (,$(BUILD_KERNEL))
 BUILD_KERNEL=$(shell uname -r)
 endif
 
+KERMAJ=$(shell uname -r|cut -c 1)
+ifeq ($(KERMAJ),3)
+  CFLAGS_EXTRA = -DIGB_PTP
+endif
+
 # Use IGB_PTP compile flag to enable IEEE-1588 PTP (documented in README)
 ifeq ($(filter %IGB_PTP,$(CFLAGS_EXTRA)),-DIGB_PTP)
   CFILES += igb_ptp.c
