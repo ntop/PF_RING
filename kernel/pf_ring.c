@@ -240,6 +240,14 @@ static rwlock_t cluster_referee_lock =
 #endif
 ;
 
+static rwlock_t ring_proc_lock =
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
+  RW_LOCK_UNLOCKED
+#else
+  (rwlock_t)__RW_LOCK_UNLOCKED(ring_proc_lock)
+#endif
+;
+
 /* Dummy buffer used for loopback_test */
 u_int32_t loobpack_test_buffer_len = 4*1024*1024;
 u_char *loobpack_test_buffer = NULL;
@@ -960,7 +968,9 @@ static const struct file_operations ring_proc_fops = {
 */
 static void ring_proc_add(struct pf_ring_socket *pfr)
 {
-  if((ring_proc_dir != NULL)
+  write_lock(&ring_proc_lock);
+
+  if ((ring_proc_dir != NULL)
      && (pfr->sock_proc_name[0] == '\0')) {
     snprintf(pfr->sock_proc_name, sizeof(pfr->sock_proc_name),
 	     "%d-%s.%d", pfr->ring_pid,
@@ -969,15 +979,19 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
     proc_create_data(pfr->sock_proc_name, 0, 
 		     ring_proc_dir, &ring_proc_fops, pfr);
 
-    if(unlikely(enable_debug))
+    if (unlikely(enable_debug))
       printk("[PF_RING] Added /proc/net/pf_ring/%s\n", pfr->sock_proc_name);
   }
+
+  write_unlock(&ring_proc_lock);
 }
 
 /* ********************************** */
 
 static void ring_proc_remove(struct pf_ring_socket *pfr)
 {
+  write_lock(&ring_proc_lock);
+
   if((ring_proc_dir != NULL)
      && (pfr->sock_proc_name[0] != '\0')) {
     if(unlikely(enable_debug))
@@ -1003,6 +1017,8 @@ static void ring_proc_remove(struct pf_ring_socket *pfr)
 
     }
   }
+
+  write_unlock(&ring_proc_lock);
 }
 
 /* ********************************** */
@@ -1601,13 +1617,15 @@ static const struct file_operations ring_proc_plugins_fops = {
 
 static void ring_proc_init(void)
 {
+  write_lock(&ring_proc_lock);
+
   ring_proc_dir = proc_mkdir("pf_ring",
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 			     init_net.
 #endif
 			     proc_net);
 
-  if(ring_proc_dir != NULL) {
+  if (ring_proc_dir != NULL) {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
     ring_proc_dir->owner = THIS_MODULE;
 #endif
@@ -1624,7 +1642,7 @@ static void ring_proc_init(void)
       proc_create(PROC_PLUGINS_INFO, 0 /* read-only */,
 		  ring_proc_dir, &ring_proc_plugins_fops);
 
-    if(!ring_proc || !ring_proc_plugins_info)
+    if (!ring_proc || !ring_proc_plugins_info)
       printk("[PF_RING] unable to register proc file\n");
     else {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
@@ -1635,31 +1653,37 @@ static void ring_proc_init(void)
     }
   } else
     printk("[PF_RING] unable to create /proc/net/pf_ring\n");
+
+  write_unlock(&ring_proc_lock);
 }
 
 /* ********************************** */
 
 static void ring_proc_term(void)
 {
-  if(ring_proc != NULL) {
+  write_lock(&ring_proc_lock); 
+
+  if (ring_proc != NULL) {
     remove_proc_entry(PROC_INFO, ring_proc_dir);
-    if(unlikely(enable_debug))  printk("[PF_RING] removed /proc/net/pf_ring/%s\n", PROC_INFO);
+    if (unlikely(enable_debug)) printk("[PF_RING] removed /proc/net/pf_ring/%s\n", PROC_INFO);
 
     remove_proc_entry(PROC_PLUGINS_INFO, ring_proc_dir);
-    if(unlikely(enable_debug)) printk("[PF_RING] removed /proc/net/pf_ring/%s\n", PROC_PLUGINS_INFO);
+    if (unlikely(enable_debug)) printk("[PF_RING] removed /proc/net/pf_ring/%s\n", PROC_PLUGINS_INFO);
 
     remove_proc_entry(PROC_STATS, ring_proc_dir);
     remove_proc_entry(PROC_DEV, ring_proc_dir);
 
-    if(ring_proc_dir != NULL) {
+    if (ring_proc_dir != NULL) {
       remove_proc_entry("pf_ring",
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 			init_net.
 #endif
 			proc_net);
-      if(unlikely(enable_debug)) printk("[PF_RING] deregistered /proc/net/pf_ring\n");
+      if (unlikely(enable_debug)) printk("[PF_RING] deregistered /proc/net/pf_ring\n");
     }
   }
+
+  write_unlock(&ring_proc_lock);
 }
 
 /* ********************************** */
@@ -4998,11 +5022,13 @@ add_virtual_filtering_device(struct sock *sock,
   write_unlock(&virtual_filtering_lock);
 
   /* Add /proc entry */
+  write_lock(&ring_proc_lock);
   elem->info.proc_entry = proc_mkdir(elem->info.device_name, ring_proc_dev_dir);
   proc_create_data(PROC_INFO, 0 /* read-only */,
 		   elem->info.proc_entry,
 		   &ring_proc_virtual_filtering_fops /* read */,
 		   (void*)&elem->info);
+  write_unlock(&ring_proc_lock);
 
   return(elem);
 }
@@ -5024,8 +5050,10 @@ static int remove_virtual_filtering_device(struct sock *sock, char *device_name)
 
     if(strcmp(filtering_ptr->info.device_name, device_name) == 0) {
       /* Remove /proc entry */
+      write_lock(&ring_proc_lock);
       remove_proc_entry(PROC_INFO, filtering_ptr->info.proc_entry);
       remove_proc_entry(filtering_ptr->info.device_name, ring_proc_dev_dir);
+      write_unlock(&ring_proc_lock);
 
       list_del(ptr);
       write_unlock(&virtual_filtering_lock);
@@ -9115,18 +9143,22 @@ void remove_device_from_ring_list(struct net_device *dev)
   u_int32_t last_list_idx;
   struct sock *sk;
 
+  write_lock(&ring_proc_lock); 
+
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
 
-    if(dev_ptr->dev == dev) {
-      if(dev_ptr->proc_entry) {
+    if (dev_ptr->dev == dev) {
+      if (dev_ptr->proc_entry != NULL) {
 #ifdef ENABLE_PROC_WRITE_RULE
 	if(dev_ptr->device_type != standard_nic_family)
 	  remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
 	remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
-	remove_proc_entry(dev_ptr->device_name, ring_proc_dev_dir);
+        /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
+        remove_proc_entry(/*dev_ptr->proc_entry->name*/ dev_ptr->device_name, ring_proc_dev_dir);
+        dev_ptr->proc_entry = NULL;
       }
 
       /* We now have to "un-bind" existing sockets */
@@ -9148,6 +9180,8 @@ void remove_device_from_ring_list(struct net_device *dev)
       break;
     }
   }
+
+  write_unlock(&ring_proc_lock);
 }
 
 /* ********************************** */
@@ -9173,6 +9207,8 @@ int add_device_to_ring_list(struct net_device *dev)
 
   if((dev_ptr = kmalloc(sizeof(ring_device_element), GFP_KERNEL)) == NULL)
     return(-ENOMEM);
+
+  write_lock(&ring_proc_lock);
 
   memset(dev_ptr, 0, sizeof(ring_device_element));
   INIT_LIST_HEAD(&dev_ptr->device_list);
@@ -9227,6 +9263,8 @@ int add_device_to_ring_list(struct net_device *dev)
 #endif
 
   list_add(&dev_ptr->device_list, &ring_aware_device_list);
+
+  write_unlock(&ring_proc_lock); 
 
   return(0);
 }
@@ -9301,9 +9339,10 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
   struct net_device *dev = netdev_notifier_info_to_dev(data);
   struct list_head *ptr, *tmp_ptr;
   struct pfring_hooks *hook;
+  int if_name_clash = 0;
 
-  if(dev != NULL) {
-    if(unlikely(enable_debug)) {
+  if (dev != NULL) {
+    if (unlikely(enable_debug)) {
       char _what[32], *what = _what;
       
       switch(msg) {
@@ -9324,26 +9363,26 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     }
 
     /* Skip non ethernet interfaces */
-    if(
+    if (
        (dev->type != ARPHRD_ETHER) /* Ethernet */
        /* Wifi */
        && (dev->type != ARPHRD_IEEE80211)
        && (dev->type != ARPHRD_IEEE80211_PRISM)
        && (dev->type != ARPHRD_IEEE80211_RADIOTAP)
        && strncmp(dev->name, "bond", 4)) {
-      if(unlikely(enable_debug))
+      if (unlikely(enable_debug))
 	printk("[PF_RING] packet_notifier(%s): skipping non ethernet device\n", dev->name);
       return NOTIFY_DONE;
     }
 
-    if(dev->ifindex >= MAX_NUM_IFIDX) {
-      if(unlikely(enable_debug))
+    if (dev->ifindex >= MAX_NUM_IFIDX) {
+      if (unlikely(enable_debug))
 	printk("[PF_RING] packet_notifier(%s): interface index %d > max index %d\n",
 	       dev->name, dev->ifindex, MAX_NUM_IFIDX);
       return NOTIFY_DONE;
     }
 
-    switch(msg) {
+    switch (msg) {
     case NETDEV_PRE_UP:
     case NETDEV_UP:
     case NETDEV_DOWN:
@@ -9396,50 +9435,71 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       break;
 
     case NETDEV_CHANGENAME: /* Rename interface ethX -> ethY */
-      if(unlikely(enable_debug)) printk("[PF_RING] Device change name %s\n", dev->name);
+      if (unlikely(enable_debug)) 
+        printk("[PF_RING] Device change name %s\n", dev->name);
+
+      write_lock(&ring_proc_lock); 
+
+      /* safety check (name clash) */
+      list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+        ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
+        if (dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0) {
+          printk("[PF_RING] WARNING: multiple devices with the same name (name clash during name change %s -> %s)\n",
+                 dev_ptr->dev->name, dev->name);
+          if_name_clash = 1;
+        }
+      }
 
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
 
-        if(dev_ptr->dev == dev) {
-          if(unlikely(enable_debug))
+        if (dev_ptr->dev == dev) {
+          if (unlikely(enable_debug))
             printk("[PF_RING] ==>> FOUND device change name %s -> %s\n",
                    dev_ptr->device_name, dev->name);
 
 	  /* Remove old entry */
+          if (dev_ptr->proc_entry != NULL) {
 #ifdef ENABLE_PROC_WRITE_RULE
-	  if(dev_ptr->device_type != standard_nic_family)
-	    remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
+            if (dev_ptr->device_type != standard_nic_family)
+              remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
-	  remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
-	  remove_proc_entry(dev_ptr->device_name, ring_proc_dev_dir);
+	    remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
+	    remove_proc_entry(/*dev_ptr->proc_entry->name*/ dev_ptr->device_name, ring_proc_dev_dir);
+            dev_ptr->proc_entry = NULL;
+          }
 
-	  /* Add new entry */
-	  strcpy(dev_ptr->device_name, dev->name);
-	  dev_ptr->proc_entry = proc_mkdir(dev_ptr->device_name, ring_proc_dev_dir);
-	  proc_create_data(PROC_INFO, 0 /* read-only */,
-			   dev_ptr->proc_entry,
-			   &ring_proc_dev_fops /* read */,
-			   dev_ptr);
+          if (!if_name_clash) { /* do not add in case of name clash */
+	    /* Add new entry */
+	    strcpy(dev_ptr->device_name, dev_ptr->dev->name);
+	    dev_ptr->proc_entry = proc_mkdir(dev_ptr->dev->name, ring_proc_dev_dir);
+	    proc_create_data(PROC_INFO, 0 /* read-only */,
+			     dev_ptr->proc_entry,
+			     &ring_proc_dev_fops /* read */,
+			     dev_ptr);
 
 #ifdef ENABLE_PROC_WRITE_RULE
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
-	  if(dev_ptr->device_type != standard_nic_family) {
-	    struct proc_dir_entry *entry;
+	    if (dev_ptr->device_type != standard_nic_family) {
+	      struct proc_dir_entry *entry;
 
-	    entry = proc_create_data(PROC_RULES, 0666 /* rw */,
-				     dev_ptr->proc_entry,
-				     &ring_proc_dev_rulefops,
-				     dev_ptr);
-	    if(entry)
-	      entry->write_proc = ring_proc_dev_rule_write;
-	  }
+	      entry = proc_create_data(PROC_RULES, 0666 /* rw */,
+				       dev_ptr->proc_entry,
+				       &ring_proc_dev_rulefops,
+				       dev_ptr);
+	      if (entry)
+	        entry->write_proc = ring_proc_dev_rule_write;
+	    }
 #endif
 #endif
+          }
 	  break;
 	}
       }
+
+      write_unlock(&ring_proc_lock); 
+
       break;
 
     default:
@@ -9477,14 +9537,20 @@ static void __exit ring_exit(void)
     dev_ptr = list_entry(ptr, ring_device_element, device_list);
     hook = (struct pfring_hooks*)dev_ptr->dev->pfring_ptr;
 
+    write_lock(&ring_proc_lock);
+
+    if (dev_ptr->proc_entry) {
 #ifdef ENABLE_PROC_WRITE_RULE
-    /* Remove /proc entry for the selected device */
-    if(dev_ptr->device_type != standard_nic_family)
-      remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
+      /* Remove /proc entry for the selected device */
+      if (dev_ptr->device_type != standard_nic_family)
+        remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
-    remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
-    remove_proc_entry(dev_ptr->device_name, ring_proc_dev_dir);
+      remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
+      remove_proc_entry(dev_ptr->dev->name, ring_proc_dev_dir);
+    }
+
+    write_unlock(&ring_proc_lock);
 
     if(hook->magic == PF_RING) {
       if(unlikely(enable_debug)) printk("[PF_RING] Unregister hook for %s\n", dev_ptr->device_name);
