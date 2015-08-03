@@ -24,8 +24,8 @@ if [ -f /etc/init.d/functions ]; then
    . /etc/init.d/functions
 fi
 
-MGMT_INTERFACE="$(/sbin/route | grep default | tr -s ' ' | cut -d ' ' -f 8)"
-if [ ${MGMT_INTERFACE} == "" ]; then
+MGMT_INTERFACE="$(/sbin/route | grep default | head -n 1 | tr -s ' ' | cut -d ' ' -f 8)"
+if [ "${MGMT_INTERFACE}" == "" ]; then
   MGMT_INTERFACE="eth0"
 fi
 MGMT_INTERFACE_DRIVER="$(/sbin/ethtool -i $MGMT_INTERFACE | grep driver | cut -d ' ' -f 2)"
