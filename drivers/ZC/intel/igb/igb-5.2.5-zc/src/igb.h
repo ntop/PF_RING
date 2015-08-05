@@ -46,7 +46,9 @@
 struct igb_adapter;
 
 #if defined(CONFIG_DCA) || defined(CONFIG_DCA_MODULE)
+#ifndef HAVE_PF_RING /* FIXX temporarily disabling DCA which is causing crashes on some systems */
 #define IGB_DCA
+#endif
 #endif
 #ifdef IGB_DCA
 #include <linux/dca.h>
