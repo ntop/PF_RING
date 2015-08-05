@@ -59,6 +59,13 @@
 #define IXGBE_PCI_DEVICE_CACHE_LINE_SIZE	0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES	8
 
+#ifdef CONFIG_DCA
+#undef CONFIG_DCA
+#endif
+#ifdef CONFIG_DCA_MODULE
+#undef CONFIG_DCA_MODULE
+#endif
+
 #define IXGBE_MAX_NIC   32
 
 /* Note: currently numa cpu affinity is per-adapter, but this can be easily 
