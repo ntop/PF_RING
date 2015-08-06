@@ -2730,8 +2730,7 @@ pcap_setdirection_linux(pcap_t *handle, pcap_direction_t d)
 			case PCAP_D_OUT:   direction = tx_only_direction; break;
 		}
 
-		pfring_set_direction(handle->ring, direction);
-		return 0;
+		return(pfring_set_direction(handle->ring, direction));
 	}
 #endif
 

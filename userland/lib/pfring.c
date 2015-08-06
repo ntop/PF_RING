@@ -930,8 +930,17 @@ int pfring_set_direction(pfring *ring, packet_direction direction) {
   if(ring && ring->set_direction) {
     int rc;
 
+    /*
+      In theory you should enable the direction *before* you
+      enable the ring. However doing it from libpcap is not
+      possible due to the way the library works. Thus although
+      it is a good practice to do so, we removed the check below
+      so that libpcap-based apps can work.
+     */
+#if 0
     if(ring->enabled)
       return -1; /* direction must be set before pfring_enable() */
+#endif
 
     rc = ring->set_direction(ring, direction);
 

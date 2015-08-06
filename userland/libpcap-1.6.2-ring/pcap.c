@@ -750,6 +750,7 @@ pcap_activate(pcap_t *p)
 		 */
 		initialize_ops(p);
 	}
+
 	return (status);
 }
 
