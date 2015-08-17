@@ -13,6 +13,7 @@ insmod ../../../../../../kernel/pf_ring.ko
 
 # Required by ixgbe
 modprobe ptp
+modprobe vxlan
 
 # As many queues as the number of processors
 #insmod ./ixgbe.ko RSS=0,0,0,0
