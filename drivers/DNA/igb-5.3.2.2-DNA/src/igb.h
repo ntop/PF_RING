@@ -44,7 +44,9 @@
 struct igb_adapter;
 
 #if defined(CONFIG_DCA) || defined(CONFIG_DCA_MODULE)
+#ifndef ENABLE_DNA /* FIXX temporarily disabling DCA which is causing crashes on some systems */
 #define IGB_DCA
+#endif
 #endif
 #ifdef IGB_DCA
 #include <linux/dca.h>
