@@ -5628,8 +5628,10 @@ void e1000e_update_stats(struct e1000_adapter *adapter)
 #ifdef HAVE_PCI_ERS
 	struct pci_dev *pdev = adapter->pdev;
 #endif
+#ifndef DYNAMIC_LTR_SUPPORT
 #ifdef ENABLE_DNA
 	struct pfring_hooks *hook = (struct pfring_hooks *) adapter->netdev->pfring_ptr;
+#endif
 #endif
 
 	/* Prevent stats update while adapter is being reset, or if the pci
