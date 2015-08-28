@@ -198,6 +198,10 @@ start_interfaces() {
 			# Disabling VLAN stripping
 			/sbin/ethtool -K $D rxvlan off > /dev/null 2>&1
 
+			# Disabling Flow Control
+			/sbin/ethtool -A $D rx off
+			/sbin/ethtool -A $D tx off
+
 			if [ `cat /proc/net/pf_ring/dev/$D/info | grep ZC | wc -l` -eq 1 ]; then
 				# ZC interface, setting max number of RX/TX slots
 				MAX_RX_SLOTS=$(/sbin/ethtool -g $D | grep "RX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
