@@ -68,6 +68,13 @@ static const char ixgbe_driver_string[] =
 #ifdef ENABLE_DNA
 #undef DRIVERIOV
 #define DRIVERIOV "-DNA"
+
+#ifdef CONFIG_DCA
+#undef CONFIG_DCA
+#endif
+#ifdef CONFIG_DCA_MODULE
+#undef CONFIG_DCA_MODULE
+#endif
 #endif
 
 #define BYPASS_TAG
