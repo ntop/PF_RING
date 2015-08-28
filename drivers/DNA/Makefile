@@ -6,9 +6,9 @@
 #  - ~/PF_RING/package/rpm/pfring.spec
 
 E1000=e1000-8.0.35
-E1000E=e1000e-2.5.4
-IGB=igb-5.0.6
-IXGBE=ixgbe-3.21.2
+E1000E=e1000e-3.2.4.2
+IGB=igb-5.3.2.2
+IXGBE=ixgbe-4.1.2
 
 all: igb ixgbe e1000e e1000
 
