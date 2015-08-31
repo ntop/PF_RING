@@ -160,6 +160,15 @@ typedef enum {
 
 /* ********************************* */
 
+typedef enum {
+  full_packet = 0,
+  slice_l2 = 2,
+  slice_l3 = 3,
+  slice_l4 = 4
+} packet_slicing_level;
+
+/* ********************************* */
+
 typedef void pfring_pkt_buff;
 
 /* ********************************* */
@@ -239,6 +248,7 @@ struct __pfring {
   u_int8_t  (*get_num_rx_channels)          (pfring *);
   int       (*get_card_settings)            (pfring *, pfring_card_settings *);
   int       (*set_sampling_rate)            (pfring *, u_int32_t);
+  int       (*set_packet_slicing)           (pfring *, packet_slicing_level, u_int32_t);
   int       (*get_selectable_fd)            (pfring *);
   int       (*set_direction)                (pfring *, packet_direction);
   int       (*set_socket_mode)              (pfring *, socket_mode);
@@ -320,6 +330,8 @@ struct __pfring {
   u_int32_t caplen;
   u_int16_t slot_header_len, mtu_len /* 0 = unknown */;
   u_int32_t sampling_rate, sampling_counter;
+  packet_slicing_level slicing_level;
+  u_int32_t slicing_additional_bytes;
   u_int8_t kernel_packet_consumer, is_shutting_down, socket_default_accept_policy;
   int fd, device_id;
   FlowSlotInfo *slots_info;
@@ -641,6 +653,15 @@ u_int8_t pfring_get_num_rx_channels(pfring *ring);
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sampling */);
+
+/**
+ * Set packet slicing level.
+ * @param ring             The PF_RING handle on which slicing is applied, when supported. 
+ * @param level            The slicing level (disabled, L2, L3, L4, ..)
+ * @param additional_bytes Bytes to capture in addition to the selected layer.
+ * @return 0 on success, a negative value otherwise.
+ */
+int pfring_set_packet_slicing(pfring *ring, packet_slicing_level level, u_int32_t additional_bytes);
 
 /**
  * Returns the file descriptor associated to the specified ring. 
