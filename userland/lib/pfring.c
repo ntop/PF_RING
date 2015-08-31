@@ -917,6 +917,25 @@ int pfring_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sampling */)
 
 /* **************************************************** */
 
+int pfring_set_packet_slicing(pfring *ring, packet_slicing_level level, u_int32_t additional_bytes) {
+  if (ring && ring->set_packet_slicing) {
+    int rc;
+
+    rc = ring->set_packet_slicing(ring, level, additional_bytes);
+
+    if (rc == 0) {
+      ring->slicing_level = level;
+      ring->slicing_additional_bytes = additional_bytes;
+    }
+
+    return rc;
+  }
+
+  return PF_RING_ERROR_NOT_SUPPORTED;
+}
+
+/* **************************************************** */
+
 int pfring_get_selectable_fd(pfring *ring) {
   if(ring && ring->get_selectable_fd)
     return ring->get_selectable_fd(ring);
