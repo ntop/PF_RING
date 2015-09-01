@@ -5841,14 +5841,6 @@ netdev_tx_t igb_xmit_frame_ring(struct sk_buff *skb,
 	__be16 protocol = vlan_get_protocol(skb);
 	u8 hdr_len = 0;
 
-#ifdef HAVE_PF_RING
-	/* We don't allow legacy send when in zc mode */
-	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
-	  dev_kfree_skb_any(skb);
-	  return NETDEV_TX_OK;
-	}
-#endif
-
 	/*
 	 * need: 1 descriptor per page * PAGE_SIZE/IGB_MAX_DATA_PER_TXD,
 	 *       + 1 desc for skb_headlen/IGB_MAX_DATA_PER_TXD,
@@ -5949,6 +5941,14 @@ static netdev_tx_t igb_xmit_frame(struct sk_buff *skb,
 				  struct net_device *netdev)
 {
 	struct igb_adapter *adapter = netdev_priv(netdev);
+
+#ifdef HAVE_PF_RING
+	/* We don't allow legacy send when in zc mode */
+	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+	  dev_kfree_skb_any(skb);
+	  return NETDEV_TX_OK;
+	}
+#endif
 
 	if (test_bit(__IGB_DOWN, &adapter->state)) {
 		dev_kfree_skb_any(skb);
