@@ -32,7 +32,7 @@
 #define DEFAULT_BUCKET_LEN            128
 #define MAX_NUM_DEVICES               256
 
-#define MAX_NUM_RING_SOCKETS           64
+#define MAX_NUM_RING_SOCKETS          128
 
 /* Watermark */
 #define DEFAULT_MIN_PKT_QUEUED        128
