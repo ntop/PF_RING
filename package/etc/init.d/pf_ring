@@ -229,6 +229,10 @@ load_driver() {
 }
 
 load_dna_zc() {
+	# load dependencies
+	/sbin/modprobe ptp
+	/sbin/modprobe dca
+
 	# load dkms drivers
 	# search for file under /etc/pf_ring/{dna,zc}/{e1000e,igb,ixgbe}/{e1000e,igb,ixgbe}.conf
 	for F in ${DRIVERS_FLAVOR[@]} ; do
