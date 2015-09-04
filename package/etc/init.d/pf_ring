@@ -256,6 +256,17 @@ load_driver() {
 load_dna_zc() {
 	# load dependencies
 	/sbin/modprobe ptp
+	/sbin/modprobe dca
+
+	# load dkms drivers
+	# search for file under /etc/pf_ring/{dna,zc}/{e1000e,igb,ixgbe}/{e1000e,igb,ixgbe}.conf
+	for F in ${DRIVERS_FLAVOR[@]} ; do
+		for D in ${DKMS_DRIVERS[@]} ; do
+			if [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
+				load_driver ${D} ${F}
+				if [ ${F} == "zc" ] && [ ${DO_NOT_LOAD_HUGEPAGES} -eq 0 ]; then
+					LOAD_HUGEPAGES=1
+				fi
 
 	# load dkms drivers
 	# search for file under /etc/pf_ring/{dna,zc}/{e1000e,igb,ixgbe}/{e1000e,igb,ixgbe}.conf
