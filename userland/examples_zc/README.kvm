@@ -35,14 +35,32 @@ where a consumer application will receive the generated traffic:
 (G1) $ ./zcount_ipc -i 0 -c 99 -u
 (G2) $ ./zcount_ipc -i 1 -c 99 -u
 
+Common issues
+-------------
+
+If you have problems runnning zcount_ipc (or similar) on the guest with an error like this:
+
+$ ./zcount_ipc -i 0 -c 99 -u
+ *** error mmap'ing uio memory region /dev/uio0: Invalid argument ***
+$ dmesg  | tail -n 1
+[ 1971.854205] zcount_ipc:3520 map pfn expected mapping type uncached-minus for [mem 0x28000000-0x28000fff], got write-back
+
+Edit in /etc/default/grub the line starting with GRUB_CMDLINE_LINUX_DEFAULT and append "nopat", for example:
+
+GRUB_CMDLINE_LINUX_DEFAULT="nopat"
+
+Then run:
+
+$ update-grub
+
 How to create/boot a Qemu VM
 ----------------------------
 
-Download latest stable Qemu (1.7.1):
+Download latest stable Qemu (2.4.0):
 
-$ wget http://wiki.qemu-project.org/download/qemu-1.7.1.tar.bz2
-$ tar xvjf qemu-1.7.1.tar.bz2 
-$ cd qemu-1.7.1
+$ wget http://wiki.qemu-project.org/download/qemu-2.4.0.tar.bz2
+$ tar xvjf qemu-2.4.0.tar.bz2 
+$ cd qemu-2.4.0
 
 Edit hw/misc/ivshmem.c commenting out line 303 (see http://patchwork.ozlabs.org/patch/316785/):
 
