@@ -35,7 +35,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
-#include <numa.h>
 
 #include "pfring.h"
 #include "pfring_zc.h"
@@ -315,7 +314,7 @@ int main(int argc, char* argv[]) {
     buffer_len,
     0, 
     MAX_CARD_SLOTS + NBUFF,
-    numa_node_of_cpu(bind_core),
+    pfring_zc_numa_get_cpu_node(bind_core),
     NULL /* auto hugetlb mountpoint */ 
   );
 

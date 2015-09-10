@@ -35,7 +35,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
-#include <numa.h>
 
 #include "pfring.h"
 #include "pfring_zc.h"
@@ -271,7 +270,7 @@ int main(int argc, char* argv[]) {
     in_device != NULL ? max_packet_len(in_device) : 1536, 
     0,
     (((in_device != NULL) + (out_device != NULL)) * (MAX_CARD_SLOTS + 1)) + (num_ipc_queues * (QUEUE_LEN + 1)), 
-    numa_node_of_cpu(forwarder[RX_FWDR].bind_core),
+    pfring_zc_numa_get_cpu_node(forwarder[RX_FWDR].bind_core),
     NULL /* auto hugetlb mountpoint */ 
   );
 

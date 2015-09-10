@@ -148,28 +148,6 @@ else
 REDIS_LIB=""
 fi
 
-dnl Disable NUMA for ARM platforms
-SHORT_MACHINE=`uname -m | cut -b1-3`
-if test "$SHORT_MACHINE" = "arm"; then
-   enable_numa="no"
-fi
-
-dnl libnuma - Default enabled
-AC_ARG_ENABLE([numa], AS_HELP_STRING([--disable-numa], [Disable NUMA support]))
-AS_IF([test "x$enable_numa" != "xno"], 
-  AC_CHECK_LIB([numa], [numa_available], HAVE_LIBNUMA="-D HAVE_LIBNUMA")
-  AC_MSG_CHECKING([if libnuma is present])
-  if test "x$ac_cv_lib_numa_numa_available" = xyes; then :
-    LIBNUMA="-lnuma"
-    HAVE_LIBNUMA="-D HAVE_LIBNUMA"
-    AC_MSG_RESULT([yes])
-  else
-    AC_MSG_RESULT(no)
-    echo "Please install libnuma-dev in order to use PF_RING"
-    exit 0
-  fi
-)
-
 AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])
 AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 
@@ -289,8 +267,6 @@ AC_SUBST(HAVE_BPF)
 AC_SUBST(BPF_INCLUDE)
 dnl AC_SUBST(BPF_LIB)
 AC_SUBST(REDIS_LIB)
-AC_SUBST(HAVE_LIBNUMA)
-AC_SUBST(LIBNUMA)
 AC_SUBST(SYSLIBS)
 AC_SUBST(INSTALL_PREFIX)
 AC_SUBST(SILICOM_LIBS)

@@ -33,13 +33,10 @@
 /* *************************************** */
 
 int bind2node(int core_id) {
-  char node_str[8];
-
-  if (core_id < 0 || numa_available() == -1)
+  if (core_id < 0)
     return -1;
 
-  snprintf(node_str, sizeof(node_str), "%u", numa_node_of_cpu(core_id));
-  numa_bind(numa_parse_nodestring(node_str));
+  pfring_zc_numa_set_numa_affinity(pfring_zc_numa_get_cpu_node(core_id));
 
   return 0;
 }

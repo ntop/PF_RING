@@ -853,19 +853,16 @@ if test "$SHORT_MACHINE" != "arm"; then
 	NPCAPOBJS='$(shell ar t libnpcap_$(MACHINE).a | grep .o)'
 	EXTRACT_LIBNPCAP="extract_libnpcap"
 	HAVE_NPCAP="-DHAVE_NPCAP"
-	HAVE_LIBNUMA="-lnuma"
 else
 	LIBNPCAP=""
 	NPCAPOBJS=""
 	EXTRACT_LIBNPCAP=""
 	HAVE_NPCAP=""
-	HAVE_LIBNUMA=""
 fi
 AC_SUBST(LIBNPCAP)
 AC_SUBST(NPCAPOBJS)
 AC_SUBST(EXTRACT_LIBNPCAP)
 AC_SUBST(HAVE_NPCAP)
-AC_SUBST(HAVE_LIBNUMA)
 
 AC_ARG_WITH(septel,
 AC_HELP_STRING([--with-septel@<:@=DIR@:>@],[include Septel support (located in directory DIR, if supplied).  @<:@default=yes, on Linux, if present@:>@]),

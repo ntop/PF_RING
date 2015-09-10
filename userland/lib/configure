@@ -625,8 +625,6 @@ HAVE_REDIRECTOR
 SILICOM_LIBS
 INSTALL_PREFIX
 SYSLIBS
-LIBNUMA
-HAVE_LIBNUMA
 REDIS_LIB
 BPF_INCLUDE
 HAVE_BPF
@@ -710,7 +708,6 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_rdi
-enable_numa
 enable_nt
 enable_bpf
 '
@@ -1333,7 +1330,6 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-rdi           Disable Silicom Redirector support in PF_RING
-  --disable-numa          Disable NUMA support
   --enable-nt             Enable Napatech support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
 
@@ -3636,73 +3632,6 @@ else
 REDIS_LIB=""
 fi
 
-SHORT_MACHINE=`uname -m | cut -b1-3`
-if test "$SHORT_MACHINE" = "arm"; then
-   enable_numa="no"
-fi
-
-# Check whether --enable-numa was given.
-if test "${enable_numa+set}" = set; then :
-  enableval=$enable_numa;
-fi
-
-if test "x$enable_numa" != "xno"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for numa_available in -lnuma" >&5
-$as_echo_n "checking for numa_available in -lnuma... " >&6; }
-if ${ac_cv_lib_numa_numa_available+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lnuma  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char numa_available ();
-int
-main ()
-{
-return numa_available ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_numa_numa_available=yes
-else
-  ac_cv_lib_numa_numa_available=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_numa_numa_available" >&5
-$as_echo "$ac_cv_lib_numa_numa_available" >&6; }
-if test "x$ac_cv_lib_numa_numa_available" = xyes; then :
-  HAVE_LIBNUMA="-D HAVE_LIBNUMA"
-fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if libnuma is present" >&5
-$as_echo_n "checking if libnuma is present... " >&6; }
-  if test "x$ac_cv_lib_numa_numa_available" = xyes; then :
-    LIBNUMA="-lnuma"
-    HAVE_LIBNUMA="-D HAVE_LIBNUMA"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    echo "Please install libnuma-dev in order to use PF_RING"
-    exit 0
-  fi
-
-fi
-
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for clock_gettime in -lrt" >&5
 $as_echo_n "checking for clock_gettime in -lrt... " >&6; }
 if ${ac_cv_lib_rt_clock_gettime+:} false; then :
@@ -3963,8 +3892,6 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
-
-
 
 
 

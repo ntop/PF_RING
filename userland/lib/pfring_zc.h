@@ -680,6 +680,26 @@ pfring_zc_check_license();
 
 /* **************************************************************************************** */
 
+/**
+ * Return the NUMA node bound to the selected core
+ * @param core_id The core id
+ * @return        node id on success, -1 otherwise.
+ */
+int
+pfring_zc_numa_get_cpu_node(int core_id);
+
+/* **************************************************************************************** */
+
+/**
+ * Set the NUMA affinity to the selected NUMA node (for memory allocation)
+ * @param node_id The NUMA node id
+ * @return        0 on success, -1 otherwise.
+ */
+int
+pfring_zc_numa_set_numa_affinity(int node_id);
+
+/* **************************************************************************************** */
+
 #ifdef __cplusplus
 }
 #endif

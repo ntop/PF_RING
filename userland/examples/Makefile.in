@@ -40,13 +40,13 @@ INCLUDE    = -I${PFRING_KERNEL} -I${PFRING_KERNEL}/plugins -I${PFRINGDIR} -I${PC
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC         = ${CROSS_COMPILE}gcc #--platform=native
-CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} ${DNA_DEFINE} @HAVE_ZERO@ @HAVE_BPF@ @HAVE_LIBNUMA@ -O2 # -g
+CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} ${DNA_DEFINE} @HAVE_ZERO@ @HAVE_BPF@ @HAVE_PF_RING_ZC@ -O2 # -g
 # LDFLAGS  =
 
 #
 # User and System libraries
 #
-LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ -lpthread @SYSLIBS@ @SILICOM_LIBS@ @REDIS_LIB@ @LIBNUMA@ -lrt
+LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ -lpthread @SYSLIBS@ @SILICOM_LIBS@ @REDIS_LIB@ -lrt
 
 # How to make an object file
 %.o: %.c pfutils.c

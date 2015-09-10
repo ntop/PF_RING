@@ -21,9 +21,6 @@ AC_SF_COMPILER_SETUP()
 AC_CHECK_DAQ_API
 AC_CHECK_SFBPF
 
-NUMA=
-AC_CHECK_LIB([numa], [numa_available], NUMA="-lnuma")
-
 # Checks for PF_RING
 AC_ARG_WITH( libpfring_includes,
 	     [  --with-libpfring-includes=DIR      libpfring include directory],
@@ -66,7 +63,7 @@ AC_CHECK_HEADER([pfring.h],  [], [AC_MSG_ERROR([Could not find pfring.h! ])])
 AC_CHECK_LIB( [pcap],
               [pfring_open],
 	      [LDFLAGS="${LDFLAGS} -lpcap"],
-	      [LDFLAGS="${LDFLAGS} -lpfring ${NUMA}"],
+	      [LDFLAGS="${LDFLAGS} -lpfring"],
 	      [] )
 
 # Checks for header files.

@@ -35,7 +35,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
-#include <numa.h>
 #include <ctype.h>
 
 #include "pfring.h"
@@ -604,7 +603,7 @@ int main(int argc, char* argv[]) {
       max_packet_len(device),
       metadata_len, 
       num_queue_buffers + NBUFF + num_consumer_buffers, 
-      numa_node_of_cpu(bind_core),
+      pfring_zc_numa_get_cpu_node(bind_core),
       NULL /* auto hugetlb mountpoint */ 
     );
 

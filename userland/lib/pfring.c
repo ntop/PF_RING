@@ -48,6 +48,11 @@
 #include "pfring_mod_accolade.h"
 #endif
 
+#ifdef HAVE_MYRICOM
+/* Myricom */
+#include "pfring_mod_myricom.h"
+#endif
+
 #ifdef HAVE_DNA
 #include "pfring_mod_dna.h"
 #endif
@@ -94,6 +99,13 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "anic",
     .open = pfring_anic_open,
+  },
+#endif
+
+#ifdef HAVE_MYRICOM
+  {
+    .name = "myri",
+    .open = pfring_myri_open,
   },
 #endif
 

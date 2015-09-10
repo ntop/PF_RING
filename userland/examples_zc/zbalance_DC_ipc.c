@@ -35,7 +35,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
-#include <numa.h>
 
 #include "pfring.h"
 #include "pfring_zc.h"
@@ -413,7 +412,7 @@ int main(int argc, char* argv[]) {
     (sort_packets * (queue_len + num_threads * FIFO_PREFETCH_BUFFERS)) +  
     PREFETCH_BUFFERS +
     (num_consumer_queues * (queue_len + POOL_SIZE)), 
-    numa_node_of_cpu(bind_worker_core),
+    pfring_zc_numa_get_cpu_node(bind_worker_core),
     NULL /* auto hugetlb mountpoint */ 
   );
 

@@ -11,7 +11,7 @@ LIBS=../lib/libpfring.a @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ @SILICOM_LIBS@ -lpthre
 all: $(LIBPFRING_CPP) pf_test
 
 pf_test: pf_test.cpp $(LIBPFRING_CPP)
-	$(CPP) $(INCLUDE) $< $(LIBPFRING_CPP) -o $@ $(LIBS) $(LIBPCAP_DIR)/libpcap.a @SYSLIBS@ @LIBNUMA@
+	$(CPP) $(INCLUDE) $< $(LIBPFRING_CPP) -o $@ $(LIBS) $(LIBPCAP_DIR)/libpcap.a @SYSLIBS@
 
 $(LIBPFRING_CPP): $(OBJ)
 	@rm -f $@

@@ -659,7 +659,6 @@ AR
 RANLIB
 V_YACC
 V_LEX
-HAVE_LIBNUMA
 HAVE_NPCAP
 EXTRACT_LIBNPCAP
 NPCAPOBJS
@@ -6427,15 +6426,12 @@ if test "$SHORT_MACHINE" != "arm"; then
 	NPCAPOBJS='$(shell ar t libnpcap_$(MACHINE).a | grep .o)'
 	EXTRACT_LIBNPCAP="extract_libnpcap"
 	HAVE_NPCAP="-DHAVE_NPCAP"
-	HAVE_LIBNUMA="-lnuma"
 else
 	LIBNPCAP=""
 	NPCAPOBJS=""
 	EXTRACT_LIBNPCAP=""
 	HAVE_NPCAP=""
-	HAVE_LIBNUMA=""
 fi
-
 
 
 
