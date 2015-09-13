@@ -12,12 +12,14 @@ ifndef GIT_REV
   ifeq (, $(shell echo ${SUBDIRS}))
    GIT_BRANCH=$(shell git branch --no-color|cut -d ' ' -f 2)
    GIT_HASH=$(shell git rev-parse HEAD)
-   GIT_REV:=${GIT_BRANCH}:${GIT_HASH}
+   ifneq ($(strip $(GIT_BRANCH)),)
+    GIT_REV:=${GIT_BRANCH}:${GIT_HASH}
+   endif
   endif
  endif
 endif
 
-ifdef GIT_REV
+ifneq ($(strip $(GIT_REV)),)
  GITDEF:=-DGIT_REV="\"${GIT_REV}\""
 endif
 
