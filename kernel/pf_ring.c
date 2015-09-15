@@ -117,7 +117,7 @@
 #include <linux/pf_ring.h>
 
 #ifndef GIT_REV
-#define GIT_REV ""
+#define GIT_REV "unknown"
 #endif
 
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
