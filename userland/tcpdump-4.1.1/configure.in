@@ -61,17 +61,24 @@ AC_HEADER_TIME
 
 dnl> PF_RING
 AC_CHECK_LIB([rdi], [rdi_init])
-
 AC_MSG_CHECKING([Silicom Redirector support])
 if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
-      HAVE_REDIRECTOR="-D HAVE_REDIRECTOR"
-      SILICOM_LIBS="-lrdi"
-      AC_MSG_RESULT(yes)
+	SILICOM_LIBS="-lrdi"
+	AC_MSG_RESULT(yes)
 else
-      AC_MSG_RESULT(no)
+	AC_MSG_RESULT(no)
 fi
 
-LIBS="$LIBS ../lib/libpfring.a -lpthread -lnuma -lrt $SILICOM_LIBS"
+ACCOLADE_HOME="/opt/accolade"
+AC_MSG_CHECKING([Accolade support])
+if test -d "$ACCOLADE_HOME"; then
+	ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
+	AC_MSG_RESULT(yes)
+else
+	AC_MSG_RESULT(no)
+fi
+
+LIBS="$LIBS ../lib/libpfring.a -lpthread -lrt $SILICOM_LIBS $ACCOLADE_LIB"
 
 case "$host_os" in
 

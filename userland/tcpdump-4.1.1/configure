@@ -4270,20 +4270,30 @@ _ACEOF
 
 fi
 
-
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking Silicom Redirector support" >&5
 $as_echo_n "checking Silicom Redirector support... " >&6; }
 if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
-      HAVE_REDIRECTOR="-D HAVE_REDIRECTOR"
-      SILICOM_LIBS="-lrdi"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+	SILICOM_LIBS="-lrdi"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
-LIBS="$LIBS ../lib/libpfring.a -lpthread -lnuma -lrt $SILICOM_LIBS"
+ACCOLADE_HOME="/opt/accolade"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Accolade support" >&5
+$as_echo_n "checking Accolade support... " >&6; }
+if test -d "$ACCOLADE_HOME"; then
+	ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+LIBS="$LIBS ../lib/libpfring.a -lpthread -lrt $SILICOM_LIBS $ACCOLADE_LIB"
 
 case "$host_os" in
 
