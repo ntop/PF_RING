@@ -18,12 +18,12 @@
 #include <sys/types.h>
 #include <linux/pf_ring.h> /* needed for hw_filtering_rule */
 
-#define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     1 << 0   /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
-#define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0      1 << 1   /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
-#define PF_RING_ZC_DEVICE_SW_TIMESTAMP       1 << 2   /**< pfring_zc_open_device() flag: compute sw timestamp (please note: this adds per-packet overhead). */
-#define PF_RING_ZC_DEVICE_HW_TIMESTAMP       1 << 3   /**< pfring_zc_open_device() flag: enable hw timestamp, when available */
-#define PF_RING_ZC_DEVICE_STRIP_HW_TIMESTAMP 1 << 4   /**< pfring_zc_open_device() flag: strip hw timestamp from packet, when available */
-#define PF_RING_ZC_DEVICE_IXIA_TIMESTAMP     1 << 5   /**< pfring_zc_open_device() flag: extract IXIA timestamp from packet */
+#define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     (1 <<  0) /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
+#define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0      (1 <<  1) /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
+#define PF_RING_ZC_DEVICE_SW_TIMESTAMP       (1 <<  2) /**< pfring_zc_open_device() flag: compute sw timestamp (please note: this adds per-packet overhead). */
+#define PF_RING_ZC_DEVICE_HW_TIMESTAMP       (1 <<  3) /**< pfring_zc_open_device() flag: enable hw timestamp, when available */
+#define PF_RING_ZC_DEVICE_STRIP_HW_TIMESTAMP (1 <<  4) /**< pfring_zc_open_device() flag: strip hw timestamp from packet, when available */
+#define PF_RING_ZC_DEVICE_IXIA_TIMESTAMP     (1 <<  5) /**< pfring_zc_open_device() flag: extract IXIA timestamp from packet */
 
 #define UNDEFINED_QUEUEID  UINT32_MAX       /**< pfring_zc_get_queue_id() return val: queue id is not valid */
 #define QUEUE_IS_DEVICE(i) (i > UINT16_MAX) /**< pfring_zc_get_queue_id() return val: queue id is an encoded device index */
@@ -278,6 +278,14 @@ int
 pfring_zc_remove_hw_rule(
 	pfring_zc_queue *queue,
 	u_int16_t rule_id
+);
+
+/* **************************************************************************************** */
+
+void 
+pfring_zc_set_rxfh_indir(
+	pfring_zc_queue *queue,
+	u_int8_t *indir_table
 );
 
 /* **************************************************************************************** */
@@ -666,6 +674,26 @@ pfring_zc_version();
  */
 int
 pfring_zc_check_license();
+
+/* **************************************************************************************** */
+
+/**
+ * Return the NUMA node bound to the selected core
+ * @param core_id The core id
+ * @return        node id on success, -1 otherwise.
+ */
+int
+pfring_zc_numa_get_cpu_node(int core_id);
+
+/* **************************************************************************************** */
+
+/**
+ * Set the NUMA affinity to the selected NUMA node (for memory allocation)
+ * @param node_id The NUMA node id
+ * @return        0 on success, -1 otherwise.
+ */
+int
+pfring_zc_numa_set_numa_affinity(int node_id);
 
 /* **************************************************************************************** */
 
