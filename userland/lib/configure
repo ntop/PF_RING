@@ -632,6 +632,10 @@ MOD_NT_LIB
 HAVE_NT
 MLX_OBJS
 HAVE_MLX
+HAVE_MYRICOM
+MYRICOM_OBJS
+MYRICOM_LIB
+MYRICOM_INC
 HAVE_ACCOLADE
 ACCOLADE_OBJS
 ACCOLADE_LIB
@@ -3376,67 +3380,6 @@ else
 $as_echo "no" >&6; }
 fi
 
-if test -f pfring_mod_mlx.c; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ibv_open_device in -libverbs" >&5
-$as_echo_n "checking for ibv_open_device in -libverbs... " >&6; }
-if ${ac_cv_lib_ibverbs_ibv_open_device+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-libverbs  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ibv_open_device ();
-int
-main ()
-{
-return ibv_open_device ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_ibverbs_ibv_open_device=yes
-else
-  ac_cv_lib_ibverbs_ibv_open_device=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ibverbs_ibv_open_device" >&5
-$as_echo "$ac_cv_lib_ibverbs_ibv_open_device" >&6; }
-if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then :
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_MELLANOX 1
-_ACEOF
-
-fi
-
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking Mellanox support" >&5
-$as_echo_n "checking Mellanox support... " >&6; }
-   if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then
-      MLX_OBJS="pfring_mod_mlx.o"
-      HAVE_MLX="-DHAVE_MELLANOX"
-      SYSLIBS="$SYSLIBS -libverbs"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-   else
-     MLX_OBJS=""
-     HAVE_MLX=""
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-   fi
-fi
-
 if test "$IS_FREEBSD" != "1"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if r/w locks are supported" >&5
 $as_echo_n "checking if r/w locks are supported... " >&6; }
@@ -3872,6 +3815,91 @@ else
 $as_echo "no" >&6; }
 fi
 
+MYRICOM_HOME="/opt/snf"
+MYRICOM_INC=
+MYRICOM_LIB=
+MYRICOM_OBJS=
+HAVE_MYRICOM=
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Myricom support" >&5
+$as_echo_n "checking Myricom support... " >&6; }
+if test -f pfring_mod_myricom.c && test -d "$MYRICOM_HOME"; then
+  MYRICOM_INC="-I$MYRICOM_HOME/include -I$MYRICOM_HOME/src/common -I$MYRICOM_HOME/src/common/bsd"
+  MYRICOM_LIB="/opt/snf/lib/libsnf.a"
+  MYRICOM_OBJS="pfring_mod_myricom.o"
+  HAVE_MYRICOM="-D HAVE_MYRICOM"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_MYRICOM 1
+_ACEOF
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+if test -f pfring_mod_mlx.c; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ibv_open_device in -libverbs" >&5
+$as_echo_n "checking for ibv_open_device in -libverbs... " >&6; }
+if ${ac_cv_lib_ibverbs_ibv_open_device+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-libverbs  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ibv_open_device ();
+int
+main ()
+{
+return ibv_open_device ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ibverbs_ibv_open_device=yes
+else
+  ac_cv_lib_ibverbs_ibv_open_device=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ibverbs_ibv_open_device" >&5
+$as_echo "$ac_cv_lib_ibverbs_ibv_open_device" >&6; }
+if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_MELLANOX 1
+_ACEOF
+
+fi
+
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking Mellanox support" >&5
+$as_echo_n "checking Mellanox support... " >&6; }
+   if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then
+      MLX_OBJS="pfring_mod_mlx.o"
+      HAVE_MLX="-DHAVE_MELLANOX"
+      SYSLIBS="$SYSLIBS -libverbs"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+   else
+     MLX_OBJS=""
+     HAVE_MLX=""
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+   fi
+fi
+
 
 # Check whether --enable-bpf was given.
 if test "${enable_bpf+set}" = set; then :
@@ -3892,6 +3920,10 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
+
+
+
+
 
 
 

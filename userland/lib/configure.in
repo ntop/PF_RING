@@ -73,21 +73,6 @@ else
   AC_MSG_RESULT(no)
 fi
 
-if test -f pfring_mod_mlx.c; then
-   AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
-   AC_MSG_CHECKING([Mellanox support])
-   if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
-      MLX_OBJS="pfring_mod_mlx.o"
-      HAVE_MLX="-DHAVE_MELLANOX"
-      SYSLIBS="$SYSLIBS -libverbs"   
-      AC_MSG_RESULT(yes)
-   else
-     MLX_OBJS=""
-     HAVE_MLX=""
-     AC_MSG_RESULT(no)
-   fi
-fi
-
 dnl> R/W locks are broken on some BSD releases
 if test "$IS_FREEBSD" != "1"; then
 AC_MSG_CHECKING([if r/w locks are supported])
@@ -210,6 +195,38 @@ else
    AC_MSG_RESULT(no)
 fi
 
+MYRICOM_HOME="/opt/snf"
+MYRICOM_INC=
+MYRICOM_LIB=
+MYRICOM_OBJS=
+HAVE_MYRICOM=
+AC_MSG_CHECKING([Myricom support])
+if test -f pfring_mod_myricom.c && test -d "$MYRICOM_HOME"; then
+  MYRICOM_INC="-I$MYRICOM_HOME/include -I$MYRICOM_HOME/src/common -I$MYRICOM_HOME/src/common/bsd"
+  MYRICOM_LIB="/opt/snf/lib/libsnf.a"
+  MYRICOM_OBJS="pfring_mod_myricom.o"
+  HAVE_MYRICOM="-D HAVE_MYRICOM"
+  AC_MSG_RESULT(yes)
+  AC_DEFINE_UNQUOTED(HAVE_MYRICOM, 1, [Myricom support is present])
+else
+  AC_MSG_RESULT(no)
+fi
+
+if test -f pfring_mod_mlx.c; then
+   AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
+   AC_MSG_CHECKING([Mellanox support])
+   if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
+      MLX_OBJS="pfring_mod_mlx.o"
+      HAVE_MLX="-DHAVE_MELLANOX"
+      SYSLIBS="$SYSLIBS -libverbs"   
+      AC_MSG_RESULT(yes)
+   else
+     MLX_OBJS=""
+     HAVE_MLX=""
+     AC_MSG_RESULT(no)
+   fi
+fi
+
 dnl BPF - Default disabled
 dnl AC_ARG_ENABLE([bpf], AS_HELP_STRING([--enable-bpf], [Enable BPF support in PF_RING]))
 dnl AS_IF([test "x$enable_bpf" = "xyes"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
@@ -259,6 +276,10 @@ AC_SUBST(ACCOLADE_INC)
 AC_SUBST(ACCOLADE_LIB)
 AC_SUBST(ACCOLADE_OBJS)
 AC_SUBST(HAVE_ACCOLADE)
+AC_SUBST(MYRICOM_INC)
+AC_SUBST(MYRICOM_LIB)
+AC_SUBST(MYRICOM_OBJS)
+AC_SUBST(HAVE_MYRICOM)
 AC_SUBST(HAVE_MLX)
 AC_SUBST(MLX_OBJS)
 AC_SUBST(HAVE_NT)
