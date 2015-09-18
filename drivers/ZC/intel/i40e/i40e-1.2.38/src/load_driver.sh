@@ -26,6 +26,7 @@ insmod ../../../../../../kernel/pf_ring.ko
 # Required by i40e
 modprobe ptp
 modprobe vxlan
+modprobe configfs
 
 # Load the driver
 insmod ./i40e.ko
