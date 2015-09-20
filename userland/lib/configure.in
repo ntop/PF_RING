@@ -295,6 +295,7 @@ AC_SUBST(HAVE_REDIRECTOR)
 AC_SUBST(HAVE_HW_TIMESTAMP)
 
 dnl> AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([pfring_config])
 AC_CONFIG_FILES([../examples/Makefile])
 AC_CONFIG_FILES([../examples_zc/Makefile])
 AC_CONFIG_FILES([../examples_libzero/Makefile])
@@ -302,3 +303,6 @@ AC_CONFIG_FILES([../c++/Makefile])
 
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT
+
+dnl> Make sure pfring_config is executable
+chmod gou+x pfring_config

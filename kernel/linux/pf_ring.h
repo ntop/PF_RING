@@ -2,7 +2,7 @@
  *
  * Definitions for packet ring
  *
- * 2004-14 - ntop.org
+ * 2004-15 - ntop.org
  *
  */
 

@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# (C) 2015 - ntop.org
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU Lesses General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+#
+
+include="@NT_INC@ @ACCOLADE_INC@ @MYRICOM_INC@"
+libs="@SYSLIBS@ @NT_LIB@ @ACCOLADE_LIB@ @MYRICOM_LIB@"
+
+usage () {
+        cat <<EOF
+Usage: $0 [OPTIONS]
+Options:
+        --include        [$include]
+        --libs           [$libs]
+EOF
+        exit 1
+}
+
+if test $# -le 0; then usage; fi
+
+while test $# -gt 0; do
+        case $1 in
+        --include) echo "$include" ;;
+        --libs)    echo "$libs" ;;
+        *)         usage ;;
+        esac
+
+        shift
+done
+
+exit 0

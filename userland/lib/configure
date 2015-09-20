@@ -3963,6 +3963,8 @@ fi
 
 
 
+ac_config_files="$ac_config_files pfring_config"
+
 ac_config_files="$ac_config_files ../examples/Makefile"
 
 ac_config_files="$ac_config_files ../examples_zc/Makefile"
@@ -4664,6 +4666,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "pfring_config") CONFIG_FILES="$CONFIG_FILES pfring_config" ;;
     "../examples/Makefile") CONFIG_FILES="$CONFIG_FILES ../examples/Makefile" ;;
     "../examples_zc/Makefile") CONFIG_FILES="$CONFIG_FILES ../examples_zc/Makefile" ;;
     "../examples_libzero/Makefile") CONFIG_FILES="$CONFIG_FILES ../examples_libzero/Makefile" ;;
@@ -5250,3 +5253,5 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+
+chmod gou+x pfring_config
