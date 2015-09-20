@@ -126,7 +126,6 @@ int pfring_anic_open(pfring *ring) {
   anic_pduproc_steer(accolade->anic_handle, ANIC_STEERLB);
   anic_pduproc_dma_pktseq(accolade->anic_handle, 1);
 
-  accolade->ringCount = 1;
   if(anic_setup_rings_largelut(accolade->anic_handle, 1 /* ringCount */, 0, NULL)) {
     // if large LUT is not supported, fall back to normal LUT
     if(anic_setup_rings(accolade->anic_handle, 1 /* ringCount */, 0, NULL)) {
