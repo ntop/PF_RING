@@ -23,10 +23,15 @@
 #include <signal.h>
 #include <setjmp.h>
 
-#define ACCOLADE_HUGEPAGE_SIZE (2*1024*1024)
-#define ACCOLADE_RING_SIZE     (RING_HUGEPAGE_COUNT * HUGEPAGE_SIZE)
-#define ACCOLADE_BUFFER_COUNT  (256)
-#define ACCOLADE_MAX_RINGS     (64)
+//#define MFL_SUPPORT
+
+#define ACCOLADE_HUGEPAGE_SIZE   (2*1024*1024)
+#define ACCOLADE_RING_SIZE       (RING_HUGEPAGE_COUNT * HUGEPAGE_SIZE)
+#define ACCOLADE_BUFFER_COUNT    (256)
+#define ACCOLADE_MAX_RINGS       (64)
+#define ACCOLADE_MAX_BLKS        (2048)
+#define ACCOLADE_MAX_PACKET_SIZE (16*1024)
+#define ACCOLADE_BLOCKS_PER_RING (64)
 
 struct block_ref {
   u_int8_t *buf_p;
@@ -42,16 +47,29 @@ struct block_header_s {
   u_int64_t last_timestamp;
 };
 
+#ifdef MFL_SUPPORT
+struct bufheader_s {
+  u_int32_t block_size;
+  u_int32_t packet_count;
+  u_int32_t byte_count;
+  u_int32_t reserved;;
+  u_int64_t first_timestamp;
+  u_int64_t last_timestamp;
+  u_int32_t first_offset;
+  u_int32_t last_offset;
+};
+#endif
+
 struct block_status {
   struct anic_blkstatus_s blkStatus;
   int refcount;
 };
 
 struct ring_stats {
-  uint64_t packets;
-  uint64_t bytes;
-  uint64_t packet_errors;
-  uint64_t timestamp_errors;
+  u_int64_t packets;
+  u_int64_t bytes;
+  u_int64_t packet_errors;
+  u_int64_t timestamp_errors;
 };
 
 struct workqueue {
@@ -62,31 +80,36 @@ struct workqueue {
 
 struct block_processing {
   int processing;
-  uint8_t *buf_p;
+  u_int8_t *buf_p;
   struct anic_blkstatus_s *blkstatus_p;
   int blk;
+#ifdef MFL_SUPPORT
+  u_int8_t *last_buf_p;
+#endif
 };
 
 typedef struct {
   anic_handle_t anic_handle;
 
-  /* ***************************** */
+  u_int32_t device_id, ring_id;
 
-  struct block_ref l_blkA[ACCOLADE_BUFFER_COUNT];
-  struct block_status l_blkStatusA[ACCOLADE_BUFFER_COUNT];
+  u_int32_t blocksize, pages, pageblocks, portCount;
+
+  struct block_ref l_blkA[ACCOLADE_MAX_BLKS /* ACCOLADE_BUFFER_COUNT */];
+  struct block_status l_blkStatusA[ACCOLADE_MAX_BLKS /* ACCOLADE_BUFFER_COUNT */];
   struct ring_stats rstats;
-  u_int32_t device_id, ring_id, blocksize, pages, pageblocks, portCount, ringCount;
+  
   anic_blocksize_e blocksize_e;
   struct workqueue wq;
   u_int64_t lastTs; 
 
-  /* ***************************** */
-
   struct block_processing currentblock;
 
-  /* ***************************** */
-
   struct anic_dma_info dmaInfo;
+
+#ifdef MFL_SUPPORT
+  int mfl_mode;
+#endif
 } pfring_anic;
 
 
