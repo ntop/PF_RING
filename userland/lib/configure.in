@@ -182,8 +182,8 @@ HAVE_ACCOLADE=
 AC_MSG_CHECKING([Accolade support])
 if test -d "$ACCOLADE_HOME"; then
    if test -f pfring_mod_accolade.c; then
-      ACCOLADE_INC="-I $ACCOLADE_HOME/include"
-      ACCOLADE_LIB="-L $ACCOLADE_HOME/lib -lanic"
+      ACCOLADE_INC="-I$ACCOLADE_HOME/include"
+      ACCOLADE_LIB="-L$ACCOLADE_HOME/lib -lanic"
       ACCOLADE_OBJS="pfring_mod_accolade.o"
       HAVE_ACCOLADE="-D HAVE_ACCOLADE"
       AC_MSG_RESULT(yes)
@@ -205,7 +205,7 @@ if test -f pfring_mod_myricom.c && test -d "$MYRICOM_HOME"; then
   MYRICOM_INC="-I$MYRICOM_HOME/include -I$MYRICOM_HOME/src/common -I$MYRICOM_HOME/src/common/bsd"
   MYRICOM_LIB="/opt/snf/lib/libsnf.a"
   MYRICOM_OBJS="pfring_mod_myricom.o"
-  HAVE_MYRICOM="-D HAVE_MYRICOM"
+  HAVE_MYRICOM="-DHAVE_MYRICOM"
   AC_MSG_RESULT(yes)
   AC_DEFINE_UNQUOTED(HAVE_MYRICOM, 1, [Myricom support is present])
 else
