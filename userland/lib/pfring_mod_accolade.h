@@ -38,17 +38,8 @@ struct block_ref {
   u_int64_t dma_address;
 };
 
-struct block_header_s {
-  u_int32_t block_size;
-  u_int32_t packet_count;
-  u_int32_t byte_count;
-  u_int32_t reserved;
-  u_int64_t first_timestamp;
-  u_int64_t last_timestamp;
-};
-
 #ifdef MFL_SUPPORT
-struct bufheader_s {
+struct block_header_s /* bufheader_s */ {
   u_int32_t block_size;
   u_int32_t packet_count;
   u_int32_t byte_count;
@@ -57,6 +48,15 @@ struct bufheader_s {
   u_int64_t last_timestamp;
   u_int32_t first_offset;
   u_int32_t last_offset;
+};
+#else
+struct block_header_s {
+  u_int32_t block_size;
+  u_int32_t packet_count;
+  u_int32_t byte_count;
+  u_int32_t reserved;
+  u_int64_t first_timestamp;
+  u_int64_t last_timestamp;
 };
 #endif
 

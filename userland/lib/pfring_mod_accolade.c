@@ -68,8 +68,8 @@ int pfring_anic_open(pfring *ring) {
 
 #ifdef MFL_SUPPORT
   if (strchr(&ring->device_name[4], '@')) {
-    sscanf(&ring->device_name[4], "%u@%u", &accolade->device_id, accolade->ring_id);
-	accolade->mfl_mode = 1;
+    sscanf(&ring->device_name[4], "%u@%u", &accolade->device_id, &accolade->ring_id);
+    accolade->mfl_mode = 1;
   } else {
 #endif
     sscanf(&ring->device_name[4], "%u", &accolade->device_id);
@@ -167,33 +167,31 @@ int pfring_anic_open(pfring *ring) {
 
 #ifdef MFL_SUPPORT
   } else { /* (accolade->mfl_mode) */
-	unsigned buf;
-	struct anic_dma_info dmaInfo;
+    struct anic_dma_info dmaInfo;
 
-	memset(accolade->l_blkA, 0, sizeof(accolade->l_blkA));
+    memset(accolade->l_blkA, 0, sizeof(accolade->l_blkA));
 
-	for (page = 0; page < ACCOLADE_BLOCKS_PER_RING; page++) {
-		
-	  if ((buf_p = anic_hugepageGet(accolade->anic_handle, 1, NULL)) == NULL) {
-	    fprintf(stderr, "anic_hugepageGet() failed errno:%u %s\n", errno, strerror(errno));
-	    goto free_private;
-	  }
+    for (page = 0; page < ACCOLADE_BLOCKS_PER_RING; page++) {
+      if ((buf_p = anic_hugepageGet(accolade->anic_handle, 1, NULL)) == NULL) {
+        fprintf(stderr, "anic_hugepageGet() failed errno:%u %s\n", errno, strerror(errno));
+        goto free_private;
+      }
 	
-	  if (anic_hugepageDmaMap(accolade->anic_handle, buf_p, 1, &dmaInfo)) {
-	    fprintf(stderr, "anic_hugepageDmaMap()\n");
-	    goto free_private;
-	  }
+      if (anic_hugepageDmaMap(accolade->anic_handle, buf_p, 1, &dmaInfo)) {
+        fprintf(stderr, "anic_hugepageDmaMap()\n");
+        goto free_private;
+      }
 	
-	  block = anic_block_add(accolade->anic_handle, accolade->ring_id, 0, accolade->ring_id, dmaInfo.dmaPhysicalAddress);
+      block = anic_block_add(accolade->anic_handle, accolade->ring_id, 0, accolade->ring_id, dmaInfo.dmaPhysicalAddress);
 	
-	  if (block < 0) {
-	    fprintf(stderr, "anic_block_add(ring:%u buf:%u) failed, oversubscribed?\n", accolade->ring_id, page);
-	    goto free_private;
-	  }
+      if (block < 0) {
+        fprintf(stderr, "anic_block_add(ring:%u buf:%u) failed, oversubscribed?\n", accolade->ring_id, page);
+        goto free_private;
+      }
 	
-	  accolade->l_blkA[block].buf_p = buf_p;
-	  accolade->l_blkA[block].dma_address = dmaInfo.dmaPhysicalAddress;
-	}
+      accolade->l_blkA[block].buf_p = buf_p;
+      accolade->l_blkA[block].dma_address = dmaInfo.dmaPhysicalAddress;
+    }
   }
 #endif
 
@@ -243,7 +241,7 @@ int pfring_anic_stats(pfring *ring, pfring_stat *stats) {
 
 #ifdef MFL_SUPPORT
   } else { /* (accolade->mfl_mode) */
-	stats->drop = 0; //TODO	
+    stats->drop = 0; //TODO	
   }
 #endif
 
@@ -371,7 +369,7 @@ void *anic_hugepageGetAt(anic_handle_t anic_handle, int count, void *atP, int *s
       // see note #4 above
       shmid = shmget(IPC_PRIVATE, HUGEPAGE_SIZE, SHM_HUGETLB|IPC_CREAT|SHM_R|SHM_W);
       if (shmid == -1) {
-	fprintf(stderr, "try\n");
+        fprintf(stderr, "try\n");
         if (errno != ENOMEM || ++tryCount > (MAX_ATTEMPTS - 1)) {
           fprintf(stderr, "anic_hugepageGetAt() shmget() failed errno:%u %s\n", errno, strerror(errno));
           goto cleanup;  // errno set by shmget()
@@ -410,7 +408,7 @@ void *anic_hugepageGetAt(anic_handle_t anic_handle, int count, void *atP, int *s
     // (the performance of this could be vastly improved for large lists as a tree or even a binary search)
     for (j = 0; j < i; j++) {
       if (pa < physAddress[j])
-	break;
+        break;
     }
     for (k = i; k > j; k--) {
       virtAddress[k] = virtAddress[k-1];
@@ -574,7 +572,7 @@ int anic_hugepageDmaMap(anic_handle_t anic_handle, void *virtualP, int hugepageC
 
 /* **************************************************** */
 
-static inline void l_createHeader(unsigned blocksize, struct anic_blkstatus_s *status_p) {
+static inline void l_createHeader(pfring_anic *accolade, unsigned blocksize, struct anic_blkstatus_s *status_p) {
   uint8_t *buf_p = status_p->buf_p;
   struct block_header_s *header_p = (struct block_header_s *)buf_p;
   struct anic_descriptor_rx_packet_data *desc_p;
@@ -583,8 +581,10 @@ static inline void l_createHeader(unsigned blocksize, struct anic_blkstatus_s *s
   header_p->packet_count = status_p->pktcnt;
 
 #ifdef MFL_SUPPORT
-  header_p->first_offset = status_p->firstpkt_offset;
-  header_p->last_offset = status_p->lastpkt_offset;
+  if (accolade->mfl_mode) {
+    header_p->first_offset = status_p->firstpkt_offset;
+    header_p->last_offset = status_p->lastpkt_offset;
+  }
 #endif
 
   desc_p = (struct anic_descriptor_rx_packet_data *)&buf_p[status_p->firstpkt_offset];
@@ -619,7 +619,7 @@ prepare_anic_block:
     accolade->currentblock.blk = accolade->wq.entryA[accolade->wq.tail];
 
     if (++accolade->wq.tail > ACCOLADE_BUFFER_COUNT)
-	accolade->wq.tail = 0;
+      accolade->wq.tail = 0;
 
     accolade->currentblock.blkstatus_p = &accolade->l_blkStatusA[accolade->currentblock.blk].blkStatus;
     accolade->currentblock.buf_p = &accolade->currentblock.blkstatus_p->buf_p[accolade->currentblock.blkstatus_p->firstpkt_offset];
@@ -635,7 +635,7 @@ prepare_anic_block:
       blocks_ready = 1;
       blk = blkstatus.blkid;
       blkstatus.buf_p = accolade->l_blkA[blk].buf_p; /* virtual address of the block */
-      l_createHeader(accolade->blocksize, &blkstatus);
+      l_createHeader(accolade, accolade->blocksize, &blkstatus);
       blkstatusP = &accolade->l_blkStatusA[blk];
 
       if (blkstatusP->refcount != 0) {
@@ -656,20 +656,22 @@ prepare_anic_block:
 
 #ifdef MFL_SUPPORT
   } else { /* (accolade->mfl_mode) */
-	struct bufheader_s *header_p;
+    struct block_header_s /* bufheader_s */ *header_p;
+    uint8_t *buf_p;
 	
     if (anic_block_get(accolade->anic_handle, accolade->ring_id, accolade->ring_id, &blkstatus) > 0) {
-	  blk = blkstatus.blkid;
-	  blkstatus.buf_p = accolade->l_blkA[blk].buf_p;
-	  header_p = (struct bufheader_s *) accolade->l_blkA[blk].buf_p;
-	  l_createHeader(accolade->blocksize, &blkstatus);
+      blk = blkstatus.blkid;
+      buf_p = accolade->l_blkA[blk].buf_p;
+      blkstatus.buf_p = buf_p;
+      header_p = (struct block_header_s /* bufheader_s */ *) buf_p;
+      l_createHeader(accolade, accolade->blocksize, &blkstatus);
     	
       accolade->currentblock.blk = blk;
-	  accolade->currentblock.buf_p = &buf_p[header_p->first_offset];
-      accolade->currentblock.last_buf_p = &buf_p[header_p->lastpkt_offset]
-	  accolade->currentblock.processing = 1;
-	  return 1;    
-	}
+      accolade->currentblock.buf_p = &buf_p[header_p->first_offset];
+      accolade->currentblock.last_buf_p = &buf_p[header_p->last_offset];
+      accolade->currentblock.processing = 1;
+      return 1;    
+    }
 	
   }
 #endif
@@ -722,15 +724,15 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
   }
 #ifdef MFL_SUPPORT
   } else { /* (accolade->mfl_mode) */
-	if  (accolade->currentblock.buf_p > accolade->currentblock.last_buf_p) {
-	  int newblk, blk = accolade->currentblock.blk;
+    if  (accolade->currentblock.buf_p > accolade->currentblock.last_buf_p) {
+      int newblk, blk = accolade->currentblock.blk;
 	
       accolade->currentblock.processing = 0;
       newblk = anic_block_add(accolade->anic_handle, accolade->ring_id, 0, accolade->ring_id, accolade->l_blkA[blk].dma_address);
 
       if (newblk < 0) {
         fprintf(stderr, "anic_block_add(ring:%u) failed, oversubscribed?\n", accolade->ring_id);
-		return;
+        return;
       }
 
       if (newblk != blk) {
@@ -738,7 +740,7 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
         accolade->l_blkA[newblk].dma_address = accolade->l_blkA[blk].dma_address;
         memset(&accolade->l_blkA[blk], 0, sizeof(accolade->l_blkA[blk]));
       }
-	}
+    }
   }	
 #endif
 }
