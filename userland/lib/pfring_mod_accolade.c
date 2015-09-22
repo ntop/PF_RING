@@ -8,7 +8,7 @@
 #include "pfring_mod_accolade.h"
 #include "pfring_mod.h" /* to print stats under /proc */
 
-#define DEBUG 0
+//#define DEBUG
 
 void *anic_hugepageGet(anic_handle_t anic_handle, int count, int *shmidP);
 int anic_hugepageDmaMap(anic_handle_t anic_handle, void *virtualP, int hugepageCount, struct anic_dma_info *dmacbP);
@@ -29,7 +29,7 @@ static void accolade_release_resources(pfring *ring) {
 
 int pfring_anic_open(pfring *ring) {
   pfring_anic *accolade;
-  u_int32_t page, block;
+  u_int32_t page, blk;
   u_int8_t *buf_p;
   int i;
 
@@ -67,12 +67,12 @@ int pfring_anic_open(pfring *ring) {
    */
 
 #ifdef MFL_SUPPORT
-  if (strchr(&ring->device_name[4], '@')) {
-    sscanf(&ring->device_name[4], "%u@%u", &accolade->device_id, &accolade->ring_id);
+  if (strchr(ring->device_name, '@')) {
+    sscanf(ring->device_name, "%u@%u", &accolade->device_id, &accolade->ring_id);
     accolade->mfl_mode = 1;
   } else {
 #endif
-    sscanf(&ring->device_name[4], "%u", &accolade->device_id);
+    sscanf(ring->device_name, "%u", &accolade->device_id);
     accolade->ring_id = 0;
 #ifdef MFL_SUPPORT
     accolade->mfl_mode = 0;
@@ -140,7 +140,7 @@ int pfring_anic_open(pfring *ring) {
   accolade->pages = ACCOLADE_BUFFER_COUNT;
   accolade->pageblocks = 1;
 
-  for (page = 0, block = 0; page < accolade->pages; page++) {
+  for (page = 0, blk = 0; page < accolade->pages; page++) {
     void *vP;
     struct anic_dma_info dmaInfo;
     u_int8_t count = (accolade->blocksize_e == ANIC_BLOCK_4MB) ? 2 : 1;
@@ -158,10 +158,10 @@ int pfring_anic_open(pfring *ring) {
     buf_p = (uint8_t *)dmaInfo.userVirtualAddress;
 
     for (i = 0; i < accolade->pageblocks; i++) {
-      accolade->l_blkA[block].buf_p = buf_p + i*accolade->blocksize;
-      accolade->l_blkA[block].dma_address = dmaInfo.dmaPhysicalAddress + i*accolade->blocksize;
-      anic_block_add(accolade->anic_handle, 0, block, 0, accolade->l_blkA[block].dma_address);
-      block++;
+      accolade->l_blkA[blk].buf_p = buf_p + i * accolade->blocksize;
+      accolade->l_blkA[blk].dma_address = dmaInfo.dmaPhysicalAddress + i*accolade->blocksize;
+      anic_block_add(accolade->anic_handle, 0, blk, 0, accolade->l_blkA[blk].dma_address);
+      blk++;
     }
   }
 
@@ -182,15 +182,24 @@ int pfring_anic_open(pfring *ring) {
         goto free_private;
       }
 	
-      block = anic_block_add(accolade->anic_handle, accolade->ring_id, 0, accolade->ring_id, dmaInfo.dmaPhysicalAddress);
+      blk = anic_block_add(accolade->anic_handle, accolade->ring_id, 0, accolade->ring_id, dmaInfo.dmaPhysicalAddress);
 	
-      if (block < 0) {
+      if (blk < 0) {
         fprintf(stderr, "anic_block_add(ring:%u buf:%u) failed, oversubscribed?\n", accolade->ring_id, page);
         goto free_private;
       }
-	
-      accolade->l_blkA[block].buf_p = buf_p;
-      accolade->l_blkA[block].dma_address = dmaInfo.dmaPhysicalAddress;
+
+      if (accolade->l_blkA[blk].buf_p != NULL) {
+        fprintf(stderr, "blk already in use blk:%u buf:%u\n", blk, page);
+        goto free_private;
+      }
+
+      accolade->l_blkA[blk].buf_p = buf_p;
+      accolade->l_blkA[blk].dma_address = dmaInfo.dmaPhysicalAddress;
+
+#ifdef DEBUG
+      printf("[ANIC] Init block %u va=%llu dma=%llu\n", blk, buf_p, accolade->l_blkA[blk].dma_address);
+#endif
     }
   }
 #endif
@@ -574,7 +583,7 @@ int anic_hugepageDmaMap(anic_handle_t anic_handle, void *virtualP, int hugepageC
 
 static inline void l_createHeader(pfring_anic *accolade, unsigned blocksize, struct anic_blkstatus_s *status_p) {
   uint8_t *buf_p = status_p->buf_p;
-  struct block_header_s *header_p = (struct block_header_s *)buf_p;
+  struct block_header_s *header_p = (struct block_header_s *) buf_p;
   struct anic_descriptor_rx_packet_data *desc_p;
 
   header_p->block_size = blocksize;
@@ -587,20 +596,19 @@ static inline void l_createHeader(pfring_anic *accolade, unsigned blocksize, str
   }
 #endif
 
-  desc_p = (struct anic_descriptor_rx_packet_data *)&buf_p[status_p->firstpkt_offset];
-
+  desc_p = (struct anic_descriptor_rx_packet_data *) &buf_p[status_p->firstpkt_offset];
   header_p->first_timestamp = desc_p->timestamp;
 
-  desc_p = (struct anic_descriptor_rx_packet_data *)&buf_p[status_p->lastpkt_offset];
-
+  desc_p = (struct anic_descriptor_rx_packet_data *) &buf_p[status_p->lastpkt_offset];
   header_p->last_timestamp = desc_p->timestamp;
+
   header_p->byte_count = status_p->lastpkt_offset + desc_p->length;
 }
 
 /* **************************************************** */
 
 static int __pfring_anic_ready(pfring *ring) {
-  pfring_anic *accolade = (pfring_anic *)ring->priv_data;
+  pfring_anic *accolade = (pfring_anic *) ring->priv_data;
   int blk, i, blocks_ready;
   struct anic_blkstatus_s blkstatus;
   struct block_status *blkstatusP;
@@ -662,13 +670,24 @@ prepare_anic_block:
     if (anic_block_get(accolade->anic_handle, accolade->ring_id, accolade->ring_id, &blkstatus) > 0) {
       blk = blkstatus.blkid;
       buf_p = accolade->l_blkA[blk].buf_p;
+      if (buf_p == NULL) {
+        fprintf(stderr, "anic_block_get(ring:%u) blk:%u never added\n", accolade->ring_id, blk);
+        exit(-1);
+      }
       blkstatus.buf_p = buf_p;
       header_p = (struct block_header_s /* bufheader_s */ *) buf_p;
       l_createHeader(accolade, accolade->blocksize, &blkstatus);
     	
       accolade->currentblock.blk = blk;
-      accolade->currentblock.buf_p = &buf_p[header_p->first_offset];
+
       accolade->currentblock.last_buf_p = &buf_p[header_p->last_offset];
+
+      accolade->currentblock.buf_p = &buf_p[header_p->first_offset]; 
+
+#ifdef DEBUG
+      printf("[ANIC] Processing block %u va=%llu va-first=%llu va-last=%llu\n", blk, buf_p, accolade->currentblock.buf_p, accolade->currentblock.last_buf_p);
+#endif
+
       accolade->currentblock.processing = 1;
       return 1;    
     }
@@ -688,6 +707,13 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
 
   hdr->len = hdr->caplen = desc_p->length - 16;
 
+#ifdef DEBUG
+  if (desc_p->length < 76) {
+    printf("Wrong packet len=%u\n", desc_p->length);
+    exit(-1);
+  }
+#endif
+
   if (likely(buffer_len == 0)) {
     *buffer = (uint8_t *) &desc_p[1];
   } else {
@@ -697,6 +723,10 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
     memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
     pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
   }
+
+#ifdef DEBUG
+  //printf("[ANIC] Packet %u bytes [%llu]\n", desc_p->length, accolade->currentblock.buf_p);
+#endif
 
   hdr->caplen = min_val(hdr->caplen, ring->caplen);
   hdr->extended_hdr.pkt_hash = 0; //TODO available?
@@ -727,6 +757,10 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
     if  (accolade->currentblock.buf_p > accolade->currentblock.last_buf_p) {
       int newblk, blk = accolade->currentblock.blk;
 	
+#ifdef DEBUG
+      printf("[ANIC] Done block %u\n", blk);
+#endif
+
       accolade->currentblock.processing = 0;
       newblk = anic_block_add(accolade->anic_handle, accolade->ring_id, 0, accolade->ring_id, accolade->l_blkA[blk].dma_address);
 
@@ -736,7 +770,14 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
       }
 
       if (newblk != blk) {
-        accolade->l_blkA[newblk].buf_p = accolade->currentblock.buf_p;
+        if (accolade->l_blkA[newblk].buf_p != NULL) {
+          fprintf(stderr, "blk already in use newblk:%u\n", blk);
+          exit(-1);
+        }
+#ifdef DEBUG
+        printf("[ANIC] New block %u dma=%llu\n", newblk, accolade->l_blkA[blk].dma_address);
+#endif
+        accolade->l_blkA[newblk].buf_p = accolade->l_blkA[blk].buf_p;
         accolade->l_blkA[newblk].dma_address = accolade->l_blkA[blk].dma_address;
         memset(&accolade->l_blkA[blk], 0, sizeof(accolade->l_blkA[blk]));
       }
