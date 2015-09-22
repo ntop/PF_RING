@@ -84,8 +84,6 @@ struct block_processing {
   struct anic_blkstatus_s *blkstatus_p;
   int blk;
 #ifdef MFL_SUPPORT
-  //u_int8_t *orig_buf_p;
-  //u_int8_t *first_buf_p;
   u_int8_t *last_buf_p;
 #endif
 };

@@ -61,9 +61,9 @@ int pfring_anic_open(pfring *ring) {
   accolade = (pfring_anic *) ring->priv_data;
 
   /*
-   * Device name anicX@Y where
-   * X deviceId
-   * Y ringId
+   * Device name anic:X@Y where
+   * X port
+   * Y ring-id
    */
 
 #ifdef MFL_SUPPORT
