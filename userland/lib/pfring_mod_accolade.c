@@ -87,7 +87,7 @@ int pfring_anic_open(pfring *ring) {
 
   accolade->anic_handle = anic_open("/dev/anic", accolade->device_id);
 
-  if(anic_error_code(accolade->anic_handle) != ANIC_ERR_NONE) {
+  if (anic_error_code(accolade->anic_handle) != ANIC_ERR_NONE) {
     goto free_private;
   }
 
@@ -126,11 +126,13 @@ int pfring_anic_open(pfring *ring) {
   }
 
   //if (accolade->anic_handle->is40k3)
-  //  for (i = 0; i < accolade->portCount; i++) 
-  //    anic_40k3_10ge(accolade->anic_handle, i);
+  //  anic_40k3_10ge(accolade->anic_handle, accolade->ring_id); /* set port speed */
 
   anic_pduproc_steer(accolade->anic_handle, ANIC_STEER0123);
   anic_pduproc_dma_pktseq(accolade->anic_handle, 1);
+
+  //if (slice)
+  //  anic_pduproc_slice(accolade->anic_handle, slice);
 
   accolade->blocksize_e = ANIC_BLOCK_2MB;
   anic_block_set_blocksize(accolade->anic_handle, accolade->blocksize_e);
@@ -294,6 +296,7 @@ int pfring_anic_enable_ring(pfring *ring) {
 #endif
 
   anic_get_rx_rmon_counts(accolade->anic_handle, accolade->ring_id, 1, &rmonTmp);
+  anic_port_get_counts(accolade->anic_handle, accolade->ring_id, 1, NULL);
 
   /* Set 1 msec block timeouts */
   anic_block_set_timeouts(accolade->anic_handle, 1000, 1000);
