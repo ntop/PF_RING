@@ -72,15 +72,17 @@ int pfring_anic_open(pfring *ring) {
     accolade->mfl_mode = 1;
   } else {
 #endif
-    sscanf(ring->device_name, "%u", &accolade->device_id);
-    accolade->ring_id = 0;
+    if (sscanf(ring->device_name, "%u:%u", &accolade->device_id, &accolade->ring_id) != 2) {
+      accolade->device_id = 0;
+      sscanf(ring->device_name, "%u", &accolade->ring_id);
+    }
 #ifdef MFL_SUPPORT
     accolade->mfl_mode = 0;
   }
 #endif
 
 #ifdef DEBUG
-  printf("[ANIC] Opening anic device=%u, ring=%u\n", accolade->device_id, accolade->ring_id);
+  printf("[ANIC] Opening anic device=%u, %s=%u\n", accolade->device_id, accolade->mfl_mode ? "ring" : "port" , accolade->ring_id);
 #endif
 
   accolade->anic_handle = anic_open("/dev/anic", accolade->device_id);
