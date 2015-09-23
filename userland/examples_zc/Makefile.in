@@ -14,12 +14,12 @@ LIBPCAP    = ${PCAPDIR}/libpcap.a
 # Search directories
 #
 PFRING_KERNEL=../../kernel
-INCLUDE    = -I${PFRINGDIR} -I${PFRING_KERNEL}
+INCLUDE    = -I${PFRINGDIR} -I${PFRING_KERNEL} `../lib/pfring_config --include`
 
 #
 # User and System libraries
 #
-LIBS       = ${LIBPFRING} @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ $(LIBPCAP) -lpthread @SYSLIBS@
+LIBS       = ${LIBPFRING} `../lib/pfring_config --libs` ../libpcap/libpcap.a -lpthread @SYSLIBS@
 
 #
 # C compiler and flags

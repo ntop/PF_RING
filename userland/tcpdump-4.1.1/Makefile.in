@@ -55,7 +55,7 @@ LDFLAGS = @LDFLAGS@
 PF_RING_LIBS=../lib/libpfring.a -lpthread -lnuma -lrt -lm
 
 # Standard LIBS
-LIBS = @LIBS@ $(PF_RING_LIBS)
+LIBS = @LIBS@ $(PF_RING_LIBS) `../lib/pfring_config --libs`
 
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@

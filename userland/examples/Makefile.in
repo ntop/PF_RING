@@ -31,7 +31,7 @@ LIBPCAP    = ${PCAPDIR}/libpcap.a  ${EXTRA_LIBS}
 # Search directories
 #
 PFRING_KERNEL=../../kernel
-INCLUDE    = -I${PFRING_KERNEL} -I${PFRING_KERNEL}/plugins -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party
+INCLUDE    = -I${PFRING_KERNEL} -I${PFRING_KERNEL}/plugins -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../lib/pfring_config --include`
 
 #
 # C compiler and flags
@@ -46,7 +46,7 @@ CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} ${DNA_DEFINE} @HAVE_ZERO@ @HAVE
 #
 # User and System libraries
 #
-LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ @MYRICOM_LIB@ -lpthread @SYSLIBS@ @SILICOM_LIBS@ @REDIS_LIB@ -lrt
+LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_config --libs` -lpthread @SYSLIBS@ @REDIS_LIB@ -lrt
 
 # How to make an object file
 %.o: %.c pfutils.c
