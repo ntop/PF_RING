@@ -731,7 +731,11 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
   hdr->caplen = min_val(hdr->caplen, ring->caplen);
   hdr->extended_hdr.pkt_hash = 0; //TODO available?
   hdr->extended_hdr.rx_direction = 1;
-  hdr->extended_hdr.timestamp_ns = desc_p->timestamp; //TODO nsec?
+
+  hdr->extended_hdr.timestamp_ns = ((desc_p->timestamp >> 32) * 1000000000) + (desc_p->timestamp & 0xffffffff);
+
+  hdr->ts.tv_sec  = desc_p->timestamp >> 32;
+  hdr->ts.tv_usec = (desc_p->timestamp & 0xffffffff) / 1000;
 
   accolade->rstats.packets++;
   accolade->rstats.bytes += hdr->len;
