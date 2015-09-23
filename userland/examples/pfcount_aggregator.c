@@ -530,7 +530,7 @@ int main(int argc, char* argv[]) {
     pd[i] = pfring_open(dev, snaplen, flags);
 
     if(pd[i] == NULL) {
-      fprintf(stderr, "pfring_open error [%s] (pf_ring not loaded or perhaps you use quick mode and have already a socket bound to %s ?)\n",
+      fprintf(stderr, "pfring_open error [%s] (pf_ring not loaded or perhaps you interface %s is down ?)\n",
 	      strerror(errno), dev);
       return(-1);
     } 

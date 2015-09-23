@@ -445,7 +445,7 @@ int main(int argc, char* argv[]) {
     ring[num_ring] = pfring_open(dev, snaplen, flags);
 
     if(ring[num_ring] == NULL) {
-      printf("pfring_open error [%s] (perhaps you use quick mode and have already a socket bound to %s ?)\n", 
+      printf("pfring_open error [%s] (pf_ring not loaded or interface %s is down ?)\n", 
 	     strerror(errno), dev);
       return(-1);
     } 

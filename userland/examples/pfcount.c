@@ -871,7 +871,7 @@ int main(int argc, char* argv[]) {
   pd = pfring_open(device, snaplen, flags);
 
   if(pd == NULL) {
-    fprintf(stderr, "pfring_open error [%s] (pf_ring not loaded or perhaps you use quick mode and have already a socket bound to %s ?)\n",
+    fprintf(stderr, "pfring_open error [%s] (pf_ring not loaded or interface %s is down ?)\n",
 	    strerror(errno), device);
     return(-1);
   } else {
