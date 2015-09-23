@@ -102,14 +102,18 @@ int pfring_anic_open(pfring *ring) {
 #endif
 
   if (accolade->anic_handle->is40k3) {
-    if (anic_k325t_aurora_train(accolade->anic_handle)) {
-      goto free_private;
+    if (accolade->ring_id == 0) { //FIXX aurora_train for "first" ring only (hepefully ran as first)
+      if (anic_k325t_aurora_train(accolade->anic_handle)) {
+        goto free_private;
+      }
     }
   }
 
   /* Reset the NIC */
-  anic_reset_and_restart_pipeline(accolade->anic_handle);
-  sleep(2);
+  if (accolade->ring_id == 0) { //FIXX reset for "first" ring only (hepefully ran as first)
+    anic_reset_and_restart_pipeline(accolade->anic_handle);
+    sleep(2);
+  }
 
   if (accolade->anic_handle->product_info.product_id == ANIC_PRODUCT_ID_40K3_QUAD10G_PACKET_CAPTURE_NIC) {
     accolade->portCount = 4;
