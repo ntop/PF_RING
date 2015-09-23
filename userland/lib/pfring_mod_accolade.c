@@ -81,9 +81,9 @@ int pfring_anic_open(pfring *ring) {
   }
 #endif
 
-#ifdef DEBUG
+//#ifdef DEBUG
   printf("[ANIC] Opening anic device=%u, %s=%u\n", accolade->device_id, accolade->mfl_mode ? "ring" : "port" , accolade->ring_id);
-#endif
+//#endif
 
   accolade->anic_handle = anic_open("/dev/anic", accolade->device_id);
 
@@ -285,7 +285,12 @@ int pfring_anic_enable_ring(pfring *ring) {
   struct rx_rmon_counts_s rmonTmp;
 
   /* Enable ring */
-  anic_block_set_ring_nodetag(accolade->anic_handle, accolade->ring_id, accolade->ring_id);
+  anic_block_set_ring_nodetag(accolade->anic_handle, accolade->ring_id,
+#ifdef MFL_SUPPORT
+    accolade->mfl_mode ? accolade->ring_id : 
+#endif
+    0
+  );
   anic_block_ena_ring(accolade->anic_handle, accolade->ring_id, 1);
 
 #ifdef MFL_SUPPORT
@@ -641,7 +646,7 @@ prepare_anic_block:
   /* Work queue is empty, service anic rings */
   blocks_ready = 0;
   for (i = 0; i < 3; i++) { /* pull up to 4 blocks off for each ring */
-    if (anic_block_get(accolade->anic_handle, accolade->ring_id /* threadId */, accolade->ring_id, &blkstatus) > 0) {
+    if (anic_block_get(accolade->anic_handle, 0 /* threadId */, accolade->ring_id, &blkstatus) > 0) {
       blocks_ready = 1;
       blk = blkstatus.blkid;
       blkstatus.buf_p = accolade->l_blkA[blk].buf_p; /* virtual address of the block */
