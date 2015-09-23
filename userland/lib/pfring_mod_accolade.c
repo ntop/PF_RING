@@ -101,8 +101,8 @@ int pfring_anic_open(pfring *ring) {
   if (!accolade->mfl_mode) {
 #endif
 
-  if(accolade->anic_handle->is40k3) {
-    if(anic_k325t_aurora_train(accolade->anic_handle)) {
+  if (accolade->anic_handle->is40k3) {
+    if (anic_k325t_aurora_train(accolade->anic_handle)) {
       goto free_private;
     }
   }
@@ -125,16 +125,12 @@ int pfring_anic_open(pfring *ring) {
     goto free_private;
   }
 
-  anic_pduproc_steer(accolade->anic_handle, ANIC_STEERLB);
-  anic_pduproc_dma_pktseq(accolade->anic_handle, 1);
+  //if (accolade->anic_handle->is40k3)
+  //  for (i = 0; i < accolade->portCount; i++) 
+  //    anic_40k3_10ge(accolade->anic_handle, i);
 
-  if(anic_setup_rings_largelut(accolade->anic_handle, 1 /* ringCount */, 0, NULL)) {
-    // if large LUT is not supported, fall back to normal LUT
-    if(anic_setup_rings(accolade->anic_handle, 1 /* ringCount */, 0, NULL)) {
-      fprintf(stderr, "Unsupported firmware revision\n");
-      goto free_private;
-    }
-  }
+  anic_pduproc_steer(accolade->anic_handle, ANIC_STEER0123);
+  anic_pduproc_dma_pktseq(accolade->anic_handle, 1);
 
   accolade->blocksize_e = ANIC_BLOCK_2MB;
   anic_block_set_blocksize(accolade->anic_handle, accolade->blocksize_e);
@@ -145,19 +141,18 @@ int pfring_anic_open(pfring *ring) {
   for (page = 0, blk = 0; page < accolade->pages; page++) {
     void *vP;
     struct anic_dma_info dmaInfo;
-    u_int8_t count = (accolade->blocksize_e == ANIC_BLOCK_4MB) ? 2 : 1;
 
-    if((vP = anic_hugepageGet(accolade->anic_handle, count, NULL)) == NULL) {
+    if ((vP = anic_hugepageGet(accolade->anic_handle, 1, NULL)) == NULL) {
       fprintf(stderr, "anic_hugepageGet() failed errno:%u %s\n", errno, strerror(errno));
       goto free_private;
     }
 
-    if(anic_hugepageDmaMap(accolade->anic_handle, vP, count, &dmaInfo)) {
+    if (anic_hugepageDmaMap(accolade->anic_handle, vP, 1, &dmaInfo)) {
       fprintf(stderr, "anic_hugepageDmaMap()\n");
       goto free_private;
     }
 
-    buf_p = (uint8_t *)dmaInfo.userVirtualAddress;
+    buf_p = (uint8_t *) dmaInfo.userVirtualAddress;
 
     for (i = 0; i < accolade->pageblocks; i++) {
       accolade->l_blkA[blk].buf_p = buf_p + i * accolade->blocksize;
@@ -236,7 +231,7 @@ int pfring_anic_stats(pfring *ring, pfring_stat *stats) {
   if (!accolade->mfl_mode) {
 #endif
 
-  anic_port_get_cnts(accolade->anic_handle, accolade->device_id, ANIC_STID_PORT_PKT_COUNTS_TYPE, &tCounts);
+  anic_port_get_cnts(accolade->anic_handle, accolade->ring_id, ANIC_STID_PORT_PKT_COUNTS_TYPE, &tCounts);
 
   //packets += tCounts.enet_rx_count;
   //bytes   += tCounts.enet_rx_bytes;
@@ -285,6 +280,7 @@ int pfring_anic_enable_ring(pfring *ring) {
   struct rx_rmon_counts_s rmonTmp;
 
   /* Enable ring */
+
   anic_block_set_ring_nodetag(accolade->anic_handle, accolade->ring_id,
 #ifdef MFL_SUPPORT
     accolade->mfl_mode ? accolade->ring_id : 
@@ -297,13 +293,13 @@ int pfring_anic_enable_ring(pfring *ring) {
   if (!accolade->mfl_mode) {
 #endif
 
-  anic_get_rx_rmon_counts(accolade->anic_handle, accolade->device_id, 1, &rmonTmp);
+  anic_get_rx_rmon_counts(accolade->anic_handle, accolade->ring_id, 1, &rmonTmp);
 
   /* Set 1 msec block timeouts */
   anic_block_set_timeouts(accolade->anic_handle, 1000, 1000);
 
   /* turn on XGE port */
-  anic_port_ena_disa(accolade->anic_handle, accolade->device_id, 1);
+  anic_port_ena_disa(accolade->anic_handle, accolade->ring_id, 1);
 
 #ifdef MFL_SUPPORT
   }
