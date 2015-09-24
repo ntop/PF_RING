@@ -61,9 +61,12 @@ int pfring_anic_open(pfring *ring) {
   accolade = (pfring_anic *) ring->priv_data;
 
   /*
-   * Device name anic:X@Y where
-   * X port
-   * Y ring-id
+   * Device name:
+   * 1. anic:D@R
+   * 2. anic:D:P
+   * 3. anic:P
+   * Where D = device, P = port, R = ring (defined with anic_rx_block_mfl, using --mode=2 for RSS or --mode=port for ring-to-port binding)
+   * Note: in 2. and 3. it is not possible to run multiple application instances
    */
 
 #ifdef MFL_SUPPORT
@@ -81,9 +84,9 @@ int pfring_anic_open(pfring *ring) {
   }
 #endif
 
-//#ifdef DEBUG
+#ifdef DEBUG
   printf("[ANIC] Opening anic device=%u, %s=%u\n", accolade->device_id, accolade->mfl_mode ? "ring" : "port" , accolade->ring_id);
-//#endif
+#endif
 
   accolade->anic_handle = anic_open("/dev/anic", accolade->device_id);
 
