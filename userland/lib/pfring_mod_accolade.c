@@ -724,11 +724,6 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
 
   if (likely(buffer_len == 0)) {
     *buffer = (uint8_t *) &desc_p[1];
-
-    if(ring->force_timestamp) {
-      hdr->ts.tv_sec  = (desc_p->timestamp >> 32);
-      hdr->ts.tv_usec = (desc_p->timestamp & 0xffffffff) / 1000;
-    }
   } else {
     if (buffer_len < hdr->caplen) 
       hdr->caplen = buffer_len;
