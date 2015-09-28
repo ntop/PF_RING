@@ -730,8 +730,13 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
     memcpy(*buffer, (uint8_t *) &desc_p[1], hdr->caplen);
     memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
     pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
+  }
+
+  if (unlikely((buffer_len && !ring->disable_timestamp) || ring->force_timestamp)) {
     hdr->ts.tv_sec  = (desc_p->timestamp >> 32);
     hdr->ts.tv_usec = (desc_p->timestamp & 0xffffffff) / 1000;
+  } else { /* do not set the timestamp for consistency */
+    hdr->ts.tv_sec = 0, hdr->ts.tv_usec = 0;
   }
 
 #ifdef DEBUG
