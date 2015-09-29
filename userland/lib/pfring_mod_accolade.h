@@ -70,6 +70,10 @@ struct ring_stats {
   u_int64_t bytes;
   u_int64_t packet_errors;
   u_int64_t timestamp_errors;
+#ifdef MFL_SUPPORT
+  u_int64_t last_drops_counter;
+  u_int64_t cumulative_drops;
+#endif
 };
 
 struct workqueue {

@@ -85,7 +85,11 @@ int pfring_anic_open(pfring *ring) {
 #endif
 
 #ifdef DEBUG
-  printf("[ANIC] Opening anic device=%u, %s=%u\n", accolade->device_id, accolade->mfl_mode ? "ring" : "port" , accolade->ring_id);
+  printf("[ANIC] Opening anic device=%u, %s=%u\n", accolade->device_id, 
+#ifdef MFL_SUPPORT
+    accolade->mfl_mode ? "ring" : 
+#endif
+    "port", accolade->ring_id);
 #endif
 
   accolade->anic_handle = anic_open("/dev/anic", accolade->device_id);
@@ -235,23 +239,30 @@ int pfring_anic_stats(pfring *ring, pfring_stat *stats) {
   if (!accolade->mfl_mode) {
 #endif
 
-  anic_port_get_cnts(accolade->anic_handle, accolade->ring_id, ANIC_STID_PORT_PKT_COUNTS_TYPE, &tCounts);
+    anic_port_get_cnts(accolade->anic_handle, accolade->ring_id, ANIC_STID_PORT_PKT_COUNTS_TYPE, &tCounts);
 
-  //packets += tCounts.enet_rx_count;
-  //bytes   += tCounts.enet_rx_bytes;
-  drops   += tCounts.enet_rx_drop_count;
-  //malfs   += tCounts.enet_rx_malf_count;
-  //rsrcs   += tCounts.enet_rx_rsrc_count;
+    //packets = tCounts.enet_rx_count;
+    //bytes   = tCounts.enet_rx_bytes;
+    //malfs   = tCounts.enet_rx_malf_count;
+    //rsrcs   = tCounts.enet_rx_rsrc_count;
 
-  //accolade->rstats.bytes;
-  //accolade->rstats.packet_errors;
-  //accolade->rstats.timestamp_errors;
+    //accolade->rstats.bytes;
+    //accolade->rstats.packet_errors;
+    //accolade->rstats.timestamp_errors;
 
-  stats->drop = drops;
+    stats->drop = tCounts.enet_rx_drop_count;
 
 #ifdef MFL_SUPPORT
-  } else { /* (accolade->mfl_mode) */
-    stats->drop = 0; //TODO	
+  } else { /* (accolade->mfl_mode) i*/
+    
+    drops = anic_block_get_ring_dropcount(accolade->anic_handle, accolade->ring_id);
+
+    if (drops < accolade->rstats.last_drops_counter) {
+      accolade->rstats.cumulative_drops += accolade->rstats.last_drops_counter;
+      accolade->rstats.last_drops_counter = drops;
+    }
+
+    stats->drop = accolade->rstats.cumulative_drops + drops;
   }
 #endif
 
