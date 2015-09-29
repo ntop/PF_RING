@@ -32,7 +32,11 @@
 #include <linux/if_vlan.h>
 #include "kcompat.h"
 #ifdef HAVE_HW_TIME_STAMP
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+#include <linux/timecounter.h>
+#else
 #include <linux/clocksource.h>
+#endif
 #include <linux/net_tstamp.h>
 #endif
 #ifdef HAVE_PTP_1588_CLOCK

@@ -1138,7 +1138,11 @@ static bool e1000_clean_rx_irq(struct e1000_ring *rx_ring)
 		 */
 		if (length < copybreak) {
 			struct sk_buff *new_skb =
-			    netdev_alloc_skb_ip_align(netdev, length);
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+				napi_alloc_skb(&adapter->napi, length);
+#else
+				netdev_alloc_skb_ip_align(netdev, length);
+#endif
 			if (new_skb) {
 				skb_copy_to_linear_data_offset(new_skb,
 							       -NET_IP_ALIGN,
@@ -3992,14 +3996,19 @@ static void e1000e_setup_rss_hash(struct e1000_adapter *adapter)
 	struct e1000_hw *hw = &adapter->hw;
 	u32 mrqc, rxcsum;
 	int i;
-	static const u32 rsskey[10] = {
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	u32 rss_key[10];
+
+	netdev_rss_key_fill(rss_key, sizeof(rss_key));
+#else
+	static const u32 rss_key[10] = {
 		0xda565a6d, 0xc20e5b25, 0x3d256741, 0xb08fa343, 0xcb2bcad0,
 		0xb4307bae, 0xa32dcb77, 0x0cf23080, 0x3bb7426a, 0xfa01acbe
 	};
-
 	/* Fill out hash function seed */
+#endif
 	for (i = 0; i < 10; i++)
-		ew32(RSSRK(i), rsskey[i]);
+		ew32(RSSRK(i), rss_key[i]);
 
 	/* Direct all traffic to queue 0 */
 	for (i = 0; i < 32; i++)
@@ -5102,7 +5111,11 @@ static int e1000_sw_init(struct e1000_adapter *adapter)
 	/* Setup hardware time stamping cyclecounter */
 	if (adapter->flags & FLAG_HAS_HW_TIMESTAMP) {
 		adapter->cc.read = e1000e_cyclecounter_read;
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+		adapter->cc.mask = CYCLECOUNTER_MASK(64);
+#else
 		adapter->cc.mask = CLOCKSOURCE_MASK(64);
+#endif
 		adapter->cc.mult = 1;
 		/* cc.shift set in e1000e_get_base_tininca() */
 
@@ -6195,7 +6208,12 @@ link_up:
 #define E1000_TX_FLAGS_VLAN_MASK	0xffff0000
 #define E1000_TX_FLAGS_VLAN_SHIFT	16
 
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+static int e1000_tso(struct e1000_ring *tx_ring, struct sk_buff *skb,
+			__be16 protocol)
+#else
 static int e1000_tso(struct e1000_ring *tx_ring, struct sk_buff *skb)
+#endif
 {
 #ifdef NETIF_F_TSO
 	struct e1000_context_desc *context_desc;
@@ -6217,7 +6235,11 @@ static int e1000_tso(struct e1000_ring *tx_ring, struct sk_buff *skb)
 
 	hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
 	mss = skb_shinfo(skb)->gso_size;
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	if (protocol == htons(ETH_P_IP)) {
+#else
 	if (skb->protocol == htons(ETH_P_IP)) {
+#endif
 		struct iphdr *iph = ip_hdr(skb);
 		iph->tot_len = 0;
 		iph->check = 0;
@@ -6270,7 +6292,12 @@ static int e1000_tso(struct e1000_ring *tx_ring, struct sk_buff *skb)
 #endif /* NETIF_F_TSO */
 }
 
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+static bool e1000_tx_csum(struct e1000_ring *tx_ring, struct sk_buff *skb,
+			__be16 protocol)
+#else
 static bool e1000_tx_csum(struct e1000_ring *tx_ring, struct sk_buff *skb)
+#endif
 {
 	struct e1000_adapter *adapter = tx_ring->adapter;
 	struct e1000_context_desc *context_desc;
@@ -6278,11 +6305,14 @@ static bool e1000_tx_csum(struct e1000_ring *tx_ring, struct sk_buff *skb)
 	unsigned int i;
 	u8 css;
 	u32 cmd_len = E1000_TXD_CMD_DEXT;
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0) )
 	__be16 protocol;
+#endif
 
 	if (skb->ip_summed != CHECKSUM_PARTIAL)
 		return 0;
 
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0) )
 #if defined(NETIF_F_HW_VLAN_TX) || defined(NETIF_F_HW_VLAN_CTAG_TX)
 	if (skb->protocol == cpu_to_be16(ETH_P_8021Q))
 		protocol = vlan_eth_hdr(skb)->h_vlan_encapsulated_proto;
@@ -6290,6 +6320,7 @@ static bool e1000_tx_csum(struct e1000_ring *tx_ring, struct sk_buff *skb)
 		protocol = skb->protocol;
 #else
 	protocol = skb->protocol;
+#endif
 #endif
 
 	switch (protocol) {
@@ -6510,6 +6541,7 @@ static void e1000_tx_queue(struct e1000_ring *tx_ring, int tx_flags, int count)
 	wmb();
 
 	tx_ring->next_to_use = i;
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0) )
 
 	if (adapter->flags2 & FLAG2_PCIM2PCI_ARBITER_WA)
 		e1000e_update_tdt_wa(tx_ring, i);
@@ -6520,6 +6552,7 @@ static void e1000_tx_queue(struct e1000_ring *tx_ring, int tx_flags, int count)
 	 * at a time, it synchronizes IO on IA64/Altix systems
 	 */
 	mmiowb();
+#endif
 }
 
 #define MINIMUM_DHCP_PACKET_SIZE 282
@@ -6530,8 +6563,13 @@ static int e1000_transfer_dhcp_info(struct e1000_adapter *adapter,
 	u16 length, offset;
 
 #if defined(NETIF_F_HW_VLAN_TX) || defined(NETIF_F_HW_VLAN_CTAG_TX)
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	if (skb_vlan_tag_present(skb) &&
+	    !((skb_vlan_tag_get(skb) == adapter->hw.mng_cookie.vlan_id) &&
+#else
 	if (vlan_tx_tag_present(skb) &&
 	    !((vlan_tx_tag_get(skb) == adapter->hw.mng_cookie.vlan_id) &&
+#endif
 	      (adapter->hw.mng_cookie.status &
 	       E1000_MNG_DHCP_COOKIE_STATUS_VLAN)))
 		return 0;
@@ -6607,6 +6645,9 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 	int count = 0;
 	int tso;
 	unsigned int f;
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	__be16 protocol = vlan_get_protocol(skb);
+#endif
 
 #ifdef HAVE_PF_RING
 	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
@@ -6631,12 +6672,17 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 	/* The minimum packet size with TCTL.PSP set is 17 bytes so
 	 * pad skb in order to meet this minimum size requirement
 	 */
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	if (skb_put_padto(skb, 17))
+		return NETDEV_TX_OK;
+#else
 	if (unlikely(skb->len < 17)) {
 		if (skb_pad(skb, 17 - skb->len))
 			return NETDEV_TX_OK;
 		skb->len = 17;
 		skb_set_tail_pointer(skb, 17);
 	}
+#endif
 #ifdef NETIF_F_TSO
 	mss = skb_shinfo(skb)->gso_size;
 	if (mss) {
@@ -6691,14 +6737,27 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 		return NETDEV_TX_BUSY;
 
 #if defined(NETIF_F_HW_VLAN_TX) || defined(NETIF_F_HW_VLAN_CTAG_TX)
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	if (skb_vlan_tag_present(skb)) {
+#else
 	if (vlan_tx_tag_present(skb)) {
+#endif
 		tx_flags |= E1000_TX_FLAGS_VLAN;
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+		tx_flags |= (skb_vlan_tag_get(skb) <<
+			     E1000_TX_FLAGS_VLAN_SHIFT);
+#else
 		tx_flags |= (vlan_tx_tag_get(skb) << E1000_TX_FLAGS_VLAN_SHIFT);
+#endif
 	}
 #endif
 	first = tx_ring->next_to_use;
 
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	tso = e1000_tso(tx_ring, skb, protocol);
+#else
 	tso = e1000_tso(tx_ring, skb);
+#endif
 	if (tso < 0) {
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
@@ -6706,14 +6765,22 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 
 	if (tso)
 		tx_flags |= E1000_TX_FLAGS_TSO;
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	else if (e1000_tx_csum(tx_ring, skb, protocol))
+#else
 	else if (e1000_tx_csum(tx_ring, skb))
+#endif
 		tx_flags |= E1000_TX_FLAGS_CSUM;
 
 	/* Old method was to assume IPv4 packet by default if TSO was enabled.
 	 * 82571 hardware supports TSO capabilities for IPv6 as well...
 	 * no longer assume, we must.
 	 */
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	if (protocol == htons(ETH_P_IP))
+#else
 	if (skb->protocol == htons(ETH_P_IP))
+#endif
 		tx_flags |= E1000_TX_FLAGS_IPV4;
 
 #ifdef IFF_SUPP_NOFCS
@@ -6727,8 +6794,15 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 	if (count) {
 #ifdef HAVE_HW_TIME_STAMP
 #ifdef SKB_SHARED_TX_IS_UNION
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+		if (unlikely(skb_shinfo(skb)->tx_flags.flags &
+			      SKBTX_HW_TSTAMP) &&
+			(adapter->flags & FLAG_HAS_HW_TIMESTAMP) &&
+			!adapter->tx_hwtstamp_skb) {
+#else
 		if (unlikely((skb_shinfo(skb)->tx_flags.flags &
 			      SKBTX_HW_TSTAMP) && !adapter->tx_hwtstamp_skb)) {
+#endif
 			skb_shinfo(skb)->tx_flags.flags |= SKBTX_IN_PROGRESS;
 			tx_flags |= E1000_TX_FLAGS_HWTSTAMP;
 			adapter->tx_hwtstamp_skb = skb_get(skb);
@@ -6758,6 +6832,23 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 				    (MAX_SKB_FRAGS *
 				     DIV_ROUND_UP(PAGE_SIZE,
 						  adapter->tx_fifo_limit) + 2));
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+
+		if (!skb->xmit_more ||
+			netif_xmit_stopped(netdev_get_tx_queue(netdev, 0))) {
+			if (adapter->flags2 & FLAG2_PCIM2PCI_ARBITER_WA)
+				e1000e_update_tdt_wa(tx_ring,
+							tx_ring->next_to_use);
+			else
+				writel(tx_ring->next_to_use, tx_ring->tail);
+
+			/* we need this if more than one processor can write
+			* to our tail at a time, it synchronizes IO on
+			*IA64/Altix systems
+			*/
+			mmiowb();
+		}
+#endif
 	} else {
 		dev_kfree_skb_any(skb);
 		tx_ring->buffer_info[first].time_stamp = 0;
@@ -7190,7 +7281,11 @@ static void e1000e_flush_lpic(struct pci_dev *pdev)
 	struct e1000_hw *hw = &adapter->hw;
 	u32 ret_val;
 
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	pm_runtime_get_sync(netdev->dev.parent);
+#else
 	pm_runtime_get_sync((netdev_to_dev(netdev))->parent);
+#endif
 
 	ret_val = hw->phy.ops.acquire(hw);
 	if (ret_val)
@@ -7203,8 +7298,6 @@ static void e1000e_flush_lpic(struct pci_dev *pdev)
 
 fl_out:
 	pm_runtime_put_sync(netdev->dev.parent);
-
-	return;
 }
 
 static int e1000e_pm_freeze(struct device *dev)
@@ -7566,15 +7659,25 @@ static int e1000e_pm_resume(struct pci_dev *pdev)
 #endif /* CONFIG_PM */
 
 #ifndef USE_LEGACY_PM_SUPPORT
-#ifdef CONFIG_PM_RUNTIME
+#if (( LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0) ) && defined(CONFIG_PM_RUNTIME) ) || ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
 static int e1000e_pm_runtime_idle(struct device *dev)
 {
 	struct pci_dev *pdev = to_pci_dev(dev);
 	struct net_device *netdev = pci_get_drvdata(pdev);
 	struct e1000_adapter *adapter = netdev_priv(netdev);
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	u16 eee_lp;
 
+	eee_lp = adapter->hw.dev_spec.ich8lan.eee_lp_ability;
+
+	if (!e1000e_has_link(adapter)) {
+		adapter->hw.dev_spec.ich8lan.eee_lp_ability = eee_lp;
+		pm_schedule_suspend(dev, 5 * MSEC_PER_SEC);
+	}
+#else
 	if (!e1000e_has_link(adapter))
 		pm_schedule_suspend(dev, 5 * MSEC_PER_SEC);
+#endif
 
 	return -EBUSY;
 }
@@ -7628,6 +7731,10 @@ static int e1000e_pm_runtime_suspend(struct device *dev)
 #ifndef USE_REBOOT_NOTIFIER
 static void e1000_shutdown(struct pci_dev *pdev)
 {
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	e1000e_flush_lpic(pdev);
+#endif
+
 	e1000e_pm_freeze(&pdev->dev);
 
 	__e1000_shutdown(pdev, false);
@@ -7983,6 +8090,9 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	int i, err, pci_using_dac;
 	u16 eeprom_data = 0;
 	u16 eeprom_apme_mask = E1000_EEPROM_APME;
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	s32 rval = 0;
+#endif
 
 	if (ei->flags2 & FLAG2_DISABLE_ASPM_L0S)
 		aspm_disable_flag = PCIE_LINK_STATE_L0S;
@@ -8303,15 +8413,31 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	} else if (adapter->flags & FLAG_APME_IN_CTRL3) {
 		if (adapter->flags & FLAG_APME_CHECK_PORT_B &&
 		    (adapter->hw.bus.func == 1))
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+			rval = e1000_read_nvm(&adapter->hw,
+					      NVM_INIT_CONTROL3_PORT_B,
+					      1, &eeprom_data);
+		else
+			rval = e1000_read_nvm(&adapter->hw,
+					      NVM_INIT_CONTROL3_PORT_A,
+					      1, &eeprom_data);
+#else
 			e1000_read_nvm(&adapter->hw, NVM_INIT_CONTROL3_PORT_B,
 				       1, &eeprom_data);
 		else
 			e1000_read_nvm(&adapter->hw, NVM_INIT_CONTROL3_PORT_A,
 				       1, &eeprom_data);
+#endif
 	}
 
 	/* fetch WoL from EEPROM */
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	if (rval)
+		e_dbg("NVM read error getting WoL initial values: %d\n", rval);
+	else if (eeprom_data & eeprom_apme_mask)
+#else
 	if (eeprom_data & eeprom_apme_mask)
+#endif
 		adapter->eeprom_wol |= E1000_WUFC_MAG;
 
 	/* now that we have the eeprom settings, apply the special cases
@@ -8344,8 +8470,16 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		device_wakeup_enable(pci_dev_to_dev(pdev));
 
 	/* save off EEPROM version number */
-	e1000_read_nvm(&adapter->hw, 5, 1, &adapter->eeprom_vers);
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	rval = e1000_read_nvm(&adapter->hw, 5, 1, &adapter->eeprom_vers);
 
+	if (rval) {
+		e_dbg("NVM read error getting EEPROM version: %d\n", rval);
+		adapter->eeprom_vers = 0;
+	}
+#else
+	e1000_read_nvm(&adapter->hw, 5, 1, &adapter->eeprom_vers);
+#endif
 	/* reset the hardware with the new settings */
 	e1000e_reset(adapter);
 
