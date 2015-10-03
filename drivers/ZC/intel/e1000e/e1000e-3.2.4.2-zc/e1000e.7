@@ -1,0 +1,208 @@
+.\" LICENSE
+.\"
+.\" This software program is released under the terms of a license agreement between you ('Licensee') and Intel.  Do not use or load this software or any associated materials (collectively, the 'Software') until you have carefully read the full terms and conditions of the LICENSE located in this software package.  By loading or using the Software, you agree to the terms of this Agreement.  If you do not agree with the terms of this Agreement, do not install or use the Software.
+.\"
+.\" * Other names and brands may be claimed as the property of others.
+.\"
+.TH e1000e 1 "January 5, 2012"
+
+.SH NAME
+e1000e \-This file describes the Linux* Base Driver for the Gigabit Family of Adapters.
+.SH SYNOPSIS
+.PD 0.4v
+modprobe e1000e [<option>=<VAL1>,<VAL2>,...]
+.PD 1v
+.SH DESCRIPTION
+This driver is intended for \fB2.4.x\fR and \fB2.6.x\fR kernels.  This driver includes support for Intel(R) Itanium(R)2-based systems.
+.LP
+This driver is only supported as a loadable module at this time.  Intel is not supplying patches against the kernel source to allow for static linking of the driver.  For questions related to hardwarerequirements, refer to the documentation supplied with your Intel adapter.  All hardware requirements listed apply to use with Linux.
+.SH OPTIONS
+The following optional parameters are used by entering them on the command line with the modprobe command.  
+.LP
+.B InterruptThrottleRate
+.IP
+.B Valid Range: 
+0,1,3,4, 100-100000 (0=off, 1=dynamic, 3=dynamic conservative, 4=simplfied balancing)
+.IP
+.B Default Value: 
+3
+.IP
+This represents the maximum number of interrupts per second the controller generates.  InterruptThrottleRate is another setting used in interrupt moderation.  Dynamic mode uses a heuristic algorithm to adjust InterruptThrottleRate based on the current traffic load.
+.IP
+The default setting is configured to optimize interrupts for bulk 
+throughput while keeping CPU utilization low.  However this setting may 
+result in slower overall transfer speeds if network traffic consists 
+mostly of small packets.  If this is the case, change this value to 0. 
+.IP
+.B NOTE: 
+InterruptThrottleRate takes precedence over the TxAbsIntDelay and RxAbsIntDelay parameters.  In other words, minimizing the receive and/or transmit absolute delays does not force the controller to generate more interrupts than what the Interrupt Throttle Rate allows.
+.IP
+See the section "InterruptThrottleRate" in Readme.
+.LP
+.B RxIntDelay
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+0
+.IP
+This sets the delay of the generation of receive interrupts, in units of 1.024 microseconds.  Receive interrupt reduction can improve CPU efficiency if properly tuned for specific network traffic.  Increasing this value adds extra latency to frame reception and can end up decreasing the throughput of TCP traffic.  If the system is reporting dropped receives, this value may be set too high, causing the driver to run out of available receive descriptors.
+.IP
+CAUTION: When setting RxIntDelay to a value other than 0, adapters may hang (stop transmitting) under certain network conditions.  If this occurs a NETDEV WATCHDOG message is logged in the system event log.  In addition, the controller is automatically reset, restoring the network connection.  To eliminate the potential for the hang ensure that RxIntDelay is set to zero.
+.LP
+.B RxAbsIntDelay 
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+128
+.IP
+This limits the delay in which a receive interrupt is generated (in units of 1.024 microseconds).  Useful only if RxIntDelay is non-zero, this value ensures that an interrupt is generated after the initial packet is received within the set amount of time.  Proper tuning, along with RxIntDelay, may improve traffic throughput in specific network conditions.
+.LP
+.B TxIntDelay
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+64
+.IP
+This sets the delay of the generation of transmit interrupts, in units of 1.024 microseconds.  Transmit interrupt reduction can improve CPU efficiency if properly tuned for specific network traffic.  If the system is reporting dropped transmits, this value may be set too high causing the driver to run out of available transmit descriptors.
+.LP
+.B TxAbsIntDelay 
+.IP
+.B Valid Range: 
+0-65535 (0=off)
+.br
+.B Default Value: 
+64
+.IP
+This limits the delay in which a transmit interrupt is generated (in units of 1.024 microseconds).  Useful only if TxIntDelay is non-zero, this value ensures that an interrupt is generated after the initial packet is sent on the wire within the set amount of time.  Proper tuning, along with TxIntDelay, may improve traffic throughput in specific network conditions.
+.LP
+.B Copybreak
+.IP
+.B Valid Range:   
+0-xxxxxxx (0=off)
+.br
+.B Default Value: 
+256
+.IP
+.B Usage: 
+modprobe e1000e.ko copybreak=128
+.IP
+Driver copies all packets below or equaling this size to a fresh rx buffer before handing it up the stack.
+.IP
+This parameter is different than other parameters, in that it is a single (not 1,1,1 etc.) parameter applied to all driver instances and it is also available during runtime at /sys/module/e1000e/parameters/copybreak
+.LP
+.B SmartPowerDownEnable
+.IP
+.B Valid Range: 
+0-1
+.br
+.B Default Value: 
+1 (uses EEPROM settings); 0 (disabled for 82571EB and 82572-based network connections) 
+.IP
+Allows Phy to turn off in lower power states. The user can turn off this parameter in supported chipsets.
+.LP
+.B KumeranLockLoss
+.IP
+.B Valid Range: 
+0-1
+.br
+.B Default Value: 
+1 (enabled)
+.IP
+This workaround skips resetting the Phy at shutdown for the initial silicon releases of ICH8 systems.
+.LP
+.B IntMode
+.IP
+.B Valid Range: 
+0-2 (0=legacy, 1=MSI, 2=MSI-X)
+.br
+.B Default Value: 
+1 (MSI)
+.IP
+Allows changing the interrupt mode at module load time, without requiring a
+recompile. If the driver load fails to enable a specific interrupt mode, the
+driver will try other interrupt modes, from least to most compatible.  The 
+interrupt order is MSI-X, MSI, Legacy.  If specifying MSI (IntMode=1) 
+interrupts, only MSI and Legacy will be attempted.
+.LP
+.B CrcStripping
+.IP
+.B Valid Range: 
+0-1
+.br
+.B Default Value: 
+1 (enabled)
+.IP
+Strip the CRC from received packets before sending up the network stack.  If 
+you have a machine with a BMC enabled but cannot receive IPMI traffic after
+loading or enabling the driver, try disabling this feature.
+.LP
+.B EEE
+.IP
+.B Valid Range:
+0-1
+.br
+.B Default Value:
+1 (enabled for parts supporting EEE)
+.IP
+This option allows for the ability of IEEE802.3az (a.k.a. Energy Efficient Ethernet or EEE) to be advertised to the link partner on parts supporting EEE.  EEE saves energy by putting the device into a low-power state when the link is idle, but only when the link partner also supports EEE and after the feature has been enabled during link negotiation.  It is not necessary to disable the advertisement of EEE when connected with a link partner that does not support EEE.
+.B Node
+.IP
+.B Valid Range:   
+0-n
+.IP
+.B Default Value: 
+-1 (off)
+.IP
+0 - n: where n is the number of the NUMA node that should be used to allocate memory for this adapter port.
+.IP
+-1: uses the driver default of allocating memory on whichever processor is running modprobe. 
+.IP
+The Node parameter will allow you to pick which NUMA node you want to have 
+the adapter allocate memory from.  All driver structures, in-memory queues, and receive buffers will be allocated on the node specified.  This parameter is onlyuseful when interrupt affinity is specified, otherwise some portion of the time the interrupt could run on a different core than the memory is allocated on, causing slower memory access and impacting throughput, CPU, or both.
+.SH JUMBO FRAMES
+.LP
+Jumbo Frames support is enabled by changing the MTU to a value larger than the default of 1500.  Use the ifconfig command to increase the MTU size.  For example:
+.IP
+ifconfig ethx mtu 9000 up
+.LP
+.B NOTE: 
+Using Jumbo frames at 10 or 100 Mbps is not supported and may result in poor performance or loss of link.
+.LP
+The maximum MTU setting for Jumbo Frames is 9216.  This value coincides with the maximum Jumbo Frames size of 9234 bytes.
+.LP
+Adapters based on the Intel(R) 82573V/E controllers do not support Jumbo Frames.
+.LP
+See the section "Jumbo Frames" in Readme.
+.LP
+.SH ethtool
+.LP
+The driver utilizes the ethtool interface for driver configuration and diagnostics, as well as displaying statistical information.  ethtool version 3 or later is required for this functionality, although we strongly recommend downloading the latest version at: http://ftp.kernel.org/pub/software/network/ethtool/.
+.LP
+.SH SPEED AND DUPLEX SETTINGS
+.LP
+Speed and Duplex are configured through the ethtool* utility.  ethtool is included with all versions of Red Hat after Red Hat7.2.  For other Linux distributions, download and install ethtool from the following website: http://sourceforge.net/projects/gkernel.  
+.LP
+.SH NAPI
+.LP
+NAPI (Rx polling mode) is supported in the e1000e driver.  NAPI is enabled by default. 
+.LP
+To disable NAPI, compile the driver module, passing in a configuration option:
+.IP
+make CFLAGS_EXTRA=-DE1000E_NO_NAPI install
+.LP
+See www.cyberus.ca/~hadi/usenix-paper.tgz for more information on NAPI.
+.LP
+.SH SUPPORT
+.LP
+For additional information, including supported adapters, building, and installation, see the Readme file included with the driver.
+.LP
+For general information, go to the Intel support website at:
+.IP
+.B http://support.intel.com
+.LP
