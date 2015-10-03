@@ -3,7 +3,7 @@
 
 [![Build Status](https://travis-ci.org/ntop/PF_RING.png?branch=master)](https://travis-ci.org/zeromq/libzmq)
 
-## Welcome
+### Introduction
 
 PF_RING™ is a Linux kernel module and user-space framework that allows
 you to process packets at high-rates while providing you a consistent
