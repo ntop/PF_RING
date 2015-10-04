@@ -1,4 +1,4 @@
-all: libpfring pcap ring_examples libzero_examples zc_examples tcpdump_build lib_c++
+all: libpfring pcap ring_examples libzero_examples zc_examples # tcpdump_build lib_c++
 
 ###################
 
