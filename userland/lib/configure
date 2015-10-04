@@ -712,7 +712,6 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_rdi
-enable_nt
 enable_bpf
 '
       ac_precious_vars='build_alias
@@ -1334,7 +1333,6 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-rdi           Disable Silicom Redirector support in PF_RING
-  --enable-nt             Enable Napatech support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
 
 Some influential environment variables:
@@ -3697,13 +3695,6 @@ if test "x$ac_cv_lib_dag_dag_get_stream_erf_types" = xyes; then :
 fi
 
 
-# Check whether --enable-nt was given.
-if test "${enable_nt+set}" = set; then :
-  enableval=$enable_nt;
-fi
-
-if test "x$enable_nt" = "xyes"; then :
-
 OLD_LIBS=$LIBS
 
 LIBS="-L/opt/napatech3/lib $LIBS"
@@ -3768,23 +3759,10 @@ $as_echo "yes" >&6; }
       HAVE_NT="-D HAVE_NT"
       NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
       NT_DEP="extract_nt_lib"
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-      echo "No Napatech library available"
-      exit
-    fi
-
-else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    echo "Please install Napatech driver/library"
-    exit
+     fi
 fi
 
 LIBS=$OLD_LIBS
-
-fi
 
 ACCOLADE_HOME="/opt/accolade"
 ACCOLADE_INC=

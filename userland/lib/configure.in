@@ -141,8 +141,8 @@ AC_CHECK_LIB( [dag],
               [HAVE_DAG="-D HAVE_DAG"; DAG_OBJS="pfring_mod_dag.o"; DAG_LIB="-L/usr/local/lib -ldag -lm"], 
               [], [] )
 
-AC_ARG_ENABLE([nt], AS_HELP_STRING([--enable-nt], [Enable Napatech support in PF_RING]))
-AS_IF([test "x$enable_nt" = "xyes"], [
+dnl> AC_ARG_ENABLE([nt], AS_HELP_STRING([--enable-nt], [Enable Napatech support in PF_RING]))
+dnl> AS_IF([test "x$enable_nt" = "xyes"], [
 OLD_LIBS=$LIBS
 
 LIBS="-L/opt/napatech3/lib $LIBS"
@@ -159,20 +159,19 @@ if test "x$ac_cv_lib_ntapi_NT_Init" = xyes; then :
       HAVE_NT="-D HAVE_NT"
       NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
       NT_DEP="extract_nt_lib"
-    else
-      AC_MSG_RESULT(no)
-      echo "No Napatech library available"
-      exit
-    fi
-
-else
-    AC_MSG_RESULT(no)
-    echo "Please install Napatech driver/library"
-    exit
+dnl>     else
+dnl>       AC_MSG_RESULT(no)
+dnl>       echo "No Napatech library available"
+dnl>       exit
+     fi
+dnl> else
+dnl>     AC_MSG_RESULT(no)
+dnl>     echo "Please install Napatech driver/library"
+dnl>     exit
 fi
 
 LIBS=$OLD_LIBS
-])
+dnl> ])
 
 ACCOLADE_HOME="/opt/accolade"
 ACCOLADE_INC=
