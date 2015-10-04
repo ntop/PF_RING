@@ -1,4 +1,4 @@
-pfring (@VERS@-@REVISION@) unstable; urgency=high
+pfring (@VERS@) unstable; urgency=high
 
   * GIT info: @GIT_BRANCH@:@GIT_HASH@
 
