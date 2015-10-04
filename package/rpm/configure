@@ -1698,15 +1698,15 @@ KERNEL=`uname -r`
 ACCOLADE_LIBS=""
 ACCOLADE_LIB_COPY=""
 if test -d /opt/accolade/lib/; then
-   ACCOLADE_LIB_COPY="cp /opt/accolade/lib/libanic.so \$RPM_BUILD_ROOT/usr/local/lib/"
-   ACCOLADE_LIBS="/usr/local/lib/libanic.so"
+   ACCOLADE_LIB_COPY="mkdir -p \$RPM_BUILD_ROOT/opt/accolade/lib/; cp /opt/accolade/lib/libanic.so \$RPM_BUILD_ROOT/opt/accolade/lib/"
+   ACCOLADE_LIBS="/opt/accolade/lib/libanic.so"
 fi
 
 NAPATECH_LIBS=
 NAPATECH_LIB_COPY=
 if test -d /opt/napatech3/lib/; then
-   NAPATECH_LIB_COPY="cp /opt/napatech3/lib/libntapi.so  /opt/napatech3/lib/libntos.so \$RPM_BUILD_ROOT/usr/local/lib/"
-   NAPATECH_LIBS="/usr/local/lib/libntapi.so"$'\n'"/usr/local/lib/libntos.so"
+   NAPATECH_LIB_COPY="mkdir -p \$RPM_BUILD_ROOT/opt/napatech3/lib/;cp /opt/napatech3/lib/libntapi.so  /opt/napatech3/lib/libntos.so \$RPM_BUILD_ROOT/opt/napatech3/lib/"
+   NAPATECH_LIBS="/opt/napatech3/lib/libntapi.so"$'\n'"/opt/napatech3/lib/libntos.so"
 fi
 
 
