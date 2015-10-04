@@ -36,7 +36,7 @@ AC_ARG_WITH( libpfring_libraries,
 
 if test -d "${HOME}/PF_RING/"; then
 	CPPFLAGS="${CPPFLAGS} -I ${HOME}/PF_RING/userland/lib -I ${HOME}/PF_RING/kernel"
-	LDFLAGS="${LDFLAGS} -L${HOME}/PF_RING/userland/lib -lpthread"
+	LDFLAGS="${LDFLAGS} -L${HOME}/PF_RING/userland/lib -lpthread `${HOME}/PF_RING/userland/lib/pfring_config --libs`"
 fi
 
 if test "x$with_pfring_includes" != "xno"; then
@@ -59,16 +59,6 @@ AC_CHECK_LIB( [pcap],
 	      [LDFLAGS="${LDFLAGS} -lpcap"],
 	      [LDFLAGS="${LDFLAGS} -lpfring"],
 	      [] )
-
-OLD_LIBS="${LIBS}"
-LIBS="${LIBS} -L/opt/napatech3/lib -lntapi"
-AC_CHECK_LIB( [ntapi],
-	[NT_Init],
-	[],
-	[LIBS="${OLD_LIBS}"],
-	[] )
-
-#LDFLAGS="${LDFLAGS} -L/opt/napatech3/lib -lntapi"],
 
 # Checks for header files.
 AC_CHECK_HEADERS([netinet/in.h stdint.h stdlib.h string.h])

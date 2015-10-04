@@ -3755,7 +3755,7 @@ $as_echo_n "checking Napatech support... " >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
       NT_INC="-I/opt/napatech3/include"
-      NT_LIB="-L/opt/napatech3/lib -lntapi"
+      NT_LIB="/opt/napatech3/lib/libntapi.so"
       HAVE_NT="-D HAVE_NT"
       NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
       NT_DEP="extract_nt_lib"
@@ -3774,7 +3774,7 @@ $as_echo_n "checking Accolade support... " >&6; }
 if test -d "$ACCOLADE_HOME"; then
    if test -f pfring_mod_accolade.c; then
       ACCOLADE_INC="-I$ACCOLADE_HOME/include"
-      ACCOLADE_LIB="-L$ACCOLADE_HOME/lib -lanic"
+      ACCOLADE_LIB="$ACCOLADE_HOME/lib/libanic.so"
       ACCOLADE_OBJS="pfring_mod_accolade.o"
       HAVE_ACCOLADE="-D HAVE_ACCOLADE"
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5

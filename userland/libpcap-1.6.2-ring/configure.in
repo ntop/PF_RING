@@ -840,11 +840,8 @@ else
 	AC_MSG_RESULT(yes)
 fi
 
-# HAVE_PF_RING
-# Simple trick to include NT lib
-if test -f "../lib/pfring_mod_nt.o"; then
-	LIBS="$LIBS -L/opt/napatech3/lib -lntapi"
-fi
+LIBS="$LIBS ../lib/libpfring.so `../lib/pfring_config --libs`"
+
 
 # NPCAP
 SHORT_MACHINE=`uname -m | cut -b1-3`
