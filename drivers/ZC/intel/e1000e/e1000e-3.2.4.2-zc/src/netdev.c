@@ -578,6 +578,25 @@ e1000_receive_skb(struct e1000_adapter *adapter,
 
 	skb->protocol = eth_type_trans(skb, netdev);
 
+#ifdef HAVE_PF_RING
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) { /* act as direct driver-to-ring */
+		struct pfring_hooks *hook = (struct pfring_hooks *) netdev->pfring_ptr;
+	  
+		if (hook && (hook->magic == PF_RING)) { /* PF_RING is alive */
+			u_int8_t skb_reference_in_use;
+			int rc;
+
+			if (unlikely(debug))
+				printk(KERN_INFO "[PF_RING] %s driver -> pf_ring [len=%d]\n", netdev->name, skb->len);
+
+			rc = hook->ring_handler(skb, 1, 1, &skb_reference_in_use, -1, 1);
+	      
+			if (rc > 0) /* Packet handled by PF_RING */
+				return rc; /* PF_RING has already freed the memory */
+		}
+	}
+#endif
+
 #ifdef CONFIG_E1000E_NAPI
 #ifdef HAVE_VLAN_RX_REGISTER
 #ifdef NETIF_F_HW_VLAN_TX
@@ -1733,11 +1752,11 @@ static bool e1000_clean_jumbo_rx_irq(struct e1000_ring *rx_ring, int *work_done,
 
 #ifdef HAVE_PF_RING
 #ifdef ENABLE_RX_ZC
-	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
-	  if(atomic_read(&rx_ring->pfring_zc.queue_in_use) > 0)
-	    wake_up_interruptible(&adapter->pfring_zc.packet_waitqueue);
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		if (atomic_read(&rx_ring->pfring_zc.queue_in_use) > 0)
+			wake_up_interruptible(&adapter->pfring_zc.packet_waitqueue);
 
-	  return(TRUE);
+		return TRUE;
 	}
 #endif
 #endif
@@ -4335,224 +4354,227 @@ static int e1000e_config_hwtstamp(struct e1000_adapter *adapter,
 
 u16 e1000e_read_pci_cfg_word(struct e1000_adapter *adapter, u32 reg)
 {
-  u16 value;
+	u16 value;
 
-  pci_read_config_word(adapter->pdev, reg, &value);
-  return value;
+	pci_read_config_word(adapter->pdev, reg, &value);
+	return value;
 }
 
 /* ********************************** */
 
 int wait_packet_function_ptr(void *data, int mode)
 {
-  struct e1000_ring *rx_ring = (struct e1000_ring*)data;
-  struct e1000_adapter *adapter = rx_ring->adapter;
+	struct e1000_ring *rx_ring = (struct e1000_ring*)data;
+	struct e1000_adapter *adapter = rx_ring->adapter;
 
-  if(unlikely(enable_debug)) printk("[wait_packet_function_ptr] called [mode=%d][data=%p]\n", mode, data);
+	if (unlikely(enable_debug)) printk("[wait_packet_function_ptr] called [mode=%d][data=%p]\n", mode, data);
 
-  // printk(KERN_INFO "[PF_RING] %s(%s, mode=%d, rx_ring=%p)\n", __FUNCTION__, adapter->netdev->name, mode, data);
+	//printk(KERN_INFO "[PF_RING] %s(%s, mode=%d, rx_ring=%p)\n", __FUNCTION__, adapter->netdev->name, mode, data);
 
-  if(mode == 1) {
-    union e1000_rx_desc_extended *rx_desc;
-    u16 i;
+	if (mode == 1) {
+		union e1000_rx_desc_extended *rx_desc;
+		u16 i;
 
-    if(data == NULL) {
-      printk("[wait_packet_function_ptr] Internal error: NULL data\n");
-      return(0);
-    }
+		if (data == NULL) {
+			printk("[wait_packet_function_ptr] Internal error: NULL data\n");
+			return 0;
+		}
 
-    i = E1000_READ_REG(&adapter->hw, E1000_RDT(0));
-    /* Very important: update the value from the register set from userland.
-     * Here i is the last I've read (zero-copy implementation) */
-    if(++i == rx_ring->count) i = 0;
-    /* Here i is the next I have to read */
+		i = E1000_READ_REG(&adapter->hw, E1000_RDT(0));
+		/* Very important: update the value from the register set from userland.
+		 * Here i is the last I've read (zero-copy implementation) */
+		if (++i == rx_ring->count) i = 0;
+		/* Here i is the next I have to read */
 
-    rx_ring->next_to_clean = i;
+		rx_ring->next_to_clean = i;
 
-    if(unlikely(enable_debug)) printk("[wait_packet_function_ptr] [next_to_clean=%d]\n", rx_ring->next_to_clean);
+		if (unlikely(enable_debug)) printk("[wait_packet_function_ptr] [next_to_clean=%d]\n", rx_ring->next_to_clean);
 
-    rx_desc = E1000_RX_DESC_EXT(*rx_ring, rx_ring->next_to_clean);
+		rx_desc = E1000_RX_DESC_EXT(*rx_ring, rx_ring->next_to_clean);
 
-    prefetch(rx_desc);
-
-#if 0
-    if(rx_desc->read.buffer_addr == 0){
-      struct e1000_hw *hw = &adapter->hw;
-
-      printk(KERN_WARNING "[PF_RING-ZC] %s(%s): [slot=%d][interrupt_received=%d][buffer_addr=%llu][RCTL:%u]\n",
-	     __FUNCTION__, adapter->netdev->name, i, adapter->pfring_zc.interrupt_received,
-	     rx_desc->read.buffer_addr, er32(RCTL));
-    }
-#endif
-
-    if(!(le32_to_cpu(rx_desc->wb.upper.status_error) & E1000_RXD_STAT_DD)) {
-      adapter->pfring_zc.interrupt_received = 0;
+		prefetch(rx_desc);
 
 #if 0
-      if(!adapter->pfring_zc.interrupt_enabled) {
-	e1000_irq_enable(adapter), adapter->pfring_zc.interrupt_enabled = 1;
-	if(unlikely(enable_debug)) printk("[wait_packet_function_ptr] Packet not arrived yet: enabling interrupts\n");
-      }
-#endif
-    } else
-      adapter->pfring_zc.interrupt_received = 1;
+		if (rx_desc->read.buffer_addr == 0) {
+			struct e1000_hw *hw = &adapter->hw;
 
-    return(le32_to_cpu(rx_desc->wb.upper.status_error) & E1000_RXD_STAT_DD);
-  } else {
-     if(adapter->pfring_zc.interrupt_enabled) {
-      e1000_irq_disable(adapter);
-      adapter->pfring_zc.interrupt_enabled = 0;
-      if(unlikely(enable_debug)) printk("[wait_packet_function_ptr] Disabled interrupts\n");
-    }
-    return(0);
-  }
+			printk(KERN_WARNING "[PF_RING-ZC] %s(%s): [slot=%d][interrupt_received=%d][buffer_addr=%llu][RCTL:%u]\n",
+			       __FUNCTION__, adapter->netdev->name, i, adapter->pfring_zc.interrupt_received,
+			       rx_desc->read.buffer_addr, er32(RCTL));
+    		}
+#endif
+
+		if (!(le32_to_cpu(rx_desc->wb.upper.status_error) & E1000_RXD_STAT_DD)) {
+			adapter->pfring_zc.interrupt_received = 0;
+
+#if 0
+			if (!adapter->pfring_zc.interrupt_enabled) {
+				e1000_irq_enable(adapter), adapter->pfring_zc.interrupt_enabled = 1;
+				if(unlikely(enable_debug)) printk("[wait_packet_function_ptr] Packet not arrived yet: enabling interrupts\n");
+			}
+#endif
+		} else
+			adapter->pfring_zc.interrupt_received = 1;
+
+		return (le32_to_cpu(rx_desc->wb.upper.status_error) & E1000_RXD_STAT_DD);
+	} else {
+		if (adapter->pfring_zc.interrupt_enabled) {
+			e1000_irq_disable(adapter);
+			adapter->pfring_zc.interrupt_enabled = 0;
+			if (unlikely(enable_debug)) printk("[wait_packet_function_ptr] Disabled interrupts\n");
+		}
+		return 0;
+	}
 }
 
 /* ********************************** */
 
 void disable_receives(struct e1000_adapter *adapter) {
-  struct e1000_hw *hw = &adapter->hw;
-  u_int32_t rctl;
+	struct e1000_hw *hw = &adapter->hw;
+	u_int32_t rctl;
   
-  rctl = er32(RCTL);
-  if (!(adapter->flags2 & FLAG2_NO_DISABLE_RX))
-    ew32(RCTL, rctl & ~E1000_RCTL_EN);
-  e1e_flush();
-  usleep_range(10000, 20000);
+	rctl = er32(RCTL);
+	if (!(adapter->flags2 & FLAG2_NO_DISABLE_RX))
+		ew32(RCTL, rctl & ~E1000_RCTL_EN);
+	e1e_flush();
+	usleep_range(10000, 20000);
 }
 
 /* ********************************** */
 
 void enable_receives(struct e1000_adapter *adapter) {
-  struct e1000_hw *hw = &adapter->hw;
-  u_int32_t rctl;
+	struct e1000_hw *hw = &adapter->hw;
+	u_int32_t rctl;
   
-  rctl = er32(RCTL);
-  ew32(RCTL, rctl | E1000_RCTL_EN);
-  e1e_flush();
-  usleep_range(10000, 20000);
+	rctl = er32(RCTL);
+	ew32(RCTL, rctl | E1000_RCTL_EN);
+	e1e_flush();
+	usleep_range(10000, 20000);
 }
 
 /* ********************************** */
 
 void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) {
-  struct e1000_ring    *rx_ring = (struct e1000_ring*)rx_data;
-  struct e1000_ring    *tx_ring = (struct e1000_ring*)tx_data;
-  struct e1000_ring    *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
-  struct e1000_adapter *adapter;
-  int debug_notify = 0;
+	struct e1000_ring    *rx_ring = (struct e1000_ring*)rx_data;
+	struct e1000_ring    *tx_ring = (struct e1000_ring*)tx_data;
+	struct e1000_ring    *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
+	struct e1000_adapter *adapter;
+	int debug_notify = 0;
   
-  if(xx_ring == NULL) { /* safety check */
-    printk("[PF_RING-ZC][e1000e] %s ???\n", __FUNCTION__);
-    return;
-  }
+	if (xx_ring == NULL) { /* safety check */
+		printk("[PF_RING-ZC][e1000e] %s ???\n", __FUNCTION__);
+		return;
+	}
 
-  if(debug_notify) printk("[PF_RING-ZC][e1000e] %s(rx_ring=%p, tx_ring=%p)\n", __FUNCTION__, rx_ring, tx_ring);
+	if (debug_notify) printk("[PF_RING-ZC][e1000e] %s(rx_ring=%p, tx_ring=%p)\n", __FUNCTION__, rx_ring, tx_ring);
   
-  adapter = xx_ring->adapter;
+	adapter = xx_ring->adapter;
 
-  if(unlikely(enable_debug) || debug_notify)
-    if(debug_notify) printk("[PF_RING-ZC][e1000e] %s (1) %s device_in_use = %d\n",
-	   __FUNCTION__, xx_ring->name, device_in_use);
+	if (unlikely(enable_debug) || debug_notify)
+		if (debug_notify) 
+			printk("[PF_RING-ZC][e1000e] %s (1) %s device_in_use = %d\n",
+			       __FUNCTION__, xx_ring->name, device_in_use);
 
-  if(device_in_use) {
-    /* Free all memory */
+	if (device_in_use) {
+		/* Free all memory */
 
-    if (atomic_inc_return(&adapter->pfring_zc.usage_counter) == 1 /* first user */)
-      try_module_get(THIS_MODULE); /* ++ */
+		if (atomic_inc_return(&adapter->pfring_zc.usage_counter) == 1 /* first user */)
+			try_module_get(THIS_MODULE); /* ++ */
 	
 #ifdef ENABLE_RX_ZC
-    if(debug_notify) printk(KERN_WARNING "[PF_RING] [+] %s(%s, usage_counter=%d, rx=%p, tx=%p)\n",
-	   __FUNCTION__, adapter->netdev->name, atomic_read(&adapter->pfring_zc.usage_counter),
-	   rx_ring, tx_ring);
+		if (debug_notify) 
+			printk(KERN_WARNING "[PF_RING] [+] %s(%s, usage_counter=%d, rx=%p, tx=%p)\n",
+			       __FUNCTION__, adapter->netdev->name, atomic_read(&adapter->pfring_zc.usage_counter),
+			       rx_ring, tx_ring);
 
-    if((rx_ring != NULL)
-       && (atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */)) {
+		if ((rx_ring != NULL)
+		    && (atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */)) {
 
-      /* disable receives while setting up the descriptors */
-      disable_receives(adapter);
-      e1000_irq_disable(adapter);
-      e1000_clean_rx_ring(rx_ring); // Flush remaining RX buffers if any
-    }
+			/* disable receives while setting up the descriptors */
+			disable_receives(adapter);
+			e1000_irq_disable(adapter);
+			e1000_clean_rx_ring(rx_ring); // Flush remaining RX buffers if any
+		}
 #endif
 
-    if((tx_ring != NULL)
-       && (atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */)) {
-      e1000_clean_tx_ring(tx_ring);
-    }
+		if ((tx_ring != NULL)
+		    && (atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */)) {
+			e1000_clean_tx_ring(tx_ring);
+		}
 
-    /* Disable pause frames */
-    if(1) {
-      struct e1000_hw *hw = &adapter->hw;
+		/* Disable pause frames */
+		if (1) {
+			struct e1000_hw *hw = &adapter->hw;
 
-      hw->fc.current_mode = e1000_fc_none;
-      e1000e_force_mac_fc(hw);
-    }
+			hw->fc.current_mode = e1000_fc_none;
+			e1000e_force_mac_fc(hw);
+		}
 
-    if(unlikely(enable_debug))
-      printk("[PF_RING-ZC][e1000e] %s (2) %s is IN use\n", __FUNCTION__, xx_ring->name);
-  } else {
-    /* Restore card memory */
-    int i;
+		if (unlikely(enable_debug))
+			printk("[PF_RING-ZC][e1000e] %s (2) %s is IN use\n", __FUNCTION__, xx_ring->name);
+	} else {
+		/* Restore card memory */
+		int i;
 
 #ifdef ENABLE_RX_ZC
-    if((rx_ring != NULL)
-       && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-      /* Restore RX */
+		if ((rx_ring != NULL)
+		    && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
+			/* Restore RX */
 
-      if(debug_notify) printk(KERN_WARNING "[PF_RING] [-] %s(%d)\n", __FUNCTION__, 1);
+			if (debug_notify) printk(KERN_WARNING "[PF_RING] [-] %s(%d)\n", __FUNCTION__, 1);
 
-      /* disable receives while setting up the descriptors */
-      disable_receives(adapter);
-      e1000_irq_disable(adapter);
+				/* disable receives while setting up the descriptors */
+				disable_receives(adapter);
+				e1000_irq_disable(adapter);
 
-      for(i=0; i<rx_ring->count; i++) {
-        union e1000_rx_desc_extended *rx_desc = E1000_RX_DESC_EXT(*rx_ring, i);
+				for (i=0; i < rx_ring->count; i++) {
+					union e1000_rx_desc_extended *rx_desc = E1000_RX_DESC_EXT(*rx_ring, i);
 
-        rx_desc->read.buffer_addr = 0;
-	rx_desc->wb.upper.status_error = 0;
-      }
+					rx_desc->read.buffer_addr = 0;
+					rx_desc->wb.upper.status_error = 0;
+      				}
 
-      e1000_clean_rx_ring(rx_ring);
-      e1000_configure_rx(adapter);
-      adapter->alloc_rx_buf(rx_ring, e1000_desc_unused(rx_ring), GFP_KERNEL);
-      rmb();
+				e1000_clean_rx_ring(rx_ring);
+				e1000_configure_rx(adapter);
+				adapter->alloc_rx_buf(rx_ring, e1000_desc_unused(rx_ring), GFP_KERNEL);
+				rmb();
 
-      e1000_irq_enable(adapter);
+				e1000_irq_enable(adapter);
 
-      enable_receives(adapter);
-    }
+				enable_receives(adapter);
+    		}
 #endif
 
-    if((tx_ring != NULL)
-	&& (atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0) /* last user */) {
-      /* Restore TX */
+		if ((tx_ring != NULL)
+		    && (atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0) /* last user */) {
+			/* Restore TX */
 
-      for(i=0; i<tx_ring->count; i++) {
-        struct e1000_buffer *tx_buffer = &tx_ring->buffer_info[i];
+			for (i=0; i < tx_ring->count; i++) {
+				struct e1000_buffer *tx_buffer = &tx_ring->buffer_info[i];
 
-        tx_buffer->next_to_watch = 0;
-        tx_buffer->skb = NULL;
-      }
+				tx_buffer->next_to_watch = 0;
+				tx_buffer->skb = NULL;
+			}
 
-      e1000_clean_tx_ring(tx_ring);
-      e1000_configure_tx(adapter);
-      tx_ring->next_to_use = 0;
-      tx_ring->next_to_clean = 0;
+			e1000_clean_tx_ring(tx_ring);
+			e1000_configure_tx(adapter);
+			tx_ring->next_to_use = 0;
+			tx_ring->next_to_clean = 0;
 
-      rmb();
-    }
+			rmb();
+ 		}
 
-    if(atomic_dec_return(&adapter->pfring_zc.usage_counter) == 0 /* last user */)
-      module_put(THIS_MODULE);  /* -- */
+		if (atomic_dec_return(&adapter->pfring_zc.usage_counter) == 0 /* last user */)
+			module_put(THIS_MODULE);  /* -- */
 
-    if(debug_notify) printk(KERN_WARNING "[PF_RING] [-] %s(%s, usage_counter=%d, rx=%p, tx=%p)\n",
-	   __FUNCTION__, adapter->netdev->name, atomic_read(&adapter->pfring_zc.usage_counter),
-	   rx_ring, tx_ring);
+		if (debug_notify) 
+			printk(KERN_WARNING "[PF_RING] [-] %s(%s, usage_counter=%d, rx=%p, tx=%p)\n",
+			       __FUNCTION__, adapter->netdev->name, atomic_read(&adapter->pfring_zc.usage_counter),
+			       rx_ring, tx_ring);
 
-    if(unlikely(enable_debug))
-      printk("[PF_RING-ZC][e1000e] %s (2) %s is NOT IN use\n", __FUNCTION__, xx_ring->name);
-  }
+		if (unlikely(enable_debug))
+			printk("[PF_RING-ZC][e1000e] %s (2) %s is NOT IN use\n", __FUNCTION__, xx_ring->name);
+	}
 }
 
 #endif
