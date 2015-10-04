@@ -21,6 +21,20 @@ fi
 
 DATE=`date -R`
 KERNEL=`uname -r`
+ACCOLADE_LIBS=""
+ACCOLADE_LIB_COPY=""
+if test -d /opt/accolade/lib/; then	
+   ACCOLADE_LIB_COPY="cp /opt/accolade/lib/libanic.so \$RPM_BUILD_ROOT/usr/local/lib/"
+   ACCOLADE_LIBS="/usr/local/lib/libanic.so"
+fi
+
+NAPATECH_LIBS=
+NAPATECH_LIB_COPY=
+if test -d /opt/napatech3/lib/; then	
+   NAPATECH_LIB_COPY="cp /opt/napatech3/lib/libntapi.so  /opt/napatech3/lib/libntos.so \$RPM_BUILD_ROOT/usr/local/lib/"
+   NAPATECH_LIBS="/usr/local/lib/libntapi.so"$'\n'"/usr/local/lib/libntos.so"
+fi
+
 
 AC_SUBST(VERS)
 AC_SUBST(EXTN)
@@ -30,6 +44,11 @@ AC_SUBST(PLATFORM)
 AC_SUBST(REVISION)
 AC_SUBST(GIT_BRANCH)
 AC_SUBST(GIT_HASH)
+AC_SUBST(ACCOLADE_LIB_COPY)
+AC_SUBST(ACCOLADE_LIBS)
+AC_SUBST(NAPATECH_LIB_COPY)
+AC_SUBST(NAPATECH_LIBS)
+
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(pfring.spec)

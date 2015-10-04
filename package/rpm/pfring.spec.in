@@ -49,6 +49,8 @@ cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
 cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
+@ACCOLADE_LIB_COPY@
+@NAPATECH_LIB_COPY@
 # DAQ
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
 cp $HOME/PF_RING/userland/snort/pfring-daq-module/daq_pfring.la $RPM_BUILD_ROOT/usr/local/lib/daq
@@ -101,6 +103,8 @@ rm -fr $RPM_BUILD_ROOT
 /etc/init.d/cluster
 /etc/init/pf_ring.conf
 /etc/ld.so.conf.d/pf_ring.conf
+@ACCOLADE_LIBS@
+@NAPATECH_LIBS@
 
 # Set the default attributes of all of the files specified to have an
 # owner and group of root and to inherit the permissions of the file
