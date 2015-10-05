@@ -155,8 +155,7 @@ if test "x$ac_cv_lib_ntapi_NT_Init" = xyes; then :
     if test -f $MOD_NT_LIB; then
       AC_MSG_RESULT(yes)
       NT_INC="-I/opt/napatech3/include"
-      NT_LIB="/opt/napatech3/lib/libntapi.so"
-      NT_SHLIB="-L/opt/napatech3/lib/ -lntapi"
+      NT_LIB="-lntapi"
       HAVE_NT="-D HAVE_NT"
       NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
       NT_DEP="extract_nt_lib"
@@ -183,8 +182,7 @@ AC_MSG_CHECKING([Accolade support])
 if test -d "$ACCOLADE_HOME"; then
    if test -f pfring_mod_accolade.c; then
       ACCOLADE_INC="-I$ACCOLADE_HOME/include"
-      ACCOLADE_LIB="$ACCOLADE_HOME/lib/libanic.so"
-      ACCOLADE_SHLIB="-L$ACCOLADE_HOME/lib/ -lanic"
+      ACCOLADE_LIB="-lanic"
       ACCOLADE_OBJS="pfring_mod_accolade.o"
       HAVE_ACCOLADE="-D HAVE_ACCOLADE"
       AC_MSG_RESULT(yes)
@@ -294,8 +292,6 @@ AC_SUBST(INSTALL_PREFIX)
 AC_SUBST(SILICOM_LIBS)
 AC_SUBST(HAVE_REDIRECTOR)
 AC_SUBST(HAVE_HW_TIMESTAMP)
-AC_SUBST(NT_SHLIB)
-AC_SUBST(ACCOLADE_SHLIB)
 
 dnl> AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([pfring_config])
