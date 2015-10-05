@@ -592,7 +592,6 @@ REVISION
 KERNEL
 DATE
 EXTN
-VERS
 target_alias
 host_alias
 build_alias
@@ -1683,7 +1682,6 @@ fi
 /bin/rm -f debian/control.in
 cp debian/control.$UBUNTU_RELEASE.in debian/control.in
 
-VERS=`cat ../../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MACHINE=`uname -m`
 REVISION=`git rev-list --all |wc -l`
 GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
@@ -1707,7 +1705,6 @@ fi
 
 DATE=`date -R`
 KERNEL=`uname -r`
-
 
 
 

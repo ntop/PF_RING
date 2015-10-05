@@ -11,7 +11,6 @@ fi
 /bin/rm -f debian/control.in
 cp debian/control.$UBUNTU_RELEASE.in debian/control.in
 
-VERS=`cat ../../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MACHINE=`uname -m`
 REVISION=`git rev-list --all |wc -l`
 GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
@@ -36,7 +35,6 @@ fi
 DATE=`date -R`
 KERNEL=`uname -r`
 
-AC_SUBST(VERS)
 AC_SUBST(EXTN)
 AC_SUBST(DATE)
 AC_SUBST(KERNEL)

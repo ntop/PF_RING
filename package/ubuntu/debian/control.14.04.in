@@ -2,7 +2,7 @@ Source: pfring
 Section: free
 Priority: optional
 Maintainer: Luca Deri <deri@ntop.org>
-Standards-Version: @VERS@
+Standards-Version: @PFRING_VERS@-@REVISION@
 Build-Depends: 
 Build-Conflicts:
 
