@@ -3,9 +3,9 @@ all: install
 add: veryclean
 	\/bin/rm -rf /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@
 	mkdir -p /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
-	cd @I40E@/@I40E@-@I40E_VERSION@/src/ ; make clean; cp -r i40e/* /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
-	cd @I40E@/@I40E@-@I40E_VERSION@/src/i40e/ ; cp ../../../../../../../kernel/linux/pf_ring.h /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
-	cd @I40E@/@I40E@-@I40E_VERSION@/src/ ; cp Makefile /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
+	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; make clean; cp -r i40e/* /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
+	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/i40e/ ; cp ../../../../../../../kernel/linux/pf_ring.h /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
+	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; cp Makefile /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	sed -i -e 's|../../../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/*.c
 	sed -i -e 's|../../../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/*.h
 	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-objs/i40e_zc-objs/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/Kbuild
