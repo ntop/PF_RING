@@ -50,8 +50,8 @@ pre-build-core:
 	cd $(PF_RING_HOME)/userland/lib; make install DESTDIR=$(HERE)/debian
 	cd $(PF_RING_HOME)/userland/libpcap; ./configure; make; cp libpcap* $(HERE)/debian/usr/local/lib/; cd $(HERE)/debian/usr/local/lib/; ln -sf libpcap.so.?.?.? libpcap.so
 	cd $(PF_RING_HOME)/kernel/linux/; cp pf_ring.h $(HERE)/debian/usr/local/include/linux/
-	if [ -d /opt/napatech3/lib/ ]; then cp /opt/napatech3/lib/libntapi.so /opt/napatech3/lib/libntos.so $(HERE)/debian/usr/local/lib/; fi;
-	if [ -d /opt/accolade/lib/ ]; then cp /opt/accolade/lib/libanic.so $(HERE)/debian/usr/local/lib/; fi;
+	if [ -d /opt/napatech3/lib/ ]; then cp /opt/napatech3/lib/libntapi.so /opt/napatech3/lib/libntos.so $(HERE)/debian/lib64/; fi;
+	if [ -d /opt/accolade/lib/ ]; then cp /opt/accolade/lib/libanic.so $(HERE)/debian/lib64/; fi;
 	@find $(HERE)/debian -name "*~" -exec /bin/rm {} ';' 
 
 pre-build-examples:
