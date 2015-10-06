@@ -4816,7 +4816,7 @@ static void i40e_vsi_close(struct i40e_vsi *vsi)
 #ifdef HAVE_PF_RING
 	{
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s(%s) called -> i40e_down\n", __FUNCTION__, vsi->netdev->name);
+			printk("[PF_RING-ZC] %s: called on %s -> i40e_down\n", __FUNCTION__, vsi->netdev->name);
 #endif
 		i40e_down(vsi);
 #ifdef HAVE_PF_RING
@@ -5628,11 +5628,6 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 	struct i40e_pf *pf = vsi->back;
 	int err;
 
-#ifdef HAVE_PF_RING
-	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
-#endif
-
 	if (pf->flags & I40E_FLAG_MSIX_ENABLED)
 		i40e_vsi_configure_msix(vsi);
 	else
@@ -5689,10 +5684,11 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 			pci_read_config_word(pf->pdev, I40E_PCI_DEVICE_CACHE_LINE_SIZE, &cache_line_size);
 			cache_line_size &= 0x00FF;
 			cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
-			if(cache_line_size == 0) cache_line_size = 64;
+			if (cache_line_size == 0) cache_line_size = 64;
 
-			if(unlikely(enable_debug))  
-				printk("[PF_RING-ZC] %s() attach [cache_line_size=%u][MSIX %s]\n", __FUNCTION__, 
+			if (unlikely(enable_debug))  
+				printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u][MSIX %s]\n", __FUNCTION__,
+					vsi->netdev->name, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0),
 					cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
 
 			for (i = 0; i < vsi->num_queue_pairs; i++) {
@@ -5757,7 +5753,7 @@ static void i40e_vsi_reinit_locked(struct i40e_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	WARN_ON(in_interrupt());
@@ -5785,7 +5781,7 @@ int i40e_up(struct i40e_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	err = i40e_vsi_configure(vsi);
@@ -5805,7 +5801,7 @@ void i40e_down(struct i40e_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	/* It is assumed that the caller of this function
@@ -5832,8 +5828,8 @@ void i40e_down(struct i40e_vsi *vsi)
 		if (hook != NULL) {
 			int i;
 			
-			if(unlikely(enable_debug))
-	      			printk("[PF_RING-ZC] %s() detach\n", __FUNCTION__);
+			if (unlikely(enable_debug))
+	      			printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, vsi->netdev->name);
 
 			for (i = 0; i < vsi->num_queue_pairs; i++) {
 				struct i40e_ring *rx_ring = vsi->rx_rings[i];
@@ -6034,7 +6030,7 @@ int i40e_vsi_open(struct i40e_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 	if (unlikely(enable_debug)) 
-		printk("[PF_RING-ZC] %s(%s) called\n", __FUNCTION__, vsi->netdev->name);
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
 #endif
 
 	err = i40e_up_complete(vsi);
