@@ -32,7 +32,6 @@
 #include <sys/sysinfo.h> /* get_nprocs(void) */
 #include <unistd.h>
 #include <signal.h>
-#include <numa.h>
 #include <ctype.h>
 
 #include "pfring.h"
@@ -476,7 +475,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
     }
 
     context->cluster = pfring_zc_create_cluster(context->cluster_id, context->max_buffer_len, 0, num_buffers,
-                                              context->bindcpu == 0 ? -1 : numa_node_of_cpu(context->bindcpu), NULL);
+                                              context->bindcpu == 0 ? -1 : pfring_zc_numa_get_cpu_node(context->bindcpu), NULL);
 
     if (context->cluster == NULL) {
       snprintf(errbuf, len, "%s: Cluster failed: %s (error %d)", __FUNCTION__, strerror(errno), errno);
