@@ -34,31 +34,42 @@ AC_ARG_WITH( libpfring_libraries,
 	     [  --with-libpfring-libraries=DIR     libpfring library directory],
 	     [with_pfring_libraries="$withval"], [with_pfring_libraries="no"])
 
-if test -d "${HOME}/PF_RING/"; then
-	CPPFLAGS="${CPPFLAGS} -I ${HOME}/PF_RING/userland/lib -I ${HOME}/PF_RING/kernel"
-	LDFLAGS="${LDFLAGS} -L${HOME}/PF_RING/userland/lib -lpthread `${HOME}/PF_RING/userland/lib/pfring_config --libs`"
-fi
-
 if test "x$with_pfring_includes" != "xno"; then
 	CPPFLAGS="${CPPFLAGS} -I${with_pfring_includes}"
+else 
+	if test -d "${HOME}/PF_RING/"; then
+		CPPFLAGS="${CPPFLAGS} -I${HOME}/PF_RING/userland/lib"
+	fi
 fi
 
 if test "x$with_pfring_kernel_includes" != "xno"; then
 	CPPFLAGS="${CPPFLAGS} -I${with_pfring_kernel_includes}"
+else 
+	if test -d "${HOME}/PF_RING/"; then
+		CPPFLAGS="${CPPFLAGS} -I${HOME}/PF_RING/kernel"
+	fi
 fi
 
 if test "x$with_pfring_libraries" != "xno"; then
 	LDFLAGS="${LDFLAGS} -L${with_pfring_libraries}"
+else 
+	if test -d "${HOME}/PF_RING/"; then
+		LDFLAGS="${LDFLAGS} -L${HOME}/PF_RING/userland/lib"
+	fi
 fi
 
 # PF_RING headers/library checks
 AC_CHECK_HEADER([pfring.h],  [], [AC_MSG_ERROR([Could not find pfring.h! ])])
 
-AC_CHECK_LIB( [pcap],
+if test -d "${HOME}/PF_RING/"; then
+	LDFLAGS="${LDFLAGS} ${HOME}/PF_RING/userland/lib/libpfring.a ${HOME}/PF_RING/userland/libpcap/libpcap.a -lpthread `${HOME}/PF_RING/userland/lib/pfring_config --libs`"
+else
+	AC_CHECK_LIB( [pcap],
               [pfring_open],
 	      [LDFLAGS="${LDFLAGS} -lpcap"],
 	      [LDFLAGS="${LDFLAGS} -lpfring"],
 	      [] )
+fi
 
 # Checks for header files.
 AC_CHECK_HEADERS([netinet/in.h stdint.h stdlib.h string.h])
