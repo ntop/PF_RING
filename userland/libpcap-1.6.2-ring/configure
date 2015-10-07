@@ -6413,7 +6413,7 @@ else
 $as_echo "yes" >&6; }
 fi
 
-LIBS="$LIBS ../lib/libpfring.so `../lib/pfring_config --libs`"
+LIBS="$LIBS `../lib/pfring_config --libs`"
 
 
 # NPCAP
