@@ -3,9 +3,9 @@ Napatech support in PF_RING
 
 Prerequisite: Napatech drivers and SDK installed.
 
-PF_RING has native support for Napatech adapters, due to the dependency
-to the Napatech library, a configure parameter --enable-nt is required 
-in order to enable the Napatech module when compiling the pf_ring library.
+PF_RING has native support for Napatech adapters, the Napatech library
+needs to be installed (under /opt/napatech3) in order to enable the 
+Napatech module when configuring/compiling the pf_ring library.
 
 For the impatient, in order to get up and running with Napatech just run 
 the following commands:
@@ -14,7 +14,7 @@ the following commands:
  $ make
  $ sudo insmod pf_ring.ko
  $ cd ../userland/lib
- $ ./configure --enable-nt
+ $ ./configure
  $ make
  $ cd ../libpcap
  $ ./configure
@@ -24,9 +24,6 @@ the following commands:
  $ sudo ./pfcount -i nt:0
 
 Please note that:
- - the only specific command for compiling pf_ring with Napatech support 
-   is "./configure --enable-nt" which requires the Napatech library to be 
-   installed under /opt
  - in order to open port 0 from the Napatech adapter you should specify 
    "nt:0", in order to open stream 0 you should speficy "nt:stream0"
  - streams  can be created using the ntpl tool (ntpl -e "<command>")

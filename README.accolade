@@ -1,0 +1,36 @@
+Accolade support in PF_RING
+---------------------------
+
+Prerequisite: Accolade SDK v.1.2.17.20150903 or later installed.
+
+PF_RING has native support for Accolade adapters, the Accolade library
+needs to be installed (under /opt/accolade) in order to enable the 
+Accolade module when configuring/compiling the pf_ring library.
+
+For the impatient, in order to get up and running with Accolade just run 
+the following commands:
+
+ $ cd PF_RING/kernel
+ $ make
+ $ sudo insmod pf_ring.ko
+ $ cd ../userland/lib
+ $ ./configure
+ $ make
+ $ cd ../libpcap
+ $ ./configure
+ $ make
+ $ cd ../examples
+ $ make
+ $ sudo ./pfcount -i anic:0
+
+Please note that:
+ - in order to open port 0 from adapter 0 you should specify "anic:0:0" 
+   (anic:<device>:<port>) or just "anic:0" (anic:<port>) if device is 0 
+ - in order to open ring 0 from adapter 0 you should speficy "anic:0@0"
+   (anic:<device>@<ring>). This is usually used for in combination with 
+   anic_rx_block_mfl which is used to setup the card for multi-process
+   applications. 
+   Example of RSS setup:
+     anic_rx_block_mfl --mode=2 
+   Example of port-to-ring binding:
+     anic_rx_block_mfl --mode=port

@@ -1,0 +1,28 @@
+Myricom support in PF_RING
+--------------------------
+
+Prerequisite: Myricom SNF v.4.1.0.53513 or later installed.
+
+PF_RING has native support for Myricom adapters, the Myricom library
+needs to be installed (under /opt/snf) in order to enable the 
+Myricom module when configuring/compiling the pf_ring library.
+
+For the impatient, in order to get up and running with Myricom just run 
+the following commands:
+
+ $ cd PF_RING/kernel
+ $ make
+ $ sudo insmod pf_ring.ko
+ $ cd ../userland/lib
+ $ ./configure
+ $ make
+ $ cd ../libpcap
+ $ ./configure
+ $ make
+ $ cd ../examples
+ $ make
+ $ sudo ./pfcount -i myri:0
+
+Please note that in order to open port 0 from the Myricom adapter you 
+should specify "myri:0"
+
