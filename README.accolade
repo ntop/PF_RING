@@ -37,7 +37,7 @@ Please note that:
    (anic:<device>@<ring>). This is usually used for in combination with 
    anic_rx_block_mfl which is used to setup the card for multi-process
    applications. 
-   Example of RSS setup with 2 rings:
+   Example of ports aggregation and load-balancing to 2 rings:
      anic_rx_block_mfl -i 0 --mode=2 
-   Example of port-to-ring binding:
+   Example of port-to-ring (ring 0 is port 0) binding:
      anic_rx_block_mfl -i 0 --mode=port
