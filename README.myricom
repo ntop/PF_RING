@@ -10,6 +10,10 @@ Myricom module when configuring/compiling the pf_ring library.
 For the impatient, in order to get up and running with Myricom just run 
 the following commands:
 
+ $ cd /opt/snf
+ $ ./sbin/rebuild.sh
+ $ ./sbin/myri_start_stop start
+
  $ cd PF_RING/kernel
  $ make
  $ sudo insmod pf_ring.ko

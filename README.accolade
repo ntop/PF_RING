@@ -10,6 +10,13 @@ Accolade module when configuring/compiling the pf_ring library.
 For the impatient, in order to get up and running with Accolade just run 
 the following commands:
 
+ $ echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+ $ cd /opt/accolade/
+ $ insmod driver/anic_mem.ko mbytes_per_device=64
+ $ cd bin
+ $ ./anic_load
+
  $ cd PF_RING/kernel
  $ make
  $ sudo insmod pf_ring.ko
@@ -30,7 +37,7 @@ Please note that:
    (anic:<device>@<ring>). This is usually used for in combination with 
    anic_rx_block_mfl which is used to setup the card for multi-process
    applications. 
-   Example of RSS setup:
-     anic_rx_block_mfl --mode=2 
+   Example of RSS setup with 2 rings:
+     anic_rx_block_mfl -i 0 --mode=2 
    Example of port-to-ring binding:
-     anic_rx_block_mfl --mode=port
+     anic_rx_block_mfl -i 0 --mode=port
