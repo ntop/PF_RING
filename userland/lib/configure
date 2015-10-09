@@ -3802,7 +3802,7 @@ HAVE_MYRICOM=
 $as_echo_n "checking Myricom support... " >&6; }
 if test -f pfring_mod_myricom.c && test -d "$MYRICOM_HOME"; then
   MYRICOM_INC="-I$MYRICOM_HOME/include -I$MYRICOM_HOME/src/common -I$MYRICOM_HOME/src/common/bsd"
-  MYRICOM_LIB="/opt/snf/lib/libsnf.a"
+  MYRICOM_LIB="/opt/snf/lib/libsnf_pic.a"
   MYRICOM_OBJS="pfring_mod_myricom.o"
   HAVE_MYRICOM="-DHAVE_MYRICOM"
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
