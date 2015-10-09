@@ -116,6 +116,8 @@ rm -fr $RPM_BUILD_ROOT
 %post
 /sbin/chkconfig pf_ring on > /dev/null 2>&1
 /sbin/chkconfig cluster on > /dev/null 2>&1
+if [ -d /opt/napatech3/lib/ ]; then cp /opt/napatech3/lib/libntapi.so /opt/napatech3/lib/libntos.so /lib64; fi
+if [ -d /opt/accolade/lib/ ]; then cp /opt/accolade/lib/libanic.so /lib64; fi
 /sbin/ldconfig > /dev/null 2>&1
  
 %changelog
