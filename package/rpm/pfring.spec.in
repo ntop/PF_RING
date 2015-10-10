@@ -59,7 +59,7 @@ cp $HOME/PF_RING/userland/snort/pfring-daq-module/daq_pfring.la $RPM_BUILD_ROOT/
 cp $HOME/PF_RING/userland/snort/pfring-daq-module/.libs/daq_pfring.so $RPM_BUILD_ROOT/usr/local/lib/daq
 cp $HOME/PF_RING/userland/snort/pfring-daq-module-zc/daq_pfring_zc.la $RPM_BUILD_ROOT/usr/local/lib/daq
 cp $HOME/PF_RING/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.so $RPM_BUILD_ROOT/usr/local/lib/daq
-cp -a $HOME/daq-2.0.0/sfbpf/.libs/libsfbpf.so.0 $HOME/daq-2.0.0/sfbpf/.libs/libsfbpf.so.0.0.1 $RPM_BUILD_ROOT/usr/local/lib
+cp -a $HOME/daq-2.?.?/sfbpf/.libs/libsfbpf.so.0 $HOME/daq-2.?.?/sfbpf/.libs/libsfbpf.so.0.0.1 $RPM_BUILD_ROOT/usr/local/lib
 %if %nodna == 0
 cp $HOME/PF_RING/userland/examples_libzero/pfdnabounce $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples_libzero/pfdnacluster_master $RPM_BUILD_ROOT/usr/local/bin
