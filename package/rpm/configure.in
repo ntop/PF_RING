@@ -19,6 +19,11 @@ else
    EXTN="i386"
 fi
 
+dnl> The step below is necessary to make sure the package will work on the
+dnl> target system without having to deal with ldconfig
+if test -d /opt/napatech3/lib/; then sudo cp /opt/napatech3/lib/libntapi.so /opt/napatech3/lib/libntos.so /lib64; fi
+if test -d /opt/accolade/lib/; then sudo cp /opt/accolade/lib/libanic.so /lib64; fi
+
 DATE=`date -R`
 KERNEL=`uname -r`
 ACCOLADE_LIBS=""
