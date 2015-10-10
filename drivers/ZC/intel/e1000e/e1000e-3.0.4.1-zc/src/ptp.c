@@ -91,12 +91,18 @@ static int e1000e_phc_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	struct e1000_adapter *adapter = container_of(ptp, struct e1000_adapter,
 						     ptp_clock_info);
 	unsigned long flags;
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0) )
 	s64 now;
+#endif
 
 	spin_lock_irqsave(&adapter->systim_lock, flags);
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+	timecounter_adjtime(&adapter->tc, delta);
+#else
 	now = timecounter_read(&adapter->tc);
 	now += delta;
 	timecounter_init(&adapter->tc, &adapter->cc, now);
+#endif
 	spin_unlock_irqrestore(&adapter->systim_lock, flags);
 
 	return 0;

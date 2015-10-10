@@ -559,7 +559,6 @@ static s32 e1000_init_phy_params_ich8lan(struct e1000_hw *hw)
 		break;
 	default:
 		return -E1000_ERR_PHY;
-		break;
 	}
 
 	return 0;
@@ -2425,7 +2424,11 @@ s32 e1000_lv_jumbo_workaround_ich8lan(struct e1000_hw *hw, bool enable)
 			return ret_val;
 		e1e_rphy(hw, PHY_REG(776, 20), &data);
 		data &= ~(0x3FF << 2);
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0) )
+		data |= (E1000_TX_PTR_GAP << 2);
+#else
 		data |= (0x1A << 2);
+#endif
 		ret_val = e1e_wphy(hw, PHY_REG(776, 20), data);
 		if (ret_val)
 			return ret_val;
