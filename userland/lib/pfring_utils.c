@@ -620,6 +620,10 @@ int pfring_print_parsed_pkt(char *buff, u_int buff_len, const u_char *p, const s
         etheraddr2string(&p[h->extended_hdr.parsed_pkt.offset.l3_offset+18], buf2),
         intoa(ntohl(*((u_int32_t *) &p[h->extended_hdr.parsed_pkt.offset.l3_offset+24]))));
     }
+
+  } else if(h->extended_hdr.parsed_pkt.eth_type == 0x0027 /* STP */) {
+    buff_used += snprintf(&buff[buff_used], buff_len - buff_used, "[STP]");
+
   } else {
     buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
       "[eth_type=0x%04X]", h->extended_hdr.parsed_pkt.eth_type);
