@@ -15,6 +15,7 @@ the following commands:
  $ sudo insmod pf_ring.ko
  $ cd ../userland/lib
  $ ./configure
+ $ ln -s /opt/napatech3/lib/libntapi.so /usr/local/lib/
  $ make
  $ cd ../libpcap
  $ ./configure
