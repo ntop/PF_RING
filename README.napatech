@@ -33,4 +33,7 @@ Please note that:
      Delete=All
      HashMode=Hash2TupleSorted
      Assign[StreamId=(0..15)]=All
-
+ - in order to use the Napatech adapter with n2disk the configuration file
+   /opt/napatech3.bkp/config/ntservice.ini should contain:
+     TimestampFormat = PCAP_NS
+     PacketDescriptor = PCAP
