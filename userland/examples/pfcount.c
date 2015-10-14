@@ -68,7 +68,7 @@ pcap_dumper_t *dumper = NULL;
 u_int string_id = 1;
 char *out_pcap_file = NULL;
 FILE *match_dumper = NULL;
-u_int8_t do_close_dump = 0, is_sysdig = 0;
+u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0;
 int num_packets = 0;
 
 struct app_stats {
@@ -145,21 +145,22 @@ void print_stats() {
     thpt = ((double)8*nBytes)/(deltaMillisec*1000);
 
     fprintf(stderr, "=========================\n"
-	    "Absolute Stats: [%u pkts rcvd]"
-	    "[%u pkts dropped]\n"
+	    "Absolute Stats: [%u pkts rcvd][%u pkts dropped]\n"
 	    "Total Pkts=%u/Dropped=%.1f %%\n",
 	    (unsigned int)pfringStat.recv,
 	    (unsigned int)pfringStat.drop,
 	    (unsigned int)(pfringStat.recv+pfringStat.drop),
 	    pfringStat.drop == 0 ? 0 :
 	    (double)(pfringStat.drop*100)/(double)(pfringStat.recv+pfringStat.drop));
-    fprintf(stderr, "%s pkts - %s bytes",
+    fprintf(stderr, "%s %s - %s bytes",
 	    pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
+            chunk_mode ? "chunks" : "pkts",
 	    pfring_format_numbers((double)nBytes, buf2, sizeof(buf2), 0));
 
     if(print_all)
-      fprintf(stderr, " [%s pkt/sec - %s Mbit/sec]\n",
+      fprintf(stderr, " [%s %s/sec - %s Mbit/sec]\n",
 	      pfring_format_numbers((double)(nPkts*1000)/deltaMillisec, buf1, sizeof(buf1), 1),
+              chunk_mode ? "chunk" : "pkt",
 	      pfring_format_numbers(thpt, buf2, sizeof(buf2), 1));
     else
       fprintf(stderr, "\n");
@@ -174,10 +175,12 @@ void print_stats() {
       bytesDiff /= (1000*1000*1000)/8;
 
       snprintf(buf, sizeof(buf),
-	      "Actual Stats: %llu pkts [%s ms][%s pps/%s Gbps]",
+	      "Actual Stats: %llu %s [%s ms][%s %s/%s Gbps]",
 	      (long long unsigned int)diff,
+              chunk_mode ? "chunks" : "pkts",
 	      pfring_format_numbers(deltaMillisec, buf1, sizeof(buf1), 1),
 	      pfring_format_numbers(((double)diff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1),
+              chunk_mode ? "cps" : "pps",
 	      pfring_format_numbers(((double)bytesDiff/(double)(deltaMillisec/1000)),  buf3, sizeof(buf3), 1));
 
       fprintf(stderr, "=========================\n%s\n", buf);
@@ -693,7 +696,6 @@ int main(int argc, char* argv[]) {
   u_char mac_address[6] = { 0 };
   int promisc, snaplen = DEFAULT_SNAPLEN, rc;
   u_int clusterId = 0;
-  u_int8_t chunk_mode = 0;
   u_int8_t enable_ixia_timestamp = 0;
   u_int32_t flags = 0;
   int bind_core = -1;
