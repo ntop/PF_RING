@@ -411,8 +411,9 @@ int pfring_set_reflector_device(pfring *ring, char *device_name) {
 
 int pfring_loop(pfring *ring, pfringProcesssPacket looper,
 		const u_char *user_bytes, u_int8_t wait_for_packet) {
-  int rc = 0;
   struct pfring_pkthdr hdr;
+  u_char *buffer = NULL;
+  int rc = 0;
 
   memset(&hdr, 0, sizeof(hdr));
   ring->break_recv_loop = 0;
@@ -423,53 +424,26 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
      || ring->mode == send_only_mode)
     return -1;
 
-  if(!ring->chunk_mode_enabled) {
-    /* Packet (non chunk) mode */
-    u_char *buffer = NULL;
+  while(!ring->break_recv_loop) {
+    rc = ring->recv(ring, &buffer, 0, &hdr, wait_for_packet);
 
-    while(!ring->break_recv_loop) {
-      rc = ring->recv(ring, &buffer, 0, &hdr, wait_for_packet);
-
-      if(rc < 0)
-	break;
-      else if(rc > 0) {
-	hdr.caplen = min_val(hdr.caplen, ring->caplen);
+    if(rc < 0)
+      break;
+    else if(rc > 0) {
+      hdr.caplen = min_val(hdr.caplen, ring->caplen);
 
 #ifdef ENABLE_BPF
-        if (unlikely(ring->userspace_bpf && bpf_filter(ring->userspace_bpf_filter.bf_insns, buffer, hdr.caplen, hdr.len) == 0))
-          continue; /* rejected */
+      if (unlikely(ring->userspace_bpf && bpf_filter(ring->userspace_bpf_filter.bf_insns, buffer, hdr.caplen, hdr.len) == 0))
+        continue; /* rejected */
 #endif
-        if(unlikely(ring->ixia_timestamp_enabled))
-          pfring_handle_ixia_hw_timestamp(buffer, &hdr);
-        else if(unlikely(ring->vss_apcon_timestamp_enabled))
-          pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
+      if(unlikely(ring->ixia_timestamp_enabled))
+        pfring_handle_ixia_hw_timestamp(buffer, &hdr);
+      else if(unlikely(ring->vss_apcon_timestamp_enabled))
+        pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
 
-	looper(&hdr, buffer, user_bytes);
-      } else {
-	/* if(!wait_for_packet) usleep(1); */
-      }
-    }
-  } else {
-    /* Chunk mode */
-    void *chunk;
-
-    if(!ring->recv_chunk) return(-2);
-
-    /* All set to zero as the header is meaningless */
-    memset(&hdr, 0, sizeof(hdr));
-
-    while(!ring->break_recv_loop) {
-      rc = ring->recv_chunk(ring, &chunk, &hdr.len, wait_for_packet);
-
-      if(rc < 0)
-	break;
-      else if(rc > 0) {
-	hdr.caplen = min_val(hdr.len, ring->caplen);
-
-	looper(&hdr, chunk, user_bytes);
-      } else {
-	/* if(!wait_for_packet) usleep(1); */
-      }
+      looper(&hdr, buffer, user_bytes);
+    } else {
+      /* if(!wait_for_packet) usleep(1); */
     }
   }
 

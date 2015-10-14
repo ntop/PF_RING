@@ -154,13 +154,13 @@ void print_stats() {
 	    (double)(pfringStat.drop*100)/(double)(pfringStat.recv+pfringStat.drop));
     fprintf(stderr, "%s %s - %s bytes",
 	    pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
-            chunk_mode ? "chunks" : "pkts",
+            chunk_mode == 1 ? "chunks" : "pkts",
 	    pfring_format_numbers((double)nBytes, buf2, sizeof(buf2), 0));
 
     if(print_all)
       fprintf(stderr, " [%s %s/sec - %s Mbit/sec]\n",
 	      pfring_format_numbers((double)(nPkts*1000)/deltaMillisec, buf1, sizeof(buf1), 1),
-              chunk_mode ? "chunk" : "pkt",
+              chunk_mode == 1 ? "chunk" : "pkt",
 	      pfring_format_numbers(thpt, buf2, sizeof(buf2), 1));
     else
       fprintf(stderr, "\n");
@@ -177,10 +177,10 @@ void print_stats() {
       snprintf(buf, sizeof(buf),
 	      "Actual Stats: %llu %s [%s ms][%s %s/%s Gbps]",
 	      (long long unsigned int)diff,
-              chunk_mode ? "chunks" : "pkts",
+              chunk_mode == 1 ? "chunks" : "pkts",
 	      pfring_format_numbers(deltaMillisec, buf1, sizeof(buf1), 1),
 	      pfring_format_numbers(((double)diff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1),
-              chunk_mode ? "cps" : "pps",
+              chunk_mode == 1 ? "cps" : "pps",
 	      pfring_format_numbers(((double)bytesDiff/(double)(deltaMillisec/1000)),  buf3, sizeof(buf3), 1));
 
       fprintf(stderr, "=========================\n%s\n", buf);
@@ -509,7 +509,7 @@ void printHelp(void) {
   printf("-t              Touch payload (to force packet load on cache)\n");
   printf("-M              Packet memcpy (to test memcpy speed)\n");
   printf("-T              Dump CRC (test and DNA only)\n");
-  printf("-C              Work in chunk mode (test only)\n");
+  printf("-C <mode>       Work with the adapter in chunk mode (1=chunk API, 2=packet API)\n");
   printf("-x <path>       File containing strings to search string (case sensitive) on payload.\n");
   printf("-o <path>       Dump matching packets onto the specified pcap (need -x).\n");
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
@@ -573,6 +573,40 @@ void* packet_consumer_thread(void* _id) {
 	       (unsigned int)stats.num_pkts,
 	       (unsigned int)stats.num_bytes);
       }
+    }
+  }
+
+  return(NULL);
+}
+
+/* *************************************** */
+
+void* chunk_consumer_thread(void* _id) {
+  long thread_id = (long)_id;
+  u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
+  void *chunk_p = NULL;
+  u_int32_t chunk_len;
+
+  u_long core_id = thread_id % numCPU;
+  struct pfring_pkthdr hdr;
+
+  /* printf("packet_consumer_thread(%lu)\n", thread_id); */
+
+  if((num_threads > 1) && (numCPU > 1)) {
+    if(bind2core(core_id) == 0)
+      printf("Set thread %lu on core %lu/%u\n", thread_id, core_id, numCPU);
+  }
+
+  memset(&hdr, 0, sizeof(hdr));
+
+  while(1) {
+    if(stats->do_shutdown) break;
+
+    if(pfring_recv_chunk(pd, &chunk_p, &chunk_len, wait_for_packet) > 0) {
+      if(stats->do_shutdown) break;
+      stats->numPkts[thread_id]++, stats->numBytes[thread_id] += chunk_len;
+    } else {
+      if(wait_for_packet == 0) sched_yield();
     }
   }
 
@@ -707,7 +741,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:Cd:l:v:ae:n:w:o:p:qb:rg:u:mtsSTx:f:z:N:M")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:l:v:ae:n:w:o:p:qb:rg:u:mtsSTx:f:z:N:M")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -731,7 +765,7 @@ int main(int argc, char* argv[]) {
       clusterId = atoi(optarg);
       break;
     case 'C':
-      chunk_mode = 1;
+      chunk_mode = atoi(optarg);
       break;
     case 'd':
       reflector_device = strdup(optarg);
@@ -826,6 +860,7 @@ int main(int argc, char* argv[]) {
   if(verbose) watermark = 1;
   if(device == NULL) device = DEFAULT_DEVICE;
   if(num_threads > MAX_NUM_THREADS) num_threads = MAX_NUM_THREADS;
+  if(chunk_mode) num_threads = 1;
 
   bind2node(bind_core);
 
@@ -1088,8 +1123,15 @@ int main(int argc, char* argv[]) {
     if(bind_core >= 0)
       bind2core(bind_core);
 
-    pfring_loop(pd, dummyProcesssPacket, (u_char*)NULL, wait_for_packet);
-    //packet_consumer_thread(0);
+    if (chunk_mode == 1) {
+      chunk_consumer_thread(0);
+    } else {
+#if 1
+      pfring_loop(pd, dummyProcesssPacket, (u_char*)NULL, wait_for_packet);
+#else
+      packet_consumer_thread(0);
+#endif
+    }
   } else {
     pthread_t my_thread;
     long i;
