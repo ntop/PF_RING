@@ -706,8 +706,10 @@ void deallocateRing(void);
 #ifdef __KERNEL__
 struct ring_sock {
   struct sock           sk; /* It MUST be the first element */
-  struct packet_type    prot_hook;
-  spinlock_t		bind_lock;
+  struct pf_ring_socket *pf_ring_sk;
+  /* FIXX Do we really need the following items? */
+  //struct packet_type    prot_hook;
+  //spinlock_t		bind_lock;
 };
 #endif
 

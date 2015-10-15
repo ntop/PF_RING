@@ -421,8 +421,7 @@ MODULE_PARM_DESC(bypass_interfaces,
 #define MIN_QUEUED_PKTS      64
 #define MAX_QUEUE_LOOPS      64
 
-#define ring_sk_datatype(__sk) ((struct pf_ring_socket *)__sk)
-#define ring_sk(__sk) ((__sk)->sk_protinfo)
+#define ring_sk(__sk) ((struct ring_sock *) __sk)->pf_ring_sk
 
 #define _rdtsc() ({ uint64_t x; asm volatile("rdtsc" : "=A" (x)); x; })
 
@@ -4876,14 +4875,14 @@ static int ring_create(
 
 #if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,11))
   sk = sk_alloc(PF_RING, GFP_KERNEL, 1, NULL);
-#else
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+#elif(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
   // BD: API changed in 2.6.12, ref:
   // http://svn.clkao.org/svnweb/linux/revision/?rev=28201
   sk = sk_alloc(PF_RING, GFP_ATOMIC, &ring_proto, 1);
-#else
+#elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0))
   sk = sk_alloc(net, PF_INET, GFP_KERNEL, &ring_proto);
-#endif
+#else
+  sk = sk_alloc(net, PF_INET, GFP_KERNEL, &ring_proto, 1 /* FIXX kernel socket? */);
 #endif
 
   if(sk == NULL)
@@ -4895,7 +4894,7 @@ static int ring_create(
   sk_set_owner(sk, THIS_MODULE);
 #endif
 
-  ring_sk(sk) = ring_sk_datatype(kmalloc(sizeof(*pfr), GFP_KERNEL));
+  ring_sk(sk) = (struct pf_ring_socket *) kmalloc(sizeof(*pfr), GFP_KERNEL);
 
   if(!(pfr = ring_sk(sk)))
     goto free_sk;
@@ -6478,8 +6477,13 @@ static int ring_mmap(struct file *file,
 
 /* ************************************* */
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
 static int ring_recvmsg(struct kiocb *iocb, struct socket *sock,
 			struct msghdr *msg, size_t len, int flags)
+#else
+static int ring_recvmsg(struct socket *sock,
+			struct msghdr *msg, size_t len, int flags)
+#endif
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   u_int32_t queued_pkts, num_loops = 0;
@@ -6531,8 +6535,13 @@ static int pf_ring_inject_packet_to_stack(struct net_device *netdev, struct msgh
 /* ************************************* */
 
 /* This code is mostly coming from af_packet.c */
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
 static int ring_sendmsg(struct kiocb *iocb, struct socket *sock,
 			struct msghdr *msg, size_t len)
+#else
+static int ring_sendmsg(struct socket *sock,
+			struct msghdr *msg, size_t len)
+#endif
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   struct sockaddr_pkt *saddr;
@@ -6773,7 +6782,7 @@ int add_sock_to_cluster_list(ring_cluster_element * el, struct sock *sock)
   if(el->cluster.num_cluster_elements == CLUSTER_LEN)
     return(-1);	/* Cluster full */
 
-  ring_sk_datatype(ring_sk(sock))->cluster_id = el->cluster.cluster_id;
+  ring_sk(sock)->cluster_id = el->cluster.cluster_id;
   el->cluster.sk[el->cluster.num_cluster_elements] = sock;
   el->cluster.num_cluster_elements++;
   return(0);
