@@ -1523,9 +1523,9 @@ int pfring_search_payload(pfring *ring, char *string_to_search) {
 
 /* **************************************************** */
 
-int pfring_recv_chunk(pfring *ring, void **chunk, u_int32_t *chunk_len, u_int8_t wait_for_incoming_chunk) {
+int pfring_recv_chunk(pfring *ring, void **chunk, pfring_chunk_info *chunk_info, u_int8_t wait_for_incoming_chunk) {
   if(ring && ring->recv_chunk)
-    return(ring->recv_chunk(ring, chunk, chunk_len, wait_for_incoming_chunk));
+    return(ring->recv_chunk(ring, chunk, pfring_chunk_info *chunk_info, wait_for_incoming_chunk));
 
   return(PF_RING_ERROR_NOT_SUPPORTED);
 }
