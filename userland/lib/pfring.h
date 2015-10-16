@@ -161,11 +161,24 @@ typedef enum {
 /* ********************************* */
 
 typedef enum {
-  full_packet = 0,
-  slice_l2 = 2,
-  slice_l3 = 3,
-  slice_l4 = 4
+  FULL_PACKET_SLICING = 0,
+  L2_SLICING = 2,
+  L3_SLICING = 3,
+  L4_SLICING = 4
 } packet_slicing_level;
+
+/* ********************************* */
+
+typedef enum {
+  PCAP_CHUNK,
+  PCAP_NSEC_CHUNK,
+  UNKNOWN_CHUNK_TYPE
+} pfring_chunk_type;
+
+typedef struct {
+  u_int32_t length;
+  pfring_chunk_type type;
+} pfring_chunk_info;
 
 /* ********************************* */
 
@@ -302,7 +315,7 @@ struct __pfring {
   int       (*send_pkt_buff)                (pfring *, pfring_pkt_buff *, u_int8_t);
   void      (*flush_tx_packets)             (pfring *);
   int       (*register_zerocopy_tx_ring)    (pfring *, pfring *);
-  int       (*recv_chunk)                   (pfring *, void **chunk, u_int32_t *chunk_len, u_int8_t wait_for_incoming_chunk); 
+  int       (*recv_chunk)                   (pfring *, void **, pfring_chunk_info *, u_int8_t); 
   int       (*set_bound_dev_name)           (pfring *, char*);
 
   /* DNA only */
@@ -1303,11 +1316,11 @@ int pfring_print_pkt(char *buff, u_int buff_len, const u_char *p, u_int len, u_i
  * Receive a packet chunk, if enabled via pfring_open() flag.
  * @param ring                      The PF_RING handle.
  * @param chunk                     A buffer that will point to the received chunk. Note that the chunk format is adapter specific.
- * @param chunk_len                 Length of the received data chunk.
+ * @param chunk_info                Informations about the chunk content and length.
  * @param wait_for_incoming_chunk   If 0 active wait is used to check the packet availability.
  * @return 0 on success, a negative value otherwise.
  */
-int pfring_recv_chunk(pfring *ring, void **chunk, u_int32_t *chunk_len, u_int8_t wait_for_incoming_chunk);
+int pfring_recv_chunk(pfring *ring, void **chunk, pfring_chunk_info *chunk_info, u_int8_t wait_for_incoming_chunk);
 
  /**
  * Set a custom device name to which the socket is bound. This function should be called for devices that are not visible via ifconfig
