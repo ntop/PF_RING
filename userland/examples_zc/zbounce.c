@@ -59,6 +59,9 @@ struct dir_info {
   u_int64_t numPkts;
   u_int64_t numBytes;
   
+  char *in_dev;
+  char *out_dev;
+
   int bind_core;
   pthread_t thread
   __attribute__((__aligned__(64)));
@@ -170,9 +173,11 @@ void *packet_consumer_thread(void *_i) {
 
       if (unlikely(verbose)) {
 #if 1
-        char bigbuf[4096];
-        pfring_print_pkt(bigbuf, sizeof(bigbuf), pfring_zc_pkt_buff_data(i->tmpbuff, i->inzq), i->tmpbuff->len, i->tmpbuff->len);
-        fputs(bigbuf, stdout);
+        char strbuf[4096];
+        int strlen = sizeof(strbuf);
+        int strused = snprintf(strbuf, strlen, "[%s -> %s]", i->in_dev, i->out_dev);
+        pfring_print_pkt(&strbuf[strused], strlen - strused, pfring_zc_pkt_buff_data(i->tmpbuff, i->inzq), i->tmpbuff->len, i->tmpbuff->len);
+        fputs(strbuf, stdout);
 #else
 	u_char *pkt_data = pfring_zc_pkt_buff_data(i->tmpbuff, i->inzq);
         int j;
@@ -211,6 +216,9 @@ void *packet_consumer_thread(void *_i) {
 
 int init_direction(struct dir_info *i, char *in_dev, char *out_dev) {
 
+  i->in_dev = in_dev;
+  i->out_dev = out_dev;
+
   i->tmpbuff = pfring_zc_get_packet_handle(zc);
 
   if (i->tmpbuff == NULL) {
@@ -240,7 +248,8 @@ int init_direction(struct dir_info *i, char *in_dev, char *out_dev) {
 /* *************************************** */
 
 int main(int argc, char* argv[]) {
-  char *device1 = NULL, *device2 = NULL, *bind_mask = NULL, c;
+  char *device1 = NULL, *device2 = NULL;
+  char *bind_mask = NULL, c;
   int cluster_id = -1;
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 
