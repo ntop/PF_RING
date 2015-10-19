@@ -585,7 +585,7 @@ void* chunk_consumer_thread(void* _id) {
   long thread_id = (long)_id;
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
   void *chunk_p = NULL;
-  u_int32_t chunk_len;
+  pfring_chunk_info chunk_info;
 
   u_long core_id = thread_id % numCPU;
   struct pfring_pkthdr hdr;
@@ -602,9 +602,9 @@ void* chunk_consumer_thread(void* _id) {
   while(1) {
     if(stats->do_shutdown) break;
 
-    if(pfring_recv_chunk(pd, &chunk_p, &chunk_len, wait_for_packet) > 0) {
+    if(pfring_recv_chunk(pd, &chunk_p, &chunk_info, wait_for_packet) > 0) {
       if(stats->do_shutdown) break;
-      stats->numPkts[thread_id]++, stats->numBytes[thread_id] += chunk_len;
+      stats->numPkts[thread_id]++, stats->numBytes[thread_id] += chunk_info.length;
     } else {
       if(wait_for_packet == 0) sched_yield();
     }
