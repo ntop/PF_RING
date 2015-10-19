@@ -169,7 +169,7 @@ static rwlock_t virtual_filtering_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t)__RW_LOCK_UNLOCKED(virtual_filtering_lock)
+  __RW_LOCK_UNLOCKED(virtual_filtering_lock)
 #endif
 ;
 
@@ -179,7 +179,7 @@ static rwlock_t ring_cluster_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t)__RW_LOCK_UNLOCKED(virtual_filtering_lock)
+  __RW_LOCK_UNLOCKED(virtual_filtering_lock)
 #endif
 ;
 
@@ -210,7 +210,7 @@ static rwlock_t cluster_fragments_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t)__RW_LOCK_UNLOCKED(cluster_fragments_lock)
+  __RW_LOCK_UNLOCKED(cluster_fragments_lock)
 #endif
 ;
 
@@ -229,7 +229,7 @@ static rwlock_t dna_cluster_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t) __RW_LOCK_UNLOCKED(dna_cluster_lock)
+  __RW_LOCK_UNLOCKED(dna_cluster_lock)
 #endif
 ;
 
@@ -239,7 +239,7 @@ static rwlock_t cluster_referee_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t) __RW_LOCK_UNLOCKED(cluster_referee_lock)
+  __RW_LOCK_UNLOCKED(cluster_referee_lock)
 #endif
 ;
 
@@ -247,7 +247,7 @@ static rwlock_t ring_proc_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t)__RW_LOCK_UNLOCKED(ring_proc_lock)
+  __RW_LOCK_UNLOCKED(ring_proc_lock)
 #endif
 ;
 
@@ -285,7 +285,7 @@ static inline void init_ring_readers(void)      {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
     RW_LOCK_UNLOCKED
 #else
-    (rwlock_t) __RW_LOCK_UNLOCKED(ring_mgmt_lock)
+    __RW_LOCK_UNLOCKED(ring_mgmt_lock)
 #endif
     ;
 }
@@ -517,7 +517,7 @@ void init_lockless_list(lockless_list *l)
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
     RW_LOCK_UNLOCKED
 #else
-    (rwlock_t) __RW_LOCK_UNLOCKED(l->list_lock)
+    __RW_LOCK_UNLOCKED(l->list_lock)
 #endif
     ;
 }
