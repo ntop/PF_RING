@@ -7381,10 +7381,10 @@ int setSocketStats(struct pf_ring_socket *s)
 
 /* ************************************* */
 
-#if defined(RHEL_RELEASE_CODE)
+#if defined(RHEL_RELEASE_CODE) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 
 /* sk_attach_filter/sk_detach_filter for some reason is undefined on CentOS
- * code from core/sock.c */
+ * code from core/sock.c kernel 2.x */
 
 static void sk_filter_rcu_release(struct rcu_head *rcu)
 {
