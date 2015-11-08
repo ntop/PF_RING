@@ -1,0 +1,226 @@
+.\" LICENSE
+.\"
+.\" This software program is released under the terms of a license agreement between you ('Licensee') and Intel. Do not use or load this software or any associated materials (collectively, the 'Software') until you have carefully read the full terms and conditions of the LICENSE located in this software package. By loading or using the Software, you agree to the terms of this Agreement. If you do not agree with the terms of this Agreement, do not install or use the Software.
+.\"
+.\" * Other names and brands may be claimed as the property of others.
+.\"
+.TH ixgbe 1 "April 1, 2013"
+
+.SH NAME
+ixgbe \-This file describes the Linux* Base Driver for the 10 Gigabit Family of Adapters.
+.SH SYNOPSIS
+.PD 0.4v
+modprobe ixgbe [<option>=<VAL1>,<VAL2>,...]
+.br
+.PD 1v
+.LP
+.SH DESCRIPTION
+This driver supports the \fB2.6.x\fR kernel, and includes support for any Linux supported system, including Itanium(R)2, x86_64, i686, and PPC
+.LP
+This driver is only supported as a loadable module at this time. Intel is not supplying patches against the kernel source to allow for static linking of the driver. For questions related to hardware requirements, refer to the documentation supplied with your 10 Gigabit adapter. All hardware requirements listed apply to use with Linux.
+.SH OPTIONS
+The following optional parameters are used by entering them on the command line with the modprobe command. For example:
+.IP
+.B modprobe ixgbe InterruptThrottleRate=16000,16000
+.PP
+.LP
+.B RSS - Receive Side Scaling (or multiple queues for receives)
+.IP
+.B Valid Range:
+0 - 16
+.br
+.B Default Value:
+0
+.IP
+0 = Sets the descriptor queue count to whichever is less, number of CPUS or 16
+1-16 = Sets the descriptor queue count to 1-16
+.IP
+RSS also effects the number of transmit queues allocated on 2.6.23 and      
+newer kernels with CONFIG_NETDEVICES_MULTIQUEUE set in the kernel .config file.
+CONFIG_NETDEVICES_MULTIQUEUE only exists from 2.6.23 to 2.6.26.  Other options 
+enable multiqueue in 2.6.27 and newer kernels.     
+.LP
+.B MQ - Multi Queue
+.IP
+.LP
+.B Valid Range:
+0, 1
+.IP
+.B Default Value: 
+1
+.IP
+0 = Disables Multiple Queue support
+1 = Enabled Multiple Queue support (a prerequisite for RSS)
+.LP
+.B DCA - Direct Cache Access 
+.IP
+.B Valid Range: 
+0, 1
+.IP
+.B Default Value:
+1 (when IXGBE_DCA is enabled)
+0 = Disables DCA support in the driver
+1 = Enables DCA support in the driver
+.IP
+See the instructions in the README for enabling DCA.  If the driver is enabled for
+DCA this parameter allows load-time control of the feature.
+.LP
+.B IntMode
+.IP
+.B Valid Range: 
+0-2 0 = Legacy Int, 1 = MSI and 2 = MSIX
+.br
+.B Default Value: 
+2
+.IP
+IntMode controls allow load time control over the type of interrupt
+registered for by the driver.  MSI-X is required for multiple queue
+support, and some kernels and combinations of kernel .config options will
+force a lower level of interrupt support.  'cat /proc/interrupts' will show
+different values for each type of interrupt. 
+.LP
+.B InterruptThrottleRate
+.IP
+.B Valid Range: 
+956-488281 (0=off, 1=dynamic)
+.br
+.B Default Value: 1
+.IP
+Interrupt Throttle Rate (interrupts/sec)
+.br
+The ITR parameter controls how many interrupts each interrupt vector can
+generate per second.  On MQ/RSS enabled kernels with MSI-X interrupts this
+means that each RX vector can generate (by default) 8000 interrupts per second
+and each TX vector can generate (by default) 4000 interrupts per second.
+Increasing ITR lowers latency at the cost of increased CPU utilization, though
+it may help throughput in some circumstances.
+.br
+1 = Dynamic mode attempts to moderate interrupts per vector while maintaining
+very low latency.  This can sometimes cause extra CPU utilization.  If planning
+on deploying ixgbe in a latency sensitive environment please consider this
+parameter.
+.br
+0 = Setting InterruptThrottleRate to 0 turns off any interrupt moderation and 
+may improve small packet latency, but is generally not suitable for bulk 
+throughput traffic due to the increased cpu utilization of the higher interrupt
+rate. Please note that on 82599-based adapters, disabling InterruptThrottleRate
+will also result in the driver disabling HW RSC. On 82598-based adapters, 
+disabling InterruptThrottleRate will also result in disabling LRO (Large Receive
+Offloads). 
+.LP
+.B LLIPort
+.IP
+.B Valid Range: 
+0-65535
+.br
+.B Default Value: 
+0 (disabled)
+.IP
+LLI is configured with the LLIPort command-line parameter, which specifies which TCP port should generate Low Latency Interrupts. For example, using LLIPort=80 would cause the board to generate an immediate interrupt upon receipt of any packet sent to TCP port 80 on the local machine.
+.IP
+WARNING: Enabling LLI can result in an excessive number of interrupts/second 
+that may cause problems with the system and in some cases may cause a kernel 
+panic.
+.LP
+.B LLIPush
+.IP
+.B Valid Range: 
+0-1
+.br
+.B Default Value: 
+0 (disabled)
+.IP
+LLIPush can be set to be enabled or disabled (default). It is most effective in 
+an environment with many small transactions. NOTE: Enabling LLIPush may allow a
+denial of service attack.
+.LP
+.B LLISize
+.IP
+.B Valid Range: 
+0-1500
+.br
+.B Default Value: 
+0 (disabled)
+.IP
+LLISize causes an immediate interrupt if the board receives a packet smaller 
+than the specified size.
+.LP
+.B LLIEType
+.IP
+.B Valid Range: 
+0-x8fff
+.br
+.B Default Value: 
+0 (disabled)
+.IP
+Low Latency Interrupt Ethernet Protocol Type.
+.LP
+.B LLIVLANP
+.IP
+.B Valid Range: 
+0-7
+.br
+.B Default Value: 
+0 (disabled)
+.IP
+Low Latency Interrupt on VLAN priority threshold.
+.LP
+.B FdirPballoc
+.IP
+.B Valid Range: 
+0-2 (0=64k, 1=128k, 2=256k)
+.br
+.B Default Value: 
+0
+.IP
+Flow Director allocated packet buffer size.
+.LP
+.B AtrSampleRate
+.IP
+.B Valid Range: 
+0-255
+.br
+.B Default Value: 
+20
+.IP
+Software ATR Tx packet sample rate. For example, when set to 20, every 20th
+packet, looks to see if the packet will create a new flow.
+.LP
+.B L2LBen
+.IP
+.B Valid Range: 
+0 = disable, 1 = enable
+.br
+.B Default Value:
+1 (enable)
+.IP
+This parameter controls the internal switch (L2 loopback between pf and vf).
+By default the switch is enabled.
+.LP
+.B LRO
+.IP
+Enable/disable Large Receive Offload.
+.B Valid Range: 
+0(off), 1(on)
+.B Default Value: 
+1
+.LP
+.SH JUMBO FRAMES
+The driver supports Jumbo Frames for all adapters. Jumbo Frames support is enabled by changing the MTU to a value larger than the default of 1500. Use the ifconfig command to increase the MTU size. For example, enter the following where <x> is the interface number:
+.IP
+ifconfig eth<x> mtu 9000 up
+.IP
+The maximum MTU setting for Jumbo Frames is 9710.  This value coincides
+with the maximum Jumbo Frames size of 9728. This driver will attempt to
+use multiple page sized buffers to receive each jumbo packet.  This
+should help to avoid buffer starvation issues when allocating receive
+packets.
+.SH SUPPORT
+For additional information, including supported adapters, building, and installation, see the README file included with the driver.
+.LP
+For general information and support, go to the Intel support website at:
+.IP
+.B http://support.intel.com
+.LP
+If an issue is identified with the released source code on the supported kernel with a supported adapter, email the specific information related to the issue to linux.nics@intel.com.
+.LP

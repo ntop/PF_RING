@@ -10,6 +10,10 @@ Napatech module when configuring/compiling the pf_ring library.
 For the impatient, in order to get up and running with Napatech just run 
 the following commands:
 
+ $ cd /opt/napatech3/bin
+ $ ./ntload.sh 
+ $ ./ntstart.sh 
+
  $ cd PF_RING/kernel
  $ make
  $ sudo insmod pf_ring.ko

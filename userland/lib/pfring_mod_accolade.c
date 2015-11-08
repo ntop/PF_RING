@@ -119,8 +119,8 @@ int pfring_anic_open(pfring *ring) {
 
   if (accolade->anic_handle->product_info.product_id == ANIC_PRODUCT_ID_40K3_QUAD10G_PACKET_CAPTURE_NIC) {
     accolade->portCount = 4;
-  } else if (accolade->anic_handle->product_info.product_id == ANIC_PRODUCT_ID_200K_DUAL100G_PACKET_CAPTURE_NIC) {
-    accolade->portCount = 2;
+  } else if (accolade->anic_handle->product_info.product_id == ANIC_PRODUCT_ID_200K_DUAL100G_PACKET_CAPTURE_NIC) {    
+    accolade->portCount = 2;   
   } else {
     fprintf(stderr, "Unsupportd product_id:0x%02x\n", accolade->anic_handle->product_info.product_id);
     goto free_private; 
@@ -136,6 +136,12 @@ int pfring_anic_open(pfring *ring) {
 
   anic_pduproc_steer(accolade->anic_handle, ANIC_STEER0123);
   anic_pduproc_dma_pktseq(accolade->anic_handle, 1);
+
+
+  if (accolade->anic_handle->product_info.product_id == ANIC_PRODUCT_ID_200K_DUAL100G_PACKET_CAPTURE_NIC) {    
+    uint32_t pktif_csr = anic_read_u32(accolade->anic_handle->iom_base, 0x10000);
+    anic_write_u32(accolade->anic_handle->iom_base, 0x10000, pktif_csr | 0xc0000); // set [19:18]     
+  }
 
   //if (slice)
   //  anic_pduproc_slice(accolade->anic_handle, slice);
