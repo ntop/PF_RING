@@ -4813,7 +4813,7 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
   u_int8_t skb_reference_in_use = 0;
 
   if (skb->pkt_type != PACKET_LOOPBACK 
-      && !active_zc_socket[dev->ifindex] /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */ ) {
+      && !(skb->pkt_type != PACKET_OUTGOING && active_zc_socket[dev->ifindex]) /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */ ) {
     rc = skb_ring_handler(skb,
 			  (skb->pkt_type == PACKET_OUTGOING) ? 0 : 1,
 			  1 /* real_skb */, &skb_reference_in_use,
