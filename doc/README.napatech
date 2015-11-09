@@ -33,12 +33,16 @@ Please note that:
    "nt:0", in order to open stream 0 you should speficy "nt:stream0"
  - streams  can be created using the ntpl tool (ntpl -e "<command>")
    Command example for ports (2 and 3) aggregation on a single stream (1):
-     Assign[streamid=1] = port == 2,3
+     ntpl -e "Assign[streamid=1] = port == 2,3"
    Command example for load balancing of all ports across 16 streams:
-     Delete=All
-     HashMode=Hash2TupleSorted
-     Assign[StreamId=(0..15)]=All
+     ntpl -e "Delete = All"
+     ntpl -e "HashMode = Hash2TupleSorted"
+     ntpl -e "Assign[StreamId=(0..15)] = All"
+   Command example for load balancing port 0 across 4 streams:
+     ntpl -e "Delete = All"
+     ntpl -e "HashMode = Hash2TupleSorted"
+     ntpl -e "Assign[StreamId=(0..3)] = port == 0"
  - in order to use the Napatech adapter with n2disk the configuration file
-   /opt/napatech3.bkp/config/ntservice.ini should contain:
+   /opt/napatech3/config/ntservice.ini should contain:
      TimestampFormat = PCAP_NS
      PacketDescriptor = PCAP
