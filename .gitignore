@@ -42,7 +42,7 @@ config.status
 .libs/
 libtool
 stamp-h1
-Makefile
+#Makefile FIXX not all makefiles should be ignored
 *.dat
 .tmp_versions
 *.manmisc
