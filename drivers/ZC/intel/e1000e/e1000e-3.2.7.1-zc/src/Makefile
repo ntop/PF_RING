@@ -1,7 +1,7 @@
 ################################################################################
 #
-# Intel 10 Gigabit PCI Express Linux driver
-# Copyright (c) 1999 - 2014 Intel Corporation.
+# Intel PRO/1000 Linux driver
+# Copyright(c) 1999 - 2015 Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -24,29 +24,19 @@
 
 ###########################################################################
 # Driver files
+FAMILYC = 82571.c ich8lan.c 80003es2lan.c
+FAMILYH = 82571.h ich8lan.h 80003es2lan.h
 
 # core driver files
-CFILES = ixgbe_main.c ixgbe_common.c ixgbe_api.c ixgbe_param.c \
-         ixgbe_lib.c ixgbe_ethtool.c kcompat.c ixgbe_82598.c \
-         ixgbe_82599.c ixgbe_x540.c \
-	 ixgbe_x550.c \
-         ixgbe_sriov.c ixgbe_mbx.c \
-         ixgbe_dcb.c ixgbe_dcb_82598.c \
-         ixgbe_dcb_82599.c \
-         ixgbe_sysfs.c \
-         ixgbe_procfs.c \
-         ixgbe_phy.c
-
-HFILES = ixgbe.h ixgbe_common.h ixgbe_api.h ixgbe_osdep.h kcompat.h \
-         ixgbe_sriov.h ixgbe_mbx.h \
-         ixgbe_dcb.h \
-         ixgbe_phy.h
+CFILES = netdev.c ethtool.c param.c $(FAMILYC) \
+         mac.c nvm.c phy.c manage.c kcompat.c
+HFILES = e1000.h hw.h regs.h defines.h \
+         mac.h nvm.h phy.h manage.h $(FAMILYH) kcompat.h
 ifeq (,$(BUILD_KERNEL))
 BUILD_KERNEL=$(shell uname -r)
 endif
 
-DRIVER_NAME=ixgbe
-
+DRIVER_NAME = e1000e
 
 ###########################################################################
 # Environment tests
@@ -55,6 +45,7 @@ DRIVER_NAME=ixgbe
 # All the places we look for kernel source
 KSP :=  /lib/modules/$(BUILD_KERNEL)/build \
         /lib/modules/$(BUILD_KERNEL)/source \
+        /lib/modules/$(BUILD_KERNEL)-default/build \
         /usr/src/linux-$(BUILD_KERNEL) \
         /usr/src/linux-$($(BUILD_KERNEL) | sed 's/-.*//') \
         /usr/src/kernel-headers-$(BUILD_KERNEL) \
@@ -88,7 +79,7 @@ endif
 VSP :=  $(KOBJ)/include/generated/utsrelease.h \
         $(KOBJ)/include/linux/utsrelease.h \
         $(KOBJ)/include/linux/version.h \
-	$(KOBJ)/include/generated/uapi/linux/version.h \
+        $(KOBJ)/include/generated/uapi/linux/version.h \
         /boot/vmlinuz.version.h
 
 # Config file Search Path
@@ -130,12 +121,6 @@ ifeq (,$(CC))
   $(error Compiler not found)
 endif
 
-# check for ubuntu kernel 3.13.0-24 (HAVE_PF_RING)
-IS_UBUNTU_3_13_PRE := $(shell uname -a | grep 3.13.0-24 | wc -l)
-ifeq (1,$(IS_UBUNTU_3_13_PRE))
-  EXTRA_CFLAGS += -DUBUNTU_3_13_PRE
-endif
-
 # we need to know what platform the driver is being built on
 # some additional features are only built on Intel platforms
 ARCH := $(shell uname -m | sed 's/i.86/i386/')
@@ -159,46 +144,19 @@ EXTRA_CFLAGS += -DDRIVER_NAME=$(DRIVER_NAME)
 EXTRA_CFLAGS += -DDRIVER_NAME_CAPS=$(shell echo $(DRIVER_NAME) | tr '[a-z]' '[A-Z]')
 # standard flags for module builds
 EXTRA_CFLAGS += -DLINUX -D__KERNEL__ -DMODULE -O2 -pipe -Wall
-EXTRA_CFLAGS += $(shell [ -d $(KSRC)/generated/uapi ] && \
-                        echo "$(KSRC)/generated/uapi")
 EXTRA_CFLAGS += -I$(KSRC)/include -I.
 EXTRA_CFLAGS += $(shell [ -f $(KSRC)/include/linux/modversions.h ] && \
-                        echo "-DMODVERSIONS -DEXPORT_SYMTAB \
-                              -include $(KSRC)/include/linux/modversions.h")
-EXTRA_CFLAGS += -DHAVE_PF_RING -DIXGBE_NO_HW_RSC -DDISABLE_PACKET_SPLIT #-DDISABLE_NETIF_F_HW_VLAN_TX
+            echo "-DMODVERSIONS -DEXPORT_SYMTAB \
+                  -include $(KSRC)/include/linux/modversions.h")
 
-# Some helper functions for converting kernel version to version codes
-get_kver = $(or $(word ${2},$(subst ., ,${1})),0)
-get_kvercode = $(shell [ "${1}" -ge 0 -a "${1}" -le 255 2>/dev/null ] && \
-                       [ "${2}" -ge 0 -a "${2}" -le 255 2>/dev/null ] && \
-                       [ "${3}" -ge 0 -a "${3}" -le 255 2>/dev/null ] && \
-                       printf %d $$(( ( ${1} << 16 ) + ( ${2} << 8 ) + ( ${3} ) )) )
-
-# The following command line parameter is intended for development of KCOMPAT
-# against upstream kernels such as net-next which have broken or non-updated
-# version codes in their Makefile. They are intended for debugging and
-# development purpose only so that we can easily test new KCOMPAT early. If you
-# don't know what this means, you do not need to set this flag. There is no
-# arcane magic here.
-
-# Convert LINUX_VERSION into LINUX_VERSION_CODE
-ifneq (${LINUX_VERSION},)
-  LINUX_VERSION_CODE=$(call get_kvercode,$(call get_kver,${LINUX_VERSION},1),$(call get_kver,${LINUX_VERSION},2),$(call get_kver,${LINUX_VERSION},3))
-endif
-
-# Honor LINUX_VERSION_CODE
-ifneq (${LINUX_VERSION_CODE},)
-  $(warning Forcing target kernel's LINUX_VERSION_CODE to ${LINUX_VERSION_CODE}$(if ${LINUX_VERSION}, from LINUX_VERSION=${LINUX_VERSION}). Do this at your owk risk.)
-  KVER_CODE := ${LINUX_VERSION_CODE}
-  EXTRA_CFLAGS += -DLINUX_VERSION_CODE=${LINUX_VERSION_CODE}
-endif
+EXTRA_CFLAGS += -DHAVE_PF_RING
 
 EXTRA_CFLAGS += $(CFLAGS_EXTRA)
 
 RHC := $(KSRC)/include/linux/rhconfig.h
 ifneq (,$(wildcard $(RHC)))
   # 7.3 typo in rhconfig.h
-  ifneq (,$(shell $(CC) $(CFLAGS) -E -dM $(RHC) | grep __module__bigmem))
+  ifneq (,$(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(RHC) | grep __module__bigmem))
 	EXTRA_CFLAGS += -D__module_bigmem
   endif
 endif
@@ -209,26 +167,16 @@ KVER := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VERSION_FILE) | grep UTS_RELEASE 
 
 # assume source symlink is the same as build, otherwise adjust KOBJ
 ifneq (,$(wildcard /lib/modules/$(KVER)/build))
-ifneq ($(KSRC),$(shell readlink /lib/modules/$(KVER)/build))
+ifneq ($(KSRC),$(shell cd /lib/modules/$(KVER)/build ; pwd -P))
   KOBJ=/lib/modules/$(KVER)/build
 endif
 endif
 
-ifeq (${KVER_CODE},)
-  KVER_CODE := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VSP) 2>/dev/null |\
-                 grep -m 1 LINUX_VERSION_CODE | awk '{ print $$3 }' | sed 's/\"//g')
-endif
-
-ifeq ($(strip $(KVER_CODE)),)
-KVER_CODE := 0
-endif
+KVER_CODE := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VSP) 2>/dev/null |\
+	grep -m 1 LINUX_VERSION_CODE | awk '{ print $$3 }' | sed 's/\"//g')
 
 RHEL_CODE := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VSP) 2>/dev/null |\
 	grep -m 1 RHEL_RELEASE_CODE | awk '{ print $$3 }')
-
-ifeq ($(strip $(RHEL_CODE)),)
-RHEL_CODE := 0
-endif
 
 # abort the build on kernels older than 2.4.0
 ifneq (1,$(shell [ $(KVER_CODE) -ge 132096 ] && echo 1 || echo 0))
@@ -236,38 +184,18 @@ ifneq (1,$(shell [ $(KVER_CODE) -ge 132096 ] && echo 1 || echo 0))
           *** This driver is not supported on kernel versions older than 2.4.0)
 endif
 
-# Add DCB netlink source if our kernel is 2.6.23 or newer
-ifeq (1,$(shell [ $(KVER_CODE) -ge 132631 ] && echo 1 || echo 0))
-  CFILES += ixgbe_dcb_nl.c
-endif
-
-# Add FCoE source if FCoE is supported by the kernel
-FCOE := $(shell grep -wE 'CONFIG_FCOE|CONFIG_FCOE_MODULE' $(CONFIG_FILE) | \
-	awk '{print $$3}')
-ifeq ($(FCOE), 1)
-  CFILES += ixgbe_fcoe.c
-  HFILES += ixgbe_fcoe.h
-endif
-
-# Add Debug FS source if DEBUG_FS is supported by the kernel
-DEBUGFS := $(shell grep -wE 'CONFIG_DEBUG_FS' $(CONFIG_FILE) | \
-	awk '{print $$3}')
-ifeq ($(DEBUGFS), 1)
-  CFILES += ixgbe_debugfs.c
-endif
-
-# Use NO_PTP_SUPPORT flag to disable IEEE-1588 PTP (Documented in README)
+# Use NO_PTP_SUPPORT compile flag to disable IEEE-1588 PTP(documented in README)
 ifneq ($(filter %NO_PTP_SUPPORT,$(CFLAGS_EXTRA)),-DNO_PTP_SUPPORT)
-# Do not attempt to enable PTP in kernels which do not have support
+# Do not attempt to enable PTP on kernels that do not support it
 ifeq (1,$(shell ([ $(KVER_CODE) -ge 196608 ] || [ $(RHEL_CODE) -ge 1540 ]) && echo 1 || echo 0))
 include $(KOBJ)/include/config/auto.conf
 ifdef CONFIG_PTP_1588_CLOCK
-CFILES += ixgbe_ptp.c
+CFILES += ptp.c
 endif # CONFIG_PTP_1588_CLOCK
 endif # kernel version >= 3.0
-endif # !NO_PTP_SUPPORT
+endif # NO_PTP_SUPPORT
 
-# set the install path before and after 3.2.0
+# set the install path
 ifeq (1,$(shell [ $(KVER_CODE) -lt 197120 ] && echo 1 || echo 0))
 INSTDIR := /lib/modules/$(KVER)/kernel/drivers/net/$(DRIVER_NAME)
 else
@@ -298,7 +226,6 @@ endif
 ifeq ($(SMP),1)
   EXTRA_CFLAGS += -D__SMP__
 endif
-
 
 ###########################################################################
 # Kernel Version Specific rules
@@ -409,6 +336,7 @@ else
   endif
 endif
 	install -D -m 644 $(MANFILE).gz $(INSTALL_MOD_PATH)$(MANDIR)/man$(MANSECTION)/$(MANFILE).gz
+	man -c -P'cat > /dev/null' $(MANFILE:.$(MANSECTION)=) || true
 
 uninstall:
 	if [ -e $(INSTDIR)/$(TARGET) ] ; then \
@@ -421,10 +349,13 @@ uninstall:
 
 .PHONY: clean install
 
+ksrc:
+	@echo $(KSRC)
+
 clean:
 ifeq ($(KOBJ),$(KSRC))
 	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) clean
 else
 	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) clean
 endif
-	rm -rf $(TARGET) $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions
+	rm -rf $(TARGET) $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions Module.markers Module.symvers modules.order
