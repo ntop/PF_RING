@@ -2903,7 +2903,9 @@ static inline int _kc_pm_runtime_get_sync(struct device __always_unused *dev)
      (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,6)) && \
      (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)))
 #define HAVE_RHEL6_NET_DEVICE_OPS_EXT
+#if (RHEL_RELEASE_CODE != RHEL_RELEASE_VERSION(6,7)) /* HAVE_PF_RING patch for centos 6 */
 #define HAVE_NDO_SET_FEATURES
+#endif
 #endif /* RHEL >= 6.6 && RHEL < 7.0 */
 #if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
 #ifndef HAVE_NETDEV_OPS_FCOE_ENABLE
