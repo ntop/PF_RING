@@ -1,16 +1,10 @@
-Available PF_RING-aware drivers:
+Available PF_RING ZC Intel drivers:
 
-e1000 drivers
-- e1000-8.0.35/
+e1000e (1 Gbit - PCI Express-only) 8254x/8256x/8257x/8258x
 
-e1000e (PCI Express-only) driver
-- e1000e-2.5.4-zc/
+igb (1 Gbit) 82575/82576/82580/I350
 
-igb (1 Gbit) 82575/6
-- igb-5.0.6-zc/
+ixgbe (10 Gbit) 82599/X520/X540 
 
-ixgbe (10 Gbit) 82598/9
-- ixgbe-3.18.7-zc/
-
-Drivers with the 'zc' suffix do support PF_RING ZC.
+i40e (10/40 Gbit) X710
 

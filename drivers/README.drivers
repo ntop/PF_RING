@@ -1,10 +1,9 @@
 This directory contains two family of drivers:
 
-- PF_RING_aware/
-Standard drivers that have been enhanced with PF_RING native support.
-These drivers support PF_RING ZC, they can be used as standard drivers, 
-or in zero-copy mode (same as DNA) opening the device with the 'zc:' 
-prefix (e.g. zc:eth1). 
+- ZC/
+Standard drivers that have been enhanced with PF_RING ZC support.
+They can be used as standard drivers, or in zero-copy mode (same as DNA) 
+opening the device with the 'zc:' prefix (e.g. zc:eth1). 
 Please note that opening the device in zero-copy mode disconnects it from 
 the system.
 
