@@ -1,7 +1,7 @@
 E1000=e1000/e1000-8.0.35
-E1000E=e1000e/e1000e-3.2.4.2-zc
+E1000E=e1000e/e1000e-3.2.7.1-zc
 IGB=igb/igb-5.3.2.2-zc
-IXGBE=ixgbe/ixgbe-4.1.2-zc
+IXGBE=ixgbe/ixgbe-4.1.5-zc
 I40E=i40e/i40e-1.3.39.1-zc
 
 all:
