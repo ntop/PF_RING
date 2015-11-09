@@ -40,7 +40,7 @@
 
 static unsigned int allow_tap_1g = 0;
 module_param(allow_tap_1g, uint, 0644);
-module_parm_desc(allow_tap_1g, "allow 1gbit/s tap disabling atonegotiation on 82599 based adapters");
+MODULE_PARM_DESC(allow_tap_1g, "Allow 1Gbit/s TAP disabling atonegotiation on 82599 based adapters");
 #endif
 
 STATIC s32 ixgbe_setup_copper_link_82599(struct ixgbe_hw *hw,
