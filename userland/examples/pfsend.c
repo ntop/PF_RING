@@ -82,7 +82,7 @@ struct udp_header {
 struct packet *pkt_head = NULL;
 pfring  *pd;
 pfring_stat pfringStats;
-char *in_dev = NULL;
+char *device = NULL;
 u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
@@ -362,7 +362,7 @@ int main(int argc, char* argv[]) {
       printHelp();
       break;
     case 'i':
-      in_dev = strdup(optarg);
+      device = strdup(optarg);
       break;
     case 'f':
       pcap_in = strdup(optarg);
@@ -422,7 +422,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if((in_dev == NULL) || (num_balanced_pkts < 1)
+  if((device == NULL) || (num_balanced_pkts < 1)
      || (optind < argc) /* Extra argument */)
     printHelp();
 
@@ -434,11 +434,12 @@ int main(int argc, char* argv[]) {
   if (pidFileName)
     create_pid_file(pidFileName);
 
-  printf("Sending packets on %s\n", in_dev);
+  printf("Sending packets on %s\n", device);
 
-  pd = pfring_open(in_dev, 1500, 0 /* PF_RING_PROMISC */);
+  pd = pfring_open(device, 1500, 0 /* PF_RING_PROMISC */);
   if(pd == NULL) {
-    printf("pfring_open %s error [%s]\n", in_dev, strerror(errno));
+    printf("pfring_open error [%s] (pf_ring not loaded or interface %s is down ?)\n", 
+           strerror(errno), device);
     return(-1);
   } else {
     u_int32_t version;
@@ -689,7 +690,7 @@ int main(int argc, char* argv[]) {
   } else {
     if (!disable_zero_copy) {
       printf("NOT using zero-copy: not supported by this driver");
-      if(strncmp(in_dev, "zc:", 3) == 0)
+      if(strncmp(device, "zc:", 3) == 0)
 	printf(" (please use zsend for zero-copy)");
       printf("\n");
     }
