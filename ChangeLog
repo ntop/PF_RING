@@ -1,3 +1,65 @@
+
+---------------------------------------                                                                                                                                                                             
+2015-11-10 PF_RING 6.2
+
+* PF_RING Library
+ - Accolade Technology support
+ - Myricom/CSPI NICs (ASIC/FPGA) support with APIv4
+ - Napatech module compatibility with ntanl v.4.0.1
+ - New API pfring_set_packet_slicing for packet slicing (hw support when available)
+ - New pfring_open flag PF_RING_ZC_IPONLY_RSS to compute RSS on IP only (not 4-tuple)
+ - Reworked pfring_recv_chunk API to handle generic segments
+ - Packet-mode with Napatech using pfring_recv also when card is configured as PCAP
+ - Improved pfring_print_parsed_pkt with STP support
+ - Fix for capturing tx packets in stack mode
+ - Removed libnuma dependency (using native numa support in PF_RING ZC)
+ - Added pfring_config tool to print includes and libs used in the current PF_RING configuration
+ - Fixed loops in stack mode (e.g. stack injected packets captured from kernel in 1-copy mode)
+ - Fix for IPv6 in pfring_hash_pkt
+ - License update to LGPL 2.1
+
+* ZC Library
+ - New API pfring_zc_set_rxfh_indir to reprogram RSS REdirection TAble
+ - New pfring_zc_open_device flag PF_RING_ZC_DEVICE_CAPTURE_TX to capture also TX direction on standard devices
+ - Fixed e1000e caplen
+ - Fixed i40e TX
+ - Fixed device detach
+ - Fixed DAQ-ZC IPC detach
+ - Fix for re-running recv after a breakloop in pfring_zc_queue_breakloop
+ - Fix for nanoseconds in case of software timestamps with ZC devices
+
+* DNA Library
+ - Fixed cluster queues initialisation in Libzero
+
+* PF_RING-aware Libpcap
+ - Fixed pcap_brekloop (tcpdump now handles sigterm correctly when there is no traffic)
+
+* PF_RING kernel module
+ - Compilation fixes for FC 22 with kernel 4.x
+ - Fixed BPF support in Centos 7 (causing crashes)
+ - Fixed concurrent /proc updates and interface name clashes
+
+* PF_RING-aware/ZC Drivers
+ - New e1000e driver v.3.2.7.1 with kernel 4.x support
+ - New igb driver v.5.3.2.2 with kernel 4.x support
+ - New ixgbe driver v.4.1.5 with kernel 4.x support
+ - New i40e-zc driver v.1.3.39.1 with kernel 4.x support
+ - Fixed rx stats in ifconfig/proc/ifstat/etc.
+ - Fixed stats with X540
+ - ixgbe: forcing drop_en on all queues when an rx queue is open
+
+* DNA Drivers
+ - New e1000e driver v.3.2.4.2
+ - New igb driver v.5.3.2.2
+ - New ixgbe driver v.4.1.2
+ - igb hw timestamp change from 40 bit to 64 bit full timestamp
+
+* Examples
+ - zbounce: printing direction
+ - zbalance_ipc: optimisation to reduce time-pulse thrad load on non-time-sensitive applications
+ - pfsend: linux cooked packets support
+ - pfsend: ability to specify egress rate in pps
+
 ---------------------------------------                                                                                                                                                                             
 2015-03-30 PF_RING 6.0.3
 
