@@ -46,3 +46,11 @@ Please note that:
    /opt/napatech3/config/ntservice.ini should contain:
      TimestampFormat = PCAP_NS
      PacketDescriptor = PCAP
+
+Compiling PF_RING apps with Napatech support on Ubuntu
+------------------------------------------------------
+Please run the command below in order to setup libraries on your Ubuntu system
+
+# sudo su
+# cd /usr/local/lib
+# ln -s /opt/napatech3/lib/* .

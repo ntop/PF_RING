@@ -41,3 +41,11 @@ Please note that:
      anic_rx_block_mfl -i 0 --mode=2 
    Example of port-to-ring (ring 0 is port 0) binding:
      anic_rx_block_mfl -i 0 --mode=port
+
+Compiling PF_RING apps with Accolade support on Ubuntu
+------------------------------------------------------
+Please run the command below in order to setup libraries on your Ubuntu system
+
+# sudo su
+# cd /usr/local/lib
+# ln -s /opt/accolade/lib/* .
