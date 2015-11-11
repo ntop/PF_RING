@@ -2,9 +2,9 @@
 *.tgz
 
 ##### Compiled source
-*.a
+#*.a FIXX not all .a should be ignored
 *.o
-*.so
+#*.so FIXX not all .so should be ignored
 *.lo
 *.la
 *.pyc
