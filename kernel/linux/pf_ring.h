@@ -623,6 +623,11 @@ typedef struct {
   filtering_internals internals;   /* PF_RING internal fields */
 } hash_filtering_rule;
 
+typedef struct {
+  u_int64_t match;
+  u_int64_t miss;
+} hash_filtering_rule_stats;
+
 /* ************************************************* */
 
 typedef struct _sw_filtering_hash_bucket {
@@ -630,6 +635,7 @@ typedef struct _sw_filtering_hash_bucket {
   void                          *plugin_data_ptr; /* ptr to a *continuous* memory area
 						     allocated by the plugin */
   u_int16_t                     plugin_data_ptr_len;
+  u_int64_t                     match; /* number of packets matching the rule */
   struct _sw_filtering_hash_bucket *next;
 } sw_filtering_hash_bucket;
 
@@ -1168,10 +1174,15 @@ struct pf_ring_socket {
 
   int bpfFilter; /* bool */
 
-  /* Sw Filtering Rules */
-  sw_filtering_hash_bucket **sw_filtering_hash;
-  u_int16_t num_sw_filtering_rules;
+  /* Sw Filtering Rules - default policy */
   u_int8_t sw_filtering_rules_default_accept_policy; /* 1=default policy is accept, drop otherwise */
+
+  /* Sw Filtering Rules - hash */
+  sw_filtering_hash_bucket **sw_filtering_hash;
+  u_int64_t sw_filtering_hash_miss;
+
+  /* Sw Filtering Rules - wildcard */
+  u_int16_t num_sw_filtering_rules;
   struct list_head sw_filtering_rules;
 
   /* Hw Filtering Rules */

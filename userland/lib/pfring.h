@@ -840,13 +840,14 @@ int pfring_purge_idle_rules(pfring *ring, u_int16_t inactivity_sec);
  * @param rule      The rule for which stats are read. This needs to be the same rule that has been previously added.
  * @param stats     A buffer allocated by the user that will contain the rule statistics. 
  *                  Please make sure that the buffer is large enough to contain the statistics. 
- *                  Such buffer will contain number of received and dropped packets.
+ *                  Such buffer will contain plugin-defined data in case of kernel plugin, a hash_filtering_rule_stats 
+ *                  struct otherwise.
  * @param stats_len The size (in bytes) of the stats buffer.
  * @return 0 on success, a negative value otherwise (e.g. the rule to be removed does not exist). 
  */
 int pfring_get_hash_filtering_rule_stats(pfring *ring,
 					 hash_filtering_rule* rule,
-					 char* stats, u_int *stats_len);
+					 char *stats, u_int *stats_len);
 
 /**
  * Read statistics of a hash filtering rule. 

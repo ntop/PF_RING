@@ -2368,7 +2368,7 @@ static int parse_pkt(struct sk_buff *skb,
 
 /* ********************************** */
 
-static int hash_bucket_match(sw_filtering_hash_bucket * hash_bucket,
+static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
 			     struct pfring_pkthdr *hdr,
 			     u_char mask_src, u_char mask_dst)
 {
@@ -2431,16 +2431,14 @@ static int hash_bucket_match(sw_filtering_hash_bucket * hash_bucket,
 	    && (memcmp(&hash_bucket->rule.host6_peer_b,
 		       (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
 		       sizeof(ip_addr) == 0)))) {
-        return(1);
-      } else {
-        return(0);
+        return 1;
       }
-    } else {
-      return(1);
+    } else { /* ip_version == 4 */
+      return 1;
     }
-  } else {
-    return(0);
   }
+
+  return 0;
 }
 
 /* ********************************** */
@@ -3661,6 +3659,7 @@ int check_perfect_rules(struct sk_buff *skb,
 
   while(hash_bucket != NULL) {
     if(hash_bucket_match(hash_bucket, hdr, 0, 0)) {
+      hash_bucket->match++;
       hash_found = 1;
       break;
     } else
@@ -4086,7 +4085,8 @@ static int add_skb_to_ring(struct sk_buff *skb,
   if(pfr->sw_filtering_hash != NULL) {
     hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, &free_parse_mem,
 				     parse_memory_buffer, displ, &last_matched_plugin);
-
+    if (!hash_found)
+      pfr->sw_filtering_hash_miss++;
     //if(unlikely(enable_debug))
     //  printk("[PF_RING] check_perfect_rules() returned %d\n", hash_found);
   }
@@ -8490,35 +8490,45 @@ static int ring_getsockopt(struct socket *sock,
 
 	  while(bucket != NULL) {
 	    if(hash_bucket_match_rule(bucket, &rule)) {
-	      u_char *buffer = kmalloc(len, GFP_ATOMIC);
 
-	      if(buffer == NULL) {
-		printk("[PF_RING] so_get_hash_filtering_rule_stats() no memory failure\n");
-		rc = -EFAULT;
-	      } else {
-		if((plugin_registration[rule.plugin_action.plugin_id] == NULL)
-		   ||
-		   (plugin_registration[rule.plugin_action.plugin_id]->pfring_plugin_get_stats == NULL)) {
-		  printk("[PF_RING] Found rule but pluginId %d is not registered\n",
-			 rule.plugin_action.plugin_id);
+              if((plugin_registration[rule.plugin_action.plugin_id] == NULL) ||
+		 (plugin_registration[rule.plugin_action.plugin_id]->pfring_plugin_get_stats == NULL)) {
+		/* no plugin or stats callback, using default stats */
+                hash_filtering_rule_stats hfrs;
+                hfrs.match = bucket->match;
+                hfrs.miss = pfr->sw_filtering_hash_miss;
+		rc = sizeof(hash_filtering_rule_stats);
+                if(copy_to_user(optval, &hfrs, rc)) {
+		  printk("[PF_RING] copy_to_user() failure\n");
 		  rc = -EFAULT;
-		} else
+		}
+	      } else {
+	        u_char *buffer = kmalloc(len, GFP_ATOMIC);
+
+	        if(buffer == NULL) {
+		  printk("[PF_RING] so_get_hash_filtering_rule_stats() no memory failure\n");
+		  rc = -EFAULT;
+                } else {
 		  rc = plugin_registration[rule.plugin_action.plugin_id]->
 		    pfring_plugin_get_stats(pfr, NULL, bucket, buffer, len);
-
-		if(rc > 0) {
-		  if(copy_to_user(optval, buffer, rc)) {
-		    printk("[PF_RING] copy_to_user() failure\n");
-		    rc = -EFAULT;
+                  if(rc > 0) {
+	            if(copy_to_user(optval, buffer, rc)) {
+		      printk("[PF_RING] copy_to_user() failure\n");
+		      rc = -EFAULT;
+		    }
 		  }
-		}
+                  kfree(buffer);
+                }
 	      }
+
 	      break;
-	    } else
-	      bucket = bucket->next;
-	  }	/* while */
+	    }
+
+	    bucket = bucket->next;
+	  } /* while */
 
 	  read_unlock_bh(&pfr->ring_rules_lock);
+
 	} else {
 	  if(unlikely(enable_debug))
 	    printk("[PF_RING] so_get_hash_filtering_rule_stats(): entry not found [hash_idx=%d]\n",
