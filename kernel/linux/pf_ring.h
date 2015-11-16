@@ -1179,10 +1179,12 @@ struct pf_ring_socket {
 
   /* Sw Filtering Rules - hash */
   sw_filtering_hash_bucket **sw_filtering_hash;
+  u_int64_t sw_filtering_hash_match;
   u_int64_t sw_filtering_hash_miss;
+  u_int32_t num_sw_filtering_hash;
 
   /* Sw Filtering Rules - wildcard */
-  u_int16_t num_sw_filtering_rules;
+  u_int32_t num_sw_filtering_rules;
   struct list_head sw_filtering_rules;
 
   /* Hw Filtering Rules */

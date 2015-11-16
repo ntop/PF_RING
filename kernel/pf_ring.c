@@ -1521,8 +1521,11 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
         seq_printf(m, "Sampling Rate      : %d\n", pfr->sample_rate);
         seq_printf(m, "IP Defragment      : %s\n", enable_ip_defrag ? "Yes" : "No");
         seq_printf(m, "BPF Filtering      : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
-        seq_printf(m, "# Sw Filt. Rules   : %d\n", pfr->num_sw_filtering_rules);
-        seq_printf(m, "# Hw Filt. Rules   : %d\n", pfr->num_hw_filtering_rules);
+        seq_printf(m, "Sw Filt Hash Rules : %d\n", pfr->num_sw_filtering_hash);
+        seq_printf(m, "Sw Filt WC Rules   : %d\n", pfr->num_sw_filtering_rules);
+        seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
+        seq_printf(m, "Sw Filt Hash Match : %llu\n", pfr->sw_filtering_hash_match);
+        seq_printf(m, "Sw Filt Hash Miss  : %llu\n", pfr->sw_filtering_hash_miss);
         seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
         seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
       }
@@ -1798,7 +1801,7 @@ static int ring_alloc_mem(struct sock *sk)
 
   pfr->insert_page_id = 1, pfr->insert_slot_id = 0;
   pfr->sw_filtering_rules_default_accept_policy = 1;
-  pfr->num_sw_filtering_rules = pfr->num_hw_filtering_rules = 0;
+  pfr->num_sw_filtering_hash = pfr->num_sw_filtering_rules = pfr->num_hw_filtering_rules = 0;
 
   return(0);
 }
@@ -3376,7 +3379,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 
 	  free_sw_filtering_hash_bucket(bucket);
 	  kfree(bucket);
-	  pfr->num_sw_filtering_rules--;
+	  pfr->num_sw_filtering_hash--;
 	  if(unlikely(enable_debug))
 	    printk("[PF_RING] %s() returned %d [2]\n", __FUNCTION__, 0);
 	  return(0);
@@ -3402,7 +3405,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
   }
 
   if(add_rule && rc == 0) {
-    pfr->num_sw_filtering_rules++;
+    pfr->num_sw_filtering_hash++;
 
     /* Avoid immediate rule purging */
     rule->rule.internals.jiffies_last_match = jiffies;
@@ -3855,7 +3858,7 @@ int check_wildcard_rules(struct sk_buff *skb,
 		       ((hash_bucket->rule.host4_peer_a >> 8) & 0xff), ((hash_bucket->rule.host4_peer_a >> 0) & 0xff),
 		       hash_bucket->rule.port_peer_a, ((hash_bucket->rule.host4_peer_b >> 24) & 0xff),
 		       ((hash_bucket->rule.host4_peer_b >> 16) & 0xff), ((hash_bucket->rule.host4_peer_b >> 8) & 0xff),
-		       ((hash_bucket->rule.host4_peer_b >> 0) & 0xff), hash_bucket->rule.port_peer_b, pfr->num_sw_filtering_rules);
+		       ((hash_bucket->rule.host4_peer_b >> 0) & 0xff), hash_bucket->rule.port_peer_b, pfr->num_sw_filtering_hash);
 	    }
 	  }
 	}
@@ -4085,7 +4088,9 @@ static int add_skb_to_ring(struct sk_buff *skb,
   if(pfr->sw_filtering_hash != NULL) {
     hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, &free_parse_mem,
 				     parse_memory_buffer, displ, &last_matched_plugin);
-    if (!hash_found)
+    if (hash_found)
+      pfr->sw_filtering_hash_match++;
+    else
       pfr->sw_filtering_hash_miss++;
     //if(unlikely(enable_debug))
     //  printk("[PF_RING] check_perfect_rules() returned %d\n", hash_found);
@@ -7278,7 +7283,7 @@ static void purge_idle_hash_rules(struct pf_ring_socket *pfr,
 		      ((scan->rule.host4_peer_b >> 0) & 0xff),
 		      scan->rule.port_peer_b,
 		      num_purged_rules,
-		      pfr->num_sw_filtering_rules);
+		      pfr->num_sw_filtering_hash);
 
 	    free_sw_filtering_hash_bucket(scan);
 	    kfree(scan);
@@ -7288,7 +7293,7 @@ static void purge_idle_hash_rules(struct pf_ring_socket *pfr,
 	    else
 	      prev->next = next;
 
-	    pfr->num_sw_filtering_rules--;
+	    pfr->num_sw_filtering_hash--;
 	    num_purged_rules++;
 	  } else
 	    prev = scan;
@@ -7301,7 +7306,7 @@ static void purge_idle_hash_rules(struct pf_ring_socket *pfr,
 
   if(unlikely(enable_debug))
     printk("[PF_RING] Purged %d hash rules [tot_rules=%d]\n",
-	   num_purged_rules, pfr->num_sw_filtering_rules);
+	   num_purged_rules, pfr->num_sw_filtering_hash);
 }
 
 /* ************************************* */
