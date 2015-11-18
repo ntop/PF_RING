@@ -847,13 +847,21 @@ static int pfring_daq_inject(void *handle, const DAQ_PktHdr_t *hdr,
 #else
       if (context->ifindexes[i] == hdr->device_index) {
 #endif
-        tx_ring_idx = i ^ 0x1;
+        if(reverse == 1)
+                tx_ring_idx = i;
+        else
+                tx_ring_idx = i ^ 0x1;
         break;
       }
   }
 
+  char tmp_packet[2000];
+  memcpy(tmp_packet, context->pkt_buffer, 14);//Mahdi: copy Header layer2 packet to tmp_packet
+  memcpy(&tmp_packet[14], packet_data, len); //Mahdi: copy data packet to tmp_packet
+  len += 14;  //Mahdi: Update packet len
+
   if(pfring_send(context->ring_handles[tx_ring_idx],
-		 (char *) packet_data, len, 1 /* flush packet */) < 0) {
+		 (char *) tmp_packet, len, 1 /* flush packet */) < 0) {
     DPE(context->errbuf, "%s", "pfring_send() error");
     return DAQ_ERROR;
   }
