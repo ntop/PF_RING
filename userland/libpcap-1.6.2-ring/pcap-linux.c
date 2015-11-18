@@ -1309,7 +1309,8 @@ pcap_activate_linux(pcap_t *handle)
 		char *appname, *active = getenv("PCAP_PF_RING_ACTIVE_POLL"), *rss_rehash;
 
 		if (handle->opt.promisc) flags |= PF_RING_PROMISC;
-		if (getenv("PCAP_PF_RING_DNA_RSS")) flags |= PF_RING_DNA_SYMMETRIC_RSS;
+		if (getenv("PCAP_PF_RING_DNA_RSS")) flags |= PF_RING_DNA_SYMMETRIC_RSS; /* deprecated */
+		if (getenv("PCAP_PF_RING_ZC_RSS"))  flags |= PF_RING_ZC_SYMMETRIC_RSS;
 		if (getenv("PCAP_PF_RING_STRIP_HW_TIMESTAMP")) flags |= PF_RING_STRIP_HW_TIMESTAMP;
 	  
 		if (active) pf_ring_active_poll = atoi(active);
