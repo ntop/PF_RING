@@ -847,6 +847,7 @@ static int pfring_zc_daq_inject(void *handle, const DAQ_PktHdr_t *hdr,
 			     const uint8_t *packet_data, uint32_t len, int reverse) {
   Pfring_Context_t *context = (Pfring_Context_t *) handle;
   int i, tx_ring_idx = DAQ_PF_RING_PASSIVE_DEV_IDX;
+  u_char *inj_buffer;
 
   if (!(context->mode == DAQ_MODE_INLINE || (context->mode == DAQ_MODE_PASSIVE && context->ids_bridge)))
     return DAQ_ERROR;
@@ -859,16 +860,31 @@ static int pfring_zc_daq_inject(void *handle, const DAQ_PktHdr_t *hdr,
         hdr->device_index
 #endif
        ) {
-      tx_ring_idx = i ^ 0x1; /* TODO Check this (do we have to send to i or i ^ 0x1?) */
+      if (reverse == 1)
+        tx_ring_idx = i;
+      else
+        tx_ring_idx = i ^ 0x1;
       break;
     }
   }
 
+  inj_buffer = pfring_zc_pkt_buff_data(context->buffer_inject, context->tx_queues[tx_ring_idx]);
+
   memcpy(
-    pfring_zc_pkt_buff_data(context->buffer_inject, context->rx_queues[tx_ring_idx]), 
+    inj_buffer,
+    pfring_zc_pkt_buff_data(context->buffer, context->rx_queues[0]),
+    14
+  );
+
+  memcpy(
+    &inj_buffer[14],
     packet_data, 
     len
   );
+
+  len += 14;
+
+  context->buffer_inject->len = len;
 
   if (pfring_zc_send_pkt(context->tx_queues[tx_ring_idx],
 		        &context->buffer_inject, 1 /* flush packet */) < 0) {
