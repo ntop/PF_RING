@@ -218,7 +218,11 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
   unsigned int data_len, hw_data_len;
   unsigned int segsize;
   unsigned int packet_cnt = 0;
+  uint32_t ts_s, ts_ns;
   int i;
+#ifdef DEBUG
+  unsigned int iface, dma, flags, label;
+#endif
 
  check_pfring_invea_ready:
 
@@ -228,21 +232,42 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
     segsize = szedata_decode_packet(invea->packet, &data, &hw_data, &data_len, &hw_data_len);
 
 #ifdef DEBUG
-    printf("new packet len %u\n", invea->packet_len);
+    printf("New packet\nLen = %u\n", invea->packet_len);
 
-    printf("hw data %04u ", hw_data_len);
+    printf("Hw data = %04u ", hw_data_len);
     for (i = 0; i < hw_data_len; i++)
       printf("0x%02x ", *(hw_data + i));
-
-    printf("\ndata %04u ", data_len);
+    printf("\nData = %04u ", data_len);
     for (i = 0; i < data_len; i++)
       printf("0x%02x ", *(data + i));
-
     printf("\n");
+
+    iface = (*(hw_data + IFACE_OFFSET)) & 0x0f;
+    dma   = (((*(hw_data + DMA_OFFSET)) >> 4) & 0x0f);
+    flags = (*(hw_data + FLAGS_OFFSET));
+    label = le16toh(*(hw_data + LABEL_OFFSET));
+
+    printf("SZE header\n");
+    printf("\tSegment size   = %u\n", segsize);
+    printf("\tHardware size  = %u\n", hw_data_len);
+    printf("\tEth. interface = %u\n", iface);
+    printf("\tDMA queue      = %u\n", dma);
+    printf("\tFlags          = %u\n", flags);
+    printf("\tLabel          = %u\n", label);
 #endif
+
+    ts_ns =  *((uint32_t*) (hw_data + (uint32_t) TIMESTAMP_NS_OFFSET));
+    ts_s  =  *((uint32_t*) (hw_data + (uint32_t) TIMESTAMP_S_OFFSET));
 
     hdr->len = hdr->caplen = invea->packet_len;
     hdr->caplen = min_val(hdr->caplen, ring->caplen);
+
+    hdr->extended_hdr.pkt_hash = 0; //TODO available?
+    hdr->extended_hdr.rx_direction = 1;
+
+    hdr->ts.tv_sec  = ts_s;
+    hdr->ts.tv_usec = ts_ns / 1000;
+    hdr->extended_hdr.timestamp_ns = ((u_int64_t) ts_s * 1000000000) + ts_ns;
 
     if (likely(buffer_len == 0)) {
       *buffer = (uint8_t *) invea->packet;
@@ -253,10 +278,6 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
       memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
       pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
     }
-
-    hdr->extended_hdr.pkt_hash = 0; //TODO available?
-    hdr->extended_hdr.rx_direction = 1;
-    hdr->extended_hdr.timestamp_ns = 0; //TODO
 
     invea->recv++;
 
