@@ -191,7 +191,7 @@ void print_packet(pfring_zc_pkt_buff *buffer) {
   char bigbuf[4096];
 
   if (buffer->ts.tv_nsec)
-    printf("[%u.%u] ", buffer->ts.tv_sec, buffer->ts.tv_nsec);
+    printf("[%u.%u] [hash=%08X] ", buffer->ts.tv_sec, buffer->ts.tv_nsec, buffer->hash);
 
 #if 1
   pfring_print_pkt(bigbuf, sizeof(bigbuf), pkt_data, buffer->len, buffer->len);

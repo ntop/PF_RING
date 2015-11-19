@@ -71,6 +71,7 @@ typedef struct _pfring_context
   char *filter_string;
   char errbuf[1024];
   u_char *pkt_buffer;
+  u_char *inj_buffer;
   u_int breakloop;
   int promisc_flag;
   int timeout;
@@ -117,8 +118,6 @@ static int pfring_daq_open(Pfring_Context_t *context, int id) {
       DPE(context->errbuf, "DNA is not supported by daq_pfring. Please get daq_pfring_dna from http://shop.ntop.org");
       return(-1);
     }
-
-    context->pkt_buffer = NULL;
 
     ring_handle = pfring_open(device, context->snaplen,
 			      PF_RING_LONG_HEADER 
@@ -240,7 +239,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
   Pfring_Context_t *context;
   DAQ_Dict* entry;
   int i;
-  /* taken from pfcount example */
+  pfring_card_settings ring_settings;
   u_int numCPU = get_nprocs();
 
   context = calloc(1, sizeof(Pfring_Context_t));
@@ -250,6 +249,8 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
   }
 
   context->mode = config->mode;
+  context->pkt_buffer = NULL;
+  context->inj_buffer = NULL;
   context->snaplen = config->snaplen;
   context->promisc_flag =(config->flags & DAQ_CFG_PROMISC);
   context->timeout = (config->timeout > 0) ? (int) config->timeout : -1;
@@ -485,6 +486,13 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
       if (pfring_daq_open(context, i) == -1)
         return DAQ_ERROR;
     }
+  }
+
+  pfring_get_card_settings(context->ring_handles[0], &ring_settings);
+  context->inj_buffer = malloc(ring_settings.max_packet_size);
+  if (context->inj_buffer == NULL) {
+    snprintf(errbuf, len, "%s: memory allocation failure\n", __FUNCTION__);
+    return DAQ_ERROR;
   }
 
 #ifdef HAVE_REDIS
@@ -847,13 +855,19 @@ static int pfring_daq_inject(void *handle, const DAQ_PktHdr_t *hdr,
 #else
       if (context->ifindexes[i] == hdr->device_index) {
 #endif
-        tx_ring_idx = i ^ 0x1;
+        if(reverse == 1)
+                tx_ring_idx = i;
+        else
+                tx_ring_idx = i ^ 0x1;
         break;
       }
   }
 
-  if(pfring_send(context->ring_handles[tx_ring_idx],
-		 (char *) packet_data, len, 1 /* flush packet */) < 0) {
+  memcpy(context->inj_buffer, context->pkt_buffer, 14); /* copy Header layer2 packet to inj_buffer */
+  memcpy(&context->inj_buffer[14], packet_data, len); /* copy data packet to inj_buffer */
+  len += 14; /* update packet len */
+
+  if(pfring_send(context->ring_handles[tx_ring_idx], (char *) context->inj_buffer, len, 1 /* flush packet */) < 0) {
     DPE(context->errbuf, "%s", "pfring_send() error");
     return DAQ_ERROR;
   }
