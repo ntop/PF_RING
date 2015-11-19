@@ -49,3 +49,9 @@ Please run the command below in order to setup libraries on your Ubuntu system
 # sudo su
 # cd /usr/local/lib
 # ln -s /opt/accolade/lib/* .
+
+Accolade and Packet Copy
+------------------------
+If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
+if you use PF_RING ZC API, there is a per-packet copy requested to move
+payload data from Accolade-memory to ZC memory. Keep this in mind!

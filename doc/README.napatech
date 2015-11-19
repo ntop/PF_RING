@@ -31,17 +31,24 @@ the following commands:
 Please note that:
  - in order to open port 0 from the Napatech adapter you should specify 
    "nt:0", in order to open stream 0 you should speficy "nt:stream0"
- - streams  can be created using the ntpl tool (ntpl -e "<command>")
+
+ - streams are logical port aggregations or packet spread (similar to RSS)
+   can be created using the ntpl tool (ntpl -e "<command>")
+
    Command example for ports (2 and 3) aggregation on a single stream (1):
-     ntpl -e "Assign[streamid=1] = port == 2,3"
+     /opt/napatech3/bin/ntpl -e "Delete = All"
+     /opt/napatech3/bin/ntpl -e "Assign[streamid=1] = port == 2,3"
+
    Command example for load balancing of all ports across 16 streams:
-     ntpl -e "Delete = All"
-     ntpl -e "HashMode = Hash2TupleSorted"
-     ntpl -e "Assign[StreamId=(0..15)] = All"
+     /opt/napatech3/bin/ntpl -e "Delete = All"
+     /opt/napatech3/bin/ntpl -e "HashMode = Hash2TupleSorted"
+     /opt/napatech3/bin/ntpl -e "Assign[StreamId=(0..15)] = All"
+
    Command example for load balancing port 0 across 4 streams:
-     ntpl -e "Delete = All"
-     ntpl -e "HashMode = Hash2TupleSorted"
-     ntpl -e "Assign[StreamId=(0..3)] = port == 0"
+     /opt/napatech3/bin/ntpl -e "Delete = All"
+     /opt/napatech3/bin/ntpl -e "HashMode = Hash2TupleSorted"
+     /opt/napatech3/bin/ntpl -e "Assign[StreamId=(0..3)] = port == 0"
+
  - in order to use the Napatech adapter with n2disk the configuration file
    /opt/napatech3/config/ntservice.ini should contain:
      TimestampFormat = PCAP_NS
@@ -54,3 +61,9 @@ Please run the command below in order to setup libraries on your Ubuntu system
 # sudo su
 # cd /usr/local/lib
 # ln -s /opt/napatech3/lib/* .
+
+Napatech and Packet Copy
+------------------------
+If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
+if you use PF_RING ZC API, there is a per-packet copy requested to move
+payload data from Napatech-memory to ZC memory. Keep this in mind!
