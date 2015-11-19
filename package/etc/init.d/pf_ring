@@ -33,7 +33,7 @@ PFRING="pf_ring"
 DNA_DRIVERS_DIR="/usr/local/pfring/drivers/DNA"
 DRIVERS_CONFIG_DIR="/etc/pf_ring"
 DRIVERS_FLAVOR=("dna" "zc")
-DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe')
+DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe' 'i40e')
 ERROR=0
 DRIVER_INSTALLED=0
 OLD_HUGEPAGES_CONFIG="/etc/pf_ring/hugepages"
@@ -260,7 +260,7 @@ load_dna_zc() {
 	/sbin/modprobe configfs
 
 	# load dkms drivers
-	# search for file under /etc/pf_ring/{dna,zc}/{e1000e,igb,ixgbe}/{e1000e,igb,ixgbe}.conf
+	# search for file under /etc/pf_ring/{dna,zc}/{e1000e,igb,ixgbe,i40e}/{e1000e,igb,ixgbe,i40e}.conf
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
 			if [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
