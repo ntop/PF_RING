@@ -23,6 +23,14 @@
 #define COMBO_100G  "COMBO-100G"
 #endif
 
+#define IFACE_OFFSET            0
+#define DMA_OFFSET              0 
+#define FLAGS_OFFSET            1
+#define LABEL_OFFSET            2
+
+#define TIMESTAMP_NS_OFFSET     4
+#define TIMESTAMP_S_OFFSET      8
+
 typedef struct {
   int device_id;
   struct szedata *sze;
@@ -37,7 +45,6 @@ typedef struct {
   uint32_t ibuf_size;
 #endif
 } pfring_invea;
-
 
 int  pfring_invea_open(pfring *ring);
 void pfring_invea_close(pfring *ring);

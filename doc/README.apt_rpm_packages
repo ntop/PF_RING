@@ -1,0 +1,24 @@
+Using PF_RING packages
+----------------------
+At http://packages.ntop.org we build binary PF_RING packages ready to use.
+We assume that you use the nBox GUI to configure such packages, so that you
+can decide what drivers to enable using what configuration.
+
+In case you do not want to use the nBox GUI, you can manually configure 
+the package from command line. Below you can find a configuration example
+for the ixgbe ZC driver, but for other packages the configuration steps are
+similar.
+
+# mkdir -p /etc/pf_ring/zc/ixgbe
+# echo "node=0 hugepagenumber=1024" > /etc/pf_ring/hugepages.conf 
+# echo "RSS=4,4" > /etc/pf_ring/zc/ixgbe/ixgbe.conf 
+# touch /etc/pf_ring/pfring.start
+# touch /etc/pf_ring/zc/ixgbe/ixgbe.start
+# tree /etc/pf_ring/
+|-- hugepages.conf
+|-- pfring.start
+`-- zc
+    `-- ixgbe
+        |-- ixgbe.conf
+        `-- ixgbe.start
+
