@@ -1,0 +1,2 @@
+In order to compile Suricata with pf_ring support please follow this guide:
+https://redmine.openinfosecfoundation.org/projects/suricata/wiki/Installation_of_Suricata_stable_with_PF_RING_(STABLE)_on_Ubuntu_server_1204
