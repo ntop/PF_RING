@@ -41,9 +41,10 @@ static int
 snf_pcap_stats(pcap_t *p, struct pcap_stat *ps)
 {
 	struct snf_ring_stats stats;
+	struct pcap_snf *psnf = p->priv;
 	int rc;
 
-	if ((rc = snf_ring_getstats(ps->snf_ring, &stats))) {
+	if ((rc = snf_ring_getstats(psnf->snf_ring, &stats))) {
 		snprintf(p->errbuf, PCAP_ERRBUF_SIZE, "snf_get_stats: %s",
 			 pcap_strerror(rc));
 		return -1;
