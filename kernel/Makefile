@@ -61,10 +61,18 @@ clean:
 install:
 	mkdir -p $(INSTDIR)
 	cp *.ko $(INSTDIR)
+	mkdir -p $(DESTDIR)/usr/include/linux
 	cp linux/pf_ring.h $(DESTDIR)/usr/include/linux
 	@if test -d ${TARGETDIR}; then \
 		cp linux/pf_ring.h ${TARGETDIR}; \
 	fi
 ifeq (,$(DESTDIR))
 	/sbin/depmod $(BUILD_KERNEL)
+else
+	@echo "*****NOTE:";
+	@echo "pf_ring,ko kernel module installed in ${DESTDIR}";
+	@echo "/sbin/depmod not run.  modprobe pf_ring won't work " ;
+	@echo "You can load the kernel module directly using" ;
+	@echo "insmod <path>/pf_ring.ko" ;
+	@echo "*****";
 endif
