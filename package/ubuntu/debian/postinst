@@ -6,8 +6,9 @@ echo "Adding the pf_ring startup script"
 update-rc.d pf_ring defaults 30 >/dev/null
 update-rc.d cluster defaults 40 >/dev/null
 
-if [ -d /opt/napatech3/lib/ ]; then cp /opt/napatech3/lib/libntapi.so /opt/napatech3/lib/libntos.so /usr/local/lib; fi
-if [ -d /opt/accolade/lib/ ]; then cp /opt/accolade/lib/libanic.so /usr/local/lib; fi
+if [ -f /opt/napatech3/lib/libntapi.so ]; then cp /opt/napatech3/lib/libntapi.so /lib64; fi
+if [ -f /opt/napatech3/lib/libntos.so ];  then cp /opt/napatech3/lib/libntos.so /lib64;  fi
+if [ -f /opt/accolade/lib/libanic.so ];   then cp /opt/accolade/lib/libanic.so /lib64;   fi
 
 /sbin/ldconfig > /dev/null 2>&1
 
