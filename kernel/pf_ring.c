@@ -430,15 +430,17 @@ MODULE_PARM_DESC(bypass_interfaces,
 u_int get_num_rx_queues(struct net_device *dev) 
 {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-  return(1);
+  return 1;
 #else
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
-  return(min_val(dev->real_num_rx_queues, dev->real_num_tx_queues));
+  return min_val(dev->real_num_rx_queues, dev->real_num_tx_queues);
 #elif (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
-  return(netdev_extended(dev)->real_num_rx_queues);
+  if (netdev_extended(dev) != NULL)
+    return netdev_extended(dev)->real_num_rx_queues;
+  else
+    return 1;
 #else
-  return(dev->real_num_tx_queues);
-  // return(1);
+  return dev->real_num_tx_queues;
 #endif
 #endif
 }
