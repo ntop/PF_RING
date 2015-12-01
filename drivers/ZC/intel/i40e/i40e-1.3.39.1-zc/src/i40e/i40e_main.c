@@ -44,6 +44,14 @@
 #define I40E_PCI_DEVICE_CACHE_LINE_SIZE      0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES        8
 
+#define I40E_MAX_NIC 64
+
+static int RSS[I40E_MAX_NIC] = 
+  { [0 ... (I40E_MAX_NIC - 1)] = 0 };
+module_param_array_named(RSS, RSS, int, NULL, 0444);
+MODULE_PARM_DESC(RSS,
+                 "Number of Receive-Side Scaling Descriptor Queues, default 0=number of cpus");
+
 u8 enable_debug = 0;
 #endif
 
@@ -8316,6 +8324,10 @@ static int i40e_init_msix(struct i40e_pf *pf)
 
 	/* reserve vectors for the main PF traffic queues */
 	pf->num_lan_msix = min_t(int, num_online_cpus(), vectors_left);
+#ifdef HAVE_PF_RING
+	if (RSS[0 /* TODO port id */ ] != 0)
+		pf->num_lan_msix = min_t(int, pf->num_lan_msix, RSS[0 /* TODO port id */ ]);
+#endif
 	vectors_left -= pf->num_lan_msix;
 	v_budget += pf->num_lan_msix;
 
@@ -8922,6 +8934,13 @@ static int i40e_sw_init(struct i40e_pf *pf)
 	if (pf->hw.func_caps.rss) {
 		pf->flags |= I40E_FLAG_RSS_ENABLED;
 		pf->rss_size = min_t(int, pf->rss_size_max, num_online_cpus());
+#ifdef HAVE_PF_RING
+		if (RSS[0 /* TODO port id */ ] != 0) {
+			pf->flags &= ~I40E_FLAG_RSS_ENABLED;
+			pf->rss_size = min_t(int, pf->rss_size, RSS[0 /* TODO port id */ ]);
+			pf->rss_size_max = pf->rss_size;
+		}
+#endif
 	}
 	/* MFP mode enabled */
 	if (pf->hw.func_caps.npar_enable || pf->hw.func_caps.flex10_enable) {
@@ -11102,6 +11121,10 @@ static void i40e_determine_queue_usage(struct i40e_pf *pf)
 					num_online_cpus());
 		pf->num_lan_qps = min_t(int, pf->num_lan_qps,
 					pf->hw.func_caps.num_tx_qp);
+#ifdef HAVE_PF_RING
+		if (RSS[0 /* TODO port id */ ] != 0)
+			pf->num_lan_qps = min_t(int, pf->num_lan_qps, RSS[0 /* TODO port id */ ]);
+#endif
 
 		queues_left -= pf->num_lan_qps;
 	}
