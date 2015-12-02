@@ -18,12 +18,15 @@ static void __pfring_myri_release_resources(pfring *ring) {
 
   if (myricom) {
     if (ring->mode != send_only_mode) {
-      snf_ring_close(myricom->hring);
-      snf_close(myricom->hsnf);
+      if (myricom->hring != NULL)
+        snf_ring_close(myricom->hring);
+      if (myricom->hsnf != NULL)
+        snf_close(myricom->hsnf);
     }
 
     if (ring->mode != recv_only_mode) {
-      snf_inject_close(myricom->hinj);
+      if(myricom->hinj != NULL)
+        snf_inject_close(myricom->hinj);
     }
 
     free(ring->priv_data);
