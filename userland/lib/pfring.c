@@ -633,7 +633,6 @@ recv_next:
 #endif
 
     rc = ring->recv(ring, buffer, buffer_len, hdr, wait_for_incoming_packet);
-    hdr->caplen = min_val(hdr->caplen, ring->caplen), hdr->extended_hdr.if_index = ring->device_id;
 
     if(unlikely(ring->ixia_timestamp_enabled))
       pfring_handle_ixia_hw_timestamp(*buffer, hdr);

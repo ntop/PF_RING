@@ -129,7 +129,7 @@ int pfring_myri_set_direction(pfring *ring, packet_direction direction) {
 int pfring_myri_get_bound_device_ifindex(pfring *ring, int *if_index) {
   //pfring_myri *myricom = (pfring_myri *) ring->priv_data;
 
-  *if_index = 0; /* TODO */
+  *if_index = myricom->device_id;
   return 0;
 }
 
@@ -235,6 +235,7 @@ int pfring_myri_recv(pfring *ring, u_char **buffer,
     }
 
     hdr->extended_hdr.pkt_hash = 0; //TODO available?
+    hdr->extended_hdr.if_index = myricom->device_id;
     hdr->extended_hdr.rx_direction = 1;
     hdr->extended_hdr.timestamp_ns = myricom->recv_req.timestamp;
 

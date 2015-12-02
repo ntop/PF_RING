@@ -313,11 +313,14 @@ struct pfring_extended_pkthdr {
 #define PKT_FLAGS_IP_FRAG_OFFSET   1 << 3 /* IP fragment offset set (not 0) */
 #define PKT_FLAGS_VLAN_HWACCEL     1 << 4 /* VLAN stripped by hw */
   u_int32_t flags;
-  /* --- short header ends here --- */
+
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
   int32_t  if_index;       /* index of the interface on which the packet has been received.
 			      It can be also used to report other information */
   u_int32_t pkt_hash;      /* Hash based on the packet header */
+
+  /* --- short header ends here --- */
+
   struct {
     int bounce_interface; /* Interface Id where this packet will bounce after processing
 			     if its values is other than UNKNOWN_INTERFACE */

@@ -228,6 +228,8 @@ int pfring_dag_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfri
 
   d->bottom += rlen;
 
+  hdr->extended_hdr.pkt_hash = 0; /* init to 0 - setting when available */
+
   skip = 0;    
   switch((erf_hdr->type & 0x7f)) {
   case TYPE_PAD:
@@ -338,6 +340,8 @@ int pfring_dag_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfri
 #else
   hdr->extended_hdr.parsed_header_len = 0;
 #endif
+
+  hdr->extended_hdr.if_index = UNKNOWN_INTERFACE; //TODO
 
   d->stats_recv++;
 	

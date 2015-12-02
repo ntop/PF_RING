@@ -1758,7 +1758,7 @@ static int ring_alloc_mem(struct sock *sk)
    * ********************************************** */
 
   if(pfr->header_len == short_pkt_header)
-    pfr->slot_header_len = offsetof(struct pfring_pkthdr, extended_hdr.rx_direction); /* <ts,caplen,len,timestamp_ns,flags */
+    pfr->slot_header_len = offsetof(struct pfring_pkthdr, extended_hdr.tx); /* <ts,caplen,len,timestamp_ns,flags */
   else
     pfr->slot_header_len = sizeof(struct pfring_pkthdr);
 
