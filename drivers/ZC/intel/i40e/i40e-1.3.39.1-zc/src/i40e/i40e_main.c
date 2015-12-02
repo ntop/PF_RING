@@ -3404,6 +3404,11 @@ int ring_is_not_empty(struct i40e_ring *rx_ring) {
 	/* Tail is write-only on i40e, checking all descriptors (or we need a shadow tail from userspace) */
 	for (i = 0; i < rx_ring->count; i++) {
 		rx_desc = I40E_RX_DESC(rx_ring, i);    
+		if (rx_desc == NULL) {
+			printk("[PF_RING-ZC] %s: RX descriptor #%u NULL, this should not happen\n", 
+			       __FUNCTION__, i);
+ 			break;
+		}
 		qword = le64_to_cpu(rx_desc->wb.qword1.status_error_len);
 		rx_status = (qword & I40E_RXD_QW1_STATUS_MASK) >> I40E_RXD_QW1_STATUS_SHIFT;
 		if (rx_status & (1 << I40E_RX_DESC_STATUS_DD_SHIFT))
@@ -3419,7 +3424,7 @@ int wait_packet_function_ptr(void *data, int mode)
 	int new_packets;
 
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(): enter [mode=%d/%s][queueId=%d][next_to_clean=%u][next_to_use=%d] ******\n",
+		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queueId=%d][next_to_clean=%u][next_to_use=%d] ******\n",
 		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
 		       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use);
 
@@ -3434,12 +3439,12 @@ int wait_packet_function_ptr(void *data, int mode)
 				i40e_enable_irq(rx_ring->q_vector);
 
 				if (unlikely(enable_debug)) 
-					printk("[PF_RING-ZC] %s(): Enabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+					printk("[PF_RING-ZC] %s: Enabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
 				if(unlikely(enable_debug))
-					printk("[PF_RING-ZC] %s(): Packet not arrived yet: enabling interrupts, queue=%d\n",
+					printk("[PF_RING-ZC] %s: Packet not arrived yet: enabling interrupts, queue=%d\n",
 					       __FUNCTION__,rx_ring->q_vector->v_idx);
       			}
     		} else {
@@ -3447,7 +3452,7 @@ int wait_packet_function_ptr(void *data, int mode)
 		}
 
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s(): Packet received: %d\n", __FUNCTION__, new_packets); 
+			printk("[PF_RING-ZC] %s: Packet received: %d\n", __FUNCTION__, new_packets); 
 
 		return new_packets;
 	} else {
@@ -3458,7 +3463,7 @@ int wait_packet_function_ptr(void *data, int mode)
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s(): Disabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+			printk("[PF_RING-ZC] %s: Disabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 
 		return 0;
 	}
@@ -5694,7 +5699,7 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 			cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
 			if (cache_line_size == 0) cache_line_size = 64;
 
-			if (unlikely(enable_debug))  
+			//if (unlikely(enable_debug))  
 				printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u][MSIX %s]\n", __FUNCTION__,
 					vsi->netdev->name, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0),
 					cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
@@ -5836,7 +5841,7 @@ void i40e_down(struct i40e_vsi *vsi)
 		if (hook != NULL) {
 			int i;
 			
-			if (unlikely(enable_debug))
+			//if (unlikely(enable_debug))
 	      			printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, vsi->netdev->name);
 
 			for (i = 0; i < vsi->num_queue_pairs; i++) {

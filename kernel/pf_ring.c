@@ -8973,7 +8973,7 @@ void zc_dev_handler(zc_dev_operation operation,
       next->dev.usage_notification = dev_notify_function_ptr;
       list_add(&next->list, &zc_devices_list);
       zc_devices_list_size++;
-      /* Increment usage count to avoid unloading it while DNA modules are in use */
+      /* Increment usage count - avoid unloading it while ZC/DNA drivers are in use */
       try_module_get(THIS_MODULE);
 
       /* We now have to update the device list */
@@ -9027,7 +9027,7 @@ void zc_dev_handler(zc_dev_operation operation,
 	list_del(ptr);
 	kfree(entry);
 	zc_devices_list_size--;
-	/* Decrement usage count for DNA devices */
+	/* Decrement usage count */
 	module_put(THIS_MODULE);
 	break;
       }
