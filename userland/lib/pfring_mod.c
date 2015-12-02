@@ -548,6 +548,9 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 #endif
 
       if(unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
+
+      hdr->caplen = min_val(hdr->caplen, ring->caplen);
+
       return(1);
     }
 
