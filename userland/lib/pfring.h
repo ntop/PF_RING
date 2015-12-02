@@ -913,7 +913,13 @@ int pfring_next_pkt_raw_timestamp(pfring *ring, u_int64_t *timestamp_ns);
 
 /**
  * Read the ring version. Note that if the ring version is 5.6 the retuned ring version is 0x050600. 
- * @param ring    The PF_RING handle to enable.
+ * @param version A user-allocated buffer on which ring version will be copied.
+ */
+void pfring_version_noring(u_int32_t *version);
+
+/**
+ * Read the ring version. Note that if the ring version is 5.6 the retuned ring version is 0x050600. 
+ * @param ring    The PF_RING handle, in case the module supports versioning.
  * @param version A user-allocated buffer on which ring version will be copied.
  * @return 0 on success, a negative value otherwise.
  */
