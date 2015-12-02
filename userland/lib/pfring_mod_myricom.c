@@ -127,7 +127,7 @@ int pfring_myri_set_direction(pfring *ring, packet_direction direction) {
 /* **************************************************** */
 
 int pfring_myri_get_bound_device_ifindex(pfring *ring, int *if_index) {
-  //pfring_myri *myricom = (pfring_myri *) ring->priv_data;
+  pfring_myri *myricom = (pfring_myri *) ring->priv_data;
 
   *if_index = myricom->device_id;
   return 0;
