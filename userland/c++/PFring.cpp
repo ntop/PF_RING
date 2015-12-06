@@ -29,12 +29,15 @@
 PFring::PFring(char* _device_name, u_int _snaplen, u_int flags) {
   snaplen = _snaplen, device_name = NULL;
 
-  if(_device_name == NULL)
-    ring = NULL;
-  else {
-    if((ring = pfring_open(_device_name, _snaplen, flags)) != NULL)
-      device_name = strdup(_device_name);
-  }
+  if (_device_name == NULL)
+    throw 1;
+  
+  ring = pfring_open(_device_name, _snaplen, flags);
+
+  if (ring == NULL)
+    throw 1;
+
+  device_name = strdup(_device_name);
 }
 
 /* *********************************************** */
