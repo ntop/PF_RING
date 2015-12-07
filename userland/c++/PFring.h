@@ -35,52 +35,53 @@ class PFring {
   char *device_name;
 
  public:
-  PFring(char* device, u_int snaplen, u_int flags = 0);
+  PFring(char *device, u_int snaplen, u_int flags = 0);
   ~PFring();
 
   /* Cluster */
   inline int set_cluster(u_int clusterId)
-  { return(ring ? pfring_set_cluster(ring, clusterId, cluster_round_robin) : -1); };
+  { return pfring_set_cluster(ring, clusterId, cluster_round_robin); };
   inline int remove_from_cluster()               
-  { return(ring ? pfring_remove_from_cluster(ring) : -1); };
+  { return pfring_remove_from_cluster(ring); };
 
   /* Channel */
   inline int set_channel_id(short channelId)
-  { return(ring ? pfring_set_channel_id(ring, channelId) : -1); };
+  { return pfring_set_channel_id(ring, channelId); };
 
   /* Read Packets */
   bool wait_for_packets(int msec = -1 /* -1 == infinite */);
   int get_next_packet(struct pfring_pkthdr *hdr, const u_char *pkt, u_int pkt_len);
+  int get_next_packet_zc(struct pfring_pkthdr *hdr, const u_char **pkt);
 
   /* Filtering */
   int add_bpf_filter(char *the_filter);
   inline int add_filtering_rule(filtering_rule* the_rule) 
-    { return(ring ? pfring_add_filtering_rule(ring, the_rule) : -1);   };
+    { return pfring_add_filtering_rule(ring, the_rule);   };
   inline int remove_filtering_rule(u_int16_t rule_id)     
-    { return(ring ? pfring_remove_filtering_rule(ring, rule_id) : -1); };
+    { return pfring_remove_filtering_rule(ring, rule_id); };
   inline int toggle_filtering_policy(bool rules_default_accept_policy)
-    { return(ring ? pfring_toggle_filtering_policy(ring, rules_default_accept_policy ? 1 : 0) : -1); };
+    { return pfring_toggle_filtering_policy(ring, rules_default_accept_policy ? 1 : 0); };
   inline int add_hash_filtering_rule(hash_filtering_rule *rule)
-    { return(ring ? pfring_handle_hash_filtering_rule(ring, rule, 1) : -1); };
+    { return pfring_handle_hash_filtering_rule(ring, rule, 1); };
   inline int remove_hash_filtering_rule(hash_filtering_rule *rule)
-    { return(ring ? pfring_handle_hash_filtering_rule(ring, rule, 0) : -1); };
+    { return pfring_handle_hash_filtering_rule(ring, rule, 0); };
 
   /* Stats */
   inline int get_stats(pfring_stat *stats)
-    { return(ring ? pfring_stats(ring, stats) : -1); };
+    { return pfring_stats(ring, stats); };
   inline int get_filtering_rule_stats(u_int16_t rule_id, char *stats, u_int *stats_len)
-    { return(ring ? pfring_get_filtering_rule_stats(ring, rule_id, stats, stats_len) : -1); };
+    { return pfring_get_filtering_rule_stats(ring, rule_id, stats, stats_len); };
   inline int get_hash_filtering_rule_stats(hash_filtering_rule* rule, char *stats, u_int *stats_len)
-    { return(ring ? pfring_get_hash_filtering_rule_stats(ring, rule, stats, stats_len) : -1); };
+    { return pfring_get_hash_filtering_rule_stats(ring, rule, stats, stats_len); };
 
   /* Utils */
-  inline char* get_device_name() { return(device_name); };
-  inline int enable_ring()       { return(ring ? pfring_enable_ring(ring) : -1); };
+  inline char* get_device_name() { return device_name; };
+  inline int enable_ring()       { return pfring_enable_ring(ring); };
   inline int set_sampling_rate(u_int32_t rate /* 1 = no sampling */)
-    { return(ring ? pfring_set_sampling_rate(ring, rate) : -1); };
+    { return pfring_set_sampling_rate(ring, rate); };
   inline int get_version(u_int32_t *version) 
-    { return(ring ? pfring_version(ring, version) : -1); };
-  inline int get_socket_id()  { return(ring ? ring->fd : -1); };
+    { return pfring_version(ring, version); };
+  inline int get_socket_id()  { return ring->fd; };
 };
 
 #endif /* _PFRING_CLASS_ */

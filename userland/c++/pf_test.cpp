@@ -1,5 +1,6 @@
 #include "PFring.h"
 #include <string.h>
+#include <errno.h>
 #include <iostream>
 using namespace std;
 
@@ -34,7 +35,7 @@ int main(int argc, char *argv[]) {
   }
   catch (int e)
   {
-    cout << "Problems while opening device " << device_name << " (pf_ring not loaded or perhaps you use quick mode and have already a socket bound to " << device_name << ")\n";
+    cout << "Problems while opening device " << device_name << ": " << strerror(errno) << " (pf_ring not loaded or perhaps you use quick mode and have already a socket bound to " << device_name << ")\n";
     return -1;
   }
 

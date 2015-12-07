@@ -27,44 +27,54 @@
 /* *********************************************** */
 
 PFring::PFring(char* _device_name, u_int _snaplen, u_int flags) {
-  snaplen = _snaplen, device_name = NULL;
+
+  snaplen = _snaplen;
 
   if (_device_name == NULL)
-    throw 1;
+    throw EINVAL;
   
+  device_name = strdup(_device_name);
+
+  if (device_name == NULL)
+    throw ENOMEM;
+
   ring = pfring_open(_device_name, _snaplen, flags);
 
-  if (ring == NULL)
-    throw 1;
-
-  device_name = strdup(_device_name);
-}
-
-/* *********************************************** */
-
-PFring::~PFring() {
-  if(ring) {
-    if(device_name) free(device_name);
-    pfring_close(ring);
-    ring = NULL;
+  if (ring == NULL) {
+    free(device_name);
+    throw errno;
   }
 }
 
 /* *********************************************** */
 
+PFring::~PFring() {
+  free(device_name);
+  pfring_close(ring);
+}
+
+/* *********************************************** */
+
 int PFring::add_bpf_filter(char *the_filter) {
-  if(ring == NULL)
-    return(-1);
-  else
-    return(pfring_set_bpf_filter(ring, the_filter));
+  return pfring_set_bpf_filter(ring, the_filter);
 }
 
 /* *********************************************** */
 
 int PFring::get_next_packet(struct pfring_pkthdr *hdr, const u_char *pkt, u_int pkt_len) {
-  if((!ring) || (!hdr) || (pkt_len < snaplen)) return(-1);
+  if (pkt == NULL || hdr == NULL || pkt_len < snaplen) 
+    return -1;
 
-  return(pfring_recv(ring, (u_char**)&pkt, pkt_len, hdr, 1 /* wait_for_incoming_packet */));
+  return pfring_recv(ring, (u_char **) &pkt, pkt_len, hdr, 1 /* wait_for_incoming_packet */);
+}
+
+/* *********************************************** */
+
+int PFring::get_next_packet_zc(struct pfring_pkthdr *hdr, const u_char **pkt) {
+  if (pkt == NULL || hdr == NULL) 
+    return -1;
+
+  return pfring_recv(ring, (u_char **) pkt, 0, hdr, 1 /* wait_for_incoming_packet */);
 }
 
 /* *********************************************** */
@@ -81,8 +91,8 @@ bool PFring::wait_for_packets(int msec) {
   errno = 0;
   rc = poll(&pfd, 1, msec);
 
-  if(rc == -1)
-    return(false);
-  else
-    return((rc > 0) ? true : false);
+  if (rc == -1)
+    return false;
+
+  return ((rc > 0) ? true : false);
 }
