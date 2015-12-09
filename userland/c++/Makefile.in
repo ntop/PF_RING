@@ -2,11 +2,11 @@ CPP=g++ -g
 
 KERNEL_DIR=../../kernel
 LIBPCAP_DIR=../libpcap
-INCLUDE=-I$(KERNEL_DIR) -I$(LIBPCAP_DIR) -I../lib
+INCLUDE=-I$(KERNEL_DIR) -I$(LIBPCAP_DIR) -I../lib `../lib/pfring_config --include`
 LIBPFRING_CPP=libpfring_cpp.a
 RANLIB=ranlib
 OBJ=PFring.o
-LIBS=../lib/libpfring.a @DAG_LIB@ @NT_LIB@ @ACCOLADE_LIB@ @SILICOM_LIBS@ -lpthread
+LIBS=../lib/libpfring.a `../lib/pfring_config --libs` -lpthread
 
 all: $(LIBPFRING_CPP) pf_test
 

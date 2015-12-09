@@ -1,6 +1,6 @@
 
 ---------------------------------------                                                                                                                                                                             
-2015-11-10 PF_RING 6.2
+2015-11-26 PF_RING 6.2
 
 * PF_RING Library
  - Accolade Technology support
@@ -11,6 +11,7 @@
  - Reworked pfring_recv_chunk API to handle generic segments
  - Packet-mode with Napatech using pfring_recv also when card is configured as PCAP
  - Improved pfring_print_parsed_pkt with STP support
+ - Improved software filtering rules stats
  - Fix for capturing tx packets in stack mode
  - Removed libnuma dependency (using native numa support in PF_RING ZC)
  - Added pfring_config tool to print includes and libs used in the current PF_RING configuration
@@ -59,6 +60,9 @@
  - zbalance_ipc: optimisation to reduce time-pulse thrad load on non-time-sensitive applications
  - pfsend: linux cooked packets support
  - pfsend: ability to specify egress rate in pps
+
+* Snort DAQ
+ - Fixed direction and L2 header in the inject function
 
 ---------------------------------------                                                                                                                                                                             
 2015-03-30 PF_RING 6.0.3

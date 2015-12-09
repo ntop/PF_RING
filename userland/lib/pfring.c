@@ -633,7 +633,6 @@ recv_next:
 #endif
 
     rc = ring->recv(ring, buffer, buffer_len, hdr, wait_for_incoming_packet);
-    hdr->caplen = min_val(hdr->caplen, ring->caplen), hdr->extended_hdr.if_index = ring->device_id;
 
     if(unlikely(ring->ixia_timestamp_enabled))
       pfring_handle_ixia_hw_timestamp(*buffer, hdr);
@@ -1146,12 +1145,18 @@ int pfring_poll(pfring *ring, u_int wait_duration) {
 
 /* **************************************************** */
 
+void pfring_version_noring(u_int32_t *version) {
+  *version = RING_VERSION_NUM; 
+}
+
+/* **************************************************** */
+
 int pfring_version(pfring *ring, u_int32_t *version) {
   if(ring && ring->version)
     return ring->version(ring, version);
 
-  *version = RING_VERSION_NUM;
-  return 0;/*PF_RING_ERROR_NOT_SUPPORTED*/;
+  pfring_version_noring(version);
+  return 0;
 }
 
 /* **************************************************** */

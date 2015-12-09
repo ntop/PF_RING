@@ -226,6 +226,7 @@ void printHelp(void) {
 #endif
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Number of different IPs (balanced traffic)\n");
+  printf("-o <num>        Offset for the IPs generated with -b\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on DNA]\n");
   printf("-z              Disable zero-copy, if supported [DNA only]\n");
   printf("-x <if index>   Send to the selected interface, if supported\n");
@@ -347,13 +348,13 @@ int main(int argc, char* argv[]) {
   ticks hz = 0;
   struct packet *tosend;
   u_int num_tx_slots = 0;
-  int num_balanced_pkts = 1, watermark = 0;
+  int num_balanced_pkts = 1, balanced_pkts_offset = 0, watermark = 0;
   u_int num_pcap_pkts = 0;
   int send_full_pcap_once = 1;
   char *pidFileName = NULL;
   int send_error_once = 1;
 
-  while((c = getopt(argc, argv, "b:dhi:n:g:l:af:r:vm:p:P:w:zx:")) != -1) {
+  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:af:r:vm:p:P:w:zx:")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -370,6 +371,9 @@ int main(int argc, char* argv[]) {
     case 'n':
       num_to_send = atoi(optarg);
       send_full_pcap_once = 0;
+      break;
+    case 'o':
+      balanced_pkts_offset = atoi(optarg);
       break;
     case 'g':
       bind_core = atoi(optarg);
@@ -584,7 +588,7 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < num_balanced_pkts; i++) {
      
       if (stdin_packet_len <= 0)
-        forge_udp_packet(buffer, sizeof(buffer), i);
+        forge_udp_packet(buffer, sizeof(buffer), balanced_pkts_offset + i);
       /* TODO else: reforge IP only */
 
       p = (struct packet *) malloc(sizeof(struct packet));

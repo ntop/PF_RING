@@ -126,9 +126,9 @@ int pfring_invea_set_direction(pfring *ring, packet_direction direction) {
 /* **************************************************** */
 
 int pfring_invea_get_bound_device_ifindex(pfring *ring, int *if_index) {
-  //pfring_invea *invea = (pfring_invea *) ring->priv_data;
+  pfring_invea *invea = (pfring_invea *) ring->priv_data;
 
-  *if_index = 0; /* TODO */
+  *if_index = invea->device_id;
   return 0;
 }
 
@@ -263,6 +263,7 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
     hdr->caplen = min_val(hdr->caplen, ring->caplen);
 
     hdr->extended_hdr.pkt_hash = 0; //TODO available?
+    hdr->extended_hdr.if_index = invea->device_id;
     hdr->extended_hdr.rx_direction = 1;
 
     hdr->ts.tv_sec  = ts_s;

@@ -8,7 +8,7 @@ add: veryclean
 	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; cp Makefile /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	sed -i -e 's|../../../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/*.c
 	sed -i -e 's|../../../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/*.h
-	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-objs/i40e_zc-objs/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/Kbuild
+	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-/i40e_zc-/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/Kbuild
 	cp dkms.conf.@I40E@ /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
 

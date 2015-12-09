@@ -290,7 +290,7 @@ int pfring_anic_set_direction(pfring *ring, packet_direction direction) {
 int pfring_anic_get_bound_device_ifindex(pfring *ring, int *if_index) {
   //pfring_anic *accolade = (pfring_anic *) ring->priv_data;
 
-  *if_index = 0; /* TODO */
+  *if_index = UNKNOWN_INTERFACE; /* TODO */
   return 0;
 }
 
@@ -762,6 +762,7 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
 
   hdr->caplen = min_val(hdr->caplen, ring->caplen);
   hdr->extended_hdr.pkt_hash = 0; //TODO available?
+  hdr->extended_hdr.if_index = UNKNOWN_INTERFACE; //TODO
   hdr->extended_hdr.rx_direction = 1;
 
   hdr->extended_hdr.timestamp_ns = ((desc_p->timestamp >> 32) * 1000000000) + (desc_p->timestamp & 0xffffffff);

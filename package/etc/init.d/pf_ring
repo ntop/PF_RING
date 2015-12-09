@@ -190,7 +190,6 @@ start_interfaces() {
 	# Enable all interfaces DNA and non DNA
 	INTERFACES="$(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g')"
 	for D in $INTERFACES ; do
-		/sbin/ifconfig $D up
 		if [ "$D" != "$MGMT_INTERFACE" ]; then
 			# Disabling offloads
 			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
@@ -201,16 +200,21 @@ start_interfaces() {
 			# Disabling Flow Control
 			/sbin/ethtool -A $D rx off > /dev/null 2>&1
 			/sbin/ethtool -A $D tx off > /dev/null 2>&1
-
 			if [ `cat /proc/net/pf_ring/dev/$D/info | grep ZC | wc -l` -eq 1 ]; then
 				# ZC interface, setting max number of RX/TX slots
 				MAX_RX_SLOTS=$(/sbin/ethtool -g $D | grep "RX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
 				MAX_TX_SLOTS=$(/sbin/ethtool -g $D | grep "TX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
 				/sbin/ethtool -G $D rx $MAX_RX_SLOTS
 				/sbin/ethtool -G $D tx $MAX_TX_SLOTS
+				F="$(/sbin/ethtool -i p1p1 | grep driver | cut -f 2 -d ':' | tr -d ' ')"
+				if [ "$F" = "i40e" ]; then
+					# FIXX setting single-queue by default (RSS option is not supported)
+					/sbin/ethtool -L $D combined 1
+				fi
 			fi
 		fi
 		set_interface_mtu ${D}
+		/sbin/ifconfig $D up
 	done
 }
 

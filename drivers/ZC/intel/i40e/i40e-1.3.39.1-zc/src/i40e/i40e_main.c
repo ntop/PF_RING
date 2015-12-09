@@ -44,6 +44,14 @@
 #define I40E_PCI_DEVICE_CACHE_LINE_SIZE      0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES        8
 
+#define I40E_MAX_NIC 64
+
+static int RSS[I40E_MAX_NIC] = 
+  { [0 ... (I40E_MAX_NIC - 1)] = 0 };
+module_param_array_named(RSS, RSS, int, NULL, 0444);
+MODULE_PARM_DESC(RSS,
+                 "Number of Receive-Side Scaling Descriptor Queues, default 0=number of cpus");
+
 u8 enable_debug = 0;
 #endif
 
@@ -3396,6 +3404,11 @@ int ring_is_not_empty(struct i40e_ring *rx_ring) {
 	/* Tail is write-only on i40e, checking all descriptors (or we need a shadow tail from userspace) */
 	for (i = 0; i < rx_ring->count; i++) {
 		rx_desc = I40E_RX_DESC(rx_ring, i);    
+		if (rx_desc == NULL) {
+			printk("[PF_RING-ZC] %s: RX descriptor #%u NULL, this should not happen\n", 
+			       __FUNCTION__, i);
+ 			break;
+		}
 		qword = le64_to_cpu(rx_desc->wb.qword1.status_error_len);
 		rx_status = (qword & I40E_RXD_QW1_STATUS_MASK) >> I40E_RXD_QW1_STATUS_SHIFT;
 		if (rx_status & (1 << I40E_RX_DESC_STATUS_DD_SHIFT))
@@ -3411,7 +3424,7 @@ int wait_packet_function_ptr(void *data, int mode)
 	int new_packets;
 
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(): enter [mode=%d/%s][queueId=%d][next_to_clean=%u][next_to_use=%d] ******\n",
+		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queueId=%d][next_to_clean=%u][next_to_use=%d] ******\n",
 		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
 		       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use);
 
@@ -3426,12 +3439,12 @@ int wait_packet_function_ptr(void *data, int mode)
 				i40e_enable_irq(rx_ring->q_vector);
 
 				if (unlikely(enable_debug)) 
-					printk("[PF_RING-ZC] %s(): Enabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+					printk("[PF_RING-ZC] %s: Enabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
 				if(unlikely(enable_debug))
-					printk("[PF_RING-ZC] %s(): Packet not arrived yet: enabling interrupts, queue=%d\n",
+					printk("[PF_RING-ZC] %s: Packet not arrived yet: enabling interrupts, queue=%d\n",
 					       __FUNCTION__,rx_ring->q_vector->v_idx);
       			}
     		} else {
@@ -3439,7 +3452,7 @@ int wait_packet_function_ptr(void *data, int mode)
 		}
 
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s(): Packet received: %d\n", __FUNCTION__, new_packets); 
+			printk("[PF_RING-ZC] %s: Packet received: %d\n", __FUNCTION__, new_packets); 
 
 		return new_packets;
 	} else {
@@ -3450,7 +3463,7 @@ int wait_packet_function_ptr(void *data, int mode)
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s(): Disabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+			printk("[PF_RING-ZC] %s: Disabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 
 		return 0;
 	}
@@ -5686,7 +5699,7 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 			cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
 			if (cache_line_size == 0) cache_line_size = 64;
 
-			if (unlikely(enable_debug))  
+			//if (unlikely(enable_debug))  
 				printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u][MSIX %s]\n", __FUNCTION__,
 					vsi->netdev->name, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0),
 					cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
@@ -5828,7 +5841,7 @@ void i40e_down(struct i40e_vsi *vsi)
 		if (hook != NULL) {
 			int i;
 			
-			if (unlikely(enable_debug))
+			//if (unlikely(enable_debug))
 	      			printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, vsi->netdev->name);
 
 			for (i = 0; i < vsi->num_queue_pairs; i++) {
@@ -8316,6 +8329,10 @@ static int i40e_init_msix(struct i40e_pf *pf)
 
 	/* reserve vectors for the main PF traffic queues */
 	pf->num_lan_msix = min_t(int, num_online_cpus(), vectors_left);
+#ifdef HAVE_PF_RING
+	if (RSS[0 /* TODO port id */ ] != 0)
+		pf->num_lan_msix = min_t(int, pf->num_lan_msix, RSS[0 /* TODO port id */ ]);
+#endif
 	vectors_left -= pf->num_lan_msix;
 	v_budget += pf->num_lan_msix;
 
@@ -8922,6 +8939,13 @@ static int i40e_sw_init(struct i40e_pf *pf)
 	if (pf->hw.func_caps.rss) {
 		pf->flags |= I40E_FLAG_RSS_ENABLED;
 		pf->rss_size = min_t(int, pf->rss_size_max, num_online_cpus());
+#ifdef HAVE_PF_RING
+		if (RSS[0 /* TODO port id */ ] != 0) {
+			pf->flags &= ~I40E_FLAG_RSS_ENABLED;
+			pf->rss_size = min_t(int, pf->rss_size, RSS[0 /* TODO port id */ ]);
+			pf->rss_size_max = pf->rss_size;
+		}
+#endif
 	}
 	/* MFP mode enabled */
 	if (pf->hw.func_caps.npar_enable || pf->hw.func_caps.flex10_enable) {
@@ -11102,6 +11126,10 @@ static void i40e_determine_queue_usage(struct i40e_pf *pf)
 					num_online_cpus());
 		pf->num_lan_qps = min_t(int, pf->num_lan_qps,
 					pf->hw.func_caps.num_tx_qp);
+#ifdef HAVE_PF_RING
+		if (RSS[0 /* TODO port id */ ] != 0)
+			pf->num_lan_qps = min_t(int, pf->num_lan_qps, RSS[0 /* TODO port id */ ]);
+#endif
 
 		queues_left -= pf->num_lan_qps;
 	}

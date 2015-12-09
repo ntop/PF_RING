@@ -430,15 +430,17 @@ MODULE_PARM_DESC(bypass_interfaces,
 u_int get_num_rx_queues(struct net_device *dev) 
 {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-  return(1);
+  return 1;
 #else
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
-  return(min_val(dev->real_num_rx_queues, dev->real_num_tx_queues));
+  return min_val(dev->real_num_rx_queues, dev->real_num_tx_queues);
 #elif (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
-  return(netdev_extended(dev)->real_num_rx_queues);
+  if (netdev_extended(dev) != NULL)
+    return netdev_extended(dev)->real_num_rx_queues;
+  else
+    return 1;
 #else
-  return(dev->real_num_tx_queues);
-  // return(1);
+  return dev->real_num_tx_queues;
 #endif
 #endif
 }
@@ -1756,7 +1758,7 @@ static int ring_alloc_mem(struct sock *sk)
    * ********************************************** */
 
   if(pfr->header_len == short_pkt_header)
-    pfr->slot_header_len = offsetof(struct pfring_pkthdr, extended_hdr.rx_direction); /* <ts,caplen,len,timestamp_ns,flags */
+    pfr->slot_header_len = offsetof(struct pfring_pkthdr, extended_hdr.tx); /* <ts,caplen,len,timestamp_ns,flags */
   else
     pfr->slot_header_len = sizeof(struct pfring_pkthdr);
 
@@ -8971,7 +8973,7 @@ void zc_dev_handler(zc_dev_operation operation,
       next->dev.usage_notification = dev_notify_function_ptr;
       list_add(&next->list, &zc_devices_list);
       zc_devices_list_size++;
-      /* Increment usage count to avoid unloading it while DNA modules are in use */
+      /* Increment usage count - avoid unloading it while ZC/DNA drivers are in use */
       try_module_get(THIS_MODULE);
 
       /* We now have to update the device list */
@@ -9025,7 +9027,7 @@ void zc_dev_handler(zc_dev_operation operation,
 	list_del(ptr);
 	kfree(entry);
 	zc_devices_list_size--;
-	/* Decrement usage count for DNA devices */
+	/* Decrement usage count */
 	module_put(THIS_MODULE);
 	break;
       }

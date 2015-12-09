@@ -37,14 +37,14 @@ INSTDIR := $(DESTDIR)/lib/modules/$(BUILD_KERNEL)/kernel/net/pf_ring
 TARGETDIR := $(DESTDIR)/usr/src/$(BUILD_KERNEL)/include/linux/
 
 all: Makefile pf_ring.c linux/pf_ring.h
-	@if test "$(USER)" = "root"; then \
-		echo "********** WARNING WARNING WARNING **********"; \
-		echo "*"; \
-		echo "* Compiling PF_RING as root might lead you to compile errors"; \
-		echo "* Please compile PF_RING as unpriviliged user"; \
-		echo "*"; \
-		echo "*********************************************"; \
-	fi
+#	@if test "$(USER)" = "root"; then \
+#		echo "********** WARNING WARNING WARNING **********"; \
+#		echo "*"; \
+#		echo "* Compiling PF_RING as root might lead you to compile errors"; \
+#		echo "* Please compile PF_RING as unpriviliged user"; \
+#		echo "*"; \
+#		echo "*********************************************"; \
+#	fi
 	make -C /lib/modules/$(BUILD_KERNEL)/build SUBDIRS=${HERE} EXTRA_CFLAGS='${EXTRA_CFLAGS}' modules
 #	cd plugins; make
 
@@ -61,10 +61,18 @@ clean:
 install:
 	mkdir -p $(INSTDIR)
 	cp *.ko $(INSTDIR)
+	mkdir -p $(DESTDIR)/usr/include/linux
 	cp linux/pf_ring.h $(DESTDIR)/usr/include/linux
 	@if test -d ${TARGETDIR}; then \
 		cp linux/pf_ring.h ${TARGETDIR}; \
 	fi
 ifeq (,$(DESTDIR))
 	/sbin/depmod $(BUILD_KERNEL)
+else
+	@echo "*****NOTE:";
+	@echo "pf_ring,ko kernel module installed in ${DESTDIR}";
+	@echo "/sbin/depmod not run.  modprobe pf_ring won't work " ;
+	@echo "You can load the kernel module directly using" ;
+	@echo "insmod <path>/pf_ring.ko" ;
+	@echo "*****";
 endif

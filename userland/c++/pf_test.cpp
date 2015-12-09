@@ -1,5 +1,8 @@
 #include "PFring.h"
 #include <string.h>
+#include <errno.h>
+#include <iostream>
+using namespace std;
 
 /* ************************************* */
 
@@ -21,20 +24,22 @@ int main(int argc, char *argv[]) {
   bool add_rule = false;
 
   if(argc != 2) {
-    printf("pf_test <device>\n");
-    return(-1);
-  } else
-    device_name = argv[1];
-
-  ring = new PFring(device_name, 128, 1);
-
-  if(ring)
-    printf("Succesfully open device %s\n", device_name);
-  else {
-    printf("Problems while opening device %s (pf_ring not loaded or perhaps you use quick mode and have already a socket bound to %s ?)\n", 
-	   device_name, device_name);
-    return(0);
+    cout << "pf_test <device>\n";
+    return -1;
   }
+
+  device_name = argv[1];
+
+  try {
+    ring = new PFring(device_name, 128, 1);
+  }
+  catch (int e)
+  {
+    cout << "Problems while opening device " << device_name << ": " << strerror(errno) << " (pf_ring not loaded or perhaps you use quick mode and have already a socket bound to " << device_name << ")\n";
+    return -1;
+  }
+
+  cout << "Succesfully open device " << device_name << "\n";
 
   ring->enable_ring();
 
@@ -50,14 +55,14 @@ int main(int argc, char *argv[]) {
     the_rule.plugin_action.plugin_id = 1; /* Dummy plugin */
     rc = ring->add_filtering_rule(&the_rule);
 
-    printf("Added filtering rule %d [rc=%d]\n", rule_id, rc);
+    cout << "Added filtering rule " << rule_id << " [rc=" << rc << "]\n", rule_id, rc;
   }
 
   while(true) {
     hdr.len = 0;
 
     if(ring->get_next_packet(&hdr, pkt, sizeof(pkt)) > 0) {
-      printf("Got %d bytes packet [tot: %u]\n", hdr.len, ++num_pkts);
+      cout << "Got " << hdr.len << " bytes packet [tot: " << ++num_pkts << "]\n";
 
       if(add_rule) {
 	struct simple_stats *the_stats = (struct simple_stats*)stats;
@@ -65,13 +70,10 @@ int main(int argc, char *argv[]) {
 
 	rc = ring->get_filtering_rule_stats(rule_id, stats, &len);
 	if(rc == sizeof(struct simple_stats))
-	  printf("Got stats for filtering rule %d [pkts=%u][bytes=%u]\n",
-		 rule_id,
-		 (unsigned int)the_stats->num_pkts,
-		 (unsigned int)the_stats->num_bytes);
+	  cout << "Got stats for filtering rule " << rule_id << " [pkts=" << ((unsigned int)the_stats->num_pkts) << "][bytes=" << ((unsigned int)the_stats->num_bytes) << "]\n";
       }
     } else {
-      printf("Error while calling get_next_packet()\n");
+      cout << "Error while calling get_next_packet()\n";
       break;
     }
   }
