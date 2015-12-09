@@ -148,7 +148,7 @@ int pfring_invea_enable_ring(pfring *ring) {
   rc = szedata_subscribe3(invea->sze, &rx, &tx);
 
   if (rc) {
-    fprintf("szedata_subscribe3 failure\n");
+    fprintf(stderr, "szedata_subscribe3 failure\n");
     return -1;
   }
 
@@ -159,7 +159,7 @@ int pfring_invea_enable_ring(pfring *ring) {
   rc = szedata_start(invea->sze);
 
   if (rc) {
-    fprintf("szedata_start failure\n");
+    fprintf(stderr, "szedata_start failure\n");
     return -1;
   }
 
@@ -219,14 +219,13 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
   unsigned int segsize;
   unsigned int packet_cnt = 0;
   uint32_t ts_s, ts_ns;
-  int i;
 #ifdef DEBUG
   unsigned int iface, dma, flags, label;
 #endif
 
  check_pfring_invea_ready:
 
-  if (myricom->packet != NULL || 
+  if (invea->packet != NULL || 
       __pfring_invea_ready(ring, wait_for_incoming_packet ? ring->poll_duration : 0) > 0) {
 
     segsize = szedata_decode_packet(invea->packet, &data, &hw_data, &data_len, &hw_data_len);
@@ -322,7 +321,7 @@ int  pfring_invea_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_pa
 
 /* **************************************************** */
 
-int pfring_flush_tx_packets(pfring *ring) {
+void pfring_invea_flush_tx_packets(pfring *ring) {
   pfring_invea *invea = (pfring_invea *) ring->priv_data;  
   szedata_burst_write_flush(invea->sze, invea->device_id);
 }

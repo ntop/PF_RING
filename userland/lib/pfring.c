@@ -53,6 +53,11 @@
 #include "pfring_mod_myricom.h"
 #endif
 
+#ifdef HAVE_INVEATECH
+/* Myricom */
+#include "pfring_mod_invea.h"
+#endif
+
 #ifdef HAVE_DNA
 #include "pfring_mod_dna.h"
 #endif
@@ -106,6 +111,13 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "myri",
     .open = pfring_myri_open,
+  },
+#endif
+
+#ifdef HAVE_INVEATECH
+  {
+    .name = "invea",
+    .open = pfring_invea_open,
   },
 #endif
 

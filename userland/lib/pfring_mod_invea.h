@@ -51,7 +51,7 @@ void pfring_invea_close(pfring *ring);
 int  pfring_invea_stats(pfring *ring, pfring_stat *stats);
 int  pfring_invea_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet);
 int  pfring_invea_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet);
-int  pfring_invea_flush_tx_packets(pfring *ring);
+void pfring_invea_flush_tx_packets(pfring *ring);
 int  pfring_invea_set_poll_watermark(pfring *ring, u_int16_t watermark);
 int  pfring_invea_set_poll_duration(pfring *ring, u_int duration);
 int  pfring_invea_poll(pfring *ring, u_int wait_duration);

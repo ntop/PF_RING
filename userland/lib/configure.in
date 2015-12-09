@@ -211,6 +211,23 @@ else
   AC_MSG_RESULT(no)
 fi
 
+LIBS="-lsze2 $LIBS"
+AC_CHECK_LIB([sze2], [szedata_open], )
+AC_MSG_CHECKING([if sze2 is present])
+if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
+    AC_MSG_RESULT([yes])
+    AC_MSG_CHECKING([Invea-Tech support])
+    if test -f pfring_mod_invea.c; then
+      AC_MSG_RESULT(yes)
+      INVEATECH_INC=""
+      INVEATECH_LIB="-lsze2"
+      INVEATECH_OBJS="pfring_mod_invea.o"
+      HAVE_INVEATECH="-D HAVE_INVEATECH"
+    else
+      AC_MSG_RESULT(no) 
+    fi
+fi
+
 if test -f pfring_mod_mlx.c; then
    AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
    AC_MSG_CHECKING([Mellanox support])
@@ -279,6 +296,10 @@ AC_SUBST(MYRICOM_INC)
 AC_SUBST(MYRICOM_LIB)
 AC_SUBST(MYRICOM_OBJS)
 AC_SUBST(HAVE_MYRICOM)
+AC_SUBST(INVEATECH_INC)
+AC_SUBST(INVEATECH_LIB)
+AC_SUBST(INVEATECH_OBJS)
+AC_SUBST(HAVE_INVEATECH)
 AC_SUBST(HAVE_MLX)
 AC_SUBST(MLX_OBJS)
 AC_SUBST(HAVE_NT)
