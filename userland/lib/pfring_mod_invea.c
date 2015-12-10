@@ -230,8 +230,6 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
     segsize = szedata_decode_packet(invea->packet, &data, &hw_data, &data_len, &hw_data_len);
 
 #ifdef DEBUG
-    printf("New packet\nLen = %u\n", invea->packet_len);
-
     printf("Hw data = %04u ", hw_data_len);
     for (i = 0; i < hw_data_len; i++)
       printf("0x%02x ", *(hw_data + i));
@@ -257,7 +255,7 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
     ts_ns =  *((uint32_t*) (hw_data + (uint32_t) TIMESTAMP_NS_OFFSET));
     ts_s  =  *((uint32_t*) (hw_data + (uint32_t) TIMESTAMP_S_OFFSET));
 
-    hdr->len = hdr->caplen = invea->packet_len;
+    hdr->len = hdr->caplen = data_len;
     hdr->caplen = min_val(hdr->caplen, ring->caplen);
 
     hdr->extended_hdr.pkt_hash = 0; //TODO available?
@@ -269,11 +267,11 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
     hdr->extended_hdr.timestamp_ns = ((u_int64_t) ts_s * 1000000000) + ts_ns;
 
     if (likely(buffer_len == 0)) {
-      *buffer = (uint8_t *) invea->packet;
+      *buffer = data;
     } else {
       if (buffer_len < hdr->caplen)
         hdr->caplen = buffer_len;
-      memcpy(*buffer, (uint8_t *) invea->packet, hdr->caplen);
+      memcpy(*buffer, data, hdr->caplen);
       memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
       pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
     }
