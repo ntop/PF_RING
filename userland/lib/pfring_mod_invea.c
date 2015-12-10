@@ -217,7 +217,6 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
   unsigned char *data, *hw_data;
   unsigned int data_len, hw_data_len;
   unsigned int segsize;
-  unsigned int packet_cnt = 0;
   uint32_t ts_s, ts_ns;
 #ifdef DEBUG
   unsigned int iface, dma, flags, label;
@@ -312,9 +311,9 @@ int  pfring_invea_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_pa
   int rc;
 
   if (flush_packet)
-    rc = szedata_prepare_and_try_write_next(invea->sze, NULL, 0, pkt, pkt_len, invea->device_id);
+    rc = szedata_prepare_and_try_write_next(invea->sze, NULL, 0, (u_char *) pkt, pkt_len, invea->device_id);
   else
-    rc = szedata_burst_write_next(invea->sze, NULL, 0, pkt, pkt_len, invea->device_id);
+    rc = szedata_burst_write_next(invea->sze, NULL, 0, (u_char *) pkt, pkt_len, invea->device_id);
 
   return (rc == 0 ? pkt_len : -1);
 }
@@ -322,8 +321,8 @@ int  pfring_invea_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_pa
 /* **************************************************** */
 
 void pfring_invea_flush_tx_packets(pfring *ring) {
-  pfring_invea *invea = (pfring_invea *) ring->priv_data;  
-  szedata_burst_write_flush(invea->sze, invea->device_id);
+  //pfring_invea *invea = (pfring_invea *) ring->priv_data;  
+  //FIXX szedata_burst_write_flush(invea->sze, invea->device_id);
 }
 
 /* **************************************************** */
