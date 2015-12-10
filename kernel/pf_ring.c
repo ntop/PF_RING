@@ -8987,6 +8987,9 @@ void zc_dev_handler(zc_dev_operation operation,
 	    dev_ptr->is_zc_device = 1 + version;
             dev_ptr->zc_dev_model = device_model;
 	    dev_ptr->num_zc_dev_rx_queues = max_val(dev_ptr->num_zc_dev_rx_queues, channel_id+1);
+#if (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
+            netif_set_real_num_rx_queues(dev_ptr->dev, dev_ptr->num_zc_dev_rx_queues); /* This is a workround for Centos 6 reporting a wrong number of queues */
+#endif
             if (rx_info != NULL) dev_ptr->num_zc_rx_slots = rx_info->packet_memory_num_slots;
             if (tx_info != NULL) dev_ptr->num_zc_tx_slots = tx_info->packet_memory_num_slots;
 
