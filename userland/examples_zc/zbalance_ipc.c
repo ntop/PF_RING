@@ -62,6 +62,7 @@ u_int32_t num_devices = 0;
 u_int32_t num_apps = 0;
 u_int32_t num_consumer_queues = 0;
 u_int32_t queue_len = QUEUE_LEN;
+u_int32_t pool_size = POOL_SIZE;
 u_int32_t instances_per_app[MAX_NUM_APP];
 char **devices = NULL;
 
@@ -272,7 +273,8 @@ void printHelp(void) {
   printf("-R <nsec>       Time resolution (nsec) when using Time Pulse thread\n"
          "                Note: in non-time-sensitive applications use >= 100usec to reduce cpu load\n");
   printf("-g <core_id>    Bind this app to a core\n");
-  printf("-q <len>        Number of slots in each queue (default: %u)\n", QUEUE_LEN);
+  printf("-q <size>       Number of slots in each consumer queue (default: %u)\n", QUEUE_LEN);
+  printf("-b <size>       Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
   printf("-N <num>        Producer for n2disk multi-thread (<num> threads)\n");
   printf("-a              Active packet wait\n");
   printf("-Q <sock list>  Enable VM support (comma-separated list of QEMU monitor sockets)\n");
@@ -401,7 +403,7 @@ int main(int argc, char* argv[]) {
     opt_argv = argv;
   }
 
-  while ((c = getopt(opt_argc, opt_argv,"ac:dg:hi:m:n:pQ:q:N:P:R:S:z")) != '?') {
+  while ((c = getopt(opt_argc, opt_argv,"ab:c:dg:hi:m:n:pQ:q:N:P:R:S:z")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch (c) {
@@ -438,6 +440,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'q':
       queue_len = upper_power_of_2(atoi(optarg));
+      break;
+    case 'b':
+      pool_size = upper_power_of_2(atoi(optarg));
       break;
     case 'N':
       n2disk_producer = 1;
@@ -502,7 +507,7 @@ int main(int argc, char* argv[]) {
     max_packet_len(devices[0]),
     metadata_len,
     (num_real_devices * MAX_CARD_SLOTS) + (num_in_queues * (queue_len + IN_POOL_SIZE)) 
-     + (num_consumer_queues * (queue_len + POOL_SIZE)) + PREFETCH_BUFFERS + num_additional_buffers, 
+     + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers, 
     pfring_zc_numa_get_cpu_node(bind_worker_core),
     NULL /* auto hugetlb mountpoint */ 
   );
@@ -554,7 +559,7 @@ int main(int argc, char* argv[]) {
   }
 
   for (i = 0; i < num_consumer_queues; i++) { 
-    if (pfring_zc_create_buffer_pool(zc, POOL_SIZE) == NULL) {
+    if (pfring_zc_create_buffer_pool(zc, pool_size) == NULL) {
       trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
       return -1;
     }
