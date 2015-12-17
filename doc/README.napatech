@@ -49,6 +49,15 @@ Please note that:
      /opt/napatech3/bin/ntpl -e "HashMode = Hash2TupleSorted"
      /opt/napatech3/bin/ntpl -e "Assign[StreamId=(0..3)] = port == 0"
 
+   Command example for merging two ports and load balancing them across
+    24 streams where the first 12 streams are bond on node 0 and the
+    remaining 12 on numa node 1
+     /opt/napatech3/bin/ntpl -e "Delete=All"
+     /opt/napatech3/bin/ntpl -e "HashMode = Hash5TupleSorted"
+     /opt/napatech3/bin/ntpl -e "Setup[NUMANode=0]=Streamid==(0..11)"
+     /opt/napatech3/bin/ntpl -e "Setup[NUMANode=1]=Streamid==(12..23)"
+     /opt/napatech3/bin/ntpl -e "Assign[streamid=(0..23)]=port==0,1"
+
  - in order to use the Napatech adapter with n2disk the configuration file
    /opt/napatech3/config/ntservice.ini should contain:
      TimestampFormat = PCAP_NS
