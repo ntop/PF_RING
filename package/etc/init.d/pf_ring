@@ -143,6 +143,11 @@ unload_hugepages() {
 }
 
 load_hugepages() {
+	if [ -d /dev/hugepages ]; then
+		# umount hugepages on systems with a default hugepages configurations, such as CentOS 7
+		umount /dev/hugepages
+	fi
+
 	check_hugepages
 	HUGEPAGES_NUMBER=0
 	if [ ${LOAD_HUGEPAGES} -eq 0 ]; then
