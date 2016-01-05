@@ -32,7 +32,10 @@ the following commands:
 
 Please note that:
  - in order to open port 0 from adapter 0 you should specify "anic:0:0" 
-   (anic:<device>:<port>) or just "anic:0" (anic:<port>) if device is 0 
+   (anic:<device>:<port>) or just "anic:0" (anic:<port>) if device is 0.
+   Opening a port this way, the full card is initialised, causesing issues
+   when opening other ports later (previous ports stop working): this can
+   be avoided using the port-to-ring binding as explained later on.
  - in order to open ring 0 from adapter 0 you should speficy "anic:0@0"
    (anic:<device>@<ring>). This is usually used for in combination with 
    anic_rx_block_mfl which is used to setup the card for multi-process
