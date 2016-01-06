@@ -52,7 +52,7 @@ CFLAGS = $(CCOPT) $(DEFS) $(INCLS)
 LDFLAGS = @LDFLAGS@
 
 # PF_RING
-PF_RING_LIBS=../lib/libpfring.a -lpthread -lnuma -lrt -lm
+PF_RING_LIBS=../lib/libpfring.a -lpthread -lrt -lm
 
 # Standard LIBS
 LIBS = @LIBS@ $(PF_RING_LIBS) `../lib/pfring_config --libs`
