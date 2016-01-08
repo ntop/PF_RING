@@ -749,13 +749,6 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
     pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
   }
 
-  if (unlikely((buffer_len && !ring->disable_timestamp) || ring->force_timestamp)) {
-    hdr->ts.tv_sec  = (desc_p->timestamp >> 32);
-    hdr->ts.tv_usec = (desc_p->timestamp & 0xffffffff) / 1000;
-  } else { /* do not set the timestamp for consistency */
-    hdr->ts.tv_sec = 0, hdr->ts.tv_usec = 0;
-  }
-
 #ifdef DEBUG
   //printf("[ANIC] Packet %u bytes [%llu]\n", desc_p->length, accolade->currentblock.buf_p);
 #endif
@@ -765,6 +758,12 @@ void __pfring_anic_recv_pkt(pfring *ring, u_char **buffer, u_int buffer_len, str
   hdr->extended_hdr.if_index = UNKNOWN_INTERFACE; //TODO
   hdr->extended_hdr.rx_direction = 1;
 
+  //if (unlikely((buffer_len && !ring->disable_timestamp) || ring->force_timestamp)) {
+    hdr->ts.tv_sec  = (desc_p->timestamp >> 32);
+    hdr->ts.tv_usec = (desc_p->timestamp & 0xffffffff) / 1000;
+  //} else { /* do not set the timestamp for consistency */
+  //  hdr->ts.tv_sec = 0, hdr->ts.tv_usec = 0;
+  //}
   hdr->extended_hdr.timestamp_ns = ((desc_p->timestamp >> 32) * 1000000000) + (desc_p->timestamp & 0xffffffff);
 
   accolade->rstats.packets++;

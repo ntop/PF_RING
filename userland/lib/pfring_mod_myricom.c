@@ -240,6 +240,9 @@ int pfring_myri_recv(pfring *ring, u_char **buffer,
     hdr->extended_hdr.pkt_hash = 0; //TODO available?
     hdr->extended_hdr.if_index = myricom->device_id;
     hdr->extended_hdr.rx_direction = 1;
+
+    hdr->ts.tv_sec  = myricom->recv_req.timestamp/1000000000;
+    hdr->ts.tv_usec = myricom->recv_req.timestamp%1000000000;
     hdr->extended_hdr.timestamp_ns = myricom->recv_req.timestamp;
 
     return 1;
