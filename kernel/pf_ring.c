@@ -696,24 +696,28 @@ static inline u_int64_t get_next_slot_offset(struct pf_ring_socket *pfr, u_int64
   struct pfring_pkthdr *hdr;
   u_int32_t real_slot_size;
 
-  // smp_rmb();
-
   hdr = (struct pfring_pkthdr *) get_slot(pfr, off);
 
   real_slot_size = pfr->slot_header_len + hdr->caplen;
 
-  if(pfr->header_len == long_pkt_header)
+  if (pfr->header_len == long_pkt_header)
     real_slot_size += hdr->extended_hdr.parsed_header_len;
 
   /* padding at the end of the packet (magic number added on insert) */
   real_slot_size += sizeof(u_int16_t); /* RING_MAGIC_VALUE */
 
+#if 0 /* ring debug */
+  printk("[PF_RING] slot len = %u bytes [%u header, %u caplen, %u parsed header, %lu magic, %u align]\n",
+    ALIGN(real_slot_size, sizeof(u_int64_t)), pfr->slot_header_len, hdr->caplen, 
+    (pfr->header_len == long_pkt_header) ? hdr->extended_hdr.parsed_header_len : 0,
+    sizeof(u_int16_t), ALIGN(real_slot_size, sizeof(u_int64_t)) - real_slot_size);
+#endif
+
   /* Align slot size to 64 bit */
   real_slot_size = ALIGN(real_slot_size, sizeof(u_int64_t));
 
-  if((off + real_slot_size + pfr->slots_info->slot_len) > (pfr->slots_info->tot_mem - sizeof(FlowSlotInfo))) {
+  if ((off + real_slot_size + pfr->slots_info->slot_len) > (pfr->slots_info->tot_mem - sizeof(FlowSlotInfo)))
     return 0;
-  }
 
   return (off + real_slot_size);
 }
@@ -722,27 +726,10 @@ static inline u_int64_t get_next_slot_offset(struct pf_ring_socket *pfr, u_int64
 
 static inline u_int64_t num_queued_pkts(struct pf_ring_socket *pfr)
 {
-  // smp_rmb();
+  if (pfr->ring_slots == NULL)
+    return 0;
 
-  if(pfr->ring_slots != NULL) {
-    /* 64-bit counters, no need to ahndle wrap
-    u_int64_t tot_insert = pfr->slots_info->tot_insert, tot_read = pfr->slots_info->tot_read;
-
-    if(tot_insert >= tot_read) {
-      return(tot_insert - tot_read);
-    } else {
-      return(((u_int64_t) - 1) + tot_insert - tot_read);
-    }
-
-    if(unlikely(enable_debug)) {
-      printk("[PF_RING] -> [tot_insert=%llu][tot_read=%llu]\n",
-	     tot_insert, tot_read);
-    }
-    */
-
-    return pfr->slots_info->tot_insert - pfr->slots_info->tot_read;
-  } else
-    return(0);
+  return pfr->slots_info->tot_insert - pfr->slots_info->tot_read;
 }
 
 /* ************************************* */

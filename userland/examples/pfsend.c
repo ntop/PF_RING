@@ -226,7 +226,7 @@ void printHelp(void) {
 #endif
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Number of different IPs (balanced traffic)\n");
-  printf("-o <num>        Offset for the IPs generated with -b\n");
+  printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on DNA]\n");
   printf("-z              Disable zero-copy, if supported [DNA only]\n");
   printf("-x <if index>   Send to the selected interface, if supported\n");
@@ -348,7 +348,7 @@ int main(int argc, char* argv[]) {
   ticks hz = 0;
   struct packet *tosend;
   u_int num_tx_slots = 0;
-  int num_balanced_pkts = 1, balanced_pkts_offset = 0, watermark = 0;
+  int num_balanced_pkts = 1, pkts_offset = 0, watermark = 0;
   u_int num_pcap_pkts = 0;
   int send_full_pcap_once = 1;
   char *pidFileName = NULL;
@@ -373,7 +373,7 @@ int main(int argc, char* argv[]) {
       send_full_pcap_once = 0;
       break;
     case 'o':
-      balanced_pkts_offset = atoi(optarg);
+      pkts_offset = atoi(optarg);
       break;
     case 'g':
       bind_core = atoi(optarg);
@@ -496,6 +496,7 @@ int main(int argc, char* argv[]) {
     pcap_t *pt = pcap_open_offline(pcap_in, ebuf);
     struct timeval beginning = { 0, 0 };
     u_int64_t avg_send_len = 0;
+    u_int32_t num_orig_pcap_pkts = 0;
 
     if(pt) {
       struct packet *last = NULL;
@@ -509,6 +510,9 @@ int main(int argc, char* argv[]) {
 	int rc = pcap_next_ex(pt, &h, (const u_char**)&pkt);
 
 	if(rc <= 0) break;
+        
+        num_orig_pcap_pkts++;
+        if ((num_orig_pcap_pkts-1) < pkts_offset) continue;
 
 	if (num_pcap_pkts == 0) {
 	  beginning.tv_sec = h->ts.tv_sec;
@@ -588,7 +592,7 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < num_balanced_pkts; i++) {
      
       if (stdin_packet_len <= 0)
-        forge_udp_packet(buffer, sizeof(buffer), balanced_pkts_offset + i);
+        forge_udp_packet(buffer, sizeof(buffer), pkts_offset + i);
       /* TODO else: reforge IP only */
 
       p = (struct packet *) malloc(sizeof(struct packet));

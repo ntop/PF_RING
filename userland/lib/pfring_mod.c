@@ -492,17 +492,6 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 
       memcpy(hdr, bucket, ring->slot_header_len);
 
-#if 0
-      if((hdr->caplen > 1518) || (hdr->len > 1518)) 
-        fprintf(stderr, "%s:%d-----> Invalid packet length [caplen: %u][len: %u]"
-                        "[hdr len: %u][slot len: %u][real slot len: %u]"
-                        "[insert_off: %u][remove_off: %u][tot_insert: %lu][tot_read: %lu]\n", 
-                __FUNCTION__, __LINE__, hdr->caplen, hdr->len, ring->slot_header_len, 
-                ring->slots_info->slot_len, ring->slot_header_len+hdr->caplen, 
-                ring->slots_info->insert_off, ring->slots_info->remove_off, 
-                ring->slots_info->tot_insert, ring->slots_info->tot_read);
-#endif
-
       bktLen = hdr->caplen;
 
       if(ring->slot_header_len == sizeof(struct pfring_pkthdr)) /* using long pkt header, parsed_header_len is available */
@@ -512,11 +501,15 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 
       /* padding at the end of the packet (it should contain the magic number) */
       real_slot_len += sizeof(u_int16_t);
-      real_slot_len = ALIGN(real_slot_len, sizeof(u_int64_t));
 
-#if 0
-      printf("Real slot len adjusted to %u (MAGIC=%02X)\n", real_slot_len, bucket[ring->slot_header_len + bktLen]);
+#if 0 /* ring debug */
+      printf("[PF_RING] slot len = %lu bytes [%u header, %u caplen, %u parsed header, %lu magic, %lu align]\n",
+        ALIGN(real_slot_len, sizeof(u_int64_t)), ring->slot_header_len, hdr->caplen,
+        (ring->slot_header_len == sizeof(struct pfring_pkthdr)) ? hdr->extended_hdr.parsed_header_len : 0,
+        sizeof(u_int16_t), ALIGN(real_slot_len, sizeof(u_int64_t)) - real_slot_len);
 #endif
+
+      real_slot_len = ALIGN(real_slot_len, sizeof(u_int64_t));
 
       if(bktLen > buffer_len) bktLen = buffer_len;
 
@@ -536,16 +529,6 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 #endif
 
       ring->slots_info->tot_read++, ring->slots_info->remove_off = next_off;
-
-#if 0 /* this safety check is not so safe as could fail due to concurrent update */
-      if(unlikely((ring->slots_info->tot_insert == ring->slots_info->tot_read)
-	 && (ring->slots_info->remove_off > ring->slots_info->insert_off 
-	 && ring->slots_info->insert_off != 0))) {
-        fprintf(stderr, " *** corrupted ring buffer indexes (recovered) ***\n",
-	ring->slots_info->remove_off = ring->slots_info->insert_off;
-	ring->slots_info->tot_read = ring->slots_info->tot_insert;
-      }
-#endif
 
       if(unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
 
