@@ -2657,7 +2657,7 @@ pcap_setfilter_linux_common(pcap_t *handle, struct bpf_program *filter,
 	 *	is buggy and needs to understand that it's just
 	 *	padding.
 	 */
-	if (can_filter_in_kernel) {
+	if (can_filter_in_kernel && fcode.len > 1 /* FIXX */) {
 		if ((err = set_kernel_filter(handle, &fcode)) == 0)
 		{
 			/*
