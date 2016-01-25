@@ -12,7 +12,8 @@ Requires: pfring-dkms = @VERS@, net-tools
 # Disable shared libs dependency check (needed by FPGA libs)
 AutoReqProv: no
 # 
-
+# As dependecies are disabled (AutoReqProv: no) we must report them manually
+Provides: daq_pfring_zc.so, daq_pfring.so, libpfring.so
 
 %description
 PF_RING kernel module and drivers for high-speed RX/TX package processing
