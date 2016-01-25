@@ -3269,32 +3269,12 @@ done
 CFLAGS=""
 SYS_LIBS=""
 
-GCC_VERSION=`$CC --version |grep ^gcc |sed 's/^.* //g'`
-if test -n "$GCC_VERSION"; then
-  ARCH=`uname -m`
-  if test "$ARCH" = "x86_64"; then
-    GCCMAJOR=`echo $GCC_VERSION |cut -d'.' -f1`
-    GCCMINOR=`echo $GCC_VERSION |cut -d'.' -f2`
-    if test "$GCCMAJOR" -eq 4 && test "$GCCMINOR" -ge 6; then
-      CPUSSE42=`grep -m 1 flags /proc/cpuinfo | grep -o sse4_2 | uniq`
-      if test "$CPUSSE42" = "sse4_2"; then
-        CPUAVX=`grep -m 1 flags /proc/cpuinfo | grep -o avx2 | uniq`
-        if test "$CPUAVX" = "avx2"; then
-          CFLAGS="-march=core-avx2 -mtune=core-avx2 $CFLAGS"
-          LIBARCH="_core-avx2"
-        else
-          if test "$CPUAVX" = "avx"; then
-            CFLAGS="-march=corei7-avx -mtune=corei7-avx $CFLAGS"
-            LIBARCH="_corei7-avx"
-  	  else
-            CFLAGS="-march=corei7 -mtune=corei7 $CFLAGS"
-            LIBARCH="_corei7"
-          fi
-        fi
-      fi
-    fi
-  fi
+NATIVE=`$CC -c -Q -march=native --help=target| grep "march" | xargs | cut -d ' ' -f 2`
+if test -f "libs/libpfring_zc_x86_64_$NATIVE.a"; then
+  CFLAGS="-march=native -mtune=native $CFLAGS"
+  LIBARCH="_$NATIVE"
 fi
+
 
 MACHINE=`uname -m`
 PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
