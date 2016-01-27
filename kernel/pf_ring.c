@@ -350,7 +350,11 @@ struct sk_buff *
 #else
 int
 #endif
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
 ip_defrag(struct sk_buff *skb, u32 user);
+#else
+ip_defrag(struct net *net, struct sk_buff *skb, u32 user);
+#endif
 
 /* ********************************** */
 
@@ -899,7 +903,11 @@ static struct sk_buff *ring_gather_frags(struct sk_buff *skb)
 #else
   int status
 #endif
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
   = ip_defrag(skb, IP_DEFRAG_RING);
+#else
+  = ip_defrag(dev_net(skb->dev), skb, IP_DEFRAG_RING);
+#endif
 
   if(
 #if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,23))
@@ -3969,6 +3977,8 @@ int bpf_filter_skb(struct sk_buff *skb,
     res = sk_run_filter(skb, filter->insns, filter->len);
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
     res = sk_run_filter(skb, filter->insns);
+#elif(LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0))
+    res = sk_filter(pfr->sk, skb);;
 #else
     res = SK_RUN_FILTER(filter, skb);
 #endif
