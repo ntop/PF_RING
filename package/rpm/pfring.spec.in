@@ -92,14 +92,14 @@ rm -fr $RPM_BUILD_ROOT
 %if %nodna == 0
 /usr/local/bin/pfdnabounce
 /usr/local/bin/pfdnacluster_master
-%endif
-#/usr/local/bin/tcpdump
-/usr/local/bin/pfcount
-/usr/local/bin/pfsend
 /usr/local/bin/zbalance_ipc
 /usr/local/bin/zsend
 /usr/local/bin/zcount
 /usr/local/bin/zcount_ipc
+%endif
+#/usr/local/bin/tcpdump
+/usr/local/bin/pfcount
+/usr/local/bin/pfsend
 /usr/local/pfring/README.FIRST
 /usr/local/pfring/README-DAQ.1st
 /etc/init.d/pf_ring
