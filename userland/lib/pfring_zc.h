@@ -674,10 +674,24 @@ pfring_zc_version();
 
 /**
  * Check if ZC is running in demo mode (using adapters in zero-copy mode without a valid license)
- * @return true if ZC is running with no demo limit.
+ * @return 1 if ZC is running with no demo limit, 0 otherwise.
  */
 int
 pfring_zc_check_license();
+
+/* **************************************************************************************** */
+
+/**
+ * Check if the license for a ZC device is valid and returns the license expiration epoch.
+ * @param queue            The queue handle for the device.
+ * @param expiration_epoch The variable (ptr) that will contain the expiration epoch as return value.
+ * @return 1 if the license is valid, and set the expiration epoch accordingly, 0 otherwise.
+ */
+int
+pfring_zc_check_device_license(
+  pfring_zc_queue *queue,
+  u_int32_t *expiration_epoch
+);
 
 /* **************************************************************************************** */
 

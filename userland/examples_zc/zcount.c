@@ -180,6 +180,7 @@ void printHelp(void) {
   printf("-R              Test hw filters adding a rule (Intel 82599)\n");
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
+  printf("-C              Check license\n");
   printf("-v              Verbose\n");
   exit(-1);
 }
@@ -261,7 +262,7 @@ void *packet_consumer_thread(void *user) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
-  int i, cluster_id = -1, rc = 0;
+  int i, cluster_id = -1, rc = 0, print_maintenance = 0;
   pthread_t my_thread;
   struct timeval timeNow, lastTime;
   pthread_t time_thread;
@@ -269,7 +270,7 @@ int main(int argc, char* argv[]) {
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:g:hi:vRHS:")) != '?') {
+  while((c = getopt(argc,argv,"ac:g:hi:vCRHS:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -301,6 +302,9 @@ int main(int argc, char* argv[]) {
     case 'v':
       verbose = 1;
       break;
+    case 'C':
+      print_maintenance = 1;
+      break;
     }
   }
   
@@ -330,6 +334,19 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
 	    strerror(errno), device);
     rc = -1;
+    goto cleanup;
+  }
+
+  if (print_maintenance) {
+    u_int32_t maintenance;
+    if (pfring_zc_check_device_license(zq, &maintenance))
+      printf("License Ok\n");
+      if (maintenance) {
+        time_t exp = maintenance;
+        printf("Maintenance will expire on %s\n", ctime(&exp));
+      }
+    else
+      printf("Invalid license\n");
     goto cleanup;
   }
 
