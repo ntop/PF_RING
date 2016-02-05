@@ -506,7 +506,7 @@ int main(int argc, char* argv[]) {
 
   if (daemon_mode)
     daemonize();
-
+    printf("%u\n",(num_real_devices * MAX_CARD_SLOTS) + (num_in_queues * (queue_len + IN_POOL_SIZE)) + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers);
   zc = pfring_zc_create_cluster(
     cluster_id, 
     max_packet_len(devices[0]),
