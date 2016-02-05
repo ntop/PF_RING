@@ -282,6 +282,7 @@ void printHelp(void) {
   printf("-d              Daemon mode\n");
   printf("-D <username>   Drop privileges\n");
   printf("-P <pid file>   Write pid to the specified file (daemon mode only)\n");
+  printf("-u <mountpoint> Hugepages mount point for packet memory allocation\n");
   exit(-1);
 }
 
@@ -388,6 +389,7 @@ int main(int argc, char* argv[]) {
   int rc;
   int num_real_devices = 0, num_in_queues = 0;
   char *pid_file = NULL;
+  char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
 
@@ -403,7 +405,7 @@ int main(int argc, char* argv[]) {
     opt_argv = argv;
   }
 
-  while ((c = getopt(opt_argc, opt_argv,"ab:c:dg:hi:m:n:pQ:q:N:P:R:S:z")) != '?') {
+  while ((c = getopt(opt_argc, opt_argv,"ab:c:dg:hi:m:n:pQ:q:N:P:R:S:zu:")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch (c) {
@@ -453,6 +455,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'R':
       time_pulse_resolution = atoi(optarg);
+      break;
+    case 'u':
+      if (optarg != NULL) hugepages_mountpoint = strdup(optarg);
       break;
     case 'S':
       time_pulse = 1;
@@ -509,7 +514,7 @@ int main(int argc, char* argv[]) {
     (num_real_devices * MAX_CARD_SLOTS) + (num_in_queues * (queue_len + IN_POOL_SIZE)) 
      + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers, 
     pfring_zc_numa_get_cpu_node(bind_worker_core),
-    NULL /* auto hugetlb mountpoint */ 
+    hugepages_mountpoint /* auto hugetlb mountpoint */ 
   );
 
   if(zc == NULL) {
