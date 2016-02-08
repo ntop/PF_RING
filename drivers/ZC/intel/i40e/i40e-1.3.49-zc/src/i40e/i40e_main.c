@@ -3635,23 +3635,22 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			if (unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
 
-			i40e_control_rxq(vsi, pf_q, false /* stop */);
-
-			i40e_clean_rx_ring(rx_ring);
-
-			i40e_control_rxq(vsi, pf_q, true /* start */);
-
 			/* disabling irqs, they will be enabled on-demand */
 			i40e_disable_irq(rx_ring->q_vector);
-		}
 
+			i40e_control_rxq(vsi, pf_q, false /* stop */);
+
+			/* FIXX this is causing system crashes on high traffic rates, TODO fix it as it causes some skbuff leak on every pfring_open!
+			i40e_clean_rx_ring(rx_ring); */
+
+			i40e_control_rxq(vsi, pf_q, true /* start */);
+		}
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 			/* nothing to do besides increasing the counter */
 
 			if(unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
 		}
-
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			struct i40e_vsi *vsi = rx_ring->vsi;
@@ -3675,7 +3674,6 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			//i40e_vsi_enable_irq(rx_ring->vsi);
 			i40e_control_rxq(vsi, pf_q, true /* start */);
 		}
-
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			/* Restore TX */
 
@@ -3693,7 +3691,6 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			//i40e_configure_tx_ring(tx_ring);
 			rmb();
 		}
-
 		if (atomic_dec_return(&adapter->pfring_zc.usage_counter) == 0 /* last user */)
 			module_put(THIS_MODULE);  /* -- */
 	}
