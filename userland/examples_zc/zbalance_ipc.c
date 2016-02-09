@@ -65,6 +65,7 @@ u_int32_t queue_len = QUEUE_LEN;
 u_int32_t pool_size = POOL_SIZE;
 u_int32_t instances_per_app[MAX_NUM_APP];
 char **devices = NULL;
+char **outdevs;
 
 int cluster_id = -1;
 int metadata_len = 0;
@@ -128,7 +129,7 @@ void print_stats() {
   double duration;
   int i;
 
-  if(start_time.tv_sec == 0)
+  if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
   else
     print_all = 1;
@@ -208,7 +209,7 @@ void print_stats() {
 
   pfring_zc_set_proc_stats(zc, stats_buf);
 
-  if(print_all && last_time.tv_sec > 0) {
+  if (print_all && last_time.tv_sec > 0) {
     double delta_msec = delta_time(&end_time, &last_time);
     unsigned long long diff_recv = tot_recv - last_tot_recv;
     unsigned long long diff_drop = tot_drop - last_tot_drop;
@@ -238,7 +239,7 @@ void print_stats() {
 void sigproc(int sig) {
   static int called = 0;
   trace(TRACE_NORMAL, "Leaving...\n");
-  if(called) return; else called = 1;
+  if (called) return; else called = 1;
 
   pfring_zc_kill_worker(zw);
 
@@ -254,35 +255,36 @@ void printHelp(void) {
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process balancing packets to multiple consumer processes.\n\n");
   printf("Usage: zbalance_ipc -i <device> -c <cluster id> -n <num inst>\n"
-	 "                [-h] [-m <hash mode>] [-S <core id>] [-g <core_id>]\n"
-	 "                [-N <num>] [-a] [-q <len>] [-Q <sock list>] [-d] \n"
-	 "                [-D <username>] [-P <pid file>] \n\n");
-  printf("-h              Print this help\n");
-  printf("-i <device>     Device (comma-separated list) Note: use 'Q' as device name to create ingress sw queues\n");
-  printf("-c <cluster id> Cluster id\n");
-  printf("-n <num inst>   Number of application instances\n"
-         "                In case of '-m 1' or '-m 4' it is possible to spread packets across multiple\n"
-         "                instances of multiple applications, using a comma-separated list\n");
-  printf("-m <hash mode>  Hashing modes:\n"
-         "                0 - No hash: Round-Robin (default)\n"
-         "                1 - IP hash, or TID (thread id) in case of '-i sysdig'\n"
-         "                2 - Fan-out\n"
-         "                3 - Fan-out (1st) + Round-Robin (2nd, 3rd, ..)\n"
-         "                4 - GTP hash (Inner IP/Port or Seq-Num)\n");
-  printf("-S <core id>    Enable Time Pulse thread and bind it to a core\n");
-  printf("-R <nsec>       Time resolution (nsec) when using Time Pulse thread\n"
-         "                Note: in non-time-sensitive applications use >= 100usec to reduce cpu load\n");
-  printf("-g <core_id>    Bind this app to a core\n");
-  printf("-q <size>       Number of slots in each consumer queue (default: %u)\n", QUEUE_LEN);
-  printf("-b <size>       Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
-  printf("-N <num>        Producer for n2disk multi-thread (<num> threads)\n");
-  printf("-a              Active packet wait\n");
-  printf("-Q <sock list>  Enable VM support (comma-separated list of QEMU monitor sockets)\n");
-  printf("-p              Print per-interface and per-queue absolute stats\n");
-  printf("-d              Daemon mode\n");
-  printf("-D <username>   Drop privileges\n");
-  printf("-P <pid file>   Write pid to the specified file (daemon mode only)\n");
-  printf("-u <mountpoint> Hugepages mount point for packet memory allocation\n");
+	 "                 [-h] [-m <hash mode>] [-S <core id>] [-g <core_id>]\n"
+	 "                 [-N <num>] [-a] [-q <len>] [-Q <sock list>] [-d] \n"
+	 "                 [-D <username>] [-P <pid file>] \n\n");
+  printf("-h               Print this help\n");
+  printf("-i <device>      Device (comma-separated list) Note: use 'Q' as device name to create ingress sw queues\n");
+  printf("-c <cluster id>  Cluster id\n");
+  printf("-n <num inst>    Number of application instances\n"
+         "                 In case of '-m 1' or '-m 4' it is possible to spread packets across multiple\n"
+         "                 instances of multiple applications, using a comma-separated list\n");
+  printf("-m <hash mode>   Hashing modes:\n"
+         "                 0 - No hash: Round-Robin (default)\n"
+         "                 1 - IP hash, or TID (thread id) in case of '-i sysdig'\n"
+         "                 2 - Fan-out\n"
+         "                 3 - Fan-out (1st) + Round-Robin (2nd, 3rd, ..)\n"
+         "                 4 - GTP hash (Inner IP/Port or Seq-Num)\n");
+  printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
+  printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
+  printf("-R <nsec>        Time resolution (nsec) when using Time Pulse thread\n"
+         "                 Note: in non-time-sensitive applications use >= 100usec to reduce cpu load\n");
+  printf("-g <core id>     Bind this app to a core\n");
+  printf("-q <size>        Number of slots in each consumer queue (default: %u)\n", QUEUE_LEN);
+  printf("-b <size>        Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
+  printf("-N <num>         Producer for n2disk multi-thread (<num> threads)\n");
+  printf("-a               Active packet wait\n");
+  printf("-Q <sock list>   Enable VM support (comma-separated list of QEMU monitor sockets)\n");
+  printf("-p               Print per-interface and per-queue absolute stats\n");
+  printf("-d               Daemon mode\n");
+  printf("-D <username>    Drop privileges\n");
+  printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
+  printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
   exit(-1);
 }
 
@@ -387,11 +389,12 @@ int main(int argc, char* argv[]) {
   int num_additional_buffers = 0;
   pthread_t time_thread;
   int rc;
-  int num_real_devices = 0, num_in_queues = 0;
+  int num_real_devices = 0, num_in_queues = 0, num_outdevs = 0;
   char *pid_file = NULL;
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
+  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:";
 
   start_time.tv_sec = 0;
 
@@ -405,7 +408,7 @@ int main(int argc, char* argv[]) {
     opt_argv = argv;
   }
 
-  while ((c = getopt(opt_argc, opt_argv,"ab:c:dg:hi:m:n:pQ:q:N:P:R:S:zu:")) != '?') {
+  while ((c = getopt(opt_argc, opt_argv, opt_string)) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch (c) {
@@ -504,6 +507,31 @@ int main(int argc, char* argv[]) {
     else num_in_queues++;
   }
 
+  inzqs  = calloc(num_devices, sizeof(pfring_zc_queue *));
+  outzqs = calloc(num_consumer_queues,  sizeof(pfring_zc_queue *));
+  outdevs = calloc(num_consumer_queues,  sizeof(char *));
+
+  optind = 1;
+  while ((c = getopt(opt_argc, opt_argv, opt_string)) != '?') {
+    int q_idx;
+    if ((c == 255) || (c == -1)) break;
+    switch (c) {
+    case 'r':
+      q_idx = atoi(optarg);
+      if (q_idx < num_consumer_queues) {
+        outdevs[q_idx] = strchr(optarg, ':');
+        if (outdevs[q_idx] != NULL) outdevs[q_idx]++;
+      }
+      break;
+    }
+  }
+
+  for (i = 0; i < num_consumer_queues; i++) 
+    if (outdevs[i] != NULL) {
+      num_outdevs++;
+      trace(TRACE_NORMAL, "Mapping egress queue %ld to device %s\n", i, outdevs[i]);
+    }
+
   if (daemon_mode)
     daemonize();
 
@@ -512,26 +540,24 @@ int main(int argc, char* argv[]) {
     max_packet_len(devices[0]),
     metadata_len,
     (num_real_devices * MAX_CARD_SLOTS) + (num_in_queues * (queue_len + IN_POOL_SIZE)) 
-     + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers, 
+     + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers
+     + (num_outdevs * MAX_CARD_SLOTS) - (num_outdevs * (queue_len /* replaced queues */ - 1 /* dummy queues */)), 
     pfring_zc_numa_get_cpu_node(bind_worker_core),
     hugepages_mountpoint 
   );
 
-  if(zc == NULL) {
+  if (zc == NULL) {
     trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",
 	    strerror(errno));
     return -1;
   }
-
-  inzqs  = calloc(num_devices, sizeof(pfring_zc_queue *));
-  outzqs = calloc(num_consumer_queues,  sizeof(pfring_zc_queue *));
 
   for (i = 0; i < num_devices; i++) {
     if (strcmp(devices[i], "Q") != 0) {
 
       inzqs[i] = pfring_zc_open_device(zc, devices[i], rx_only, 0);
 
-      if(inzqs[i] == NULL) {
+      if (inzqs[i] == NULL) {
         trace(TRACE_ERROR, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
 	        strerror(errno), devices[i]);
         return -1;
@@ -541,7 +567,7 @@ int main(int argc, char* argv[]) {
 
       inzqs[i] = pfring_zc_create_queue(zc, queue_len);
 
-      if(inzqs[i] == NULL) {                                                                                                
+      if (inzqs[i] == NULL) {                                                                                                
         trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));                                             
         return -1;                                                                                                           
       } 
@@ -554,12 +580,27 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  for (i = 0; i < num_consumer_queues; i++) { 
-    outzqs[i] = pfring_zc_create_queue(zc, queue_len);
+  for (i = 0; i < num_consumer_queues; i++) {
+    if (outdevs[i] == NULL) { /* Egress queue */
+      outzqs[i] = pfring_zc_create_queue(zc, queue_len);
 
-    if(outzqs[i] == NULL) {
-      trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
-      return -1;
+      if (outzqs[i] == NULL) {
+        trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
+        return -1;
+      }
+    } else { /* Opening device instead of queue for egress */
+      outzqs[i] = pfring_zc_open_device(zc, outdevs[i], tx_only, 0);
+
+      if (outzqs[i] == NULL) {
+        trace(TRACE_ERROR, "pfring_zc_open_device(%s) error [%s]\n", outdevs[i], strerror(errno));
+        return -1;
+      }
+
+      /* creating dummy queues to keep numeration coherent */
+      if (pfring_zc_create_queue(zc, 1) == NULL) {
+        trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
+        return -1;
+      }
     }
   }
 
@@ -582,7 +623,7 @@ int main(int argc, char* argv[]) {
     queues_list[0] = '\0';
 
     for (i = 0; i < n2disk_threads; i++) {
-      if(pfring_zc_create_queue(zc, N2DISK_CONSUMER_QUEUE_LEN) == NULL) {
+      if (pfring_zc_create_queue(zc, N2DISK_CONSUMER_QUEUE_LEN) == NULL) {
         trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
         return -1;
       }
@@ -647,8 +688,13 @@ int main(int argc, char* argv[]) {
   trace(TRACE_NORMAL, "Run your application instances as follows:\n");
   for (i = 0; i < num_apps; i++) {
     if (num_apps > 1) trace(TRACE_NORMAL, "Application %lu\n", i);
-    for (j = 0; j < instances_per_app[i]; j++)
-      trace(TRACE_NORMAL, "\tpfcount -i zc:%d@%lu\n", cluster_id, off++);
+    for (j = 0; j < instances_per_app[i]; j++) {
+      if (outdevs[off] == NULL)
+        trace(TRACE_NORMAL, "\tpfcount -i zc:%d@%lu\n", cluster_id, off);
+      else
+        trace(TRACE_NORMAL, "\t%s\n", outdevs[off]);
+      off++;
+    }
   }
 
   if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4) && num_apps == 1)) { /* balancer */
@@ -682,7 +728,7 @@ int main(int argc, char* argv[]) {
     
     outzmq = pfring_zc_create_multi_queue(outzqs, num_consumer_queues);
 
-    if(outzmq == NULL) {
+    if (outzmq == NULL) {
       trace(TRACE_ERROR, "pfring_zc_create_multi_queue error [%s]\n", strerror(errno));
       return -1;
     }
@@ -713,7 +759,7 @@ int main(int argc, char* argv[]) {
 
   }
 
-  if(zw == NULL) {
+  if (zw == NULL) {
     trace(TRACE_ERROR, "pfring_zc_run_balancer error [%s]\n", strerror(errno));
     return -1;
   }
@@ -728,7 +774,7 @@ int main(int argc, char* argv[]) {
 
   pfring_zc_destroy_cluster(zc);
 
-  if(pid_file)
+  if (pid_file)
     remove_pid_file(pid_file);
 
   return 0;
