@@ -118,9 +118,10 @@ void *time_pulse_thread(void *data) {
 void print_stats() {
   static u_int8_t print_all = 0;
   static struct timeval last_time;
-  static unsigned long long last_tot_recv = 0, last_tot_slave_recv = 0;
+  static unsigned long long last_tot_recv = 0, last_tot_slave_sent = 0;
+  //static unsigned long long last_tot_slave_recv = 0;
   static unsigned long long last_tot_drop = 0, last_tot_slave_drop = 0;
-  unsigned long long tot_recv = 0, tot_drop = 0, tot_slave_recv = 0, tot_slave_drop = 0;
+  unsigned long long tot_recv = 0, tot_drop = 0, tot_slave_sent = 0, tot_slave_recv = 0, tot_slave_drop = 0;
   struct timeval end_time;
   char buf1[64], buf2[64], buf3[64], buf4[64];
   pfring_zc_stat stats;
@@ -144,14 +145,14 @@ void print_stats() {
 
   for (i = 0; i < num_consumer_queues; i++)
     if (pfring_zc_stats(outzqs[i], &stats) == 0)
-      tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
+      tot_slave_sent += stats.sent, tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
 
   if (!daemon_mode && !proc_stats_only) {
     trace(TRACE_NORMAL, "=========================");
     trace(TRACE_NORMAL, "Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
             pfring_format_numbers((double)tot_recv, buf1, sizeof(buf1), 0),
 	    pfring_format_numbers((double)tot_drop, buf2, sizeof(buf2), 0),
-	    pfring_format_numbers((double)tot_slave_recv, buf3, sizeof(buf3), 0),
+	    pfring_format_numbers((double)tot_slave_sent, buf3, sizeof(buf3), 0),
 	    pfring_format_numbers((double)tot_slave_drop, buf4, sizeof(buf4), 0)
     );
   }
@@ -172,9 +173,11 @@ void print_stats() {
   snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
            "Duration:          %s\n"
   	   "Packets:           %lu\n"
+	   "Forwarded:         %lu\n"
 	   "Processed:         %lu\n",
            msec2dhmsm(duration, time_buf, sizeof(time_buf)),
 	   (long unsigned int)tot_recv,
+	   (long unsigned int)tot_slave_sent,
 	   (long unsigned int)tot_slave_recv);
 
   if (print_interface_stats) {
@@ -213,14 +216,15 @@ void print_stats() {
     double delta_msec = delta_time(&end_time, &last_time);
     unsigned long long diff_recv = tot_recv - last_tot_recv;
     unsigned long long diff_drop = tot_drop - last_tot_drop;
-    unsigned long long diff_slave_recv = tot_slave_recv - last_tot_slave_recv;
+    unsigned long long diff_slave_sent = tot_slave_sent - last_tot_slave_sent;
+    //unsigned long long diff_slave_recv = tot_slave_recv - last_tot_slave_recv;
     unsigned long long diff_slave_drop = tot_slave_drop - last_tot_slave_drop;
 
     if (!daemon_mode && !proc_stats_only) {
       trace(TRACE_NORMAL, "Actual Stats: Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
 	      pfring_format_numbers(((double)diff_recv/(double)(delta_msec/1000)),  buf1, sizeof(buf1), 1),
 	      pfring_format_numbers(((double)diff_drop/(double)(delta_msec/1000)),  buf2, sizeof(buf2), 1),
-	      pfring_format_numbers(((double)diff_slave_recv/(double)(delta_msec/1000)),  buf3, sizeof(buf3), 1),
+	      pfring_format_numbers(((double)diff_slave_sent/(double)(delta_msec/1000)),  buf3, sizeof(buf3), 1),
 	      pfring_format_numbers(((double)diff_slave_drop/(double)(delta_msec/1000)),  buf4, sizeof(buf4), 1)
       );
     }
@@ -229,7 +233,8 @@ void print_stats() {
   if (!daemon_mode && !proc_stats_only) 
     trace(TRACE_NORMAL, "=========================\n\n");
  
-  last_tot_recv = tot_recv, last_tot_slave_recv = tot_slave_recv;
+  last_tot_recv = tot_recv, last_tot_slave_sent = tot_slave_sent;
+  //last_tot_slave_recv = tot_slave_recv;
   last_tot_drop = tot_drop, last_tot_slave_drop = tot_slave_drop;
   last_time.tv_sec = end_time.tv_sec, last_time.tv_usec = end_time.tv_usec;
 }
