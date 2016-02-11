@@ -110,7 +110,6 @@ start_cluster() {
     sleep 5
 }
 
-
 stop_cluster() {
     CLUSTER_ID=$1
 
@@ -133,6 +132,64 @@ stop_cluster() {
     for E in $IDS ; do
 	stop_cluster_id $E
     done
+}
+
+check_cluster_status() {
+	INTERFACE_NAME=$1
+
+	if [ -z $INTERFACE_NAME ]; then
+		NETDEVICES="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+	else
+		NETDEVICES=$INTERFACE_NAME
+	fi
+
+	local NUM_CONFIGED_INSTANCES=0
+	local NUM_RUNNING_INSTANCES=0
+	local RUNNING_INSTANCES=()
+	local NOT_RUNNING_INSTANCES=()
+
+	for E in $NETDEVICES ; do
+		if [ -f /etc/cluster/cluster-${E}.start ] ; then
+			NUM_CONFIGED_INSTANCES=$((NUM_CONFIGED_INSTANCES+1))
+
+			PID_FILE=$(cat /etc/cluster/cluster-${E}.conf | grep '\-P='|cut -d '=' -f 2)
+			if [ -f $PID_FILE ]; then
+				PID=$(cat "${PID_FILE}")
+				if [ $PID -gt 0 ]; then
+					IS_EXISTING=$(ps auxw | grep -v grep| grep $PID|wc -l)
+					if [ $IS_EXISTING -gt 0 ]; then
+						NUM_RUNNING_INSTANCES=$((NUM_RUNNING_INSTANCES+1));
+						RUNNING_INSTANCES+=($E);
+					fi
+				fi
+			else #no pid
+				NOT_RUNNING_INSTANCES+=($E);
+			fi
+		fi
+	done
+	if [ $NUM_RUNNING_INSTANCES -eq $NUM_CONFIGED_INSTANCES  ]; then
+		echo "UP"
+	else
+	   local MSG="The following instances are not running: "
+	   for INSTANCE in ${NOT_RUNNING_INSTANCES[@]}; do
+		   MSG+="$INSTANCE "
+		done
+		echo "$MSG"
+	fi
+}
+
+get_status() {
+	EXIT_CODE=0
+	cluster_result=$(check_cluster_status $1);
+
+	if [[ $cluster_result == UP* ]]; then
+		echo "cluster running"
+	else
+		echo "$cluster_result"
+		EXIT_CODE=3
+	fi
+
+	exit "$EXIT_CODE"
 }
 
 ########
@@ -169,8 +226,12 @@ case "$1" in
 	start_cluster "$PARAM_CLUSTER_ID" 0;
 	;;
 
+  status)
+	get_status "$PARAM_CLUSTER_ID";
+	;;
+
   *)
-	echo "Usage: /etc/init.d/cluster {start|force-start|stop|restart} [cluster id(s)]"
+	echo "Usage: /etc/init.d/cluster {start|force-start|stop|restart|status} [cluster id(s)]"
 	exit 1
 esac
 
