@@ -1,0 +1,307 @@
+.\" LICENSE
+.\"
+.\" This software program is released under the terms of a license agreement between you ('Licensee') and Intel. Do not use or load this software or any associated materials (collectively, the 'Software') until you have carefully read the full terms and conditions of the LICENSE located in this software package. By loading or using the Software, you agree to the terms of this Agreement. If you do not agree with the terms of this Agreement, do not install or use the Software.
+.\"
+.\" * Other names and brands may be claimed as the property of others.
+.\"
+.
+.TH igb 1 "June 3, 2013"
+.SH NAME
+igb \-This file describes the Linux* Base Driver for the Gigabit Family of Adapters.
+.SH SYNOPSIS
+.PD 0.4v
+modprobe igb [<option>=<VAL1>,<VAL2>,...]
+.PD 1v
+.SH DESCRIPTION
+This driver is intended for \fB2.6.30\fR and later kernels. 
+This driver includes support for Intel(R) Itanium(R)2-based systems.
+.LP
+This driver is only supported as a loadable module at this time. Intel is
+not supplying patches against the kernel source to allow for static linking of
+the drivers.
+
+
+For questions related to hardware requirements, refer to the documentation
+supplied with your Intel adapter. All hardware requirements listed apply to
+use with Linux.
+
+.LP
+This driver supports 2.5 Gbps operating speed on 2500BASE-KX only for 
+I354-based network connections.
+.SH OPTIONS
+The following optional parameters are used by entering them on the
+command line with the modprobe command.
+For example:
+.IP
+modprobe igb InterruptThrottleRate=16000,16000
+.LP
+.B InterruptThrottleRate
+.IP
+.B Valid Range:
+0=off
+1=dynamic
+3=dynamic conservative
+<min_ITR>-<max_ITR>
+.IP
+Interrupt Throttle Rate controls the number of interrupts each interrupt
+vector can generate per second. Increasing ITR lowers latency at the cost of
+increased CPU utilization, though it may help throughput in some circumstances.
+.IP
+0 = Setting InterruptThrottleRate to 0 turns off any interrupt moderation
+  and may improve small packet latency. However, this is generally not
+  suitable for bulk throughput traffic due to the increased CPU utilization
+  of the higher interrupt rate.
+  NOTES:
+  - On 82599, and X540, and X550-based adapters, disabling InterruptThrottleRate
+    will also result in the driver disabling HW RSC.
+  - On 82598-based adapters, disabling InterruptThrottleRate will also
+    result in disabling LRO (Large Receive Offloads).
+.IP
+1 = Setting InterruptThrottleRate to Dynamic mode attempts to moderate
+  interrupts per vector while maintaining very low latency. This can
+  sometimes cause extra CPU utilization. If planning on deploying igb
+  in a latency sensitive environment, this parameter should be considered.
+.IP
+<min_ITR>-<max_ITR> = 100-100000
+  Setting InterruptThrottleRate to a value greater or equal to <min_ITR>
+  will program the adapter to send at most that many interrupts
+  per second, even if more packets have come in. This reduces interrupt load
+  on the system and can lower CPU utilization under heavy load, but will
+  increase latency as packets are not processed as quickly.
+
+ .IP
+NOTE:
+- Un-supported Adapters: InterruptThrottleRate is NOT supported by
+  82542, 82543, or 82544-based adapters.
+.LP
+.B LLIPort
+.IP
+.B Valid Range: 0-65535
+.IP
+LLI is configured with the LLIPort command-line parameter, which specifies
+which TCP port should generate Low Latency Interrupts.
+.IP
+For example, using LLIPort=80 would cause the board to generate an immediate
+interrupt upon receipt of any packet sent to TCP port 80 on the local machine.
+.IP
+WARNING: Enabling LLI can result in an excessive number of interrupts/second
+that may cause problems with the system and in some cases may cause a kernel
+panic.
+.LP
+.B LLIPush
+.IP
+.B Valid Range: 0-1
+.IP
+LLIPush can be set to be enabled or disabled (default). It is most effective
+in an environment with many small transactions.
+.IP
+NOTE: Enabling LLIPush may allow a denial of service attack.
+.LP
+.B LLISize
+.IP
+.B Valid Range: 0-1500
+.IP
+LLISize causes an immediate interrupt if the board receives a packet smaller
+than the specified size.
+.LP
+.B IntMode
+.IP
+.B Valid Range: 0-2 (0 = Legacy Int, 1 = MSI and 2 = MSI-X)
+.IP
+IntMode controls allow load time control over the type of interrupt
+registered for by the driver. MSI-X is required for multiple queue
+support, and some kernels and combinations of kernel .config options
+will force a lower level of interrupt support.
+'cat /proc/interrupts' will show different values for each type of interrupt.
+.LP
+.B RSS
+.IP
+.B Valid Range: 0-8
+.IP
+0 = Assign up to the lesser value of the number of CPUs or the number of queues
+.IP
+X = Assign X queues, where X is less than or equal to the maximum number of
+queues (8 queues). 
+The driver allows maximum supported queue value. For example,
+I350-based adapters allow RSS=8, where 8 queues is the maximum allowable
+queues.
+.IP
+NOTE: For 82575-based adapters, the maximum number of queues is 4; for
+82576-based and newer adapters it is 8; for I210-based adapters it is 4
+queues; and for I211-based adapters it is 2 queues.
+.IP
+This parameter is also affected by the VMDq parameter in that it will limit
+the queues more.
+.IP
+	VMDQ
+Model 0 1 2 3+
+82575 4 4 3 1
+82576 8 2 2 2
+82580 8 1 1 1
+.LP
+.B VMDQ
+.IP
+.B Valid Range: 0-4 on 82575-based adapters; 0-8 for 82576/82580-based adapters
+.IP
+Supports enabling VMDq pools as this is needed to support SR-IOV.
+.IP
+0 = Disabled
+.IP
+1 = Sets the netdev as pool 0
+.IP
+2+ = Add additional queues but they currently are not used
+.IP
+This parameter is forced to 1 or more if the max_vfs module parameter is used.
+In addition, the number of queues available for RSS is limited if this is set
+to 1 or greater.
+.LP
+.B max_vfs
+.IP
+.B Valid Range: 0-7
+.IP
+If the value is greater than 0 it will also force the VMDq parameter to be 1
+or more.
+.IP
+.IP
+.LP
+.B QueuePairs
+.IP
+.B Valid Range: 0-1
+.IP
+If set to 0, when MSI-X is enabled, the Tx and Rx will attempt to occupy
+separate vectors.
+.IP
+This option can be overridden to 1 if there are not sufficient interrupts
+available. This can occur if any combination of RSS, VMDQ, and max_vfs results
+in more than 4 queues being used.
+.LP
+.B Node
+.IP
+.B Valid Range: 0-n
+.IP
+0 - n: where n is the number of the NUMA node that should be used to allocate
+memory for this adapter port.
+.IP
+-1: uses the driver default of allocating memory on whichever processor is
+running modprobe.
+.IP
+The Node parameter allows you to choose which NUMA node you want to have the
+adapter allocate memory from. All driver structures, in-memory queues, and
+receive buffers will be allocated on the node specified. This parameter is
+only useful when interrupt affinity is specified; otherwise, part of the
+interrupt time could run on a different core than where the memory is
+allocated causing slower memory access and impacting throughput, CPU, or both.
+.LP
+.B EEE
+.IP
+.B Valid Range: 0-1
+.IP
+0 = Disables EEE
+.IP
+1 = Enables EEE
+.IP
+A link between two EEE-compliant devices will result in periodic bursts of
+data followed by periods where the link is in an idle state. This Low Power
+Idle (LPI) state is supported in both 1 Gbps and 100 Mbps link speeds.
+
+NOTE: EEE support requires auto-negotiation.
+.LP
+.B DMAC
+.IP
+.B Valid Range: 0, 250, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000,
+9000, 10000
+.IP
+This parameter enables or disables DMA Coalescing feature. Values are in
+microseconds and set the internal DMA Coalescing internal timer.
+.IP
+DMA (Direct Memory Access) allows the network device to move packet data
+directly to the system's memory, reducing CPU utilization. However, the
+frequency and random intervals at which packets arrive do not allow the
+system to enter a lower power state. DMA Coalescing allows the adapter
+to collect packets before it initiates a DMA event. This may increase
+network latency but also increases the chances that the system will enter
+a lower power state.
+.IP
+Turning on DMA Coalescing may save energy with kernel 2.6.32 and newer.
+DMA Coalescing must be enabled across all active ports in order to save
+platform power.
+.LP
+.B MDD (Malicious Driver Detection)
+.IP
+.B Valid Range: 0-1
+.IP
+0 = Disabled
+.IP>
+1 = Enabled
+.IP
+This parameter is only relevant for I350 devices operating in SR-IOV mode.
+When this parameter is set, the driver detects malicious VF driver and
+disables its Tx/Rx queues until a VF driver reset occurs.
+.SH Jumbo Frames
+.LP
+Jumbo Frames support is enabled by changing the Maximum Transmission Unit
+(MTU) to a value larger than the default value of 1500.
+
+Use the ifconfig command to increase the MTU size. For example, enter the
+following where <x> is the interface number:
+
+   ifconfig eth<x> mtu 9000 up
+
+.LP
+NOTES:
+- The maximum MTU setting for Jumbo Frames is 9216. This value coincides
+  with the maximum Jumbo Frames size of 9234 bytes.
+- Using Jumbo frames at 10 or 100 Mbps is not supported and may result in
+  poor performance or loss of link.
+See the section "Jumbo Frames" in the Readme.
+.SH ethtool
+.LP
+The driver utilizes the ethtool interface for driver configuration and
+diagnostics, as well as displaying statistical information. The latest
+ethtool version is required for this functionality. Download it at
+http://ftp.kernel.org/pub/software/network/ethtool/
+
+
+.LP
+.B LRO
+.IP
+.B Valid Range: 0(off), 1(on)
+Large Receive Offload (LRO) is a technique for increasing inbound throughput
+of high-bandwidth network connections by reducing CPU overhead. It works by
+aggregating multiple incoming packets from a single stream into a larger
+buffer before they are passed higher up the networking stack, thus reducing
+the number of packets that have to be processed. LRO combines multiple
+Ethernet frames into a single receive in the stack, thereby potentially
+decreasing CPU utilization for receives.
+.IP
+NOTE: LRO requires 2.4.22 or later kernel version.
+.IP
+IGB_LRO is a compile time flag. The user can enable it at compile time to add
+support for LRO from the driver. The flag is used by adding
+CFLAGS_EXTRA="-DIGB_LRO" to the make file when it's being compiled.
+# make CFLAGS_EXTRA="-DIGB_LRO" install
+.IP
+You can verify that the driver is using LRO by looking at these counters in
+ethtool:
+.LP
+- lro_aggregated - counts total packets that were combined
+.LP
+- lro_flushed - counts the number of packets flushed out of LRO
+.LP
+- lro_recycled - counts the number of buffers returned to the ring from
+  recycling
+.IP
+NOTE: IPv6 and UDP are not supported by LRO.
+.SH SUPPORT
+.LP
+For additional information regarding building and installation,
+see the
+README
+included with the driver.
+For general information, go to the Intel support website at:
+.B www.intel.com/support/
+.LP
+If an issue is identified with the released source code on a supported
+kernel with a supported adapter, email the specific information related to the
+issue to e1000-devel@lists.sf.net.
+.LP

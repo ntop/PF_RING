@@ -1,0 +1,100 @@
+# updates for the system pci.ids file
+#
+# IMPORTANT!  Entries in this list must be sorted as they
+#             would appear in the system pci.ids file.  Entries
+#             are sorted by ven, dev, subven, subdev
+#             (numerical order).
+#
+8086  Intel Corporation
+	0438  DH8900CC Series Gigabit Network Connection
+	043a  DH8900CC Series Gigabit Fiber Network Connection
+	043c  DH8900CC Series Gigabit Backplane Network Connection
+	0440  DH8900CC Series Gigabit SFP Network Connection
+	10a7  82575EB Gigabit Network Connection
+		8086 10a8  82575EB Gigabit Riser Card
+	10a9  82575EB Gigabit Backplane Connection
+	10c9  82576 Gigabit Network Connection
+		8086 a01c  Gigabit ET Dual Port Server Adapter
+		8086 a03c  Gigabit ET Dual Port Server Adapter
+	10d6  82575GB Gigabit Network Connection
+		8086 10d6  Gigabit VT Quad Port Server Adapter
+		8086 145a  Gigabit VT Quad Port Server Adapter
+		8086 147a  Gigabit VT Quad Port Server Adapter
+	10e6  82576 Gigabit Network Connection
+		8086 a01f  Gigabit EF Dual Port Server Adapter
+		8086 a02f  Gigabit EF Dual Port Server Adapter
+	10e7  82576 Gigabit Network Connection
+	10e8  82576 Gigabit Network Connection
+		8086 a02b  Gigabit ET Quad Port Server Adapter
+		8086 a02c  Gigabit ET Quad Port Server Adapter
+	150a  82576NS Gigabit Network Connection
+	150d  82576 Gigabit Backplane Connection
+		8086 a10c  Gigabit ET Quad Port Mezzanine Card
+	150e  82580 Gigabit Network Connection
+		8086 12a1  Ethernet Server Adapter I340-T4
+		8086 12a2  Ethernet Server Adapter I340-T4
+	150f  82580 Gigabit Fiber Network Connection
+	1510  82580 Gigabit Backplane Connection
+	1511  82580 Gigabit SFP Connection
+	1516  82580 Gigabit Network Connection
+		8086 12b1  Ethernet Server Adapter I340-T2
+		8086 12b2  Ethernet Server Adapter I340-T2
+	1518  82576NS SerDes Gigabit Network Connection
+	1521  I350 Gigabit Network Connection
+		1028 04cf  Gigabit 2P I350-t LOM
+		1028 0602  Gigabit 2P I350-t LOM
+		1028 1f60  Gigabit 4P I350-t rNDC
+		1028 1f62  Gigabit 4P X540/I350 rNDC
+		1028 1f73  Gigabit 4P X520/I350 rNDC
+		1028 1f9a  Gigabit 4P X710/I350 rNDC
+		103c 17d1  Ethernet 1Gb 4-port 366FLR Adapter
+		103c 337f  Ethernet 1Gb 2-port 361i Adapter
+		103c 3380  Ethernet 1Gb 4-port 366i Adapter
+		103c 339e  Ethernet 1Gb 2-port 361T Adapter
+		103c 2003  Ethernet 1Gb 2-port 367i Adapter
+		103c 2226  Ethernet 1Gb 1-port 364i Adapter
+		103c 8157  Ethernet 1Gb 4-port 366T Adapter
+		108e 7b16  Quad Port GbE PCIe 2.0 ExpressModule, UTP
+		108e 7b18  Quad Port GbE PCIe 2.0 Low Profile Adapter, UTP
+		17aa 1074  Lenovo ThinkServer I350-T4 AnyFabric
+		8086 0001  Ethernet Server Adapter I350-T4
+		8086 0002  Ethernet Server Adapter I350-T2
+		8086 00a1  Ethernet Server Adapter I350-T4
+		8086 00a2  Ethernet Server Adapter I350-T2
+		8086 5001  Ethernet Server Adapter I350-T4
+		8086 5002  Ethernet Server Adapter I350-T2
+	1522  I350 Gigabit Fiber Network Connection
+		108e 7b17  Quad Port GbE PCIe 2.0 ExpressModule, MMF
+		108e 7b19  Dual Port GbE PCIe 2.0 Low Profile Adapter, MMF
+		8086 0003  Ethernet Server Adapter I350-F4
+		8086 0004  Ethernet Server Adapter I350-F2
+		8086 0005  Ethernet Server Adapter I350-F1
+		8086 00a3  Ethernet Server Adapter I350-F4
+		8086 00a4  Ethernet Server Adapter I350-F2
+	1523  I350 Gigabit Backplane Connection
+		1028 0660  Gigabit 2P I350 LOM
+		1028 1f9b  Gigabit 4P I350 bNDC
+		103c 18d1  Ethernet 1Gb 2-port 361FLB Adapter
+		103c 1989  Ethernet 1Gb 2-port 363i Adapter
+		103c 339f  Ethernet 1Gb 4-port 366M Adapter
+		8086 1f52  1GbE 4P I350 Mezz
+	1524  I350 Gigabit Connection
+	1526  82576 Gigabit Network Connection
+		8086 a05c  Gigabit ET2 Quad Port Server Adapter
+		8086 a06c  Gigabit ET2 Quad Port Server Adapter
+	1527  82580 Gigabit Fiber Network Connection
+		8086 0001  Ethernet Server Adapter I340-F4
+		8086 0002  Ethernet Server Adapter I340-F4
+	1533  I210 Gigabit Network Connection
+		103c 0003  Ethernet I210-T1 GbE NIC
+		8086 0001  Ethernet Server Adapter I210-T1
+		8086 0002  Ethernet Server Adapter I210-T1
+	1536  I210 Gigabit Fiber Network Connection
+	1538  I210 Gigabit Network Connection
+	157b  I210 Gigabit Network Connection
+	157c  I210 Gigabit Backplane Connection
+	1539  I211 Gigabit Network Connection
+	1f40  Ethernet Connection I354 1.0 GbE Backplane
+		1028 05f1  Ethernet Connection I354 1.0 GbE Backplane
+	1f41  Ethernet Connection I354
+	1f45  Ethernet Connection I354 2.5 GbE Backplane
