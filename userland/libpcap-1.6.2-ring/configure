@@ -6596,6 +6596,8 @@ bpf|linux|snf)
 	;;
 esac
 
+want_snf=no
+with_snf=no
 ac_cv_lbl_snf_api=no
 if test "$with_snf" != no; then
 
