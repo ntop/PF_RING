@@ -45,6 +45,7 @@ FORCESTART=0
 FORCESTART_FILE="/etc/pf_ring/forcestart"
 DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
 LOAD_HUGEPAGES=0
+PFRING_CONFIG="/etc/pf_ring/pf_ring.conf"
 
 function dkms_installed {
   if [ ${DISTRO} == "debian" ]; then
@@ -192,10 +193,11 @@ set_interface_mtu() {
 }
 
 start_interfaces() {
-	# Enable all interfaces DNA and non DNA
+	SETUP_FOR_PACKET_CAPTURE=$1
+
 	INTERFACES="$(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g')"
 	for D in $INTERFACES ; do
-		if [ "$D" != "$MGMT_INTERFACE" ]; then
+		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && [ "$D" != "$MGMT_INTERFACE" ]; then
 			# Disabling offloads
 			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
 
@@ -217,8 +219,8 @@ start_interfaces() {
 					/sbin/ethtool -L $D combined 1
 				fi
 			fi
+			set_interface_mtu ${D}
 		fi
-		set_interface_mtu ${D}
 		/sbin/ifconfig $D up
 	done
 }
@@ -324,7 +326,7 @@ unload_dna_zc() {
 	if [ ${UNLOAD_HUGEPAGES} -eq 1 ]; then
 		unload_hugepages
 	fi
-	start_interfaces
+	start_interfaces 0
 }
 
 start_pf_ring() {
@@ -343,14 +345,7 @@ start_pf_ring() {
 
     KERNEL_VERSION=$(uname -r)
 
-    PFRING_CONFIG="/etc/pf_ring/pf_ring.conf"
-    PFRING_CONFIG_OLD="/etc/pf_ring/pfring.conf"
-    PARAM=""
-    if [ -f $PFRING_CONFIG ]; then
-        PARAM="$(cat $PFRING_CONFIG)"
-    elif [ -f $PFRING_CONFIG_OLD ]; then
-        PARAM="$(cat $PFRING_CONFIG_OLD)"
-    fi
+    PARAM="$(cat $PFRING_CONFIG)"
 
     PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
     PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
@@ -406,7 +401,7 @@ start_pf_ring() {
     ## Load NTOP drivers ##
     sleep 1
     
-    start_interfaces
+    start_interfaces 1
 
     [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
     [ ${DISTRO} == "centos" ] && echo_success && echo
@@ -461,6 +456,68 @@ stop_pf_ring() {
     [ ${DISTRO} == "centos" ] && echo_success && echo
 }
 
+check_driver_status() {
+	local NUM_CONFIGED_DRIVERS=0
+	local NUM_LOADED_DRIVERS=0
+	local UNLOADED_DRIVERS=()
+	for F in ${DRIVERS_FLAVOR[@]} ; do
+		for D in ${DKMS_DRIVERS[@]} ; do
+			if [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
+				NUM_CONFIGED_DRIVERS=$((NUM_CONFIGED_DRIVERS+1))
+				if [ `lsmod |grep -w ^${D}_${F} | wc -l` -eq 1 ]; then
+					NUM_LOADED_DRIVERS=$((NUM_LOADED_DRIVERS+1))
+				else
+					UNLOADED_DRIVERS+=(${D}_${F})
+				fi
+			fi
+		done
+	done
+	if [ $NUM_CONFIGED_DRIVERS -eq $NUM_LOADED_DRIVERS ]; then
+		echo "UP"
+	else
+		local MSG="The following drivers are not loaded: "
+		for driver in ${UNLOADED_DRIVERS[@]}; do
+			 MSG+="$driver "
+		done
+		echo "$MSG"
+	fi
+}
+
+check_pf_ring_status() {
+	# check the module status
+	if [ -f ${DRIVERS_CONFIG_DIR}/${PFRING}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${PFRING}.start ]; then
+		if [ `lsmod | grep ^${PFRING} | wc -l` -gt 0 ]; then
+			echo "UP"
+		elif [ `lsmod | grep ^${PFRING} | wc -l` -le 0 ]; then
+			local  MSG="pf_ring module not running"
+			echo "$MSG"
+		fi
+	fi
+
+}
+
+get_status() {
+	EXIT_CODE=0
+	driver_result=$(check_driver_status);
+	pf_ring_result=$(check_pf_ring_status);
+
+	if [[ $driver_result == UP* ]]; then
+		echo "Drivers Loaded"
+	else
+		echo "$driver_result"
+		EXIT_CODE=3
+	fi
+
+	if [[ $pf_ring_result == UP* ]]; then
+		echo "pf_ring Loaded"
+	else
+		echo "$pf_ring_result"
+		EXIT_CODE=3
+	fi
+
+	exit "$EXIT_CODE"
+}
+
 old_config_migration() {
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
@@ -483,10 +540,13 @@ old_config_migration() {
 	if [ -f ${OLD_HUGEPAGES_CONFIG} ] && [ ! -f ${HUGEPAGES_CONFIG} ]; then 
 		mv ${OLD_HUGEPAGES_CONFIG} ${HUGEPAGES_CONFIG}
 	fi
+
+	PFRING_CONFIG_OLD="/etc/pf_ring/pfring.conf" 
+	if [ -f $PFRING_CONFIG_OLD ]; then
+		mv ${PFRING_CONFIG_OLD} ${PFRING_CONFIG}
+	fi
 }
 ########
-
-INTERFACE_NAME=$2
 
 case "$1" in
   start)
@@ -494,11 +554,11 @@ case "$1" in
 	;;
 
   stop)
-  	stop_pf_ring;
+	stop_pf_ring;
 	;;
 
   restart)
-    stop_pf_ring;
+	stop_pf_ring;
 	start_pf_ring;
 	;;
 
@@ -509,12 +569,16 @@ case "$1" in
 
   forcerestart)
 	FORCESTART=1
-    stop_pf_ring;
+	stop_pf_ring;
 	start_pf_ring;
 	;;
 
+  status)
+	get_status;
+	;;
+
   *)
-	echo "Usage: /etc/init.d/pf_ring {start|stop|restart|forcestart|forcerestart}"
+	echo "Usage: /etc/init.d/pf_ring {start|stop|restart|forcestart|forcerestart|status}"
 	exit 1
 esac
 
