@@ -212,7 +212,7 @@ struct __pfring {
 
   /* Hardware Timestamp */
   struct {
-    u_int8_t force_timestamp, is_silicom_hw_timestamp_card, enable_hw_timestamp;
+    u_int8_t force_timestamp, is_silicom_hw_timestamp_card, enable_hw_timestamp, last_hw_timestamp_head_offset;
     struct timespec last_hw_timestamp;
   } hw_ts;
 
