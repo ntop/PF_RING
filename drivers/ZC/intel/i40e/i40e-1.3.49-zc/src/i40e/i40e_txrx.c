@@ -3132,6 +3132,14 @@ netdev_tx_t i40e_lan_xmit_frame(struct sk_buff *skb, struct net_device *netdev)
 	struct i40e_vsi *vsi = np->vsi;
 	struct i40e_ring *tx_ring = vsi->tx_rings[skb->queue_mapping];
 
+#ifdef HAVE_PF_RING
+	/* We don't allow legacy send when in zc mode */
+	if (atomic_read(&i40e_netdev_to_pf(netdev)->pfring_zc.usage_counter) > 0) {
+		dev_kfree_skb_any(skb);
+		return NETDEV_TX_OK;
+	}
+#endif
+
 	/* hardware can't handle really short frames, hardware padding works
 	 * beyond this point
 	 */
