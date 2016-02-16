@@ -620,8 +620,12 @@ e1000_receive_skb(struct e1000_adapter *adapter,
 
 			rc = hook->ring_handler(skb, 1, 1, &skb_reference_in_use, -1, 1);
 	      
-			if (rc > 0) /* Packet handled by PF_RING */
+			if (rc > 0) { /* Packet handled by PF_RING */
+				if (!skb_reference_in_use)
+					kfree_skb(skb);
+
 				return rc; /* PF_RING has already freed the memory */
+			}
 		}
 	}
 #endif
@@ -1211,13 +1215,8 @@ static bool e1000_clean_rx_irq(struct e1000_ring *rx_ring)
 #endif
 
 #ifdef HAVE_PF_RING
-		if (e1000_receive_skb(adapter, netdev, skb, staterr,
-				      rx_desc->wb.upper.vlan) == 2) {
-			/* Force adapter to stop polling as we have no room for packets */
-			/* printk("[PF_RING] No room for packets\n");  */
-			*work_done = work_to_do;
-			/* schedule(); */
-		}
+		if (e1000_receive_skb(adapter, netdev, skb, staterr, rx_desc->wb.upper.vlan) == 2)
+			*work_done = work_to_do; /* Slow down the adapter as we have no room for packets */
 #else
 		e1000_receive_skb(adapter, netdev, skb, staterr,
 				  rx_desc->wb.upper.vlan);
@@ -1692,13 +1691,8 @@ copydone:
 			adapter->rx_hdr_split++;
 
 #ifdef HAVE_PF_RING
-		if (e1000_receive_skb(adapter, netdev, skb,
-				      staterr, rx_desc->wb.middle.vlan) == 2) {
-			/* Force adapter to stop polling as we have no room for packets */
-			/* printk("[PF_RING] No room for packets\n");  */
-			*work_done = work_to_do;
-			/* schedule(); */
-		}
+		if (e1000_receive_skb(adapter, netdev, skb, staterr, rx_desc->wb.middle.vlan) == 2)
+			*work_done = work_to_do; /* Slow down the adapter as we have no room for packets */
 #else
 		e1000_receive_skb(adapter, netdev, skb, staterr,
 				  rx_desc->wb.middle.vlan);
@@ -1910,13 +1904,8 @@ static bool e1000_clean_jumbo_rx_irq(struct e1000_ring *rx_ring, int *work_done,
 		}
 
 #ifdef HAVE_PF_RING
-		if (e1000_receive_skb(adapter, netdev, skb, staterr,
-				      rx_desc->wb.upper.vlan) == 2) {
-			/* Force adapter to stop polling as we have no room for packets */
-			/* printk("[PF_RING] No room for packets\n");  */
-			*work_done = work_to_do;
-			/* schedule(); */
-		}
+		if (e1000_receive_skb(adapter, netdev, skb, staterr, rx_desc->wb.upper.vlan) == 2)
+			*work_done = work_to_do; /* Slow down the adapter as we have no room for packets */
 #else
 		e1000_receive_skb(adapter, netdev, skb, staterr,
 				  rx_desc->wb.upper.vlan);
