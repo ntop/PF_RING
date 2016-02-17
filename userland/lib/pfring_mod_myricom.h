@@ -14,6 +14,10 @@
 typedef struct {
   int device_id;
 
+  int app_id;
+  int num_rings;
+  int ring_id;
+
   /* RX */
   snf_handle_t hsnf;
   snf_ring_t hring;
