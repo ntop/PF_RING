@@ -69,12 +69,26 @@ int pfring_myri_open(pfring *ring) {
 
   myricom = (pfring_myri *) ring->priv_data;
 
-  /*
-   * Device name X where
-   * X device ID
-   */
-
-  sscanf(ring->device_name, "%u", &myricom->device_id);
+  if (sscanf(ring->device_name, "A%uR%uP%u@%u",
+        &myricom->app_id,
+        &myricom->num_rings,
+        &myricom->device_id,
+        &myricom->ring_id) == 4) {
+  } else
+  if (sscanf(ring->device_name, "A%uP%u",
+        &myricom->app_id,
+        &myricom->device_id) == 2) {
+    myricom->num_rings = 0;
+    myricom->ring_id = -1;
+  } else 
+  if (sscanf(ring->device_name, "%u", 
+        &myricom->device_id) == 1) {
+    myricom->app_id = -1;
+    myricom->num_rings = 0;
+    myricom->ring_id = -1;
+  } else {
+    goto free_private;
+  }
 
   snf_init(SNF_VERSION_API);
 
@@ -150,14 +164,18 @@ int pfring_myri_enable_ring(pfring *ring) {
 #endif
 
   if (ring->mode != send_only_mode) {
+
+    if (myricom->app_id >= 0)
+      snf_set_app_id(myricom->app_id);
+
     rc = snf_open(
-		  myricom->device_id,
-		  0 /* num rings (0: read from env var) */,
-		  NULL /* &rssp (NULL: default RSS settings or from env var) */,
-		  0 /* ring size */,
-		  -1, /* flags */
-		  &myricom->hsnf
-		  );
+      myricom->device_id,
+      myricom->num_rings /* 0: read from env var */,
+      NULL /* &rssp (NULL: default RSS settings or from env var) */,
+      0 /* ring size */,
+      -1, /* flags */
+      &myricom->hsnf
+    );
 
     if (rc) {
       errno = rc;
@@ -165,7 +183,10 @@ int pfring_myri_enable_ring(pfring *ring) {
       return -1;
     }
 
-    rc = snf_ring_open(myricom->hsnf, &myricom->hring);
+    if (myricom->ring_id >= 0)
+      rc = snf_ring_open_id(myricom->hsnf, myricom->ring_id, &myricom->hring);
+    else 
+      rc = snf_ring_open(myricom->hsnf, &myricom->hring);
 
     if (rc) {
       errno = rc;

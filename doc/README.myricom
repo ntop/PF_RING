@@ -33,13 +33,20 @@ you should specify "myri:0"
 Multi-process traffic duplication example:
  $ SNF_APP_ID=1 ./pfcount -i myri:0
  $ SNF_APP_ID=2 ./pfcount -i myri:0
-
-Ports aggregation (where 3 is a mask, including port 0 and 1)
-example:
- $ SNF_FLAGS=0x2 ./pfcount -i myri:3
+Or
+ $ ./pfcount -i myri:A1P0
+ $ ./pfcount -i myri:A2P0
+Where A1 means APP ID 1, P0 means Port 0
 
 Multi-process traffic sharing (RSS) example:
  $ SNF_APP_ID=1 SNF_NUM_RINGS=2 SNF_RING_ID=0 ./pfcount -i myri:0
  $ SNF_APP_ID=1 SNF_NUM_RINGS=2 SNF_RING_ID=1 ./pfcount -i myri:0
+Or
+ $ ./pfcount -i myri:A1R2P0@0
+ $ ./pfcount -i myri:A1R2P0@1
+Where A1 means APP ID 1, R2 means RSS with 2 Rings, P0 means Port 0, @0 means Ring 0
 
+Ports aggregation (where 3 is a mask, including port 0 and 1)
+example:
+ $ SNF_FLAGS=0x2 ./pfcount -i myri:3
 
