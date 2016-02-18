@@ -661,7 +661,7 @@ pfring_zc_builtin_gtp_hash(
 /* **************************************************************************************** */
 
 /**
- * Write custom stats under /proc/net/pf_ring/stats/<cluster>
+ * Write custom stats under /proc/net/pf_ring/stats/<cluster file>
  * @param cluster The cluster handle.
  * @param stats   The stats string to write.
  * @return        0 on success, a negative value otherwise.
@@ -669,6 +669,20 @@ pfring_zc_builtin_gtp_hash(
 int
 pfring_zc_set_proc_stats(
   pfring_zc_cluster *cluster,
+  char *stats
+);
+
+/* **************************************************************************************** */
+
+/**
+ * Write custom device stats under /proc/net/pf_ring/stats/<device file>
+ * @param queue  The queue handle for the device.
+ * @param stats  The stats string to write.
+ * @return       0 on success, a negative value otherwise.
+ */
+int
+pfring_zc_set_device_proc_stats(
+  pfring_zc_queue *queue,
   char *stats
 );
 
