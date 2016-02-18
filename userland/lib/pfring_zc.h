@@ -295,6 +295,17 @@ pfring_zc_set_rxfh_indir(
 /* **************************************************************************************** */
 
 /**
+ * Get the cluster id. 
+ * @param cluster The cluster handle.
+ * @return        The cluster id.
+ */
+u_int32_t
+pfring_zc_get_cluster_id(
+  pfring_zc_cluster *cluster
+);
+
+
+/**
  * Read the queue id. If the actual queue is a device, it is possible to convert the ID to the device index using QUEUEID_TO_IFINDEX(id)
  * @param queue The queue handle.
  * @return      The queue id.
