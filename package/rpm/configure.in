@@ -22,7 +22,8 @@ fi
 dnl> The step below is necessary to make sure the package will work on the
 dnl> target system without having to deal with ldconfig
 if test -d /opt/napatech3/lib/; then sudo cp /opt/napatech3/lib/libntapi.so /opt/napatech3/lib/libntos.so /lib64; fi
-if test -d /opt/accolade/lib/; then sudo cp /opt/accolade/lib/libanic.so /lib64; fi
+if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so         /lib64; ln -s /lib64/libsnf.so /lib64/libsnf.so.0; fi
+if test -d /opt/accolade/lib/;  then sudo cp /opt/accolade/lib/libanic.so   /lib64; fi
 
 DATE=`date -R`
 KERNEL=`uname -r`
@@ -36,8 +37,15 @@ fi
 NAPATECH_LIBS=
 NAPATECH_LIB_COPY=
 if test -d /opt/napatech3/; then	
-   NAPATECH_LIB_COPY="mkdir -p \$RPM_BUILD_ROOT/lib64/;cp /lib64/libntapi.so  /lib64/libntos.so \$RPM_BUILD_ROOT/lib64/"
+   NAPATECH_LIB_COPY="mkdir -p \$RPM_BUILD_ROOT/lib64/; cp /lib64/libntapi.so /lib64/libntos.so \$RPM_BUILD_ROOT/lib64/"
    NAPATECH_LIBS="/lib64/libntapi.so"$'\n'"/lib64/libntos.so"
+fi
+
+MYRICOM_LIBS=
+MYRICOM_LIB_COPY=
+if test -d /opt/snf/; then	
+   MYRICOM_LIB_COPY="mkdir -p \$RPM_BUILD_ROOT/lib64/; cp /lib64/libsnf.so \$RPM_BUILD_ROOT/lib64/"
+   MYRICOM_LIBS="/lib64/libsnf.so"
 fi
 
 
@@ -53,6 +61,8 @@ AC_SUBST(ACCOLADE_LIB_COPY)
 AC_SUBST(ACCOLADE_LIBS)
 AC_SUBST(NAPATECH_LIB_COPY)
 AC_SUBST(NAPATECH_LIBS)
+AC_SUBST(MYRICOM_LIB_COPY)
+AC_SUBST(MYRICOM_LIBS)
 
 
 AC_CONFIG_FILES(Makefile)

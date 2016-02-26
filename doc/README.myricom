@@ -13,6 +13,8 @@ the following commands:
  $ cd /opt/snf
  $ ./sbin/rebuild.sh
  $ ./sbin/myri_start_stop start
+ $ echo "/opt/snf/lib" > /etc/ld.so.conf.d/snf.conf
+ $ ldconfig
 
  $ cd PF_RING/kernel
  $ make

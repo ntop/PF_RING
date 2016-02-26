@@ -40,6 +40,7 @@ PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 ZERO_LIB="libs/libpfring_zero_$MACHINE$LIBARCH.a"
 DNA_LIB="libs/libpfring_dna_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
+MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
 
 dnl> Check for a modern pthread library
 AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
@@ -141,10 +142,7 @@ AC_CHECK_LIB( [dag],
               [HAVE_DAG="-D HAVE_DAG"; DAG_OBJS="pfring_mod_dag.o"; DAG_LIB="-L/usr/local/lib -ldag -lm"], 
               [], [] )
 
-dnl> AC_ARG_ENABLE([nt], AS_HELP_STRING([--enable-nt], [Enable Napatech support in PF_RING]))
-dnl> AS_IF([test "x$enable_nt" = "xyes"], [
 OLD_LIBS=$LIBS
-
 LIBS="-L/opt/napatech3/lib -lntos $LIBS"
 AC_CHECK_LIB([ntapi], [NT_Init], )
 AC_MSG_CHECKING([if ntapi is present])
@@ -154,24 +152,13 @@ if test "x$ac_cv_lib_ntapi_NT_Init" = xyes; then :
     AC_MSG_CHECKING([Napatech support])
     if test -f $MOD_NT_LIB; then
       AC_MSG_RESULT(yes)
-      NT_INC="-I/opt/napatech3/include"
       NT_LIB="-lntapi -lntos"
       HAVE_NT="-D HAVE_NT"
       NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
       NT_DEP="extract_nt_lib"
-dnl>     else
-dnl>       AC_MSG_RESULT(no)
-dnl>       echo "No Napatech library available"
-dnl>       exit
      fi
-dnl> else
-dnl>     AC_MSG_RESULT(no)
-dnl>     echo "Please install Napatech driver/library"
-dnl>     exit
 fi
-
 LIBS=$OLD_LIBS
-dnl> ])
 
 ACCOLADE_HOME="/opt/accolade"
 ACCOLADE_INC=
@@ -195,16 +182,15 @@ else
 fi
 
 MYRICOM_HOME="/opt/snf"
-MYRICOM_INC=
 MYRICOM_LIB=
 MYRICOM_OBJS=
 HAVE_MYRICOM=
 AC_MSG_CHECKING([Myricom support])
-if test -f pfring_mod_myricom.c && test -d "$MYRICOM_HOME"; then
-  MYRICOM_INC="-I$MYRICOM_HOME/include -I$MYRICOM_HOME/src/common -I$MYRICOM_HOME/src/common/bsd"
-  MYRICOM_LIB="/opt/snf/lib/libsnf_pic.a"
-  MYRICOM_OBJS="pfring_mod_myricom.o"
+if test -d "$MYRICOM_HOME"; then
+  MYRICOM_LIB="-L/opt/snf/lib -lsnf"
   HAVE_MYRICOM="-DHAVE_MYRICOM"
+  MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+  MYRICOM_DEP="extract_myricom_lib"
   AC_MSG_RESULT(yes)
   AC_DEFINE_UNQUOTED(HAVE_MYRICOM, 1, [Myricom support is present])
 else
@@ -268,21 +254,21 @@ AC_SUBST(HAVE_DAG)
 AC_SUBST(DAG_LIB)
 AC_SUBST(DAG_OBJS)
 AC_SUBST(NT_OBJS)
-AC_SUBST(NT_INC)
 AC_SUBST(NT_LIB)
 AC_SUBST(NT_DEP)
+AC_SUBST(HAVE_NT)
+AC_SUBST(MOD_NT_LIB)
 AC_SUBST(ACCOLADE_INC)
 AC_SUBST(ACCOLADE_LIB)
 AC_SUBST(ACCOLADE_OBJS)
 AC_SUBST(HAVE_ACCOLADE)
-AC_SUBST(MYRICOM_INC)
 AC_SUBST(MYRICOM_LIB)
 AC_SUBST(MYRICOM_OBJS)
 AC_SUBST(HAVE_MYRICOM)
+AC_SUBST(MOD_MYRICOM_LIB)
+AC_SUBST(MYRICOM_DEP)
 AC_SUBST(HAVE_MLX)
 AC_SUBST(MLX_OBJS)
-AC_SUBST(HAVE_NT)
-AC_SUBST(MOD_NT_LIB)
 AC_SUBST(HAVE_BPF)
 AC_SUBST(BPF_INCLUDE)
 dnl AC_SUBST(BPF_LIB)
