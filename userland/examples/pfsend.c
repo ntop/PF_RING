@@ -87,7 +87,7 @@ u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 struct timeval lastTime, startTime;
-int reforge_mac = 0;
+int reforge_mac = 0, reforge_ip = 0;
 char mac_address[6];
 int send_len = 60;
 int if_index = -1;
@@ -329,6 +329,31 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
 							 IPPROTO_UDP + ntohs(udp_header->len)))));
 }
 
+/* ******************************************* */
+
+static void reforge_packet(u_char *buffer, u_int buffer_len, u_int idx) {
+  struct ip_header *ip_header;
+  u_int32_t src_ip = (0x0A000000 + idx) % 0xFFFFFFFF /* from 10.0.0.0 */;
+  u_int32_t dst_ip =  0xC0A80001 /* 192.168.0.1 */;
+  struct pfring_pkthdr hdr;
+
+  memset(&hdr, 0, sizeof(hdr));
+  hdr.len = hdr.caplen = buffer_len;
+
+  if(reforge_mac) memcpy(buffer, mac_address, 6);
+
+  if (reforge_ip) {
+    if (pfring_parse_pkt(buffer, &hdr, 3, 0, 0) >= 3) {
+      if (hdr.extended_hdr.parsed_pkt.ip_version == 4) {
+        ip_header = (struct ip_header*) &buffer[hdr.extended_hdr.parsed_pkt.offset.l3_offset];
+        ip_header->daddr = htonl(dst_ip);
+        ip_header->saddr = htonl(src_ip); 
+        /* TODO IP and UDP/TCP checksum */
+      }
+    }
+  }
+}
+
 /* *************************************** */
 
 int main(int argc, char* argv[]) {
@@ -358,6 +383,7 @@ int main(int argc, char* argv[]) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
+      reforge_ip = 1;
       break;
     case 'h':
       printHelp();
@@ -505,9 +531,9 @@ int main(int argc, char* argv[]) {
       if (datalink == DLT_LINUX_SLL)
         printf("Linux 'cooked' packets detected, stripping 2 bytes from header..\n");
 
-      while(1) {
+      while (1) {
 	struct packet *p;
-	int rc = pcap_next_ex(pt, &h, (const u_char**)&pkt);
+	int rc = pcap_next_ex(pt, &h, (const u_char **) &pkt);
 
 	if(rc <= 0) break;
         
@@ -519,7 +545,7 @@ int main(int argc, char* argv[]) {
 	  beginning.tv_usec = h->ts.tv_usec;
 	}
 
-	p = (struct packet*)malloc(sizeof(struct packet));
+	p = (struct packet *) malloc(sizeof(struct packet));
 	if(p) {
 	  p->len = h->caplen;
           if (datalink == DLT_LINUX_SLL) p->len -= 2;
@@ -537,7 +563,8 @@ int main(int argc, char* argv[]) {
 	    } else {
 	      memcpy(p->pkt, pkt, p->len);
             }
-	    if(reforge_mac) memcpy(p->pkt, mac_address, 6);
+	    if(reforge_mac || reforge_ip)
+              reforge_packet((u_char *) p->pkt, p->len, pkts_offset + num_pcap_pkts); 
 	  }
 
 	  if(last) {
@@ -590,10 +617,11 @@ int main(int argc, char* argv[]) {
     }
 
     for (i = 0; i < num_balanced_pkts; i++) {
-     
+
       if (stdin_packet_len <= 0)
         forge_udp_packet(buffer, sizeof(buffer), pkts_offset + i);
-      /* TODO else: reforge IP only */
+      else
+        reforge_packet(buffer, sizeof(buffer), pkts_offset + i); 
 
       p = (struct packet *) malloc(sizeof(struct packet));
       if(p) {
@@ -602,7 +630,7 @@ int main(int argc, char* argv[]) {
         p->len = send_len;
         p->ticks_from_beginning = 0;
         p->next = pkt_head;
-        p->pkt = (char*)malloc(p->len);
+        p->pkt = (char *) malloc(p->len);
 
 	if (p->pkt == NULL) {
 	  printf("Not enough memory\n");
