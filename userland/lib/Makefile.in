@@ -11,7 +11,7 @@ INSTDIR   = ${DESTDIR}/@INSTALL_PREFIX@
 #
 # Search directories
 #
-INCLUDE   = -I../../kernel @BPF_INCLUDE@ @NT_INC@ @ACCOLADE_INC@ @MYRICOM_INC@ @INVEATECH_INC@
+INCLUDE   = -I../../kernel @BPF_INCLUDE@ @ACCOLADE_INC@ @INVEATECH_INC@
 
 #
 # Zero ToolKit
@@ -90,12 +90,12 @@ RING_H     = ../../kernel/linux/pf_ring.h
 
 all: ${TARGETS}
 
-${STATICLIB}: Makefile @ZERO_DEP@ @DNA_DEP@ @PF_RING_ZC_DEP@ @NT_DEP@ ${OBJS} pfring.h ${RING_H}
+${STATICLIB}: Makefile @ZERO_DEP@ @DNA_DEP@ @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
 	ar rs $@ ${OBJS}
 	ranlib $@
 
-${DYNAMICLIB}: ${OBJS} @ZERO_DEP@ @DNA_DEP@ @PF_RING_ZC_DEP@ @NT_DEP@ pfring.h ${RING_H} Makefile
+${DYNAMICLIB}: ${OBJS} @ZERO_DEP@ @DNA_DEP@ @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
 	${CC} ${LDFLAGS} ${OBJS} ${SYSLIBS} -o $@
 
@@ -107,6 +107,9 @@ extract_zero_lib:
 
 extract_pfring_zc_lib:
 	ar x @PF_RING_ZC_LIB@
+
+extract_myricom_lib:
+	ar x @MOD_MYRICOM_LIB@
 
 extract_nt_lib:
 	ar x @MOD_NT_LIB@

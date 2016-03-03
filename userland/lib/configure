@@ -628,25 +628,25 @@ SYSLIBS
 REDIS_LIB
 BPF_INCLUDE
 HAVE_BPF
-MOD_NT_LIB
-HAVE_NT
 MLX_OBJS
 HAVE_MLX
 HAVE_INVEATECH
 INVEATECH_OBJS
 INVEATECH_LIB
 INVEATECH_INC
+MYRICOM_DEP
+MOD_MYRICOM_LIB
 HAVE_MYRICOM
 MYRICOM_OBJS
 MYRICOM_LIB
-MYRICOM_INC
 HAVE_ACCOLADE
 ACCOLADE_OBJS
 ACCOLADE_LIB
 ACCOLADE_INC
+MOD_NT_LIB
+HAVE_NT
 NT_DEP
 NT_LIB
-NT_INC
 NT_OBJS
 DAG_OBJS
 DAG_LIB
@@ -3281,6 +3281,7 @@ PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 ZERO_LIB="libs/libpfring_zero_$MACHINE$LIBARCH.a"
 DNA_LIB="libs/libpfring_dna_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
+MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setaffinity_np in -lpthread" >&5
 $as_echo_n "checking for pthread_setaffinity_np in -lpthread... " >&6; }
@@ -3680,7 +3681,6 @@ fi
 
 
 OLD_LIBS=$LIBS
-
 LIBS="-L/opt/napatech3/lib -lntos $LIBS"
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for NT_Init in -lntapi" >&5
 $as_echo_n "checking for NT_Init in -lntapi... " >&6; }
@@ -3738,14 +3738,12 @@ $as_echo_n "checking Napatech support... " >&6; }
     if test -f $MOD_NT_LIB; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-      NT_INC="-I/opt/napatech3/include"
       NT_LIB="-lntapi -lntos"
       HAVE_NT="-D HAVE_NT"
       NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
       NT_DEP="extract_nt_lib"
      fi
 fi
-
 LIBS=$OLD_LIBS
 
 ACCOLADE_HOME="/opt/accolade"
@@ -3778,17 +3776,16 @@ $as_echo "no" >&6; }
 fi
 
 MYRICOM_HOME="/opt/snf"
-MYRICOM_INC=
 MYRICOM_LIB=
 MYRICOM_OBJS=
 HAVE_MYRICOM=
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking Myricom support" >&5
 $as_echo_n "checking Myricom support... " >&6; }
-if test -f pfring_mod_myricom.c && test -d "$MYRICOM_HOME"; then
-  MYRICOM_INC="-I$MYRICOM_HOME/include -I$MYRICOM_HOME/src/common -I$MYRICOM_HOME/src/common/bsd"
-  MYRICOM_LIB="/opt/snf/lib/libsnf_pic.a"
-  MYRICOM_OBJS="pfring_mod_myricom.o"
+if test -d "$MYRICOM_HOME"; then
+  MYRICOM_LIB="-L/opt/snf/lib -lsnf"
   HAVE_MYRICOM="-DHAVE_MYRICOM"
+  MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+  MYRICOM_DEP="extract_myricom_lib"
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 

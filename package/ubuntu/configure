@@ -1704,7 +1704,8 @@ else
 fi
 
 if test -d /opt/napatech3/lib/; then sudo cp /opt/napatech3/lib/libntapi.so /opt/napatech3/lib/libntos.so /usr/local/lib; fi
-if test -d /opt/accolade/lib/; then sudo cp /opt/accolade/lib/libanic.so /usr/local/lib; fi
+if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so /usr/local/lib; ln -s /usr/local/lib/libsnf.so /usr/local/lib/libsnf.so.0; fi
+if test -d /opt/accolade/lib/;  then sudo cp /opt/accolade/lib/libanic.so /usr/local/lib; fi
 
 
 DATE=`date -R`
