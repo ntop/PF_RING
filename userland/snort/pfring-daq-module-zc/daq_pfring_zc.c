@@ -926,11 +926,14 @@ static void pfring_zc_daq_shutdown(void *handle) {
       pfring_zc_destroy_cluster(context->cluster);
   } else {
     for (i = 0; i < context->num_devices; i++)
-      if (context->rx_queues[i])
+      if (context->rx_queues[i]) {
         pfring_zc_ipc_detach_queue(context->rx_queues[i]);
+      }
 
-    if (context->ipc_pool)
+    if (context->ipc_pool) {
+      pfring_zc_release_packet_handle_to_pool(context->ipc_pool, context->buffer);
       pfring_zc_ipc_detach_buffer_pool(context->ipc_pool);
+    }
   }
 
   if (context->devices[DAQ_PF_RING_PASSIVE_DEV_IDX])
