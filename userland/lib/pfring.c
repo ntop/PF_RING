@@ -683,6 +683,15 @@ int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
 
 /* **************************************************** */
 
+int pfring_get_metadata(pfring *ring, u_char **metadata) {
+  if(ring && ring->get_metadata)
+    return ring->get_metadata(ring, metadata);
+
+  return(PF_RING_ERROR_NOT_SUPPORTED);
+}
+
+/* **************************************************** */
+
 int pfring_set_poll_watermark(pfring *ring, u_int16_t watermark) {
   if(ring && ring->set_poll_watermark)
     return ring->set_poll_watermark(ring, watermark);

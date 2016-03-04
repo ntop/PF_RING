@@ -317,6 +317,7 @@ struct __pfring {
   int       (*register_zerocopy_tx_ring)    (pfring *, pfring *);
   int       (*recv_chunk)                   (pfring *, void **, pfring_chunk_info *, u_int8_t); 
   int       (*set_bound_dev_name)           (pfring *, char*);
+  int       (*get_metadata)         	    (pfring *, u_char**);
 
   /* DNA only */
   int      (*dna_init)             (pfring *);
@@ -506,6 +507,14 @@ int pfring_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
 		       struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet,
 		       u_int8_t level /* 1..4 */, u_int8_t add_timestamp, u_int8_t add_hash);
+
+/**
+ * Get metadata for the last captured packet, if any. This is usually used with ZC SPSC queues for reading packet metadata.
+ * @param ring
+ * @param metadata Ptr to a variable that will contain the packet metadata (out).
+ * @return 0 if this is supported by the actual module and metadata is found, a negative error value otherwise.
+ */
+int pfring_get_metadata(pfring *ring, u_char **metadata);
 
 /**
  * Whenever a user-space application has to wait until incoming packets arrive, it can instruct PF_RING not to return from poll() call 
