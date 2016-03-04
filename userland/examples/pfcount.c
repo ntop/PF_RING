@@ -107,7 +107,7 @@ void print_stats() {
   static u_int64_t lastBytes = 0;
   double diff, bytesDiff;
   static struct timeval lastTime;
-  char buf[256], buf1[64], buf2[64], buf3[64], timebuf[128];
+  char buf[256], buf1[64], buf2[64], buf3[64], buf4[64], timebuf[128];
   u_int64_t deltaMillisecStart;
 
   if(startTime.tv_sec == 0) {
@@ -137,7 +137,7 @@ void print_stats() {
              "Dropped:  %lu\n"
              "Bytes:    %lu\n",
              msec2dhmsm(deltaMillisecStart, timebuf, sizeof(timebuf)),
-             (long unsigned int) pfringStat.recv,
+             (long unsigned int) nPkts,
              (long unsigned int) pfringStat.drop,
              (long unsigned int) nBytes);
     pfring_set_application_stats(pd, buf);
@@ -145,20 +145,18 @@ void print_stats() {
     thpt = ((double)8*nBytes)/(deltaMillisec*1000);
 
     fprintf(stderr, "=========================\n"
-	    "Absolute Stats: [%u pkts rcvd][%u pkts dropped]\n"
-	    "Total Pkts=%u/Dropped=%.1f %%\n",
-	    (unsigned int)pfringStat.recv,
-	    (unsigned int)pfringStat.drop,
-	    (unsigned int)(pfringStat.recv+pfringStat.drop),
+	    "Absolute Stats: [%s pkts total][%s pkts dropped][%.1f%% dropped]\n",
+	    pfring_format_numbers((double)(nPkts + pfringStat.drop), buf2, sizeof(buf2), 0),
+	    pfring_format_numbers((double)(pfringStat.drop), buf3, sizeof(buf3), 0),
 	    pfringStat.drop == 0 ? 0 :
-	    (double)(pfringStat.drop*100)/(double)(pfringStat.recv+pfringStat.drop));
-    fprintf(stderr, "%s %s - %s bytes",
+	    (double)(pfringStat.drop*100)/(double)(nPkts + pfringStat.drop));
+    fprintf(stderr, "[%s %s rcvd][%s bytes rcvd]",
 	    pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
             chunk_mode == 1 ? "chunks" : "pkts",
 	    pfring_format_numbers((double)nBytes, buf2, sizeof(buf2), 0));
 
     if(print_all)
-      fprintf(stderr, " [%s %s/sec - %s Mbit/sec]\n",
+      fprintf(stderr, "[%s %s/sec][%s Mbit/sec]\n",
 	      pfring_format_numbers((double)(nPkts*1000)/deltaMillisec, buf1, sizeof(buf1), 1),
               chunk_mode == 1 ? "chunk" : "pkt",
 	      pfring_format_numbers(thpt, buf2, sizeof(buf2), 1));
@@ -175,8 +173,8 @@ void print_stats() {
       bytesDiff /= (1000*1000*1000)/8;
 
       snprintf(buf, sizeof(buf),
-	      "Actual Stats: %llu %s [%s ms][%s %s/%s Gbps]",
-	      (long long unsigned int)diff,
+	      "Actual Stats: [%s %s rcvd][%s ms][%s %s][%s Gbps]",
+	      pfring_format_numbers(diff, buf4, sizeof(buf4), 0),
               chunk_mode == 1 ? "chunks" : "pkts",
 	      pfring_format_numbers(deltaMillisec, buf1, sizeof(buf1), 1),
 	      pfring_format_numbers(((double)diff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1),
