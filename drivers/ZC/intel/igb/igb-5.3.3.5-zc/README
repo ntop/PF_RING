@@ -1,0 +1,933 @@
+
+igb Linux* Base Driver for Intel(R) Ethernet Network Connection
+-------------------------------------------------------------
+
+================================================================================
+
+September 24, 2015
+
+================================================================================
+
+- Overview
+- Identifying Your Adapter
+- Building and Installation
+- Command Line Parameters
+- Additional Configurations
+- Known Issues
+- Support
+- License
+
+
+================================================================================
+
+
+Important Notes
+---------------
+
+Configuring SR-IOV for improved network security
+------------------------------------------------
+
+In a virtualized environment, on Intel(R) Server Adapters that support SR-IOV,
+the virtual function (VF) may be subject to malicious behavior. Software-
+generated layer two frames, like IEEE 802.3x (link flow control), IEEE 802.1Qbb
+(priority based flow-control), and others of this type, are not expected and
+can throttle traffic between the host and the virtual switch, reducing
+performance. To resolve this issue, configure all SR-IOV enabled ports for
+VLAN tagging. This configuration allows unexpected, and potentially malicious,
+frames to be dropped.
+
+
+
+Overview
+--------
+
+This document describes the igb Linux base driver.
+
+The Linux* base driver supports the following kernel versions:
+ 2.6.30 or newer. 
+
+It includes support for Itanium(R)2 based systems.
+
+The igb driver supports 2.5 Gbps operating speed on 2500BASE-KX only for
+I354-based network connections.
+
+This driver is only supported as a loadable module at this time. Intel is
+not supplying patches against the kernel source to allow for static linking of
+the drivers.
+
+For questions related to hardware requirements, refer to the documentation
+supplied with your Intel adapter. All hardware requirements listed apply to
+use with Linux.
+
+The following features are now available in supported kernels:
+- Native VLANs
+- Channel Bonding (teaming)
+- SNMP
+
+Adapter teaming is implemented using the native Linux Channel bonding
+module. This is included in supported Linux kernels.
+Channel Bonding documentation can be found in the Linux kernel source:
+/documentation/networking/bonding.txt
+
+The igb driver supports IEEE 1588 time stamping for kernels 2.6.30 and newer.
+
+The driver information previously displayed in the /proc file system is not
+supported in this release.
+
+Driver information can be obtained using ethtool, lspci, and ifconfig.
+Instructions on updating ethtool can be found in the section Additional 
+Configurations later in this document.
+
+
+
+================================================================================
+
+
+Identifying Your Adapter
+------------------------
+For information on how to identify your adapter, go to the Adapter &
+Driver ID Guide at:
+http://support.intel.com/support/go/network/adapter/proidguide.htm
+
+For the latest Intel network drivers, refer to the
+following website and select your adapter.
+http://www.intel.com/support
+
+
+================================================================================
+
+
+Building and Installation
+-------------------------
+
+To build a binary RPM* package of this driver, run 'rpmbuild -tb
+igb-<x.x.x>.tar.gz', where <x.x.x> is the version number for the driver tar file.
+
+NOTES:
+
+- For the build to work properly, the currently running kernel MUST match
+  the version and configuration of the installed kernel sources. If you have
+  just recompiled the kernel reboot the system before building.
+- RPM functionality has only been tested in Red Hat distributions.
+
+1. Move the base driver tar file to the directory of your choice. For
+   example, use '/home/username/igb' or '/usr/local/src/igb'.
+
+2. Untar/unzip the archive, where <x.x.x> is the version number for the
+   driver tar file:
+   tar zxf igb-<x.x.x>.tar.gz
+
+3. Change to the driver src directory, where <x.x.x> is the version number
+   for the driver tar:
+   cd igb-<x.x.x>/src/
+
+4. Compile the driver module:
+   # make install
+   The binary will be installed as:
+   /lib/modules/<KERNEL VERSION>/updates/drivers/net/ethernet/intel/igb/igb.ko
+
+   The install location listed above is the default location. This may differ
+   for various Linux distributions.
+
+5. Load the module using the modprobe command:
+   modprobe <igb> [parameter=port1_value,port2_value]
+
+   Make sure that any older igb drivers are removed from the kernel before
+   loading the new module:
+   rmmod igb; modprobe igb
+
+6. Assign an IP address to the interface by entering the following,
+   where ethX is the interface name that was shown in dmesg after modprobe:
+   
+   ip address add <IP_address>/<netmask bits> dev ethX
+
+7. Verify that the interface works. Enter the following, where IP_address
+   is the IP address for another machine on the same subnet as the interface
+   that is being tested:
+   ping <IP_address>
+
+
+
+To build igb driver with DCA
+----------------------------
+
+If your kernel supports DCA, the driver will build by default with DCA enabled.
+NOTE:
+   For certain distributions like (but not limited to) RedHat Enterprise
+   Linux 7 and Ubuntu, once the driver is installed the initrd/initramfs
+   file may need to be updated to prevent the OS loading old versions
+   of the igb driver. The dracut utility may be used on RedHat
+   distributions:
+	# dracut --force
+   For Ubuntu:
+	# update-initramfs -u
+
+
+================================================================================
+
+
+Command Line Parameters
+-----------------------
+If the driver is built as a module, the following optional parameters are used
+by entering them on the command line with the modprobe command using this
+syntax:
+modprobe igb [<option>=<VAL1>,<VAL2>,...]
+
+There needs to be a <VAL#> for each network port in the system supported by
+this driver. The values will be applied to each instance, in function order.
+For example:
+modprobe igb InterruptThrottleRate=16000,16000
+
+In this case, there are two network ports supported by igb in the system.
+The default value for each parameter is generally the recommended setting,
+unless otherwise noted.
+
+NOTES:
+- For more information about the command line parameters, see the application
+  note at: http://www.intel.com/design/network/applnots/ap450.htm.
+- A descriptor describes a data buffer and attributes related to the data
+  buffer. This information is accessed by the hardware.
+
+
+InterruptThrottleRate
+---------------------
+Valid Range:
+0=off
+1=dynamic
+3=dynamic conservative
+<min_ITR>-<max_ITR>
+Interrupt Throttle Rate controls the number of interrupts each interrupt
+vector can generate per second. Increasing ITR lowers latency at the cost of
+increased CPU utilization, though it may help throughput in some circumstances.
+0 = Setting InterruptThrottleRate to 0 turns off any interrupt moderation
+  and may improve small packet latency. However, this is generally not
+  suitable for bulk throughput traffic due to the increased CPU utilization
+  of the higher interrupt rate.
+  NOTES:
+  - On 82599, and X540, and X550-based adapters, disabling InterruptThrottleRate
+    will also result in the driver disabling HW RSC.
+  - On 82598-based adapters, disabling InterruptThrottleRate will also
+    result in disabling LRO (Large Receive Offloads).
+1 = Setting InterruptThrottleRate to Dynamic mode attempts to moderate
+  interrupts per vector while maintaining very low latency. This can
+  sometimes cause extra CPU utilization. If planning on deploying igb
+  in a latency sensitive environment, this parameter should be considered.
+<min_ITR>-<max_ITR> = 100-100000
+  Setting InterruptThrottleRate to a value greater or equal to <min_ITR>
+  will program the adapter to send at most that many interrupts
+  per second, even if more packets have come in. This reduces interrupt load
+  on the system and can lower CPU utilization under heavy load, but will
+  increase latency as packets are not processed as quickly.
+
+ 
+NOTE:
+- Un-supported Adapters: InterruptThrottleRate is NOT supported by
+  82542, 82543, or 82544-based adapters.
+
+
+LLI (Low Latency Interrupts)
+----------------------------
+
+LLI allows for immediate generation of an interrupt upon processing receive
+packets that match certain criteria as set by the parameters described below.
+LLI parameters are not enabled when Legacy interrupts are used. You must be
+using MSI or MSI-X (see cat /proc/interrupts) to successfully use LLI.
+
+
+LLIPort
+-------
+Valid Range: 0-65535
+LLI is configured with the LLIPort command-line parameter, which specifies
+which TCP port should generate Low Latency Interrupts.
+For example, using LLIPort=80 would cause the board to generate an immediate
+interrupt upon receipt of any packet sent to TCP port 80 on the local machine.
+WARNING: Enabling LLI can result in an excessive number of interrupts/second
+that may cause problems with the system and in some cases may cause a kernel
+panic.
+
+
+LLIPush
+-------
+Valid Range: 0-1
+LLIPush can be set to be enabled or disabled (default). It is most effective
+in an environment with many small transactions.
+NOTE: Enabling LLIPush may allow a denial of service attack.
+
+
+LLISize
+-------
+Valid Range: 0-1500
+LLISize causes an immediate interrupt if the board receives a packet smaller
+than the specified size.
+
+
+IntMode
+-------
+Valid Range: 0-2 (0 = Legacy Int, 1 = MSI and 2 = MSI-X)
+IntMode controls allow load time control over the type of interrupt
+registered for by the driver. MSI-X is required for multiple queue
+support, and some kernels and combinations of kernel .config options
+will force a lower level of interrupt support.
+'cat /proc/interrupts' will show different values for each type of interrupt.
+
+
+RSS
+---
+Valid Range: 0-8
+0 = Assign up to the lesser value of the number of CPUs or the number of queues
+X = Assign X queues, where X is less than or equal to the maximum number of
+queues (8 queues). 
+The driver allows maximum supported queue value. For example,
+I350-based adapters allow RSS=8, where 8 queues is the maximum allowable
+queues.
+NOTE: For 82575-based adapters, the maximum number of queues is 4; for
+82576-based and newer adapters it is 8; for I210-based adapters it is 4
+queues; and for I211-based adapters it is 2 queues.
+This parameter is also affected by the VMDq parameter in that it will limit
+the queues more.
+	VMDQ
+Model 0 1 2 3+
+82575 4 4 3 1
+82576 8 2 2 2
+82580 8 1 1 1
+
+
+VMDQ
+----
+Valid Range: 0-4 on 82575-based adapters; 0-8 for 82576/82580-based adapters
+Supports enabling VMDq pools as this is needed to support SR-IOV.
+0 = Disabled
+1 = Sets the netdev as pool 0
+2+ = Add additional queues but they currently are not used
+This parameter is forced to 1 or more if the max_vfs module parameter is used.
+In addition, the number of queues available for RSS is limited if this is set
+to 1 or greater.
+
+NOTE: When either SR-IOV mode or VMDq mode is enabled, hardware VLAN filtering
+and VLAN tag stripping/insertion will remain enabled.
+
+
+max_vfs
+-------
+Valid Range: 0-7
+If the value is greater than 0 it will also force the VMDq parameter to be 1
+or more.
+
+NOTE: This parameter is only used on kernel 3.7.x and below. On kernel 3.8.x
+and above, use sysfs to enable VFs. For example:
+#echo $num_vf_enabled > /sys/class/net/$dev/device/sriov_numvfs	//enable VFs
+#echo 0 > /sys/class/net/$dev/device/sriov_numvfs	//disable VFs
+
+The parameters for the driver are referenced by position. Thus, if you have a
+dual port adapter, or more than one adapter in your system, and want N virtual functions per port, you must specify a
+number for each port with each parameter separated by a comma. For example:
+  modprobe igb max_vfs=4,1
+NOTE: Caution must be used in loading the driver with these parameters.
+Depending on your system configuration, number of slots, etc., it is impossible
+to predict in all cases where the positions would be on the command line.
+This parameter adds support for SR-IOV. It causes the driver to spawn up to
+max_vfs worth of virtual functions.
+NOTE: When either SR-IOV mode or VMDq mode is enabled, hardware VLAN filtering
+and VLAN tag stripping/insertion will remain enabled. Please remove the old
+VLAN filter before the new VLAN filter is added. For example,
+ip link set eth0 vf 0 vlan 100	// set vlan 100 for VF 0
+ip link set eth0 vf 0 vlan 0	// Delete vlan 100
+ip link set eth0 vf 0 vlan 200	// set a new vlan 200 for VF 0
+
+
+Configuring SR-IOV for improved network security
+------------------------------------------------
+
+In a virtualized environment, on Intel(R) Server Adapters that support SR-IOV,
+the virtual function (VF) may be subject to malicious behavior. Software-
+generated layer two frames, like IEEE 802.3x (link flow control), IEEE 802.1Qbb
+(priority based flow-control), and others of this type, are not expected and
+can throttle traffic between the host and the virtual switch, reducing
+performance. To resolve this issue, configure all SR-IOV enabled ports for
+VLAN tagging. This configuration allows unexpected, and potentially malicious,
+frames to be dropped.
+
+
+Configuring VLAN tagging on SR-IOV enabled adapter ports
+--------------------------------------------------------
+
+To configure VLAN tagging for the ports on an SR-IOV enabled adapter,
+use the following command. The VLAN configuration should be done 
+before the VF driver is loaded or the VM is booted.
+
+$ ip link set dev <PF netdev id> vf <id> vlan <vlan id>
+
+For example, the following instructions will configure PF eth0 and 
+the first VF on VLAN 10.
+$ ip link set dev eth0 vf 0 vlan 10
+.
+
+QueuePairs
+----------
+Valid Range: 0-1
+If set to 0, when MSI-X is enabled, the Tx and Rx will attempt to occupy
+separate vectors.
+This option can be overridden to 1 if there are not sufficient interrupts
+available. This can occur if any combination of RSS, VMDQ, and max_vfs results
+in more than 4 queues being used.
+
+
+Node
+----
+Valid Range: 0-n
+0 - n: where n is the number of the NUMA node that should be used to allocate
+memory for this adapter port.
+-1: uses the driver default of allocating memory on whichever processor is
+running modprobe.
+The Node parameter allows you to choose which NUMA node you want to have the
+adapter allocate memory from. All driver structures, in-memory queues, and
+receive buffers will be allocated on the node specified. This parameter is
+only useful when interrupt affinity is specified; otherwise, part of the
+interrupt time could run on a different core than where the memory is
+allocated causing slower memory access and impacting throughput, CPU, or both.
+
+
+EEE
+---
+Valid Range: 0-1
+0 = Disables EEE
+1 = Enables EEE
+A link between two EEE-compliant devices will result in periodic bursts of
+data followed by periods where the link is in an idle state. This Low Power
+Idle (LPI) state is supported in both 1 Gbps and 100 Mbps link speeds.
+
+NOTE: EEE support requires auto-negotiation.
+
+
+DMAC
+----
+Valid Range: 0, 250, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000,
+9000, 10000
+This parameter enables or disables DMA Coalescing feature. Values are in
+microseconds and set the internal DMA Coalescing internal timer.
+DMA (Direct Memory Access) allows the network device to move packet data
+directly to the system's memory, reducing CPU utilization. However, the
+frequency and random intervals at which packets arrive do not allow the
+system to enter a lower power state. DMA Coalescing allows the adapter
+to collect packets before it initiates a DMA event. This may increase
+network latency but also increases the chances that the system will enter
+a lower power state.
+Turning on DMA Coalescing may save energy with kernel 2.6.32 and newer.
+DMA Coalescing must be enabled across all active ports in order to save
+platform power.
+
+
+MDD (Malicious Driver Detection)
+--------------------------------
+Valid Range: 0-1
+0 = Disabled
+>
+1 = Enabled
+This parameter is only relevant for I350 devices operating in SR-IOV mode.
+When this parameter is set, the driver detects malicious VF driver and
+disables its Tx/Rx queues until a VF driver reset occurs.
+
+
+================================================================================
+
+
+Additional Features and Configurations
+-------------------------------------------
+
+
+Configuring the Driver on Different Distributions
+-------------------------------------------------
+
+Configuring a network driver to load properly when the system is started is
+distribution dependent. Typically, the configuration process involves adding
+an alias line to /etc/modules.conf or /etc/modprobe.conf as well as editing
+other system startup scripts and/or configuration files. Many popular Linux
+distributions ship with tools to make these changes for you. To learn the
+proper way to configure a network device for your system, refer to your
+distribution documentation. If during this process you are asked for the
+driver or module name, the name for the Base Driver is igb.
+
+For example, if you install the igb driver for two adapters (eth0
+and eth1) and want to set the interrupt mode to MSI-X and MSI, respectively,
+add the following to modules.conf or /etc/modprobe.conf:
+alias eth0 igb
+alias eth1 igb
+options igb InterruptThrottleRate=3,1
+
+
+Viewing Link Messages
+---------------------
+
+Link messages will not be displayed to the console if the distribution is
+restricting system messages. In order to see network driver link messages on
+your console, set dmesg to eight by entering the following:
+dmesg -n 8
+
+NOTE: This setting is not saved across reboots.
+
+
+Jumbo Frames
+------------
+Jumbo Frames support is enabled by changing the Maximum Transmission Unit
+(MTU) to a value larger than the default value of 1500.
+
+Use the ifconfig command to increase the MTU size. For example, enter the
+following where <x> is the interface number:
+
+   ifconfig eth<x> mtu 9000 up
+
+This setting is not saved across reboots. The setting change can be made
+permanent by adding 'MTU=9000' to the file:
+/etc/sysconfig/network-scripts/ifcfg-eth<x> for RHEL or to the file
+/etc/sysconfig/network/<config_file> for SLES.
+
+NOTES:
+- The maximum MTU setting for Jumbo Frames is 9216. This value coincides
+  with the maximum Jumbo Frames size of 9234 bytes.
+- Using Jumbo frames at 10 or 100 Mbps is not supported and may result in
+  poor performance or loss of link.
+
+
+ethtool
+-------
+The driver utilizes the ethtool interface for driver configuration and
+diagnostics, as well as displaying statistical information. The latest
+ethtool version is required for this functionality. Download it at
+http://ftp.kernel.org/pub/software/network/ethtool/
+
+
+Speed and Duplex Configuration
+------------------------------
+
+In addressing speed and duplex configuration issues, you need to
+distinguish between copper-based adapters and fiber-based adapters.
+
+In the default mode, an Intel(R) Network Adapter using copper connections
+will attempt to auto-negotiate with its link partner to determine the best
+setting. If the adapter cannot establish link with the link partner using
+auto-negotiation, you may need to manually configure the adapter and link
+partner to identical settings to establish link and pass packets. This
+should only be needed when attempting to link with an older switch that
+does not support auto-negotiation or one that has been forced to a specific
+speed or duplex mode. Your link partner must match the setting you choose.
+
+Speed and Duplex are configured through the ethtool* utility. ethtool is
+included with all versions of Red Hat after Red Hat 7.2. For other Linux
+distributions, download and install ethtool from the following website:
+
+   http://ftp.kernel.org/pub/software/network/ethtool/
+
+Caution: Only experienced network administrators should force speed and
+duplex manually. The settings at the switch must always match the adapter
+settings. Adapter performance may suffer or your adapter may not
+operate if you configure the adapter differently from your switch.
+
+An Intel(R) Network Adapter using fiber-based connections, however, will not
+attempt to auto-negotiate with its link partner since those adapters operate
+only in full duplex and only at their native speed.
+
+NOTE: For the Intel(R) Ethernet Connection X552 10 GbE SFP+ you must specify
+the desired speed. 
+
+
+Enabling Wake on LAN* (WoL)
+---------------------------
+
+WoL is configured through the ethtool* utility. ethtool is included with all
+versions of Red Hat after Red Hat 7.2. For other Linux distributions, download
+and install ethtool from the following website:
+http://ftp.kernel.org/pub/software/network/ethtool/.
+
+For instructions on enabling WoL with ethtool, refer to the website listed
+above.
+
+WoL will be enabled on the system during the next shut down or reboot. For
+this driver version, in order to enable WoL, the igb driver must be loaded
+prior to shutting down or suspending the system.
+
+NOTES:
+- Wake on LAN is only supported on port A of multi-port devices.
+- Wake On LAN is not supported for the Intel(R) Gigabit VT Quad Port Server
+  Adapter.
+
+
+Multiqueue
+----------
+In this mode, a separate MSI-X vector is allocated for each queue and one for
+"other" interrupts such as link status change and errors. All interrupts are
+throttled via interrupt moderation. Interrupt moderation must be used to avoid
+interrupt storms while the driver is processing one interrupt. The moderation
+value should be at least as large as the expected time for the driver to
+process an interrupt. Multiqueue is off by default.
+
+REQUIREMENTS: MSI-X support is required for Multiqueue. If MSI-X is not found,
+the system will fallback to MSI or to Legacy interrupts. This driver supports
+multiqueue in kernel versions 2.6.24 and newer. This driver supports receive
+multiqueue on all kernels that support MSI-X.
+
+NOTES:
+- Do not use MSI-X with the 2.6.19 or 2.6.20 kernels.
+- On some kernels a reboot is required to switch between single queue mode
+and multiqueue mode or vice-versa.
+
+
+LRO
+---
+Valid Range: 0(off), 1(on)
+Large Receive Offload (LRO) is a technique for increasing inbound throughput
+of high-bandwidth network connections by reducing CPU overhead. It works by
+aggregating multiple incoming packets from a single stream into a larger
+buffer before they are passed higher up the networking stack, thus reducing
+the number of packets that have to be processed. LRO combines multiple
+Ethernet frames into a single receive in the stack, thereby potentially
+decreasing CPU utilization for receives.
+NOTE: LRO requires 2.4.22 or later kernel version.
+IGB_LRO is a compile time flag. The user can enable it at compile time to add
+support for LRO from the driver. The flag is used by adding
+CFLAGS_EXTRA="-DIGB_LRO" to the make file when it's being compiled.
+# make CFLAGS_EXTRA="-DIGB_LRO" install
+You can verify that the driver is using LRO by looking at these counters in
+ethtool:
+- lro_aggregated - counts total packets that were combined
+- lro_flushed - counts the number of packets flushed out of LRO
+- lro_recycled - counts the number of buffers returned to the ring from
+  recycling
+NOTE: IPv6 and UDP are not supported by LRO.
+
+
+IEEE 1588 Precision Time Protocol (PTP) Hardware Clock (PHC)
+------------------------------------------------------------
+
+Precision Time Protocol (PTP) is used to synchronize clocks in a computer
+network and is supported in the igb driver.
+
+NOTE: PTP requires 3.0.0 or later kernel version that has PTP support enabled
+in the kernel and a user-space software daemon.
+
+IGB_PTP is a compile time flag. The user can enable it at compile time to add
+support for PTP from the driver. The flag is used by editing the make file
+as follows when it is being compiled:
+
+>make CFLAGS_EXTRA="-DIGB_PTP" install
+
+NOTE: The driver will fail to compile if your kernel does not support PTP.
+
+You can verify that the driver is using PTP by looking at the system log to
+see whether a PHC was attempted to be registered or not. If you have a kernel
+and version of ethtool with PTP support, you can check the PTP support in the
+driver by executing:
+ethtool -T ethX
+
+
+MAC and VLAN anti-spoofing feature
+----------------------------------
+
+When a malicious driver attempts to send a spoofed packet, it is dropped by
+the hardware and not transmitted.
+
+An interrupt is sent to the PF driver notifying it of the spoof attempt.
+When a spoofed packet is detected, the PF driver will send the following
+message to the system log (displayed by the "dmesg" command):
+Spoof event(s) detected on VF(n), where n = the VF that attempted to do the
+spoofing
+
+
+
+Setting MAC Address, VLAN and Rate Limit Using IProute2 Tool
+------------------------------------------------------------
+You can set a MAC address of a Virtual Function (VF), a default VLAN and the
+rate limit using the IProute2 tool. Download the latest version of the
+IProute2 tool from Sourceforge if your version does not have all the features
+you require.
+
+
+================================================================================
+
+
+Known Issues/Troubleshooting
+----------------------------
+
+
+MAC address of Virtual Function changes unexpectedly
+----------------------------------------------------
+
+If a Virtual Function's MAC address is not assigned in the host, then the
+VF (virtual function) driver will use a random MAC address. This random MAC
+address may change each time the VF driver is reloaded. You can assign a
+static MAC address in the host machine. This static MAC address will survive
+a VF driver reload.
+
+
+Hardware Issues
+---------------
+
+For known hardware and troubleshooting issues, either refer to the "Release
+Notes" in your User Guide, or for more detailed information, go to
+http://www.intel.com.
+
+In the search box enter your devices controller ID followed by "spec update"
+(i.e., 82599 spec update). The specification update file has complete
+information on known hardware issues.
+
+
+Software Issues
+---------------
+
+NOTE: After installing the driver, if your Intel Ethernet Network Connection
+is not working, verify that you have installed the correct driver.
+
+Intel(R) Active Management Technology 2.0, 2.1, 2.5 Not Supported in
+Conjunction with Linux driver.
+
+
+
+Using the igb driver on 2.4 or older 2.6 based kernels
+------------------------------------------------------
+
+Due to limited support for PCI-Express in 2.4 kernels and older 2.6 kernels,
+the igb driver may run into interrupt related problems on some systems, such
+as no link or hang when bringing up the device.
+
+We recommend the newer 2.6 based kernels, as these kernels correctly configure
+the PCI-Express configuration space of the adapter and all intervening
+bridges. If you are required to use a 2.4 kernel, use a 2.4 kernel newer than
+2.4.30. For 2.6 kernels we recommend using the 2.6.21 kernel or newer.
+
+Alternatively, on 2.6 kernels you may disable MSI support in the kernel by
+booting with the "pci=nomsi" option or permanently disable MSI support in your
+kernel by configuring your kernel with CONFIG_PCI_MSI unset.
+
+
+Detected Tx Unit Hang in Quad Port Adapters
+-------------------------------------------
+
+In some cases ports 3 and 4 don't pass traffic and report 'Detected Tx Unit
+Hang' followed by 'NETDEV WATCHDOG: ethX: transmit timed out' errors. Ports 1
+and 2 do not show any errors and will pass traffic.
+
+This issue may be resolved by updating to the latest kernel and BIOS. The user
+is encouraged to run an OS that fully supports MSI interrupts. You can check
+your system BIOS by downloading the Linux Firmware Developer Kit at
+http://www.linuxfirmwarekit.org/.
+
+
+Compiling the Driver
+--------------------
+
+When trying to compile the driver by running make install, the following error
+may occur: "Linux kernel source not configured - missing version.h"
+
+To solve this issue, create the version.h file by going to the Linux source
+tree and entering:
+# make include/linux/version.h
+
+
+Performance Degradation with Jumbo Frames
+-----------------------------------------
+
+Degradation in throughput performance may be observed in some Jumbo frames
+environments. If this is observed, increasing the application's socket buffer
+size and/or increasing the /proc/sys/net/ipv4/tcp_*mem entry values may help.
+See the specific application manual and
+/usr/src/linux*/Documentation/networking/ip-sysctl.txt for more details.
+
+
+Jumbo Frames on Foundry BigIron 8000 switch
+-------------------------------------------
+There is a known issue using Jumbo frames when connected to a Foundry BigIron
+8000 switch. This is a 3rd party limitation. If you experience loss of
+packets, lower the MTU size.
+
+
+Multiple Interfaces on Same Ethernet Broadcast Network
+------------------------------------------------------
+
+Due to the default ARP behavior on Linux, it is not possible to have one
+system on two IP networks in the same Ethernet broadcast domain
+(non-partitioned switch) behave as expected. All Ethernet interfaces will
+respond to IP traffic for any IP address assigned to the system. This results
+in unbalanced receive traffic.
+
+If you have multiple interfaces in a server, either turn on ARP filtering by
+entering:
+echo 1 > /proc/sys/net/ipv4/conf/all/arp_filter
+
+This only works if your kernel's version is higher than 2.4.5.
+
+
+NOTE: This setting is not saved across reboots. The configuration change can
+be made permanent by adding the following line to the file /etc/sysctl.conf:
+net.ipv4.conf.all.arp_filter = 1
+
+Another alternative is to install the interfaces in separate broadcast domains
+(either in different switches or in a switch partitioned to VLANs).
+
+
+Disable rx Flow Control with ethtool
+------------------------------------
+
+In order to disable receive flow control using ethtool, you must turn off
+auto-negotiation on the same command line:
+ethtool -A eth? autoneg off rx off
+
+
+Unplugging Network Cable While ethtool -p is Running
+----------------------------------------------------
+
+In kernel versions 2.5.50 and newer, unplugging the network cable while
+ethtool -p is running will cause the system to become unresponsive to
+keyboard commands, except for control-alt-delete. Restarting the system
+appears to be the only remedy.
+
+
+Trouble Passing Traffic on Ports 1 and 2 Using RHEL3
+----------------------------------------------------
+
+There is a known hardware compatibility issue on some systems with RHEL3
+kernels. Traffic on ports 1 and 2 may be slower than expected, and ping times,
+higher than expected.
+
+This issue MAY be resolved by updating to the latest kernel and BIOS. You can
+check your system BIOS by downloading the Linux Firmware Developer Kit at
+http://www.linuxfirmwarekit.org/.
+
+
+Do Not Use LRO When Routing Packets
+-----------------------------------
+
+Due to a known general compatibility issue with LRO and routing, do not use LRO
+when routing packets.
+
+
+Build Error with Asianux 3.0 - Redefinition of typedef 'irq_handler_t'
+----------------------------------------------------------------------
+
+Some systems may experience build issues due to the redefinition of
+irq_handler_t. To resolve this issue, build the driver (step 4 above) using
+the command:
+# make CFLAGS_EXTRA=-DAX_RELEASE_CODE=1 install
+
+
+MSI-X Issues with Kernels Between 2.6.19 - 2.6.21 (inclusive)
+-------------------------------------------------------------
+
+Kernel panics and instability may be observed on any MSI-X hardware if you use
+irqbalance with kernels between 2.6.19 and 2.6.21. If such problems are
+encountered, you may disable the irqbalance daemon or upgrade to a newer
+kernel.
+
+
+Rx Page Allocation Errors
+-------------------------
+
+'Page allocation failure. order:0' errors may occur under stress with kernels
+2.6.25 and newer. This is caused by the way the Linux kernel reports this
+stressed condition.
+
+Under Redhat 5.4-GA, System May Crash when Closing Guest OS Window after
+Loading/Unloading Physical Function (PF) Driver
+
+Do not remove the igb driver from Dom0 while Virtual Functions (VFs) are
+assigned to guests. VFs must first use the xm "pci-detach" command to hot-plug
+the VF device out of the VM it is assigned to or else shut down the VM.
+
+Unloading Physical Function (PF) Driver Causes System Reboots When VM is
+Running and VF is Loaded on the VM.
+
+Do not unload the PF driver (igb) while VFs are assigned to guests.
+
+
+SLES10 SP3 Random System Panic when Reloading Driver
+----------------------------------------------------
+
+This is a known SLES-10 SP3 issue. After requesting interrupts for MSI-X
+vectors, system may panic.
+
+Currently, the only known workaround is to build the driver with
+CFLAGS_EXTRA=-DDISABLE_PCI_MSI if the driver needs to be loaded/unloaded.
+Otherwise, the driver can be loaded once and will be safe, but unloading it
+will lead to the issue.
+
+Enabling SR-IOV in a 32-bit Microsoft* Windows* Server 2008 Guest OS Using
+Intel® 82576-based GbE or Intel® 82599-based 10GbE Controller Under KVM
+KVM Hypervisor/VMM supports direct assignment of a PCIe device to a VM. This
+includes traditional PCIe devices, as well as SR-IOV-capable devices using
+Intel 82576-based and 82599-based controllers.
+
+While direct assignment of a PCIe device or an SR-IOV Virtual Function (VF) to
+a Linux-based VM running 2.6.32 or newer kernel is functional, there is a
+known issue with Microsoft Windows Server 2008 VM that results in a "yellow
+bang" error. This problem is within the KVM VMM itself, not the Intel driver
+or the SR-IOV logic of the VMM. The KVM emulates an older CPU model for the
+guests, and this older CPU model does not support MSI-X interrupts, which is a
+requirement for Intel SR-IOV.
+
+If you wish to use the Intel 82576- or 82599-based controllers in SR-IOV mode
+with KVM and a Microsoft Windows Server 2008 guest, try the following
+workaround. Configure KVM to emulate a different model of CPU
+when using qemu to create the KVM guest:
+"-cpu qemu64,model=13"
+
+
+Host May Reboot after Removing PF when VF is Active in Guest
+------------------------------------------------------------
+
+Using kernel versions earlier than 3.2, do not unload the PF driver with
+active VFs. Doing this will cause your VFs to stop working until you reload
+the PF driver and may cause a spontaneous reboot of your system.
+
+Prior to unloading the PF driver, you must first ensure that all VFs are
+no longer active. Do this by shutting down all VMs and unloading the VF driver.
+
+
+================================================================================
+
+
+Support
+-------
+For general information, go to the Intel support website at:
+www.intel.com/support/
+
+or the Intel Wired Networking project hosted by Sourceforge at:
+http://sourceforge.net/projects/e1000
+If an issue is identified with the released source code on a supported
+kernel with a supported adapter, email the specific information related to the
+issue to e1000-devel@lists.sf.net.
+
+
+================================================================================
+
+
+License
+-------
+
+This program is free software; you can redistribute it and/or modify it under
+the terms and conditions of the GNU General Public License, version 2, as
+published by the Free Software Foundation.
+
+This program is distributed in the hope it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
+St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+The full GNU General Public License is included in this distribution in the
+file called "COPYING".
+
+Intel(R) Gigabit Ethernet driver
+Copyright(c) 1999 - 2015 Intel Corporation.
+================================================================================
+
+
+
+Trademarks
+----------
+
+Intel, Itanium, and Pentium are trademarks or registered trademarks of Intel
+Corporation or its subsidiaries in the United States and other countries.
+
+* Other names and brands may be claimed as the property of others.
+
+
