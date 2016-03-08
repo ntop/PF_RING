@@ -351,7 +351,7 @@ struct __pfring {
   FlowSlotInfo *slots_info;
   u_int poll_sleep;
   u_int16_t poll_duration;
-  u_int8_t promisc, clear_promisc, reentrant, break_recv_loop;
+  u_int8_t promisc, __padding, reentrant, break_recv_loop;
   u_long num_poll_calls;
   pthread_rwlock_t rx_lock, tx_lock;
 
@@ -1272,6 +1272,14 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* 2
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_set_if_promisc(const char *device, int set_promisc);
+
+/**
+ * Set the promiscuous mode to bound device.
+ * @param ring        The PF_RING handle.
+ * @param set_promisc The promisc flag. 
+ * @return 0 on success, a negative value otherwise.
+ */
+int pfring_set_promisc(pfring *ring, int set_promisc);
 
 /**
  * Format a number.

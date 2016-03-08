@@ -652,7 +652,7 @@ int pfring_print_pkt(char *buff, u_int buff_len, const u_char *p, u_int len, u_i
 
 /* ******************************* */
 
-static int pfring_promisc(const char *device, int set_promisc) {
+static int __pfring_set_if_promisc(const char *device, int set_promisc) {
   int sock_fd, ret = 0;
   struct ifreq ifr;
 
@@ -703,7 +703,7 @@ int pfring_set_if_promisc(const char *device, int set_promisc) {
 
     if (at != NULL) at[0] = '\0';
 
-    ret = pfring_promisc(elem, set_promisc);
+    ret = __pfring_set_if_promisc(elem, set_promisc);
 
     if (ret < 0) 
       return ret;
@@ -712,6 +712,13 @@ int pfring_set_if_promisc(const char *device, int set_promisc) {
   }
 
   return ret;
+}
+
+/* *************************************** */
+
+int pfring_set_promisc(pfring *ring, int set_promisc) {
+  u_int32_t enable = set_promisc;
+  return setsockopt(ring->fd, 0, SO_SET_IFF_PROMISC, &enable, sizeof(enable));
 }
 
 /* *************************************** */

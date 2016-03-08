@@ -82,6 +82,7 @@
 #define SO_LOCK_CLUSTER_OBJECT           137
 #define SO_UNLOCK_CLUSTER_OBJECT         138
 #define SO_SET_CUSTOM_BOUND_DEV_NAME     139
+#define SO_SET_IFF_PROMISC               140
 
 /* Get */
 #define SO_GET_RING_VERSION              170
@@ -972,6 +973,8 @@ typedef struct {
 
   pfring_device_type device_type; /* Device Type */
 
+  atomic_t promisc_users; /* number of rings with promisc set bound to this device */
+
   /*
     NOTE
 
@@ -1120,6 +1123,7 @@ struct pf_ring_socket {
   socket_mode mode; /* Specify the link direction to enable (RX, TX, both) */
   pkt_header_len header_len;
   u_int8_t stack_injection_mode;
+  u_int8_t promisc_enabled;
 
   struct sock *sk;
 

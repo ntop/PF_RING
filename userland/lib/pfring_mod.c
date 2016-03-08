@@ -158,10 +158,8 @@ int pfring_mod_open_setup(pfring *ring) {
 	 ring->slots_info->remove_off, ring->slots_info->tot_lost);
 #endif
 
-  if(ring->promisc) {
-    if(pfring_set_if_promisc(ring->device_name, 1) == 0)
-      ring->clear_promisc = 1;
-  }
+  if(ring->promisc)
+    pfring_set_promisc(ring, 1);
 
   ring->slot_header_len = pfring_get_slot_header_len(ring);
   if(ring->slot_header_len == (u_int16_t)-1) {
@@ -376,9 +374,6 @@ void pfring_mod_close(pfring *ring) {
      	      ring->buffer, (unsigned int)ring->slots_info->tot_mem);
     }
   }
-
-  if(ring->clear_promisc)
-    pfring_set_if_promisc(ring->device_name, 0);
 
   close(ring->fd);
 }

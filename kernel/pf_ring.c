@@ -5837,6 +5837,38 @@ unlock:
 
 /* *********************************************** */
 
+static void set_netdev_promisc(struct net_device *netdev) {
+  unsigned int if_flags;
+
+  rtnl_lock();
+
+  if_flags = (short) dev_get_flags(netdev);
+  if (!(if_flags & IFF_PROMISC)) {
+    if_flags |= IFF_PROMISC;
+    dev_change_flags(netdev, if_flags);
+  }
+
+  rtnl_unlock();
+}
+
+/* *********************************************** */
+
+static void unset_netdev_promisc(struct net_device *netdev) {
+  unsigned int if_flags;
+
+  rtnl_lock();
+
+  if_flags = (short) dev_get_flags(netdev);
+  if (if_flags & IFF_PROMISC) { 
+    if_flags &= ~IFF_PROMISC;
+    dev_change_flags(netdev, if_flags);
+  }
+
+  rtnl_unlock();
+}
+
+/* *********************************************** */
+
 static int ring_release(struct socket *sock)
 {
   struct sock *sk = sock->sk;
@@ -6002,6 +6034,11 @@ static int ring_release(struct socket *sock)
   if(pfr->extra_dma_memory != NULL) {
     free_extra_dma_memory(pfr->extra_dma_memory);
     pfr->extra_dma_memory = NULL;
+  }
+
+  if (pfr->promisc_enabled) {
+    if (atomic_dec_return(&pfr->ring_netdev->promisc_users) == 0) 
+      unset_netdev_promisc(pfr->ring_netdev->dev);
   }
 
   /*
@@ -7531,7 +7568,7 @@ static int ring_setsockopt(struct socket *sock,
 
   found = 1;
 
-  if(unlikely(enable_debug))
+  //if(unlikely(enable_debug))
     printk("[PF_RING] --> ring_setsockopt(optname=%u)\n", optname);
 
   switch(optname) {
@@ -8380,8 +8417,9 @@ static int ring_setsockopt(struct socket *sock,
     if(copy_from_user(&pfr->statsString, optval, optlen)) {
       pfr->statsString[0] = '\0';
       return(-EFAULT);
-    } else
-      pfr->statsString[optlen] = '\0';
+    }
+
+    pfr->statsString[optlen] = '\0';
 
     ret = setSocketStats(pfr);
     found = 1;
@@ -8389,6 +8427,33 @@ static int ring_setsockopt(struct socket *sock,
 
   case SO_SET_STACK_INJECTION_MODE:
     pfr->stack_injection_mode = 1;
+    found = 1;
+    break;
+
+  case SO_SET_IFF_PROMISC:
+    {
+      u_int32_t enable_promisc;
+
+      if (optlen != sizeof(u_int32_t))
+        return (-EINVAL);
+
+      if (copy_from_user(&enable_promisc, optval, optlen))
+        return (-EFAULT);
+
+      if (enable_promisc) {
+        if (!pfr->ring_netdev || pfr->ring_netdev == &none_device_element || pfr->ring_netdev == &any_device_element) {
+          if(unlikely(enable_debug))
+            printk("[PF_RING] SO_SET_IFF_PROMISC: not a real device\n");
+        } else if (!pfr->promisc_enabled && pfr->ring_netdev) {
+          pfr->promisc_enabled = 1;
+          if (atomic_inc_return(&pfr->ring_netdev->promisc_users) == 1) /* first user */
+            set_netdev_promisc(pfr->ring_netdev->dev);
+        }
+      } else {
+        if (!atomic_read(&pfr->ring_netdev->promisc_users)) /* no users (otehrwise keep (promisc) */
+          unset_netdev_promisc(pfr->ring_netdev->dev);
+      }
+    }
     found = 1;
     break;
 
@@ -9247,6 +9312,7 @@ int add_device_to_ring_list(struct net_device *dev)
   write_lock(&ring_proc_lock);
 
   memset(dev_ptr, 0, sizeof(ring_device_element));
+  atomic_set(&dev_ptr->promisc_users, 0);
   INIT_LIST_HEAD(&dev_ptr->device_list);
   dev_ptr->dev = dev;
   strcpy(dev_ptr->device_name, dev->name);

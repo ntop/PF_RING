@@ -118,9 +118,6 @@ void pfring_dna_close(pfring *ring) {
 
   pfring_map_dna_device(ring, remove_device_mapping, "");
 
-  if(ring->clear_promisc)
-    pfring_set_if_promisc(ring->device_name, 0);
-
   close(ring->fd);
 }
 
@@ -402,10 +399,8 @@ int pfring_dna_open(pfring *ring) {
 
   /* ***************************************** */
 
-  if(ring->promisc) {
-    if(pfring_set_if_promisc(ring->device_name, 1) == 0)
-      ring->clear_promisc = 1;
-  }
+  if (ring->promisc)
+    pfring_set_promisc(ring, 1);
 
   /* ***************************************** */
 
