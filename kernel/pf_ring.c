@@ -7568,7 +7568,7 @@ static int ring_setsockopt(struct socket *sock,
 
   found = 1;
 
-  //if(unlikely(enable_debug))
+  if(unlikely(enable_debug))
     printk("[PF_RING] --> ring_setsockopt(optname=%u)\n", optname);
 
   switch(optname) {
