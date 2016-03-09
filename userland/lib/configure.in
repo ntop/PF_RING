@@ -113,12 +113,12 @@ if test "x$enable_rdi" != "xno"; then :
   fi
 fi
 
+dnl Redis - Default disabled
+REDIS_LIB=""
+AC_ARG_ENABLE([redis], AS_HELP_STRING([--enable-redis], [Enable Redis support in PF_RING]))
 AC_CHECK_LIB([hiredis], [redisCommand])
 if test "x$ac_cv_lib_hiredis_redisCommand" = xyes; then :
-REDIS_LIB="-lhiredis"
-AC_DEFINE_UNQUOTED(HAVE_REDIS, 1, [redis is present])
-else
-REDIS_LIB=""
+  AS_IF([test "x$enable_redis" = "xyes"], [REDIS_LIB="-lhiredis"; AC_DEFINE_UNQUOTED(HAVE_REDIS, 1, [redis is present])])
 fi
 
 AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])

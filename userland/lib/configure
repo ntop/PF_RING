@@ -716,6 +716,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_rdi
+enable_redis
 enable_bpf
 '
       ac_precious_vars='build_alias
@@ -1337,6 +1338,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-rdi           Disable Silicom Redirector support in PF_RING
+  --enable-redis          Enable Redis support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
 
 Some influential environment variables:
@@ -3502,6 +3504,12 @@ $as_echo "no" >&6; }
   fi
 fi
 
+REDIS_LIB=""
+# Check whether --enable-redis was given.
+if test "${enable_redis+set}" = set; then :
+  enableval=$enable_redis;
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for redisCommand in -lhiredis" >&5
 $as_echo_n "checking for redisCommand in -lhiredis... " >&6; }
 if ${ac_cv_lib_hiredis_redisCommand+:} false; then :
@@ -3548,14 +3556,13 @@ _ACEOF
 fi
 
 if test "x$ac_cv_lib_hiredis_redisCommand" = xyes; then :
-REDIS_LIB="-lhiredis"
-
+  if test "x$enable_redis" = "xyes"; then :
+  REDIS_LIB="-lhiredis";
 cat >>confdefs.h <<_ACEOF
 #define HAVE_REDIS 1
 _ACEOF
 
-else
-REDIS_LIB=""
+fi
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for clock_gettime in -lrt" >&5
