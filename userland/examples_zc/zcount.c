@@ -339,14 +339,15 @@ int main(int argc, char* argv[]) {
 
   if (print_maintenance) {
     u_int32_t maintenance;
-    if (pfring_zc_check_device_license(zq, &maintenance))
+    if (pfring_zc_check_device_license(zq, &maintenance)) {
       printf("License Ok\n");
       if (maintenance) {
         time_t exp = maintenance;
         printf("Maintenance will expire on %s\n", ctime(&exp));
       }
-    else
+    } else {
       printf("Invalid license\n");
+    }
     goto cleanup;
   }
 
