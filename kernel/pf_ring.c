@@ -3978,7 +3978,7 @@ int bpf_filter_skb(struct sk_buff *skb,
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
     res = sk_run_filter(skb, filter->insns);
 #elif(LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0))
-    res = sk_filter(pfr->sk, skb);;
+    res = (sk_filter(pfr->sk, skb) == 0) ? 1 : 0;
 #else
     res = SK_RUN_FILTER(filter, skb);
 #endif
