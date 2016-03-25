@@ -845,7 +845,8 @@ LIBS="$LIBS `../lib/pfring_config --libs`"
 
 # NPCAP
 SHORT_MACHINE=`uname -m | cut -b1-3`
-if test "$SHORT_MACHINE" != "arm"; then
+#if test "$SHORT_MACHINE" != "arm"; then
+if test -f "libnpcap_$(MACHINE).a"; then
         LIBNPCAP='libnpcap_$(MACHINE).a'
 	NPCAPOBJS='$(shell ar t libnpcap_$(MACHINE).a | grep .o)'
 	EXTRACT_LIBNPCAP="extract_libnpcap"
