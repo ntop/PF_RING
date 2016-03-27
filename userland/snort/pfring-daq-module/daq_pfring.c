@@ -820,8 +820,10 @@ static int pfring_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t callbac
 	break;
 
       case DAQ_VERDICT_BLOCK:   /* Block the packet. */
+#ifdef DAQ_VERDICT_RETRY
       case DAQ_VERDICT_RETRY:   /* Hold the packet briefly and resend it to Snort while Snort waits for external response. 
                                    Drop any new packets received on that flow while holding before sending them to Snort. */
+#endif
 	/* Nothing to do really */
 	break;
 
@@ -1039,7 +1041,11 @@ DAQ_SO_PUBLIC const DAQ_Module_t DAQ_MODULE_DATA =
     .modify_flow = NULL,
     .hup_prep = NULL,
     .hup_apply = NULL,
-    .hup_post = NULL,
+    .hup_post = NULL
+
+#if (DAQ_API_VERSION > 0x00010002)
+    ,
     .dp_add_dc = NULL
+#endif
 #endif
   };
