@@ -634,8 +634,10 @@ static inline void pfring_zc_daq_process(Pfring_Context_t *context, pfring_zc_pk
     case DAQ_VERDICT_PASS:      /* Pass the packet */
     case DAQ_VERDICT_REPLACE:   /* Pass a packet that has been modified in-place.(No resizing allowed!) */
     case DAQ_VERDICT_BLOCK:     /* Block the packet. */
+#ifdef DAQ_VERDICT_RETRY
     case DAQ_VERDICT_RETRY:     /* Hold the packet briefly and resend it to Snort while Snort waits for external response. 
                                    Drop any new packets received on that flow while holding before sending them to Snort. */
+#endif
       /* Nothing to do really */
       break;
     case MAX_DAQ_VERDICT:
@@ -830,8 +832,10 @@ static int pfring_zc_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t call
 	  pfring_zc_daq_send_packet(context, context->tx_queues[rx_ring_idx ^ 0x1], hdr.caplen);
 	break;
       case DAQ_VERDICT_BLOCK:     /* Block the packet. */
+#ifdef DAQ_VERDICT_RETRY
       case DAQ_VERDICT_RETRY:     /* Hold the packet briefly and resend it to Snort while Snort waits for external response. 
                                      Drop any new packets received on that flow while holding before sending them to Snort. */
+#endif
 	/* Nothing to do really */
 	break;
       case MAX_DAQ_VERDICT:
@@ -1052,7 +1056,10 @@ DAQ_SO_PUBLIC const DAQ_Module_t DAQ_MODULE_DATA =
     .modify_flow = NULL,
     .hup_prep = NULL,
     .hup_apply = NULL,
-    .hup_post = NULL,
+    .hup_post = NULL
+#if (DAQ_API_VERSION > 0x00010002)
+    ,   
     .dp_add_dc = NULL
+#endif
 #endif
   };
