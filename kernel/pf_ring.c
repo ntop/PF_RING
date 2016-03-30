@@ -2976,11 +2976,13 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 	hdr->len += sizeof(struct eth_vlan_hdr);
 	hdr->caplen = min_val(pfr->bucket_len - offset, hdr->caplen + sizeof(struct eth_vlan_hdr));
 
-        skb_copy_bits(skb, -displ, &ring_bucket[pfr->slot_header_len + offset], displ);
-        b = (u_int16_t*)&ring_bucket[pfr->slot_header_len + offset + 12];
-        b[0] = ntohs(ETH_P_8021Q), b[1] = ntohs(vlan_tci), b[2] = v->h_vlan_proto;
-        if(skb_copy_bits(skb, 0, &ring_bucket[pfr->slot_header_len + offset + 18], (int) hdr->caplen - 18) < 0)
-          printk("[PF_RING] FAULT [skb->len=%u][caplen=%u]\n", skb->len, hdr->caplen - 20);
+        skb_copy_bits(skb, -displ, &ring_bucket[pfr->slot_header_len + offset], 12 /* MAC src/dst */);
+        b = (u_int16_t*) &ring_bucket[pfr->slot_header_len + offset + 12 /* MAC src/dst */];
+        b[0] = ntohs(ETH_P_8021Q), b[1] = htons(vlan_tci /* including priority */), b[2] = v->h_vlan_proto;
+        if(skb_copy_bits(skb, -displ + sizeof(struct ethhdr), 
+             &ring_bucket[pfr->slot_header_len + offset + sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)], 
+             (int) hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr))) < 0)
+          printk("[PF_RING] FAULT [skb->len=%u][caplen=%lu]\n", skb->len, hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)));
       } else {
         skb_copy_bits(skb, -displ, &ring_bucket[pfr->slot_header_len + offset], (int) hdr->caplen);
       }
