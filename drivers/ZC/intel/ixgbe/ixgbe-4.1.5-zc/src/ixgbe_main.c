@@ -5990,10 +5990,12 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 
 			init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 
+			rx_info.num_queues = adapter->num_rx_queues;
 			rx_info.packet_memory_num_slots     = rx_ring->count;
 			rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
 			rx_info.descr_packet_memory_tot_len = rx_ring->size;
 	      
+			tx_info.num_queues = adapter->num_tx_queues;
 			tx_info.packet_memory_num_slots     = tx_ring->count;
 			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;

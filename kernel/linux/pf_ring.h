@@ -756,7 +756,7 @@ typedef struct {
   u_int16_t registers_index;
   u_int16_t stats_index;
   u_int32_t vector;
-  u_int32_t reserved; /* future use */
+  u_int32_t num_queues;
 } mem_ring_info;
 
 typedef enum {

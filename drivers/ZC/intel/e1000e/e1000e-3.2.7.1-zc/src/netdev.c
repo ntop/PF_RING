@@ -4638,10 +4638,12 @@ static void e1000_configure(struct e1000_adapter *adapter)
 
 		init_waitqueue_head(&adapter->pfring_zc.packet_waitqueue);
 
+		rx_info.num_queues                  = 1;
 		rx_info.packet_memory_num_slots     = rx_ring->count;
 		rx_info.packet_memory_slot_len      = ALIGN(adapter->rx_buffer_len, cache_line_size);
 		rx_info.descr_packet_memory_tot_len = rx_ring->size;
 
+		tx_info.num_queues                  = 1;
 		tx_info.packet_memory_num_slots     = tx_ring->count;
 		tx_info.packet_memory_slot_len      = ALIGN(adapter->rx_buffer_len, cache_line_size);
 		tx_info.descr_packet_memory_tot_len = tx_ring->size;

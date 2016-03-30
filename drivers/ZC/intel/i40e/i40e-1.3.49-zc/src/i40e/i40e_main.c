@@ -5746,6 +5746,7 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 
 				init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 
+				rx_info.num_queues = vsi->num_queue_pairs;
 				rx_info.packet_memory_num_slots     = rx_ring->count;
 				rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
 				rx_info.descr_packet_memory_tot_len = rx_ring->size;
@@ -5753,6 +5754,7 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 				rx_info.stats_index		    = vsi->info.stat_counter_idx;
 				rx_info.vector			    = rx_ring->q_vector->v_idx + vsi->base_vector;
  
+				tx_info.num_queues = vsi->num_queue_pairs;
 				tx_info.packet_memory_num_slots     = tx_ring->count;
 				tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 				tx_info.descr_packet_memory_tot_len = tx_ring->size;

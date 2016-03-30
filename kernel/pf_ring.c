@@ -4052,7 +4052,11 @@ static int add_skb_to_ring(struct sk_buff *skb,
   if((!pfring_enabled) || ((!pfr->ring_active) && (pfr->master_ring == NULL)))
     return(-1);
 
-  pfr->num_rx_channels = num_rx_channels; /* Constantly updated */
+  if (pfr->num_rx_channels != num_rx_channels) { /* Constantly updated */
+    //printk("[PF_RING] Detected number of channels change on %s (%u -> %u)\n",
+    //  pfr->ring_netdev->dev->name, pfr->num_rx_channels, num_rx_channels);
+    pfr->num_rx_channels = num_rx_channels;
+  }
   hdr->extended_hdr.parsed_pkt.last_matched_rule_id = (u_int16_t)-1;
 
   atomic_inc(&pfr->num_ring_users);
@@ -6126,17 +6130,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
     ring_proc_add(pfr);
   }
 
-  /*
-    As the 'struct net_device' does not contain the number
-    of RX queues, we can guess that its number is the same as the number
-    of TX queues. After the first packet has been received by the adapter
-    the num of RX queues is updated with the real value
-  */
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
-  pfr->num_rx_channels = pfr->ring_netdev->dev->real_num_tx_queues;
-#else
-  pfr->num_rx_channels = 1;
-#endif
+  pfr->num_rx_channels = get_num_rx_queues(pfr->ring_netdev->dev);
 
   if((dev == &any_device_element) && (!quick_mode)) {
     num_any_rings++;
@@ -8726,15 +8720,12 @@ static int ring_getsockopt(struct socket *sock,
     {
       u_int8_t num_rx_channels;
 
-      if(pfr->ring_netdev == &none_device_element) {
-	/* Device not yet bound */
+      if(pfr->ring_netdev == &none_device_element) /* Device not yet bound */
 	num_rx_channels = UNKNOWN_NUM_RX_CHANNELS;
-      } else {
-	if(pfr->ring_netdev->is_zc_device)
-	  num_rx_channels = pfr->ring_netdev->num_zc_dev_rx_queues;
-	else
-	  num_rx_channels = max_val(pfr->num_rx_channels, get_num_rx_queues(pfr->ring_netdev->dev));
-      }
+      else if(pfr->ring_netdev->is_zc_device)
+	num_rx_channels = pfr->ring_netdev->num_zc_dev_rx_queues;
+      else
+        num_rx_channels = max_val(pfr->num_rx_channels, get_num_rx_queues(pfr->ring_netdev->dev));
 
       if(unlikely(enable_debug))
 	printk("[PF_RING] --> SO_GET_NUM_RX_CHANNELS[%s]=%d [dna=%d/dns_rx_channels=%d][%p]\n",
@@ -9051,7 +9042,7 @@ void zc_dev_handler(zc_dev_operation operation,
 	  if(strcmp(dev_ptr->device_name, netdev->name) == 0) {
 	    dev_ptr->is_zc_device = 1 + version;
             dev_ptr->zc_dev_model = device_model;
-	    dev_ptr->num_zc_dev_rx_queues = max_val(dev_ptr->num_zc_dev_rx_queues, channel_id+1);
+	    dev_ptr->num_zc_dev_rx_queues = (rx_info != NULL) ? rx_info->num_queues : UNKNOWN_NUM_RX_CHANNELS;
 #if (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
             netif_set_real_num_rx_queues(dev_ptr->dev, dev_ptr->num_zc_dev_rx_queues); /* This is a workround for Centos 6 reporting a wrong number of queues */
 #endif
