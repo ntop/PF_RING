@@ -6021,7 +6021,9 @@ static int ring_release(struct socket *sock)
   if(pfr->cluster_referee != NULL)
     remove_cluster_referee(pfr);
 
-  if(pfr->zc_device_entry != NULL) {
+  if((pfr->zc_device_entry != NULL) 
+     && pfr->zc_device_entry->dev.netdev
+     && pfr->zc_device_entry->dev.netdev->name) {
     zc_dev_mapping mapping;
 
     mapping.operation = remove_device_mapping;
