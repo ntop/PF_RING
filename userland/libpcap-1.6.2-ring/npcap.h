@@ -11,6 +11,8 @@
 
 #include "pcap.h"
 
+#define HAVE_PCAP_COMPRESSION
+
 #define PCAP_MAGIC      0xa1b2c3d4
 #define PCAP_NSEC_MAGIC 0xa1b23c4d
 

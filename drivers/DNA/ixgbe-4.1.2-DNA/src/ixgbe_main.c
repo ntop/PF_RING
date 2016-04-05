@@ -6178,13 +6178,13 @@ void ixgbe_clean_rx_ring(struct ixgbe_ring *rx_ring)
 				}
 
 				/* De-register with PF_RING: one per channel	*/
-
+				rx_info.num_queues               = adapter->num_rx_queues;
 				rx_info.packet_memory_num_chunks = rx_ring->dna.num_memory_pages;
 				rx_info.packet_memory_chunk_len	 = rx_ring->dna.tot_packet_memory;
 				rx_info.packet_memory_num_slots	 = rx_ring->dna.packet_num_slots;
 				rx_info.packet_memory_slot_len	 = rx_ring->dna.packet_slot_len;
 				rx_info.descr_packet_memory_tot_len = 2 * rx_ring->size;
-	
+				tx_info.num_queues               = adapter->num_tx_queues;
 				tx_info.packet_memory_num_chunks = tx_ring->dna.num_memory_pages;
 				tx_info.packet_memory_chunk_len	 = tx_ring->dna.tot_packet_memory;
 				tx_info.packet_memory_num_slots	 = tx_ring->dna.packet_num_slots;

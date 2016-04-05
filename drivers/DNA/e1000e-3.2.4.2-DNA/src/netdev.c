@@ -1908,13 +1908,13 @@ static void e1000_clean_rx_ring(struct e1000_ring *rx_ring)
 				}
 
 				/* De-register with PF_RING */
-
+				rx_info.num_queues               = 1;
 				rx_info.packet_memory_num_chunks = 1;
 				rx_info.packet_memory_chunk_len	 = adapter->dna.tot_packet_memory;
 				rx_info.packet_memory_num_slots	 = adapter->dna.packet_num_slots;
 				rx_info.packet_memory_slot_len	 = adapter->dna.packet_slot_len;
 				rx_info.descr_packet_memory_tot_len = 2 * rx_ring->size;
-	
+				tx_info.num_queues               = 1;
 				tx_info.packet_memory_num_chunks = 1;
 				tx_info.packet_memory_chunk_len	 = adapter->dna.tot_packet_memory;
 				tx_info.packet_memory_num_slots	 = adapter->dna.packet_num_slots;
