@@ -409,13 +409,13 @@ void alloc_dna_memory(struct e1000_adapter *adapter) {
 	  memcpy(shadow_tx_desc, tx_desc, sizeof(struct e1000_tx_desc));
 	}
       }
-
+      rx_info.num_queues                  = 1;
       rx_info.packet_memory_num_chunks    = adapter->dna.num_memory_pages;
       rx_info.packet_memory_chunk_len     = adapter->dna.tot_packet_memory;
       rx_info.packet_memory_num_slots     = adapter->dna.packet_num_slots;
       rx_info.packet_memory_slot_len      = adapter->dna.packet_slot_len;
       rx_info.descr_packet_memory_tot_len = 2 * rx_ring->size;
-  
+      tx_info.num_queues                  = 1;
       tx_info.packet_memory_num_chunks    = adapter->dna.num_memory_pages;
       tx_info.packet_memory_chunk_len     = adapter->dna.tot_packet_memory;
       tx_info.packet_memory_num_slots     = adapter->dna.packet_num_slots;
