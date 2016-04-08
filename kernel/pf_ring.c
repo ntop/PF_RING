@@ -7011,6 +7011,10 @@ static int pfring_map_zc_dev(struct pf_ring_socket *pfr,
 	   (mapping->operation == remove_device_mapping) ? "remove" : "add",
 	   mapping->device_name, mapping->channel_id);
 
+  if (strlen(mapping->device_name) == 0)
+    printk("[PF_RING] %s:%d %s ZC socket with empty device name!", __FUNCTION__, __LINE__,
+      mapping->operation == add_device_mapping ? "opening" : "closing");
+
   if (mapping->operation == remove_device_mapping) {
     /* Unlock driver */
 
@@ -7037,8 +7041,8 @@ static int pfring_map_zc_dev(struct pf_ring_socket *pfr,
         write_unlock(&entry->lock);
 
 	if (!found) {
-	  printk("[PF_RING] %s:%d something got wrong removing %s@%u\n", __FUNCTION__, __LINE__,
-                 mapping->device_name, mapping->channel_id);
+	  printk("[PF_RING] %s:%d something got wrong removing socket bound to %s@%u\n", 
+                 __FUNCTION__, __LINE__, entry->dev.netdev->name, entry->dev.channel_id);
 	  return -1; /* Something got wrong */
 	}
 
@@ -7561,6 +7565,7 @@ static int ring_setsockopt(struct socket *sock,
   socket_mode sockmode;
   hw_filtering_rule hw_rule;
   struct list_head *ptr, *tmp_ptr;
+  zc_dev_mapping mapping;
 
   if(pfr == NULL)
     return(-EINVAL);
@@ -7946,32 +7951,29 @@ static int ring_setsockopt(struct socket *sock,
   case SO_RING_BUCKET_LEN:
     if(optlen != sizeof(u_int32_t))
       return(-EINVAL);
-    else {
-      if(copy_from_user(&pfr->bucket_len, optval, optlen))
-	return(-EFAULT);
 
-      if(unlikely(enable_debug))
-	printk("[PF_RING] --> SO_RING_BUCKET_LEN=%d\n", pfr->bucket_len);
+    if(copy_from_user(&pfr->bucket_len, optval, optlen))
+      return(-EFAULT);
 
-      found = 1;
-    }
+    if(unlikely(enable_debug))
+      printk("[PF_RING] --> SO_RING_BUCKET_LEN=%d\n", pfr->bucket_len);
+
+    found = 1;
     break;
 
   case SO_MAP_DNA_DEVICE:
     if(optlen != sizeof(zc_dev_mapping))
       return(-EINVAL);
-    else {
-      zc_dev_mapping mapping;
 
-      if(copy_from_user(&mapping, optval, optlen))
-	return(-EFAULT);
-      else {
-        if (unlikely(enable_debug))
-          printk("[PF_RING] SO_MAP_DNA_DEVICE %s\n", mapping.device_name);
-	ret = pfring_map_zc_dev(pfr, &mapping);
-        found = 1;
-      }
-    }
+    if(copy_from_user(&mapping, optval, optlen))
+      return(-EFAULT);
+      
+    if (unlikely(enable_debug))
+      printk("[PF_RING] SO_MAP_DNA_DEVICE %s\n", mapping.device_name);
+
+    ret = pfring_map_zc_dev(pfr, &mapping);
+
+    found = 1;
     break;
 
   case SO_SET_MASTER_RING:
@@ -8985,6 +8987,10 @@ void zc_dev_handler(zc_dev_operation operation,
            rx_info != NULL ? rx_info->packet_memory_num_chunks : 0, 
            tx_info != NULL ? tx_info->packet_memory_num_chunks : 0); 
   }
+
+  if (strlen(netdev->name) == 0)
+    printk("[PF_RING] %s:%d %s ZC device with empty name!", __FUNCTION__, __LINE__,
+      operation == add_device_mapping ? "registering" : "removing");
 
   if(operation == add_device_mapping) {
     zc_dev_list *next;
