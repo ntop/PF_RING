@@ -8979,14 +8979,10 @@ void zc_dev_handler(zc_dev_operation operation,
 			zc_dev_wait_packet wait_packet_function_ptr,
 			zc_dev_notify dev_notify_function_ptr)
 {
-  if(unlikely(enable_debug)) {
-    printk("[PF_RING] %s(%s@%u [operation=%s])\n", __FUNCTION__,
-	   netdev->name, channel_id,
-	   operation == add_device_mapping ? "add_device_mapping" : "remove_device_mapping");
-    printk("[PF_RING] RX=%u/TX=%u\n", 
-           rx_info != NULL ? rx_info->packet_memory_num_chunks : 0, 
-           tx_info != NULL ? tx_info->packet_memory_num_chunks : 0); 
-  }
+  if(unlikely(enable_debug))
+    printk("[PF_RING] %s: %s ZC device %s@%u\n", __FUNCTION__,
+	   operation == add_device_mapping ? "registering" : "removing",
+	   netdev->name, channel_id);
 
   if (strlen(netdev->name) == 0)
     printk("[PF_RING] %s:%d %s ZC device with empty name!", __FUNCTION__, __LINE__,
@@ -9058,8 +9054,8 @@ void zc_dev_handler(zc_dev_operation operation,
             if (tx_info != NULL) dev_ptr->num_zc_tx_slots = tx_info->packet_memory_num_slots;
 
 	    if(unlikely(enable_debug))
-	      printk("[PF_RING] ==>> Updating DNA %s [num_zc_dev_rx_queues=%d][%p]\n",
-		     dev_ptr->device_name, dev_ptr->num_zc_dev_rx_queues, dev_ptr);
+	      printk("[PF_RING] %s: updating ZC device %s queues=%d\n", __FUNCTION__,
+		     dev_ptr->device_name, dev_ptr->num_zc_dev_rx_queues);
 	    break;
 	  }
 	}
@@ -9102,8 +9098,8 @@ void zc_dev_handler(zc_dev_operation operation,
   }
 
   if(unlikely(enable_debug))
-    printk("[PF_RING] %s(%s): [zc_devices_list_size=%d]\n",
-	   __FUNCTION__, netdev->name, zc_devices_list_size);
+    printk("[PF_RING] %s: %d registered ZC devices/queues\n",
+	   __FUNCTION__, zc_devices_list_size);
 }
 
 /* ************************************* */
@@ -9336,9 +9332,6 @@ int add_device_to_ring_list(struct net_device *dev)
 
     rc = dev_ptr->dev->ethtool_ops->set_rxnfc(dev_ptr->dev, &cmd);
 
-    if(unlikely(enable_debug))
-      printk("[PF_RING] set_rxnfc returned %d\n", rc);
-
     if(rc == RING_MAGIC_VALUE) {
       /* This device supports hardware filtering */
       dev_ptr->device_type = intel_82599_family;
@@ -9353,16 +9346,20 @@ int add_device_to_ring_list(struct net_device *dev)
 				     ring_proc_dev_rule_read, dev_ptr);
       if(entry) {
 	entry->write_proc = ring_proc_dev_rule_write;
-	if(unlikely(enable_debug)) printk("[PF_RING] Device %s (Intel 82599) DOES support hardware packet filtering\n", dev->name);
+	if(unlikely(enable_debug)) 
+          printk("[PF_RING] Device %s (Intel 82599) DOES support hardware packet filtering\n", dev->name);
       } else {
-	if(unlikely(enable_debug)) printk("[PF_RING] Error while creating /proc entry 'rules' for device %s\n", dev->name);
+	if(unlikely(enable_debug)) 
+          printk("[PF_RING] Error while creating /proc entry 'rules' for device %s\n", dev->name);
       }
 #endif
     } else {
-      if(unlikely(enable_debug)) printk("[PF_RING] Device %s does NOT support hardware packet filtering [1]\n", dev->name);
+      if(unlikely(enable_debug)) 
+        printk("[PF_RING] Device %s does NOT support hardware packet filtering (1)\n", dev->name);
     }
   } else {
-    if(unlikely(enable_debug)) printk("[PF_RING] Device %s does NOT support hardware packet filtering [2]\n", dev->name);
+    if(unlikely(enable_debug)) 
+      printk("[PF_RING] Device %s does NOT support hardware packet filtering (2)\n", dev->name);
   }
 #endif
 
@@ -9450,6 +9447,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       char _what[32], *what = _what;
       
       switch(msg) {
+      case NETDEV_POST_INIT:   what = "NETDEV_POST_INIT"; break;
       case NETDEV_PRE_UP:      what = "NETDEV_PRE_UP"; break;
       case NETDEV_UP:          what = "NETDEV_UP"; break;
       case NETDEV_DOWN:        what = "NETDEV_DOWN"; break;
@@ -9459,11 +9457,11 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       case NETDEV_CHANGEADDR:  what = "NETDEV_CHANGEADDR"; break;
       case NETDEV_CHANGENAME:  what = "NETDEV_CHANGENAME"; break;
       default:
-	snprintf(_what, sizeof(_what), "%lu", msg);
+	snprintf(_what, sizeof(_what), "Unknown msg %lu", msg);
 	break;
       }
       
-      printk("[PF_RING] packet_notifier(%s) [%s][%d]\n", dev->name, what, dev->type);
+      printk("[PF_RING] %s %s: %s Type=%d\n", __FUNCTION__, dev->name, what, dev->type);
     }
 
     /* Skip non ethernet interfaces */
@@ -9475,25 +9473,27 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
        && (dev->type != ARPHRD_IEEE80211_RADIOTAP)
        && strncmp(dev->name, "bond", 4)) {
       if (unlikely(enable_debug))
-	printk("[PF_RING] packet_notifier(%s): skipping non ethernet device\n", dev->name);
+	printk("[PF_RING] %s %s: skipping non ethernet device\n", __FUNCTION__, 
+               dev->name);
       return NOTIFY_DONE;
     }
 
     if (dev->ifindex >= MAX_NUM_IFIDX) {
       if (unlikely(enable_debug))
-	printk("[PF_RING] packet_notifier(%s): interface index %d > max index %d\n",
+	printk("[PF_RING] %s %s: interface index %d > max index %d\n", __FUNCTION__,
 	       dev->name, dev->ifindex, MAX_NUM_IFIDX);
       return NOTIFY_DONE;
     }
 
     switch (msg) {
+    case NETDEV_POST_INIT:
     case NETDEV_PRE_UP:
     case NETDEV_UP:
     case NETDEV_DOWN:
       break;
     case NETDEV_REGISTER:
       if(unlikely(enable_debug))
-	printk("[PF_RING] packet_notifier(%s) [REGISTER][pfring_ptr=%p][hook=%p]\n",
+	printk("[PF_RING] %s %s: [REGISTER][pfring_ptr=%p][hook=%p]\n", __FUNCTION__,
 	       dev->name, dev->pfring_ptr, &ring_hooks);
 
       /* safety check */
@@ -9515,7 +9515,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 
     case NETDEV_UNREGISTER:
       if(unlikely(enable_debug))
-	printk("[PF_RING] packet_notifier(%s) [UNREGISTER][pfring_ptr=%p]\n",
+	printk("[PF_RING] %s %s: [UNREGISTER][pfring_ptr=%p]\n", __FUNCTION__,
 	       dev->name, dev->pfring_ptr);
 
       hook = (struct pfring_hooks *) dev->pfring_ptr;
@@ -9540,7 +9540,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 
     case NETDEV_CHANGENAME: /* Rename interface ethX -> ethY */
       if (unlikely(enable_debug)) 
-        printk("[PF_RING] Device change name %s\n", dev->name);
+        printk("[PF_RING] Device changed name to %s\n", dev->name);
 
       write_lock(&ring_proc_lock); 
 
@@ -9559,7 +9559,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 
         if (dev_ptr->dev == dev) {
           if (unlikely(enable_debug))
-            printk("[PF_RING] ==>> FOUND device change name %s -> %s\n",
+            printk("[PF_RING] Updating device name %s to %s\n",
                    dev_ptr->device_name, dev->name);
 
 	  /* Remove old entry */
@@ -9607,9 +9607,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       break;
 
     default:
-      if(unlikely(enable_debug))
-	printk("[PF_RING] packet_notifier(%s): unhandled message [msg=%lu][pfring_ptr=%p]\n",
-	       dev->name, msg, dev->pfring_ptr);
       break;
     }
   }
