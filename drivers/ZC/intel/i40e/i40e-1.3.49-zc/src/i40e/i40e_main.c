@@ -5873,12 +5873,16 @@ void i40e_down(struct i40e_vsi *vsi)
 	if (vsi->netdev) {
 		struct pfring_hooks *hook = (struct pfring_hooks*)vsi->netdev->pfring_ptr;
 		struct i40e_pf *pf = vsi->back;
+		struct i40e_pf    *adapter = i40e_netdev_to_pf(vsi->netdev);
+		int i;
 
 		if (hook != NULL) {
-			int i;
 			
 			//if (unlikely(enable_debug))
 	      			printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, vsi->netdev->name);
+
+			if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
+				printk("[PF_RING-ZC] %s: detaching %s while in use\n", __FUNCTION__, vsi->netdev->name); 
 
 			for (i = 0; i < vsi->num_queue_pairs; i++) {
 				struct i40e_ring *rx_ring = vsi->rx_rings[i];

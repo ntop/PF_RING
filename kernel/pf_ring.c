@@ -337,8 +337,9 @@ static int skb_ring_handler(struct sk_buff *skb, u_char recv_packet,
 			    int32_t channel_id, u_int32_t num_rx_channels);
 static int buffer_ring_handler(struct net_device *dev, char *data, int len);
 static int remove_from_cluster(struct sock *sock, struct pf_ring_socket *pfr);
-static int pfring_map_zc_dev(struct pf_ring_socket *pfr,
-			       zc_dev_mapping *mapping);
+static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapping);
+static int pfring_get_zc_dev(struct pf_ring_socket *pfr);
+static int pfring_release_zc_dev(struct pf_ring_socket *pfr);
 
 static int  get_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host, u_int16_t fragment_id, u_int8_t more_fragments);
 static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host, u_int16_t fragment_id, u_int8_t app_id);
@@ -6030,14 +6031,7 @@ static int ring_release(struct socket *sock)
   if((pfr->zc_device_entry != NULL) 
      && pfr->zc_device_entry->dev.netdev
      && pfr->zc_device_entry->dev.netdev->name) {
-    zc_dev_mapping mapping;
-
-    mapping.operation = remove_device_mapping;
-    snprintf(mapping.device_name, sizeof(mapping.device_name), "%s",  pfr->zc_device_entry->dev.netdev->name);
-    mapping.channel_id = pfr->zc_device_entry->dev.channel_id;
-    if (unlikely(enable_debug))
-      printk("[PF_RING] %s: unmapping %s\n", __FUNCTION__, mapping.device_name);
-    pfring_map_zc_dev(pfr, &mapping);
+    pfring_release_zc_dev(pfr);
   }
 
   if(pfr->extra_dma_memory != NULL) {
@@ -7000,145 +6994,179 @@ static int add_sock_to_cluster(struct sock *sock,
 
 /* ************************************* */
 
-static int pfring_map_zc_dev(struct pf_ring_socket *pfr,
-			     zc_dev_mapping *mapping)
+static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapping)
 {
   struct list_head *ptr, *tmp_ptr;
-  int i, found;
+  zc_dev_list *entry;
+  int dev_found = 0, found;
 
   if (unlikely(enable_debug))
-    printk("[PF_RING] %s:%d %s %s@%d\n", __FUNCTION__, __LINE__,
-	   (mapping->operation == remove_device_mapping) ? "remove" : "add",
+    printk("[PF_RING] %s:%d %s@%d\n", __FUNCTION__, __LINE__,
 	   mapping->device_name, mapping->channel_id);
 
   if (strlen(mapping->device_name) == 0)
-    printk("[PF_RING] %s:%d %s ZC socket with empty device name!", __FUNCTION__, __LINE__,
-      mapping->operation == add_device_mapping ? "opening" : "closing");
+    printk("[PF_RING] %s:%d ZC socket with empty device name!", __FUNCTION__, __LINE__);
 
-  if (mapping->operation == remove_device_mapping) {
-    /* Unlock driver */
-
-    list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
-      zc_dev_list *entry = list_entry(ptr, zc_dev_list, list);
-
-      if (!strcmp(entry->dev.netdev->name, mapping->device_name)
-	 && entry->dev.channel_id == mapping->channel_id) {
-        found = 0;
-
-        write_lock(&entry->lock);
-	
-	for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
-	  if(entry->bound_sockets[i] == pfr) {
-	    entry->bound_sockets[i] = NULL;
-	    entry->num_bound_sockets--;
-	    if (entry->num_bound_sockets == 0)
-              active_zc_socket[entry->dev.netdev->ifindex] = 0;
-	    found = 1;
-	    break;
-	  }
-	}
-
-        write_unlock(&entry->lock);
-
-	if (!found) {
-	  printk("[PF_RING] %s:%d something got wrong removing socket bound to %s@%u\n", 
-                 __FUNCTION__, __LINE__, entry->dev.netdev->name, entry->dev.channel_id);
-	  return -1; /* Something got wrong */
-	}
-
-	if (unlikely(enable_debug))
-	  printk("[PF_RING] %s:%d %s@%u removed mapping [num_bound_sockets=%u]\n", __FUNCTION__, __LINE__,
-		 mapping->device_name, mapping->channel_id, entry->num_bound_sockets);
-
-        if (pfr->zc_dev != NULL) {
-          pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr,
-					      pfr->zc_dev->tx_adapter_ptr,
-					      0 /* unlock */);
-	  pfr->zc_device_entry = NULL;
-	  pfr->zc_dev = NULL;
-        }
-
-        break;
-      }
+  /* lookinf for ZC dev */
+  list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
+    entry = list_entry(ptr, zc_dev_list, list);
+    if (strcmp(entry->dev.netdev->name, mapping->device_name) == 0
+        && entry->dev.channel_id == mapping->channel_id) {
+      dev_found = 1;
+      break;
     }
+  }
+  
+  if (!dev_found) {
+    printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC/DNA device\n", __FUNCTION__, __LINE__,
+	   mapping->device_name, mapping->channel_id);
+    return -1;
+  }
 
-    return 0;
-  } else {
-    ring_proc_remove(pfr);
-
-    list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
-      zc_dev_list *entry = list_entry(ptr, zc_dev_list, list);
-      if (strcmp(entry->dev.netdev->name, mapping->device_name) == 0
-	 && entry->dev.channel_id == mapping->channel_id) {
-	int i;
-
-	if (unlikely(enable_debug))
-	  printk("[PF_RING] %s:%d %s@%d [num_bound_sockets=%d][%p]\n", __FUNCTION__, __LINE__,
-		 entry->dev.netdev->name, mapping->channel_id,
-		 entry->num_bound_sockets, entry);
-
-        write_lock(&entry->lock);
-
-        found = 0;
-	for (i=0; i<MAX_NUM_ZC_BOUND_SOCKETS; i++) {
-	  if (entry->bound_sockets[i] == NULL) {
-	    entry->bound_sockets[i] = pfr;
-	    entry->num_bound_sockets++;
-            active_zc_socket[entry->dev.netdev->ifindex] = 1;
-	    found = 1;
-	    break;
-	  }
-	}
-
-	write_unlock(&entry->lock);
-
-	if (!found) {
-	  printk("[PF_RING] %s:%d something got wrong adding %s@%u %s\n", __FUNCTION__, __LINE__,
-	         mapping->device_name, mapping->channel_id, direction2string(pfr->mode));
-	  return -1; /* Something got wrong: too many mappings */
-	}
-
-	pfr->zc_device_entry = entry;
-	pfr->zc_dev = &entry->dev;
-
-	/* Now let's set the read ring_netdev device */
-	found = 0;
-	list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-	  ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
-	  if (!strcmp(dev_ptr->device_name, mapping->device_name)) {
-	    if (unlikely(enable_debug))
-	      printk("[PF_RING] %s:%d found %s [%p]\n", __FUNCTION__, __LINE__,
-                     dev_ptr->device_name, dev_ptr);
-	    pfr->ring_netdev = dev_ptr;
-	    found = 1;
-	    break;
-	  }
-	}
-
-	if (!found) {
-	  printk("[PF_RING] %s:%d add %s@%u %s something got wrong (device not found)\n", __FUNCTION__, __LINE__,
-	         mapping->device_name, mapping->channel_id, direction2string(pfr->mode));
-	  return -1; /* Something got wrong */
-	}
-
-	if (unlikely(enable_debug))
-	  printk("[PF_RING] %s:%d added mapping %s@%u [num_bound_sockets=%u]\n", __FUNCTION__, __LINE__,
-		 mapping->device_name, mapping->channel_id, entry->num_bound_sockets);
-
-	pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr,
-					pfr->zc_dev->tx_adapter_ptr,
-					1 /* lock */);
-
-	ring_proc_add(pfr);
-	return 0;
-      }
+  /* looking for ring_netdev device, setting it here as it is used 
+   * also before pfring_get_zc_dev to set promisc */
+  found = 0;
+  list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+    ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
+    if (!strcmp(dev_ptr->device_name, mapping->device_name)) {
+      if (unlikely(enable_debug))
+        printk("[PF_RING] %s:%d found %s [%p]\n", __FUNCTION__, __LINE__,
+               dev_ptr->device_name, dev_ptr);
+      pfr->ring_netdev = dev_ptr;
+      found = 1;
+      break;
     }
   }
 
-  printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC/DNA device\n", __FUNCTION__, __LINE__,
-	 mapping->device_name, mapping->channel_id);
+  if (!found) {
+    printk("[PF_RING] %s:%d something got wrong adding %s@%u (device not found)\n", __FUNCTION__, __LINE__,
+           mapping->device_name, mapping->channel_id);
+    return -1; /* Something got wrong */
+  }
 
-  return -1;
+  memcpy(&pfr->zc_mapping, mapping, sizeof(zc_dev_mapping));
+
+  return 0;
+}
+
+/* ************************************* */
+
+static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
+  struct list_head *ptr, *tmp_ptr;
+  zc_dev_list *entry;
+  int i, dev_found = 0, found;
+
+  if (unlikely(enable_debug))
+    printk("[PF_RING] %s:%d %s@%d\n", __FUNCTION__, __LINE__,
+	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+
+  if (strlen(pfr->zc_mapping.device_name) == 0)
+    printk("[PF_RING] %s:%d %s ZC socket with empty device name!", __FUNCTION__, __LINE__,
+      pfr->zc_mapping.operation == add_device_mapping ? "opening" : "closing");
+
+  list_for_each_safe(ptr,tmp_ptr, &zc_devices_list) {
+    entry = list_entry(ptr, zc_dev_list, list);
+    if (strcmp(entry->dev.netdev->name, pfr->zc_mapping.device_name) == 0
+        && entry->dev.channel_id == pfr->zc_mapping.channel_id) {
+      dev_found = 1;
+      break;
+    }
+  }
+  
+  if (!dev_found) {
+    printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC/DNA device\n", __FUNCTION__, __LINE__,
+	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+    return -1;
+  }
+
+  ring_proc_remove(pfr);
+
+  if (unlikely(enable_debug))
+    printk("[PF_RING] %s:%d %s@%d [num_bound_sockets=%d][%p]\n", __FUNCTION__, __LINE__,
+           entry->dev.netdev->name, pfr->zc_mapping.channel_id,
+           entry->num_bound_sockets, entry);
+
+  write_lock(&entry->lock);
+  found = 0;
+  for (i=0; i<MAX_NUM_ZC_BOUND_SOCKETS; i++) {
+    if (entry->bound_sockets[i] == NULL) {
+      entry->bound_sockets[i] = pfr;
+      entry->num_bound_sockets++;
+      active_zc_socket[entry->dev.netdev->ifindex] = 1;
+      found = 1;
+      break;
+    }
+  }
+  write_unlock(&entry->lock);
+
+  if (!found) {
+    printk("[PF_RING] %s:%d something got wrong adding %s@%u\n", __FUNCTION__, __LINE__,
+           pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+    return -1; /* Something got wrong: too many mappings */
+  }
+
+  pfr->zc_device_entry = entry;
+  pfr->zc_dev = &entry->dev;
+
+  if (unlikely(enable_debug))
+    printk("[PF_RING] %s:%d added mapping %s@%u [num_bound_sockets=%u]\n", __FUNCTION__, __LINE__,
+           pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id, entry->num_bound_sockets);
+
+  pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 1 /* lock */);
+
+  ring_proc_add(pfr);
+
+  return 0;
+}
+
+/* ************************************* */
+
+static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
+{
+  zc_dev_list *entry = pfr->zc_device_entry;
+  int i, found;
+
+  if (unlikely(enable_debug))
+    printk("[PF_RING] %s:%d releasing %s@%d\n", __FUNCTION__, __LINE__,
+	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+
+  if (entry == NULL) {
+    printk("[PF_RING] %s:%d %s@%u unmapping failed\n", __FUNCTION__, __LINE__,
+	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+    return -1;
+  }
+
+  write_lock(&entry->lock);
+  found = 0;
+  for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
+    if(entry->bound_sockets[i] == pfr) {
+      entry->bound_sockets[i] = NULL;
+      entry->num_bound_sockets--;
+      if (entry->num_bound_sockets == 0)
+        active_zc_socket[entry->dev.netdev->ifindex] = 0;
+      found = 1;
+      break;
+    }
+  }
+  write_unlock(&entry->lock);
+
+  if (!found) {
+    printk("[PF_RING] %s:%d something got wrong removing socket bound to %s@%u\n", 
+           __FUNCTION__, __LINE__, entry->dev.netdev->name, entry->dev.channel_id);
+    return -1; /* Something got wrong */
+  }
+
+  if (unlikely(enable_debug))
+    printk("[PF_RING] %s:%d %s@%u removed mapping [num_bound_sockets=%u]\n", __FUNCTION__, __LINE__,
+           pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id, entry->num_bound_sockets);
+
+  if (pfr->zc_dev != NULL) {
+    pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 0 /* unlock */);
+    pfr->zc_device_entry = NULL;
+    pfr->zc_dev = NULL;
+  }
+
+  return 0;
 }
 
 /* ************************************* */
@@ -7971,7 +7999,10 @@ static int ring_setsockopt(struct socket *sock,
     if (unlikely(enable_debug))
       printk("[PF_RING] SO_MAP_DNA_DEVICE %s\n", mapping.device_name);
 
-    ret = pfring_map_zc_dev(pfr, &mapping);
+    if (mapping.operation == add_device_mapping)
+      ret = pfring_select_zc_dev(pfr, &mapping);
+    else
+      ret = pfring_release_zc_dev(pfr);
 
     found = 1;
     break;
@@ -8670,8 +8701,11 @@ static int ring_getsockopt(struct socket *sock,
 
   case SO_GET_MAPPED_DNA_DEVICE:
     {
-      if((pfr->zc_dev == NULL) || (len < sizeof(zc_memory_info)))
+      if(!pfr->zc_mapping.device_name[0] || len < sizeof(zc_memory_info))
 	return(-EFAULT);
+
+      if(pfring_get_zc_dev(pfr) < 0)
+        return(-EFAULT);
 
       if(copy_to_user(optval, &pfr->zc_dev->mem_info, sizeof(zc_memory_info)))
 	return(-EFAULT);
@@ -9066,7 +9100,7 @@ void zc_dev_handler(zc_dev_operation operation,
   } else {
     struct list_head *ptr, *tmp_ptr;
     zc_dev_list *entry;
-    int i, found = 0;
+    int i;
 
     list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
       entry = list_entry(ptr, zc_dev_list, list);
@@ -9076,15 +9110,9 @@ void zc_dev_handler(zc_dev_operation operation,
         /* driver detach - checking if there is an application running */
         for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
           if (entry->bound_sockets[i] != NULL) {
-            //entry->bound_sockets[i] = NULL;
-            //entry->num_bound_sockets--;
-            found = 1;
+            printk("[PF_RING] Unloading ZC driver while the device is in use from userspace!!\n");
             break;
           }
-        }
-        if (found) {
-          printk("[PF_RING] Trying to unload a ZC driver while using the device!!\n");
-          //entry->dev.usage_notification(entry->dev.rx_adapter_ptr, entry->dev.tx_adapter_ptr, 0 /* unlock */);
         }
 
 	list_del(ptr);

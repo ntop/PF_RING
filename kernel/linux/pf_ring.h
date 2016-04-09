@@ -1149,7 +1149,8 @@ struct pf_ring_socket {
     struct net_device *last_tx_dev;
   } tx;
 
-  /* Direct NIC Access */
+  /* ZC (Direct NIC Access) */
+  zc_dev_mapping zc_mapping;
   zc_dev_info *zc_dev;
   zc_dev_list *zc_device_entry;
 
