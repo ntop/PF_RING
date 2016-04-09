@@ -57,7 +57,7 @@ for IF in $INTERFACES ; do
 		ethtool -G $IF tx 4096
 
 		# Disabling offloads
-		ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
+		ethtool -K $IF sg off tso off gso off gro off > /dev/null 2>&1
 
 		# Disabling VLAN stripping
 		ethtool -K $IF rxvlan off
