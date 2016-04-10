@@ -1,6 +1,6 @@
 /* ***************************************************************
  *
- * (C) 2004-15 - ntop.org
+ * (C) 2004-16 - ntop.org
  *
  * This code includes contributions courtesy of
  * - Amit D. Chaudhary <amit_ml@rajgad.com>
@@ -2981,7 +2981,8 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
         if(skb_copy_bits(skb, -displ + sizeof(struct ethhdr), 
              &ring_bucket[pfr->slot_header_len + offset + sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)], 
              (int) hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr))) < 0)
-          printk("[PF_RING] FAULT [skb->len=%u][caplen=%lu]\n", skb->len, hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)));
+          printk("[PF_RING] FAULT [skb->len=%u][caplen=%u]\n", 
+		 skb->len, hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)));
       } else {
         skb_copy_bits(skb, -displ, &ring_bucket[pfr->slot_header_len + offset], (int) hdr->caplen);
       }
@@ -9739,7 +9740,7 @@ static int __init ring_init(void)
 #endif
 
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
-	 "(C) 2004-15 ntop.org\n",
+	 "(C) 2004-16 ntop.org\n",
 	 RING_VERSION, GIT_REV);
 
 #if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
