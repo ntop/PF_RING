@@ -42,7 +42,7 @@ start_cluster_id() {
 		fi
 	    fi
 	fi
-	$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf > /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
+	$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf >> /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
     else
 	echo "cluster $CLUSTER_ID not started: missing /etc/cluster/cluster-${CLUSTER_ID}.start"
     fi
