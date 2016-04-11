@@ -21,7 +21,7 @@ lib_c++:
 	cd c++; make
 
 tcpdump_build:
-	cd tcpdump-4.1.1; ./configure ; make
+	cd tcpdump; ./configure ; make
 
 ###################
 
@@ -46,4 +46,4 @@ lib_c++_clean:
 	cd c++; make clean
 
 tcpdump_clean:
-	if test -f tcpdump-4.1.1/config.status; then cd tcpdump-4.1.1; make clean; fi
+	if test -f tcpdump/config.status; then cd tcpdump; make clean; fi
