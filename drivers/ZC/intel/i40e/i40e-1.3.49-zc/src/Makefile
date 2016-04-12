@@ -185,7 +185,8 @@ ifeq (,$(MANDIR))
 endif
 
 # PF_RING
-CFLAGS_EXTRA += -D HAVE_PF_RING
+DEBUG_CFLAGS += -g -DDEBUG
+CFLAGS_EXTRA += -D HAVE_PF_RING ${DEBUG_CFLAGS}
 
 # kernel build function
 # $1 is the relative path of the subdir to build in
