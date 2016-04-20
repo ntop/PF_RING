@@ -65,6 +65,10 @@ extern "C" {
 #define PCAP_VERSION_MAJOR 2
 #define PCAP_VERSION_MINOR 4
 
+#ifdef HAVE_PF_RING
+#define PF_RING_PCAP
+#endif
+
 #define PCAP_ERRBUF_SIZE 256
 
 /*
@@ -162,6 +166,16 @@ struct pcap_pkthdr {
 	bpf_u_int32 caplen;	/* length of portion present */
 	bpf_u_int32 len;	/* length this packet (off wire) */
 };
+
+#ifdef HAVE_PF_RING
+/* Nanosecond accuracy */
+struct ns_pcaphdr {
+	struct timeval ts;
+	bpf_u_int32 caplen;
+	bpf_u_int32 len;  
+	u_int64_t ns;
+};
+#endif
 
 /*
  * As returned by the pcap_stats()
@@ -438,6 +452,12 @@ int	bpf_validate(const struct bpf_insn *f, int len);
 char	*bpf_image(const struct bpf_insn *, int);
 void	bpf_dump(const struct bpf_program *, int);
 
+#ifdef HAVE_PF_RING
+u_int32_t pcap_get_pfring_id(pcap_t *handle);
+int pcap_set_master_id(pcap_t *handle, u_int32_t master_id);
+int pcap_set_master(pcap_t *handle, pcap_t *master);
+#endif
+
 #if defined(WIN32)
 
 /*
@@ -477,6 +497,14 @@ u_long pcap_mac_packets (void);
 int	pcap_get_selectable_fd(pcap_t *);
 
 #endif /* WIN32/MSDOS/UN*X */
+
+#ifdef HAVE_PF_RING
+u_int32_t pcap_get_pfring_id(pcap_t *handle);
+int pcap_set_master_id(pcap_t *handle, u_int32_t master_id);
+int pcap_set_master(pcap_t *handle, pcap_t *master);
+int pcap_set_application_name(pcap_t *handle, char *name);
+int pcap_set_watermark(pcap_t *handle, u_int watermark);
+#endif
 
 #ifdef __cplusplus
 }

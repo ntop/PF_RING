@@ -6848,11 +6848,13 @@ reset_kernel_filter(pcap_t *handle)
 
 #ifdef HAVE_PF_RING
 	if (handle->ring != NULL)
-		return -1;
+		return 0;
 #endif
 
-	return setsockopt(handle->fd, SOL_SOCKET, SO_DETACH_FILTER,
-				   &dummy, sizeof(dummy));
+	return setsockopt(handle->fd, 
+			  SOL_SOCKET,
+			  SO_DETACH_FILTER,
+			  &dummy, sizeof(dummy));
 }
 #endif
 
