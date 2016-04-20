@@ -56,6 +56,18 @@
 #include <linux/ethtool.h>
 #include <linux/if_vlan.h>
 
+#ifdef HAVE_PF_RING
+#ifdef CONFIG_DCB
+#undef CONFIG_DCB
+#ifdef CONFIG_FCOE
+#undef CONFIG_FCOE
+#endif
+#ifdef CONFIG_FCOE_MODULE
+#undef CONFIG_FCOE_MODULE
+#endif
+#endif
+#endif
+
 /* UTS_RELEASE is in a different header starting in kernel 2.6.18 */
 #ifndef UTS_RELEASE
 /* utsrelease.h changed locations in 2.6.33 */
