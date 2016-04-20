@@ -5846,6 +5846,18 @@ unlock:
 
 /* *********************************************** */
 
+static int is_netdev_promisc(struct net_device *netdev) {
+  unsigned int if_flags;
+
+  rtnl_lock();
+  if_flags = (short) dev_get_flags(netdev);
+  rtnl_unlock();
+
+  return !!(if_flags & IFF_PROMISC);
+}
+
+/* *********************************************** */
+
 static void set_netdev_promisc(struct net_device *netdev) {
   unsigned int if_flags;
 
@@ -6041,8 +6053,10 @@ static int ring_release(struct socket *sock)
   }
 
   if (pfr->promisc_enabled) {
-    if (atomic_dec_return(&pfr->ring_netdev->promisc_users) == 0) 
-      unset_netdev_promisc(pfr->ring_netdev->dev);
+    if (atomic_dec_return(&pfr->ring_netdev->promisc_users) == 0) { 
+      if (!pfr->ring_netdev->do_not_remove_promisc)
+        unset_netdev_promisc(pfr->ring_netdev->dev);
+    }
   }
 
   /*
@@ -8479,12 +8493,19 @@ static int ring_setsockopt(struct socket *sock,
             printk("[PF_RING] SO_SET_IFF_PROMISC: not a real device\n");
         } else if (!pfr->promisc_enabled && pfr->ring_netdev) {
           pfr->promisc_enabled = 1;
-          if (atomic_inc_return(&pfr->ring_netdev->promisc_users) == 1) /* first user */
-            set_netdev_promisc(pfr->ring_netdev->dev);
+          if (atomic_inc_return(&pfr->ring_netdev->promisc_users) == 1) { /* first user */
+            if (is_netdev_promisc(pfr->ring_netdev->dev)) { /* promisc already set via ifconfig */
+              pfr->ring_netdev->do_not_remove_promisc = 1;
+            } else {
+              pfr->ring_netdev->do_not_remove_promisc = 0;
+              set_netdev_promisc(pfr->ring_netdev->dev);
+            }
+          }
         }
       } else {
         if (!atomic_read(&pfr->ring_netdev->promisc_users)) /* no users (otehrwise keep (promisc) */
-          unset_netdev_promisc(pfr->ring_netdev->dev);
+          if (!pfr->ring_netdev->do_not_remove_promisc)
+            unset_netdev_promisc(pfr->ring_netdev->dev);
       }
     }
     found = 1;

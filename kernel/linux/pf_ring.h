@@ -973,6 +973,7 @@ typedef struct {
 
   pfring_device_type device_type; /* Device Type */
 
+  u_int8_t do_not_remove_promisc; /* promisc was set before any socket */
   atomic_t promisc_users; /* number of rings with promisc set bound to this device */
 
   /*
