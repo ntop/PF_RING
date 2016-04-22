@@ -1,0 +1,12 @@
+Source: pfring
+Section: free
+Priority: optional
+Maintainer: Luca Deri <deri@ntop.org>
+Standards-Version: @PFRING_VERS@-@REVISION@
+Build-Depends: 
+Build-Conflicts:
+
+Package: pfring
+Architecture: @EXTN@
+Depends: pfring-dkms (=@PFRING_VERS@)
+Description: PF_RING (http://www.ntop.org/pf_ring/) [@GIT_BRANCH@:@GIT_HASH@]
