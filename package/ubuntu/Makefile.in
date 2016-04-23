@@ -14,7 +14,7 @@ PF_RING_HOME=$(HERE)/../../
 
 all: clean @PRE_DEP@ build
 
-pre-drivers: pre-dna pre-zc
+pre-drivers: @BUILD_PRE_DNA@ pre-zc
 
 pre-kernel-nodrivers:
 	cd ../../kernel; ./configure; sudo make -f Makefile.dkms deb
