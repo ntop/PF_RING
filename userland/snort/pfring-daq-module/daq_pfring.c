@@ -199,7 +199,7 @@ static int update_hw_stats(Pfring_Context_t *context) {
     memset(&ps, 0, sizeof(pfring_stat));
 
     if(pfring_stats(context->ring_handles[i], &ps) < 0) {
-      DPE(context->errbuf, "%s: pfring_stats error [ring_idx = %d]", __FUNCTION__, i);
+      DPE(context->errbuf, "%s: pfring_stats error [ring_idx = %d]", __func__, i);
       return DAQ_ERROR;
     }
 
@@ -244,7 +244,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
 
   context = calloc(1, sizeof(Pfring_Context_t));
   if(!context) {
-    snprintf(errbuf, len, "%s: Couldn't allocate memory for the new PF_RING context!", __FUNCTION__);
+    snprintf(errbuf, len, "%s: Couldn't allocate memory for the new PF_RING context!", __func__);
     return DAQ_ERROR_NOMEM;
   }
 
@@ -267,13 +267,13 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
 #endif
 
   if(!context->devices[DAQ_PF_RING_PASSIVE_DEV_IDX]) {
-    snprintf(errbuf, len, "%s: Couldn't allocate memory for the device string!", __FUNCTION__);
+    snprintf(errbuf, len, "%s: Couldn't allocate memory for the device string!", __func__);
     free(context);
     return DAQ_ERROR_NOMEM;
   }
 
   if(context->mode == DAQ_MODE_READ_FILE) {
-    snprintf(errbuf, len, "%s: function not supported on PF_RING", __FUNCTION__);
+    snprintf(errbuf, len, "%s: function not supported on PF_RING", __func__);
     free(context);
     return DAQ_ERROR;
   } else if(context->mode == DAQ_MODE_INLINE) {
@@ -296,7 +296,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
       }
 
       if (context->num_devices & 0x1) {
-        snprintf(errbuf, len, "%s: Wrong format: inline mode requires pairs of devices", __FUNCTION__);
+        snprintf(errbuf, len, "%s: Wrong format: inline mode requires pairs of devices", __func__);
         free(context);
         return DAQ_ERROR;
       }
@@ -315,7 +315,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
     while(dev != NULL) {
 
       if(context->num_devices >= DAQ_PF_RING_MAX_NUM_DEVICES){
-        snprintf(errbuf, len, "%s: too many interfaces!", __FUNCTION__);
+        snprintf(errbuf, len, "%s: too many interfaces!", __func__);
         free(context);
         return DAQ_ERROR_NOMEM;
       }
@@ -328,7 +328,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
   for(entry = config->values; entry; entry = entry->next) {
     if(!entry->value || !*entry->value) {
       snprintf(errbuf, len,
-	       "%s: variable needs value(%s)\n", __FUNCTION__, entry->key);
+	       "%s: variable needs value(%s)\n", __func__, entry->key);
       return DAQ_ERROR;
     } else if(!strcmp(entry->key, "clusterid")) {
       char *clusters = strdup(entry->value);
@@ -339,7 +339,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
         clusterid = strtok_r(clusters, ",", &clusterid_pos);
         for (i = 0; i < context->num_devices; i++) {
 	  if (clusterid == NULL) {
-	    snprintf(errbuf, len, "%s: not enough cluster ids (%d)\n", __FUNCTION__, i);
+	    snprintf(errbuf, len, "%s: not enough cluster ids (%d)\n", __func__, i);
 	    return DAQ_ERROR;
 	  }
 
@@ -349,7 +349,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
 	     || (context->clusterids[i] <= 0)
 	     || (context->clusterids[i] > 65535)) {
 	    snprintf(errbuf, len, "%s: bad clusterid(%s)\n",
-		     __FUNCTION__, clusterid);
+		     __func__, clusterid);
 
 	    return DAQ_ERROR;
           }
@@ -365,7 +365,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
       context->idle_rules_timeout = (int) strtol(entry->value, &end, 0);
       if(*end || (context->idle_rules_timeout < 0)) {
 	snprintf(errbuf, len, "%s: bad kernel filters idle timeout(%s)\n",
-		 __FUNCTION__, entry->value);
+		 __func__, entry->value);
 	return DAQ_ERROR;
       }
     } else if(!strcmp(entry->key, "fast-tx")) {
@@ -376,7 +376,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
       if(*end
 	 || (context->bindcpu >= numCPU)) {
 	snprintf(errbuf, len, "%s: bad bindcpu(%s)\n",
-		 __FUNCTION__, entry->value);
+		 __func__, entry->value);
 	return DAQ_ERROR;
       } else {
 	cpu_set_t mask;
@@ -385,7 +385,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
 	CPU_SET((int)context->bindcpu, &mask);
 	if(sched_setaffinity(0, sizeof(mask), &mask) < 0) {
 	  snprintf(errbuf, len, "%s:failed to set bindcpu(%u) on pid %i\n",
-		   __FUNCTION__, context->bindcpu, getpid());
+		   __func__, context->bindcpu, getpid());
 	  return DAQ_ERROR;
 	}
       }
@@ -394,7 +394,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
       context->timeout = (int) strtol(entry->value, &end, 0);
       if(*end || (context->timeout < 0)) {
 	snprintf(errbuf, len, "%s: bad timeout(%s)\n",
-		 __FUNCTION__, entry->value);
+		 __func__, entry->value);
 	return DAQ_ERROR;
       }
     } else if(!strcmp(entry->key, "watermark")) {
@@ -402,7 +402,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
       context->watermark = (int) strtol(entry->value, &end, 0);
       if(*end || (context->watermark < 0)) {
 	snprintf(errbuf, len, "%s: bad watermark(%s)\n",
-		 __FUNCTION__, entry->value);
+		 __func__, entry->value);
 	return DAQ_ERROR;
       }
     } else if(!strcmp(entry->key, "clustermode")) {
@@ -410,7 +410,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
       int cmode = (int) strtol(entry->value, &end, 0);
       if(*end || (cmode != 2 && cmode != 4 && cmode != 5 && cmode != 6)) {
 	snprintf(errbuf, len, "%s: bad cluster mode(%s)\n",
-		 __FUNCTION__, entry->value);
+		 __func__, entry->value);
 	return DAQ_ERROR;
       } else {
         switch (cmode) {
@@ -436,13 +436,13 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
 
 	  if (context->num_reflector_devices != context->num_devices) {
 	    snprintf(errbuf, len, "%s: not enough reflector devices (%d)\n",
-	             __FUNCTION__, context->num_reflector_devices);
+	             __func__, context->num_reflector_devices);
 	    return DAQ_ERROR;
 	  }
         }
       } else {
         snprintf(errbuf, len, "%s: lowlevelbridge is for passive mode only\n",
-		 __FUNCTION__);
+		 __func__);
         return DAQ_ERROR;
       }
     }
@@ -462,7 +462,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
 	  i++;
 	}
 	if (temp != NULL) {
-	  snprintf(errbuf, len, "%s: Incorrect format for <redis ip>:<redis port>\n", __FUNCTION__);
+	  snprintf(errbuf, len, "%s: Incorrect format for <redis ip>:<redis port>\n", __func__);
 	  free(temp);
 	  return DAQ_ERROR;
 	}
@@ -472,7 +472,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
     else {
       snprintf(errbuf, len,
 	       "%s: unsupported variable(%s=%s)\n",
-	       __FUNCTION__, entry->key, entry->value);
+	       __func__, entry->key, entry->value);
       return DAQ_ERROR;
     }
   }
@@ -491,7 +491,7 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
   pfring_get_card_settings(context->ring_handles[0], &ring_settings);
   context->inj_buffer = malloc(ring_settings.max_packet_size);
   if (context->inj_buffer == NULL) {
-    snprintf(errbuf, len, "%s: memory allocation failure\n", __FUNCTION__);
+    snprintf(errbuf, len, "%s: memory allocation failure\n", __func__);
     return DAQ_ERROR;
   }
 
@@ -518,7 +518,7 @@ static int pfring_daq_set_filter(void *handle, const char *filter) {
   if(context->ring_handles[DAQ_PF_RING_PASSIVE_DEV_IDX]) {
     if(sfbpf_compile(context->snaplen, DLT_EN10MB, &fcode,
 		     filter, 0 /* 1: optimize */, htonl(context->netmask)) < 0) {
-      DPE(context->errbuf, "%s: BPF state machine compilation failed!", __FUNCTION__);
+      DPE(context->errbuf, "%s: BPF state machine compilation failed!", __func__);
       return DAQ_ERROR;
     }
 
@@ -535,7 +535,7 @@ static int pfring_daq_set_filter(void *handle, const char *filter) {
     /* Just check if the filter is valid */
     if(sfbpf_compile(context->snaplen, DLT_EN10MB, &fcode,
     		     filter, 0 /* 1: optimize */, 0 /* netmask */) < 0) {
-      DPE(context->errbuf, "%s: BPF state machine compilation failed!", __FUNCTION__);
+      DPE(context->errbuf, "%s: BPF state machine compilation failed!", __func__);
       return DAQ_ERROR;
     }
 
@@ -548,7 +548,7 @@ static int pfring_daq_set_filter(void *handle, const char *filter) {
 
     if(!context->filter_string) {
       DPE(context->errbuf, "%s: Couldn't allocate memory for the filter string!",
-	  __FUNCTION__);
+	  __func__);
       ret = DAQ_ERROR;
     }
 
@@ -699,7 +699,7 @@ static int pfring_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t callbac
 	if(errno == EINTR)
 	  break;
 
-	DPE(context->errbuf, "%s: Poll failed: %s(%d)", __FUNCTION__, strerror(errno), errno);
+	DPE(context->errbuf, "%s: Poll failed: %s(%d)", __func__, strerror(errno), errno);
 	return DAQ_ERROR;
       }
     } else {
@@ -790,7 +790,7 @@ static int pfring_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t callbac
 	  /* Attacker */
 	  if (inet_ntop(AF_INET, (const void *) &phdr.extended_hdr.parsed_pkt.ipv4_src, ipAttacker, INET_ADDRSTRLEN) != NULL) {
 	    if (pfring_daq_redis_insert_to_set(context->redis_ctx, "Attackers", ipAttacker) != DAQ_SUCCESS) {
-	      DPE(context->errbuf, "%s: Insert into Attackers Set failed: %s", __FUNCTION__, ipAttacker);
+	      DPE(context->errbuf, "%s: Insert into Attackers Set failed: %s", __func__, ipAttacker);
 	      return DAQ_ERROR;
 	    }
 	  }
@@ -798,7 +798,7 @@ static int pfring_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t callbac
 	  /* target */
 	  if (inet_ntop(AF_INET,(const void *) &phdr.extended_hdr.parsed_pkt.ipv4_dst, ipTarget, INET_ADDRSTRLEN) != NULL) {
 	    if (pfring_daq_redis_insert_to_set(context->redis_ctx, "Targets", ipTarget) != DAQ_SUCCESS) {
-	      DPE(context->errbuf, "%s: Insert into Targets Set failed: %s", __FUNCTION__, ipTarget);
+	      DPE(context->errbuf, "%s: Insert into Targets Set failed: %s", __func__, ipTarget);
 	      return DAQ_ERROR;
 	    }
 	  }

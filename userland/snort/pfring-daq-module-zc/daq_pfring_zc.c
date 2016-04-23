@@ -254,7 +254,7 @@ static int update_hw_stats(Pfring_Context_t *context) {
     memset(&ps, 0, sizeof(pfring_zc_stat));
 
     if (pfring_zc_stats(context->rx_queues[i], &ps) < 0) {
-      DPE(context->errbuf, "%s: pfring_stats error [ring_idx = %d]", __FUNCTION__, i);
+      DPE(context->errbuf, "%s: pfring_stats error [ring_idx = %d]", __func__, i);
       return DAQ_ERROR;
     }
 
@@ -295,7 +295,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
   context = calloc(1, sizeof(Pfring_Context_t));
 
   if (context == NULL) {
-    snprintf(errbuf, len, "%s: Couldn't allocate memory for context!", __FUNCTION__);
+    snprintf(errbuf, len, "%s: Couldn't allocate memory for context!", __func__);
     return DAQ_ERROR_NOMEM;
   }
 
@@ -312,21 +312,21 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
   context->ipc_attach = 0;
 
   if (!context->devices[DAQ_PF_RING_PASSIVE_DEV_IDX]) {
-    snprintf(errbuf, len, "%s: Couldn't allocate memory for the device string!", __FUNCTION__);
+    snprintf(errbuf, len, "%s: Couldn't allocate memory for the device string!", __func__);
     free(context);
     return DAQ_ERROR_NOMEM;
   }
 
   for (entry = config->values; entry; entry = entry->next) {
     if (!entry->value || !*entry->value) {
-      snprintf(errbuf, len, "%s: variable needs value(%s)\n", __FUNCTION__, entry->key);
+      snprintf(errbuf, len, "%s: variable needs value(%s)\n", __func__, entry->key);
       return DAQ_ERROR;
     } else if (!strcmp(entry->key, "bindcpu")) {
       char *end = entry->value;
       context->bindcpu = (int) strtol(entry->value, &end, 0);
       if (*end
 	 || (context->bindcpu >= numCPU)) {
-	snprintf(errbuf, len, "%s: bad bindcpu(%s)\n", __FUNCTION__, entry->value);
+	snprintf(errbuf, len, "%s: bad bindcpu(%s)\n", __func__, entry->value);
 	return DAQ_ERROR;
       } else {
 	cpu_set_t mask;
@@ -334,7 +334,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
 	CPU_ZERO(&mask);
 	CPU_SET((int)context->bindcpu, &mask);
 	if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
-	  snprintf(errbuf, len, "%s:failed to set bindcpu(%u) on pid %i\n", __FUNCTION__, context->bindcpu, getpid());
+	  snprintf(errbuf, len, "%s:failed to set bindcpu(%u) on pid %i\n", __func__, context->bindcpu, getpid());
 	  return DAQ_ERROR;
 	}
       }
@@ -342,7 +342,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
       char *end = entry->value;
       context->timeout = (int) strtol(entry->value, &end, 0);
       if (*end || (context->timeout < 0)) {
-	snprintf(errbuf, len, "%s: bad timeout(%s)\n", __FUNCTION__, entry->value);
+	snprintf(errbuf, len, "%s: bad timeout(%s)\n", __func__, entry->value);
 	return DAQ_ERROR;
       }
     } else if (!strcmp(entry->key, "idsbridge")) {
@@ -350,28 +350,28 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
         char* end = entry->value;
         context->ids_bridge = (int) strtol(entry->value, &end, 0);
 	if (*end || (context->ids_bridge < 0) || (context->ids_bridge > 2)) {
-	  snprintf(errbuf, len, "%s: bad ids bridge mode(%s)\n", __FUNCTION__, entry->value);
+	  snprintf(errbuf, len, "%s: bad ids bridge mode(%s)\n", __func__, entry->value);
 	  return DAQ_ERROR;
 	}
       } else {
-        snprintf(errbuf, len, "%s: idsbridge is for passive mode only\n", __FUNCTION__);
+        snprintf(errbuf, len, "%s: idsbridge is for passive mode only\n", __func__);
         return DAQ_ERROR;
       }
     } else if (!strcmp(entry->key, "clusterid")) {
       char *end = entry->value;
       context->cluster_id = (int) strtol(entry->value, &end, 0);
       if (*end || (context->cluster_id < 0)) {
-        snprintf(errbuf, len, "%s: bad clusterid(%s)\n", __FUNCTION__, entry->value);
+        snprintf(errbuf, len, "%s: bad clusterid(%s)\n", __func__, entry->value);
         return DAQ_ERROR;
       }
     } else {
-      snprintf(errbuf, len, "%s: unsupported variable(%s=%s)\n", __FUNCTION__, entry->key, entry->value);
+      snprintf(errbuf, len, "%s: unsupported variable(%s=%s)\n", __func__, entry->key, entry->value);
       return DAQ_ERROR;
     }
   }
 
   if (context->mode == DAQ_MODE_READ_FILE) {
-    snprintf(errbuf, len, "%s: function not supported on PF_RING", __FUNCTION__);
+    snprintf(errbuf, len, "%s: function not supported on PF_RING", __func__);
     free(context);
     return DAQ_ERROR;
   } else if (context->mode == DAQ_MODE_INLINE || (context->mode == DAQ_MODE_PASSIVE && context->ids_bridge)) {
@@ -389,7 +389,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
 
         if (context->num_devices >= DAQ_PF_RING_MAX_NUM_DEVICES) {
           snprintf(errbuf, len, "%s: Maximum num of devices reached (%d), you should increase "
-	    "DAQ_PF_RING_MAX_NUM_DEVICES.\n", __FUNCTION__, DAQ_PF_RING_MAX_NUM_DEVICES);
+	    "DAQ_PF_RING_MAX_NUM_DEVICES.\n", __func__, DAQ_PF_RING_MAX_NUM_DEVICES);
           free(context);
           return DAQ_ERROR;
         }
@@ -414,7 +414,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
 
       if (context->num_devices & 0x1) {
         snprintf(errbuf, len, "%s: Wrong format: %s requires pairs of devices",
-	         __FUNCTION__, context->mode == DAQ_MODE_INLINE ? "inline mode" : "ids bridge");
+	         __func__, context->mode == DAQ_MODE_INLINE ? "inline mode" : "ids bridge");
         free(context);
         return DAQ_ERROR;
       }
@@ -478,21 +478,21 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
                                               context->bindcpu == 0 ? -1 : pfring_zc_numa_get_cpu_node(context->bindcpu), NULL);
 
     if (context->cluster == NULL) {
-      snprintf(errbuf, len, "%s: Cluster failed: %s (error %d)", __FUNCTION__, strerror(errno), errno);
+      snprintf(errbuf, len, "%s: Cluster failed: %s (error %d)", __func__, strerror(errno), errno);
       return DAQ_ERROR;
     }
 
     context->buffer = pfring_zc_get_packet_handle(context->cluster);
 
     if (context->buffer == NULL) {
-      snprintf(errbuf, len, "%s: Buffer allocation failed: %s(%d)", __FUNCTION__, strerror(errno), errno);
+      snprintf(errbuf, len, "%s: Buffer allocation failed: %s(%d)", __func__, strerror(errno), errno);
       return DAQ_ERROR;
     }
 
     context->buffer_inject = pfring_zc_get_packet_handle(context->cluster);
 
     if (context->buffer_inject == NULL) {
-      snprintf(errbuf, len, "%s: Buffer allocation failed: %s(%d)", __FUNCTION__, strerror(errno), errno);
+      snprintf(errbuf, len, "%s: Buffer allocation failed: %s(%d)", __func__, strerror(errno), errno);
       return DAQ_ERROR;
     }
 
@@ -502,14 +502,14 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
 
     if (context->ipc_pool == NULL) {
       snprintf(errbuf, len, "%s: pfring_zc_ipc_attach_buffer_pool error %s(%d), please check that cluster %d is running\n",
-          __FUNCTION__, strerror(errno), errno, context->cluster_id);
+          __func__, strerror(errno), errno, context->cluster_id);
       return -1;
     }
 
     context->buffer = pfring_zc_get_packet_handle_from_pool(context->ipc_pool);
 
     if (context->buffer == NULL) {
-      snprintf(errbuf, len, "%s: Buffer allocation failed: %s(%d)", __FUNCTION__, strerror(errno), errno);
+      snprintf(errbuf, len, "%s: Buffer allocation failed: %s(%d)", __func__, strerror(errno), errno);
       return DAQ_ERROR;
     }
 
@@ -526,7 +526,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
       context->q = pfring_zc_create_queue(context->cluster, QUEUE_LEN);
 
       if (context->q == NULL) {
-        snprintf(errbuf, len, "%s: Couldn't create queue: '%s'", __FUNCTION__, strerror(errno));
+        snprintf(errbuf, len, "%s: Couldn't create queue: '%s'", __func__, strerror(errno));
         return DAQ_ERROR_NOMEM;
       }
 
@@ -564,9 +564,9 @@ static int pfring_zc_daq_set_filter(void *handle, const char *filter) {
   return DAQ_SUCCESS;
 
 bpf_error:
-  DPE(context->errbuf, "%s: BPF state machine compilation failed!", __FUNCTION__); 
+  DPE(context->errbuf, "%s: BPF state machine compilation failed!", __func__); 
 #else
-  DPE(context->errbuf, "%s: BPF filters not supported!", __FUNCTION__);
+  DPE(context->errbuf, "%s: BPF filters not supported!", __func__);
 #endif
   return DAQ_ERROR;
 }

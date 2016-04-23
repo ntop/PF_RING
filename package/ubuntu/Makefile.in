@@ -42,7 +42,7 @@ pre-build-core:
 	@echo "- REMEMBER to set the kernel version in debian/control"
 	@echo "- Make sure you have updated the version in debian/changelog"
 	@echo "************************************************************"
-	rm -rf $(HERE)/debian/tmp
+	rm -rf $(HERE)/debian/pfring
 	mkdir -p debian/lib debian/usr/local/include/linux debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland; make
 	cd $(PF_RING_HOME)/userland/snort/pfring-daq-module; autoreconf -ivf; ./configure; make; mkdir -p $(HERE)/debian/usr/local/lib/daq; cp $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.la $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.so $(HERE)/debian/usr/local/lib/daq
@@ -80,6 +80,6 @@ build: pre-build
 
 clean:
 	@\rm -f ./*.deb
-	-rm -rf debian/tmp
+	-rm -rf debian/pfring
 	-rm -rf debian/usr
 	-rm -rf debian/lib

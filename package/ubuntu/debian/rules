@@ -39,19 +39,19 @@ binary-arch: build install
 	dh_installinit
 	dh_installman
 #	dh_installdebconf -n
-# Install sources
-	mkdir -p ./debian/tmp/
-	cp -r ./debian/usr  ../etc ./debian/tmp/
-	-find ./debian/tmp -name "\.svn" -type d -exec /bin/rm -rf {} ';'
-	-find ./debian/tmp -name "*~" -type d -exec /bin/rm -rf {} ';'
-	rm -rf ./debian/tmp/etc/init
-	#rm -rf ./debian/tmp/etc/init.d/pf_ring
 	dh_link
 	dh_strip
 	dh_compress
 	dh_fixperms
 #	dh_makeshlibs
 	dh_installdeb
+# Install sources
+	mkdir -p ./debian/pfring/
+	cp -r ./debian/usr  ../etc ./debian/pfring/
+	-find ./debian/pfring -name "\.svn" -type d -exec /bin/rm -rf {} ';'
+	-find ./debian/pfring -name "*~" -type d -exec /bin/rm -rf {} ';'
+	rm -rf ./debian/pfring/etc/init
+	#rm -rf ./debian/pfring/etc/init.d/pf_ring
 #	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums
