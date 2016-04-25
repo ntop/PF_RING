@@ -66,6 +66,8 @@ build-nodrivers: pre-kernel-nodrivers build
 build: pre-build
 	dpkg-buildpackage -rfakeroot -b -us -uc #-d
 	@\rm -f ../pf_ring_*dsc ../pf_ring_*.gz ../pf_ring_*changes 
+	echo "Signing package"
+	dpkg-sig --sign builder -k D1EB60BE ../pfring_*deb
 	@/bin/mv ../pfring_*deb . 
 	@echo 
 	@echo "Package built." 
