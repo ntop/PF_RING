@@ -21,7 +21,8 @@ clean:
 
 
 cleanup:
-	sudo rm -rf /var/lib/dkms/*-zc  /lib/modules/`uname -r`/extra/*-zc.ko
+	sudo rm -rf /var/lib/dkms/*  /lib/modules/`uname -r`/extra/*-zc.ko
+
 
 dkms-deb-virtual:
 	/bin/rm -rf tmp
@@ -31,14 +32,14 @@ dkms-deb-virtual:
 	cd tmp; dpkg-deb -b pfring-drivers-zc-dkms .; mv *.deb ..
 
 dkms-deb: cleanup dkms-deb-virtual
+	sudo make -f Makefile.dkms.i40e deb
+	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
+	sudo make -f Makefile.dkms.ixgbe deb
+	cp /var/lib/dkms/ixgbe-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.e1000e deb
 	cp /var/lib/dkms/e1000e-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.igb deb
 	cp /var/lib/dkms/igb-zc/*/deb/*.deb .
-	sudo make -f Makefile.dkms.ixgbe deb
-	cp /var/lib/dkms/ixgbe-zc/*/deb/*.deb .
-	sudo make -f Makefile.dkms.i40e deb
-	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
 
 dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.e1000e rpm
