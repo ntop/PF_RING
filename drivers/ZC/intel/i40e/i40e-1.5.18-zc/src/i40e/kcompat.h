@@ -4836,11 +4836,11 @@ static inline bool page_is_pfmemalloc(struct page __maybe_unused *page)
 #endif /* 4.5.0 */
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
-static inline void napi_consume_skb(struct sk_buff *skb,
-				    int __always_unused budget)
-{
-	dev_consume_skb_any(skb);
-}
+//static inline void napi_consume_skb(struct sk_buff *skb,
+//				    int __always_unused budget)
+//{
+//	dev_consume_skb_any(skb);
+//}
 
 static inline void page_ref_inc(struct page *page)
 {

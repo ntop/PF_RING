@@ -93,6 +93,7 @@ static struct configfs_attribute *i40e_cfgfs_vsi_attrs[] = {
 	NULL,
 };
 
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) ) 
 /**
  * i40e_cfgfs_vsi_attr_show - Show a VSI's NPAR BW partition info
  * @item: A pointer back to the configfs item created on driver load
@@ -190,6 +191,7 @@ static ssize_t i40e_cfgfs_vsi_attr_store(struct config_item *item,
 
 	return count;
 }
+#endif
 
 /**
  * i40e_cfgfs_vsi_release - Free up the configuration item memory
@@ -202,8 +204,10 @@ static void i40e_cfgfs_vsi_release(struct config_item *item)
 
 static struct configfs_item_operations i40e_cfgfs_vsi_item_ops = {
 	.release		= i40e_cfgfs_vsi_release,
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) ) 
 	.show_attribute		= i40e_cfgfs_vsi_attr_show,
 	.store_attribute	= i40e_cfgfs_vsi_attr_store,
+#endif
 };
 
 static struct config_item_type i40e_cfgfs_vsi_type = {
@@ -278,6 +282,7 @@ static struct configfs_attribute *i40e_cfgfs_group_attrs[] = {
 	NULL,
 };
 
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) ) 
 static ssize_t i40e_cfgfs_group_attr_show(struct config_item *item,
 					 struct configfs_attribute *attr,
 					 char *page)
@@ -289,6 +294,7 @@ static ssize_t i40e_cfgfs_group_attr_show(struct config_item *item,
 "To start, use the name of the network port to be configured in a 'mkdir'\n"
 "command, e.g. 'mkdir eth3'.\n");
 }
+#endif
 
 static void i40e_cfgfs_group_release(struct config_item *item)
 {
@@ -297,7 +303,9 @@ static void i40e_cfgfs_group_release(struct config_item *item)
 
 static struct configfs_item_operations i40e_cfgfs_group_item_ops = {
 	.release	= i40e_cfgfs_group_release,
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0) ) 
 	.show_attribute	= i40e_cfgfs_group_attr_show,
+#endif
 };
 
 /*
