@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- * Intel Ethernet Controller XL710 Family Linux Driver
- * Copyright(c) 2013 - 2015 Intel Corporation.
+ * Intel(R) 40-10 Gigabit Ethernet Connection Network Driver
+ * Copyright(c) 2013 - 2016 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,9 +11,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * The full GNU General Public License is included in this distribution in
  * the file called "COPYING".
@@ -34,7 +31,7 @@
  */
 
 #define I40E_FW_API_VERSION_MAJOR	0x0001
-#define I40E_FW_API_VERSION_MINOR	0x0004
+#define I40E_FW_API_VERSION_MINOR	0x0005
 
 struct i40e_aq_desc {
 	__le16 flags;
@@ -132,6 +129,10 @@ enum i40e_admin_queue_opc {
 	i40e_aqc_opc_list_func_capabilities	= 0x000A,
 	i40e_aqc_opc_list_dev_capabilities	= 0x000B,
 
+	/* Proxy commands */
+	i40e_aqc_opc_set_proxy_config		= 0x0104,
+	i40e_aqc_opc_set_ns_proxy_table_entry	= 0x0105,
+
 	/* LAA */
 	i40e_aqc_opc_mac_address_read	= 0x0107,
 	i40e_aqc_opc_mac_address_write	= 0x0108,
@@ -139,12 +140,19 @@ enum i40e_admin_queue_opc {
 	/* PXE */
 	i40e_aqc_opc_clear_pxe_mode	= 0x0110,
 
+	/* WoL commands */
+	i40e_aqc_opc_set_wol_filter	= 0x0120,
+	i40e_aqc_opc_get_wake_reason	= 0x0121,
+
 	/* internal switch commands */
 	i40e_aqc_opc_get_switch_config		= 0x0200,
 	i40e_aqc_opc_add_statistics		= 0x0201,
 	i40e_aqc_opc_remove_statistics		= 0x0202,
 	i40e_aqc_opc_set_port_parameters	= 0x0203,
 	i40e_aqc_opc_get_switch_resource_alloc	= 0x0204,
+	i40e_aqc_opc_set_switch_config		= 0x0205,
+	i40e_aqc_opc_rx_ctl_reg_read		= 0x0206,
+	i40e_aqc_opc_rx_ctl_reg_write		= 0x0207,
 
 	i40e_aqc_opc_add_vsi			= 0x0210,
 	i40e_aqc_opc_update_vsi_parameters	= 0x0211,
@@ -202,10 +210,6 @@ enum i40e_admin_queue_opc {
 	i40e_aqc_opc_resume_port_tx				= 0x041C,
 	i40e_aqc_opc_configure_partition_bw			= 0x041D,
 
-	/* hmc */
-	i40e_aqc_opc_query_hmc_resource_profile	= 0x0500,
-	i40e_aqc_opc_set_hmc_resource_profile	= 0x0501,
-
 	/* phy commands*/
 	i40e_aqc_opc_get_phy_abilities		= 0x0600,
 	i40e_aqc_opc_set_phy_config		= 0x0601,
@@ -220,6 +224,7 @@ enum i40e_admin_queue_opc {
 	i40e_aqc_opc_get_phy_wol_caps		= 0x0621,
 	i40e_aqc_opc_set_phy_debug		= 0x0622,
 	i40e_aqc_opc_upload_ext_phy_fm		= 0x0625,
+	i40e_aqc_opc_run_phy_activity		= 0x0626,
 
 	/* NVM commands */
 	i40e_aqc_opc_nvm_read			= 0x0701,
@@ -228,6 +233,7 @@ enum i40e_admin_queue_opc {
 	i40e_aqc_opc_nvm_config_read		= 0x0704,
 	i40e_aqc_opc_nvm_config_write		= 0x0705,
 	i40e_aqc_opc_oem_post_update		= 0x0720,
+	i40e_aqc_opc_thermal_sensor		= 0x0721,
 
 	/* virtualization commands */
 	i40e_aqc_opc_send_msg_to_pf		= 0x0801,
@@ -258,6 +264,10 @@ enum i40e_admin_queue_opc {
 	/* Tunnel commands */
 	i40e_aqc_opc_add_udp_tunnel	= 0x0B00,
 	i40e_aqc_opc_del_udp_tunnel	= 0x0B01,
+	i40e_aqc_opc_set_rss_key	= 0x0B02,
+	i40e_aqc_opc_set_rss_lut	= 0x0B03,
+	i40e_aqc_opc_get_rss_key	= 0x0B04,
+	i40e_aqc_opc_get_rss_lut	= 0x0B05,
 
 	/* Async Events */
 	i40e_aqc_opc_event_lan_overflow		= 0x1001,
@@ -398,6 +408,7 @@ struct i40e_aqc_list_capabilities_element_resp {
 #define I40E_AQ_CAP_ID_OS2BMC_CAP	0x0004
 #define I40E_AQ_CAP_ID_FUNCTIONS_VALID	0x0005
 #define I40E_AQ_CAP_ID_ALTERNATE_RAM	0x0006
+#define I40E_AQ_CAP_ID_WOL_AND_PROXY	0x0008
 #define I40E_AQ_CAP_ID_SRIOV		0x0012
 #define I40E_AQ_CAP_ID_VF		0x0013
 #define I40E_AQ_CAP_ID_VMDQ		0x0014
@@ -418,6 +429,8 @@ struct i40e_aqc_list_capabilities_element_resp {
 #define I40E_AQ_CAP_ID_LED		0x0061
 #define I40E_AQ_CAP_ID_SDP		0x0062
 #define I40E_AQ_CAP_ID_MDIO		0x0063
+#define I40E_AQ_CAP_ID_WSR_PROT		0x0064
+#define I40E_AQ_CAP_ID_NVM_MGMT		0x0080
 #define I40E_AQ_CAP_ID_FLEX10		0x00F1
 #define I40E_AQ_CAP_ID_CEM		0x00F2
 
@@ -545,6 +558,41 @@ struct i40e_aqc_clear_pxe {
 };
 
 I40E_CHECK_CMD_LENGTH(i40e_aqc_clear_pxe);
+
+/* Set WoL Filter (0x0120) */
+
+struct i40e_aqc_set_wol_filter {
+	__le16 filter_index;
+#define I40E_AQC_MAX_NUM_WOL_FILTERS	8
+	__le16 cmd_flags;
+#define I40E_AQC_SET_WOL_FILTER				0x8000
+#define I40E_AQC_SET_WOL_FILTER_NO_TCO_WOL		0x4000
+	__le16 valid_flags;
+#define I40E_AQC_SET_WOL_FILTER_ACTION_VALID		0x8000
+#define I40E_AQC_SET_WOL_FILTER_NO_TCO_ACTION_VALID	0x4000
+	u8 reserved[2];
+	__le32	address_high;
+	__le32	address_low;
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_set_wol_filter);
+
+/* Get Wake Reason (0x0121) */
+
+struct i40e_aqc_get_wake_reason_completion {
+	u8 reserved_1[2];
+	__le16 wake_reason;
+	u8 reserved_2[12];
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_get_wake_reason_completion);
+
+struct i40e_aqc_set_wol_filter_data {
+	u8 filter[128];
+	u8 mask[16];
+};
+
+I40E_CHECK_STRUCT_LEN(0x90, i40e_aqc_set_wol_filter_data);
 
 /* Switch configuration commands (0x02xx) */
 
@@ -675,6 +723,31 @@ struct i40e_aqc_switch_resource_alloc_element_resp {
 };
 
 I40E_CHECK_STRUCT_LEN(0x10, i40e_aqc_switch_resource_alloc_element_resp);
+
+/* Set Switch Configuration (direct 0x0205) */
+struct i40e_aqc_set_switch_config {
+	__le16	flags;
+#define I40E_AQ_SET_SWITCH_CFG_PROMISC		0x0001
+#define I40E_AQ_SET_SWITCH_CFG_L2_FILTER	0x0002
+	__le16	valid_flags;
+	u8	reserved[12];
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_set_switch_config);
+
+/* Read Receive control registers  (direct 0x0206)
+ * Write Receive control registers (direct 0x0207)
+ *     used for accessing Rx control registers that can be
+ *     slow and need special handling when under high Rx load
+ */
+struct i40e_aqc_rx_ctl_reg_read_write {
+	__le32 reserved1;
+	__le32 address;
+	__le32 reserved2;
+	__le32 value;
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_rx_ctl_reg_read_write);
 
 /* Add VSI (indirect 0x0210)
  *    this indirect command uses struct i40e_aqc_vsi_properties_data
@@ -822,14 +895,18 @@ struct i40e_aqc_vsi_properties_data {
 					 I40E_AQ_VSI_TC_QUE_NUMBER_SHIFT)
 	/* queueing option section */
 	u8	queueing_opt_flags;
+#define I40E_AQ_VSI_QUE_OPT_MULTICAST_UDP_ENA	0x04
+#define I40E_AQ_VSI_QUE_OPT_UNICAST_UDP_ENA	0x08
 #define I40E_AQ_VSI_QUE_OPT_TCP_ENA	0x10
 #define I40E_AQ_VSI_QUE_OPT_FCOE_ENA	0x20
+#define I40E_AQ_VSI_QUE_OPT_RSS_LUT_PF	0x00
+#define I40E_AQ_VSI_QUE_OPT_RSS_LUT_VSI	0x40
 	u8	queueing_opt_reserved[3];
 	/* scheduler section */
 	u8	up_enable_bits;
 	u8	sched_reserved;
 	/* outer up section */
-	__le32	outer_up_table; /* same structure and defines as ingress table */
+	__le32	outer_up_table; /* same structure and defines as ingress tbl */
 	u8	cmd_reserved[8];
 	/* last 32 bytes are written by FW */
 	__le16	qs_handle[8];
@@ -898,7 +975,8 @@ struct i40e_aqc_add_veb {
 					I40E_AQC_ADD_VEB_PORT_TYPE_SHIFT)
 #define I40E_AQC_ADD_VEB_PORT_TYPE_DEFAULT	0x2
 #define I40E_AQC_ADD_VEB_PORT_TYPE_DATA		0x4
-#define I40E_AQC_ADD_VEB_ENABLE_L2_FILTER	0x8
+#define I40E_AQC_ADD_VEB_ENABLE_L2_FILTER	0x8     /* deprecated */
+#define I40E_AQC_ADD_VEB_ENABLE_DISABLE_STATS	0x10
 	u8	enable_tcs;
 	u8	reserved[9];
 };
@@ -965,6 +1043,7 @@ struct i40e_aqc_add_macvlan_element_data {
 #define I40E_AQC_MACVLAN_ADD_HASH_MATCH		0x0002
 #define I40E_AQC_MACVLAN_ADD_IGNORE_VLAN	0x0004
 #define I40E_AQC_MACVLAN_ADD_TO_QUEUE		0x0008
+#define I40E_AQC_MACVLAN_ADD_USE_SHARED_MAC	0x0010
 	__le16	queue_number;
 #define I40E_AQC_MACVLAN_CMD_QUEUE_SHIFT	0
 #define I40E_AQC_MACVLAN_CMD_QUEUE_MASK		(0x7FF << \
@@ -1061,6 +1140,7 @@ struct i40e_aqc_set_vsi_promiscuous_modes {
 #define I40E_AQC_SET_VSI_PROMISC_BROADCAST	0x04
 #define I40E_AQC_SET_VSI_DEFAULT		0x08
 #define I40E_AQC_SET_VSI_PROMISC_VLAN		0x10
+#define I40E_AQC_SET_VSI_PROMISC_TX		0x8000
 	__le16	seid;
 #define I40E_AQC_VSI_PROM_CMD_SEID_MASK		0x3FF
 	__le16	vlan_tag;
@@ -1249,10 +1329,16 @@ struct i40e_aqc_add_remove_cloud_filters_element_data {
 
 #define I40E_AQC_ADD_CLOUD_TNL_TYPE_SHIFT		9
 #define I40E_AQC_ADD_CLOUD_TNL_TYPE_MASK		0x1E00
-#define I40E_AQC_ADD_CLOUD_TNL_TYPE_XVLAN		0
+#define I40E_AQC_ADD_CLOUD_TNL_TYPE_VXLAN		0
 #define I40E_AQC_ADD_CLOUD_TNL_TYPE_NVGRE_OMAC		1
-#define I40E_AQC_ADD_CLOUD_TNL_TYPE_NGE			2
+#define I40E_AQC_ADD_CLOUD_TNL_TYPE_GENEVE		2
 #define I40E_AQC_ADD_CLOUD_TNL_TYPE_IP			3
+#define I40E_AQC_ADD_CLOUD_TNL_TYPE_RESERVED		4
+#define I40E_AQC_ADD_CLOUD_TNL_TYPE_VXLAN_GPE		5
+
+#define I40E_AQC_ADD_CLOUD_FLAGS_SHARED_OUTER_MAC	0x2000
+#define I40E_AQC_ADD_CLOUD_FLAGS_SHARED_INNER_MAC	0x4000
+#define I40E_AQC_ADD_CLOUD_FLAGS_SHARED_OUTER_IP	0x8000
 
 	__le32	tenant_id;
 	u8	reserved[4];
@@ -1460,7 +1546,8 @@ struct i40e_aqc_configure_switching_comp_ets_bw_limit_data {
 	u8	reserved1[28];
 };
 
-I40E_CHECK_STRUCT_LEN(0x40, i40e_aqc_configure_switching_comp_ets_bw_limit_data);
+I40E_CHECK_STRUCT_LEN(0x40,
+		      i40e_aqc_configure_switching_comp_ets_bw_limit_data);
 
 /* Configure Switching Component Bandwidth Allocation per Tc
  * (indirect 0x0417)
@@ -1535,27 +1622,6 @@ struct i40e_aqc_configure_partition_bw_data {
 
 I40E_CHECK_STRUCT_LEN(0x22, i40e_aqc_configure_partition_bw_data);
 
-/* Get and set the active HMC resource profile and status.
- * (direct 0x0500) and (direct 0x0501)
- */
-struct i40e_aq_get_set_hmc_resource_profile {
-	u8	pm_profile;
-	u8	pe_vf_enabled;
-	u8	reserved[14];
-};
-
-I40E_CHECK_CMD_LENGTH(i40e_aq_get_set_hmc_resource_profile);
-
-enum i40e_aq_hmc_profile {
-	/* I40E_HMC_PROFILE_NO_CHANGE    = 0, reserved */
-	I40E_HMC_PROFILE_DEFAULT	= 1,
-	I40E_HMC_PROFILE_FAVOR_VF	= 2,
-	I40E_HMC_PROFILE_EQUAL		= 3,
-};
-
-#define I40E_AQ_GET_HMC_RESOURCE_PROFILE_PM_MASK	0xF
-#define I40E_AQ_GET_HMC_RESOURCE_PROFILE_COUNT_MASK	0x3F
-
 /* Get PHY Abilities (indirect 0x0600) uses the generic indirect struct */
 
 /* set in param0 for get phy abilities to report qualified modules */
@@ -1591,6 +1657,10 @@ enum i40e_aq_phy_type {
 	I40E_PHY_TYPE_1000BASE_LX		= 0x1C,
 	I40E_PHY_TYPE_1000BASE_T_OPTICAL	= 0x1D,
 	I40E_PHY_TYPE_20GBASE_KR2		= 0x1E,
+	I40E_PHY_TYPE_25GBASE_KR		= 0x1F,
+	I40E_PHY_TYPE_25GBASE_CR		= 0x20,
+	I40E_PHY_TYPE_25GBASE_SR		= 0x21,
+	I40E_PHY_TYPE_25GBASE_LR		= 0x22,
 	I40E_PHY_TYPE_MAX
 };
 
@@ -1746,7 +1816,12 @@ struct i40e_aqc_get_link_status {
 	u8	config;
 #define I40E_AQ_CONFIG_CRC_ENA		0x04
 #define I40E_AQ_CONFIG_PACING_MASK	0x78
-	u8	reserved[5];
+	u8	external_power_ability;
+#define I40E_AQ_LINK_POWER_CLASS_1	0x00
+#define I40E_AQ_LINK_POWER_CLASS_2	0x01
+#define I40E_AQ_LINK_POWER_CLASS_3	0x02
+#define I40E_AQ_LINK_POWER_CLASS_4	0x03
+	u8	reserved[4];
 };
 
 I40E_CHECK_CMD_LENGTH(i40e_aqc_get_link_status);
@@ -1802,7 +1877,10 @@ struct i40e_aqc_set_phy_debug {
 #define I40E_AQ_PHY_DEBUG_RESET_EXTERNAL_NONE	0x00
 #define I40E_AQ_PHY_DEBUG_RESET_EXTERNAL_HARD	0x01
 #define I40E_AQ_PHY_DEBUG_RESET_EXTERNAL_SOFT	0x02
+/* Disable link manageability on a single port */
 #define I40E_AQ_PHY_DEBUG_DISABLE_LINK_FW	0x10
+/* Disable link manageability on all ports needs both bits 4 and 5 */
+#define I40E_AQ_PHY_DEBUG_DISABLE_ALL_LINK_FW	0x20
 	u8	reserved[15];
 };
 
@@ -1813,6 +1891,18 @@ enum i40e_aq_phy_reg_type {
 	I40E_AQC_PHY_REG_EXERNAL_BASET	= 0x2,
 	I40E_AQC_PHY_REG_EXERNAL_MODULE	= 0x3
 };
+
+/* Run PHY Activity (0x0626) */
+struct i40e_aqc_run_phy_activity {
+	__le16  activity_id;
+	u8      flags;
+	u8      reserved1;
+	__le32  control;
+	__le32  data;
+	u8      reserved2[4];
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_run_phy_activity);
 
 /* NVM Read command (indirect 0x0701)
  * NVM Erase commands (direct 0x0702)
@@ -1838,7 +1928,7 @@ struct i40e_aqc_nvm_config_read {
 #define I40E_AQ_ANVM_READ_SINGLE_FEATURE		0
 #define I40E_AQ_ANVM_READ_MULTIPLE_FEATURES		1
 	__le16	element_count;
-	__le16	element_id;     /* Feature/field ID */
+	__le16	element_id;	/* Feature/field ID */
 	__le16	element_id_msw;	/* MSWord of field ID */
 	__le32	address_high;
 	__le32	address_low;
@@ -1859,9 +1949,10 @@ I40E_CHECK_CMD_LENGTH(i40e_aqc_nvm_config_write);
 
 /* Used for 0x0704 as well as for 0x0705 commands */
 #define I40E_AQ_ANVM_FEATURE_OR_IMMEDIATE_SHIFT		1
-#define I40E_AQ_ANVM_FEATURE_OR_IMMEDIATE_MASK		(1 << I40E_AQ_ANVM_FEATURE_OR_IMMEDIATE_SHIFT)
-#define I40E_AQ_ANVM_FEATURE				0
-#define I40E_AQ_ANVM_IMMEDIATE_FIELD			(1 << FEATURE_OR_IMMEDIATE_SHIFT)
+#define I40E_AQ_ANVM_FEATURE_OR_IMMEDIATE_MASK \
+				(1 << I40E_AQ_ANVM_FEATURE_OR_IMMEDIATE_SHIFT)
+#define I40E_AQ_ANVM_FEATURE		0
+#define I40E_AQ_ANVM_IMMEDIATE_FIELD	(1 << FEATURE_OR_IMMEDIATE_SHIFT)
 struct i40e_aqc_nvm_config_data_feature {
 	__le16 feature_id;
 #define I40E_AQ_ANVM_FEATURE_OPTION_OEM_ONLY		0x01
@@ -1885,7 +1976,7 @@ I40E_CHECK_STRUCT_LEN(0xc, i40e_aqc_nvm_config_data_immediate_field);
 /* OEM Post Update (indirect 0x0720)
  * no command data struct used
  */
- struct i40e_aqc_nvm_oem_post_update {
+struct i40e_aqc_nvm_oem_post_update {
 #define I40E_AQ_NVM_OEM_POST_UPDATE_EXTERNAL_DATA	0x01
 	u8 sel_data;
 	u8 reserved[7];
@@ -1901,6 +1992,22 @@ struct i40e_aqc_nvm_oem_post_update_buffer {
 };
 
 I40E_CHECK_STRUCT_LEN(0x28, i40e_aqc_nvm_oem_post_update_buffer);
+
+/* Thermal Sensor (indirect 0x0721)
+ *     read or set thermal sensor configs and values
+ *     takes a sensor and command specific data buffer, not detailed here
+ */
+struct i40e_aqc_thermal_sensor {
+	u8 sensor_action;
+#define I40E_AQ_THERMAL_SENSOR_READ_CONFIG	0
+#define I40E_AQ_THERMAL_SENSOR_SET_CONFIG	1
+#define I40E_AQ_THERMAL_SENSOR_READ_TEMP	2
+	u8 reserved[7];
+	__le32	addr_high;
+	__le32	addr_low;
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_thermal_sensor);
 
 /* Send to PF command (indirect 0x0801) id is only used by PF
  * Send to VF command (indirect 0x0802) id is only used by PF
@@ -2146,12 +2253,21 @@ struct i40e_aqc_lldp_set_local_mib {
 
 I40E_CHECK_CMD_LENGTH(i40e_aqc_lldp_set_local_mib);
 
+struct i40e_aqc_lldp_set_local_mib_resp {
+#define SET_LOCAL_MIB_RESP_EVENT_TRIGGERED_MASK      0x01
+	u8  status;
+	u8  reserved[15];
+};
+
+I40E_CHECK_STRUCT_LEN(0x10, i40e_aqc_lldp_set_local_mib_resp);
+
 /*	Stop/Start LLDP Agent (direct 0x0A09)
  *	Used for stopping/starting specific LLDP agent. e.g. DCBx
  */
 struct i40e_aqc_lldp_stop_start_specific_agent {
 #define I40E_AQC_START_SPECIFIC_AGENT_SHIFT	0
-#define I40E_AQC_START_SPECIFIC_AGENT_MASK	(1 << I40E_AQC_START_SPECIFIC_AGENT_SHIFT)
+#define I40E_AQC_START_SPECIFIC_AGENT_MASK \
+				(1 << I40E_AQC_START_SPECIFIC_AGENT_SHIFT)
 	u8	command;
 	u8	reserved[15];
 };
@@ -2166,13 +2282,14 @@ struct i40e_aqc_add_udp_tunnel {
 #define I40E_AQC_TUNNEL_TYPE_VXLAN	0x00
 #define I40E_AQC_TUNNEL_TYPE_NGE	0x01
 #define I40E_AQC_TUNNEL_TYPE_TEREDO	0x10
+#define I40E_AQC_TUNNEL_TYPE_VXLAN_GPE	0x11
 	u8	reserved1[10];
 };
 
 I40E_CHECK_CMD_LENGTH(i40e_aqc_add_udp_tunnel);
 
 struct i40e_aqc_add_udp_tunnel_completion {
-	__le16 udp_port;
+	__le16	udp_port;
 	u8	filter_entry_index;
 	u8	multiple_pfs;
 #define I40E_AQC_SINGLE_PF		0x0
@@ -2201,6 +2318,46 @@ struct i40e_aqc_del_udp_tunnel_completion {
 };
 
 I40E_CHECK_CMD_LENGTH(i40e_aqc_del_udp_tunnel_completion);
+
+struct i40e_aqc_get_set_rss_key {
+#define I40E_AQC_SET_RSS_KEY_VSI_VALID		(0x1 << 15)
+#define I40E_AQC_SET_RSS_KEY_VSI_ID_SHIFT	0
+#define I40E_AQC_SET_RSS_KEY_VSI_ID_MASK	(0x3FF << \
+					I40E_AQC_SET_RSS_KEY_VSI_ID_SHIFT)
+	__le16	vsi_id;
+	u8	reserved[6];
+	__le32	addr_high;
+	__le32	addr_low;
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_get_set_rss_key);
+
+struct i40e_aqc_get_set_rss_key_data {
+	u8 standard_rss_key[0x28];
+	u8 extended_hash_key[0xc];
+};
+
+I40E_CHECK_STRUCT_LEN(0x34, i40e_aqc_get_set_rss_key_data);
+
+struct  i40e_aqc_get_set_rss_lut {
+#define I40E_AQC_SET_RSS_LUT_VSI_VALID		(0x1 << 15)
+#define I40E_AQC_SET_RSS_LUT_VSI_ID_SHIFT	0
+#define I40E_AQC_SET_RSS_LUT_VSI_ID_MASK	(0x3FF << \
+					I40E_AQC_SET_RSS_LUT_VSI_ID_SHIFT)
+	__le16	vsi_id;
+#define I40E_AQC_SET_RSS_LUT_TABLE_TYPE_SHIFT	0
+#define I40E_AQC_SET_RSS_LUT_TABLE_TYPE_MASK	(0x1 << \
+					I40E_AQC_SET_RSS_LUT_TABLE_TYPE_SHIFT)
+
+#define I40E_AQC_SET_RSS_LUT_TABLE_TYPE_VSI	0
+#define I40E_AQC_SET_RSS_LUT_TABLE_TYPE_PF	1
+	__le16	flags;
+	u8	reserved[4];
+	__le32	addr_high;
+	__le32	addr_low;
+};
+
+I40E_CHECK_CMD_LENGTH(i40e_aqc_get_set_rss_lut);
 
 /* tunnel key structure 0x0B10 */
 
@@ -2359,4 +2516,4 @@ struct i40e_aqc_debug_modify_internals {
 
 I40E_CHECK_CMD_LENGTH(i40e_aqc_debug_modify_internals);
 
-#endif
+#endif /* _I40E_ADMINQ_CMD_H_ */

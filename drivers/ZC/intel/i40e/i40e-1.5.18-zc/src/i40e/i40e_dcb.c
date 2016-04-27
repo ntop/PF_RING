@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- * Intel Ethernet Controller XL710 Family Linux Driver
- * Copyright(c) 2013 - 2015 Intel Corporation.
+ * Intel(R) 40-10 Gigabit Ethernet Connection Network Driver
+ * Copyright(c) 2013 - 2016 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,9 +11,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * The full GNU General Public License is included in this distribution in
  * the file called "COPYING".
@@ -380,32 +377,40 @@ static void i40e_parse_cee_app_tlv(struct i40e_cee_feat_tlv *tlv,
 {
 	u16 length, typelength, offset = 0;
 	struct i40e_cee_app_prio *app;
-	u8 i, up, selector;
+	u8 i;
 
 	typelength = ntohs(tlv->hdr.typelen);
 	length = (u16)((typelength & I40E_LLDP_TLV_LEN_MASK) >>
 		       I40E_LLDP_TLV_LEN_SHIFT);
 
-	dcbcfg->numapps = length/sizeof(*app);
+	dcbcfg->numapps = length / sizeof(*app);
 	if (!dcbcfg->numapps)
 		return;
 
 	for (i = 0; i < dcbcfg->numapps; i++) {
+		u8 up, selector;
+
 		app = (struct i40e_cee_app_prio *)(tlv->tlvinfo + offset);
 		for (up = 0; up < I40E_MAX_USER_PRIORITY; up++) {
 			if (app->prio_map & BIT(up))
 				break;
 		}
 		dcbcfg->app[i].priority = up;
+
 		/* Get Selector from lower 2 bits, and convert to IEEE */
 		selector = (app->upper_oui_sel & I40E_CEE_APP_SELECTOR_MASK);
-		if (selector == I40E_CEE_APP_SEL_ETHTYPE)
+		switch (selector) {
+		case I40E_CEE_APP_SEL_ETHTYPE:
 			dcbcfg->app[i].selector = I40E_APP_SEL_ETHTYPE;
-		else if (selector == I40E_CEE_APP_SEL_TCPIP)
+			break;
+		case I40E_CEE_APP_SEL_TCPIP:
 			dcbcfg->app[i].selector = I40E_APP_SEL_TCPIP;
-		else
+			break;
+		default:
 			/* Keep selector as it is for unknown types */
 			dcbcfg->app[i].selector = selector;
+		}
+
 		dcbcfg->app[i].protocolid = ntohs(app->protocol);
 		/* Move to next app */
 		offset += sizeof(*app);
@@ -815,13 +820,15 @@ i40e_status i40e_get_dcb_config(struct i40e_hw *hw)
 	struct i40e_aqc_get_cee_dcb_cfg_resp cee_cfg;
 	struct i40e_aqc_get_cee_dcb_cfg_v1_resp cee_v1_cfg;
 
-	/* If Firmware version < v4.33 IEEE only */
-	if (((hw->aq.fw_maj_ver == 4) && (hw->aq.fw_min_ver < 33)) ||
-	    (hw->aq.fw_maj_ver < 4))
+	/* If Firmware version < v4.33 on X710/XL710, IEEE only */
+	if ((hw->mac.type == I40E_MAC_XL710) &&
+	    (((hw->aq.fw_maj_ver == 4) && (hw->aq.fw_min_ver < 33)) ||
+	      (hw->aq.fw_maj_ver < 4)))
 		return i40e_get_ieee_dcb_config(hw);
 
-	/* If Firmware version == v4.33 use old CEE struct */
-	if ((hw->aq.fw_maj_ver == 4) && (hw->aq.fw_min_ver == 33)) {
+	/* If Firmware version == v4.33 on X710/XL710, use old CEE struct */
+	if ((hw->mac.type == I40E_MAC_XL710) &&
+	    ((hw->aq.fw_maj_ver == 4) && (hw->aq.fw_min_ver == 33))) {
 		ret = i40e_aq_get_cee_dcb_config(hw, &cee_v1_cfg,
 						 sizeof(cee_v1_cfg), NULL);
 		if (ret == I40E_SUCCESS) {
@@ -1233,14 +1240,12 @@ i40e_status i40e_dcb_config_to_lldp(u8 *lldpmib, u16 *miblen,
 	u16 length, offset = 0, tlvid = I40E_TLV_ID_START;
 	i40e_status ret = I40E_SUCCESS;
 	struct i40e_lldp_org_tlv *tlv;
-	u16 type, typelength;
+	u16 typelength;
 
 	tlv = (struct i40e_lldp_org_tlv *)lldpmib;
 	while (1) {
 		i40e_add_dcb_tlv(tlv, dcbcfg, tlvid++);
 		typelength = ntohs(tlv->typelength);
-		type = (u16)((typelength & I40E_LLDP_TLV_TYPE_MASK) >>
-				I40E_LLDP_TLV_TYPE_SHIFT);
 		length = (u16)((typelength & I40E_LLDP_TLV_LEN_MASK) >>
 				I40E_LLDP_TLV_LEN_SHIFT);
 		if (length)

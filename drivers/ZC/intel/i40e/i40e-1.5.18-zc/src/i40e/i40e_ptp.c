@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- * Intel Ethernet Controller XL710 Family Linux Driver
- * Copyright(c) 2013 - 2015 Intel Corporation.
+ * Intel(R) 40-10 Gigabit Ethernet Connection Network Driver
+ * Copyright(c) 2013 - 2016 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -12,9 +12,6 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  * The full GNU General Public License is included in this distribution in
  * the file called "COPYING".
  *
@@ -24,6 +21,10 @@
  *
  ******************************************************************************/
 
+/* this lets the macros that return timespec64 or structs compile cleanly with
+ * W=2
+ */
+#pragma GCC diagnostic ignored "-Waggregate-return"
 #include "i40e.h"
 #ifdef HAVE_PTP_1588_CLOCK
 #include <linux/ptp_classify.h>
@@ -159,13 +160,13 @@ static int i40e_ptp_adjfreq(struct ptp_clock_info *ptp, s32 ppb)
 static int i40e_ptp_adjtime(struct ptp_clock_info *ptp, s64 delta)
 {
 	struct i40e_pf *pf = container_of(ptp, struct i40e_pf, ptp_caps);
-	struct timespec64 now, then = ns_to_timespec64(delta);
+	struct timespec64 now;
 	unsigned long flags;
 
 	spin_lock_irqsave(&pf->tmreg_lock, flags);
 
 	i40e_ptp_read(pf, &now);
-	now = timespec_add(now, then);
+	timespec64_add_ns(&now, delta);
 	i40e_ptp_write(pf, (const struct timespec64 *)&now);
 
 	spin_unlock_irqrestore(&pf->tmreg_lock, flags);
@@ -361,6 +362,7 @@ void i40e_ptp_tx_hwtstamp(struct i40e_pf *pf)
 	skb_tstamp_tx(pf->ptp_tx_skb, &shhwtstamps);
 	dev_kfree_skb_any(pf->ptp_tx_skb);
 	pf->ptp_tx_skb = NULL;
+	clear_bit_unlock(__I40E_PTP_TX_IN_PROGRESS, &pf->state);
 }
 
 /**
@@ -723,13 +725,8 @@ void i40e_ptp_init(struct i40e_pf *pf)
 		i40e_ptp_set_timestamp_mode(pf, &pf->tstamp_config);
 
 		/* Set the clock value. */
-#ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		ts = ktime_to_timespec64(ktime_get_real());
 		i40e_ptp_settime64(&pf->ptp_caps, &ts);
-#else
-		ts = ktime_to_timespec(ktime_get_real());
-		i40e_ptp_settime(&pf->ptp_caps, &ts);
-#endif
 	}
 }
 
@@ -749,6 +746,7 @@ void i40e_ptp_stop(struct i40e_pf *pf)
 	if (pf->ptp_tx_skb) {
 		dev_kfree_skb_any(pf->ptp_tx_skb);
 		pf->ptp_tx_skb = NULL;
+		clear_bit_unlock(__I40E_PTP_TX_IN_PROGRESS, &pf->state);
 	}
 
 	if (pf->ptp_clock) {

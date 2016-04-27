@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- * Intel Ethernet Controller XL710 Family Linux Driver
- * Copyright(c) 2013 - 2015 Intel Corporation.
+ * Intel(R) 40-10 Gigabit Ethernet Connection Network Driver
+ * Copyright(c) 2013 - 2016 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,9 +11,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * The full GNU General Public License is included in this distribution in
  * the file called "COPYING".
@@ -60,6 +57,8 @@ enum i40e_vf_states {
 	I40E_VF_STAT_ACTIVE,
 	I40E_VF_STAT_FCOEENA,
 	I40E_VF_STAT_DISABLED,
+	I40E_VF_STAT_MC_PROMISC,
+	I40E_VF_STAT_UC_PROMISC,
 };
 
 /* VF capabilities */
@@ -76,7 +75,7 @@ struct i40e_vf {
 	struct i40e_pf *pf;
 
 	/* VF id in the PF space */
-	u16 vf_id;
+	s16 vf_id;
 	/* all VF vsis connect to the same parent */
 	enum i40e_switch_element_types parent_type;
 	struct i40e_virtchnl_version_info vf_ver;
@@ -89,13 +88,14 @@ struct i40e_vf {
 	struct i40e_virtchnl_ether_addr default_fcoe_addr;
 	u16 port_vlan_id;
 	bool pf_set_mac;	/* The VMM admin set the VF MAC address */
+	bool trusted;
 
 	/* VSI indices - actual VSI pointers are maintained in the PF structure
 	 * When assigned, these will be non-zero, because VSI 0 is always
 	 * the main LAN VSI for the PF.
 	 */
-	u8 lan_vsi_idx;	        /* index into PF struct */
-	u8 lan_vsi_id;		/* ID as used by firmware */
+	u16 lan_vsi_idx;	/* index into PF struct */
+	u16 lan_vsi_id;		/* ID as used by firmware */
 #ifdef I40E_FCOE
 	u8 fcoe_vsi_index;
 	u8 fcoe_vsi_id;
@@ -114,9 +114,12 @@ struct i40e_vf {
 	bool link_forced;
 	bool link_up;		/* only valid if VF link is forced */
 #endif
-#ifdef HAVE_VF_SPOOFCHK_CONFIGURE
 	bool spoofchk;
-#endif
+	u16 num_mac;
+	u16 num_vlan;
+
+	/* RDMA Client */
+	struct i40e_virtchnl_iwarp_qvlist_info *qvlist_info;
 };
 
 void i40e_free_vfs(struct i40e_pf *pf);
@@ -124,7 +127,7 @@ void i40e_free_vfs(struct i40e_pf *pf);
 int i40e_pci_sriov_configure(struct pci_dev *dev, int num_vfs);
 #endif
 int i40e_alloc_vfs(struct i40e_pf *pf, u16 num_alloc_vfs);
-int i40e_vc_process_vf_msg(struct i40e_pf *pf, u16 vf_id, u32 v_opcode,
+int i40e_vc_process_vf_msg(struct i40e_pf *pf, s16 vf_id, u32 v_opcode,
 			   u32 v_retval, u8 *msg, u16 msglen);
 int i40e_vc_process_vflr_event(struct i40e_pf *pf);
 void i40e_reset_vf(struct i40e_vf *vf, bool flr);
@@ -139,6 +142,9 @@ int i40e_ndo_set_vf_bw(struct net_device *netdev, int vf_id, int min_tx_rate,
 		       int max_tx_rate);
 #else
 int i40e_ndo_set_vf_bw(struct net_device *netdev, int vf_id, int tx_rate);
+#endif
+#ifdef HAVE_NDO_SET_VF_TRUST
+int i40e_ndo_set_vf_trust(struct net_device *netdev, int vf_id, bool setting);
 #endif
 int i40e_ndo_enable_vf(struct net_device *netdev, int vf_id, bool enable);
 #ifdef IFLA_VF_MAX

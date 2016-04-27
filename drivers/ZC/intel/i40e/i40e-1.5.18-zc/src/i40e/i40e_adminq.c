@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- * Intel Ethernet Controller XL710 Family Linux Driver
- * Copyright(c) 2013 - 2015 Intel Corporation.
+ * Intel(R) 40-10 Gigabit Ethernet Connection Network Driver
+ * Copyright(c) 2013 - 2016 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,9 +11,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * The full GNU General Public License is included in this distribution in
  * the file called "COPYING".
@@ -29,16 +26,6 @@
 #include "i40e_register.h"
 #include "i40e_adminq.h"
 #include "i40e_prototype.h"
-
-/**
- * i40e_is_nvm_update_op - return true if this is an NVM update operation
- * @desc: API request descriptor
- **/
-static INLINE bool i40e_is_nvm_update_op(struct i40e_aq_desc *desc)
-{
-	return (desc->opcode == CPU_TO_LE16(i40e_aqc_opc_nvm_erase) ||
-		desc->opcode == CPU_TO_LE16(i40e_aqc_opc_nvm_update));
-}
 
 /**
  *  i40e_adminq_init_regs - Initialize AdminQ registers
@@ -539,6 +526,24 @@ shutdown_arq_out:
 }
 
 /**
+ *  i40e_resume_aq - resume AQ processing from 0
+ *  @hw: pointer to the hardware structure
+ **/
+static void i40e_resume_aq(struct i40e_hw *hw)
+{
+	/* Registers are reset after PF reset */
+	hw->aq.asq.next_to_use = 0;
+	hw->aq.asq.next_to_clean = 0;
+
+	i40e_config_asq_regs(hw);
+
+	hw->aq.arq.next_to_use = 0;
+	hw->aq.arq.next_to_clean = 0;
+
+	i40e_config_arq_regs(hw);
+}
+
+/**
  *  i40e_init_adminq - main initialization routine for Admin Queue
  *  @hw: pointer to the hardware structure
  *
@@ -551,10 +556,11 @@ shutdown_arq_out:
  **/
 i40e_status i40e_init_adminq(struct i40e_hw *hw)
 {
-	i40e_status ret_code;
-	u16 eetrack_lo, eetrack_hi;
 	u16 cfg_ptr, oem_hi, oem_lo;
+	u16 eetrack_lo, eetrack_hi;
+	i40e_status ret_code;
 	int retry = 0;
+
 	/* verify input for valid configuration */
 	if ((hw->aq.num_arq_entries == 0) ||
 	    (hw->aq.num_asq_entries == 0) ||
@@ -563,8 +569,6 @@ i40e_status i40e_init_adminq(struct i40e_hw *hw)
 		ret_code = I40E_ERR_CONFIG;
 		goto init_adminq_exit;
 	}
-
-	/* initialize spin locks */
 	i40e_init_spinlock(&hw->aq.asq_spinlock);
 	i40e_init_spinlock(&hw->aq.arq_spinlock);
 
@@ -625,13 +629,9 @@ i40e_status i40e_init_adminq(struct i40e_hw *hw)
 
 	/* pre-emptive resource lock release */
 	i40e_aq_release_resource(hw, I40E_NVM_RESOURCE_ID, 0, NULL);
-	hw->aq.nvm_release_on_done = false;
+	hw->nvm_release_on_done = false;
 	hw->nvmupd_state = I40E_NVMUPD_STATE_INIT;
 
-	ret_code = i40e_aq_set_hmc_resource_profile(hw,
-						    I40E_HMC_PROFILE_DEFAULT,
-						    0,
-						    NULL);
 	ret_code = I40E_SUCCESS;
 
 	/* success! */
@@ -662,8 +662,6 @@ i40e_status i40e_shutdown_adminq(struct i40e_hw *hw)
 
 	i40e_shutdown_asq(hw);
 	i40e_shutdown_arq(hw);
-
-	/* destroy the spinlocks */
 	i40e_destroy_spinlock(&hw->aq.asq_spinlock);
 	i40e_destroy_spinlock(&hw->aq.arq_spinlock);
 
@@ -689,7 +687,6 @@ u16 i40e_clean_asq(struct i40e_hw *hw)
 
 	desc = I40E_ADMINQ_DESC(*asq, ntc);
 	details = I40E_ADMINQ_DETAILS(*asq, ntc);
-
 	while (rd32(hw, hw->aq.asq.head) != ntc) {
 		i40e_debug(hw, I40E_DEBUG_AQ_MESSAGE,
 			   "ntc %d head %d.\n", ntc, rd32(hw, hw->aq.asq.head));
@@ -722,7 +719,7 @@ u16 i40e_clean_asq(struct i40e_hw *hw)
  *  Returns true if the firmware has processed all descriptors on the
  *  admin send queue. Returns false if there are still requests pending.
  **/
-bool i40e_asq_done(struct i40e_hw *hw)
+static bool i40e_asq_done(struct i40e_hw *hw)
 {
 	/* AQ designers suggest use of head for better
 	 * timing reliability than DD bit
@@ -880,7 +877,6 @@ i40e_status i40e_asq_send_command(struct i40e_hw *hw,
 			 */
 			if (i40e_asq_done(hw))
 				break;
-			/* ugh! delay while spin_lock */
 			usleep_range(1000, 2000);
 			total_delay++;
 		} while (total_delay < hw->aq.asq_cmd_timeout);
@@ -1046,26 +1042,7 @@ i40e_status i40e_clean_arq_element(struct i40e_hw *hw,
 	hw->aq.arq.next_to_clean = ntc;
 	hw->aq.arq.next_to_use = ntu;
 
-	if (i40e_is_nvm_update_op(&e->desc)) {
-		if (hw->aq.nvm_release_on_done) {
-			i40e_release_nvm(hw);
-			hw->aq.nvm_release_on_done = false;
-		}
-
-		switch (hw->nvmupd_state) {
-		case I40E_NVMUPD_STATE_INIT_WAIT:
-			hw->nvmupd_state = I40E_NVMUPD_STATE_INIT;
-			break;
-
-		case I40E_NVMUPD_STATE_WRITE_WAIT:
-			hw->nvmupd_state = I40E_NVMUPD_STATE_WRITING;
-			break;
-
-		default:
-			break;
-		}
-	}
-
+	i40e_nvmupd_check_wait_event(hw, LE16_TO_CPU(e->desc.opcode));
 clean_arq_element_out:
 	/* Set pending if needed, unlock and return */
 	if (pending != NULL)
@@ -1076,16 +1053,3 @@ clean_arq_element_err:
 	return ret_code;
 }
 
-void i40e_resume_aq(struct i40e_hw *hw)
-{
-	/* Registers are reset after PF reset */
-	hw->aq.asq.next_to_use = 0;
-	hw->aq.asq.next_to_clean = 0;
-
-	i40e_config_asq_regs(hw);
-
-	hw->aq.arq.next_to_use = 0;
-	hw->aq.arq.next_to_clean = 0;
-
-	i40e_config_arq_regs(hw);
-}

@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
- * Intel Ethernet Controller XL710 Family Linux Driver
- * Copyright(c) 2013 - 2015 Intel Corporation.
+ * Intel(R) 40-10 Gigabit Ethernet Connection Network Driver
+ * Copyright(c) 2013 - 2016 Intel Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,9 +11,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * The full GNU General Public License is included in this distribution in
  * the file called "COPYING".
@@ -63,9 +60,12 @@ static inline void writeq(__u64 val, volatile void __iomem *addr)
  * actual OS primitives
  */
 
-#undef ASSERT
+#define hw_dbg(h, s, ...) do {				\
+		pr_debug("i40e %02x.%x " s,			\
+			(h)->bus.device, (h)->bus.func,		\
+			##__VA_ARGS__);				\
+} while (0)
 
-#define hw_dbg(hw, S, A...)	do {} while (0)
 
 #define wr32(a, reg, value)	writel((value), ((a)->hw_addr + (reg)))
 #define rd32(a, reg)		readl((a)->hw_addr + (reg))
@@ -81,7 +81,8 @@ struct i40e_dma_mem {
 } __packed;
 
 #define i40e_allocate_dma_mem(h, m, unused, s, a) \
-			i40e_allocate_dma_mem_d(h, m, s, a)
+			i40e_allocate_dma_mem_d(h, m, unused, s, a)
+
 #define i40e_free_dma_mem(h, m) i40e_free_dma_mem_d(h, m)
 
 struct i40e_virt_mem {
@@ -116,10 +117,20 @@ struct i40e_spinlock {
 	struct mutex spinlock;
 };
 
-#define i40e_init_spinlock(_sp) i40e_init_spinlock_d(_sp)
+static inline void i40e_no_action(struct i40e_spinlock *sp)
+{
+	/* nothing */
+}
+
+/* the locks are initialized in _probe and destroyed in _remove
+ * so make sure NOT to implement init/destroy here, as to
+ * avoid the i40e_init_adminq code trying to reinitialize
+ * the persistent lock memory
+ */
+#define i40e_init_spinlock(_sp)    i40e_no_action(_sp)
 #define i40e_acquire_spinlock(_sp) i40e_acquire_spinlock_d(_sp)
 #define i40e_release_spinlock(_sp) i40e_release_spinlock_d(_sp)
-#define i40e_destroy_spinlock(_sp) i40e_destroy_spinlock_d(_sp)
+#define i40e_destroy_spinlock(_sp) i40e_no_action(_sp)
 
 #define I40E_HTONL(a)		htonl(a)
 
@@ -128,6 +139,8 @@ struct i40e_spinlock {
 
 typedef enum i40e_status_code i40e_status;
 #if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
+#ifdef WITH_FCOE
 #define I40E_FCOE
+#endif
 #endif /* CONFIG_FCOE or CONFIG_FCOE_MODULE */
 #endif /* _I40E_OSDEP_H_ */
