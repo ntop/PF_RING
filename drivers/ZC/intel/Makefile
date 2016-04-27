@@ -19,10 +19,8 @@ clean:
 	cd $(I40E)/src; make clean
 	/bin/rm *.deb *.rpm
 
-
 cleanup:
 	sudo rm -rf /var/lib/dkms/*  /lib/modules/`uname -r`/extra/*-zc.ko
-
 
 dkms-deb-virtual:
 	/bin/rm -rf tmp
