@@ -1,0 +1,425 @@
+README for Intel(R) Ethernet Switch Host Interface Driver
+===============================================================================
+
+===============================================================================
+
+April 4, 2016
+
+===============================================================================
+
+Contents
+--------
+
+- Overview
+- Building and Installation
+- Command Line Parameters
+- Additional Features & Configurations
+- Known Issues
+
+
+================================================================================
+
+
+Important Notes
+---------------
+
+Configuring SR-IOV for improved network security
+------------------------------------------------
+
+In a virtualized environment, on Intel(R) Server Adapters that support SR-IOV,
+the virtual function (VF) may be subject to malicious behavior. Software-
+generated layer two frames, like IEEE 802.3x (link flow control), IEEE 802.1Qbb
+(priority based flow-control), and others of this type, are not expected and
+can throttle traffic between the host and the virtual switch, reducing
+performance. To resolve this issue, configure all SR-IOV enabled ports for
+VLAN tagging. This configuration allows unexpected, and potentially malicious,
+frames to be dropped.
+
+
+
+Overview
+--------
+
+This driver supports kernel versions 2.6.32 and newer.
+
+Driver information can be obtained using ethtool, lspci, and iproute2 ip.
+Instructions on updating ethtool can be found in the section Additional
+Configurations later in this document.
+
+
+Intel(R) Ethernet SDI Adapter FM10420-100GbE-QDA2 Notes
+-------------------------------------------------------
+
+The Intel(R) Ethernet SDI Adapter FM10420-100GbE-QDA2 supports the following
+cables:
+Supplier		Part Number
+FCI			10121178-2010LF
+FCI			10121178-4020LF
+FCI			10121178-4030LF
+FCI			10121178-4040LF
+FCI			10121178-4050LF
+
+Note: The Intel(R) Ethernet SDI Adapter FM10420-100GbE-QDA2 is a Gen3 x16 card
+that is electrically bifurcated into two x8 ports. Without a BIOS that supports
+bifurcation, only 1 port is available.
+
+
+================================================================================
+
+
+Building and Installation
+-------------------------
+
+To build a binary RPM* package of this driver, run 'rpmbuild -tb
+fm10k-<x.x.x>.tar.gz', where <x.x.x> is the version number for the driver tar file.
+
+NOTES:
+
+- For the build to work properly, the currently running kernel MUST match
+  the version and configuration of the installed kernel sources. If you have
+  just recompiled the kernel reboot the system before building.
+- RPM functionality has only been tested in Red Hat distributions.
+
+1. Move the base driver tar file to the directory of your choice. For
+   example, use '/home/username/fm10k' or '/usr/local/src/fm10k'.
+
+2. Untar/unzip the archive, where <x.x.x> is the version number for the
+   driver tar file:
+   tar zxf fm10k-<x.x.x>.tar.gz
+
+3. Change to the driver src directory, where <x.x.x> is the version number
+   for the driver tar:
+   cd fm10k-<x.x.x>/src/
+
+4. Compile the driver module:
+   # make install
+   The binary will be installed as:
+   /lib/modules/<KERNEL VERSION>/updates/drivers/net/ethernet/intel/fm10k/fm10k.ko
+
+   The install location listed above is the default location. This may differ
+   for various Linux distributions.
+
+5. Load the module using the modprobe command:
+   modprobe <fm10k> [parameter=port1_value,port2_value]
+
+   Make sure that any older fm10k drivers are removed from the kernel before
+   loading the new module:
+   rmmod fm10k; modprobe fm10k
+
+6. Assign an IP address to the interface by entering the following,
+   where ethX is the interface name that was shown in dmesg after modprobe:
+   
+   ip address add <IP_address>/<netmask bits> dev ethX
+
+7. Verify that the interface works. Enter the following, where IP_address
+   is the IP address for another machine on the same subnet as the interface
+   that is being tested:
+   ping <IP_address>
+
+NOTE:
+   For certain distributions like (but not limited to) RedHat Enterprise
+   Linux 7 and Ubuntu, once the driver is installed the initrd/initramfs
+   file may need to be updated to prevent the OS loading old versions
+   of the fm10k driver. The dracut utility may be used on RedHat
+   distributions:
+	# dracut --force
+   For Ubuntu:
+	# update-initramfs -u
+
+
+================================================================================
+
+
+Command Line Parameters
+-----------------------
+If the driver is built as a module, the following optional parameters are used
+by entering them on the command line with the modprobe command using this
+syntax:
+modprobe fm10k [<option>=<VAL1>]
+
+For example:
+modprobe fm10k max_vfs=7
+
+The default value for each parameter is generally the recommended setting,
+unless otherwise noted.
+
+
+
+RSS
+---
+Valid Range: 0-128
+0 = Assign up to the lesser value of the number of CPUs or the number of queues
+X = Assign X queues, where X is less than or equal to the maximum number of
+queues (128 queues). 
+
+
+max_vfs
+-------
+Valid Range:0-64
+
+NOTE: This parameter is only used on kernel 3.7.x and below. On kernel 3.8.x
+and above, use sysfs to enable VFs. For example:
+#echo $num_vf_enabled > /sys/class/net/$dev/device/sriov_numvfs	//enable VFs
+#echo 0 > /sys/class/net/$dev/device/sriov_numvfs	//disable VFs
+
+The parameters for the driver are referenced by position. Thus, if you have a
+dual port adapter, or more than one adapter in your system, and want N virtual
+functions per port, you must specify a number for each port with each parameter
+separated by a comma. For example:
+  modprobe fm10k max_vfs=4,1
+NOTE: Caution must be used in loading the driver with these parameters.
+Depending on your system configuration, number of slots, etc., it is impossible
+to predict in all cases where the positions would be on the command line.
+This parameter adds support for SR-IOV. It causes the driver to spawn up to
+max_vfs worth of virtual functions.
+NOTE: When SR-IOV mode is enabled, hardware VLAN
+filtering and VLAN tag stripping/insertion will remain enabled. Please remove
+the old VLAN filter before the new VLAN filter is added. For example,
+ip link set eth0 vf 0 vlan 100	// set vlan 100 for VF 0
+ip link set eth0 vf 0 vlan 0	// Delete vlan 100
+ip link set eth0 vf 0 vlan 200	// set a new vlan 200 for VF 0
+
+
+Configuring SR-IOV for improved network security
+------------------------------------------------
+
+In a virtualized environment, on Intel(R) Server Adapters that support SR-IOV,
+the virtual function (VF) may be subject to malicious behavior. Software-
+generated layer two frames, like IEEE 802.3x (link flow control), IEEE 802.1Qbb
+(priority based flow-control), and others of this type, are not expected and
+can throttle traffic between the host and the virtual switch, reducing
+performance. To resolve this issue, configure all SR-IOV enabled ports for
+VLAN tagging. This configuration allows unexpected, and potentially malicious,
+frames to be dropped.
+
+
+Configuring VLAN tagging on SR-IOV enabled adapter ports
+--------------------------------------------------------
+
+To configure VLAN tagging for the ports on an SR-IOV enabled adapter,
+use the following command. The VLAN configuration should be done 
+before the VF driver is loaded or the VM is booted.
+
+$ ip link set dev <PF netdev id> vf <id> vlan <vlan id>
+
+For example, the following instructions will configure PF eth0 and 
+the first VF on VLAN 10.
+$ ip link set dev eth0 vf 0 vlan 10
+.
+
+================================================================================
+
+
+Additional Features and Configurations
+-------------------------------------------
+
+
+Configuring the Driver on Different Distributions
+-------------------------------------------------
+
+Configuring a network driver to load properly when the system is started is
+distribution dependent. Typically, the configuration process involves adding
+an alias line to /etc/modules.conf or /etc/modprobe.conf as well as editing
+other system startup scripts and/or configuration files. Many popular Linux
+distributions ship with tools to make these changes for you. To learn the
+proper way to configure a network device for your system, refer to your
+distribution documentation. If during this process you are asked for the
+driver or module name, the name for the Base Driver is fm10k.
+
+
+Viewing Link Messages
+---------------------
+
+Link messages will not be displayed to the console if the distribution is
+restricting system messages. In order to see network driver link messages on
+your console, set dmesg to eight by entering the following:
+dmesg -n 8
+
+NOTE: This setting is not saved across reboots.
+
+
+Jumbo Frames
+------------
+Jumbo Frames support is enabled by changing the Maximum Transmission Unit
+(MTU) to a value larger than the default value of 1500.
+
+Use the ifconfig command to increase the MTU size. For example, enter the
+following where <x> is the interface number:
+
+   ifconfig eth<x> mtu 9000 up
+
+This setting is not saved across reboots. The setting change can be made
+permanent by adding 'MTU=9000' to the file:
+/etc/sysconfig/network-scripts/ifcfg-eth<x> for RHEL or to the file
+/etc/sysconfig/network/<config_file> for SLES.
+
+NOTES:
+- The maximum MTU setting for Jumbo Frames is 15342. This value coincides
+  with the maximum Jumbo Frames size of 15364 bytes.
+- This driver will attempt to use multiple page sized buffers to receive
+  each jumbo packet. This should help to avoid buffer starvation issues
+  when allocating receive packets.
+
+
+ethtool
+-------
+The driver utilizes the ethtool interface for driver configuration and
+diagnostics, as well as displaying statistical information. The latest
+ethtool version is required for this functionality. Download it at
+http://ftp.kernel.org/pub/software/network/ethtool/
+
+Supported ethtool Commands and Options
+--------------------------------------
+-n --show-nfc
+  Retrieves the receive network flow classification configurations.
+
+rx-flow-hash tcp4|udp4|ah4|esp4|sctp4|tcp6|udp6|ah6|esp6|sctp6
+  Retrieves the hash options for the specified network traffic type.
+
+-N --config-nfc
+  Configures the receive network flow classification.
+
+rx-flow-hash tcp4|udp4|ah4|esp4|sctp4|tcp6|udp6|ah6|esp6|sctp6 m|v|t|s|d|f|n|r...
+  Configures the hash options for the specified network traffic type.
+
+  udp4 UDP over IPv4
+  udp6 UDP over IPv6
+
+  f Hash on bytes 0 and 1 of the Layer 4 header of the rx packet.
+  n Hash on bytes 2 and 3 of the Layer 4 header of the rx packet.
+
+
+NAPI
+----
+NAPI (Rx polling mode) is supported in the fm10k driver.
+For more information on NAPI, see
+https://www.linuxfoundation.org/collaborate/workgroups/networking/napi
+
+
+Flow Control
+------------
+
+The Intel(R) Ethernet Switch Host Interface Driver does not support Flow
+Control. It will not send pause frames. This may result in dropped frames.
+
+
+VXLAN Overlay HW Offloading
+---------------------------
+
+Virtual Extensible LAN (VXLAN) allows you to extend an L2 network over an L3
+network, which may be useful in a virtualized or cloud environment. Some Intel(R)
+Ethernet Network devices perform VXLAN processing, offloading it from the
+operating system. This reduces CPU utilization.
+ 
+VXLAN offloading is controlled by the tx and rx checksum offload options
+provided by ethtool. That is, if tx checksum offload is enabled, and the adapter
+has the capability, VXLAN offloading is also enabled. If rx checksum offload is
+enabled, then the VXLAN packets rx checksum will be offloaded, unless the module
+parameter vxlan_rx=0,0 was used to specifically disable the VXLAN rx offload.
+ 
+VXLAN Overlay HW Offloading is enabled by default. To view and configure VXLAN
+on a VXLAN-overlay offload enabled device, use the following
+command:
+
+  # ethtool -k ethX
+   (This command displays the offloads and their current state.)
+
+For more information on configuring your network for overlay HW offloading
+support, refer to the Intel Technical Brief, "Creating Overlay Networks
+Using Intel Ethernet Converged Network Adapters" (Intel Networking Division,
+August 2013):
+
+http://www.intel.com/content/dam/www/public/us/en/documents/technology-briefs/
+overlay-networks-using-converged-network-adapters-brief.pdf
+
+
+================================================================================
+
+
+Known Issues/Troubleshooting
+----------------------------
+
+
+Packets dropped when issuing ping with very large payload
+---------------------------------------------------------
+
+If you issue a ping with a very large payload, you may see packets dropped.
+Very large frames can fragment into many descriptors with a long enough delay
+that the CPU will go to sleep. If the CPU is in a deep C-state, it may not
+wake fast enough to copy those packets out of the internal descriptor cache
+and into host memory. If some descriptors are dropped, then the whole
+fragmented frame will be discarded because the ping is not able to located
+all required fragments.
+
+To fix this, ensure the CPU does not enter a deep C-state by using one of
+the following methods:
+  - Change your BIOS to disable the lowest C-states
+  - Change the CPU governor
+  - Use /dev/cpu_dma_latency (see the Linux Kernel’s Documentation folder)
+
+
+Driver cannot bind to PF when VM assigned to PF is started
+----------------------------------------------------------
+
+In a virtualization setup, if the fm10k driver is not installed on the host
+OS and a VM that has been assigned one of the PCI PF host interface devices
+is started, the fm10k driver can no longer bind to the PCI PF host interface
+devices on the host OS.
+
+To correct this, manually unbind the bus driver from the PF host interface
+device (or stop the VM) and then manually bind the fm10k driver to the PF
+host interface device. Alternatively, you can add "fm10k" to the device's
+driver_override entry in the /sys filesystem to prevent the bus driver from
+binding to the PF host interface device in the first place.
+
+
+================================================================================
+
+
+Support
+-------
+For general information, go to the Intel support website at:
+www.intel.com/support/
+
+or the Intel Wired Networking project hosted by Sourceforge at:
+http://sourceforge.net/projects/e1000
+If an issue is identified with the released source code on a supported
+kernel with a supported adapter, email the specific information related to the
+issue to e1000-devel@lists.sf.net.
+
+
+================================================================================
+
+
+License
+-------
+
+This program is free software; you can redistribute it and/or modify it under
+the terms and conditions of the GNU General Public License, version 2, as
+published by the Free Software Foundation.
+
+This program is distributed in the hope it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
+St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+The full GNU General Public License is included in this distribution in the
+file called "COPYING".
+
+Copyright(c) 2015-2016 Intel Corporation.
+================================================================================
+
+
+
+Trademarks
+----------
+
+Intel, Itanium, and Pentium are trademarks or registered trademarks of Intel
+Corporation or its subsidiaries in the United States and other countries.
+
+* Other names and brands may be claimed as the property of others.
+
+
