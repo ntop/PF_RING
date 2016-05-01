@@ -1644,12 +1644,15 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct fm10k_ring  *tx_ring = (struct fm10k_ring *) tx_data;
 	struct fm10k_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
 	struct fm10k_intfc *interface;
+	struct fm10k_hw *hw;
+	u32 rxqctl = FM10K_RXQCTL_ENABLE | FM10K_RXQCTL_PF;
 	u8 enable_debug = 0;
 	int i;
   
 	if (xx_ring == NULL) return; /* safety check*/
 
 	interface = netdev_priv(xx_ring->netdev);
+	hw = &interface->hw;
 
 	if(device_in_use) { /* free all memory */
 
@@ -1657,9 +1660,17 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			try_module_get(THIS_MODULE); /* ++ */
 
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
+
+			/* disable queue */
+			fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), 0);
+			fm10k_write_flush(hw);
+
 			fm10k_clean_rx_ring(rx_ring);
 			fm10k_write_reg(&interface->hw, FM10K_RDH(rx_ring->reg_idx), 0);
 			fm10k_write_reg(&interface->hw, FM10K_RDT(rx_ring->reg_idx), 0);
+
+			/* enable queue */
+			fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), rxqctl);
 
 			fm10k_irq_disable(rx_ring->q_vector);
 
@@ -1673,18 +1684,22 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	} else { /* restore card memory */
 
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-			//TODO disable receives while setting up the descriptors
    
+			/* disable queue */
+			fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), 0);
+			fm10k_write_flush(hw);
+
 			for (i=0; i<rx_ring->count; i++) {
 				union fm10k_rx_desc *rx_desc = FM10K_RX_DESC(rx_ring, i);
 				rx_desc->q.pkt_addr = 0;
 			}
 
+			/* enable queue */
+			fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), rxqctl);
+
 			fm10k_configure_rx_ring(interface, rx_ring);
 			rmb();
     
-			//TODO enable all receives
-
 			fm10k_irq_disable(rx_ring->q_vector);
 				
 			//TODO force drop_en on current queue in case queue reset clean the bit
