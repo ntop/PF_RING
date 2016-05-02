@@ -1582,18 +1582,6 @@ static void fm10k_qv_enable(struct fm10k_q_vector *q_vector)
 	writel(itr, q_vector->itr);
 }
 
-#ifdef HAVE_PF_RING  
-
-void fm10k_irq_enable(struct fm10k_q_vector *q_vector) {
-	fm10k_qv_enable(q_vector);
-}
-
-void fm10k_irq_disable(struct fm10k_q_vector *q_vector) {
-	//TODO
-}
-
-#endif
-
 static int fm10k_poll(struct napi_struct *napi, int budget)
 {
 	struct fm10k_q_vector *q_vector =

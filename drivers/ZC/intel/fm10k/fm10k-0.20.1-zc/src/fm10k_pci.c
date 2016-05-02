@@ -1583,9 +1583,15 @@ err_out:
 #ifdef HAVE_PF_RING
 
 void fm10k_clean_rx_ring(struct fm10k_ring *rx_ring);
-void fm10k_irq_enable(struct fm10k_q_vector *q_vector);
-void fm10k_irq_disable(struct fm10k_q_vector *q_vector);
 int ring_is_not_empty(struct fm10k_ring *rx_ring);
+
+void fm10k_irq_enable(struct fm10k_q_vector *q_vector) {
+	writel(FM10K_ITR_ENABLE, q_vector->itr);
+}
+
+void fm10k_irq_disable(struct fm10k_q_vector *q_vector) {
+	writel(FM10K_ITR_MASK_SET, q_vector->itr);
+}
 
 int wait_packet_function_ptr(void *data, int mode)
 {
@@ -1702,8 +1708,8 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
     
 			fm10k_irq_disable(rx_ring->q_vector);
 				
-			//TODO force drop_en on current queue in case queue reset clean the bit
-			//fm10k_update_rx_drop_en(interface);
+			/* force drop_en on current queue in case queue reset clean the bit */
+			fm10k_update_rx_drop_en(interface);
 		}
 
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
@@ -1775,7 +1781,7 @@ void fm10k_up(struct fm10k_intfc *interface)
 	if(hook != NULL) {
 		int i;
 
-		unsigned int buf_len = FM10K_RX_BUFSZ; /* TODO check the correct length */
+		unsigned int buf_len = FM10K_RX_BUFSZ; /* TODO check the correct length (what about jumbo?) */
 
 		for (i = 0; i < interface->num_rx_queues; i++) {
 			struct fm10k_ring *rx_ring = interface->rx_ring[i];
