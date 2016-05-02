@@ -1059,6 +1059,9 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
       case intel_i40e:
         dev_family = "Intel i40e";
         break;
+      case intel_fm10k:
+        dev_family = "Intel fm10k";
+        break;
       }
     } else {
       switch(dev_ptr->device_type) {
