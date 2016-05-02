@@ -1691,17 +1691,17 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
    
-			/* disable queue */
-			fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), 0);
-			fm10k_write_flush(hw);
-
-			for (i=0; i<rx_ring->count; i++) {
-				union fm10k_rx_desc *rx_desc = FM10K_RX_DESC(rx_ring, i);
-				rx_desc->q.pkt_addr = 0;
-			}
-
-			/* enable queue */
-			fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), rxqctl);
+			///* disable queue */
+			//fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), 0);
+			//fm10k_write_flush(hw);
+			//
+			//for (i=0; i<rx_ring->count; i++) {
+			//	union fm10k_rx_desc *rx_desc = FM10K_RX_DESC(rx_ring, i);
+			//	rx_desc->q.pkt_addr = 0;
+			//}
+			//
+			///* enable queue */
+			//fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), rxqctl);
 
 			fm10k_configure_rx_ring(interface, rx_ring);
 			rmb();
@@ -1716,10 +1716,11 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			/* Restore TX */
 			tx_ring->next_to_clean = fm10k_read_reg(&interface->hw, FM10K_TDT(tx_ring->reg_idx));
        
-			for(i=0; i<tx_ring->count; i++) {
+			for (i=0; i < tx_ring->count; i++) {
 				struct fm10k_tx_buffer *tx_buffer = &tx_ring->tx_buffer[i];
-				tx_buffer->next_to_watch = NULL;
-				tx_buffer->skb = NULL;
+				fm10k_unmap_and_free_tx_resource(tx_ring, tx_buffer);
+				//tx_buffer->next_to_watch = NULL;
+				//tx_buffer->skb = NULL;
 			}
 
 			fm10k_configure_tx_ring(interface, tx_ring);
