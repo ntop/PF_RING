@@ -6063,6 +6063,13 @@ iface_ethtool_get_ts_info(pcap_t *handle, char *ebuf)
 	int num_ts_types;
 	int i, j;
 
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL && handle->ring->zc_device) {
+		iface_set_default_ts_types(handle);
+		return 0;
+	}
+#endif
+
 	/*
 	 * This doesn't apply to the "any" device; you have to ask
 	 * specific devices for their capabilities, so just default
