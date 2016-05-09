@@ -34,6 +34,11 @@
 #define QUEUEID_TO_IFINDEX(i) (i >> 16)     /**< pfring_zc_get_queue_id() return val: convert queue id to device index, if QUEUE_IS_DEVICE(id) */
 #define IFINDEX_TO_QUEUEID(i) (i << 16)     /**< pfring_zc_get_queue_id() return val: convert back device index to queue id, if QUEUE_IS_DEVICE(id) */
 
+#define PF_RING_ZC_PKT_FLAGS_GOOD_IP_CS (1 << 0) /**< pfring_zc_pkt_buff.flags: valid IP checksum detected */
+#define PF_RING_ZC_PKT_FLAGS_BAD_IP_CS  (1 << 1) /**< pfring_zc_pkt_buff.flags: bad IP checksum detected */
+#define PF_RING_ZC_PKT_FLAGS_GOOD_L4_CS (1 << 2) /**< pfring_zc_pkt_buff.flags: valid TCP/UDP checksum detected */
+#define PF_RING_ZC_PKT_FLAGS_BAD_L4_CS  (1 << 3) /**< pfring_zc_pkt_buff.flags: bad TCP/UDP checksum detected (note: UDP checksum 0 is detected as bad on some cards!) */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -73,7 +78,8 @@ typedef struct {
  * Buffer handle. 
  */
 typedef struct {
-  u_int32_t len;         /**< Packet length. */
+  u_int16_t len;         /**< Packet length. */
+  u_int16_t flags;       /**< Packet flags. */
   u_int32_t hash;        /**< Packet hash. */
   pfring_zc_timespec ts; /**< Packet timestamp (nsec) */
   u_char user[];         /**< Start of user metadata, if any. */
