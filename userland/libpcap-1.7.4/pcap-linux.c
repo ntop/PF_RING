@@ -6742,10 +6742,9 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 	 */
 	if (setsockopt(handle->fd, 
 #ifdef HAVE_PF_RING
-		       0,
-#else
-		       SOL_SOCKET, 
+		       (handle->ring != NULL) ? 0 :
 #endif
+		       SOL_SOCKET, 
 		       SO_ATTACH_FILTER,
 		       &total_fcode, sizeof(total_fcode)) == 0) {
 		char drain[1];
@@ -6806,10 +6805,9 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 	 */
 	ret = setsockopt(handle->fd,
 #ifdef HAVE_PF_RING
-			 0,
-#else
+		       (handle->ring != NULL) ? 0 :
+#endif
 			 SOL_SOCKET,
-#endif 
 			 SO_ATTACH_FILTER,
 			 fcode, sizeof(*fcode));
 	if (ret == -1 && total_filter_on) {
