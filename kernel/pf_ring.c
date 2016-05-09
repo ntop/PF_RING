@@ -3953,13 +3953,6 @@ int check_wildcard_rules(struct sk_buff *skb,
 
 /* ********************************** */
 
-/*
-  This code has been partially copied from af_packet.c
-
-  Return code
-  1: pass the filter
-  0: this packet has to be dropped
- */
 int bpf_filter_skb(struct sk_buff *skb,
 		   struct pf_ring_socket *pfr,
 		   int displ) 
@@ -3985,10 +3978,10 @@ int bpf_filter_skb(struct sk_buff *skb,
     res = sk_run_filter(skb, filter->insns, filter->len);
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
     res = sk_run_filter(skb, filter->insns);
-#elif(LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0))
-    res = (sk_filter(pfr->sk, skb) == 0) ? 1 : 0;
-#else
+#elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
     res = SK_RUN_FILTER(filter, skb);
+#else
+    res = (sk_filter(pfr->sk, skb) == 0) ? 1 : 0;
 #endif
 
   rcu_read_unlock();
@@ -4005,7 +3998,7 @@ int bpf_filter_skb(struct sk_buff *skb,
 	   skb->cloned);
   }
 
-  return res;
+  return res; /* 0 to drop packet */
 }
 
 /* ********************************** */
