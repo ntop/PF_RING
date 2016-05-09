@@ -43,7 +43,7 @@ AR = @AR@
 MKDEP = @MKDEP@
 PROG = tcpdump
 CCOPT = @V_CCOPT@
-INCLS = -I. @V_INCLS@ -I../libpcap
+INCLS = -I. @V_INCLS@
 DEFS = @DEFS@ @CPPFLAGS@ @V_DEFS@ -DHAVE_PF_RING
 
 # Standard CFLAGS
