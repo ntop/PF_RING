@@ -194,17 +194,15 @@ char* _intoa(unsigned int addr, char* buf, u_short bufLen) {
 
 /* ************************************ */
 
-char* intoa(unsigned int addr) {
-  static char buf[sizeof "ff:ff:ff:ff:ff:ff:255.255.255.255"];
+ static char buf[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"];
 
+char* intoa(unsigned int addr) {
   return(_intoa(addr, buf, sizeof(buf)));
 }
 
 /* ************************************ */
 
 inline char* in6toa(struct in6_addr addr6) {
-  static char buf[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"];
-
   snprintf(buf, sizeof(buf), 
 	   "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 	   addr6.s6_addr[0], addr6.s6_addr[1], addr6.s6_addr[2], 
