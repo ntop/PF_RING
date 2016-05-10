@@ -1801,7 +1801,7 @@ void fm10k_up(struct fm10k_intfc *interface)
 			tx_info.packet_memory_num_slots     = tx_ring->count;
 			tx_info.packet_memory_slot_len      = buf_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
-	      
+
 			hook->zc_dev_handler(add_device_mapping,
 			  zc_driver,
 			  &rx_info,
@@ -1810,7 +1810,7 @@ void fm10k_up(struct fm10k_intfc *interface)
 			  rx_ring->desc,
 			  0,
 			  tx_ring->desc,
-			  (void*)rx_ring->netdev->mem_start,
+			  (void *) rx_ring->netdev->mem_start,
 			  rx_ring->netdev->mem_end - rx_ring->netdev->mem_start,
 			  rx_ring->queue_index,
 			  rx_ring->netdev,
@@ -1819,8 +1819,8 @@ void fm10k_up(struct fm10k_intfc *interface)
 			  rx_ring->netdev->dev_addr,
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
-			  (void*)rx_ring,
-			  (void*)tx_ring,
+			  (void *) rx_ring,
+			  (void *) tx_ring,
 			  wait_packet_function_ptr,
 			  notify_function_ptr
 			);
@@ -2217,7 +2217,7 @@ static int fm10k_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 #ifdef HAVE_PF_RING
 	netdev->mem_start = pci_resource_start(pdev, 0);
-	netdev->mem_end = netdev->mem_start + pci_resource_len(pdev, 0);
+	netdev->mem_end = netdev->mem_start + FM10K_UC_ADDR_SIZE;
 #endif
 
 	err = fm10k_sw_init(interface, ent);

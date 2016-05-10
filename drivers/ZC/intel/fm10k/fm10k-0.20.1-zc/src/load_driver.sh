@@ -24,6 +24,7 @@ fi
 insmod ../../../../../../kernel/pf_ring.ko
 
 # Required by fm10k
+modprobe uio
 #modprobe ptp
 #modprobe vxlan
 #modprobe configfs
