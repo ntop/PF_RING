@@ -14,7 +14,7 @@ LIBPCAP    = ${PCAPDIR}/libpcap.a
 # Search directories
 #
 PFRING_KERNEL=../../kernel
-INCLUDE    = -I${PFRINGDIR} -I${PFRING_KERNEL} `../lib/pfring_config --include`
+INCLUDE    = -I${PFRINGDIR} -I${PFRING_KERNEL} -I${PCAPDIR} `../lib/pfring_config --include`
 
 #
 # User and System libraries
