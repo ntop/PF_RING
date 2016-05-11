@@ -46,10 +46,10 @@ for IF in $INTERFACES ; do
 		ethtool -L $IF combined 1
 
 		# Max number of RX slots
-		ethtool -G $IF rx 4096
+		ethtool -G $IF rx 16384
 
 		# Max number of TX slots
-		ethtool -G $IF tx 4096
+		ethtool -G $IF tx 16384
 
 		# Disabling offloads
 		ethtool -K $IF sg off tso off gso off gro off > /dev/null 2>&1
