@@ -36,7 +36,7 @@
 #include <sched.h>
 #include <stdio.h>
 #include <ctype.h>
-
+#include <pcap.h>
 #include "pfring.h"
 #include "pfring_zc.h"
 
@@ -70,7 +70,8 @@ u_int8_t use_pkt_burst_api = 0;
 #endif
 u_int8_t n2disk_producer = 0;
 u_int32_t n2disk_threads;
-
+pcap_t *pt = NULL;
+u_int max_pkt_len = 60;
 u_char stdin_packet[9000];
 int stdin_packet_len = 0;
 
@@ -260,8 +261,8 @@ int read_packet_hex(u_char *buf, int buf_len) {
     if (d < 0) break;
     c = (u_char) d;
     if ((c >= '0' && c <= '9') 
-     || (c >= 'a' && c <= 'f')
-     || (c >= 'A' && c <= 'F')) {
+	|| (c >= 'a' && c <= 'f')
+	|| (c >= 'A' && c <= 'F')) {
       s[i&0x1] = c;
       if (i&0x1) {
         bytes = (i+1)/2;
@@ -317,7 +318,7 @@ void print_stats() {
 	     "Actual Stats: %s pps - %s Gbps",
 	     pfring_format_numbers(((double)diff/(double)(deltaMillisec/1000)),  buf1, sizeof(buf1), 1),
 	     pfring_format_numbers(((double)bytesDiff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1));
-     fprintf(stderr, "%s\n", buf);
+    fprintf(stderr, "%s\n", buf);
   }
 
   fprintf(stderr, "=========================\n\n");
@@ -342,16 +343,17 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zsend - (C) 2014 ntop.org\n");
+  printf("zsend - (C) 2014-16 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A traffic generator able to replay synthetic udp packets or hex from standard input.\n"); 
   printf("Usage:    zsend -i <device> -c <cluster id>\n"
 	 "                [-h] [-g <core id>] [-p <pps>] [-l <len>] [-n <num>]\n"
 	 "                [-b <num>] [-N <num>] [-S <core id>] [-P <core id>]\n"
-	 "                [-z] [-a] [-Q <sock>]\n\n");
+	 "                [-z] [-a] [-Q <sock>] [-f <.pcap file>]\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name (optional: do not specify a device to create a cluster with a sw queue)\n");
   printf("-c <cluster id> Cluster id\n");
+  printf("-f <.pcap file> Send packets as read from a pcap file\n");
   printf("-g <core id>    Bind this app to a core\n");
   printf("-p <pps>        Rate (packets/s)\n");
   printf("-l <len>        Packet len (bytes)\n");
@@ -404,94 +406,132 @@ void *send_traffic(void *user) {
 #ifdef BURST_API  
   /****** Burst API ******/
   if (use_pkt_burst_api) {
-  while (likely(!do_shutdown && (!num_to_send || numPkts < num_to_send))) {
+    while (likely(!do_shutdown && (!num_to_send || numPkts < num_to_send))) {
 
-    if (!num_queue_buffers || numPkts < num_queue_buffers + NBUFF || num_ips > 1) { /* forge all buffers 1 time */
-      for (i = 0; i < BURSTLEN; i++) {
-        buffers[buffer_id + i]->len = packet_len;
-        if (stdin_packet_len > 0)
-          memcpy(pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq), stdin_packet, stdin_packet_len);
-        else
-          forge_udp_packet(pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq), numPkts + i);
+      if (!num_queue_buffers || numPkts < num_queue_buffers + NBUFF || num_ips > 1) { /* forge all buffers 1 time */
+	for (i = 0; i < BURSTLEN; i++) {
+	  int rc = -1;
+	    
+	  if(pt != NULL) {
+	    u_char *pkt;
+	    struct pcap_pkthdr *h;
+
+	    if(numPkts > NBUFF)
+	      rc = 0; /* We have forged enough packets */
+	    else if((rc = pcap_next_ex(pt, &h, (const u_char **) &pkt)) > 0) {
+	      u_char *buffer = pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq);
+
+	      if(h->caplen > max_pkt_len) h->caplen = max_pkt_len;
+	      buffers[buffer_id + i]->len = max_pkt_len;
+	      memcpy(buffer, pkt, h->caplen);
+	    }
+	  }
+
+	  if(rc < 0) {
+	    buffers[buffer_id + i]->len = packet_len;
+
+	    if (stdin_packet_len > 0)
+	      memcpy(pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq), stdin_packet, stdin_packet_len);
+	    else
+	      forge_udp_packet(pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq), numPkts + i);
+	  }
+	}
       }
-    }
 
-    /* TODO send unsent packets when a burst is partially sent */
-    while (unlikely((sent_packets = pfring_zc_send_pkt_burst(zq, &buffers[buffer_id], BURSTLEN, flush_packet)) <= 0)) {
-      if (unlikely(do_shutdown)) break;
-      if (!active) usleep(1);
-    }
-
-    numPkts += sent_packets;
-    numBytes += ((packet_len + 24 /* 8 Preamble + 4 CRC + 12 IFG */ ) * sent_packets);
-
-    buffer_id += BURSTLEN;
-    buffer_id &= NBUFFMASK;
-
-    if(pps > 0) {
-      u_int8_t synced = 0;
-      if (use_pulse_time) {
-        while(*pulse_timestamp_ns - ts_ns_start < numPkts * ns_delta && !do_shutdown)
-          if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
-      } else {
-        while((getticks() - tick_start) < (numPkts * tick_delta))
-          if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
+      /* TODO send unsent packets when a burst is partially sent */
+      while (unlikely((sent_packets = pfring_zc_send_pkt_burst(zq, &buffers[buffer_id], BURSTLEN, flush_packet)) <= 0)) {
+	if (unlikely(do_shutdown)) break;
+	if (!active) usleep(1);
       }
-    }
 
-  } 
+      numPkts += sent_packets;
+      numBytes += ((packet_len + 24 /* 8 Preamble + 4 CRC + 12 IFG */ ) * sent_packets);
+
+      buffer_id += BURSTLEN;
+      buffer_id &= NBUFFMASK;
+
+      if(pps > 0) {
+	u_int8_t synced = 0;
+	if (use_pulse_time) {
+	  while(*pulse_timestamp_ns - ts_ns_start < numPkts * ns_delta && !do_shutdown)
+	    if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
+	} else {
+	  while((getticks() - tick_start) < (numPkts * tick_delta))
+	    if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
+	}
+      }
+
+    } 
 
   } else {
 #endif
 
-  /****** Packet API ******/
-  while (likely(!do_shutdown && (!num_to_send || numPkts < num_to_send))) {
+    /****** Packet API ******/
+    while (likely(!do_shutdown && (!num_to_send || numPkts < num_to_send))) {
+      int rc = -1;
+	    
+      if(pt != NULL) {
+	u_char *pkt;
+	struct pcap_pkthdr *h;
 
-    buffers[buffer_id]->len = packet_len;
+	if(numPkts > NBUFF)
+	  rc = 0; /* We have forged enough packets */
+	else if((rc = pcap_next_ex(pt, &h, (const u_char **) &pkt)) > 0) {
+	  u_char *buffer = pfring_zc_pkt_buff_data(buffers[buffer_id], zq);
+
+	  if(h->caplen > max_pkt_len) h->caplen = max_pkt_len;
+	  buffers[buffer_id]->len = h->caplen;
+	  memcpy(buffer, pkt, h->caplen);
+	} 
+      }
+
+      if(rc < 0) {
+	buffers[buffer_id]->len = packet_len;
 
 #if 1
-    if (!num_queue_buffers || numPkts < num_queue_buffers + NBUFF || num_ips > 1) { /* forge all buffers 1 time */
-      if (stdin_packet_len > 0)
-        memcpy(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), stdin_packet, stdin_packet_len);
-      else
-        forge_udp_packet(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), numPkts);
-    }
+	if (!num_queue_buffers || numPkts < num_queue_buffers + NBUFF || num_ips > 1) { /* forge all buffers 1 time */
+	  if (stdin_packet_len > 0)
+	    memcpy(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), stdin_packet, stdin_packet_len);
+	  else
+	    forge_udp_packet(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), numPkts);
+	}
 #else
-    {
-      u_char *pkt_data = pfring_zc_pkt_buff_data(buffers[buffer_id], zq);
-      int k;
-      u_int8_t j = numPkts;
-      for(k = 0; k < buffers[buffer_id]->len; k++)
-        pkt_data[k] = j++;
-      pkt_data[k-1] = cluster_id;
-    }
+	{
+	  u_char *pkt_data = pfring_zc_pkt_buff_data(buffers[buffer_id], zq);
+	  int k;
+	  u_int8_t j = numPkts;
+	  for(k = 0; k < buffers[buffer_id]->len; k++)
+	    pkt_data[k] = j++;
+	  pkt_data[k-1] = cluster_id;
+	}
 #endif
+      }
 
-    if (append_timestamp)
-      buffers[buffer_id]->len = append_packet_ts(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), buffers[buffer_id]->len);
+      if (append_timestamp)
+	buffers[buffer_id]->len = append_packet_ts(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), buffers[buffer_id]->len);
 
-    while (unlikely((sent_bytes = pfring_zc_send_pkt(zq, &buffers[buffer_id], flush_packet)) < 0)) {
-      if (unlikely(do_shutdown)) break;
-      if (!active) usleep(1);
-    }
+      while (unlikely((sent_bytes = pfring_zc_send_pkt(zq, &buffers[buffer_id], flush_packet)) < 0)) {
+	if (unlikely(do_shutdown)) break;
+	if (!active) usleep(1);
+      }
 
-    numPkts++;
-    numBytes += sent_bytes + 24; /* 8 Preamble + 4 CRC + 12 IFG */
+      numPkts++;
+      numBytes += sent_bytes + 24; /* 8 Preamble + 4 CRC + 12 IFG */
 
-    buffer_id++;
-    buffer_id &= NBUFFMASK;
+      buffer_id++;
+      buffer_id &= NBUFFMASK;
 
-    if(pps > 0) {
-      u_int8_t synced = 0;
-      if (use_pulse_time) {
-        while(*pulse_timestamp_ns - ts_ns_start < numPkts * ns_delta && !do_shutdown)
-          if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
-      } else {
-        while((getticks() - tick_start) < (numPkts * tick_delta))
-          if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
+      if(pps > 0) {
+	u_int8_t synced = 0;
+	if (use_pulse_time) {
+	  while(*pulse_timestamp_ns - ts_ns_start < numPkts * ns_delta && !do_shutdown)
+	    if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
+	} else {
+	  while((getticks() - tick_start) < (numPkts * tick_delta))
+	    if (!synced) pfring_zc_sync_queue(zq, tx_only), synced = 1;
+	}
       }
     }
-  }
 
 #ifdef BURST_API  
   }
@@ -511,10 +551,11 @@ int main(int argc, char* argv[]) {
   pthread_t time_thread;
   char *vm_sock = NULL;
   int i, rc, ipc_q_attach = 0;
+  char ebuf[256];
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ab:c:g:hi:n:p:l:zN:S:P:Q:")) != '?') {
+  while((c = getopt(argc,argv,"ab:c:f:g:hi:n:p:l:zN:S:P:Q:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -532,6 +573,12 @@ int main(int argc, char* argv[]) {
       break;
     case 'i':
       device = strdup(optarg);
+      break;
+    case 'f':
+      if((pt = pcap_open_offline(optarg, ebuf)) != NULL)
+	printf("Reading packets from pcap file %s\n", optarg);
+      else
+	printf("WARNING: unable to read packets from pcap file %s\n", optarg);
       break;
     case 'l':
       packet_len = atoi(optarg);
@@ -573,6 +620,9 @@ int main(int argc, char* argv[]) {
   if (n2disk_producer) 
     device = NULL;
 
+  if(pt)
+    append_timestamp = 0;
+
   /* checking if the interface is a queue allocated by an external cluster (ipc) */
   if (device != NULL && is_a_queue(device, &cluster_id, &queue_id)) 
     ipc_q_attach = 1;
@@ -592,20 +642,18 @@ int main(int argc, char* argv[]) {
   }
  
   if (!ipc_q_attach) {
-
     if (device != NULL)
       num_queue_buffers = MAX_CARD_SLOTS;
     else
       num_queue_buffers = QUEUE_LEN;
 
-    zc = pfring_zc_create_cluster(
-      cluster_id, 
-      max_packet_len(device),
-      metadata_len, 
-      num_queue_buffers + NBUFF + num_consumer_buffers, 
-      pfring_zc_numa_get_cpu_node(bind_core),
-      NULL /* auto hugetlb mountpoint */ 
-    );
+    zc = pfring_zc_create_cluster(cluster_id, 
+				  max_pkt_len = max_packet_len(device),
+				  metadata_len, 
+				  num_queue_buffers + NBUFF + num_consumer_buffers, 
+				  pfring_zc_numa_get_cpu_node(bind_core),
+				  NULL /* auto hugetlb mountpoint */ 
+				  );
 
     if(zc == NULL) {
       fprintf(stderr, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",
@@ -662,7 +710,6 @@ int main(int argc, char* argv[]) {
 
         fprintf(stderr, "Run n2disk with: --cluster-ipc-attach --cluster-id %d --cluster-ipc-queues %s --cluster-ipc-pool 0\n", cluster_id, queues_list);
       }
-
     }
 
     if (enable_vm_support) {
@@ -746,4 +793,3 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
-
