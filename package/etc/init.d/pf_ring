@@ -268,6 +268,7 @@ load_driver() {
 
 load_dna_zc() {
 	# load dependencies
+	/sbin/modprobe uio
 	/sbin/modprobe ptp
 	/sbin/modprobe dca
 	/sbin/modprobe configfs
