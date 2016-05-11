@@ -64,7 +64,7 @@ char **in_devices = NULL;
 u_int32_t num_out_devices = 0;
 char **out_devices = NULL;
 
-int cluster_id = -1;
+int cluster_id = DEFAULT_CLUSTER_ID;
 int metadata_len = 0;
 int bind_worker_core = -1;
 struct timeval start_time;

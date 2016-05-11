@@ -246,7 +246,7 @@ void *consumer_thread(void *user) {
 int main(int argc, char* argv[]) {
   char *device = NULL, *dev, c;
   long i;
-  int cluster_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID;
 #ifdef USE_QUEUE
   pthread_t thread;
 #endif

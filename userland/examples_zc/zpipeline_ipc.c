@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
   char *in_pair = NULL, *out_pair = NULL;
   char *vm_sockets = NULL, *vm_sock; 
   long i;
-  int cluster_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID;
   int rc;
 
   start_time.tv_sec = 0;

@@ -281,7 +281,7 @@ void *packet_consumer_thread(void *_id) {
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
   long i;
-  int cluster_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID;
   pthread_t my_thread, time_thread;
   int wait_for_packet = 1, time_pulse = 0;
   int pulse_timestamp_precision_nsec = PULSE_TS_PRECISION_NSEC;

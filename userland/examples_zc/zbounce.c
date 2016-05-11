@@ -250,7 +250,7 @@ int init_direction(struct dir_info *i, char *in_dev, char *out_dev) {
 int main(int argc, char* argv[]) {
   char *device1 = NULL, *device2 = NULL;
   char *bind_mask = NULL, c;
-  int cluster_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID;
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 
   dir[0].bind_core = dir[1].bind_core = -1;

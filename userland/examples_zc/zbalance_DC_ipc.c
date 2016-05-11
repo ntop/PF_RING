@@ -75,7 +75,7 @@ u_int32_t num_threads = 0;
 u_int32_t num_thread_devices[MAX_NUM_THREADS] = { 0 };
 char **thread_devices[MAX_NUM_THREADS] = { NULL };
 
-int cluster_id = -1;
+int cluster_id = DEFAULT_CLUSTER_ID;
 int metadata_len = 0;
 
 int bind_worker_core = -1;

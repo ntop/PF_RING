@@ -30,6 +30,8 @@
 
 #define MAX_NUM_OPTIONS             64
 
+#define DEFAULT_CLUSTER_ID          99
+
 /* *************************************** */
 
 int bind2node(int core_id) {

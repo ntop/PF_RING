@@ -235,7 +235,7 @@ int32_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
 int main(int argc, char* argv[]) {
   char *device = NULL, *dev, c;
   long i;
-  int cluster_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID;
   char *bind_mask = NULL;
   pthread_t *threads;
   char *id;

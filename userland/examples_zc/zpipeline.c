@@ -202,7 +202,7 @@ void *pipeline_stage_thread(void* _id) {
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
   long i;
-  int cluster_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID;
   char *bind_mask = NULL;
   pthread_t *threads;
   char *id;

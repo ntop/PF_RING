@@ -262,7 +262,7 @@ void *packet_consumer_thread(void *user) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
-  int i, cluster_id = -1, rc = 0, print_maintenance = 0;
+  int i, cluster_id = DEFAULT_CLUSTER_ID, rc = 0, print_maintenance = 0;
   pthread_t my_thread;
   struct timeval timeNow, lastTime;
   pthread_t time_thread;
