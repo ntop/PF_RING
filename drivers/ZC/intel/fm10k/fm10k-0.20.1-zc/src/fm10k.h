@@ -53,7 +53,10 @@
 #define FM10K_DEFAULT_TX_WORK	 256
 
 #ifdef HAVE_PF_RING
-//TODO check real MIN/MAX RXD/TXD
+#undef FM10K_MAX_RXD
+#undef FM10K_MAX_TXD
+#define FM10K_MAX_RXD		16384 /* up to 16K descriptors of 32 bytes */
+#define FM10K_MAX_TXD		16384 /* up to 32K descriptors of 16 bytes */
 #endif
 
 #define FM10K_RXBUFFER_256	  256
