@@ -6063,13 +6063,6 @@ iface_ethtool_get_ts_info(pcap_t *handle, char *ebuf)
 	int num_ts_types;
 	int i, j;
 
-#ifdef HAVE_PF_RING
-	if (handle->ring != NULL /* && handle->ring->zc_device */ ) {
-		iface_set_default_ts_types(handle);
-		return 0;
-	}
-#endif
-
 	/*
 	 * This doesn't apply to the "any" device; you have to ask
 	 * specific devices for their capabilities, so just default
@@ -6097,18 +6090,22 @@ iface_ethtool_get_ts_info(pcap_t *handle, char *ebuf)
 	ifr.ifr_data = (caddr_t)&info;
 	if (ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
 		close(fd);
+#ifndef HAVE_PF_RING
 		if (errno == EOPNOTSUPP || errno == EINVAL) {
+#endif
 			/*
 			 * OK, let's just return all the possible time
 			 * stamping types.
 			 */
 			iface_set_default_ts_types(handle);
 			return 0;
+#ifndef HAVE_PF_RING
 		}
 		snprintf(ebuf, PCAP_ERRBUF_SIZE,
 		    "%s: SIOCETHTOOL(ETHTOOL_GET_TS_INFO) ioctl failed: %s", handle->opt.source,
 		    strerror(errno));
 		return -1;
+#endif
 	}
 	close(fd);
 
