@@ -3398,8 +3398,9 @@ static inline void *_kc_vzalloc(unsigned long size)
 }
 #define vzalloc(_size) _kc_vzalloc(_size)
 
-#ifndef vlan_get_protocol
-static inline __be16 __kc_vlan_get_protocol(const struct sk_buff *skb)
+#if (!(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(5,7)) || \
+     (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(6,0)))
+static inline __be16 vlan_get_protocol(const struct sk_buff *skb)
 {
 	if (vlan_tx_tag_present(skb) ||
 	    skb->protocol != cpu_to_be16(ETH_P_8021Q))
@@ -3410,8 +3411,8 @@ static inline __be16 __kc_vlan_get_protocol(const struct sk_buff *skb)
 
 	return ((struct vlan_ethhdr*)skb->data)->h_vlan_encapsulated_proto;
 }
-#define vlan_get_protocol(_skb) __kc_vlan_get_protocol(_skb)
-#endif
+#endif /* !RHEL5.7+ || RHEL6.0 */
+
 #ifdef HAVE_HW_TIME_STAMP
 #define SKBTX_HW_TSTAMP (1 << 0)
 #define SKBTX_IN_PROGRESS (1 << 2)
@@ -4051,7 +4052,9 @@ int __kc_pcie_capability_clear_word(struct pci_dev *dev, int pos,
 #define USE_CONST_DEV_UC_CHAR
 #endif
 
+#if !(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,8))
 #define napi_gro_flush(_napi, _flush_old) napi_gro_flush(_napi)
+#endif /* !RHEL6.8+ */
 
 #else /* >= 3.7.0 */
 #define HAVE_CONST_STRUCT_PCI_ERROR_HANDLERS
