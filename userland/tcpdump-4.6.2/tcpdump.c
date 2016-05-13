@@ -1974,9 +1974,6 @@ cleanup(int signo _U_)
 	 * the ANSI C standard doesn't say it is).
 	 */
 	pcap_breakloop(pd);
-#ifdef HAVE_PF_RING
-	pcap_close(pd);
-#endif
 #else
 	/*
 	 * We don't have "pcap_breakloop()"; this isn't safe, but
