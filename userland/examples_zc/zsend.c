@@ -42,6 +42,13 @@
 
 #include "zutils.c"
 
+struct packet {
+  u_int16_t len;
+  u_int64_t ticks_from_beginning;
+  char *pkt;
+  struct packet *next;
+};
+
 #define POW2(n) ((n & (n - 1)) == 0)
 
 #define ALARM_SLEEP             1
@@ -68,18 +75,22 @@ u_int8_t active = 0, flush_packet = 0, append_timestamp = 0, use_pulse_time = 0,
 #ifdef BURST_API
 u_int8_t use_pkt_burst_api = 0;
 #endif
+int pkts_offset = 0;
+u_int num_pcap_pkts = 0;
+int reforge_mac = 0;
 u_int8_t n2disk_producer = 0;
 u_int32_t n2disk_threads;
 pcap_t *pt = NULL;
 u_int max_pkt_len = 60;
 u_char stdin_packet[9000];
 int stdin_packet_len = 0;
-
+char mac_address[6];
 u_int32_t num_queue_buffers = 0, num_consumer_buffers = 0;
-
+int send_len = 60;
 volatile int do_shutdown = 0;
-
+int send_full_pcap_once = 1;
 int bind_time_pulse_core = -1;
+double gbit_s = 0;
 volatile u_int64_t *pulse_timestamp_ns;
 volatile u_int64_t *pulse_timestamp_ns_n;
 
@@ -315,9 +326,10 @@ void print_stats() {
     bytesDiff /= (1000*1000*1000)/8;
 
     snprintf(buf, sizeof(buf),
-	     "Actual Stats: %s pps - %s Gbps",
+	     "Actual Stats: %s pps - %s Gbps [%u bytes / %.1f sec]",
 	     pfring_format_numbers(((double)diff/(double)(deltaMillisec/1000)),  buf1, sizeof(buf1), 1),
-	     pfring_format_numbers(((double)bytesDiff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1));
+	     pfring_format_numbers(((double)bytesDiff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1),
+	     (u_int32_t)(nBytes - lastBytes), (float)deltaMillisec/1000);
     fprintf(stderr, "%s\n", buf);
   }
 
@@ -347,15 +359,18 @@ void printHelp(void) {
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A traffic generator able to replay synthetic udp packets or hex from standard input.\n"); 
   printf("Usage:    zsend -i <device> -c <cluster id>\n"
-	 "                [-h] [-g <core id>] [-p <pps>] [-l <len>] [-n <num>]\n"
+	 "                [-h] [-g <core id>] [-r <rate>] [-p <pps>] [-l <len>] [-n <num>]\n"
 	 "                [-b <num>] [-N <num>] [-S <core id>] [-P <core id>]\n"
-	 "                [-z] [-a] [-Q <sock>] [-f <.pcap file>]\n\n");
+	 "                [-z] [-a] [-Q <sock>] [-f <.pcap file>] [-m <MAC>] [-o <num>]\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name (optional: do not specify a device to create a cluster with a sw queue)\n");
   printf("-c <cluster id> Cluster id\n");
   printf("-f <.pcap file> Send packets as read from a pcap file\n");
+  printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
+  printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-g <core id>    Bind this app to a core\n");
   printf("-p <pps>        Rate (packets/s)\n");
+  printf("-r <Gbps rate>  Rate to send (example -r 2.5 sends 2.5 Gbit/sec, -r -1 pcap capture rate)\n");
   printf("-l <len>        Packet len (bytes)\n");
   printf("-n <num>        Number of packets\n");
   printf("-b <num>        Number of different IPs\n");
@@ -371,18 +386,126 @@ void printHelp(void) {
 /* *************************************** */
 
 void *send_traffic(void *user) {
-  ticks hz, tick_start = 0, tick_delta = 0;
+  ticks hz = 0, tick_start = 0, tick_delta = 0;
   u_int64_t ts_ns_start = 0, ns_delta = 0;
   u_int32_t buffer_id = 0;
-  int sent_bytes;
+  int sent_bytes, verbose = 0;
 #ifdef BURST_API
   int i, sent_packets;
 #endif
+  struct packet *pkt_head = NULL, *tosend = NULL;
+  
+  if(gbit_s != 0 || pps != 0) {
+    /* computing usleep delay */
+    tick_start = getticks();
+    usleep(1);
+    tick_delta = getticks() - tick_start;
+
+    /* computing CPU freq */
+    tick_start = getticks();
+    usleep(1001);
+    hz = (getticks() - tick_start - tick_delta) * 1000 /*kHz -> Hz*/;
+    printf("Estimated CPU freq: %lu Hz\n", (long unsigned int)hz);
+  }
+
+  if(pt) {
+    u_char *pkt;
+    struct pcap_pkthdr *h;
+    struct timeval beginning = { 0, 0 };
+    u_int64_t avg_send_len = 0;
+    u_int32_t num_orig_pcap_pkts = 0;
+
+    struct packet *last = NULL;
+    int datalink = pcap_datalink(pt);
+
+    if (datalink == DLT_LINUX_SLL)
+      printf("Linux 'cooked' packets detected, stripping 2 bytes from header..\n");
+
+    while (1) {
+      struct packet *p;
+      int rc = pcap_next_ex(pt, &h, (const u_char **) &pkt);
+
+      if(rc <= 0) break;
+        
+      num_orig_pcap_pkts++;
+      if ((num_orig_pcap_pkts-1) < pkts_offset) continue;
+
+      if (num_pcap_pkts == 0) {
+	beginning.tv_sec = h->ts.tv_sec;
+	beginning.tv_usec = h->ts.tv_usec;
+      }
+
+      p = (struct packet *) malloc(sizeof(struct packet));
+      if(p) {
+	p->len = h->caplen;
+	if(p->len > max_pkt_len) p->len = max_pkt_len;
+	if (datalink == DLT_LINUX_SLL) p->len -= 2;
+	p->ticks_from_beginning = (((h->ts.tv_sec - beginning.tv_sec) * 1000000) + (h->ts.tv_usec - beginning.tv_usec)) * hz / 1000000;
+	p->next = NULL;
+	p->pkt = (char*)malloc(p->len);
+
+	if(p->pkt == NULL) {
+	  printf("Not enough memory\n");
+	  break;
+	} else {
+	  if (datalink == DLT_LINUX_SLL) {
+	    memcpy(p->pkt, pkt, 12);
+	    memcpy(&p->pkt[12], &pkt[14], p->len - 14);
+	  } else {
+	    memcpy(p->pkt, pkt, p->len);
+	  }
+	  if(reforge_mac)
+	    memcpy((u_char *) p->pkt, mac_address, 6);
+	}
+
+	if(last) {
+	  last->next = p;
+	  last = p;
+	} else
+	  pkt_head = p, last = p;
+      } else {
+	printf("Not enough memory\n");
+	break;
+      }
+
+      if(verbose)
+	printf("Read %d bytes packet from pcap file [%lu.%lu Secs =  %lu ticks@%luhz from beginning]\n",
+	       p->len, h->ts.tv_sec - beginning.tv_sec, h->ts.tv_usec - beginning.tv_usec,
+	       (long unsigned int)p->ticks_from_beginning,
+	       (long unsigned int)hz);
+
+      avg_send_len += p->len;
+      num_pcap_pkts++;
+    } /* while */
+
+    if (num_pcap_pkts == 0) {
+      printf("ERROR: pcap file is empty\n");
+      return(NULL);
+    }
+
+    avg_send_len /= num_pcap_pkts;
+
+    pcap_close(pt);
+    printf("Read %d packets from pcap file\n", num_pcap_pkts);
+    last->next = pkt_head; /* Loop */
+    send_len = avg_send_len;
+
+    if (send_full_pcap_once)
+      num_to_send = num_pcap_pkts;
+
+    tosend = pkt_head;
+  }
 
   if (bind_core >= 0)
     bind2core(bind_core);
 
-  if(pps > 0) {
+  if(gbit_s > 0) {
+    /* computing max rate */
+    pps = ((gbit_s * 1000000000) / 8 /*byte*/) / (8 /*Preamble*/ + send_len + 4 /*CRC*/ + 12 /*IFG*/);
+  } else if (gbit_s < 0) {
+    /* capture rate */
+    pps = -1;
+  } else if(pps > 0) {
     if (use_pulse_time) {
       ts_ns_start = *pulse_timestamp_ns;
       ns_delta = (double) (1000000000 / pps);
@@ -403,6 +526,17 @@ void *send_traffic(void *user) {
     }
   }
 
+  if (pps > 0) {
+    double td = (double) (hz / pps);
+    tick_delta = (ticks)td;
+
+    if (gbit_s > 0)
+      printf("Rate set to %.2f Gbit/s, %d-byte packets, %u pps\n",
+	     gbit_s, (send_len + 4 /*CRC*/), pps);
+    else
+      printf("Rate set to %u pps\n", pps);
+  }
+
 #ifdef BURST_API  
   /****** Burst API ******/
   if (use_pkt_burst_api) {
@@ -410,30 +544,18 @@ void *send_traffic(void *user) {
 
       if (!num_queue_buffers || numPkts < num_queue_buffers + NBUFF || num_ips > 1) { /* forge all buffers 1 time */
 	for (i = 0; i < BURSTLEN; i++) {
-	  int rc = -1;
-	    
-	  if(pt != NULL) {
-	    u_char *pkt;
-	    struct pcap_pkthdr *h;
+	  u_char *buffer = pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq);
 
-	    if(numPkts > NBUFF)
-	      rc = 0; /* We have forged enough packets */
-	    else if((rc = pcap_next_ex(pt, &h, (const u_char **) &pkt)) > 0) {
-	      u_char *buffer = pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq);
-
-	      if(h->caplen > max_pkt_len) h->caplen = max_pkt_len;
-	      buffers[buffer_id + i]->len = max_pkt_len;
-	      memcpy(buffer, pkt, h->caplen);
-	    }
-	  }
-
-	  if(rc < 0) {
+	  if(tosend) {
+	    buffers[buffer_id + i]->len = tosend->len, memcpy(buffer, tosend->pkt, tosend->len);
+	    tosend = tosend->next;
+	  } else  {
 	    buffers[buffer_id + i]->len = packet_len;
-
+	    
 	    if (stdin_packet_len > 0)
-	      memcpy(pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq), stdin_packet, stdin_packet_len);
+	      memcpy(buffer, stdin_packet, stdin_packet_len);
 	    else
-	      forge_udp_packet(pfring_zc_pkt_buff_data(buffers[buffer_id + i], zq), numPkts + i);
+	      forge_udp_packet(buffer, numPkts + i);
 	  }
 	}
       }
@@ -465,50 +587,27 @@ void *send_traffic(void *user) {
 
   } else {
 #endif
-
     /****** Packet API ******/
     while (likely(!do_shutdown && (!num_to_send || numPkts < num_to_send))) {
-      int rc = -1;
-	    
-      if(pt != NULL) {
-	u_char *pkt;
-	struct pcap_pkthdr *h;
+      u_char *buffer = pfring_zc_pkt_buff_data(buffers[buffer_id], zq);
 
-	if(numPkts > NBUFF)
-	  rc = 0; /* We have forged enough packets */
-	else if((rc = pcap_next_ex(pt, &h, (const u_char **) &pkt)) > 0) {
-	  u_char *buffer = pfring_zc_pkt_buff_data(buffers[buffer_id], zq);
-
-	  if(h->caplen > max_pkt_len) h->caplen = max_pkt_len;
-	  buffers[buffer_id]->len = h->caplen;
-	  memcpy(buffer, pkt, h->caplen);
-	} 
-      }
-
-      if(rc < 0) {
+      if(tosend) {
+	buffers[buffer_id]->len = tosend->len, memcpy(buffer, tosend->pkt, tosend->len);
+	tosend = tosend->next;
+      } else  {
 	buffers[buffer_id]->len = packet_len;
 
-#if 1
-	if (!num_queue_buffers || numPkts < num_queue_buffers + NBUFF || num_ips > 1) { /* forge all buffers 1 time */
+	if (!num_queue_buffers || numPkts < num_queue_buffers + NBUFF || num_ips > 1) {
+	  /* forge all buffers 1 time */
 	  if (stdin_packet_len > 0)
-	    memcpy(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), stdin_packet, stdin_packet_len);
+	    memcpy(buffer, stdin_packet, stdin_packet_len);
 	  else
-	    forge_udp_packet(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), numPkts);
+	    forge_udp_packet(buffer, numPkts);
 	}
-#else
-	{
-	  u_char *pkt_data = pfring_zc_pkt_buff_data(buffers[buffer_id], zq);
-	  int k;
-	  u_int8_t j = numPkts;
-	  for(k = 0; k < buffers[buffer_id]->len; k++)
-	    pkt_data[k] = j++;
-	  pkt_data[k-1] = cluster_id;
-	}
-#endif
       }
 
       if (append_timestamp)
-	buffers[buffer_id]->len = append_packet_ts(pfring_zc_pkt_buff_data(buffers[buffer_id], zq), buffers[buffer_id]->len);
+	buffers[buffer_id]->len = append_packet_ts(buffer, buffers[buffer_id]->len);
 
       while (unlikely((sent_bytes = pfring_zc_send_pkt(zq, &buffers[buffer_id], flush_packet)) < 0)) {
 	if (unlikely(do_shutdown)) break;
@@ -555,7 +654,7 @@ int main(int argc, char* argv[]) {
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ab:c:f:g:hi:n:p:l:zN:S:P:Q:")) != '?') {
+  while((c = getopt(argc,argv,"ab:c:f:g:hi:m:n:o:p:r:l:zN:S:P:Q:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -583,8 +682,30 @@ int main(int argc, char* argv[]) {
     case 'l':
       packet_len = atoi(optarg);
       break;
+    case 'm':
+      {
+	u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
+
+	if(sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", 
+		  &mac_a, &mac_b, &mac_c, &mac_d, &mac_e, &mac_f) != 6) {
+	  printf("Invalid MAC address format (XX:XX:XX:XX:XX:XX)\n");
+	  return(0);
+	} else {
+	  reforge_mac = 1;
+	  mac_address[0] = mac_a, mac_address[1] = mac_b, mac_address[2] = mac_c;
+	  mac_address[3] = mac_d, mac_address[4] = mac_e, mac_address[5] = mac_f;
+	}
+      }
+      break;
     case 'n':
       num_to_send = atoi(optarg);
+      send_full_pcap_once = 0; 
+      break;
+    case 'o':
+      pkts_offset = atoi(optarg);
+      break;
+    case 'r':
+      sscanf(optarg, "%lf", &gbit_s);
       break;
     case 'p':
       pps = atoi(optarg);
