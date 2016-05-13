@@ -1636,7 +1636,16 @@ main(int argc, char **argv)
 		cmdbuf = copy_argv(&argv[optind]);
 
 	if (pcap_compile(pd, &fcode, cmdbuf, Oflag, netmask) < 0)
+#ifdef HAVE_PF_RING
+	{
+		warning("%s", pcap_geterr(pd));
+		pcap_close(pd);
+		exit(0);
+	}
+#else
 		error("%s", pcap_geterr(pd));
+#endif
+
 	if (dflag) {
 		bpf_dump(&fcode, dflag);
 		pcap_close(pd);
@@ -1917,9 +1926,25 @@ main(int argc, char **argv)
 					pcap_datalink_val_to_description(new_dlt));
 				}
 				if (pcap_compile(pd, &fcode, cmdbuf, Oflag, netmask) < 0)
+#ifdef HAVE_PF_RING
+				{
+					warning("%s", pcap_geterr(pd));
+					pcap_close(pd);
+					exit(0);
+				}
+#else
 					error("%s", pcap_geterr(pd));
+#endif
 				if (pcap_setfilter(pd, &fcode) < 0)
+#ifdef HAVE_PF_RING
+				{
+					warning("%s", pcap_geterr(pd));
+					pcap_close(pd);
+					exit(0);
+				}
+#else
 					error("%s", pcap_geterr(pd));
+#endif
 			}
 		}
 	}
@@ -1949,6 +1974,9 @@ cleanup(int signo _U_)
 	 * the ANSI C standard doesn't say it is).
 	 */
 	pcap_breakloop(pd);
+#ifdef HAVE_PF_RING
+	pcap_close(pd);
+#endif
 #else
 	/*
 	 * We don't have "pcap_breakloop()"; this isn't safe, but
@@ -1966,6 +1994,9 @@ cleanup(int signo _U_)
 		(void)fflush(stdout);
 		info(1);
 	}
+#ifdef HAVE_PF_RING
+	pcap_close(pd);
+#endif
 	exit(0);
 #endif
 }
