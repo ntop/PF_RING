@@ -762,7 +762,7 @@ int main(int argc, char* argv[]) {
 
     if (if_index != -1)
       rc = pfring_send_ifindex(pd, tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */, if_index);
-    else if(use_zero_copy_We)
+    else if(use_zero_copy_tx)
       /* tx pre-filled the TX slots */
       rc = pfring_send(pd, NULL, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
     else
