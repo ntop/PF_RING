@@ -25,9 +25,8 @@ insmod ../../../../../../kernel/pf_ring.ko
 
 # Required by fm10k
 modprobe uio
-#modprobe ptp
-#modprobe vxlan
-#modprobe configfs
+modprobe ptp
+modprobe vxlan
 
 # Load the driver
 insmod ./fm10k.ko
