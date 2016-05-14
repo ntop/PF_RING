@@ -28,13 +28,13 @@ for other packages/drivers configuration steps are similar.
 # mkdir -p /etc/pf_ring/zc/ixgbe
 # echo "RSS=4,4" > /etc/pf_ring/zc/ixgbe/ixgbe.conf 
 # touch /etc/pf_ring/zc/ixgbe/ixgbe.start
-# touch /etc/pf_ring/pfring.conf
-# touch /etc/pf_ring/pfring.start
+# touch /etc/pf_ring/pf_ring.conf
+# touch /etc/pf_ring/pf_ring.start
 # echo "node=0 hugepagenumber=1024" > /etc/pf_ring/hugepages.conf 
 # tree /etc/pf_ring/
 |-- hugepages.conf
-|-- pfring.conf
-|-- pfring.start
+|-- pf_ring.conf
+|-- pf_ring.start
 `-- zc
     `-- ixgbe
         |-- ixgbe.conf
