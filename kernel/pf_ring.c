@@ -7507,7 +7507,7 @@ int setSocketStats(struct pf_ring_socket *pfr)
 
 /* ************************************* */
 
-#if defined(RHEL_RELEASE_CODE) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
+#if (defined(RHEL_RELEASE_CODE) && (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)))
 
 /* sk_attach_filter/sk_detach_filter for some reason is undefined on CentOS
  * code from core/sock.c kernel 2.x */
@@ -7615,6 +7615,7 @@ static int ring_setsockopt(struct socket *sock,
     printk("[PF_RING] --> ring_setsockopt(optname=%u)\n", optname);
 
   switch(optname) {
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
   case SO_ATTACH_FILTER:
     ret = -EINVAL;
 
@@ -7648,7 +7649,8 @@ static int ring_setsockopt(struct socket *sock,
     ret = sk_detach_filter(pfr->sk);
     pfr->bpfFilter = 0;
     break;
-
+#endif
+    
   case SO_ADD_TO_CLUSTER:
     if(optlen != sizeof(cluster))
       return(-EINVAL);
