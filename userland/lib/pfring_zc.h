@@ -20,7 +20,11 @@
 
 /* RedHat */
 #ifndef UINT16_MAX
+#ifdef __UINT16_MAX__
 #define UINT16_MAX __UINT16_MAX__
+#else
+#define UINT16_MAX  (65535)
+#endif
 #endif
 
 #define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     (1 <<  0) /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
