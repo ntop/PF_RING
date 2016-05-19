@@ -7615,7 +7615,6 @@ static int ring_setsockopt(struct socket *sock,
     printk("[PF_RING] --> ring_setsockopt(optname=%u)\n", optname);
 
   switch(optname) {
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
   case SO_ATTACH_FILTER:
     ret = -EINVAL;
 
@@ -7649,7 +7648,6 @@ static int ring_setsockopt(struct socket *sock,
     ret = sk_detach_filter(pfr->sk);
     pfr->bpfFilter = 0;
     break;
-#endif
     
   case SO_ADD_TO_CLUSTER:
     if(optlen != sizeof(cluster))
