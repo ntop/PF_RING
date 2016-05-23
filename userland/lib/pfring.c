@@ -683,9 +683,9 @@ int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
 
 /* **************************************************** */
 
-int pfring_get_metadata(pfring *ring, u_char **metadata) {
+int pfring_get_metadata(pfring *ring, u_char **metadata, u_int32_t *metadata_len) {
   if(ring && ring->get_metadata)
-    return ring->get_metadata(ring, metadata);
+    return ring->get_metadata(ring, metadata, metadata_len);
 
   return(PF_RING_ERROR_NOT_SUPPORTED);
 }

@@ -18,15 +18,6 @@
 #include <sys/types.h>
 #include <linux/pf_ring.h> /* needed for hw_filtering_rule */
 
-/* RedHat */
-#ifndef UINT16_MAX
-#ifdef __UINT16_MAX__
-#define UINT16_MAX __UINT16_MAX__
-#else
-#define UINT16_MAX  (65535)
-#endif
-#endif
-
 #define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     (1 <<  0) /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
 #define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0      (1 <<  1) /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
 #define PF_RING_ZC_DEVICE_SW_TIMESTAMP       (1 <<  2) /**< pfring_zc_open_device() flag: compute sw timestamp (please note: this adds per-packet overhead). */
@@ -38,10 +29,10 @@
 #define PF_RING_ZC_DEVICE_IPONLY_RSS         (1 <<  8) /**< pfring_zc_open_device() flag: compute RSS hash on IP only (not 4-tuple) */
 #define PF_RING_ZC_DEVICE_NOT_PROMISC        (1 <<  9) /**< pfring_zc_open_device() flag: do NOT set the device in promiscuos mode */
 
-#define UNDEFINED_QUEUEID  UINT32_MAX       /**< pfring_zc_get_queue_id() return val: queue id is not valid */
-#define QUEUE_IS_DEVICE(i) (i > UINT16_MAX) /**< pfring_zc_get_queue_id() return val: queue id is an encoded device index */
-#define QUEUEID_TO_IFINDEX(i) (i >> 16)     /**< pfring_zc_get_queue_id() return val: convert queue id to device index, if QUEUE_IS_DEVICE(id) */
-#define IFINDEX_TO_QUEUEID(i) (i << 16)     /**< pfring_zc_get_queue_id() return val: convert back device index to queue id, if QUEUE_IS_DEVICE(id) */
+#define UNDEFINED_QUEUEID 0xFFFFFFFF    /**< pfring_zc_get_queue_id() return val: queue id is not valid */
+#define QUEUE_IS_DEVICE(i) (i > 0xFFFF) /**< pfring_zc_get_queue_id() return val: queue id is an encoded device index */
+#define QUEUEID_TO_IFINDEX(i) (i >> 16) /**< pfring_zc_get_queue_id() return val: convert queue id to device index, if QUEUE_IS_DEVICE(id) */
+#define IFINDEX_TO_QUEUEID(i) (i << 16) /**< pfring_zc_get_queue_id() return val: convert back device index to queue id, if QUEUE_IS_DEVICE(id) */
 
 #define PF_RING_ZC_PKT_FLAGS_GOOD_IP_CS (1 << 0) /**< pfring_zc_pkt_buff.flags: valid IP checksum detected */
 #define PF_RING_ZC_PKT_FLAGS_BAD_IP_CS  (1 << 1) /**< pfring_zc_pkt_buff.flags: bad IP checksum detected */
@@ -93,6 +84,14 @@ typedef struct {
   pfring_zc_timespec ts; /**< Packet timestamp (nsec) */
   u_char user[];         /**< Start of user metadata, if any. */
 } pfring_zc_pkt_buff;
+
+/**
+ * Buffer handle. 
+ */
+typedef struct {
+  u_int32_t buffer_len;   /**< Max packet length. */
+  u_int32_t metadata_len; /**< User metadata length. */
+} pfring_zc_queue_info;
 
 /**
  * Returns the pointer to the actual packet data.
@@ -328,6 +327,17 @@ pfring_zc_get_cluster_id(
 u_int32_t
 pfring_zc_get_queue_id(
   pfring_zc_queue *queue
+);
+
+/**
+ * Read queue settings, including queue len, buffers len, metadata len.
+ * @param queue The queue handle.
+ * @param info  The queue settings (out).
+ */
+void
+pfring_zc_get_queue_settings(
+  pfring_zc_queue *queue,
+  pfring_zc_queue_info *info
 );
 
 /**

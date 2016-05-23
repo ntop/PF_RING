@@ -316,8 +316,8 @@ struct __pfring {
   void      (*flush_tx_packets)             (pfring *);
   int       (*register_zerocopy_tx_ring)    (pfring *, pfring *);
   int       (*recv_chunk)                   (pfring *, void **, pfring_chunk_info *, u_int8_t); 
-  int       (*set_bound_dev_name)           (pfring *, char*);
-  int       (*get_metadata)         	    (pfring *, u_char**);
+  int       (*set_bound_dev_name)           (pfring *, char *);
+  int       (*get_metadata)         	    (pfring *, u_char **, u_int32_t *);
 
   /* DNA only */
   int      (*dna_init)             (pfring *);
@@ -514,7 +514,7 @@ int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
  * @param metadata Ptr to a variable that will contain the packet metadata (out).
  * @return 0 if this is supported by the actual module and metadata is found, a negative error value otherwise.
  */
-int pfring_get_metadata(pfring *ring, u_char **metadata);
+int pfring_get_metadata(pfring *ring, u_char **metadata, u_int32_t *metadata_len);
 
 /**
  * Whenever a user-space application has to wait until incoming packets arrive, it can instruct PF_RING not to return from poll() call 
