@@ -2087,7 +2087,7 @@ void igb_reset(struct igb_adapter *adapter)
 	adapter->devrc++;
 }
 
-#ifdef HAVE_NDO_SET_FEATURES
+#if defined(HAVE_NDO_SET_FEATURES) && !defined(HAVE_RHEL6_NET_DEVICE_OPS_EXT)
 static netdev_features_t igb_fix_features(struct net_device *netdev,
 					  netdev_features_t features)
 {
@@ -2343,7 +2343,7 @@ static const struct net_device_ops igb_netdev_ops = {
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= igb_netpoll,
 #endif
-#ifdef HAVE_NDO_SET_FEATURES
+#if defined(HAVE_NDO_SET_FEATURES) && !defined(HAVE_RHEL6_NET_DEVICE_OPS_EXT)
 	.ndo_fix_features	= igb_fix_features,
 	.ndo_set_features	= igb_set_features,
 #endif
@@ -2777,7 +2777,7 @@ static int igb_probe(struct pci_dev *pdev,
 	if (hw->mac.type >= e1000_82576)
 		netdev->features |= NETIF_F_SCTP_CSUM;
 
-#ifdef HAVE_NDO_SET_FEATURES
+#if defined(HAVE_NDO_SET_FEATURES) && !defined(HAVE_RHEL6_NET_DEVICE_OPS_EXT)
 	/* copy netdev features into list of user selectable features */
 	netdev->hw_features |= netdev->features;
 #ifndef IGB_NO_LRO
