@@ -10205,6 +10205,13 @@ static int __devinit ixgbe_probe(struct pci_dev *pdev,
 #if IS_ENABLED(CONFIG_FCOE)
 	u16 device_caps;
 #endif
+#ifdef HAVE_NDO_SET_FEATURES
+#ifndef HAVE_RHEL6_NET_DEVICE_OPS_EXT
+	netdev_features_t hw_features;
+#else
+	u32 hw_features;
+#endif
+#endif
 
 	err = pci_enable_device_mem(pdev);
 	if (err)
@@ -10433,14 +10440,18 @@ static int __devinit ixgbe_probe(struct pci_dev *pdev,
 
 #ifdef HAVE_NDO_SET_FEATURES
 	/* copy netdev features into list of user selectable features */
-	netdev->hw_features |= netdev->features;
+#ifndef HAVE_RHEL6_NET_DEVICE_OPS_EXT
+	hw_features = netdev->hw_features;
+#else
+	hw_features = get_netdev_hw_features(netdev);
+#endif
+	hw_features |= netdev->features;
 
 	/* give us the option of enabling RSC/LRO later */
 #ifdef IXGBE_NO_LRO
 	if (adapter->flags2 & IXGBE_FLAG2_RSC_CAPABLE)
 #endif
-		netdev->hw_features |= NETIF_F_LRO;
-
+		hw_features |= NETIF_F_LRO;
 #else
 #ifdef NETIF_F_GRO
 
@@ -10464,13 +10475,20 @@ static int __devinit ixgbe_probe(struct pci_dev *pdev,
 	case ixgbe_mac_X550EM_x:
 		netdev->features |= NETIF_F_SCTP_CSUM;
 #ifdef HAVE_NDO_SET_FEATURES
-		netdev->hw_features |= NETIF_F_SCTP_CSUM |
-				       NETIF_F_NTUPLE;
+		hw_features |= NETIF_F_SCTP_CSUM |
+			       NETIF_F_NTUPLE;
 #endif
 		break;
 	default:
 		break;
 	}
+#ifdef HAVE_NDO_SET_FEATURES
+#ifdef HAVE_RHEL6_NET_DEVICE_OPS_EXT
+	set_netdev_hw_features(netdev, hw_features);
+#else
+	netdev->hw_features = hw_features;
+#endif
+#endif
 
 #ifdef HAVE_NETDEV_VLAN_FEATURES
 	netdev->vlan_features |= NETIF_F_SG |
