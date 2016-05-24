@@ -158,12 +158,128 @@ sf_setdirection(pcap_t *p, pcap_direction_t d)
 void
 sf_cleanup(pcap_t *p)
 {
+#ifdef HAVE_NPCAP
+	if (p->npcapfd != NULL) {
+		npcap_close(p->npcapfd);
+		p->npcapfd = NULL;
+	} else
+#endif
 	if (p->rfile != stdin)
 		(void)fclose(p->rfile);
 	if (p->buffer != NULL)
 		free(p->buffer);
 	pcap_freecode(&p->fcode);
 }
+
+#ifdef HAVE_NPCAP
+
+#define LT_LINKTYPE(x)		((x) & 0x03FFFFFF)
+#define LT_LINKTYPE_EXT(x)	((x) & 0xFC000000)
+
+int
+npcap_offline_read(pcap_t *p, int cnt, pcap_handler callback, u_char *user)
+{
+	struct bpf_insn *fcode;
+	int status = 0;
+	int n = 0;
+	u_char *data;
+
+	while (status == 0) {
+		struct pcap_pkthdr *h;
+
+		if (p->break_loop) {
+			if (n == 0) {
+				p->break_loop = 0;
+				return (-2);
+			} else
+				return (n);
+		}
+
+		status = npcap_read_next(p->npcapfd, (struct pcap_disk_pkthdr **) &h, &data);
+		if (status < 0)
+			return (status);
+
+		if ((fcode = p->fcode.bf_insns) == NULL ||
+		    bpf_filter(fcode, data, h->len, h->caplen)) {
+			(*callback)(user, h, data);
+			if (++n >= cnt && cnt > 0)
+				break;
+		}
+	}
+
+	return (n);
+}
+
+#ifdef WIN32
+static
+#endif
+pcap_t *
+npcap_open_offline(const char *fname, char *errbuf)
+{
+	pcap_t *p;
+	struct pcap_file_header hdr;
+	int rc;
+
+	p = pcap_create_common("(savefile)", errbuf);
+	if (p == NULL)
+		return (NULL);
+
+	p->npcapfd = npcap_open(fname, packet_mode);
+	if (p->npcapfd == NULL) {
+		snprintf(errbuf, PCAP_ERRBUF_SIZE,
+			 "error reading dump file: %d", errno);
+		goto bad;
+	}
+
+	rc = npcap_read_header(p->npcapfd, &hdr);
+	if (rc < 0) {
+		snprintf(errbuf, PCAP_ERRBUF_SIZE,
+		         "truncated dump file; tried to read file header: %d", rc);
+		goto bad;
+	}
+
+	p->tzoff = hdr.thiszone;
+	p->snapshot = hdr.snaplen;
+	p->linktype = linktype_to_dlt(LT_LINKTYPE(hdr.linktype));
+	p->linktype_ext = LT_LINKTYPE_EXT(hdr.linktype);
+
+	//p->sf.version_major = hdr.version_major;
+	//p->sf.version_minor = hdr.version_minor;
+	//p->sf.next_packet_op = npcap_next_packet;
+	//p->sf.hdrsize = sizeof(struct pcap_disk_pkthdr);
+
+	p->buffer = NULL;
+
+	p->sf.rfile = NULL;
+
+#ifdef PCAP_FDDIPAD
+	/* Padding only needed for live capture fcode */
+	p->fddipad = 0;
+#endif
+
+	p->read_op = npcap_offline_read;
+	p->inject_op = sf_inject;
+	p->setfilter_op = install_bpf_program;
+	p->setdirection_op = sf_setdirection;
+	p->set_datalink_op = NULL;	/* we don't support munging link-layer headers */
+	p->getnonblock_op = sf_getnonblock;
+	p->setnonblock_op = sf_setnonblock;
+	p->stats_op = sf_stats;
+#ifdef WIN32
+	p->setbuff_op = sf_setbuff;
+	p->setmode_op = sf_setmode;
+	p->setmintocopy_op = sf_setmintocopy;
+#endif
+	p->cleanup_op = sf_cleanup;
+	p->activated = 1;
+
+	return (p);
+ bad:
+	free(p);
+	return (NULL);
+}
+
+#endif /* HAVE_NPCAP */
 
 pcap_t *
 pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
@@ -183,6 +299,11 @@ pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
 		SET_BINMODE(fp);
 #endif
 	}
+#ifdef HAVE_NPCAP
+	else if (strstr(fname, ".npcap") != NULL) {
+		return (npcap_open_offline(fname, errbuf));
+	}
+#endif
 	else {
 #if !defined(WIN32) && !defined(MSDOS)
 		fp = fopen(fname, "r");
@@ -309,6 +430,10 @@ pcap_fopen_offline_with_tstamp_precision(FILE *fp, u_int precision,
 
 found:
 	p->rfile = fp;
+
+#ifdef HAVE_NPCAP
+	p->npcapfd = NULL;
+#endif
 
 	/* Padding only needed for live capture fcode */
 	p->fddipad = 0;
