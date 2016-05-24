@@ -10000,10 +10000,6 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 	.ndo_fcoe_get_wwn = ixgbe_fcoe_get_wwn,
 #endif
 #endif /* CONFIG_FCOE */
-#ifdef HAVE_NDO_SET_FEATURES
-	.ndo_set_features = ixgbe_set_features,
-	.ndo_fix_features = ixgbe_fix_features,
-#endif /* HAVE_NDO_SET_FEATURES */
 #ifdef HAVE_VLAN_RX_REGISTER
 	.ndo_vlan_rx_register	= &ixgbe_vlan_mode,
 #endif
@@ -10028,6 +10024,17 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 #ifdef HAVE_NDO_FEATURES_CHECK
 	.ndo_features_check	= ixgbe_features_check,
 #endif /* HAVE_NDO_FEATURES_CHECK */
+#ifdef HAVE_RHEL6_NET_DEVICE_OPS_EXT
+};
+
+/* RHEL6 keeps these operations in a separate structure */
+static const struct net_device_ops_ext ixgbe_netdev_ops_ext = {
+	.size = sizeof(struct net_device_ops_ext),
+#endif /* HAVE_RHEL6_NET_DEVICE_OPS_EXT */
+#ifdef HAVE_NDO_SET_FEATURES
+	.ndo_set_features = ixgbe_set_features,
+	.ndo_fix_features = ixgbe_fix_features,
+#endif /* HAVE_NDO_SET_FEATURES */
 };
 #endif /* HAVE_NET_DEVICE_OPS */
 
@@ -10035,6 +10042,9 @@ void ixgbe_assign_netdev_ops(struct net_device *dev)
 {
 #ifdef HAVE_NET_DEVICE_OPS
 	dev->netdev_ops = &ixgbe_netdev_ops;
+#ifdef HAVE_RHEL6_NET_DEVICE_OPS_EXT
+	set_netdev_ops_ext(dev, &ixgbe_netdev_ops_ext);
+#endif /* HAVE_RHEL6_NET_DEVICE_OPS_EXT */
 #else /* HAVE_NET_DEVICE_OPS */
 	dev->open = &ixgbe_open;
 	dev->stop = &ixgbe_close;
