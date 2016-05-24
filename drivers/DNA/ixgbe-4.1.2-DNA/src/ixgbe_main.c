@@ -9900,14 +9900,19 @@ static int ixgbe_ndo_bridge_setlink(struct net_device *dev,
 	return 0;
 }
 
-#ifdef HAVE_BRIDGE_FILTER
+#ifdef HAVE_NDO_BRIDGE_GETLINK_NLFLAGS
+static int ixgbe_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
+				    struct net_device *dev,
+				    u32 __maybe_unused filter_mask,
+				    int nlflags)
+#elif defined(HAVE_BRIDGE_FILTER)
 static int ixgbe_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 				    struct net_device *dev,
 				    u32 __always_unused filter_mask)
 #else
 static int ixgbe_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 				    struct net_device *dev)
-#endif
+#endif /* HAVE_NDO_BRIDGE_GETLINK_NLFLAGS */
 {
 	struct ixgbe_adapter *adapter = netdev_priv(dev);
 	u16 mode;
@@ -9916,8 +9921,13 @@ static int ixgbe_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 		return 0;
 
 	mode = adapter->bridge_mode;
-
-#ifdef HAVE_NDO_FDB_ADD_VID
+#ifdef HAVE_NDO_DFLT_BRIDGE_GETLINK_VLAN_SUPPORT
+	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode, 0, 0, nlflags,
+				       filter_mask, NULL);
+#elif defined(HAVE_NDO_BRIDGE_GETLINK_NLFLAGS)
+	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode, 0, 0, nlflags);
+#elif defined(HAVE_NDO_FDB_ADD_VID) || \
+      defined NDO_BRIDGE_GETLINK_HAS_FILTER_MASK_PARAM
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode, 0, 0);
 #else
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode);
