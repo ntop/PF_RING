@@ -2303,11 +2303,11 @@ static int igb_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 				       filter_mask, NULL);
 #elif defined(HAVE_NDO_BRIDGE_GETLINK_NLFLAGS)
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode, 0, 0, nlflags);
-#elif defined(HAVE_NDO_FDB_ADD_VID)
+#elif defined(NDO_DFLT_BRIDGE_GETLINK_HAS_BRFLAGS)
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode, 0, 0);
 #else
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode);
-#endif /* HAVE_NDO_FDB_ADD_VID */
+#endif /* NDO_DFLT_BRIDGE_GETLINK_HAS_BRFLAGS */
 }
 #endif /* HAVE_BRIDGE_ATTRIBS */
 #endif /* HAVE_FDB_OPS */
