@@ -860,21 +860,24 @@ fi
 LIBS="$LIBS `../lib/pfring_config --libs`"
 
 
-# NPCAP
-AC_MSG_CHECKING(whether we have NPCAP support)
-MACHINE=`uname -m`
-if test -f "libnpcap_${MACHINE}.a"; then
-	AC_MSG_RESULT(yes)
-        LIBNPCAP='libnpcap_${MACHINE}.a'
-	NPCAPOBJS='$(shell ar t libnpcap_${MACHINE}.a | grep .o)'
-	EXTRACT_LIBNPCAP="extract_libnpcap"
-	HAVE_NPCAP="-DHAVE_NPCAP"
-else
-	AC_MSG_RESULT(no)
-	LIBNPCAP=""
-	NPCAPOBJS=""
-	EXTRACT_LIBNPCAP=""
-	HAVE_NPCAP=""
+# NPCAP - Default disabled
+LIBNPCAP=""
+NPCAPOBJS=""
+EXTRACT_LIBNPCAP=""
+HAVE_NPCAP=""
+AC_ARG_ENABLE([npcap], AS_HELP_STRING([--enable-npcap], [Enable NPCAP support in libpcap]))
+if test "x$enable_npcap" = "xyes"; then
+	AC_MSG_CHECKING(whether we have NPCAP support)
+	MACHINE=`uname -m`
+	if test -f "libnpcap_${MACHINE}.a"; then
+		AC_MSG_RESULT(yes)
+	        LIBNPCAP='libnpcap_${MACHINE}.a'
+		NPCAPOBJS='$(shell ar t libnpcap_${MACHINE}.a | grep .o)'
+		EXTRACT_LIBNPCAP="extract_libnpcap"
+		HAVE_NPCAP="-DHAVE_NPCAP"
+	else
+		AC_MSG_RESULT(no)
+	fi
 fi
 AC_SUBST(LIBNPCAP)
 AC_SUBST(NPCAPOBJS)
