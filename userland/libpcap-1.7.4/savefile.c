@@ -185,7 +185,8 @@ npcap_offline_read(pcap_t *p, int cnt, pcap_handler callback, u_char *user)
 	u_char *data;
 
 	while (status == 0) {
-		struct pcap_pkthdr *h;
+		struct pcap_pkthdr pcaph;
+		struct pcap_disk_pkthdr *h;
 
 		if (p->break_loop) {
 			if (n == 0) {
@@ -195,13 +196,17 @@ npcap_offline_read(pcap_t *p, int cnt, pcap_handler callback, u_char *user)
 				return (n);
 		}
 
-		status = npcap_read_next(p->npcapfd, (struct pcap_disk_pkthdr **) &h, &data);
+		status = npcap_read_next(p->npcapfd, &h, &data);
 		if (status < 0)
 			return (status);
 
 		if ((fcode = p->fcode.bf_insns) == NULL ||
 		    bpf_filter(fcode, data, h->len, h->caplen)) {
-			(*callback)(user, h, data);
+			pcaph.caplen = h->caplen;
+			pcaph.len = h->len;
+			pcaph.ts.tv_sec = h->ts.tv_sec;
+			pcaph.ts.tv_usec = h->ts.tv_usec;
+			(*callback)(user, &pcaph, data);
 			if (++n >= cnt && cnt > 0)
 				break;
 		}
@@ -220,7 +225,7 @@ npcap_open_offline(const char *fname, char *errbuf)
 	struct pcap_file_header hdr;
 	int rc;
 
-	p = pcap_create_common("(savefile)", errbuf);
+	p = pcap_create_common("(savefile)", errbuf, 0 /* priv data len */);
 	if (p == NULL)
 		return (NULL);
 
@@ -250,7 +255,7 @@ npcap_open_offline(const char *fname, char *errbuf)
 
 	p->buffer = NULL;
 
-	p->sf.rfile = NULL;
+	p->rfile = NULL;
 
 #ifdef PCAP_FDDIPAD
 	/* Padding only needed for live capture fcode */

@@ -6452,14 +6452,19 @@ LIBS="$LIBS `../lib/pfring_config --libs`"
 
 
 # NPCAP
-SHORT_MACHINE=`uname -m | cut -b1-3`
-#if test "$SHORT_MACHINE" != "arm"; then
-if test -f "libnpcap_$(MACHINE).a"; then
-        LIBNPCAP='libnpcap_$(MACHINE).a'
-	NPCAPOBJS='$(shell ar t libnpcap_$(MACHINE).a | grep .o)'
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we have NPCAP support" >&5
+$as_echo_n "checking whether we have NPCAP support... " >&6; }
+MACHINE=`uname -m`
+if test -f "libnpcap_${MACHINE}.a"; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        LIBNPCAP='libnpcap_${MACHINE}.a'
+	NPCAPOBJS='$(shell ar t libnpcap_${MACHINE}.a | grep .o)'
 	EXTRACT_LIBNPCAP="extract_libnpcap"
 	HAVE_NPCAP="-DHAVE_NPCAP"
 else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 	LIBNPCAP=""
 	NPCAPOBJS=""
 	EXTRACT_LIBNPCAP=""
