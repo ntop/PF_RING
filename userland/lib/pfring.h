@@ -318,6 +318,7 @@ struct __pfring {
   int       (*recv_chunk)                   (pfring *, void **, pfring_chunk_info *, u_int8_t); 
   int       (*set_bound_dev_name)           (pfring *, char *);
   int       (*get_metadata)         	    (pfring *, u_char **, u_int32_t *);
+  u_int32_t (*get_interface_speed)	    (pfring *);
 
   /* DNA only */
   int      (*dna_init)             (pfring *);
@@ -1389,6 +1390,14 @@ int pfring_read_vss_apcon_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
  * @return 0 on success, a negative value otherwise.
  */
 void pfring_handle_vss_apcon_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
+
+/**
+ * Get interface speed.
+ * @param ring
+ * @return 0 if interface speed is unknown, the interface speed otherwise.
+ */
+
+u_int32_t pfring_get_interface_speed(pfring *ring);
 
 /* ********************************* */
 

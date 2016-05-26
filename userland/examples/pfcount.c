@@ -939,9 +939,10 @@ int main(int argc, char* argv[]) {
 	
       pfring_get_bound_device_ifindex(pd, &ifindex);
       
-      printf("Capturing from %s [%s][ifIndex: %d]\n",
+      printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
 	     device, etheraddr_string(mac_address, buf),
-	     ifindex);
+	     ifindex,
+             pfring_get_interface_speed(pd));
       }
     }
   }

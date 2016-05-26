@@ -40,6 +40,7 @@ int pfring_anic_open(pfring *ring) {
   ring->set_direction      = pfring_anic_set_direction;
   ring->enable_ring        = pfring_anic_enable_ring;
   ring->get_bound_device_ifindex = pfring_anic_get_bound_device_ifindex;
+  ring->get_interface_speed = pfring_anic_get_interface_speed;
 
   /* Inherited from pfring_mod.c */
   ring->set_socket_mode          = pfring_mod_set_socket_mode;
@@ -291,6 +292,16 @@ int pfring_anic_get_bound_device_ifindex(pfring *ring, int *if_index) {
   //pfring_anic *accolade = (pfring_anic *) ring->priv_data;
 
   *if_index = UNKNOWN_INTERFACE; /* TODO */
+  return 0;
+}
+
+/* **************************************************** */
+
+u_int32_t pfring_anic_get_interface_speed(pfring *ring) {
+  //pfring_anic *accolade = (pfring_anic *) ring->priv_data;
+
+  /* TODO */
+
   return 0;
 }
 

@@ -73,5 +73,6 @@ int  pfring_mlx_set_direction(pfring *ring, packet_direction direction);
 int  pfring_mlx_enable_ring(pfring *ring);
 int  pfring_mlx_set_socket_mode(pfring *ring, socket_mode mode);
 int  pfring_mlx_get_bound_device_ifindex(pfring *ring, int *if_index);
+u_int32_t pfring_mlx_get_interface_speed(pfring *ring);
 
 #endif /* _PFRING_MOD_MLX_H_ */

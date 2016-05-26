@@ -15,6 +15,11 @@
 #include <sys/types.h>
 #include <pthread.h>
 
+/* ethtool */
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <linux/ethtool.h>
+
 #ifdef ENABLE_BPF
 #include <pcap/pcap.h>
 #include <pcap/bpf.h>
@@ -238,6 +243,7 @@ int pfring_mod_open(pfring *ring) {
   ring->shutdown = pfring_mod_shutdown;
   ring->send_last_rx_packet = pfring_mod_send_last_rx_packet;
   ring->set_bound_dev_name = pfring_mod_set_bound_dev_name;
+  ring->get_interface_speed = pfring_mod_get_interface_speed;
 
   ring->poll_duration = DEFAULT_POLL_DURATION;
 
@@ -1009,4 +1015,54 @@ int pfring_mod_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
    return(setsockopt(ring->fd, 0, SO_SET_CUSTOM_BOUND_DEV_NAME, 
 		     custom_dev_name, strlen(custom_dev_name)));
 }
+
+/* *************************************** */
+
+static u_int32_t __pfring_mod_get_ethtool_interface_speed(const char *ifname) {
+  int sock, rc;
+  struct ifreq ifr;
+  struct ethtool_cmd edata;
+  u_int32_t speed = 0;
+  const char *col;
+
+  col = strchr(ifname, ':');
+
+  if (col != NULL)
+    ifname = &col[1];
+
+  sock = socket(PF_INET, SOCK_DGRAM, 0);
+
+  if (sock < 0) {
+    fprintf(stderr, "Socket error [%s]\n", ifname);
+    return speed;
+  }
+
+  memset(&ifr, 0, sizeof(struct ifreq));
+  strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
+  ifr.ifr_data = (char *) &edata;
+
+  edata.cmd = ETHTOOL_GSET;
+
+  rc = ioctl(sock, SIOCETHTOOL, &ifr);
+
+  close(sock);
+
+  if (rc < 0) {
+    fprintf(stderr, "I/O Control error [%s]\n", ifname);
+    return speed;
+  }
+
+  ethtool_cmd_speed(&edata);
+  speed = edata.speed;
+
+  return speed;
+}
+
+/* *************************************** */
+
+u_int32_t pfring_mod_get_interface_speed(pfring *ring) {
+  return __pfring_mod_get_ethtool_interface_speed(ring->device_name);
+}
+ 
+/* *************************************** */
 

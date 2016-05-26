@@ -77,5 +77,6 @@ int pfring_mod_remove_bpf_filter(pfring *ring);
 int pfring_mod_send_last_rx_packet(pfring *ring, int tx_interface_id);
 void pfring_mod_shutdown(pfring *ring);
 int pfring_mod_set_bound_dev_name(pfring *ring, char *custom_dev_name);
+u_int32_t pfring_mod_get_interface_speed(pfring *ring);
 
 #endif /* _PFRING_MOD_H_ */

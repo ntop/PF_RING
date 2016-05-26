@@ -44,6 +44,7 @@ int pfring_invea_open(pfring *ring) {
   ring->get_bound_device_ifindex = pfring_invea_get_bound_device_ifindex;
   ring->send               = pfring_invea_send;
   ring->flush_tx_packets   = pfring_invea_flush_tx_packets;
+  ring->get_interface_speed = pfring_invea_get_interface_speed;
 
   /* inherited from pfring_mod.c */
   ring->set_socket_mode          = pfring_mod_set_socket_mode;
@@ -129,6 +130,16 @@ int pfring_invea_get_bound_device_ifindex(pfring *ring, int *if_index) {
   pfring_invea *invea = (pfring_invea *) ring->priv_data;
 
   *if_index = invea->device_id;
+  return 0;
+}
+
+/* **************************************************** */
+
+u_int32_t pfring_invea_get_interface_speed(pfring *ring) {
+  //pfring_invea *invea = (pfring_invea *) ring->priv_data;
+
+  /* TODO */
+
   return 0;
 }
 

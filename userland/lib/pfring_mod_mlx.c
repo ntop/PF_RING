@@ -138,6 +138,7 @@ int pfring_mlx_open(pfring *ring) {
   ring->set_direction      = pfring_mlx_set_direction;
   ring->enable_ring        = pfring_mlx_enable_ring;
   ring->get_bound_device_ifindex = pfring_mlx_get_bound_device_ifindex;
+  ring->get_interface_speed = pfring_mlx_get_interface_speed;
 
   /* Inherited from pfring_mod.c */
   ring->set_socket_mode    = pfring_mod_set_socket_mode;
@@ -531,7 +532,7 @@ int pfring_mlx_poll(pfring *ring, u_int wait_duration) {
   return 1;
 }
 
-/* ******************************* */
+/* **************************************************** */
 
 int pfring_mlx_get_bound_device_ifindex(pfring *ring, int *if_index) {
   //pfring_mlx *mlx = (pfring_mlx *) ring->priv_data;
@@ -539,4 +540,16 @@ int pfring_mlx_get_bound_device_ifindex(pfring *ring, int *if_index) {
   *if_index = 0; /* FIX */
   return 0;
 }
+
+/* **************************************************** */
+
+u_int32_t pfring_mlx_get_interface_speed(pfring *ring) {
+  //pfring_mlx *mlx = (pfring_mlx *) ring->priv_data;
+
+  /* TODO */
+
+  return 0;
+}
+
+/* **************************************************** */
 

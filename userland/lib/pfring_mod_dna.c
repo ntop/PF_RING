@@ -257,6 +257,7 @@ int pfring_dna_open(pfring *ring) {
   ring->remove_filtering_rule = pfring_mod_remove_filtering_rule;
   ring->toggle_filtering_policy = pfring_mod_toggle_filtering_policy;
   ring->shutdown = pfring_mod_shutdown;
+  ring->get_interface_speed = pfring_mod_get_interface_speed;
   /* These functions are set by the dna library: (when supported by the device)
    * ring->send
    * ring->send_get_time

@@ -1564,3 +1564,18 @@ int pfring_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
 
   return(PF_RING_ERROR_NOT_SUPPORTED);
 }
+
+/* **************************************************** */
+
+u_int32_t pfring_get_interface_speed(pfring *ring) {
+  if (!ring)
+    return 0;
+
+  if (ring->get_interface_speed)
+    return ring->get_interface_speed(ring);
+
+  return pfring_mod_get_interface_speed(ring);
+}
+
+/* **************************************************** */
+

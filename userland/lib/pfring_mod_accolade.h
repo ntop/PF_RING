@@ -129,5 +129,6 @@ int  pfring_anic_set_direction(pfring *ring, packet_direction direction);
 int  pfring_anic_enable_ring(pfring *ring);
 int  pfring_anic_set_socket_mode(pfring *ring, socket_mode mode);
 int  pfring_anic_get_bound_device_ifindex(pfring *ring, int *if_index);
+u_int32_t pfring_anic_get_interface_speed(pfring *ring);
 
 #endif /* _PFRING_MOD_ACCOLADE_H_ */
