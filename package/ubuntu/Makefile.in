@@ -14,20 +14,16 @@ PF_RING_HOME=$(HERE)/../../
 
 all: clean @PRE_DEP@ build
 
-pre-drivers: @BUILD_PRE_DNA@ pre-zc
+pre-drivers: pre-zc
 
 pre-kernel-nodrivers:
 	cd ../../kernel; ./configure; sudo make -f Makefile.dkms deb
 
 pre-kernel: pre-drivers pre-kernel-nodrivers
 
-pre-dna:
-	cd ../../drivers/DNA/; ./configure; make dkms-deb
-	cp ../../drivers/DNA/*.deb .
-
 pre-zc:
-	cd ../../drivers/PF_RING_aware/intel/; ./configure; make dkms-deb
-	cp ../../drivers/PF_RING_aware/intel/*.deb .
+	cd ../../drivers/intel/; ./configure; make dkms-deb
+	cp ../../drivers/intel/*.deb .
 
 pre: pre-kernel pre-build
 pre-nodrivers: pre-kernel-nodrivers pre-build
@@ -58,7 +54,6 @@ pre-build-core:
 pre-build-examples:
 #	cd $(PF_RING_HOME)/userland/tcpdump/ ; ./configure; make; cp tcpdump $(HERE)/debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland/examples; cp pfcount pfsend pfwrite $(HERE)/debian/usr/local/bin
-	cd $(PF_RING_HOME)/userland/examples_libzero; cp pfdnacluster_master $(HERE)/debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland/examples_zc; cp zbalance_ipc zsend zcount zcount_ipc $(HERE)/debian/usr/local/bin
 
 build-nodrivers: pre-kernel-nodrivers build
