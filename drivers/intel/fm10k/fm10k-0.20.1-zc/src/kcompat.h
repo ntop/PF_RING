@@ -4152,7 +4152,7 @@ static inline bool page_is_pfmemalloc(struct page __maybe_unused *page)
 #define HAVE_NETIF_NAPI_ADD_CALLS_NAPI_HASH_ADD
 #endif /* 4.5.0 */
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
 static inline void napi_consume_skb(struct sk_buff *skb,
 				    int __always_unused budget)
 {
