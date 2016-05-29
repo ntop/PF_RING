@@ -1,13 +1,13 @@
 all:
 	cd kernel; make
 	cd userland; make
-	cd drivers; make dna
+	cd drivers; make
 
 clean:
 	cd kernel; make clean
 	cd userland; make clean
 	cd drivers; make clean
-	cd userland/snort/pfring-daq-module; make clean
+	-cd userland/snort/pfring-daq-module; make clean
 
 snort:
 	cd userland/snort/pfring-daq-module; autoreconf -ivf; ./configure; make

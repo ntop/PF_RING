@@ -20,7 +20,7 @@ clean:
 	cd $(IXGBE)/src; make clean
 	cd $(I40E)/src; make clean
 	cd $(FM10K)/src; make clean
-	/bin/rm *.deb *.rpm
+	-/bin/rm *.deb *.rpm
 
 
 cleanup:
