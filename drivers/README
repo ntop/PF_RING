@@ -1,0 +1,7 @@
+This directory contains drivers for popular 1/10/40/100 Gbit adapters with PF_RING ZC support.
+They can be used as standard drivers, or in zero-copy mode
+opening the device with the 'zc:' prefix (e.g. zc:eth1).
+
+Please note that opening the device in zero-copy mode disconnects it from 
+the system.
+

@@ -1,12 +1,12 @@
-all: pf_ring_aware dna
-
-pf_ring_aware:
-	cd PF_RING_aware; make
-
-dna:
-	cd DNA; make
+all:
+#	cd broadcom; make
+	cd intel; make
+#	cd chelsio/cxgb4; make
+#	cd myricom; make
 
 clean:
-	cd PF_RING_aware; make clean
-	cd DNA; make clean
+#	cd broadcom; make clean
+	cd intel; make clean
+#	cd chelsio/cxgb4; make clean
+#	cd myricom; make clean
 
