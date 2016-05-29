@@ -1,5 +1,7 @@
 AC_INIT([Makefile.in], 1.0)
 
+FM10K="fm10k"
+FM10K_VERSION=`grep "FM10K=" Makefile|cut -d '-' -f 2`
 I40E="i40e"
 I40E_VERSION=`grep "I40E=" Makefile|cut -d '-' -f 2`
 IXGBE="ixgbe"
@@ -10,6 +12,8 @@ E1000E="e1000e"
 E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
 REVISION=`git rev-list --all |wc -l`
 
+AC_SUBST(FM10K)
+AC_SUBST(FM10K_VERSION)
 AC_SUBST(I40E)
 AC_SUBST(I40E_VERSION)
 AC_SUBST(IXGBE)
@@ -20,10 +24,12 @@ AC_SUBST(E1000E)
 AC_SUBST(E1000E_VERSION)
 AC_SUBST(REVISION)
 
+AC_CONFIG_FILES(Makefile.dkms.fm10k)
 AC_CONFIG_FILES(Makefile.dkms.i40e)
 AC_CONFIG_FILES(Makefile.dkms.ixgbe)
 AC_CONFIG_FILES(Makefile.dkms.igb)
 AC_CONFIG_FILES(Makefile.dkms.e1000e)
+AC_CONFIG_FILES(dkms.conf.fm10k)
 AC_CONFIG_FILES(dkms.conf.i40e)
 AC_CONFIG_FILES(dkms.conf.ixgbe)
 AC_CONFIG_FILES(dkms.conf.igb)

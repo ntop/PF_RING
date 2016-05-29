@@ -1,0 +1,42 @@
+all: install
+
+add: veryclean
+	\/bin/rm -rf /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@
+	mkdir -p /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
+	cd @FM10K@/@FM10K@-@FM10K_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
+	cd @FM10K@/@FM10K@-@FM10K_VERSION@-zc/src/ ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
+	cd @FM10K@/@FM10K@-@FM10K_VERSION@-zc/src/ ; cp Makefile /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
+	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/*.c
+	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/*.h
+	sed -i -e 's/fm10k\.o/fm10k_zc.o/' -e 's/fm10k-/fm10k_zc-/' /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Kbuild
+	cp dkms.conf.@FM10K@ /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/dkms.conf 
+	dkms add -m @FM10K@-zc -v @FM10K_VERSION@.@REVISION@
+
+build: add
+	dkms build -m @FM10K@-zc -v @FM10K_VERSION@.@REVISION@
+
+install: build
+	dkms install --force -m @FM10K@-zc -v @FM10K_VERSION@.@REVISION@
+
+deb: add add_deb install
+	dkms mkdeb -m @FM10K@-zc -v @FM10K_VERSION@.@REVISION@ --source-only
+
+rpm: add add_rpm install
+	dkms mkrpm -m @FM10K@-zc -v @FM10K_VERSION@.@REVISION@ --source-only
+
+add_rpm:
+	cp -f zc.spec /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/@FM10K@-zc-dkms-mkrpm.spec
+
+add_deb:
+	cp -r zc-dkms-mkdeb /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/@FM10K@-zc-dkms-mkdeb
+	-cd  /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/@FM10K@-zc-dkms-mkdeb ; find . -type d -name ".git" -exec rm -fr {} \;
+
+remove:
+	-dkms remove -m @FM10K@-zc -v @FM10K_VERSION@.@REVISION@ --all
+	\/bin/rm -f /lib/modules/*/weak-updates/fm10k*ko
+	\/bin/rm -f /lib/modules/*/extra/fm10k*ko
+	\/bin/rm -rf /var/lib/dkms/fm10k-zc
+
+veryclean: remove
+	\/bin/rm -fr /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@
+	
