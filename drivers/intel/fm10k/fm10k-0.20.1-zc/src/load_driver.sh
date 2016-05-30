@@ -21,7 +21,7 @@ if [ $AVAILHUGEPAGES -ne $HUGEPAGES ]; then
 fi
 
 # We assume that you have compiled PF_RING
-insmod ../../../../../../kernel/pf_ring.ko
+insmod ../../../../../kernel/pf_ring.ko
 
 # Required by fm10k
 modprobe uio

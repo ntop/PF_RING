@@ -23,7 +23,7 @@ fi
 # Note: for hw timestamping on supported adapters compile with make CFLAGS_EXTRA="-DIGB_PTP"
 
 # We assume that you have compiled PF_RING
-insmod ../../../../../../kernel/pf_ring.ko
+insmod ../../../../../kernel/pf_ring.ko
 
 # Disable multiqueue
 insmod ./igb.ko RSS=1,1,1,1,1,1,1,1

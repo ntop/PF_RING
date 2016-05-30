@@ -9,7 +9,7 @@ rmmod ixgbe
 rmmod pf_ring
 
 # We assume that you have compiled PF_RING
-insmod ../../../../../../kernel/pf_ring.ko
+insmod ../../../../../kernel/pf_ring.ko
 
 # Required by ixgbe
 modprobe ptp
