@@ -3405,6 +3405,9 @@ static inline void *_kc_vzalloc(unsigned long size)
 #define vzalloc(_size) _kc_vzalloc(_size)
 
 #ifndef vlan_get_protocol
+#ifndef vlan_tx_tag_present
+#define vlan_tx_tag_present(_skb) 0
+#endif
 static inline __be16 __kc_vlan_get_protocol(const struct sk_buff *skb)
 {
 	if (vlan_tx_tag_present(skb) ||
