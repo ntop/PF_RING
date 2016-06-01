@@ -5220,21 +5220,21 @@ static struct dma_memory_info *allocate_extra_dma_memory(struct device *hwdev,
       printk("[PF_RING] %s() Mapping DMA slot %d of %d [slot addr=%p][offset=%u]\n",
              __FUNCTION__, i + 1, dma_memory->num_slots, slot, offset);
 
-      dma_memory->dma_addr[i] = cpu_to_le64(
-        pci_map_single(to_pci_dev(dma_memory->hwdev), slot,
-                       dma_memory->slot_len,
-                       PCI_DMA_BIDIRECTIONAL));
+    dma_memory->dma_addr[i] = cpu_to_le64(
+      pci_map_single(to_pci_dev(dma_memory->hwdev), slot,
+                     dma_memory->slot_len,
+                     PCI_DMA_BIDIRECTIONAL));
 
-      if(dma_mapping_error(
+    if(dma_mapping_error(
 #if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,26))
-                           dma_memory->hwdev,
+                         dma_memory->hwdev,
 #endif
-			   dma_memory->dma_addr[i])) {
-        printk("[PF_RING] %s() Error mapping DMA slot %d of %d \n", __FUNCTION__, i + 1, dma_memory->num_slots);
-	dma_memory->dma_addr[i] = 0;
-	dma_memory->num_slots = i;
-        break;
-      }
+		         dma_memory->dma_addr[i])) {
+      printk("[PF_RING] %s() Error mapping DMA slot %d of %d \n", __FUNCTION__, i + 1, dma_memory->num_slots);
+      dma_memory->dma_addr[i] = 0;
+      dma_memory->num_slots = i;
+      break;
+    }
   }
 
   return dma_memory;
