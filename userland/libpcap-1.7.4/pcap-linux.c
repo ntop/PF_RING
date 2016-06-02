@@ -1384,6 +1384,7 @@ pcap_activate_linux(pcap_t *handle)
 		if (getenv("PCAP_PF_RING_DNA_RSS")) flags |= PF_RING_DNA_SYMMETRIC_RSS; /* deprecated */
 		if (getenv("PCAP_PF_RING_ZC_RSS"))  flags |= PF_RING_ZC_SYMMETRIC_RSS;
 		if (getenv("PCAP_PF_RING_STRIP_HW_TIMESTAMP")) flags |= PF_RING_STRIP_HW_TIMESTAMP;
+		if (getenv("PCAP_PF_RING_HW_TIMESTAMP") || handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) flags |= PF_RING_HW_TIMESTAMP;
 	  
 		if (active) pf_ring_active_poll = atoi(active);
 		handle->ring = pfring_open((char*)device, handle->snapshot, flags);
@@ -1706,8 +1707,15 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 				bp = packet;
 				pcap_header.caplen = min(pcap_header.caplen, handle->bufsize);
 				caplen = pcap_header.caplen, packet_len = pcap_header.len;
-				if (pcap_header.ts.tv_sec == 0) 
-					gettimeofday((struct timeval*)&pcap_header.ts, NULL);
+				if (pcap_header.extended_hdr.timestamp_ns && handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) {
+					pcap_header.ts.tv_sec  = pcap_header.extended_hdr.timestamp_ns / 1000000000;
+					pcap_header.ts.tv_usec = pcap_header.extended_hdr.timestamp_ns % 1000;
+				} else if (pcap_header.ts.tv_sec == 0) {
+					if (handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO)
+						clock_gettime(CLOCK_REALTIME, (struct timespec *) &pcap_header.ts);
+					else
+						gettimeofday((struct timeval *) &pcap_header.ts, NULL);
+				}
 
 				break;
 			} else {
