@@ -341,6 +341,16 @@ pfring_zc_get_queue_settings(
 );
 
 /**
+ * Read queue speed.
+ * @param queue The queue handle.
+ * @return      The queue speed in Mbit/s, 0 if unknown.
+ */
+u_int32_t
+pfring_zc_get_queue_speed(
+  pfring_zc_queue *queue
+);
+
+/**
  * Read the queue stats.
  * @param queue The queue handle.
  * @param stats The stats structure.
