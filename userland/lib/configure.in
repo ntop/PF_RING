@@ -24,8 +24,6 @@ dnl> CFLAGS="$save_CFLAGS"
 
 MACHINE=`uname -m`
 PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
-ZERO_LIB="libs/libpfring_zero_$MACHINE$LIBARCH.a"
-DNA_LIB="libs/libpfring_dna_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
 
@@ -50,17 +48,6 @@ else
   AC_MSG_RESULT(no)
 fi
 
-AC_MSG_CHECKING([Zero support])
-if test -f $ZERO_LIB; then
-  HAVE_ZERO="-D HAVE_ZERO"
-  ZERO_OBJS=`ar t $ZERO_LIB | grep -F .o | tr '\n' ' '`
-  ZERO_DEP="extract_zero_lib"
-  AC_MSG_RESULT(yes)
-else
-  ZERO_LIB=""
-  AC_MSG_RESULT(no)
-fi
-
 dnl> R/W locks are broken on some BSD releases
 if test "$IS_FREEBSD" != "1"; then
 AC_MSG_CHECKING([if r/w locks are supported])
@@ -76,18 +63,6 @@ int main()
 ]
 , [ AC_MSG_RESULT(yes) AC_DEFINE_UNQUOTED(HAVE_RW_LOCK, 1, [pthread has rw locks]) ], [AC_MSG_RESULT(no)]
 )
-fi
-
-AC_MSG_CHECKING([DNA support])
-if test -f $DNA_LIB; then
-  HAVE_DNA="-D HAVE_DNA"
-  DNA_OBJS=`ar t $DNA_LIB | tr '\n' ' '`
-  DNA_OBJS="pfring_mod_dna.o "$DNA_OBJS
-  DNA_DEP="extract_dna_lib"
-  AC_MSG_RESULT(yes)
-else
-  DNA_LIB=""
-  AC_MSG_RESULT(no)
 fi
 
 dnl> end of pthread_setaffinity_np check
@@ -248,14 +223,6 @@ AC_SUBST(PF_RING_ZC_LIB)
 AC_SUBST(PF_RING_ZC_OBJS)
 AC_SUBST(PF_RING_ZC_DEP)
 AC_SUBST(PF_RING_ZC_H)
-AC_SUBST(HAVE_ZERO)
-AC_SUBST(ZERO_LIB)
-AC_SUBST(ZERO_OBJS)
-AC_SUBST(ZERO_DEP)
-AC_SUBST(HAVE_DNA)
-AC_SUBST(DNA_LIB)
-AC_SUBST(DNA_OBJS)
-AC_SUBST(DNA_DEP)
 AC_SUBST(HAVE_DAG)
 AC_SUBST(DAG_LIB)
 AC_SUBST(DAG_OBJS)
@@ -293,7 +260,6 @@ dnl> AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([pfring_config])
 AC_CONFIG_FILES([../examples/Makefile])
 AC_CONFIG_FILES([../examples_zc/Makefile])
-AC_CONFIG_FILES([../examples_libzero/Makefile])
 AC_CONFIG_FILES([../c++/Makefile])
 
 AC_CONFIG_HEADERS(config.h)

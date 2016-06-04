@@ -228,7 +228,6 @@ void printHelp(void) {
   printf("-b <num>        Number of different IPs (balanced traffic)\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on DNA]\n");
-  printf("-z              Disable zero-copy, if supported [DNA only]\n");
   printf("-x <if index>   Send to the selected interface, if supported\n");
   printf("-d              Daemon mode\n");
   printf("-P <pid file>   Write pid to the specified file (daemon mode only)\n");
@@ -358,8 +357,7 @@ static void reforge_packet(u_char *buffer, u_int buffer_len, u_int idx) {
 
 int main(int argc, char* argv[]) {
   char *pcap_in = NULL, path[255] = { 0 };
-  int c, i, verbose = 0, active_poll = 0, disable_zero_copy = 0;
-  int use_zero_copy_tx = 0;
+  int c, i, verbose = 0, active_poll = 0;
   u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
   u_char buffer[9000];
   u_int32_t num_to_send = 0;
@@ -372,14 +370,13 @@ int main(int argc, char* argv[]) {
 #endif
   ticks hz = 0;
   struct packet *tosend;
-  u_int num_tx_slots = 0;
   int num_balanced_pkts = 1, pkts_offset = 0, watermark = 0;
   u_int num_pcap_pkts = 0;
   int send_full_pcap_once = 1;
   char *pidFileName = NULL;
   int send_error_once = 1;
 
-  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:af:r:vm:p:P:w:zx:")) != -1) {
+  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:af:r:vm:p:P:w:x:")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -437,9 +434,6 @@ int main(int argc, char* argv[]) {
     case 'w':
       watermark = atoi(optarg);
       if(watermark < 1) watermark = 1;
-      break;
-    case 'z':
-      disable_zero_copy = 1;
       break;
     case 'd':
       daemon_mode = 1;
@@ -693,45 +687,6 @@ int main(int argc, char* argv[]) {
     return(-1);
   }
 
-  use_zero_copy_tx = 0;
-
-  if((!disable_zero_copy)
-     && (pd->dna_get_num_tx_slots != NULL)
-     && (pd->dna_get_next_free_tx_slot != NULL)
-     && (pd->dna_copy_tx_packet_into_slot != NULL)) {
-    tosend = pkt_head;
-
-    num_tx_slots = pd->dna_get_num_tx_slots(pd);
-
-    if(num_tx_slots > 0
-       && (((num_to_send > 0) && (num_to_send <= num_tx_slots))
-        || ( pcap_in && (num_pcap_pkts     <= num_tx_slots) && (num_tx_slots % num_pcap_pkts     == 0))
-        || (!pcap_in && (num_balanced_pkts <= num_tx_slots) && (num_tx_slots % num_balanced_pkts == 0)))) {
-      int ret;
-      u_int first_free_slot = pd->dna_get_next_free_tx_slot(pd);
-
-      for(i=0; i<num_tx_slots; i++) {
-	ret = pfring_copy_tx_packet_into_slot(pd, (first_free_slot+i)%num_tx_slots, tosend->pkt, tosend->len);
-	if(ret < 0)
-	  break;
-
-	tosend = tosend->next;
-      }
-
-      use_zero_copy_tx = 1;
-      printf("Using zero-copy TX\n");
-    } else {
-      printf("NOT using zero-copy: TX ring size (%u) is not a multiple of the number of unique packets to send (%u)\n", num_tx_slots, pcap_in ? num_pcap_pkts : num_balanced_pkts);
-    }
-  } else {
-    if (!disable_zero_copy) {
-      printf("NOT using zero-copy: not supported by this driver");
-      if(strncmp(device, "zc:", 3) == 0)
-	printf(" (please use zsend for zero-copy)");
-      printf("\n");
-    }
-  }
-
   tosend = pkt_head;
   i = 0;
 
@@ -762,9 +717,6 @@ int main(int argc, char* argv[]) {
 
     if (if_index != -1)
       rc = pfring_send_ifindex(pd, tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */, if_index);
-    else if(use_zero_copy_tx)
-      /* tx pre-filled the TX slots */
-      rc = pfring_send(pd, NULL, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
     else
       rc = pfring_send(pd, tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
 
@@ -789,10 +741,6 @@ int main(int argc, char* argv[]) {
     }
 
     tosend = tosend->next;
-
-    if (use_zero_copy_tx
-	&& (num_pkt_good_sent == num_tx_slots))
-      tosend = pkt_head;
 
 #if !(defined(__arm__) || defined(__mips__))
     if(pps > 0) {

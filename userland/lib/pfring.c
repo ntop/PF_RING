@@ -58,10 +58,6 @@
 #include "pfring_mod_invea.h"
 #endif
 
-#ifdef HAVE_DNA
-#include "pfring_mod_dna.h"
-#endif
-
 #ifdef HAVE_PF_RING_ZC
 extern int pfring_zc_open(pfring *ring);
 #endif
@@ -121,18 +117,6 @@ static pfring_module_info pfring_module_list[] = {
   },
 #endif
 
-#ifdef HAVE_DNA
-#ifdef HAVE_ZERO
-  {
-    .name = "dnacl", /* using dnacl* as dnacluster is too long */
-    .open = pfring_dna_cluster_open,
-  },
-#endif
-  {
-    .name = "dna",
-    .open = pfring_dna_open,
-  },
-#endif
 #ifdef HAVE_PF_RING_ZC
   {
     .name = "zc",
@@ -197,34 +181,6 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 
     while (pfring_module_list[++i].name) {
       str = str1 = NULL;
-#ifdef HAVE_DNA
-      u_int8_t is_dna = 0;
-      if(strcmp(pfring_module_list[i].name, "dna") == 0) {
-        /* DNA module: check proc for renamed interfaces */
-        FILE *proc_net_pfr;
-	char line[256];
-	char tmp[32];
-	char *at;
-	snprintf(tmp, sizeof(tmp), "%s", device_name);
-	at = strchr(tmp, '@');
-	if (at != NULL) at[0] = '\0';
-        snprintf(line, sizeof(line), "/proc/net/pf_ring/dev/%s/info", tmp);
-	proc_net_pfr = fopen(line, "r");
-	if(proc_net_pfr != NULL) {
-	  const char *str_mode = "Polling Mode:";
-	  while(fgets(line, sizeof(line), proc_net_pfr) != NULL) {
-	    char *p = &line[0];
-	    if (!strncmp(p, str_mode, strlen(str_mode))) {
-	      p += strlen(str_mode);
-              is_dna = (strstr(p, "DNA") != NULL);
-              break;
-	    }
-	  }
-	  fclose(proc_net_pfr);
-	}
-        if (!is_dna) continue;
-      } else
-#endif
       if(!(str = strstr(device_name, pfring_module_list[i].name))) continue;
       if(!pfring_module_list[i].open)                              continue;
       mod_found = 1;
@@ -1410,36 +1366,6 @@ int pfring_adjust_device_clock(pfring *ring, struct timespec *offset, int8_t sig
   if(ring && ring->adjust_device_clock) {
     return ring->adjust_device_clock(ring, offset, sign);
   }
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-u_int pfring_get_num_tx_slots(pfring *ring) {
-  if(ring && ring->dna_get_num_tx_slots) {
-    return ring->dna_get_num_tx_slots(ring);
-  }
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-u_int pfring_get_num_rx_slots(pfring *ring) {
-  if(ring && ring->dna_get_num_rx_slots) {
-    return ring->dna_get_num_rx_slots(ring);
-  }
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-int pfring_copy_tx_packet_into_slot(pfring *ring,
-				    u_int16_t tx_slot_id, char* buffer, u_int len) {
-  if(ring && ring->dna_copy_tx_packet_into_slot)
-    return (ring->dna_copy_tx_packet_into_slot(ring, tx_slot_id, buffer, len) != NULL ? 0 : -1);
 
   return(PF_RING_ERROR_NOT_SUPPORTED);
 }

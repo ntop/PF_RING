@@ -226,21 +226,6 @@ struct __pfring {
 
   u_int8_t zc_device;
 
-  /* FIXX these fields should be moved in ->priv_data */
-  /* DNA (Direct NIC Access) only */ 
-  struct {
-    u_int16_t num_rx_pkts_before_dna_sync, num_tx_pkts_before_dna_sync; 
-    u_int16_t dna_rx_sync_watermark, dna_tx_sync_watermark;
-    u_int64_t tot_dna_read_pkts, tot_dna_lost_pkts;
-    u_int32_t rx_reg, tx_reg, last_rx_slot_read;
-    u_int32_t num_rx_slots_per_chunk, num_tx_slots_per_chunk;
-    
-    zc_dev_info dna_dev;
-    volatile u_int32_t *rx_reg_ptr, *tx_reg_ptr,
-      *mpc_reg_ptr, *qprdc_reg_ptr, *rnbc_reg_ptr, *rqdpc_reg_ptr, *gorc_reg_ptr;
-    zc_dev_operation last_dna_operation;
-  } dna;
-
   void   *priv_data; /* module private data */
 
   void      (*close)                        (pfring *);
@@ -320,18 +305,6 @@ struct __pfring {
   int       (*get_metadata)         	    (pfring *, u_char **, u_int32_t *);
   u_int32_t (*get_interface_speed)	    (pfring *);
 
-  /* DNA only */
-  int      (*dna_init)             (pfring *);
-  void     (*dna_term)             (pfring *);   
-  int      (*dna_enable)           (pfring *);
-  u_int8_t (*dna_check_packet_to_read) (pfring *, u_int8_t);
-  u_char*  (*dna_next_packet)      (pfring *, u_char **, u_int, struct pfring_pkthdr *);
-  u_int    (*dna_get_num_tx_slots)(pfring *ring);
-  u_int    (*dna_get_num_rx_slots)(pfring *ring);
-  u_int    (*dna_get_next_free_tx_slot)(pfring *ring);
-  u_char*  (*dna_copy_tx_packet_into_slot)(pfring *ring, u_int32_t tx_slot_id, char *buffer, u_int len);
-  u_int8_t (*dna_tx_ready)(pfring *);
-
   /* Silicom Redirector Only */
   struct {
     int8_t device_id, port_id;
@@ -397,7 +370,7 @@ struct __pfring {
  * This call is used to initialize a PF_RING socket hence obtain a handle of type struct pfring 
  * that can be used in subsequent calls. Note that: 
  * 1. you can use physical (e.g. ethX) and virtual (e.g. tapX) devices, RX-queues (e.g. ethX@Y), 
- *    and additional modules (e.g. dna:dnaX@Y, dag:dagX:Y, "multi:ethA@X;ethB@Y;ethC@Z", "dnacluster:A@X", "stack:dnaX").
+ *    and additional modules (e.g. zc:ethX@Y, dag:dagX:Y, "multi:ethA@X;ethB@Y;ethC@Z", "stack:ethX").
  * 2. you need super-user capabilities in order to open a device.
  * @param device_name Symbolic name of the PF_RING-aware device we’re attempting to open (e.g. eth0).
  * @param caplen      Maximum packet capture len (also known as snaplen).
@@ -1079,31 +1052,6 @@ int pfring_send_last_rx_packet(pfring *ring, int tx_interface_id);
  * @return 1 if link is up, 0 otherwise.
  */
 int pfring_get_link_status(pfring *ring);
-
-/**
- * Return the number of slots in the egress ring.
- * @param ring The PF_RING handle.
- * @return The number of slots. 
- */
-
-u_int pfring_get_num_tx_slots(pfring *ring);
-
-/**
- * Return the number of slots in the ingress ring.
- * @param ring The PF_RING handle.
- * @return The number of slots.
- */
-u_int pfring_get_num_rx_slots(pfring *ring);
-
-/**
- * Copies a packet into the specified slot of the egress ring.
- * @param ring       The PF_RING handle.
- * @param tx_slot_id The slot index. 
- * @param buffer     The packet to copy. 
- * @param len        The packet length.
- * @return 0 on success, a negative value otherwise.
- */
-int pfring_copy_tx_packet_into_slot(pfring *ring, u_int16_t tx_slot_id, char* buffer, u_int len);
 
 /**
  * Return the pointer to the buffer pointed by the packet buffer handle.

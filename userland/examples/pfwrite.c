@@ -571,8 +571,7 @@ int main(int argc, char* argv[]) {
 	s = (hdr.ts.tv_sec + thiszone) % 86400;
 
 	if(hdr.extended_hdr.timestamp_ns) {
-	  if (pd->dna.dna_dev.mem_info.device_model != intel_igb_82580 /* other than intel_igb_82580 */)
-	    s = ((hdr.extended_hdr.timestamp_ns / 1000000000) + thiszone) % 86400;
+	  s = ((hdr.extended_hdr.timestamp_ns / 1000000000) + thiszone) % 86400;
 	  /* "else" intel_igb_82580 has 40 bit ts, using gettimeofday seconds:
 	   * be careful with drifts mixing sys time and hw timestamp */
 	  usec = (hdr.extended_hdr.timestamp_ns / 1000) % 1000000;

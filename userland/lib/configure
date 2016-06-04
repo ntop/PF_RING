@@ -651,14 +651,6 @@ NT_OBJS
 DAG_OBJS
 DAG_LIB
 HAVE_DAG
-DNA_DEP
-DNA_OBJS
-DNA_LIB
-HAVE_DNA
-ZERO_DEP
-ZERO_OBJS
-ZERO_LIB
-HAVE_ZERO
 PF_RING_ZC_H
 PF_RING_ZC_DEP
 PF_RING_ZC_OBJS
@@ -3280,8 +3272,6 @@ fi
 
 MACHINE=`uname -m`
 PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
-ZERO_LIB="libs/libpfring_zero_$MACHINE$LIBARCH.a"
-DNA_LIB="libs/libpfring_dna_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
 
@@ -3351,20 +3341,6 @@ else
 $as_echo "no" >&6; }
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Zero support" >&5
-$as_echo_n "checking Zero support... " >&6; }
-if test -f $ZERO_LIB; then
-  HAVE_ZERO="-D HAVE_ZERO"
-  ZERO_OBJS=`ar t $ZERO_LIB | grep -F .o | tr '\n' ' '`
-  ZERO_DEP="extract_zero_lib"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  ZERO_LIB=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
 if test "$IS_FREEBSD" != "1"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if r/w locks are supported" >&5
 $as_echo_n "checking if r/w locks are supported... " >&6; }
@@ -3404,21 +3380,6 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking DNA support" >&5
-$as_echo_n "checking DNA support... " >&6; }
-if test -f $DNA_LIB; then
-  HAVE_DNA="-D HAVE_DNA"
-  DNA_OBJS=`ar t $DNA_LIB | tr '\n' ' '`
-  DNA_OBJS="pfring_mod_dna.o "$DNA_OBJS
-  DNA_DEP="extract_dna_lib"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  DNA_LIB=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
 fi
 
 fi
@@ -3994,21 +3955,11 @@ fi
 
 
 
-
-
-
-
-
-
-
-
 ac_config_files="$ac_config_files pfring_config"
 
 ac_config_files="$ac_config_files ../examples/Makefile"
 
 ac_config_files="$ac_config_files ../examples_zc/Makefile"
-
-ac_config_files="$ac_config_files ../examples_libzero/Makefile"
 
 ac_config_files="$ac_config_files ../c++/Makefile"
 
@@ -4708,7 +4659,6 @@ do
     "pfring_config") CONFIG_FILES="$CONFIG_FILES pfring_config" ;;
     "../examples/Makefile") CONFIG_FILES="$CONFIG_FILES ../examples/Makefile" ;;
     "../examples_zc/Makefile") CONFIG_FILES="$CONFIG_FILES ../examples_zc/Makefile" ;;
-    "../examples_libzero/Makefile") CONFIG_FILES="$CONFIG_FILES ../examples_libzero/Makefile" ;;
     "../c++/Makefile") CONFIG_FILES="$CONFIG_FILES ../c++/Makefile" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
 
