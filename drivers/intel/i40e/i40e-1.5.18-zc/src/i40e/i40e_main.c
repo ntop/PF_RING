@@ -5671,12 +5671,9 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 				tx_info.registers_index		    = tx_ring->reg_idx;
 
 				hook->zc_dev_handler(add_device_mapping,
-					zc_driver,
 					&rx_info,
 					&tx_info,
-					0, /* rx packet memory */
 					rx_ring->desc, /* rx packet descriptors */
-					0, /* tx packet memory */
 					tx_ring->desc, /* tx packet descriptors */
 					(void *) pci_resource_start(pf->pdev, 0),
 					pci_resource_len(pf->pdev, 0),
@@ -5798,12 +5795,9 @@ void i40e_down(struct i40e_vsi *vsi)
 				struct i40e_ring *rx_ring = vsi->rx_rings[i];
 				struct i40e_ring *tx_ring = vsi->tx_rings[i];
 				hook->zc_dev_handler(remove_device_mapping,
-					zc_driver,
 					NULL, // rx_info,
 					NULL, // tx_info,
-					0, // rx_ring->pfring_zc.rx_tx.rx.packet_memory,
 					NULL, /* Packet descriptors */
-					0, // tx_ring->pfring_zc.rx_tx.tx.packet_memory,
 					NULL, /* Packet descriptors */
 					(void*)pci_resource_start(pf->pdev, 0),
 					pci_resource_len(pf->pdev, 0),

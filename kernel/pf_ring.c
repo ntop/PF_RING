@@ -223,16 +223,6 @@ static u_int plugin_registration_size = 0;
 static struct pfring_plugin_registration *plugin_registration[MAX_PLUGIN_ID] = { NULL };
 static u_short max_registered_plugin_id = 0;
 
-/* List of DNA clusters */
-static struct list_head dna_cluster_list;
-static rwlock_t dna_cluster_lock =
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  RW_LOCK_UNLOCKED
-#else
-  __RW_LOCK_UNLOCKED(dna_cluster_lock)
-#endif
-;
-
 /* List of generic cluster referees */
 static struct list_head cluster_referee_list;
 static rwlock_t cluster_referee_lock =
@@ -1076,8 +1066,7 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
 	       dev->perm_addr[0], dev->perm_addr[1], dev->perm_addr[2],
 	       dev->perm_addr[3], dev->perm_addr[4], dev->perm_addr[5]);
     
-    seq_printf(m, "Polling Mode:      %s\n", dev_ptr->is_zc_device == 1 ? "DNA" : 
-      (dev_ptr->is_zc_device == 2 ? "NAPI/ZC" : "NAPI"));
+    seq_printf(m, "Polling Mode:      %s\n", dev_ptr->is_zc_device ? "NAPI/ZC" : "NAPI");
 
     switch(dev->type) {
     case 1:   strcpy(dev_buf, "Ethernet"); break;
@@ -1474,7 +1463,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
     /* /proc/net/pf_ring/info */
     seq_printf(m, "PF_RING Version          : %s (%s)\n", RING_VERSION, GIT_REV);
     seq_printf(m, "Total rings              : %d\n", atomic_read(&ring_table_size));
-    seq_printf(m, "\nStandard (non DNA/ZC) Options\n");
+    seq_printf(m, "\nStandard (non ZC) Options\n");
     seq_printf(m, "Ring slots               : %d\n", min_num_slots);
     seq_printf(m, "Slot version             : %d\n", RING_FLOWSLOT_VERSION);
     seq_printf(m, "Capture TX               : %s\n", enable_tx_capture ? "Yes [RX+TX]" : "No [RX only]");
@@ -1513,8 +1502,8 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
       seq_printf(m, "\n");
 
-      seq_printf(m, "Active             : %d\n", pfr->ring_active || pfr->dna_cluster);
-      seq_printf(m, "Breed              : %s\n", (pfr->zc_device_entry != NULL) ? (pfr->ring_netdev->is_zc_device == 1 ? "DNA" : "ZC") : "Standard");
+      seq_printf(m, "Active             : %d\n", pfr->ring_active);
+      seq_printf(m, "Breed              : %s\n", (pfr->zc_device_entry != NULL) ? "ZC" : "Standard");
       seq_printf(m, "Appl. Name         : %s\n", pfr->appl_name ? pfr->appl_name : "<unknown>");
       seq_printf(m, "Socket Mode        : %s\n", sockmode2string(pfr->mode));
       if (pfr->mode != send_only_mode) {
@@ -1532,23 +1521,12 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       }
 
       if(pfr->zc_device_entry != NULL) {
-        /* DNA/ZC */
+        /* ZC */
         seq_printf(m, "Channel Id         : %d\n", pfr->zc_device_entry->dev.channel_id);
         if (pfr->mode != send_only_mode)
           seq_printf(m, "Num RX Slots       : %d\n", pfr->zc_device_entry->dev.mem_info.rx.packet_memory_num_slots);
         if (pfr->mode != recv_only_mode)
 	  seq_printf(m, "Num TX Slots       : %d\n", pfr->zc_device_entry->dev.mem_info.tx.packet_memory_num_slots);
-	seq_printf(m, "Tot Memory         : %u bytes\n",
-			( pfr->zc_device_entry->dev.mem_info.rx.packet_memory_num_chunks *
-			  pfr->zc_device_entry->dev.mem_info.rx.packet_memory_chunk_len   )
-			+(pfr->zc_device_entry->dev.mem_info.tx.packet_memory_num_chunks *
-			  pfr->zc_device_entry->dev.mem_info.tx.packet_memory_chunk_len   )
-			+ pfr->zc_device_entry->dev.mem_info.rx.descr_packet_memory_tot_len
-			+ pfr->zc_device_entry->dev.mem_info.tx.descr_packet_memory_tot_len);
-	if(pfr->dna_cluster && pfr->dna_cluster_type == cluster_master && pfr->dna_cluster->stats) {
-	  seq_printf(m, "Cluster: Tot Recvd : %lu\n", (unsigned long)pfr->dna_cluster->stats->tot_rx_packets);
-	  seq_printf(m, "Cluster: Tot Sent  : %lu\n", (unsigned long)pfr->dna_cluster->stats->tot_tx_packets);
-	}
       } else if(fsi != NULL) {
         /* Standard PF_RING */
 	seq_printf(m, "Channel Id Mask    : 0x%016llX\n", pfr->channel_id_mask);
@@ -5274,275 +5252,6 @@ static void free_extra_dma_memory(struct dma_memory_info *dma_memory)
 
 /* ********************************** */
 
-static struct dna_cluster* dna_cluster_create(u_int32_t dna_cluster_id, u_int32_t num_slots,
-                                              u_int32_t num_slaves, u_int64_t slave_mem_len,
-					      u_int64_t master_persistent_mem_len, socket_mode mode,
-					      u_int32_t options, char *hugepages_dir,
-                                              struct device *hwdev, u_int32_t slot_len, u_int32_t chunk_len,
-					      u_int32_t *recovered)
-{
-  struct list_head *ptr, *tmp_ptr;
-  struct dna_cluster *entry;
-  struct dna_cluster *dnac = NULL;
-  u_int64_t shared_mem_size;
-  int i;
-
-  write_lock(&dna_cluster_lock);
-
-  /* checking if the dna cluster already exists */
-  list_for_each_safe(ptr, tmp_ptr, &dna_cluster_list) {
-    entry = list_entry(ptr, struct dna_cluster, list);
-
-    if(entry->id == dna_cluster_id) {
-
-      if(unlikely(enable_debug))
-        printk("[PF_RING] %s(%u) cluster already exists [master: %u]\n",
-               __FUNCTION__, dna_cluster_id, entry->master);
-
-      /* Note: a dna cluster can be created by a master only,
-       * however one/more slaves can keep it if the master dies */
-      if(entry->master > 0)
-        goto unlock;
-
-      dnac = entry;
-      break;
-    }
-  }
-
-  /* Creating a new dna cluster */
-  if(dnac == NULL) {
-    if(unlikely(enable_debug))
-      printk("[PF_RING] %s(%u): attempting to create a dna cluster\n", __FUNCTION__, dna_cluster_id);
-
-    dnac = kcalloc(1, sizeof(struct dna_cluster), GFP_KERNEL);
-
-    if(dnac == NULL) {
-      if(unlikely(enable_debug))
-	printk("[PF_RING] %s(%u) failed\n", __FUNCTION__, dna_cluster_id);
-      goto unlock;
-    }
-
-    dnac->id = dna_cluster_id;
-    dnac->num_slaves = num_slaves;
-    dnac->mode = mode;
-    dnac->options = options;
-    memcpy(dnac->hugepages_dir, hugepages_dir, DNA_CLUSTER_MAX_HP_DIR_LEN);
-
-    dnac->master = 0;
-    for (i = 0; i < dnac->num_slaves; i++)
-      dnac->active_slaves[i] = 0;
-
-    if(!(dnac->options & DNA_CLUSTER_OPT_HUGEPAGES)) {
-      if((dnac->extra_dma_memory = allocate_extra_dma_memory(hwdev, num_slots, slot_len, chunk_len)) == NULL) {
-        kfree(dnac);
-        dnac = NULL;
-        goto unlock;
-      }
-
-      if(dnac->extra_dma_memory->num_slots < num_slots) {
-        /* DNA cluster requires exactly num_slots, they are not used as a auxiliary "tank" */
-        free_extra_dma_memory(dnac->extra_dma_memory);
-        kfree(dnac);
-        dnac = NULL;
-        goto unlock;
-      }
-    }
-
-    if(num_slaves > 0 /* when using direct forwarding num_slaves could also be 0 */) {
-      dnac->slave_shared_memory_len = PAGE_ALIGN(slave_mem_len);
-      if (!(dnac->options & DNA_CLUSTER_OPT_HUGEPAGES)) {
-        shared_mem_size = dnac->slave_shared_memory_len * num_slaves;
-        if((dnac->shared_memory = allocate_shared_memory(&shared_mem_size)) == NULL) {
-          printk("[PF_RING] %s() ERROR: not enough memory for DNA Cluster shared memory\n", __FUNCTION__);
-	  if(!(dnac->options & DNA_CLUSTER_OPT_HUGEPAGES))
-            free_extra_dma_memory(dnac->extra_dma_memory);
-          kfree(dnac);
-          dnac = NULL;
-          goto unlock;
-        }
-      }
-    }
-
-    dnac->master_persistent_memory_len = PAGE_ALIGN(master_persistent_mem_len);
-    shared_mem_size = dnac->master_persistent_memory_len;
-    if((dnac->master_persistent_memory = allocate_shared_memory(&shared_mem_size)) == NULL) {
-      printk("[PF_RING] %s() ERROR: not enough memory for DNA Cluster persistent memory\n", __FUNCTION__);
-      if (dnac->shared_memory != NULL)
-        vfree(dnac->shared_memory);
-      if(!(dnac->options & DNA_CLUSTER_OPT_HUGEPAGES))
-        free_extra_dma_memory(dnac->extra_dma_memory);
-      kfree(dnac);
-      dnac = NULL;
-      goto unlock;
-    }
-
-    /* global stats are at the beginning of the persistent memory */
-    dnac->stats = (struct dna_cluster_global_stats *) dnac->master_persistent_memory;
-
-    list_add(&dnac->list, &dna_cluster_list);
-
-    if(unlikely(enable_debug))
-      printk("[PF_RING] %s(%u) New DNA cluster created\n",  __FUNCTION__, dna_cluster_id);
-
-    *recovered = 0;
-  } else {
-    /* recovering an old cluster */
-
-    /* checking cluster parameters */
-    if(dnac->num_slaves != num_slaves
-	|| (num_slaves > 0 && dnac->slave_shared_memory_len != PAGE_ALIGN(slave_mem_len))
-	|| dnac->master_persistent_memory_len != PAGE_ALIGN(master_persistent_mem_len)
-	|| dnac->mode != mode
-        || (!(dnac->options & DNA_CLUSTER_OPT_HUGEPAGES) && (!dnac->extra_dma_memory || dnac->extra_dma_memory->num_slots != num_slots))
-	|| ((dnac->options & DNA_CLUSTER_OPT_HUGEPAGES)  &&   dnac->extra_dma_memory && dnac->extra_dma_memory->num_slots > 0)) {
-      dnac = NULL;
-      goto unlock;
-    }
-
-    *recovered = 1;
-  }
-
-  dnac->master = 1;
-
-unlock:
-  write_unlock(&dna_cluster_lock);
-
-  if(dnac != NULL) {
-    if(unlikely(enable_debug))
-      printk("[PF_RING] %s(%u) DNA cluster found or created [master: %u]\n",
-           __FUNCTION__, dna_cluster_id, dnac->master);
-  } else
-    printk("[PF_RING] %s() error\n", __FUNCTION__);
-
-  return dnac;
-}
-
-static void dna_cluster_remove(struct dna_cluster *dnac, cluster_client_type type, u_int32_t slave_id)
-{
-  struct list_head *ptr, *tmp_ptr;
-  struct dna_cluster *entry;
-  int i, active_users = 0;
-
-  write_lock(&dna_cluster_lock);
-
-  list_for_each_safe(ptr, tmp_ptr, &dna_cluster_list) {
-    entry = list_entry(ptr, struct dna_cluster, list);
-
-    if(entry == dnac) {
-
-      if(type == cluster_master)
-        dnac->master = 0;
-      else if(type == cluster_slave) {
-        dnac->slave_waitqueue[slave_id] = NULL;
-	dnac->active_slaves[slave_id] = 0;
-      }
-
-      if(dnac->master)
-        active_users++;
-      for (i = 0; i < dnac->num_slaves; i++)
-        if(dnac->active_slaves[i])
-	  active_users++;
-
-      if(active_users == 0) {
-        list_del(ptr);
-	if(entry->extra_dma_memory)
-          free_extra_dma_memory(entry->extra_dma_memory);
-	vfree(entry->master_persistent_memory);
-	if(entry->shared_memory != NULL)
-          vfree(entry->shared_memory);
-        kfree(entry);
-
-	if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() success\n", __FUNCTION__);
-      }
-
-      break;
-    }
-  }
-
-  write_unlock(&dna_cluster_lock);
-}
-
-static struct dna_cluster* dna_cluster_attach(u_int32_t dna_cluster_id, u_int32_t *slave_id, u_int32_t auto_slave_id,
-                                              wait_queue_head_t *slave_waitqueue, u_int32_t *mode, u_int32_t *options,
-					      u_int32_t *slave_mem_len, char *hugepages_dir)
-{
-  struct list_head *ptr, *tmp_ptr;
-  struct dna_cluster *entry;
-  struct dna_cluster *dnac = NULL;
-  int i, free_id_found = 0;
-
-  write_lock(&dna_cluster_lock);
-
-  list_for_each_safe(ptr, tmp_ptr, &dna_cluster_list) {
-    entry = list_entry(ptr, struct dna_cluster, list);
-
-    if(entry->id == dna_cluster_id) {
-
-      if(unlikely(enable_debug))
-        printk("[PF_RING] %s() cluster %u found\n",
-               __FUNCTION__, dna_cluster_id);
-
-      dnac = entry;
-
-      if(auto_slave_id) {
-        for (i = 0; i < dnac->num_slaves; i++) {
-          if(!dnac->active_slaves[i]) {
-	    dnac->active_slaves[i] = 1;
-	    *slave_id = i;
-	    free_id_found = 1;
-	    break;
-	  }
-	}
-
-	if(!free_id_found) {
-          dnac = NULL;
-          goto unlock;
-	}
-
-      } else {
-        if(*slave_id >= dnac->num_slaves) {
-          printk("[PF_RING] %s() slave id is %u, max slave id is %u\n", __FUNCTION__, *slave_id, dnac->num_slaves - 1);
-          dnac = NULL;
-          goto unlock;
-        }
-
-        if(dnac->active_slaves[*slave_id]) {
-          printk("[PF_RING] %s() slave %u@%u already running\n", __FUNCTION__, *slave_id, dna_cluster_id);
-          dnac = NULL;
-          goto unlock;
-        } else {
-	  dnac->active_slaves[*slave_id] = 1;
-	}
-      }
-
-      dnac->slave_waitqueue[*slave_id] = slave_waitqueue;
-
-      *mode = dnac->mode;
-      *options = dnac->options;
-      *slave_mem_len = dnac->slave_shared_memory_len;
-      memcpy(hugepages_dir, dnac->hugepages_dir, DNA_CLUSTER_MAX_HP_DIR_LEN);
-
-      break;
-    }
-  }
-
-unlock:
-  write_unlock(&dna_cluster_lock);
-
-  if(unlikely(enable_debug)) {
-    if(dnac != NULL)
-      printk("[PF_RING] %s(%u) attached to DNA cluster\n",
-        __FUNCTION__, dna_cluster_id);
-    else
-      printk("[PF_RING] %s() error\n", __FUNCTION__);
-  }
-
-  return dnac;
-}
-
-/* ********************************** */
-
 static int create_cluster_referee(struct pf_ring_socket *pfr, u_int32_t cluster_id, u_int32_t *recovered)
 {
   struct list_head *ptr, *tmp_ptr;
@@ -5554,7 +5263,7 @@ static int create_cluster_referee(struct pf_ring_socket *pfr, u_int32_t cluster_
 
   write_lock(&cluster_referee_lock);
 
-  /* checking if the dna cluster already exists */
+  /* checking if the cluster already exists */
   list_for_each_safe(ptr, tmp_ptr, &cluster_referee_list) {
     entry = list_entry(ptr, struct cluster_referee, list);
 
@@ -5572,7 +5281,7 @@ static int create_cluster_referee(struct pf_ring_socket *pfr, u_int32_t cluster_
     }
   }
 
-  /* Creating a new dna cluster */
+  /* Creating a new cluster */
   if(cr == NULL) {
     if(unlikely(enable_debug))
       printk("[PF_RING] %s: attempting to create a referee for cluster %u\n", __FUNCTION__, cluster_id);
@@ -6031,9 +5740,6 @@ static int ring_release(struct socket *sock)
   if(ring_memory_ptr != NULL && free_ring_memory)
     vfree(ring_memory_ptr);
 
-  if(pfr->dna_cluster != NULL)
-    dna_cluster_remove(pfr->dna_cluster, pfr->dna_cluster_type, pfr->dna_cluster_slave_id);
-
   if(pfr->cluster_referee != NULL)
     remove_cluster_referee(pfr);
 
@@ -6272,7 +5978,7 @@ static int ring_mmap(struct file *file,
 {
   struct sock *sk = sock->sk;
   struct pf_ring_socket *pfr = ring_sk(sk);
-  int i, rc;
+  int rc;
   unsigned long mem_id = vma->vm_pgoff; /* using vm_pgoff as memory id */
   unsigned long size = (unsigned long)(vma->vm_end - vma->vm_start);
 
@@ -6290,35 +5996,13 @@ static int ring_mmap(struct file *file,
     printk("[PF_RING] %s() called, size: %ld bytes [bucket_len=%d]\n",
 	   __FUNCTION__, size, pfr->bucket_len);
 
-  /* Trick for mapping DNA chunks */
+  /* Trick for mapping packet memory chunks */
   if(mem_id >= 100) {
     mem_id -= 100;
 
     if(pfr->zc_dev) {
-      if(mem_id < pfr->zc_dev->mem_info.rx.packet_memory_num_chunks) {
-        /* DNA: RX packet memory */
-
-        if((rc = do_memory_mmap(vma, 0, size, (void *)pfr->zc_dev->rx_packet_memory[mem_id], 0, VM_LOCKED, 1)) < 0)
-          return(rc);
-
-	return(0);
-      } else if(mem_id < pfr->zc_dev->mem_info.rx.packet_memory_num_chunks +
-                         pfr->zc_dev->mem_info.tx.packet_memory_num_chunks) {
-        /* DNA: TX packet memory */
-
-        mem_id -= pfr->zc_dev->mem_info.rx.packet_memory_num_chunks;
-
-        if((rc = do_memory_mmap(vma, 0, size, (void *)pfr->zc_dev->tx_packet_memory[mem_id], 0, VM_LOCKED, 1)) < 0)
-          return(rc);
-
-	return(0);
-      } else if(pfr->extra_dma_memory && mem_id < pfr->zc_dev->mem_info.rx.packet_memory_num_chunks +
-                                                  pfr->zc_dev->mem_info.tx.packet_memory_num_chunks +
-                                                  pfr->extra_dma_memory->num_chunks) {
+      if(pfr->extra_dma_memory && mem_id < pfr->extra_dma_memory->num_chunks) {
         /* Extra DMA memory */
-
-        mem_id -= pfr->zc_dev->mem_info.rx.packet_memory_num_chunks;
-        mem_id -= pfr->zc_dev->mem_info.tx.packet_memory_num_chunks;
 
         if(pfr->extra_dma_memory->virtual_addr == NULL)
           return(-EINVAL);
@@ -6330,48 +6014,15 @@ static int ring_mmap(struct file *file,
       }
     }
 
-    if(pfr->dna_cluster) {
-      /* DNA cluster extra DMA memory */
-
-      if(pfr->zc_dev) {
-        mem_id -= pfr->zc_dev->mem_info.rx.packet_memory_num_chunks;
-        mem_id -= pfr->zc_dev->mem_info.tx.packet_memory_num_chunks;
-        if(pfr->extra_dma_memory)
-          mem_id -= pfr->extra_dma_memory->num_chunks;
-      }
-
-      if (pfr->dna_cluster->options & DNA_CLUSTER_OPT_HUGEPAGES)
-        return(-EINVAL);
-
-      if(pfr->dna_cluster->extra_dma_memory == NULL || pfr->dna_cluster->extra_dma_memory->virtual_addr == NULL)
-        return(-EINVAL);
-
-      if(mem_id >= pfr->dna_cluster->extra_dma_memory->num_chunks)
-        return(-EINVAL);
-
-      if (size < pfr->dna_cluster->extra_dma_memory->num_chunks * pfr->dna_cluster->extra_dma_memory->chunk_len)
-        return(-EINVAL);
-
-      for (i = 0; i < pfr->dna_cluster->extra_dma_memory->num_chunks; i++) {
-        if((rc = do_memory_mmap(vma, i * pfr->dna_cluster->extra_dma_memory->chunk_len,
-	                        pfr->dna_cluster->extra_dma_memory->chunk_len,
-				(void *)pfr->dna_cluster->extra_dma_memory->virtual_addr[i],
-				0, VM_LOCKED, 1)) < 0)
-        return(rc);
-      }
-
-      return(0);
-    }
-
-    printk("[PF_RING] %s() failed: not DNA nor DNA cluster\n", __FUNCTION__);
+    printk("[PF_RING] %s() failed: not ZC dev\n", __FUNCTION__);
     return(-EINVAL);
   }
 
   switch(mem_id) {
     /* RING */
     case 0:
-      if(pfr->zc_dev != NULL || pfr->dna_cluster != NULL) {
-        printk("[PF_RING] %s(): trying to map ring memory on DNA/ZC socket\n", __FUNCTION__);
+      if(pfr->zc_dev != NULL) {
+        printk("[PF_RING] %s(): trying to map ring memory on ZC socket\n", __FUNCTION__);
 	return(-EINVAL);
       }
 
@@ -6398,10 +6049,10 @@ static int ring_mmap(struct file *file,
 
       break;
     case 1:
-      /* DNA/ZC: RX packet descriptors */
+      /* ZC: RX packet descriptors */
       if(pfr->zc_dev == NULL) {
         if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: operation for DNA/ZC only", __FUNCTION__);
+	  printk("[PF_RING] %s() failed: operation for ZC only", __FUNCTION__);
         return(-EINVAL);
       }
 
@@ -6410,10 +6061,10 @@ static int ring_mmap(struct file *file,
 
       break;
     case 2:
-      /* DNA/ZC: Physical card memory */
+      /* ZC: Physical card memory */
       if(pfr->zc_dev == NULL) {
         if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: operation for DNA/ZC only", __FUNCTION__);
+	  printk("[PF_RING] %s() failed: operation for ZC only", __FUNCTION__);
         return(-EINVAL);
       }
 
@@ -6428,86 +6079,15 @@ static int ring_mmap(struct file *file,
 
       break;
     case 3:
-      /* DNA/ZC: TX packet descriptors */
+      /* ZC: TX packet descriptors */
       if(pfr->zc_dev == NULL) {
         if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: operation for DNA/ZC only", __FUNCTION__);
+	  printk("[PF_RING] %s() failed: operation for ZC only", __FUNCTION__);
         return(-EINVAL);
       }
 
       if((rc = do_memory_mmap(vma, 0, size, (void *) pfr->zc_dev->tx_descr_packet_memory, 0, VM_LOCKED, 1)) < 0)
 	return(rc);
-
-      break;
-    case 4:
-      /* DNA cluster shared memory (master) */
-      if(pfr->dna_cluster == NULL || pfr->dna_cluster_type != cluster_master) {
-        if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: operation for DNA cluster master only", __FUNCTION__);
-        return(-EINVAL);
-      }
-
-      if (pfr->dna_cluster->options & DNA_CLUSTER_OPT_HUGEPAGES) {
-        if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: trying to allocate kernel memory when using hugepages", __FUNCTION__);
-        return(-EINVAL);
-      }
-
-      if(size > (pfr->dna_cluster->slave_shared_memory_len * pfr->dna_cluster->num_slaves)) {
-        if(unlikely(enable_debug))
-          printk("[PF_RING] %s() failed: area too large [%ld > %llu]\n",
-	         __FUNCTION__, size, pfr->dna_cluster->slave_shared_memory_len * pfr->dna_cluster->num_slaves);
-        return(-EINVAL);
-      }
-
-      if((rc = do_memory_mmap(vma, 0, size, (void *) pfr->dna_cluster->shared_memory, 0, VM_LOCKED, 0)) < 0)
-        return(rc);
-
-      break;
-    case 5:
-      /* DNA cluster shared memory (slave) */
-      if(pfr->dna_cluster == NULL || pfr->dna_cluster_type != cluster_slave) {
-        if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: operation for DNA cluster slave only", __FUNCTION__);
-        return(-EINVAL);
-      }
-
-      if (pfr->dna_cluster->options & DNA_CLUSTER_OPT_HUGEPAGES) {
-        if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: trying to allocate kernel memory when using hugepages", __FUNCTION__);
-        return(-EINVAL);
-      }
-
-      if(size > pfr->dna_cluster->slave_shared_memory_len) {
-        if(unlikely(enable_debug))
-          printk("[PF_RING] %s() failed: area too large [%ld > %llu]\n",
-	         __FUNCTION__, size, pfr->dna_cluster->slave_shared_memory_len * pfr->dna_cluster->num_slaves);
-        return(-EINVAL);
-      }
-
-      if((rc = do_memory_mmap(vma, 0, size, (void *) pfr->dna_cluster->shared_memory,
-		 (pfr->dna_cluster->slave_shared_memory_len / PAGE_SIZE) * pfr->dna_cluster_slave_id,
-		 VM_LOCKED, 0)) < 0)
-        return(rc);
-
-      break;
-    case 6:
-      /* DNA cluster persistent memory (master) */
-      if(pfr->dna_cluster == NULL || pfr->dna_cluster_type != cluster_master) {
-        if(unlikely(enable_debug))
-	  printk("[PF_RING] %s() failed: operation for DNA cluster master only", __FUNCTION__);
-        return(-EINVAL);
-      }
-
-      if(size > pfr->dna_cluster->master_persistent_memory_len) {
-        if(unlikely(enable_debug))
-          printk("[PF_RING] %s() failed: area too large [%ld > %d]\n",
-	         __FUNCTION__, size, pfr->dna_cluster->master_persistent_memory_len);
-        return(-EINVAL);
-      }
-
-      if((rc = do_memory_mmap(vma, 0, size, (void *) pfr->dna_cluster->master_persistent_memory, 0, VM_LOCKED, 0)) < 0)
-        return(rc);
 
       break;
     default:
@@ -6737,21 +6317,13 @@ unsigned int ring_poll(struct file *file,
     return(mask);
 
   if(pfr->zc_dev == NULL) {
-    /* PF_RING mode (No DNA/ZC) */
+    /* PF_RING mode (No ZC) */
 
     // if(unlikely(enable_debug))
-    //  printk("[PF_RING] poll called (non DNA/ZC device)\n");
+    //  printk("[PF_RING] poll called (non ZC device)\n");
 
     pfr->ring_active = 1;
     // smp_rmb();
-
-    /* DNA cluster */
-    if(pfr->dna_cluster != NULL && pfr->dna_cluster_type == cluster_slave) {
-      poll_wait(file, &pfr->ring_slots_waitqueue, wait);
-      // if(1) /* queued packets info not available */
-        mask |= POLLIN | POLLRDNORM;
-      return(mask);
-    }
 
     if(pfr->tx.enable_tx_with_bounce && pfr->header_len == long_pkt_header) {
       write_lock_bh(&pfr->tx.consume_tx_packets_lock);
@@ -6773,11 +6345,11 @@ unsigned int ring_poll(struct file *file,
 
     return(mask);
   } else {
-    /* DNA/ZC mode */
+    /* ZC mode */
     /* enable_debug = 1;  */
 
     if(unlikely(enable_debug))
-      printk("[PF_RING] poll called on DNA/ZC device [%d]\n",
+      printk("[PF_RING] poll called on ZC device [%d]\n",
 	     *pfr->zc_dev->interrupt_received);
 
     if(pfr->zc_dev->wait_packet_function_ptr == NULL) {
@@ -7029,7 +6601,7 @@ static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapp
   }
   
   if (!dev_found) {
-    printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC/DNA device\n", __FUNCTION__, __LINE__,
+    printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC device\n", __FUNCTION__, __LINE__,
 	   mapping->device_name, mapping->channel_id);
     return -1;
   }
@@ -7085,7 +6657,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   }
   
   if (!dev_found) {
-    printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC/DNA device\n", __FUNCTION__, __LINE__,
+    printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC device\n", __FUNCTION__, __LINE__,
 	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
     return -1;
   }
@@ -7944,9 +7516,9 @@ static int ring_setsockopt(struct socket *sock,
 	     || pfr->zc_device_entry->bound_sockets[i]->mode == send_and_recv_mode
 	     || pfr->mode == send_and_recv_mode) {
             write_unlock(&pfr->zc_device_entry->lock);
-	    printk("[PF_RING] Unable to activate two or more DNA/ZC sockets on the same interface %s/link direction\n",
+	    printk("[PF_RING] Unable to activate two or more ZC sockets on the same interface %s/link direction\n",
 		   pfr->ring_netdev->dev->name);
-	    return(-EFAULT); /* No way: we can't have two sockets that are doing the same thing with DNA/ZC */
+	    return(-EFAULT); /* No way: we can't have two sockets that are doing the same thing with ZC */
 	  }
 	} /* if */
       } /* for */
@@ -8008,7 +7580,7 @@ static int ring_setsockopt(struct socket *sock,
     found = 1;
     break;
 
-  case SO_MAP_DNA_DEVICE:
+  case SO_SELECT_ZC_DEVICE:
     if(optlen != sizeof(zc_dev_mapping))
       return(-EINVAL);
 
@@ -8016,7 +7588,7 @@ static int ring_setsockopt(struct socket *sock,
       return(-EFAULT);
       
     if (unlikely(enable_debug))
-      printk("[PF_RING] SO_MAP_DNA_DEVICE %s\n", mapping.device_name);
+      printk("[PF_RING] SO_SELECT_ZC_DEVICE %s\n", mapping.device_name);
 
     if (mapping.operation == add_device_mapping)
       ret = pfring_select_zc_dev(pfr, &mapping);
@@ -8204,116 +7776,6 @@ static int ring_setsockopt(struct socket *sock,
 
     pfr->rehash_rss = default_rehash_rss_func;
     found = 1;
-    break;
-
-  case SO_CREATE_DNA_CLUSTER:
-    {
-      struct create_dna_cluster_info cdnaci;
-
-      if(optlen < sizeof(cdnaci))
-        return(-EINVAL);
-
-      if(copy_from_user(&cdnaci, optval, sizeof(cdnaci)))
-	return(-EFAULT);
-
-      if(cdnaci.slave_mem_len == 0 || cdnaci.num_slaves > DNA_CLUSTER_MAX_NUM_SLAVES)
-        return(-EINVAL);
-
-      if(pfr->zc_dev == NULL || pfr->zc_dev->hwdev == NULL)
-        return(-EINVAL);
-
-      if (!(cdnaci.options & DNA_CLUSTER_OPT_HUGEPAGES)) {
-        if(optlen < (sizeof(cdnaci) + sizeof(u_int64_t) * cdnaci.num_slots))
-          return(-EINVAL);
-      }
-
-      if(pfr->dna_cluster) /* already called */
-        return(-EINVAL);
-
-      pfr->dna_cluster = dna_cluster_create(cdnaci.cluster_id, cdnaci.num_slots, cdnaci.num_slaves,
-                                            cdnaci.slave_mem_len, cdnaci.master_persistent_mem_len,
-					    cdnaci.mode, cdnaci.options, cdnaci.hugepages_dir,
-					    pfr->zc_dev->hwdev,
-                                            pfr->zc_dev->mem_info.rx.packet_memory_slot_len,
-                                            pfr->zc_dev->mem_info.rx.packet_memory_chunk_len,
-					    &cdnaci.recovered);
-
-      if(pfr->dna_cluster == NULL) {
-	if(unlikely(enable_debug))
-	  printk("[PF_RING] SO_CREATE_DNA_CLUSTER [%u]\n", cdnaci.cluster_id);
-
-        return(-EINVAL);
-      }
-
-      pfr->dna_cluster_type = cluster_master;
-
-      /* copying back the structure (actually we need cdnaci.recovered only) */
-      if(copy_to_user(optval, &cdnaci, sizeof(cdnaci))) {
-        dna_cluster_remove(pfr->dna_cluster, pfr->dna_cluster_type, 0);
-	pfr->dna_cluster = NULL;
-        return(-EFAULT);
-      }
-
-      /* copying dma addresses to userspace at the end of the structure */
-      if(!(cdnaci.options & DNA_CLUSTER_OPT_HUGEPAGES) && cdnaci.num_slots > 0) {
-        if(copy_to_user(optval + sizeof(cdnaci), pfr->dna_cluster->extra_dma_memory->dma_addr,
-                        sizeof(u_int64_t) * cdnaci.num_slots)) {
-          dna_cluster_remove(pfr->dna_cluster, pfr->dna_cluster_type, 0);
-	  pfr->dna_cluster = NULL;
-          return(-EFAULT);
-       }
-      }
-
-      if(unlikely(enable_debug))
-        printk("[PF_RING] SO_CREATE_DNA_CLUSTER done [%u]\n", cdnaci.cluster_id);
-    }
-
-    found = 1;
-    break;
-
-  case SO_ATTACH_DNA_CLUSTER:
-    {
-      struct attach_dna_cluster_info adnaci;
-
-      if(copy_from_user(&adnaci, optval, sizeof(adnaci)))
-	return(-EFAULT);
-
-      pfr->dna_cluster = dna_cluster_attach(adnaci.cluster_id, &adnaci.slave_id, adnaci.auto_slave_id,
-        &pfr->ring_slots_waitqueue, &adnaci.mode, &adnaci.options, &adnaci.slave_mem_len, adnaci.hugepages_dir);
-
-      if(pfr->dna_cluster == NULL) {
-	if(unlikely(enable_debug))
-	  printk("[PF_RING] SO_ATTACH_DNA_CLUSTER [%u@%u]\n", adnaci.slave_id, adnaci.cluster_id);
-
-        return(-EINVAL);
-      }
-
-      pfr->dna_cluster_slave_id = adnaci.slave_id;
-      pfr->dna_cluster_type = cluster_slave;
-
-      if(copy_to_user(optval, &adnaci, sizeof(adnaci))) { /* copying back values (return adnaci.mode) */
-        dna_cluster_remove(pfr->dna_cluster, pfr->dna_cluster_type, pfr->dna_cluster_slave_id);
-	pfr->dna_cluster = NULL;
-        return(-EFAULT);
-      }
-
-      if(unlikely(enable_debug))
-        printk("[PF_RING] SO_ATTACH_DNA_CLUSTER done [%u]\n", adnaci.cluster_id);
-    }
-
-    found = 1;
-    break;
-
-  case SO_WAKE_UP_DNA_CLUSTER_SLAVE:
-    {
-      u_int32_t slave_id;
-
-      if(copy_from_user(&slave_id, optval, sizeof(slave_id)))
-	return(-EFAULT);
-
-      if(pfr->dna_cluster && slave_id < pfr->dna_cluster->num_slaves && pfr->dna_cluster->slave_waitqueue[slave_id])
-        wake_up_interruptible(pfr->dna_cluster->slave_waitqueue[slave_id]);
-    }
     break;
 
   case SO_CREATE_CLUSTER_REFEREE:
@@ -8725,7 +8187,7 @@ static int ring_getsockopt(struct socket *sock,
       break;
     }
 
-  case SO_GET_MAPPED_DNA_DEVICE:
+  case SO_GET_ZC_DEVICE_INFO:
     {
       if(!pfr->zc_mapping.device_name[0] || len < sizeof(zc_memory_info))
 	return(-EFAULT);
@@ -8792,7 +8254,7 @@ static int ring_getsockopt(struct socket *sock,
         num_rx_channels = max_val(pfr->num_rx_channels, get_num_rx_queues(pfr->ring_netdev->dev));
 
       if(unlikely(enable_debug))
-	printk("[PF_RING] --> SO_GET_NUM_RX_CHANNELS[%s]=%d [dna=%d/dns_rx_channels=%d][%p]\n",
+	printk("[PF_RING] --> SO_GET_NUM_RX_CHANNELS[%s]=%d [zc=%d/rx_channels=%d][%p]\n",
 	       pfr->ring_netdev->dev->name, num_rx_channels,
 	       pfr->ring_netdev->is_zc_device,
 	       pfr->ring_netdev->num_zc_dev_rx_queues,
@@ -9019,12 +8481,9 @@ static int ring_getsockopt(struct socket *sock,
 /* ************************************* */
 
 void zc_dev_handler(zc_dev_operation operation,
-			zc_driver_version version,
 			mem_ring_info *rx_info,
 			mem_ring_info *tx_info,
-			unsigned long  rx_packet_memory[DNA_MAX_NUM_CHUNKS],
 			void          *rx_descr_packet_memory,
-			unsigned long  tx_packet_memory[DNA_MAX_NUM_CHUNKS],
 			void          *tx_descr_packet_memory,
 			void          *phys_card_memory,
 			u_int          phys_card_memory_len,
@@ -9056,7 +8515,7 @@ void zc_dev_handler(zc_dev_operation operation,
       memset(next, 0, sizeof(zc_dev_list));
 
       rwlock_init(&next->lock);
-      next->num_bound_sockets = 0, next->dev.mem_info.version = version;
+      next->num_bound_sockets = 0;
 
       //printk("[PF_RING] [rx_slots=%u/num_rx_pages=%u/memory_tot_len=%u]][tx_slots=%u/num_tx_pages=%u]\n",
       //       packet_memory_num_slots, num_rx_pages, packet_memory_tot_len,
@@ -9065,15 +8524,11 @@ void zc_dev_handler(zc_dev_operation operation,
       /* RX */
       if(rx_info != NULL)
         memcpy(&next->dev.mem_info.rx, rx_info, sizeof(next->dev.mem_info.rx));
-      if(rx_packet_memory != NULL)
-        memcpy(&next->dev.rx_packet_memory, rx_packet_memory, sizeof(next->dev.rx_packet_memory));
       next->dev.rx_descr_packet_memory = rx_descr_packet_memory;
 
       /* TX */
       if(tx_info != NULL)
         memcpy(&next->dev.mem_info.tx, tx_info, sizeof(next->dev.mem_info.tx));
-      if(tx_packet_memory != NULL)
-	memcpy(&next->dev.tx_packet_memory, tx_packet_memory, sizeof(next->dev.tx_packet_memory));
       next->dev.tx_descr_packet_memory = tx_descr_packet_memory;
 
       /* PHYS */
@@ -9093,7 +8548,7 @@ void zc_dev_handler(zc_dev_operation operation,
       next->dev.usage_notification = dev_notify_function_ptr;
       list_add(&next->list, &zc_devices_list);
       zc_devices_list_size++;
-      /* Increment usage count - avoid unloading it while ZC/DNA drivers are in use */
+      /* Increment usage count - avoid unloading it while ZC drivers are in use */
       try_module_get(THIS_MODULE);
 
       /* We now have to update the device list */
@@ -9104,7 +8559,7 @@ void zc_dev_handler(zc_dev_operation operation,
 	  ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
 
 	  if(strcmp(dev_ptr->device_name, netdev->name) == 0) {
-	    dev_ptr->is_zc_device = 1 + version;
+	    dev_ptr->is_zc_device = 1;
             dev_ptr->zc_dev_model = device_model;
 	    dev_ptr->num_zc_dev_rx_queues = (rx_info != NULL) ? rx_info->num_queues : UNKNOWN_NUM_RX_CHANNELS;
 #if (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
@@ -9780,7 +9235,6 @@ static int __init ring_init(void)
   INIT_LIST_HEAD(&virtual_filtering_devices_list);
   INIT_LIST_HEAD(&ring_aware_device_list);
   INIT_LIST_HEAD(&zc_devices_list);
-  INIT_LIST_HEAD(&dna_cluster_list);
   INIT_LIST_HEAD(&cluster_referee_list);
 
   for(i = 0; i < NUM_FRAGMENTS_HASH_SLOTS; i++)

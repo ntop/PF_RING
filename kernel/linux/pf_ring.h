@@ -70,9 +70,6 @@
 #define SO_PURGE_IDLE_RULES              125 /* inactivity (sec) */
 #define SO_SET_SOCKET_MODE               126
 #define SO_USE_SHORT_PKT_HEADER          127
-#define SO_CREATE_DNA_CLUSTER            128
-#define SO_ATTACH_DNA_CLUSTER            129
-#define SO_WAKE_UP_DNA_CLUSTER_SLAVE     130
 #define SO_ENABLE_RX_PACKET_BOUNCE       131
 #define SO_SEND_MSG_TO_PLUGIN            132 /* send user msg to plugin */
 #define SO_SET_APPL_STATS                133
@@ -88,7 +85,7 @@
 #define SO_GET_RING_VERSION              170
 #define SO_GET_FILTERING_RULE_STATS      171
 #define SO_GET_HASH_FILTERING_RULE_STATS 172
-#define SO_GET_MAPPED_DNA_DEVICE         173
+#define SO_GET_ZC_DEVICE_INFO            173
 #define SO_GET_NUM_RX_CHANNELS           174
 #define SO_GET_RING_ID                   175
 #define SO_GET_PACKET_CONSUMER_MODE      176
@@ -104,8 +101,7 @@
 #define SO_GET_APPL_STATS_FILE_NAME      186
 #define SO_GET_LINK_STATUS               187
 
-/* Map */
-#define SO_MAP_DNA_DEVICE                190
+#define SO_SELECT_ZC_DEVICE              190
 
 /* Error codes */
 #define PF_RING_ERROR_GENERIC              -1
@@ -686,11 +682,6 @@ typedef struct flowSlotInfo {
 
 /* **************************************** */
 
-#define DNA_MAX_CHUNK_ORDER		5
-#define DNA_MAX_NUM_CHUNKS		4096
-
-/* *********************************** */
-
 #ifdef __KERNEL__
 
 FlowSlotInfo *getRingPtr(void);
@@ -749,8 +740,6 @@ typedef enum {
 } zc_dev_model;
 
 typedef struct {
-  u_int32_t packet_memory_num_chunks; /* dna only */
-  u_int32_t packet_memory_chunk_len;  /* dna only */
   u_int32_t packet_memory_num_slots;
   u_int32_t packet_memory_slot_len;
   u_int32_t descr_packet_memory_tot_len;
@@ -760,13 +749,7 @@ typedef struct {
   u_int32_t num_queues;
 } mem_ring_info;
 
-typedef enum {
-  dna_driver = 0,
-  zc_driver
-} zc_driver_version;
-
 typedef struct {
-  zc_driver_version version;
   mem_ring_info rx;
   mem_ring_info tx;
   u_int32_t phys_card_memory_len;
@@ -776,8 +759,6 @@ typedef struct {
 typedef struct {
   zc_memory_info mem_info;
   u_int16_t channel_id;
-  unsigned long rx_packet_memory[DNA_MAX_NUM_CHUNKS];  /* Invalid in userland */
-  unsigned long tx_packet_memory[DNA_MAX_NUM_CHUNKS];  /* Invalid in userland */
   void *rx_descr_packet_memory; /* Invalid in userland */
   void *tx_descr_packet_memory; /* Invalid in userland */
   char *phys_card_memory;       /* Invalid in userland */
@@ -842,40 +823,6 @@ typedef struct {
 
 /* ************************************************* */
 
-#define DNA_CLUSTER_MAX_NUM_SLAVES 32
-#define DNA_CLUSTER_MAX_HP_DIR_LEN 256
-#define DNA_CLUSTER_OPT_HUGEPAGES  1 << 2 /* from pfring_zero.h (TO FIX) */
-
-struct create_dna_cluster_info {
-  u_int32_t cluster_id;
-  u_int32_t mode; /* socket_mode */
-  u_int32_t options;
-  u_int32_t recovered; /* fresh or recovered */
-  u_int32_t num_slots; /* total number of rx/tx nic/slaves slots */
-  u_int32_t num_slaves;
-  u_int64_t slave_mem_len; /* per slave shared memory size */
-  u_int64_t master_persistent_mem_len;
-  char      hugepages_dir[DNA_CLUSTER_MAX_HP_DIR_LEN];
-  u_int64_t dma_addr[];
-};
-
-struct attach_dna_cluster_info {
-  u_int32_t cluster_id;
-  u_int32_t slave_id;
-  u_int32_t auto_slave_id; /* ask for the next free id (bool) */
-  u_int32_t mode; /* socket_mode */
-  u_int32_t options;
-  u_int32_t slave_mem_len;
-  char      hugepages_dir[DNA_CLUSTER_MAX_HP_DIR_LEN];
-};
-
-struct dna_cluster_global_stats {
-  u_int64_t tot_rx_packets;
-  u_int64_t tot_tx_packets;
-};
-
-/* ************************************************* */
-
 struct create_cluster_referee_info {
   u_int32_t cluster_id;
   u_int32_t recovered; /* fresh or recovered */
@@ -894,6 +841,13 @@ struct lock_cluster_object_info {
   u_int32_t lock_mask;
   u_int32_t reserved;
 };
+
+/* ************************************************* */
+
+typedef enum {
+  cluster_slave  = 0,
+  cluster_master = 1
+} cluster_client_type;
 
 /* ************************************************* */
 
@@ -965,10 +919,10 @@ typedef struct {
 
 
 typedef struct {
-  /* ZC/DNA */
+  /* ZC */
   u_int8_t is_zc_device;
   zc_dev_model zc_dev_model;
-  u_int num_zc_dev_rx_queues; /* 0 for non ZC/DNA devices */
+  u_int num_zc_dev_rx_queues; /* 0 for non ZC devices */
   u_int32_t num_zc_rx_slots;
   u_int32_t num_zc_tx_slots;
 
@@ -1016,38 +970,6 @@ struct dma_memory_info {
   unsigned long *virtual_addr;  /* chunks pointers */
   u_int64_t     *dma_addr;      /* per-slot DMA adresses */
   struct device *hwdev;         /* dev for DMA mapping */
-};
-
-/* ************************************************* */
-
-typedef enum {
-  cluster_slave  = 0,
-  cluster_master = 1
-} cluster_client_type;
-
-struct dna_cluster {
-  u_int32_t id;
-  u_int32_t num_slaves;
-  socket_mode mode;
-  u_int32_t options;
-
-  u_int8_t master;
-  u_int8_t active_slaves[DNA_CLUSTER_MAX_NUM_SLAVES];
-
-  struct dma_memory_info *extra_dma_memory;
-
-  u_int64_t slave_shared_memory_len; /* per slave len */
-  u_char *shared_memory;
-
-  char hugepages_dir[DNA_CLUSTER_MAX_HP_DIR_LEN];
-
-  u_int32_t master_persistent_memory_len;
-  u_char *master_persistent_memory;
-  struct dna_cluster_global_stats *stats;
-
-  wait_queue_head_t *slave_waitqueue[DNA_CLUSTER_MAX_NUM_SLAVES];
-
-  struct list_head list;
 };
 
 /* ************************************************* */
@@ -1217,12 +1139,7 @@ struct pf_ring_socket {
   u_int8_t kernel_consumer_plugin_id; /* If != 0 it identifies a plugin responsible for consuming packets */
   char *kernel_consumer_options, *kernel_consumer_private;
 
-  /* DNA cluster */
-  struct dna_cluster *dna_cluster;
-  cluster_client_type dna_cluster_type;
-  u_int32_t dna_cluster_slave_id; /* slave only */
-
-  /* Generic cluster */
+  /* Userspace cluster (ZC) */
   struct cluster_referee *cluster_referee;
   cluster_client_type cluster_role;
 };
@@ -1353,12 +1270,9 @@ typedef int   (*register_pfring_plugin)(struct pfring_plugin_registration *reg);
 typedef int   (*unregister_pfring_plugin)(u_int16_t pfring_plugin_id);
 typedef u_int (*read_device_pfring_free_slots)(int ifindex);
 typedef void  (*handle_pfring_zc_dev)(zc_dev_operation operation,
-					zc_driver_version version,
 					mem_ring_info *rx_info,
 					mem_ring_info *tx_info,
-					unsigned long *rx_packet_memory,
 					void          *rx_descr_packet_memory,
-					unsigned long *tx_packet_memory,
 					void          *tx_descr_packet_memory,
 					void          *phys_card_memory,
 					u_int          phys_card_memory_len,

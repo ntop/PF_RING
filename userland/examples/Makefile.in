@@ -16,10 +16,6 @@ PFRINGDIR  = ../lib
 LIBPFRING  = ${PFRINGDIR}/libpfring.a
 
 #
-# DNA Support
-DNA_DEFINE = #-DENABLE_DNA_SUPPORT
-
-#
 # PF_RING aware libpcap
 #
 O_FLAG     = -O2 -DHAVE_PF_RING
@@ -40,7 +36,7 @@ INCLUDE    = -I${PFRING_KERNEL} -I${PFRING_KERNEL}/plugins -I${PFRINGDIR} -I${PC
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC         = ${CROSS_COMPILE}gcc #--platform=native
-CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} ${DNA_DEFINE} @HAVE_ZERO@ @HAVE_BPF@ @HAVE_PF_RING_ZC@ -O2 # -g
+CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_BPF@ @HAVE_PF_RING_ZC@ -O2 # -g
 # LDFLAGS  =
 
 #

@@ -1419,7 +1419,6 @@ pcap_activate_linux(pcap_t *handle)
 					pfring_enable_rss_rehash(handle->ring);
 			}
 			pfring_set_poll_watermark(handle->ring, 1 /* watermark */);
-			handle->ring->dna.dna_rx_sync_watermark = 0; /* trick (otherwise tshark wouldn't work with DNA) */
 		}
 	} else
         	handle->ring = NULL;
@@ -6903,7 +6902,6 @@ pcap_set_watermark(pcap_t *handle, u_int watermark)
 
 	if (handle->ring) {
 		ret = pfring_set_poll_watermark(handle->ring, watermark);
-		handle->ring->dna.dna_rx_sync_watermark = watermark;
 	}
 
 	return ret;

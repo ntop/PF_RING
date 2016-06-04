@@ -1803,12 +1803,9 @@ void fm10k_up(struct fm10k_intfc *interface)
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 
 			hook->zc_dev_handler(add_device_mapping,
-			  zc_driver,
 			  &rx_info,
 			  &tx_info,
-			  0,
 			  rx_ring->desc,
-			  0,
 			  tx_ring->desc,
 			  (void *) rx_ring->netdev->mem_start,
 			  rx_ring->netdev->mem_end - rx_ring->netdev->mem_start,
@@ -1888,12 +1885,9 @@ void fm10k_down(struct fm10k_intfc *interface)
 
 		for (i = 0; i < interface->num_rx_queues; i++) {
 			hook->zc_dev_handler(remove_device_mapping,
-			  zc_driver,
 			  NULL, // rx_info,
 			  NULL, // tx_info,
-			  0, // interface->rx_ring[i]->pfring_zc.rx_tx.rx.packet_memory,
 			  NULL, /* Packet descriptors */
-			  0, // tx_ring->pfring_zc.rx_tx.tx.packet_memory,
 			  NULL, /* Packet descriptors */
 			  (void*)interface->rx_ring[i]->netdev->mem_start,
 			  interface->rx_ring[i]->netdev->mem_end - interface->rx_ring[i]->netdev->mem_start,

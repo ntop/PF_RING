@@ -4649,16 +4649,13 @@ static void e1000_configure(struct e1000_adapter *adapter)
 
 		// printk("%s(%d)=%lu\n", __FUNCTION__, i, adapter->netdev->mem_start);
 		hook->zc_dev_handler(add_device_mapping,
-				     zc_driver,
 #ifdef ENABLE_RX_ZC
 				     &rx_info,
 #else
 				     NULL,
 #endif
 				     &tx_info,
-				     0, // rx_ring->pfring_zc.rx_tx.rx.packet_memory,
 				     rx_ring->desc, /* Packet descriptors */
-				     0, // tx_ring->pfring_zc.rx_tx.tx.packet_memory,
 				     tx_ring->desc, /* Packet descriptors */
 				     (void*)adapter->netdev->mem_start,
 				     adapter->netdev->mem_end - adapter->netdev->mem_start,
@@ -5210,12 +5207,9 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 
 	  if (hook != NULL) {
 	  	hook->zc_dev_handler(remove_device_mapping,
-					  zc_driver,
 					  NULL, // rx_info,
 					  NULL, // tx_info,
-					  0, // adapter->pfring_zc.packet_memory,
 					  NULL, /* Packet descriptors */
-					  0, // tx_ring->pfring_zc.rx_tx.tx.packet_memory,
 					  NULL, /* Packet descriptors */
 					  (void*)adapter->netdev->mem_start,
 					  adapter->netdev->mem_end - adapter->netdev->mem_start,
