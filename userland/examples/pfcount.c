@@ -88,7 +88,7 @@ struct strmatch {
 
 struct strmatch *matching_strings = NULL;
 
-u_int8_t wait_for_packet = 1, do_shutdown = 0, add_drop_rule = 0, show_crc = 0;
+u_int8_t wait_for_packet = 1, do_shutdown = 0, add_drop_rule = 0;
 u_int8_t use_extended_pkt_header = 0, touch_payload = 0, enable_hw_timestamp = 0, dont_strip_timestamps = 0, memcpy_test = 0;
 
 volatile char memcpy_test_buffer[9216];
@@ -406,18 +406,6 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
   if(verbose == 2) {
     int i, len = h->caplen;
 
-    if(show_crc) {
-      if(0) {
-	u_int32_t sec, nsec;
-
-	sec  = ntohl(*(u_int32_t*)(&p[h->caplen-4]));
-	nsec = ntohl(*(u_int32_t*)(&p[h->caplen]));
-	printf("%u.%u\n", sec, nsec);
-      }
-
-      len += 4;
-    }
-
     for(i = 0; i < len; i++)
       printf("%02X ", p[i]);
 
@@ -479,9 +467,7 @@ void printHelp(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"
-	 "                - dnaX for DNA-based adapters\n"
 	 "                - zc:ethX for ZC devices\n"
-	 "                - dnacluster:X for DNA cluster Id X\n"
 	 "                - sysdig for capturing sysdig events\n"
 #ifdef HAVE_DAG
 	 "                - dag:dagX:Y for Endace DAG cards\n"
@@ -506,7 +492,6 @@ void printHelp(void) {
   printf("-S              Do not strip hw timestamps (if present)\n");
   printf("-t              Touch payload (to force packet load on cache)\n");
   printf("-M              Packet memcpy (to test memcpy speed)\n");
-  printf("-T              Dump CRC (test and DNA only)\n");
   printf("-C <mode>       Work with the adapter in chunk mode (1=chunk API, 2=packet API)\n");
   printf("-x <path>       File containing strings to search string (case sensitive) on payload.\n");
   printf("-o <path>       Dump matching packets onto the specified pcap (need -x).\n");
@@ -739,7 +724,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:l:v:ae:n:w:o:p:qb:rg:u:mtsSTx:f:z:N:M")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:l:v:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:M")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -819,9 +804,6 @@ int main(int argc, char* argv[]) {
     case 'S':
       dont_strip_timestamps = 1;
       break;
-    case 'T':
-      show_crc = 1;
-      break;
     case 'g':
       bind_core = atoi(optarg);
       break;
@@ -900,7 +882,7 @@ int main(int argc, char* argv[]) {
   if(!dont_strip_timestamps)  flags |= PF_RING_STRIP_HW_TIMESTAMP;
   if(chunk_mode)              flags |= PF_RING_CHUNK_MODE;
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
-  flags |= PF_RING_DNA_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-DNA drivers */
+  flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
 
   //printf("flags: %d\n", flags);
   pd = pfring_open(device, snaplen, flags);
@@ -924,11 +906,6 @@ int main(int argc, char* argv[]) {
   if(strstr(device, "dnacluster:")) {
     printf("Capturing from %s\n", device);
   } else {
-    if(show_crc && strncmp(device, "dna", 3)) {
-      fprintf(stderr, "-T can be enabled only with DNA\n");
-      show_crc = 0;
-    }
-
     if(is_sysdig) {
       printf("Capturing from sysdig\n");
     } else {
@@ -972,7 +949,7 @@ int main(int argc, char* argv[]) {
   }
 
   if((rc = pfring_set_direction(pd, direction)) != 0)
-    ; //fprintf(stderr, "pfring_set_direction returned %d (perhaps you use a direction other than rx only with DNA ?)\n", rc);
+    ; //fprintf(stderr, "pfring_set_direction returned %d (perhaps you use a direction other than rx only with ZC?)\n", rc);
 
   if((rc = pfring_set_socket_mode(pd, recv_only_mode)) != 0)
     fprintf(stderr, "pfring_set_socket_mode returned [rc=%d]\n", rc);

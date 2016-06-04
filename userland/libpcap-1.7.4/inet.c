@@ -208,7 +208,7 @@ add_or_find_if(pcap_if_t **curdev_ret, pcap_if_t **alldevs, const char *name,
 				char file_buf[255];
 
 				while(fgets(file_buf, sizeof(file_buf), fd) != NULL) {
-					if(strstr(file_buf, "ZC") || strstr(file_buf, "DNA")) {
+					if(strstr(file_buf, "ZC")) {
 						zc_found = 1;
 						break;
 					}
@@ -217,7 +217,7 @@ add_or_find_if(pcap_if_t **curdev_ret, pcap_if_t **alldevs, const char *name,
 				fclose(fd);
 
 				if (zc_found)
-					snprintf(buf, sizeof(buf), "%s", "PF_RING ZC/DNA");
+					snprintf(buf, sizeof(buf), "%s", "PF_RING ZC");
 			}
 
 			description = strdup(buf);

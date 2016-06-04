@@ -45,7 +45,7 @@ u_int32_t num_sent = 0;
 /* ****************************************************** */
 
 void printHelp(void) {
-  printf("pfbridge - Forwards traffic from -a -> -b device using vanilla PF_RING (no DNA)\n\n");
+  printf("pfbridge - Forwards traffic from -a -> -b device using vanilla PF_RING\n\n");
   printf("-h              [Print help]\n");
   printf("-v              [Verbose]\n");
   printf("-p              [Use pfring_send() instead of bridge]\n");

@@ -114,8 +114,8 @@ static int pfring_daq_open(Pfring_Context_t *context, int id) {
   }
 
   if(device) {
-    if(strncmp(device, "dna", 3) == 0) {
-      DPE(context->errbuf, "DNA is not supported by daq_pfring. Please get daq_pfring_dna from http://shop.ntop.org");
+    if(strncmp(device, "zc:", 3) == 0) {
+      DPE(context->errbuf, "ZC is not supported by daq_pfring. Please use daq_pfring_zc");
       return(-1);
     }
 

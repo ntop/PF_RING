@@ -1399,15 +1399,6 @@ int pfring_set_pkt_buff_ifindex(pfring *ring, pfring_pkt_buff *pkt_handle, int i
 
 /* **************************************************** */
 
-int pfring_register_zerocopy_tx_ring(pfring *ring, pfring *tx_ring) {
-  if(ring && ring->register_zerocopy_tx_ring)
-    return ring->register_zerocopy_tx_ring(ring, tx_ring);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
 int pfring_add_pkt_buff_ifindex(pfring *ring, pfring_pkt_buff *pkt_handle, int if_index) {
   if(ring && ring->add_pkt_buff_ifindex)
     return ring->add_pkt_buff_ifindex(ring, pkt_handle, if_index);

@@ -9,7 +9,7 @@ Make sure you have installed:
    do that downloading snort and DAQ from http://www.snort.org/snort-downloads?
 - cd ~/PF_RING/kernel
   sudo make install
-- For best performance please use PF_RING DNA that supports both IPS and IDS mode
+- For best performance please use PF_RING ZC that supports both IPS and IDS mode
 - make sure you have installed
   - autoconf
   - automake

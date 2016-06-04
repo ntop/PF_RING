@@ -115,9 +115,6 @@ void printHelp(void) {
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-x <if index>   Send to the selected interface, if supported\n");
   printf("-h              Print this help\n");
-  printf("\nExample for testing the DNA bouncer latency:\n");
-  printf("./pfdnabounce -i dna1 -m 0 -g 2 -f -a\n");
-  printf("./pflatency -i dna0 -l 60 -g 1\n");
   exit(0);
 }
 

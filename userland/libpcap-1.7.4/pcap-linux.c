@@ -1381,7 +1381,7 @@ pcap_activate_linux(pcap_t *handle)
 		char *appname, *active = getenv("PCAP_PF_RING_ACTIVE_POLL"), *rss_rehash;
 
 		if (handle->opt.promisc) flags |= PF_RING_PROMISC;
-		if (getenv("PCAP_PF_RING_DNA_RSS")) flags |= PF_RING_DNA_SYMMETRIC_RSS; /* deprecated */
+		if (getenv("PCAP_PF_RING_DNA_RSS" /* deprecated (backward compatibility) */ )) flags |= PF_RING_ZC_SYMMETRIC_RSS;
 		if (getenv("PCAP_PF_RING_ZC_RSS"))  flags |= PF_RING_ZC_SYMMETRIC_RSS;
 		if (getenv("PCAP_PF_RING_STRIP_HW_TIMESTAMP")) flags |= PF_RING_STRIP_HW_TIMESTAMP;
 		if (getenv("PCAP_PF_RING_HW_TIMESTAMP") || handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) flags |= PF_RING_HW_TIMESTAMP;
@@ -2152,7 +2152,7 @@ pcap_stats_linux(pcap_t *handle, struct pcap_stat *stats)
 			handlep->stat.ps_recv = ring_stats.recv;
 #if 0
 			/* tcpdump reports ps_drop as "packets dropped by kernel",
-			 * that is wrong with DNA, so we should set ps_ifdrop. 
+			 * that is wrong with ZC, so we should set ps_ifdrop. 
 			 * But snort ignores ps_ifdrop, so it is best to set ps_drop in any case. */
 			if (handle->ring->zc_device)
 				handlep->stat.ps_ifdrop = ring_stats.drop;
@@ -2706,7 +2706,7 @@ pcap_setfilter_linux_common(pcap_t *handle, struct bpf_program *filter,
 #ifdef HAVE_PF_RING
 	if (can_filter_in_kernel && handle->ring != NULL) {
 		int if_index;
-		if (handle->ring->zc_device /* DNA/ZC: we need to filter in userland as kernel is bypassed */
+		if (handle->ring->zc_device /* ZC: we need to filter in userland as kernel is bypassed */
 		    || pfring_get_bound_device_ifindex(handle->ring, &if_index) != 0 /* not a physical device */)
 			can_filter_in_kernel = 0;
 	}

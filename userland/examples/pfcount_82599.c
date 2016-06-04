@@ -584,7 +584,7 @@ int main(int argc, char* argv[]) {
   if(num_threads > 1) flags |= PF_RING_REENTRANT;
   if(use_extended_pkt_header) flags |= PF_RING_LONG_HEADER;
 
-  pd = pfring_open(device, snaplen, flags | PF_RING_PROMISC | PF_RING_DNA_SYMMETRIC_RSS);
+  pd = pfring_open(device, snaplen, flags | PF_RING_PROMISC | PF_RING_ZC_SYMMETRIC_RSS);
 
   if(pd == NULL) {
     printf("pfring_open error [%s]\n", strerror(errno));
@@ -610,7 +610,7 @@ int main(int argc, char* argv[]) {
   }
 
   if((rc = pfring_set_direction(pd, direction)) != 0)
-    printf("pfring_set_direction returned %d (perhaps you use a direction other than rx only with DNA ?)\n", rc);
+    printf("pfring_set_direction returned %d (perhaps you use a direction other than rx only with ZC?)\n", rc);
 
   if(watermark > 0) {
     if((rc = pfring_set_poll_watermark(pd, watermark)) != 0)

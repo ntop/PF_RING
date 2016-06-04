@@ -227,7 +227,7 @@ void printHelp(void) {
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Number of different IPs (balanced traffic)\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
-  printf("-w <watermark>  TX watermark (low value=low latency) [not effective on DNA]\n");
+  printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
   printf("-x <if index>   Send to the selected interface, if supported\n");
   printf("-d              Daemon mode\n");
   printf("-P <pid file>   Write pid to the specified file (daemon mode only)\n");

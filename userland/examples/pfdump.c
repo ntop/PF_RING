@@ -136,14 +136,7 @@ char* etheraddr_string(const u_char *ep, char *buf) {
 void printHelp(void) {
   printf("pfdump - (C) 2012 ntop.org and University of Twente\n\n");
   printf("-h              Print this help\n");
-  printf("-i <device>     Device name. Use:\n"
-	 "                - ethX@Y for channels\n"
-	 "                - dnaX for DNA-based adapters\n"
-	 "                - dnacluster:X for DNA cluster Id X\n"
-#ifdef HAVE_DAG
-	 "                - dag:dagX:Y for Endace DAG cards\n"
-#endif
-	 );
+  printf("-i <device>     Device name. Use ethX@Y for channels\n");
   printf("-c <cluster id> Cluster id\n");
   printf("-f <filter>     [BPF filter]\n");
   printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
@@ -269,7 +262,7 @@ int main(int argc, char* argv[]) {
 
   if (1)                      flags |= PF_RING_REENTRANT; // 2 threads
   if(promisc)                 flags |= PF_RING_PROMISC;
-  flags |= PF_RING_DNA_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-DNA drivers */
+  flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
 
   pd = pfring_open(device, snaplen, flags);
 
@@ -322,7 +315,7 @@ int main(int argc, char* argv[]) {
   }
 
   if((rc = pfring_set_direction(pd, direction)) != 0)
-    ; // fprintf(stderr, "pfring_set_direction returned %d (perhaps you use a direction other than rx only with DNA ?)\n", rc);
+    ; // fprintf(stderr, "pfring_set_direction returned %d (perhaps you use a direction other than rx only with ZC?)\n", rc);
 
   if((rc = pfring_set_socket_mode(pd, recv_only_mode)) != 0)
     fprintf(stderr, "pfring_set_socket_mode returned [rc=%d]\n", rc);

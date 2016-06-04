@@ -178,7 +178,7 @@ void my_sigalarm(int sig) {
 void printHelp(void) {
   printf("pfcount_multichannel\n(C) 2005-12 Deri Luca <deri@ntop.org>\n\n");
   printf("-h              Print this help\n");
-  printf("-i <device>     Device name (No device@channel), and dnaX for DNA\n");
+  printf("-i <device>     Device name (No device@channel)\n");
 
   printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
   printf("-l <len>        Capture length\n");
@@ -443,11 +443,7 @@ int main(int argc, char* argv[]) {
   printf("Capturing from %s\n", device);
 
   flags |= PF_RING_PROMISC; /* hardcode: promisc=1 */
-#if 0
-  flags |=  PF_RING_DNA_FIXED_RSS_Q_0;
-#else
-  flags |= PF_RING_DNA_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-DNA drivers */
-#endif
+  flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   if(use_extended_pkt_header) flags |= PF_RING_LONG_HEADER;
 
   num_channels = pfring_open_multichannel(device, snaplen, flags, ring);
@@ -483,7 +479,7 @@ int main(int argc, char* argv[]) {
     pfring_set_application_name(threads[i].ring, buf);
 
     if((rc = pfring_set_direction(threads[i].ring, direction)) != 0)
-	fprintf(stderr, "pfring_set_direction returned %d [direction=%d] (you can't capture TX with DNA)\n", rc, direction);
+	fprintf(stderr, "pfring_set_direction returned %d [direction=%d] (you can't capture TX with ZC)\n", rc, direction);
     
     if((rc = pfring_set_socket_mode(threads[i].ring, recv_only_mode)) != 0)
 	fprintf(stderr, "pfring_set_socket_mode returned [rc=%d]\n", rc);

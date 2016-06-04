@@ -523,7 +523,7 @@ int main(int argc, char* argv[]) {
   dev = strtok_r(devices, "+", &tmp);
   while(i<MAX_NUM_DEVS && dev != NULL) {
     flags |= PF_RING_PROMISC;
-    flags |= PF_RING_DNA_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-DNA drivers */
+    flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
     pd[i] = pfring_open(dev, snaplen, flags);
 
     if(pd[i] == NULL) {
