@@ -20,7 +20,13 @@ the '-zc' suffix. Three driver families are currently available:
 10 Gbit
 - ixgbe (RX and TX)
 
-These drivers can be found in drivers/PF_RING_aware 
+10/40 Gbit
+- i40e (RX and TX)
+
+10/40/100 Gbit
+- fm10k (RX and TX)
+
+These drivers can be found in drivers/
 
 Note: ZC needs hugepages for memory allocation, they are automatically initialised by 
 the load_dna_driver.sh script you can use to load the driver. For more informations 
