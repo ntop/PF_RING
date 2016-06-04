@@ -312,8 +312,8 @@ int main(int argc, char* argv[]) {
   } else {
     u_int32_t version;
 
-    pfring_set_application_name(pdo, "pfdnasend");
-    pfring_set_application_name(pdi, "pfdnasend");
+    pfring_set_application_name(pdo, "pflatency");
+    pfring_set_application_name(pdi, "pflatency");
     pfring_version(pdo, &version);
     pfring_version(pdi, &version);
 

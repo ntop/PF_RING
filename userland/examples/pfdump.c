@@ -283,20 +283,16 @@ int main(int argc, char* argv[]) {
 	   version & 0x000000FF);
   }
 
-  if(strstr(device, "dnacluster:")) {
-    printf("Capturing from %s\n", device);
-  } else {
-    if(pfring_get_bound_device_address(pd, mac_address) != 0)
-      fprintf(stderr, "Unable to read the device address\n");
-    else {
-      int ifindex = -1;
+  if(pfring_get_bound_device_address(pd, mac_address) != 0)
+    fprintf(stderr, "Unable to read the device address\n");
+  else {
+    int ifindex = -1;
 
-      pfring_get_bound_device_ifindex(pd, &ifindex);
+    pfring_get_bound_device_ifindex(pd, &ifindex);
 
-      printf("Capturing from %s [%s][ifIndex: %d]\n",
-	     device, etheraddr_string(mac_address, buf),
-	     ifindex);
-    }
+    printf("Capturing from %s [%s][ifIndex: %d]\n",
+      device, etheraddr_string(mac_address, buf),
+      ifindex);
   }
 
   printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));

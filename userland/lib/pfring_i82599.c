@@ -18,7 +18,7 @@ int i82599_add_hash_filtering_rule(pfring *ring, hash_filtering_rule* rule_to_ad
   memset(&rule, 0, sizeof(rule));
 
   //if(ring->ft_device_type != intel_82599_family
-  //&& ring->dna_dev.mem_info.device_model != intel_ixgbe_82599)
+  //&& device_model != intel_ixgbe_82599)
   //  return -4;
 
   switch(rule_to_add->rule_action) {
@@ -59,7 +59,7 @@ int i82599_add_filtering_rule(pfring *ring, filtering_rule* rule_to_add) {
   memset(&rule, 0, sizeof(rule));
 
   //if(ring->ft_device_type != intel_82599_family
-  //&& ring->dna_dev.mem_info.device_model != intel_ixgbe_82599)
+  //&& device_model != intel_ixgbe_82599)
   //  return -4;
 
   switch(rule_to_add->rule_action) {

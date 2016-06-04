@@ -3,13 +3,11 @@ you to process packets at high-rates while providing you a consistent
 API for packet processing applications. This directory contains:
 
 drivers                         PF_RING optimized drivers
-drivers/PF_RING_aware           PF_RING-aware/ZC drivers (suggested option)
-drivers/DNA                     DNA drivers (obsoleted by ZC drivers)
+drivers/                        PF_RING-aware/ZC drivers (suggested option)
 userland/			User space code
 userland/lib/			User space library
 userland/libpcap-XXX-ring/	Libpcap enhanced with PF_RING support
 userland/examples/		PF_RING sample applications
-userland/examples_libzero/	DNA/Libzero sample applications
 userland/examples_zc/		PF_RING ZC sample applications
 userland/snort/			Snort DAQ module for using snort over PF_RING
 
@@ -31,7 +29,7 @@ to be immediately available for standard Linux networking. In order to open
 it in ZC you must prepend 'zc:' to the interface name, example: 
 pfcount -i zc:eth1
 
-2. DNA/ZC drivers
+2. ZC drivers
 These drivers have been used to implement kernel bypass until PF_RING 5.x
 and since the ZC introduction they will be available for some more time
 but they are deprecated in favour of ZC that offer the same performance
