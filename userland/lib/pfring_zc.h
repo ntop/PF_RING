@@ -711,14 +711,26 @@ pfring_zc_set_proc_stats(
 
 /**
  * Write custom device stats under /proc/net/pf_ring/stats/<device file>
- * @param queue  The queue handle for the device.
- * @param stats  The stats string to write.
- * @return       0 on success, a negative value otherwise.
+ * @param queue The queue handle for the device.
+ * @param stats The stats string to write.
+ * @return      0 on success, a negative value otherwise.
  */
 int
 pfring_zc_set_device_proc_stats(
   pfring_zc_queue *queue,
   char *stats
+);
+
+/**
+ * Write application name under /proc/net/pf_ring/<socket>
+ * @param queue The queue handle for the device.
+ * @param name  The application name.
+ * @return      0 on success, a negative value otherwise.
+ */
+int
+pfring_zc_set_device_app_name(
+  pfring_zc_queue *queue,
+  char *name
 );
 
 /* **************************************************************************************** */
