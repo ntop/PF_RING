@@ -718,7 +718,7 @@ pfring_zc_set_proc_stats(
 int
 pfring_zc_set_device_proc_stats(
   pfring_zc_queue *queue,
-  char *stats
+  const char *stats
 );
 
 /**
@@ -730,7 +730,7 @@ pfring_zc_set_device_proc_stats(
 int
 pfring_zc_set_device_app_name(
   pfring_zc_queue *queue,
-  char *name
+  const char *name
 );
 
 /* **************************************************************************************** */
