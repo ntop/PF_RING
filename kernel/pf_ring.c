@@ -547,14 +547,6 @@ int lockless_list_add(lockless_list *l, void *elem)
       break; /* We succeeded */
   }
 
-#if 0
-  /* 2 - Set the ring table bit */
-  if(l->list_elements[first_bit_unset] != NULL) {
-    /* Purge old element first, that was stored previously */
-    kfree(l->list_elements[first_bit_unset]);
-  }
-#endif
-
   if(l->top_element_id < i)
     l->top_element_id = i;
 
@@ -701,13 +693,6 @@ static inline u_int64_t get_next_slot_offset(struct pf_ring_socket *pfr, u_int64
   /* padding at the end of the packet (magic number added on insert) */
   real_slot_size += sizeof(u_int16_t); /* RING_MAGIC_VALUE */
 
-#if 0 /* ring debug */
-  printk("[PF_RING] slot len = %u bytes [%u header, %u caplen, %u parsed header, %lu magic, %u align]\n",
-    ALIGN(real_slot_size, sizeof(u_int64_t)), pfr->slot_header_len, hdr->caplen, 
-    (pfr->header_len == long_pkt_header) ? hdr->extended_hdr.parsed_header_len : 0,
-    sizeof(u_int16_t), ALIGN(real_slot_size, sizeof(u_int64_t)) - real_slot_size);
-#endif
-
   /* Align slot size to 64 bit */
   real_slot_size = ALIGN(real_slot_size, sizeof(u_int64_t));
 
@@ -835,8 +820,6 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 static inline int check_free_ring_slot(struct pf_ring_socket *pfr)
 {
   u_int64_t remove_off;
-
-  // smp_rmb();
 
   if(pfr->tx.enable_tx_with_bounce && pfr->header_len == long_pkt_header) /* fast-tx enabled */
     remove_off = pfr->slots_info->kernel_remove_off;
@@ -1682,17 +1665,6 @@ static u_char *allocate_shared_memory(u_int64_t *mem_len)
   /* Alignment necessary on ARM platforms */
   tot_mem += SHMLBA - (tot_mem % SHMLBA);
 
-#if 0 /* rounding size to the next power of 2 was needed by vPFRing (deprecated) */
-  tot_mem--;
-  tot_mem |= tot_mem >> 1;
-  tot_mem |= tot_mem >> 2;
-  tot_mem |= tot_mem >> 4;
-  tot_mem |= tot_mem >> 8;
-  tot_mem |= tot_mem >> 16;
-  tot_mem |= tot_mem >> 32;
-  tot_mem++;
-#endif
-
   /* Memory is already zeroed */
   shared_mem = vmalloc_user(tot_mem);
 
@@ -1876,10 +1848,6 @@ static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t proto,
 			         ip_addr host_peer_a, ip_addr host_peer_b,
 			         u_int16_t port_peer_a, u_int16_t port_peer_b)
 {
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] hash_pkt(vlan_id=%u, proto=%u, port_peer_a=%u, port_peer_b=%u)\n",
-  //	   vlan_id, proto, port_peer_a, port_peer_b);
-
   return(vlan_id+proto+
 	 host_peer_a.v6.s6_addr32[0]+host_peer_a.v6.s6_addr32[1]+
 	 host_peer_a.v6.s6_addr32[2]+host_peer_a.v6.s6_addr32[3]+
@@ -1993,9 +1961,6 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 
   hdr->extended_hdr.parsed_pkt.offset.l3_offset = displ;
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] [eth_type=%04X]\n", hdr->extended_hdr.parsed_pkt.eth_type);
-
   if(hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_IP /* IPv4 */) {
     struct iphdr *ip;
     u_int16_t frag_off;
@@ -2006,8 +1971,6 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 
     ip = (struct iphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
     *ip_id = ip->id, frag_off = ntohs(ip->frag_off);
-
-    //if(unlikely(enable_debug)) printk("[PF_RING] frag_off=%04X\n", frag_off);
 
     if(frag_off & 0x1FFF /* Fragment offset */)
       hdr->extended_hdr.flags |= PKT_FLAGS_IP_FRAG_OFFSET; /* Packet offset > 0 */
@@ -2078,9 +2041,6 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
     return(0); /* No IP */
   }
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] [l3_proto=%d]\n", hdr->extended_hdr.parsed_pkt.l3_proto);
-
   hdr->extended_hdr.parsed_pkt.offset.l4_offset = hdr->extended_hdr.parsed_pkt.offset.l3_offset+ip_len;
 
   if(((hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP)
@@ -2127,9 +2087,6 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
           struct iphdr *tunneled_ip;
 
 	  hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id = ntohl(gtp->teid);
-
-	  //if(unlikely(enable_debug))
-	  //  printk("[PF_RING] GTPv1 [%04X]\n", hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id);
 
 	  if((hdr->extended_hdr.parsed_pkt.l4_src_port == GTP_U_DATA_PORT)
 	     || (hdr->extended_hdr.parsed_pkt.l4_dst_port == GTP_U_DATA_PORT)) {
@@ -2312,12 +2269,6 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
       }
     } else
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
-
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] [l4_offset=%d][l4_src_port/l4_dst_port=%d/%d]\n",
-    //	     hdr->extended_hdr.parsed_pkt.offset.l4_offset,
-    //	     hdr->extended_hdr.parsed_pkt.l4_src_port,
-    //	     hdr->extended_hdr.parsed_pkt.l4_dst_port);
   } else
     hdr->extended_hdr.parsed_pkt.l4_src_port = hdr->extended_hdr.parsed_pkt.l4_dst_port = 0;
 
@@ -2356,35 +2307,6 @@ static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
 			     struct pfring_pkthdr *hdr,
 			     u_char mask_src, u_char mask_dst)
 {
-#if 0
-    printk("[PF_RING] hash_bucket_match() (%u,%d,%d.%d.%d.%d:%u,%d.%d.%d.%d:%u) "
-	   "(%u,%d,%d.%d.%d.%d:%u,%d.%d.%d.%d:%u)\n",
-	   hash_bucket->rule.vlan_id, hash_bucket->rule.proto,
-	   ((hash_bucket->rule.host4_peer_a >> 24) & 0xff),
-	   ((hash_bucket->rule.host4_peer_a >> 16) & 0xff),
-	   ((hash_bucket->rule.host4_peer_a >> 8) & 0xff),
-	   ((hash_bucket->rule.host4_peer_a >> 0) & 0xff),
-	   hash_bucket->rule.port_peer_a,
-	   ((hash_bucket->rule.host4_peer_b >> 24) & 0xff),
-	   ((hash_bucket->rule.host4_peer_b >> 16) & 0xff),
-	   ((hash_bucket->rule.host4_peer_b >> 8) & 0xff),
-	   ((hash_bucket->rule.host4_peer_b >> 0) & 0xff),
-	   hash_bucket->rule.port_peer_b,
-
-	   hdr->extended_hdr.parsed_pkt.vlan_id,
-	   hdr->extended_hdr.parsed_pkt.l3_proto,
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_src >> 24) & 0xff),
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_src >> 16) & 0xff),
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_src >> 8) & 0xff),
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_src >> 0) & 0xff),
-	   hdr->extended_hdr.parsed_pkt.l4_src_port,
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_dst >> 24) & 0xff),
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_dst >> 16) & 0xff),
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_dst >> 8) & 0xff),
-	   ((hdr->extended_hdr.parsed_pkt.ipv4_dst >> 0) & 0xff),
-	   hdr->extended_hdr.parsed_pkt.l4_dst_port);
-#endif
-
   /*
     When protocol of host_peer is IPv4, s6_addr32[0] contains IPv4
     address and the value of other elements of s6_addr32 are 0.
@@ -2872,10 +2794,6 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
   if(pfr->ring_slots == NULL) return(0);
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] do_lock=%d [num_channels_per_ring=%d][num_bound_devices=%d]\n",
-  //	   do_lock, pfr->num_channels_per_ring, pfr->num_bound_devices);
-
   /* We need to lock as two ksoftirqd might put data onto the same ring */
 
   if(do_lock) write_lock(&pfr->ring_index_lock);
@@ -2896,10 +2814,6 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
     /* No room left */
 
     pfr->slots_info->tot_lost++;
-
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] ==> slot(off=%llu) is full [insert_off=%llu][remove_off=%llu][slot_len=%u][num_queued_pkts=%llu]\n",
-    //	     off, pfr->slots_info->insert_off, pfr->slots_info->remove_off, pfr->slots_info->slot_len, num_queued_pkts(pfr));
 
    if(do_lock) write_unlock(&pfr->ring_index_lock);
     return(0);
@@ -2930,11 +2844,6 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
     if(hdr->caplen > 0) {
       u16 vlan_tci = 0;
-
-      //if(unlikely(enable_debug))
-      //  printk("[PF_RING] --> [caplen=%d][len=%d][displ=%d][extended_hdr.parsed_header_len=%d][bucket_len=%d][sizeof=%d]\n",
-      //         hdr->caplen, hdr->len, displ, hdr->extended_hdr.parsed_header_len, pfr->bucket_len,
-      //         pfr->slot_header_len);
 
       if(__vlan_hwaccel_get_tag(skb, &vlan_tci) == 0 && vlan_tci != 0 /* The packet is tagged (hw offload)... */
 	 && ((hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0 /* but we have seen no tag -> it has been stripped */
@@ -3019,23 +2928,11 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
   /* Update insert offset */
   pfr->slots_info->insert_off = get_next_slot_offset(pfr, off);
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] ==> insert_off=%llu\n", pfr->slots_info->insert_off);
-
   /* NOTE: smp_* barriers are _compiler_ barriers on UP, mandatory barriers on SMP
    * a consumer _must_ see the new value of tot_insert only after the buffer update completes */
   smp_mb(); //wmb();
 
   pfr->slots_info->tot_insert++;
-
-#if 0
-  printk("Packet=%llu Header_Len=%u Len=%u Caplen=%u Next_Insert_offset=%llu\n",
-    pfr->slots_info->tot_insert,
-    pfr->slot_header_len,
-    hdr->len,
-    hdr->caplen,
-    pfr->slots_info->insert_off);
-#endif
 
  if(do_lock) write_unlock(&pfr->ring_index_lock);
 
@@ -3066,10 +2963,6 @@ static inline int add_pkt_to_ring(struct sk_buff *skb,
 {
   struct pf_ring_socket *pfr = (_pfr->master_ring != NULL) ? _pfr->master_ring : _pfr;
   u_int64_t the_bit = 1 << channel_id;
-
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] --> add_pkt_to_ring(len=%d) [pfr->channel_id_mask=%16X][channel_id=%d][real_skb=%u]\n",
-  //	   hdr->len, pfr->channel_id_mask, channel_id, real_skb);
 
   if((!pfr->ring_active) || (!skb))
     return(0);
@@ -4021,20 +3914,11 @@ static int add_skb_to_ring(struct sk_buff *skb,
      that will then be freed when the packet has been handled
   */
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] --> %s(len=%d) [channel_id=%d/%d][active=%d][%s]\n",
-  //         __FUNCTION__,
-  //	   hdr->len, channel_id, num_rx_channels,
-  //	   pfr->ring_active, pfr->ring_netdev->dev->name);
-
   if((!pfring_enabled) || ((!pfr->ring_active) && (pfr->master_ring == NULL)))
     return(-1);
 
-  if (pfr->num_rx_channels != num_rx_channels) { /* Constantly updated */
-    //printk("[PF_RING] Detected number of channels change on %s (%u -> %u)\n",
-    //  pfr->ring_netdev->dev->name, pfr->num_rx_channels, num_rx_channels);
+  if (pfr->num_rx_channels != num_rx_channels) /* Constantly updated */
     pfr->num_rx_channels = num_rx_channels;
-  }
   hdr->extended_hdr.parsed_pkt.last_matched_rule_id = (u_int16_t)-1;
 
   atomic_inc(&pfr->num_ring_users);
@@ -4047,20 +3931,8 @@ static int add_skb_to_ring(struct sk_buff *skb,
     }
   }
 
-  //if(unlikely(enable_debug)) {
-  //  printk("[PF_RING] %s: [%s][displ=%d][len=%d][caplen=%d]"
-  //	   "[is_ip_pkt=%d][%d -> %d][%p/%p]\n", __FUNCTION__,
-  //	   (skb->dev->name != NULL) ? skb->dev->name : "<NULL>",
-  //	   displ, hdr->len, hdr->caplen,
-  //	   is_ip_pkt, hdr->extended_hdr.parsed_pkt.l4_src_port,
-  //	   hdr->extended_hdr.parsed_pkt.l4_dst_port, skb->dev,
-  //	   pfr->ring_netdev);
-  //}
-
   /* Extensions */
   fwd_pkt = pfr->sw_filtering_rules_default_accept_policy;
-
-  /* printk("[PF_RING] rules_default_accept_policy: [fwd_pkt=%d]\n", fwd_pkt); */
 
   /* ************************** */
 
@@ -4074,8 +3946,6 @@ static int add_skb_to_ring(struct sk_buff *skb,
       pfr->sw_filtering_hash_match++;
     else
       pfr->sw_filtering_hash_miss++;
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] check_perfect_rules() returned %d\n", hash_found);
   }
 
   /* [2.2] Search rules list */
@@ -4083,19 +3953,9 @@ static int add_skb_to_ring(struct sk_buff *skb,
     if(check_wildcard_rules(skb, pfr, hdr, &fwd_pkt, &free_parse_mem,
 			    parse_memory_buffer, displ, &last_matched_plugin) != 0)
       fwd_pkt = 0;
-
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] check_wildcard_rules() completed: fwd_pkt=%d\n", fwd_pkt);
   }
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] %s() verdict: fwd_pkt=%d [default=%u]\n", __FUNCTION__,
-  //	   fwd_pkt, pfr->sw_filtering_rules_default_accept_policy);
-
-  if(fwd_pkt) {
-    /* We accept the packet: it needs to be queued */
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] Forwarding packet to userland\n");
+  if(fwd_pkt) { /* We accept the packet: it needs to be queued */
 
     /* [3] Packet sampling */
     if(pfr->sample_rate > 1) {
@@ -4106,14 +3966,6 @@ static int add_skb_to_ring(struct sk_buff *skb,
 	pfr->pktToSample = pfr->sample_rate;
       } else {
 	pfr->pktToSample--;
-
-	//if(unlikely(enable_debug))
-	//  printk("[PF_RING] %s(skb): sampled packet [len=%d]"
-	//	 "[tot=%llu][insert_off=%llu][pkt_type=%d][cloned=%d]\n",
-	//	 __FUNCTION__,
-	//	 (int)skb->len, pfr->slots_info->tot_pkts,
-	//	 pfr->slots_info->insert_off, skb->pkt_type,
-	//	 skb->cloned);
 
 	write_unlock(&pfr->ring_index_lock);
 
@@ -4138,10 +3990,6 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
 	hdr->extended_hdr.parsed_pkt.last_matched_plugin_id = last_matched_plugin;
 
-	//if(unlikely(enable_debug))
-	//  printk("[PF_RING] --> [last_matched_plugin = %d][extended_hdr.parsed_header_len=%d]\n",
-	//	 last_matched_plugin, hdr->extended_hdr.parsed_header_len);
-
 	if(offset > pfr->bucket_len)
 	  offset = hdr->extended_hdr.parsed_header_len = pfr->bucket_len;
 
@@ -4153,15 +4001,8 @@ static int add_skb_to_ring(struct sk_buff *skb,
     }
   }
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] [pfr->slots_info->insert_off=%llu]\n",
-  //         pfr->slots_info->insert_off);
-
   if(free_parse_mem)
     free_parse_memory(parse_memory_buffer);
-
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] %s() returned %d\n", __FUNCTION__, rc);
 
   atomic_dec(&pfr->num_ring_users);
   return(rc);
@@ -4344,9 +4185,6 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
   iphdr = ip_hdr(skb);
 
   if(iphdr && (iphdr->version == 4)) {
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] [version=%d] %X -> %X\n",
-    //	     iphdr->version, iphdr->saddr, iphdr->daddr);
 
     if(iphdr->frag_off & htons(IP_MF | IP_OFFSET)) {
       if((cloned = skb_clone(skb, GFP_ATOMIC)) != NULL) {
@@ -4412,21 +4250,10 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
 	  hdr->len = hdr->caplen = skb->len + displ;
 	  parse_pkt(skb, 1, displ, hdr, &ip_id);
 	} else {
-	  //printk("[PF_RING] Fragment queued \n");
 	  return(NULL);	/* mask rcvd fragments */
 	}
       }
     }
-    // else {
-    //  if(unlikely(enable_debug))
-    //	printk("[PF_RING] Do not seems to be a fragmented ip_pkt[iphdr=%p]\n", iphdr);
-    //}
-  } else if(iphdr && iphdr->version == 6) {
-    /* Re-assembling fragmented IPv6 packets has not been
-       implemented. Probability of observing fragmented IPv6
-       packets is extremely low. */
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] Re-assembling fragmented IPv6 packet hs not been implemented\n");
   }
 
   return(skb);
@@ -4475,8 +4302,6 @@ static int skb_ring_handler(struct sk_buff *skb,
   if(atomic_read(&ring_table_size) == 0)
     return(0);
 
-  // prefetch(skb->data);
-
   if(recv_packet) {
     if(real_skb)
       displ = skb->dev->hard_header_len;
@@ -4484,12 +4309,6 @@ static int skb_ring_handler(struct sk_buff *skb,
       displ = 0;
   } else
     displ = 0;
-
-  //if(unlikely(enable_debug)) {
-  //  if(skb->dev && (skb->dev->ifindex < MAX_NUM_IFIDX))
-  //    printk("[PF_RING] (1) %s(): [%d rings on %s (idx=%d), %d 'any' rings]\n", __FUNCTION__
-  //	     num_rings_per_device[skb->dev->ifindex], skb->dev->name, skb->dev->ifindex, num_any_rings);
-  //}
 
   if((num_any_rings == 0)
      && (skb->dev
@@ -4514,15 +4333,6 @@ static int skb_ring_handler(struct sk_buff *skb,
     return(0);
   }
 
-  //if(unlikely(enable_debug)) {
-  //  struct timeval tv;
-  //  skb_get_timestamp(skb, &tv);
-  //  printk("[PF_RING] %s(): [skb=%p][%u.%u][len=%d][dev=%s][csum=%u]\n", __FUNCTION__,
-  //	   skb, (unsigned int)tv.tv_sec, (unsigned int)tv.tv_usec,
-  //	   skb->len, skb->dev == NULL ? "<NULL>" : skb->dev->name,
-  //	   skb->csum);
-  //}
-
 #ifdef PROFILING
   rdt1 = _rdtsc();
 #endif
@@ -4532,11 +4342,6 @@ static int skb_ring_handler(struct sk_buff *skb,
   hdr.ts.tv_sec = 0;
   hdr.len = hdr.caplen = skb->len + displ;
   hdr.extended_hdr.flags = 0;
-
-#if 0 /* safety check (this leads to wrong numbers with GSO) */
-  hdr.len = hdr.caplen = min(skb->len + displ,
-    skb->dev->mtu /* 1500 */ + skb->dev->hard_header_len /* 14 */ + VLAN_HLEN /* 4 */);
-#endif
 
   if(quick_mode) {
     pfr = device_rings[skb->dev->ifindex][channel_id];
@@ -4549,11 +4354,7 @@ static int skb_ring_handler(struct sk_buff *skb,
       pfr = device_rings[skb->dev->ifindex][channel_id];
     }
 
-    //if(unlikely(enable_debug)) printk("[PF_RING] Expecting channel %d [%p]\n", channel_id, pfr);
-
     if((pfr != NULL) && is_valid_skb_direction(pfr->direction, recv_packet)) {
-      /* printk("==>>> [%d][%d]\n", skb->dev->ifindex, channel_id); */
-
       rc = 1;
       room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
 					  displ, 0, NULL, NULL, 0, real_skb ? &clone_id : NULL);
@@ -4585,10 +4386,6 @@ static int skb_ring_handler(struct sk_buff *skb,
     /* [1] Check unclustered sockets */
     sk = (struct sock*)lockless_list_get_first(&ring_table, &last_list_idx);
 
-    //if(unlikely(enable_debug))
-    //  printk("[PF_RING] -> lockless_list_get_first=%p [num elements=%u][last_list_idx=%u]\n",
-    //	     sk, ring_table.num_elements, (unsigned int)last_list_idx);
-
     while(sk != NULL) {
       pfr = ring_sk(sk);
 
@@ -4616,10 +4413,6 @@ static int skb_ring_handler(struct sk_buff *skb,
       }
 
       sk = (struct sock*)lockless_list_get_next(&ring_table, &last_list_idx);
-
-      //if(unlikely(enable_debug))
-      //  printk("[PF_RING] -> lockless_list_get_next=%p [num elements=%u][last_list_idx=%u]\n",
-      //         sk, ring_table.num_elements, (unsigned int)last_list_idx);
     }
 
     cluster_ptr = (ring_cluster_element*)lockless_list_get_first(&ring_cluster_list, &last_list_idx);
@@ -4750,8 +4543,6 @@ static int skb_ring_handler(struct sk_buff *skb,
   if((rc == 1) && (room_available == 0))
     rc = 2;
 
-  //if(unlikely(enable_debug)) printk("[PF_RING] (4) %s(): returned %d\n", __FUNCTION__, rc);
-
   return(rc); /*  0 = packet not handled */
 }
 
@@ -4762,10 +4553,6 @@ struct sk_buff skb;
 static int buffer_ring_handler(struct net_device *dev, char *data, int len)
 {
   u_int8_t skb_reference_in_use;
-
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] buffer_ring_handler: [dev=%s][len=%d]\n",
-  //         dev->name == NULL ? "<NULL>" : dev->name, len);
 
   skb.dev = dev;
   skb.len = len;
@@ -5704,8 +5491,6 @@ static int ring_release(struct socket *sock)
       kfree(pfr->sw_filtering_hash);
     }
 
-    /* printk("[PF_RING] --> num_hw_filtering_rules=%d\n", pfr->num_hw_filtering_rules); */
-
     /* Free Hw Filtering Rules */
     if(pfr->num_hw_filtering_rules > 0) {
       list_for_each_safe(ptr, tmp_ptr, &pfr->hw_filtering_rules) {
@@ -5883,23 +5668,6 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 
   if(unlikely(enable_debug))
     printk("[PF_RING] searching device %s\n", sa->sa_data);
-
-#if 0
-  if(strcmp(sa->sa_data, "any") == 0)
-    dev = &any_dev;
-  else {
-    if((dev = __dev_get_by_name(
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-				&init_net,
-#endif
-				sa->sa_data)) == NULL) {
-
-      if(unlikely(enable_debug))
-	printk("[PF_RING] search failed\n");
-      return(-EINVAL);
-    }
-  }
-#endif
 
   return(packet_ring_bind(sk, sa->sa_data));
 }
@@ -6307,10 +6075,6 @@ unsigned int ring_poll(struct file *file,
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   int rc, mask = 0;
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] -- poll called [ZC: %p][%s]\n", pfr->zc_dev,
-  //	   pfr->ring_netdev->dev->name ? pfr->ring_netdev->dev->name : "???");
-
   pfr->num_poll_calls++;
 
   if(unlikely(pfr->ring_shutdown))
@@ -6319,11 +6083,7 @@ unsigned int ring_poll(struct file *file,
   if(pfr->zc_dev == NULL) {
     /* PF_RING mode (No ZC) */
 
-    // if(unlikely(enable_debug))
-    //  printk("[PF_RING] poll called (non ZC device)\n");
-
     pfr->ring_active = 1;
-    // smp_rmb();
 
     if(pfr->tx.enable_tx_with_bounce && pfr->header_len == long_pkt_header) {
       write_lock_bh(&pfr->tx.consume_tx_packets_lock);
@@ -6331,14 +6091,8 @@ unsigned int ring_poll(struct file *file,
       write_unlock_bh(&pfr->tx.consume_tx_packets_lock);
     }
 
-    /* printk("Before [num_queued_pkts(pfr)=%u]\n", num_queued_pkts(pfr)); */
-
-    if(num_queued_pkts(pfr) < pfr->poll_num_pkts_watermark /* || pfr->num_poll_calls == 1 */) {
+    if(num_queued_pkts(pfr) < pfr->poll_num_pkts_watermark /* || pfr->num_poll_calls == 1 */)
       poll_wait(file, &pfr->ring_slots_waitqueue, wait);
-      // smp_mb();
-    }
-
-    /* printk("After [num_queued_pkts(pfr)=%u]\n", num_queued_pkts(pfr)); */
 
     if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark)
       mask |= POLLIN | POLLRDNORM;
@@ -6760,10 +6514,6 @@ static int get_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host,
   struct list_head *ptr, *tmp_ptr;
   u_int8_t app_id = -1;
 
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] %s(fragment_id=%d) [num_cluster_fragments=%d]\n",
-  //	   __FUNCTION__, fragment_id, num_cluster_fragments);
-
   if(num_cluster_fragments == 0)
     return(-1); /* no fragment */
 
@@ -6777,10 +6527,6 @@ static int get_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host,
        && frag->ipv4_dst_host == ipv4_dst_host) {
       /* Found: 1) return queue_id and 2) delete this entry if last fragment (not more_fragments) */
       app_id = frag->cluster_app_id;
-
-      //if(unlikely(enable_debug))
-      //  printk("[PF_RING] %s(fragment_id=%d): found %d [num_cluster_fragments=%d]\n",
-      //         __FUNCTION__, fragment_id, app_id, num_cluster_fragments);
 
       if(!more_fragments){
         list_del(ptr);  
@@ -6840,10 +6586,6 @@ static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host
 
   if(num_cluster_fragments > MAX_CLUSTER_FRAGMENTS_LEN) /* Avoid filling up all memory */
     return;
-
-  //if(unlikely(enable_debug))
-  //  printk("[PF_RING] %s(fragment_id=%d, app_id=%d) [num_cluster_fragments=%d]\n",
-  //	   __FUNCTION__, fragment_id, app_id, num_cluster_fragments);
 
   write_lock(&cluster_fragments_lock);
 
@@ -6992,10 +6734,7 @@ static void purge_idle_rules(struct pf_ring_socket *pfr,
 
 	if(unlikely(enable_debug))
 	  printk ("[PF_RING] Purging rule "
-		  // "[last_match=%u][expire_jiffies=%u]"
 		  "[%d.%d.%d.%d:%d -> %d.%d.%d.%d:%d][purged=%d][tot_rules=%d]\n",
-		  //(unsigned int) entry->rule.internals.jiffies_last_match,
-		  //(unsigned int) expire_jiffies,
 		  ((entry->rule.core_fields.shost.v4 >> 24) & 0xff),
 		  ((entry->rule.core_fields.shost.v4 >> 16) & 0xff),
 		  ((entry->rule.core_fields.shost.v4 >> 8)  & 0xff),
@@ -7166,11 +6905,11 @@ static int ring_setsockopt(struct socket *sock,
 			   int optlen)
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
-  int found, ret = 0 /* OK */, i;
+  int found = 1, ret = 0 /* OK */, i;
   u_int32_t ring_id;
   struct add_to_cluster cluster;
   u_int64_t channel_id_mask;
-  char applName[32 + 1] = { 0 };
+  char name[32 + 1] = { 0 };
   u_int16_t rule_id, rule_inactivity;
   packet_direction direction;
   socket_mode sockmode;
@@ -7180,8 +6919,6 @@ static int ring_setsockopt(struct socket *sock,
 
   if(pfr == NULL)
     return(-EINVAL);
-
-  found = 1;
 
   if(unlikely(enable_debug))
     printk("[PF_RING] --> ring_setsockopt(optname=%u)\n", optname);
@@ -7297,18 +7034,17 @@ static int ring_setsockopt(struct socket *sock,
     break;
 
   case SO_SET_APPL_NAME:
-    if(optlen >
-       sizeof(applName) /* Names should not be too long */ )
+    if(optlen > sizeof(name) /* Names should not be too long */ )
       return(-EINVAL);
 
-    if(copy_from_user(&applName, optval, optlen))
+    if(copy_from_user(&name, optval, optlen))
       return(-EFAULT);
 
     if(pfr->appl_name != NULL)
       kfree(pfr->appl_name);
     pfr->appl_name = (char *)kmalloc(optlen + 1, GFP_ATOMIC);
     if(pfr->appl_name != NULL) {
-      memcpy(pfr->appl_name, applName, optlen);
+      memcpy(pfr->appl_name, name, optlen);
       pfr->appl_name[optlen] = '\0';
     }
 
@@ -7531,13 +7267,12 @@ static int ring_setsockopt(struct socket *sock,
       pfr->ring_active = 1;
     }
 
-    found = 1;
     break;
 
   case SO_DEACTIVATE_RING:
     if(unlikely(enable_debug))
       printk("[PF_RING] * SO_DEACTIVATE_RING *\n");
-    found = 1, pfr->ring_active = 0;
+    pfr->ring_active = 0;
     break;
 
   case SO_SET_POLL_WATERMARK:
@@ -7562,8 +7297,6 @@ static int ring_setsockopt(struct socket *sock,
 
       if(unlikely(enable_debug))
 	printk("[PF_RING] --> SO_SET_POLL_WATERMARK=%d\n", pfr->poll_num_pkts_watermark);
-
-      found = 1;
     }
     break;
 
@@ -7576,8 +7309,6 @@ static int ring_setsockopt(struct socket *sock,
 
     if(unlikely(enable_debug))
       printk("[PF_RING] --> SO_RING_BUCKET_LEN=%d\n", pfr->bucket_len);
-
-    found = 1;
     break;
 
   case SO_SELECT_ZC_DEVICE:
@@ -7594,8 +7325,6 @@ static int ring_setsockopt(struct socket *sock,
       ret = pfring_select_zc_dev(pfr, &mapping);
     else
       ret = pfring_release_zc_dev(pfr);
-
-    found = 1;
     break;
 
   case SO_SET_MASTER_RING:
@@ -7660,8 +7389,6 @@ static int ring_setsockopt(struct socket *sock,
         }
       }
     }
-
-    found = 1;
     break;
 
   case SO_DEL_HW_FILTERING_RULE:
@@ -7715,11 +7442,6 @@ static int ring_setsockopt(struct socket *sock,
       if(copy_from_user(&pfr->kernel_consumer_plugin_id, optval,
 			sizeof(pfr->kernel_consumer_plugin_id)))
 	return(-EFAULT);
-
-#if 0
-      printk("[PF_RING] SO_SET_PACKET_CONSUMER_MODE=%d [diff=%d]\n",
-	     pfr->kernel_consumer_plugin_id, diff);
-#endif
 
       if(diff > 0) {
 	pfr->kernel_consumer_options = kmalloc(diff, GFP_KERNEL);
@@ -7775,7 +7497,6 @@ static int ring_setsockopt(struct socket *sock,
       printk("[PF_RING] * SO_REHASH_RSS_PACKET *\n");
 
     pfr->rehash_rss = default_rehash_rss_func;
-    found = 1;
     break;
 
   case SO_CREATE_CLUSTER_REFEREE:
@@ -7800,8 +7521,6 @@ static int ring_setsockopt(struct socket *sock,
       if(unlikely(enable_debug))
         printk("[PF_RING] SO_CREATE_CLUSTER_REFEREE done [%u]\n", ccri.cluster_id);
     }
-
-    found = 1;
     break;
 
   case SO_PUBLISH_CLUSTER_OBJECT:
@@ -7817,8 +7536,6 @@ static int ring_setsockopt(struct socket *sock,
       if(unlikely(enable_debug))
         printk("[PF_RING] SO_PUBLISH_CLUSTER_OBJECT done [%u.%u@%u]\n", pcoi.object_type, pcoi.object_id, pcoi.cluster_id);
     }
-
-    found = 1;
     break;
 
   case SO_LOCK_CLUSTER_OBJECT:
@@ -7834,8 +7551,6 @@ static int ring_setsockopt(struct socket *sock,
       if(unlikely(enable_debug))
         printk("[PF_RING] SO_LOCK_CLUSTER_OBJECT done [%u.%u@%u]\n", lcoi.object_type, lcoi.object_id, lcoi.cluster_id);
     }
-
-    found = 1;
     break;
 
   case SO_UNLOCK_CLUSTER_OBJECT:
@@ -7851,8 +7566,6 @@ static int ring_setsockopt(struct socket *sock,
       if(unlikely(enable_debug))
         printk("[PF_RING] SO_UNLOCK_CLUSTER_OBJECT done [%u.%u@%u]\n", lcoi.object_type, lcoi.object_id, lcoi.cluster_id);
     }
-
-    found = 1;
     break;
 
   case SO_SET_CUSTOM_BOUND_DEV_NAME:
@@ -7865,21 +7578,19 @@ static int ring_setsockopt(struct socket *sock,
       return(-EFAULT);
     } else
       pfr->custom_bound_device_name[optlen] = '\0';
-
-    found = 1;
     break;
 
   case SO_SHUTDOWN_RING:
-    found = 1, pfr->ring_active = 0, pfr->ring_shutdown = 1;
+    pfr->ring_active = 0, pfr->ring_shutdown = 1;
     wake_up_interruptible(&pfr->ring_slots_waitqueue);
     break;
 
   case SO_USE_SHORT_PKT_HEADER:
-    found = 1, pfr->header_len = short_pkt_header;
+    pfr->header_len = short_pkt_header;
     break;
 
   case SO_ENABLE_RX_PACKET_BOUNCE:
-    found = 1, pfr->tx.enable_tx_with_bounce = 1;
+    pfr->tx.enable_tx_with_bounce = 1;
     break;
 
   case SO_SEND_MSG_TO_PLUGIN:
@@ -7919,7 +7630,6 @@ static int ring_setsockopt(struct socket *sock,
       }
       kfree(msg_data);
     }
-    found = 1;
     break;
 
   case SO_SET_APPL_STATS:
@@ -7935,12 +7645,10 @@ static int ring_setsockopt(struct socket *sock,
     pfr->statsString[optlen] = '\0';
 
     ret = setSocketStats(pfr);
-    found = 1;
     break;
 
   case SO_SET_STACK_INJECTION_MODE:
     pfr->stack_injection_mode = 1;
-    found = 1;
     break;
 
   case SO_SET_IFF_PROMISC:
@@ -7974,7 +7682,6 @@ static int ring_setsockopt(struct socket *sock,
             unset_netdev_promisc(pfr->ring_netdev->dev);
       }
     }
-    found = 1;
     break;
 
   default:
@@ -7984,8 +7691,8 @@ static int ring_setsockopt(struct socket *sock,
 
   if(found)
     return(ret);
-  else
-    return(sock_setsockopt(sock, level, optname, optval, optlen));
+  
+  return(sock_setsockopt(sock, level, optname, optval, optlen));
 }
 
 /* ************************************* */
@@ -8516,10 +8223,6 @@ void zc_dev_handler(zc_dev_operation operation,
 
       rwlock_init(&next->lock);
       next->num_bound_sockets = 0;
-
-      //printk("[PF_RING] [rx_slots=%u/num_rx_pages=%u/memory_tot_len=%u]][tx_slots=%u/num_tx_pages=%u]\n",
-      //       packet_memory_num_slots, num_rx_pages, packet_memory_tot_len,
-      //       num_tx_slots, num_tx_pages);
 
       /* RX */
       if(rx_info != NULL)

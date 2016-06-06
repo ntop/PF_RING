@@ -101,6 +101,7 @@
 #define SO_GET_APPL_STATS_FILE_NAME      186
 #define SO_GET_LINK_STATUS               187
 
+/* Other *sockopt */
 #define SO_SELECT_ZC_DEVICE              190
 
 /* Error codes */
