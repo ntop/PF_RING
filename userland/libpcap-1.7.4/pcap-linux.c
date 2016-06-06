@@ -1708,7 +1708,7 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 				caplen = pcap_header.caplen, packet_len = pcap_header.len;
 				if (pcap_header.extended_hdr.timestamp_ns && handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) {
 					pcap_header.ts.tv_sec  = pcap_header.extended_hdr.timestamp_ns / 1000000000;
-					pcap_header.ts.tv_usec = pcap_header.extended_hdr.timestamp_ns % 1000;
+					pcap_header.ts.tv_usec = pcap_header.extended_hdr.timestamp_ns % 1000000000;
 				} else if (pcap_header.ts.tv_sec == 0) {
 					if (handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO)
 						clock_gettime(CLOCK_REALTIME, (struct timespec *) &pcap_header.ts);
