@@ -18,18 +18,10 @@ start_cluster_id() {
     CLUSTER_ID=$1
     FORCE=$2
 
-    CLUSTER_MASTER_BINARY=/usr/local/bin/pfdnacluster_master
+    CLUSTER_MASTER_BINARY=/usr/local/bin/zbalance_ipc
 
     if [ -f /etc/cluster/cluster-${CLUSTER_ID}.start ] || [ $FORCE -eq 1 ]; then
 	echo "Starting cluster $CLUSTER_ID"
-
-	IF_LIST=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep "\-i="|cut -d '=' -f2)       
-	for i in $(echo $IF_LIST | tr "," "\n"); do
-        	if [[ ! $i == *dna* ]]; then
-			# Not all interfaces are DNA, it is supposed to be a ZC cluster
-			CLUSTER_MASTER_BINARY=/usr/local/bin/zbalance_ipc
-	      	fi
-	done
 
 	PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
         if [ -f $PID_FILE ]; then

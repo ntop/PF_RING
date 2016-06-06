@@ -27,7 +27,7 @@ build-rpm:
 # Do NOT build package as root (http://wiki.centos.org/HowTos/SetupRpmBuildEnvironment)
 #	mkdir -p $(HOME)/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 #	echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
-	@rpmbuild -bb ./$(APPL).spec --define "pfring_version $(PACKAGE_VERSION)" --define "buildrev $(REVISION)" --define "nodna 0"
+	@rpmbuild -bb ./$(APPL).spec --define "pfring_version $(PACKAGE_VERSION)" --define "buildrev $(REVISION)" --define "nozc 0"
 	@./rpm-sign.exp $(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
 	@echo ""
 	@echo "Package contents:"

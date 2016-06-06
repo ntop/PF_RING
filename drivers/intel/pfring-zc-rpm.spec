@@ -1,4 +1,4 @@
-Summary: PF_RING DNA dkms kernel drivers
+Summary: PF_RING ZC dkms kernel drivers
 Name: pfring-drivers-zc-dkms
 Version: 1.2
 Release: 0

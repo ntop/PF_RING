@@ -950,7 +950,7 @@ pcap_lookupnet(device, netp, maskp, errbuf)
 	    || strstr(device, "snf") != NULL
 #endif
 #ifdef HAVE_PF_RING
-	    || (strncmp(device, "dna", 3) == 0)
+	    || (strncmp(device, "zc:", 3) == 0)
 #endif
 	    ) {
 		*netp = *maskp = 0;

@@ -1,6 +1,6 @@
-all: dna zc
+all: standard zc
 
-dna:
+standard:
 	cd pfring-daq-module; ./configure; make; cd ..
 
 zc:

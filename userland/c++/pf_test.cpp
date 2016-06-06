@@ -13,7 +13,7 @@ struct simple_stats {
 /* ************************************* */
 
 int main(int argc, char *argv[]) {
-  char *device_name = (char*)"dna0";
+  char *device_name = (char*) "zc:eth1";
   PFring *ring;
   int rc;
   u_int16_t rule_id = 99;

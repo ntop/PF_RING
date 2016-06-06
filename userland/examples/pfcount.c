@@ -479,7 +479,7 @@ void printHelp(void) {
   printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
   printf("-l <len>        Capture length\n");
   printf("-g <core_id>    Bind this app to a core\n");
-  printf("-d <device>     Device on which incoming packets are copied (e.g. userspace:usr0 or dna1)\n");
+  printf("-d <device>     Device on which incoming packets are copied\n");
   printf("-w <watermark>  Watermark\n");
   printf("-p <poll wait>  Poll wait (msec)\n");
   printf("-b <cpu %%>      CPU pergentage priority (0-99)\n");
@@ -903,16 +903,13 @@ int main(int argc, char* argv[]) {
 	   version & 0x000000FF);
   }
 
-  if(strstr(device, "dnacluster:")) {
-    printf("Capturing from %s\n", device);
+  if(is_sysdig) {
+    printf("Capturing from sysdig\n");
   } else {
-    if(is_sysdig) {
-      printf("Capturing from sysdig\n");
-    } else {
-      if(pfring_get_bound_device_address(pd, mac_address) != 0)
-	fprintf(stderr, "Unable to read the device address\n");
-      else {
-	int ifindex = -1;
+    if(pfring_get_bound_device_address(pd, mac_address) != 0)
+      fprintf(stderr, "Unable to read the device address\n");
+    else {
+      int ifindex = -1;
 	
       pfring_get_bound_device_ifindex(pd, &ifindex);
       
@@ -920,7 +917,6 @@ int main(int argc, char* argv[]) {
 	     device, etheraddr_string(mac_address, buf),
 	     ifindex,
              pfring_get_interface_speed(pd));
-      }
     }
   }
 

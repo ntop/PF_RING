@@ -29,6 +29,6 @@ the '-zc' suffix. Three driver families are currently available:
 These drivers can be found in drivers/
 
 Note: ZC needs hugepages for memory allocation, they are automatically initialised by 
-the load_dna_driver.sh script you can use to load the driver. For more informations 
+the load_driver.sh script you can use to load the driver. For more informations 
 please read README.hugepages.
 

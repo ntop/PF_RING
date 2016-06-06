@@ -55,7 +55,7 @@ pfring_stat pfringStats;
 
 static struct timeval startTime;
 unsigned long long numPkts = 0, numBytes = 0;
-u_int8_t wait_for_packet = 1, dna_mode = 0, do_shutdown = 0, num_ring;
+u_int8_t wait_for_packet = 1, do_shutdown = 0, num_ring;
 
 /* ******************************** */
 

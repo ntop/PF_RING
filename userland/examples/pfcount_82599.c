@@ -55,7 +55,7 @@ pthread_rwlock_t statsLock;
 
 static struct timeval startTime;
 unsigned long long numPkts[MAX_NUM_THREADS] = { 0 }, numBytes[MAX_NUM_THREADS] = { 0 };
-u_int8_t wait_for_packet = 1, dna_mode = 0, do_shutdown = 0;
+u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int8_t use_extended_pkt_header = 0;
 
 /* ******************************** */
@@ -748,11 +748,7 @@ int main(int argc, char* argv[]) {
     alarm(ALARM_SLEEP);
   }
 
-  if(dna_mode)
-    num_threads = 1;
-  else {
-    if(num_threads > 1) wait_for_packet = 1;
-  }
+  if(num_threads > 1) wait_for_packet = 1;
 
   pfring_enable_ring(pd);
 
