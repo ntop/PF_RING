@@ -6538,22 +6538,9 @@ done
 
 $as_echo "#define HAVE_PCAP_DUMP_FTELL 1" >>confdefs.h
 
-#
-# Do we have the new open API?  Check for pcap_create, and assume that,
-# if we do, we also have pcap_activate() and the other new routines
-# introduced in libpcap 1.0.0.
-#
-for ac_func in pcap_create
-do :
-  ac_fn_c_check_func "$LINENO" "pcap_create" "ac_cv_func_pcap_create"
-if test "x$ac_cv_func_pcap_create" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_PCAP_CREATE 1
 _ACEOF
-
-fi
-done
-
   cat >>confdefs.h <<_ACEOF
 #define HAVE_PCAP_SET_TSTAMP_TYPE 1
 _ACEOF
