@@ -6554,38 +6554,12 @@ _ACEOF
 fi
 done
 
-if test $ac_cv_func_pcap_create = "yes" ; then
-	#
-	# OK, do we have pcap_set_tstamp_type?  If so, assume we have
-	# pcap_list_tstamp_types and pcap_free_tstamp_types as well.
-	#
-	for ac_func in pcap_set_tstamp_type
-do :
-  ac_fn_c_check_func "$LINENO" "pcap_set_tstamp_type" "ac_cv_func_pcap_set_tstamp_type"
-if test "x$ac_cv_func_pcap_set_tstamp_type" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_PCAP_SET_TSTAMP_TYPE 1
 _ACEOF
-
-fi
-done
-
-	#
-	# And do we have pcap_set_tstamp_precision?  If so, we assume
-	# we also have pcap_open_offline_with_tstamp_precision.
-	#
-	for ac_func in pcap_set_tstamp_precision
-do :
-  ac_fn_c_check_func "$LINENO" "pcap_set_tstamp_precision" "ac_cv_func_pcap_set_tstamp_precision"
-if test "x$ac_cv_func_pcap_set_tstamp_precision" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_PCAP_SET_TSTAMP_PRECISION 1
 _ACEOF
-
-fi
-done
-
-fi
 
 #
 # Check for a miscellaneous collection of functions which we use

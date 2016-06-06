@@ -2479,9 +2479,9 @@ print_packet(u_char *user, const struct pcap_pkthdr *h, const u_char *sp)
 	if(ndo->ndo_packet_number)
 		ND_PRINT((ndo, "%5u  ", packets_captured));
 
-#ifdef HAVE_PF_RING
+#if 0 /* #ifdef HAVE_PF_RING not needed anymore with HAVE_PCAP_SET_TSTAMP_PRECISION (--time-stamp-precision=nano) */
         {
-          struct ns_pcaphdr *myhdr = (struct ns_pcaphdr*)h;
+          struct ns_pcaphdr *myhdr = (struct ns_pcaphdr *) h;
           int s = myhdr->ts.tv_sec % 86400;
           u_int nsec = myhdr->ns % 1000;
 
