@@ -1,5 +1,62 @@
 
 ---------------------------------------                                                                                                                                                                             
+2016-06-07 PF_RING 6.4
+
+* PF_RING Library
+ - Improved Myricom support, new naming scheme to improve usability
+ - Improved Napatech support, 100G support
+ - Improved Accolade support
+ - New Invea-Tech support
+ - New API pfring_get_metadata to read ZC metadata
+ - New pfring_get_interface_speed API
+ - New API pfring_version_noring()
+ - C++ wrapper improvements
+ - Removed DNA legacy
+
+* ZC Library
+ - New API pfring_zc_set_device_proc_stats to write /proc stats per device
+ - New API pfring_zc_set_device_app_name to write the application name under /proc
+ - New API pfring_zc_get_cluster_id to get the cluster ID from a queue
+ - New API pfring_zc_check_device_license for reading interface license status
+ - New API pfring_zc_get_queue_settings to read buffer len and metadata len from queue
+ - New API pfring_zc_get_queue_speed to read the link speed
+ - New pfring_zc_open_device flag PF_RING_ZC_DEVICE_NOT_PROMISC to open the device without setting promisc mode
+ - New packet metadata flags, including IP/L4 checksum (when available from card offloads)
+ - Improved pfring_zc_builtin_gtp_hash
+
+* PF_RING-aware Libpcap/Tcpdump
+ - New libpcap v.1.7.4
+ - New tcpdump v.4.7.4
+ - Libnpcap support to let libpcap-based applications (i.e. tcpdump) read compressed .npcap files produced by n2disk
+ - Native nanosecond timestamps support
+ - Tcpdump patch to close the pcap handle in case of errors (this avoids breaking ZC queues)
+
+* PF_RING kernel module
+ - Fixed BPF support on kernel 4.4.x
+ - Fixed RSS support on Centos 6 (it was reporting the wrong number of queues, affecting RSS rehash)
+ - Reworked promisc support: handling promisc through the pf_ring kernel module in order to automatically remove it even when applications drop privileges
+ - VLAN ID fix in case of vlan stripping offload enabled (it was including priority bits)
+
+* Drivers
+ - New i40e-zc v.1.5.18
+ - New fm10k-zc v.0.20.1
+ - Support for latest Ubuntu 16, RHEL 6.8, Centos 7
+ - Fixed i40e-zc initialisation failures due to promisc reset
+ - Fixed i40e-zc 'transmit queue 0 timed out'
+ - Fixed e1000e-zc memory leak
+
+* Examples
+ - Added ability to reforge MAC/IP also when reading packets from pcap file/stdin in pfsend
+ - Added -f option for replaying packets from pcap file in zsend
+ - Added -o option to pfsend to specify an offset to be used with -b
+ - Added -r option to use egress interfaces instead of queues in zbalance_ipc
+
+* Snort DAQ
+ - Fixed DAQ-ZC buffer leak in IPC mode
+ - Fixed DAQ_DP_ADD_DC support
+ - Fixed support for DAQ < 2.0.6
+
+---------------------------------------                                                                                                                                                                             
 2015-11-26 PF_RING 6.2
 
 * PF_RING Library
