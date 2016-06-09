@@ -856,7 +856,7 @@ static inline int check_free_ring_slot(struct pf_ring_socket *pfr)
       */
 
       /* Zero-copy recv: this prevents from overwriting packets while apps are processing them */
-      if((pfr->slots_info->tot_mem - sizeof(FlowSlotInfo) - pfr->slots_info->insert_off) < (2 * pfr->slots_info->slot_len) &&
+      if((pfr->slots_info->tot_mem - sizeof(FlowSlotInfo) - pfr->slots_info->insert_off) < (3 * pfr->slots_info->slot_len) &&
 	 remove_off == 0)
 	return(0);
     }
