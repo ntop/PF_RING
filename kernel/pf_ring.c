@@ -844,9 +844,8 @@ static inline int check_free_ring_slot(struct pf_ring_socket *pfr)
 
     /* We have to check whether we have enough space to accommodate a new packet */
 
-    /* Zero-copy recv: this prevents from overwriting packets while apps are processing them */
-    if((remove_off - pfr->slots_info->insert_off) 
-       < (3 /* 2 should be enough, using 3 as safer value */ * pfr->slots_info->slot_len))
+    /* Checking space for 1. new packet and 2. packet under processing */
+    if((remove_off - pfr->slots_info->insert_off) < (2 * pfr->slots_info->slot_len))
       return(0);
 
   } else { /* pfr->slots_info->insert_off > remove_off */
@@ -855,12 +854,9 @@ static inline int check_free_ring_slot(struct pf_ring_socket *pfr)
      *  offset is wrapped to the beginning in case the space remaining is less than slot_len
      *  (i.e. the memory needed to accommodate a packet) */
 
-    /* Zero-copy recv: this prevents from overwriting packets while apps are processing them */
-    if((pfr->slots_info->tot_mem - sizeof(FlowSlotInfo) - pfr->slots_info->insert_off)
-       < (3 /* 2 should be enough, using 3 as safer value */ * pfr->slots_info->slot_len) &&
-      remove_off == 0)
+    /* Checking space for 1. new packet, 2. packet under processing and 3. emty room when available space at insert time is less than slot_len */
+    if((pfr->slots_info->tot_mem - sizeof(FlowSlotInfo) - pfr->slots_info->insert_off) < (3 * pfr->slots_info->slot_len) && remove_off == 0)
       return(0);
-
   }
 
   return(1);
