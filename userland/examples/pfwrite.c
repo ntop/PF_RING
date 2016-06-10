@@ -201,7 +201,7 @@ char* intoa(unsigned int addr) {
 
 /* ************************************ */
 
-inline char* in6toa(struct in6_addr addr6) {
+static inline char* in6toa(struct in6_addr addr6) {
   snprintf(buf, sizeof(buf),
 	   "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 	   addr6.s6_addr[0], addr6.s6_addr[1], addr6.s6_addr[2],

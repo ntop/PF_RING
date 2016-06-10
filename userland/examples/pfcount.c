@@ -415,10 +415,19 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
 
 /* ****************************************************** */
 
+typedef struct Validator_ {
+  uint8_t x[16];
+} Validator;
+
 void dummyProcesssPacket(const struct pfring_pkthdr *h,
 			 const u_char *p, const u_char *user_bytes) {
   long threadId = (long)user_bytes;
   u_int8_t dump_match = 0;
+
+  const Validator *v = (const Validator *) p;
+  Validator vs;
+
+  memcpy(&vs, v, sizeof(Validator));
 
   stats->numPkts[threadId]++, stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
 
@@ -458,6 +467,12 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h,
 
   if (unlikely(num_packets && num_packets == stats->numPkts[threadId]))
     sigproc(0);
+
+  usleep(1);
+
+  if (memcmp(v, &vs, sizeof(Validator)) != 0) {
+    abort();
+  }
 }
 
 /* *************************************** */

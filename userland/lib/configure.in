@@ -114,7 +114,7 @@ if test "x$ac_cv_lib_ntapi_NT_Init" = xyes; then :
     AC_MSG_CHECKING([Napatech support])
     if test -f $MOD_NT_LIB; then
       AC_MSG_RESULT(yes)
-      NT_LIB="-lntapi -lntos"
+      NT_LIB="-L/opt/napatech3/lib -lntapi -lntos"
       HAVE_NT="-D HAVE_NT"
       NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
       NT_DEP="extract_nt_lib"
