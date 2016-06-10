@@ -1011,7 +1011,7 @@ int pfring_mod_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
 
 /* *************************************** */
 
-static u_int32_t __pfring_mod_get_ethtool_interface_speed(const char *ifname) {
+static u_int32_t __ethtool_get_link_settings(const char *ifname) {
   int sock, rc;
   struct ifreq ifr;
   struct ethtool_cmd edata;
@@ -1045,8 +1045,9 @@ static u_int32_t __pfring_mod_get_ethtool_interface_speed(const char *ifname) {
     return speed;
   }
 
-  ethtool_cmd_speed(&edata);
-  speed = edata.speed;
+  speed = ethtool_cmd_speed(&edata);
+  if (speed == SPEED_UNKNOWN)
+    speed = 0;
 
   return speed;
 }
@@ -1054,7 +1055,7 @@ static u_int32_t __pfring_mod_get_ethtool_interface_speed(const char *ifname) {
 /* *************************************** */
 
 u_int32_t pfring_mod_get_interface_speed(pfring *ring) {
-  return __pfring_mod_get_ethtool_interface_speed(ring->device_name);
+  return __ethtool_get_link_settings(ring->device_name);
 }
  
 /* *************************************** */
