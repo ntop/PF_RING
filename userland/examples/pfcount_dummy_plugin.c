@@ -149,7 +149,7 @@ void my_sigalarm(int sig) {
 
 static char hex[] = "0123456789ABCDEF";
 
-char* etheraddr_string(const u_char *ep, char *buf) {
+static char* etheraddr_string(const u_char *ep, char *buf) {
   u_int i, j;
   char *cp;
 
@@ -180,7 +180,7 @@ char* etheraddr_string(const u_char *ep, char *buf) {
 /*
  * A faster replacement for inet_ntoa().
  */
-char* _intoa(unsigned int addr, char* buf, u_short bufLen) {
+static char* _intoa(unsigned int addr, char* buf, u_short bufLen) {
   char *cp, *retStr;
   u_int byte;
   int n;
@@ -219,7 +219,7 @@ char* intoa(unsigned int addr) {
 
 /* ************************************ */
 
-inline char* in6toa(struct in6_addr addr6) {
+static inline char* in6toa(struct in6_addr addr6) {
   snprintf(buf, sizeof(buf), 
 	   "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 	   addr6.s6_addr[0], addr6.s6_addr[1], addr6.s6_addr[2], 
@@ -229,21 +229,6 @@ inline char* in6toa(struct in6_addr addr6) {
 	   addr6.s6_addr[15]);
 
   return(buf);
-}
-
-/* ****************************************************** */
-
-char* proto2str(u_short proto) {
-  static char protoName[8];
-
-  switch(proto) {
-  case IPPROTO_TCP:  return("TCP");
-  case IPPROTO_UDP:  return("UDP");
-  case IPPROTO_ICMP: return("ICMP");
-  default:
-    snprintf(protoName, sizeof(protoName), "%d", proto);
-    return(protoName);
-  }
 }
 
 /* ****************************************************** */
