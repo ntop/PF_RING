@@ -62,15 +62,7 @@ unsigned long long rdtsc() {
 /* **************************************************** */
 
 inline int pfring_there_is_pkt_available(pfring *ring) {
-#if 1
-  return(ring->slots_info->tot_insert != ring->slots_info->tot_read);
-#else
-  /* stronger check: */
-  return ((ring->slots_info->remove_off != ring->slots_info->insert_off && 
-          (ring->slots_info->tot_insert != ring->slots_info->tot_read)) || 
-         ((ring->slots_info->remove_off == ring->slots_info->insert_off) && 
-	 ((ring->slots_info->tot_insert - ring->slots_info->tot_read) >= ring->slots_info->min_num_slots)));
-#endif
+  return ring->slots_info->tot_insert != ring->slots_info->tot_read;
 }
 
 /* **************************************************** */
@@ -515,7 +507,7 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
       if(bktLen > buffer_len) bktLen = buffer_len;
 
       if(buffer_len == 0)
-	*buffer = (u_char*)&bucket[ring->slot_header_len];
+	*buffer = (u_char *) &bucket[ring->slot_header_len];
       else
 	memcpy(*buffer, &bucket[ring->slot_header_len], bktLen);
 
@@ -529,7 +521,8 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
       gcc_mb();
 #endif
 
-      ring->slots_info->tot_read++, ring->slots_info->remove_off = next_off;
+      ring->slots_info->tot_read++;
+      ring->slots_info->remove_off = next_off;
 
       if(unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
 
@@ -1018,7 +1011,7 @@ int pfring_mod_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
 
 /* *************************************** */
 
-static u_int32_t __pfring_mod_get_ethtool_interface_speed(const char *ifname) {
+static u_int32_t __ethtool_get_link_settings(const char *ifname) {
   int sock, rc;
   struct ifreq ifr;
   struct ethtool_cmd edata;
@@ -1052,8 +1045,9 @@ static u_int32_t __pfring_mod_get_ethtool_interface_speed(const char *ifname) {
     return speed;
   }
 
-  ethtool_cmd_speed(&edata);
-  speed = edata.speed;
+  speed = ethtool_cmd_speed(&edata);
+  if (speed == SPEED_UNKNOWN)
+    speed = 0;
 
   return speed;
 }
@@ -1061,7 +1055,7 @@ static u_int32_t __pfring_mod_get_ethtool_interface_speed(const char *ifname) {
 /* *************************************** */
 
 u_int32_t pfring_mod_get_interface_speed(pfring *ring) {
-  return __pfring_mod_get_ethtool_interface_speed(ring->device_name);
+  return __ethtool_get_link_settings(ring->device_name);
 }
  
 /* *************************************** */

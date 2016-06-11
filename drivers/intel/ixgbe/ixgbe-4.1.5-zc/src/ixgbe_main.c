@@ -9751,6 +9751,15 @@ static void ixgbe_set_prio_tc_map(struct ixgbe_adapter __maybe_unused *adapter)
 #endif
 }
 
+#ifdef NETIF_F_HW_TC
+static int
+__ixgbe_setup_tc(struct net_device *dev, __always_unused u32 handle,
+		 __always_unused __be16 proto, struct tc_to_netdev *tc)
+{
+	return ixgbe_setup_tc(dev, tc->tc);
+}
+#endif /* NETIF_F_HW_TC */
+
 /**
  * ixgbe_setup_tc - routine to configure net_device for multiple traffic
  * classes.
@@ -10190,9 +10199,11 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 #else
 	.ndo_get_stats		= ixgbe_get_stats,
 #endif /* HAVE_NDO_GET_STATS64 */
-#ifdef HAVE_SETUP_TC
+#ifdef NETIF_F_HW_TC
+	.ndo_setup_tc		= __ixgbe_setup_tc,
+#else
 	.ndo_setup_tc		= ixgbe_setup_tc,
-#endif
+#endif /* NETIF_F_HW_TC */
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= ixgbe_netpoll,
 #endif
