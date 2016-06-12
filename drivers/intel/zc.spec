@@ -11,7 +11,7 @@ Summary:	%{module_name} %{version} dkms package
 Name:		%{module_name}
 Version:	%{version}
 License:	%license
-Release:	1dkms
+Release:	dkms
 BuildArch:	noarch
 Group:		System/Kernel
 Requires: 	dkms >= 1.95, kernel-devel
@@ -55,6 +55,7 @@ if [ ! -f /etc/modprobe.d/pfring-zc.conf ]; then
    echo 'blacklist e1000e-zc' >> /etc/modprobe.d/pfring-zc.conf
    echo 'blacklist igb-zc' >> /etc/modprobe.d/pfring-zc.conf
    echo 'blacklist ixgbe-zc' >> /etc/modprobe.d/pfring-zc.conf
+   echo 'blacklist fm10k-zc' >> /etc/modprobe.d/pfring-zc.conf
    echo 'blacklist i40e-zc' > /etc/modprobe.d/i40e-zc.conf
 fi
 
