@@ -10199,11 +10199,13 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 #else
 	.ndo_get_stats		= ixgbe_get_stats,
 #endif /* HAVE_NDO_GET_STATS64 */
+#ifdef HAVE_SETUP_TC
 #ifdef NETIF_F_HW_TC
 	.ndo_setup_tc		= __ixgbe_setup_tc,
 #else
 	.ndo_setup_tc		= ixgbe_setup_tc,
 #endif /* NETIF_F_HW_TC */
+#endif
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= ixgbe_netpoll,
 #endif
