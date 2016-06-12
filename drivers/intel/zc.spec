@@ -53,9 +53,10 @@ fi
 %post
 if [ ! -f /etc/modprobe.d/pfring-zc.conf ]; then
    echo 'blacklist e1000e-zc' >> /etc/modprobe.d/pfring-zc.conf
-   echo 'blacklist igb-zc' >> /etc/modprobe.d/pfring-zc.conf
-   echo 'blacklist ixgbe-zc' >> /etc/modprobe.d/pfring-zc.conf
-   echo 'blacklist i40e-zc' > /etc/modprobe.d/i40e-zc.conf
+   echo 'blacklist igb-zc'    >> /etc/modprobe.d/pfring-zc.conf
+   echo 'blacklist ixgbe-zc'  >> /etc/modprobe.d/pfring-zc.conf
+   echo 'blacklist i40e-zc'   >> /etc/modprobe.d/pfring-zc.conf
+   echo 'blacklist fm10k-zc'  >> /etc/modprobe.d/pfring-zc.conf
 fi
 
 for POSTINST in %{_prefix}/lib/dkms/common.postinst %{_datarootdir}/%{module_name}/postinst; do
