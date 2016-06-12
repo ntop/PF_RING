@@ -11,7 +11,7 @@ Summary:	%{module_name} %{version} dkms package
 Name:		%{module_name}
 Version:	%{version}
 License:	%license
-Release:	1dkms
+Release:	dkms
 BuildArch:	noarch
 Group:		System/Kernel
 Requires: 	dkms >= 1.95, kernel-devel
