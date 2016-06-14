@@ -3736,7 +3736,7 @@ $as_echo_n "checking Accolade support... " >&6; }
 if test -d "$ACCOLADE_HOME"; then
    if test -f pfring_mod_accolade.c; then
       ACCOLADE_INC="-I$ACCOLADE_HOME/include"
-      ACCOLADE_LIB="-lanic"
+      ACCOLADE_LIB="-L/opt/accolade/lib -lanic"
       ACCOLADE_OBJS="pfring_mod_accolade.o"
       HAVE_ACCOLADE="-D HAVE_ACCOLADE"
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
