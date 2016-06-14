@@ -921,18 +921,12 @@ int main(int argc, char* argv[]) {
   if(is_sysdig) {
     printf("Capturing from sysdig\n");
   } else {
-    if(pfring_get_bound_device_address(pd, mac_address) != 0)
-      fprintf(stderr, "Unable to read the device address\n");
-    else {
-      int ifindex = -1;
-	
-      pfring_get_bound_device_ifindex(pd, &ifindex);
-      
-      printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
-	     device, etheraddr_string(mac_address, buf),
-	     ifindex,
-             pfring_get_interface_speed(pd));
-    }
+    int ifindex = -1;
+    rc = pfring_get_bound_device_address(pd, mac_address);
+    pfring_get_bound_device_ifindex(pd, &ifindex);
+    printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
+	   device, rc == 0 ? etheraddr_string(mac_address, buf) : "unknown",
+	   ifindex, pfring_get_interface_speed(pd));
   }
 
   printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));
