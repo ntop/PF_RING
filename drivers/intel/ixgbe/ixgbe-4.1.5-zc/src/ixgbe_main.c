@@ -700,6 +700,11 @@ struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	bool real_tx_hang = false;
 	int i;
 
+#ifdef HAVE_PF_RING
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) /* tx hang detected while in use from userspace: expected behaviour */
+		return; /* avoid card reset while application is running on top of ZC */
+#endif	
+
 #define TX_TIMEO_LIMIT 16000
 	for (i = 0; i < adapter->num_tx_queues; i++) {
 		struct ixgbe_ring *tx_ring = adapter->tx_ring[i];

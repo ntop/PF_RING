@@ -6030,6 +6030,11 @@ static void igb_tx_timeout(struct net_device *netdev)
 	struct igb_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
+#ifdef HAVE_PF_RING
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) /* tx hang detected while in use from userspace: expected behaviour */
+		return; /* avoid card reset while application is running on top of ZC */
+#endif	
+
 	/* Do the reset outside of interrupt context */
 	adapter->tx_timeout_count++;
 

@@ -694,6 +694,11 @@ static void fm10k_tx_timeout(struct net_device *netdev)
 	bool real_tx_hang = false;
 	int i;
 
+#ifdef HAVE_PF_RING
+	if (atomic_read(&interface->pfring_zc.usage_counter) > 0) /* tx hang detected while in use from userspace: expected behaviour */
+		return; /* avoid card reset while application is running on top of ZC */
+#endif	
+
 #define TX_TIMEO_LIMIT 16000
 	for (i = 0; i < interface->num_tx_queues; i++) {
 		struct fm10k_ring *tx_ring = interface->tx_ring[i];
