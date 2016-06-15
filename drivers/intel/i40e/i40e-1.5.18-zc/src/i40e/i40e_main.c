@@ -319,7 +319,7 @@ static void i40e_tx_timeout(struct net_device *netdev)
 	}
 
 #ifdef HAVE_PF_RING
-	if (atomic_read(&tx_ring->pfring_zc.queue_in_use)) /* tx hang detected && queue in use from userspace: expected behaviour */
+	if (tx_ring && atomic_read(&tx_ring->pfring_zc.queue_in_use)) /* tx hang detected && queue in use from userspace: expected behaviour */
 		return; /* avoid card reset while application is running on top of ZC */
 #endif	
 
