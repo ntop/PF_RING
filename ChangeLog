@@ -1,5 +1,17 @@
 
 ---------------------------------------                                                                                                                                                                             
+2016-06-16 PF_RING 6.4.1
+
+* PF_RING Library
+ - Fixed pfring_get_interface_speed on several capture modules
+
+* PF_RING kernel module
+ - Fixed packet corruption with standard pf_ring sockets in case of slow consumer
+
+* Drivers
+ - Fixed 'tx hang' on all drivers
+
+---------------------------------------                                                                                                                                                                             
 2016-06-07 PF_RING 6.4
 
 * PF_RING Library
