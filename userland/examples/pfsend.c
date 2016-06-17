@@ -226,6 +226,7 @@ void printHelp(void) {
 #endif
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Number of different IPs (balanced traffic)\n");
+  printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
   printf("-x <if index>   Send to the selected interface, if supported\n");
@@ -286,6 +287,8 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
   u_int32_t src_ip = (0x0A000000 + idx) % 0xFFFFFFFF /* from 10.0.0.0 */;
   u_int32_t dst_ip =  0xC0A80001 /* 192.168.0.1 */;
   u_int16_t src_port = 2012, dst_port = 3000;
+
+  srandom(time(NULL));
 
   /* Reset packet */
   memset(buffer, 0, buffer_len);
@@ -357,7 +360,7 @@ static void reforge_packet(u_char *buffer, u_int buffer_len, u_int idx) {
 
 int main(int argc, char* argv[]) {
   char *pcap_in = NULL, path[255] = { 0 };
-  int c, i, verbose = 0, active_poll = 0;
+  int c, i, j, n, verbose = 0, active_poll = 0;
   u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
   u_char buffer[9000];
   u_int32_t num_to_send = 0;
@@ -375,8 +378,9 @@ int main(int argc, char* argv[]) {
   int send_full_pcap_once = 1;
   char *pidFileName = NULL;
   int send_error_once = 1;
+  int randomize = 0;
 
-  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:af:r:vm:p:P:w:x:")) != -1) {
+  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:af:r:vm:p:P:w:x:z")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -440,6 +444,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'P':
       pidFileName = strdup(optarg);
+      break;
+    case 'z':
+      randomize = 1;
       break;
     default:
       printHelp();
@@ -740,6 +747,11 @@ int main(int argc, char* argv[]) {
       num_bytes_good_sent += tosend->len + 24 /* 8 Preamble + 4 CRC + 12 IFG */;
     }
 
+    if (randomize) {
+      n = random() & 0xF;
+      for (j = 0; j < n; j++)
+        tosend = tosend->next;
+    }
     tosend = tosend->next;
 
 #if !(defined(__arm__) || defined(__mips__))
