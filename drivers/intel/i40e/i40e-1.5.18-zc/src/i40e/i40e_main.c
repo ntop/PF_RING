@@ -3299,6 +3299,7 @@ static void i40e_fdir_filter_restore(struct i40e_vsi *vsi)
 }
 
 #ifdef HAVE_PF_RING
+
 /**
  * i40e_irq_dynamic_disable - Disable default interrupt generation settings
  * @vsi: pointer to a vsi
@@ -3532,8 +3533,10 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			try_module_get(THIS_MODULE); /* ++ */
     
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
+			/*
 			struct i40e_vsi *vsi = rx_ring->vsi;
 			u16 pf_q = vsi->base_queue + rx_ring->queue_index;
+			*/
 
 			if (unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
@@ -3541,12 +3544,11 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			/* disabling irqs, they will be enabled on-demand */
 			i40e_disable_irq(rx_ring->q_vector);
 
-			i40e_control_rxq(vsi, pf_q, false /* stop */);
-
 			/* FIXX this is causing system crashes on high traffic rates, TODO fix it as it causes some skbuff leak on every pfring_open!
-			i40e_clean_rx_ring(rx_ring); */
-
-			i40e_control_rxq(vsi, pf_q, true /* start */);
+			i40e_control_rxq(vsi, pf_q, false);
+			i40e_clean_rx_ring(rx_ring);
+			i40e_control_rxq(vsi, pf_q, true);
+			*/
 		}
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 			/* nothing to do besides increasing the counter */
