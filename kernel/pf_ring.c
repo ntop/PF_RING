@@ -6941,7 +6941,7 @@ static int ring_setsockopt(struct socket *sock,
       if (unlikely(enable_debug))
         printk("[PF_RING] BPF filter (len = %u)\n", fprog.len);
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) /* FIXX ubuntu only */
+#if(LINUX_VERSION_CODE > KERNEL_VERSION(4,4,6)) /* FIXX ubuntu kernel > 4.4.0-21 */
       ret = __sk_attach_filter(&fprog, pfr->sk, sock_owned_by_user(pfr->sk));
 #else
       ret = sk_attach_filter(&fprog, pfr->sk);
@@ -6955,7 +6955,7 @@ static int ring_setsockopt(struct socket *sock,
   case SO_DETACH_FILTER:
     if (unlikely(enable_debug))
       printk("[PF_RING] Removing BPF filter\n");
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) /* FIXX ubuntu only */
+#if(LINUX_VERSION_CODE > KERNEL_VERSION(4,4,6)) /* FIXX ubuntu kernel > 4.4.0-21 */
     ret = __sk_detach_filter(pfr->sk, sock_owned_by_user(pfr->sk));
 #else
     ret = sk_detach_filter(pfr->sk);
