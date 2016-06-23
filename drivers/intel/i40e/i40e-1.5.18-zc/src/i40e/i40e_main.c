@@ -453,10 +453,18 @@ static struct rtnl_link_stats64 *i40e_get_netdev_stats_struct(
 			bytes   = rx_ring->stats.bytes;
 		} while (u64_stats_fetch_retry_irq(&rx_ring->syncp, start));
 
+#ifndef HAVE_PF_RING
 		stats->rx_packets += packets;
 		stats->rx_bytes   += bytes;
+#endif
 	}
 	rcu_read_unlock();
+
+#ifdef HAVE_PF_RING
+        /* Using stats from registers which contain actual stats also in ZC mode */
+        stats->rx_bytes = vsi->eth_stats.rx_bytes;
+        stats->rx_packets = vsi->eth_stats.rx_unicast;
+#endif
 
 	/* following stats updated by i40e_watchdog_subtask() */
 	stats->multicast	= vsi_stats->multicast;
@@ -894,12 +902,19 @@ static void i40e_update_vsi_stats(struct i40e_vsi *vsi)
 #ifdef HAVE_NDO_GET_STATS64
 		} while (u64_stats_fetch_retry_irq(&p->syncp, start));
 #endif
+#ifndef HAVE_PF_RING
 		rx_b += bytes;
 		rx_p += packets;
+#endif
 		rx_buf += p->rx_stats.alloc_buff_failed;
 		rx_page += p->rx_stats.alloc_page_failed;
 	}
 	rcu_read_unlock();
+#ifdef HAVE_PF_RING
+        /* Using stats from registers which contain actual stats also in ZC mode */
+        rx_b = vsi->eth_stats.rx_bytes;
+        rx_p = vsi->eth_stats.rx_unicast;
+#endif
 	vsi->tx_restart = tx_restart;
 	vsi->tx_busy = tx_busy;
 	vsi->tx_linearize = tx_linearize;
