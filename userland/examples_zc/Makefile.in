@@ -36,7 +36,7 @@ CFLAGS     = -O2 -Wall @CFLAGS@ ${INCLUDE}
 PFPROGS   = 
 
 ifneq (@HAVE_PF_RING_ZC@,)
-	PFPROGS += zcount zbounce zbounce_ipc zpipeline zbalance zsend zcount_ipc zfanout_ipc zbalance_ipc zpipeline_ipc zfifo zreplicator zbalance_DC_ipc
+	PFPROGS += zcount zbounce zbounce_ipc zpipeline zbalance zsend zcount_ipc zfanout_ipc zbalance_ipc zpipeline_ipc zfifo zreplicator zbalance_DC_ipc zsanitycheck
 endif
 
 TARGETS   =  ${PFPROGS}
@@ -81,6 +81,9 @@ zreplicator: zreplicator.o ${LIBPFRING} Makefile
 
 zbalance_DC_ipc: zbalance_DC_ipc.o ${LIBPFRING} Makefile
 	${CC} ${CFLAGS} zbalance_DC_ipc.o ${LIBS} -o $@
+
+zsanitycheck: zsanitycheck.o ${LIBPFRING} Makefile
+	${CC} ${CFLAGS} zsanitycheck.o ${LIBS} -o $@
 
 clean:
 	@rm -f ${TARGETS} *.o *~ config.*
