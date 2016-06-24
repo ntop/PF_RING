@@ -182,7 +182,6 @@ void printHelp(void) {
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
   printf("-C              Check license\n");
   printf("-v              Verbose\n");
-  exit(-1);
 }
 
 /* *************************************** */
@@ -276,6 +275,7 @@ int main(int argc, char* argv[]) {
     switch(c) {
     case 'h':
       printHelp();
+      exit(0);
       break;
     case 'a':
       wait_for_packet = 0;
@@ -308,8 +308,10 @@ int main(int argc, char* argv[]) {
     }
   }
   
-  if (device == NULL) printHelp();
-  if (cluster_id < 0) printHelp();
+  if (device == NULL || cluster_id < 0) {
+    printHelp();
+    exit(-1);
+  }
 
   buffer_len = max_packet_len(device);
 
