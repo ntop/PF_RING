@@ -463,7 +463,7 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h,
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount - (C) 2005-14 ntop.org\n\n");
+  printf("pfcount - (C) 2005-16 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"
@@ -499,7 +499,6 @@ void printHelp(void) {
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
 	 "                ixia\tTimestamped packets by ixiacom.com hardware devices\n");
-  exit(0);
 }
 
 /* *************************************** */
@@ -730,7 +729,7 @@ int main(int argc, char* argv[]) {
     switch(c) {
     case 'h':
       printHelp();
-      return(0);
+      exit(0);
       break;
     case 'a':
       wait_for_packet = 0;
@@ -768,8 +767,10 @@ int main(int argc, char* argv[]) {
 	verbose = 1;
       else if(optarg[0] == '2')
 	verbose = 2;
-      else
+      else {
 	printHelp();
+        exit(-1);
+      }
       break;
     case 'f':
       bpfFilter = strdup(optarg);
