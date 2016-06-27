@@ -8688,9 +8688,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     }
 
     if (dev->ifindex >= MAX_NUM_IFIDX) {
-      if (unlikely(enable_debug))
-	printk("[PF_RING] %s %s: interface index %d > max index %d\n", __FUNCTION__,
-	       dev->name, dev->ifindex, MAX_NUM_IFIDX);
+      printk("[PF_RING] %s %s: interface index %d > max index %d\n", __FUNCTION__,
+	     dev->name, dev->ifindex, MAX_NUM_IFIDX);
       return NOTIFY_DONE;
     }
 

@@ -908,7 +908,7 @@ typedef struct {
   rwlock_t lock;
 } zc_dev_list;
 
-#define MAX_NUM_IFIDX                       1024
+#define MAX_NUM_IFIDX 2048
 
 /*
  * Linked-list of virtual filtering devices
