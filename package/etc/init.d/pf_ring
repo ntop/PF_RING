@@ -314,6 +314,10 @@ start_pf_ring() {
 
     KERNEL_VERSION=$(uname -r)
 
+    if [ ! -f $PFRING_CONFIG ]; then
+        touch $PFRING_CONFIG
+    fi
+
     PARAM="$(cat $PFRING_CONFIG)"
 
     PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
