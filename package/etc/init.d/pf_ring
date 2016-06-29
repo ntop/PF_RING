@@ -227,6 +227,11 @@ load_driver() {
 			echo "Error loading driver ${1}-${2}"
 			# last resort: try rebuilding dkms driver
 			rebuild_dkms ${1}-${2}
+			# attempt to load the driver now that it has been rebuilt
+			/sbin/modprobe ${1}_${2} ${DRV_PARAM}
+			if [ `echo $?` -eq 0 ]; then
+				DRIVER_INSTALLED=1
+			fi
 		else 
 			DRIVER_INSTALLED=1
 		fi
