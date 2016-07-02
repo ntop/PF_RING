@@ -8670,7 +8670,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 	break;
       }
       
-      printk("[PF_RING] %s %s: %s Type=%d\n", __FUNCTION__, dev->name, what, dev->type);
+      printk("[PF_RING] %s %s: %s Type=%d IfIndex=%d Addr=%p\n", __FUNCTION__, dev->name, what, dev->type, dev->ifindex, dev);
     }
 
     /* Skip non ethernet interfaces */
