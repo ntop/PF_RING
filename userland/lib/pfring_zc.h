@@ -38,6 +38,8 @@
 #define PF_RING_ZC_PKT_FLAGS_BAD_IP_CS  (1 << 1) /**< pfring_zc_pkt_buff.flags: bad IP checksum detected */
 #define PF_RING_ZC_PKT_FLAGS_GOOD_L4_CS (1 << 2) /**< pfring_zc_pkt_buff.flags: valid TCP/UDP checksum detected */
 #define PF_RING_ZC_PKT_FLAGS_BAD_L4_CS  (1 << 3) /**< pfring_zc_pkt_buff.flags: bad TCP/UDP checksum detected (note: UDP checksum 0 is detected as bad on some cards!) */
+//#define PF_RING_ZC_PKT_FLAGS_TX_IP_CS   (1 << 4) /**< pfring_zc_pkt_buff.flags: compute IP checksum on transmission (when supported) */ 
+//#define PF_RING_ZC_PKT_FLAGS_TX_L4_CS   (1 << 5) /**< pfring_zc_pkt_buff.flags: compute TCP checksum on transmission (when supported) */ 
 
 #ifdef __cplusplus
 extern "C" {
@@ -199,7 +201,7 @@ pfring_zc_recv_pkt_burst(
 ); 
 
 /**
- * Check if the queue is empty. 
+ * Check if the queue is empty (rx only for devices). 
  * @param queue The queue handle.
  * @return      1 on empty queue, 0 otherwise. 
  */
@@ -250,7 +252,7 @@ pfring_zc_send_pkt_burst(
 ); 
 
 /**
- * Check if the queue is full. 
+ * Check if the queue is full (tx only for devices). 
  * @param queue The queue handle.
  * @return      1 on full queue, 0 otherwise. 
  */
