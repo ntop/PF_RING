@@ -110,6 +110,22 @@
 #include <linux/pci.h>
 #include <asm/shmparam.h>
 
+#ifndef UTS_RELEASE
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33))
+#include <linux/utsrelease.h>
+#else
+#include <generated/utsrelease.h>
+#endif
+#endif
+
+#ifdef UTS_UBUNTU_RELEASE_ABI
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,0,0))
+#undef UTS_UBUNTU_RELEASE_ABI
+#else
+#define UBUNTU_VERSION_CODE (LINUX_VERSION_CODE & ~0xFF)
+#endif
+#endif
+
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 #define I82599_HW_FILTERING_SUPPORT
 #endif
@@ -6941,7 +6957,12 @@ static int ring_setsockopt(struct socket *sock,
       if (unlikely(enable_debug))
         printk("[PF_RING] BPF filter (len = %u)\n", fprog.len);
 
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(4,4,6)) /* FIXX ubuntu kernel > 4.4.0-21 */
+
+#if (defined(UTS_UBUNTU_RELEASE_ABI) && (\
+       UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) || \
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI > 21) || \
+       UBUNTU_VERSION_CODE > KERNEL_VERSION(4,4,0))) || \
+    (!defined(UTS_UBUNTU_RELEASE_ABI) && LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)) 
       ret = __sk_attach_filter(&fprog, pfr->sk, sock_owned_by_user(pfr->sk));
 #else
       ret = sk_attach_filter(&fprog, pfr->sk);
@@ -6955,7 +6976,11 @@ static int ring_setsockopt(struct socket *sock,
   case SO_DETACH_FILTER:
     if (unlikely(enable_debug))
       printk("[PF_RING] Removing BPF filter\n");
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(4,4,6)) /* FIXX ubuntu kernel > 4.4.0-21 */
+#if (defined(UTS_UBUNTU_RELEASE_ABI) && (\
+       UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) || \
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI > 21) || \
+       UBUNTU_VERSION_CODE > KERNEL_VERSION(4,4,0))) || \
+    (!defined(UTS_UBUNTU_RELEASE_ABI) && LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0))
     ret = __sk_detach_filter(pfr->sk, sock_owned_by_user(pfr->sk));
 #else
     ret = sk_detach_filter(pfr->sk);
