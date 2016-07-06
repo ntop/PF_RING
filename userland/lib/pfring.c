@@ -135,15 +135,21 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   char *str, *str1;
   pfring *ring;
 
+  if (device_name == NULL)
+    return NULL;
+
 #ifdef RING_DEBUG
   printf("[PF_RING] Attempting to pfring_open(%s)\n", device_name);
 #endif
 
-  ring = (pfring*)malloc(sizeof(pfring));
-  if(ring == NULL)
-    return NULL;
+  ring = (pfring *) malloc(sizeof(pfring));
 
-  if(caplen > MAX_CAPLEN) caplen = MAX_CAPLEN;
+  if (ring == NULL) {
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  if (caplen > MAX_CAPLEN) caplen = MAX_CAPLEN;
 
   memset(ring, 0, sizeof(pfring));
 
@@ -175,47 +181,57 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 #endif
   /* modules */
 
-  if(device_name) {
-    ret = -1;
-    ring->device_name = NULL;
+  ret = -1;
+  ring->device_name = NULL;
 
-    while (pfring_module_list[++i].name) {
-      str = str1 = NULL;
-      if(!(str = strstr(device_name, pfring_module_list[i].name))) continue;
-      if(!pfring_module_list[i].open)                              continue;
-      mod_found = 1;
+  while (pfring_module_list[++i].name) {
+    str = str1 = NULL;
+    if(!(str = strstr(device_name, pfring_module_list[i].name))) continue;
+    if(!pfring_module_list[i].open)                              continue;
+    mod_found = 1;
 #ifdef RING_DEBUG
-      printf("[PF_RING] pfring_open: found module %s\n", pfring_module_list[i].name);
+    printf("[PF_RING] pfring_open: found module %s\n", pfring_module_list[i].name);
 #endif
 
-      if (str != NULL) {
-        str1 = strchr(str, ':');
-	if (str1 != NULL) str1++;
-      }
-
-      ring->device_name = str1 ? strdup(str1) : strdup(device_name);
-      ret = pfring_module_list[i].open(ring);
-      break;
+    if (str != NULL) {
+      str1 = strchr(str, ':');
+      if (str1 != NULL) str1++;
     }
+
+    ring->device_name = strdup(str1 != NULL ? str1 : device_name);
+    if (ring->device_name == NULL) {
+      errno = ENOMEM;
+      free(ring);
+      return NULL;
+    }
+    ret = pfring_module_list[i].open(ring);
+    break;
   }
 
   /* default */
   if(!mod_found) {
     ring->device_name = strdup(device_name ? device_name : "any");
-
+    if (ring->device_name == NULL) {
+      errno = ENOMEM;
+      free(ring);
+      return NULL;
+    }
     ret = pfring_mod_open(ring);
   }
 
   if(ret < 0) {
     errno = ENODEV;
-    if(ring->device_name) free(ring->device_name);
+    if (ring->device_name != NULL) free(ring->device_name);
     free(ring);
     return NULL;
   }
 
   if(unlikely(ring->reentrant)) {
-    pthread_rwlock_init(&ring->rx_lock, PTHREAD_PROCESS_PRIVATE);
-    pthread_rwlock_init(&ring->tx_lock, PTHREAD_PROCESS_PRIVATE);
+    if (pthread_rwlock_init(&ring->rx_lock, PTHREAD_PROCESS_PRIVATE) != 0 || 
+        pthread_rwlock_init(&ring->tx_lock, PTHREAD_PROCESS_PRIVATE) != 0) {
+      free(ring);
+      return NULL;
+    }
   }
 
   ring->socket_default_accept_policy = 1; /* Accept (default) */
