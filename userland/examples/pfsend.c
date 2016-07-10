@@ -46,7 +46,7 @@
 struct packet {
   u_int16_t len;
   u_int64_t ticks_from_beginning;
-  char *pkt;
+  u_char *pkt;
   struct packet *next;
 };
 
@@ -66,18 +66,25 @@ struct ip_header {
   u_int8_t	protocol;			/* protocol */
   u_int16_t	check;			/* checksum */
   u_int32_t saddr, daddr;	/* source and dest address */
-};
+} __attribute__((packed));
 
-/*
- * Udp protocol header.
- * Per RFC 768, September, 1981.
- */
 struct udp_header {
   u_int16_t	source;		/* source port */
   u_int16_t	dest;		/* destination port */
   u_int16_t	len;		/* udp length */
   u_int16_t	check;		/* udp checksum */
-};
+} __attribute__((packed));
+
+struct tcp_header {
+  u_int16_t source;
+  u_int16_t dest;
+  u_int32_t seq;
+  u_int32_t ack_seq;
+  u_int16_t flags;
+  u_int16_t window;
+  u_int16_t check;
+  u_int16_t urg_ptr;
+} __attribute__((packed));
 
 struct packet *pkt_head = NULL;
 pfring  *pd;
@@ -87,7 +94,7 @@ u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 struct timeval lastTime, startTime;
-int reforge_mac = 0, reforge_ip = 0;
+int reforge_mac = 0, reforge_ip = 0, on_the_fly_reforging = 0;
 char mac_address[6];
 int send_len = 60;
 int if_index = -1;
@@ -225,7 +232,8 @@ void printHelp(void) {
   printf("-p <pps rate>   Rate to send (example -p 100 send 100 pps)\n");
 #endif
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
-  printf("-b <num>        Number of different IPs (balanced traffic)\n");
+  printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
+  printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
@@ -244,8 +252,7 @@ void printHelp(void) {
  * Borrowed from DHCPd
  */
 
-static u_int32_t in_cksum(unsigned char *buf,
-			  unsigned nbytes, u_int32_t sum) {
+static u_int32_t in_cksum(unsigned char *buf, unsigned nbytes, u_int32_t sum) {
   uint i;
 
   /* Checksum all the pairs of bytes first... */
@@ -259,9 +266,6 @@ static u_int32_t in_cksum(unsigned char *buf,
   /* If there's a single byte left over, checksum it, too.   Network
      byte order is big-endian, so the remaining byte is the high byte. */
   if(i < nbytes) {
-#ifdef DEBUG_CHECKSUM_VERBOSE
-    debug ("sum = %x", sum);
-#endif
     sum += buf [i] << 8;
     /* Add carry. */
     if(sum > 0xFFFF)
@@ -288,8 +292,6 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
   u_int32_t dst_ip =  0xC0A80001 /* 192.168.0.1 */;
   u_int16_t src_port = 2012, dst_port = 3000;
 
-  srandom(time(NULL));
-
   /* Reset packet */
   memset(buffer, 0, buffer_len);
 
@@ -301,20 +303,19 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
   ip_header->ihl = 5;
   ip_header->version = 4;
   ip_header->tos = 0;
-  ip_header->tot_len = htons(send_len-sizeof(struct ether_header));
+  ip_header->tot_len = htons(buffer_len-sizeof(struct ether_header));
   ip_header->id = htons(2012);
   ip_header->ttl = 64;
   ip_header->frag_off = htons(0);
   ip_header->protocol = IPPROTO_UDP;
   ip_header->daddr = htonl(dst_ip);
   ip_header->saddr = htonl(src_ip);
-  ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header,
-				      sizeof(struct ip_header), 0));
+  ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header, sizeof(struct ip_header), 0));
 
   udp_header = (struct udp_header*)(buffer + sizeof(struct ether_header) + sizeof(struct ip_header));
   udp_header->source = htons(src_port);
   udp_header->dest = htons(dst_port);
-  udp_header->len = htons(send_len-sizeof(struct ether_header)-sizeof(struct ip_header));
+  udp_header->len = htons(buffer_len-sizeof(struct ether_header)-sizeof(struct ip_header));
   udp_header->check = 0; /* It must be 0 to compute the checksum */
 
   /*
@@ -325,35 +326,61 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
 
   i = sizeof(struct ether_header) + sizeof(struct ip_header) + sizeof(struct udp_header);
   udp_header->check = wrapsum(in_cksum((unsigned char *)udp_header, sizeof(struct udp_header),
-                                       in_cksum((unsigned char *)&buffer[i], send_len-i,
-						in_cksum((unsigned char *)&ip_header->saddr,
-							 2*sizeof(ip_header->saddr),
-							 IPPROTO_UDP + ntohs(udp_header->len)))));
+                                in_cksum((unsigned char *)&buffer[i], buffer_len-i,
+				  in_cksum((unsigned char *)&ip_header->saddr, 2 * sizeof(ip_header->saddr),
+				    IPPROTO_UDP + ntohs(udp_header->len)))));
 }
 
 /* ******************************************* */
 
-static void reforge_packet(u_char *buffer, u_int buffer_len, u_int idx) {
+static struct pfring_pkthdr hdr; /* note: this is static to be (re)used by on the fly reforging */
+
+static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use_prev_hdr) {
   struct ip_header *ip_header;
   u_int32_t src_ip = (0x0A000000 + idx) % 0xFFFFFFFF /* from 10.0.0.0 */;
   u_int32_t dst_ip =  0xC0A80001 /* 192.168.0.1 */;
-  struct pfring_pkthdr hdr;
 
-  memset(&hdr, 0, sizeof(hdr));
-  hdr.len = hdr.caplen = buffer_len;
-
-  if(reforge_mac) memcpy(buffer, mac_address, 6);
+  if (reforge_mac) memcpy(buffer, mac_address, 6);
 
   if (reforge_ip) {
-    if (pfring_parse_pkt(buffer, &hdr, 3, 0, 0) >= 3) {
-      if (hdr.extended_hdr.parsed_pkt.ip_version == 4) {
-        ip_header = (struct ip_header*) &buffer[hdr.extended_hdr.parsed_pkt.offset.l3_offset];
-        ip_header->daddr = htonl(dst_ip);
-        ip_header->saddr = htonl(src_ip); 
-        /* TODO IP and UDP/TCP checksum */
-      }
+    if (!use_prev_hdr) {
+      memset(&hdr, 0, sizeof(hdr));
+      hdr.len = hdr.caplen = buffer_len;
+
+      if (pfring_parse_pkt(buffer, &hdr, 4, 0, 0) < 3)
+        return -1;
+      if (hdr.extended_hdr.parsed_pkt.ip_version != 4)
+        return -1;
+    }
+
+    ip_header = (struct ip_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l3_offset];
+    ip_header->daddr = htonl(dst_ip);
+    ip_header->saddr = htonl(src_ip);
+    ip_header->check = 0;
+    ip_header->check = wrapsum(in_cksum((unsigned char *) ip_header, sizeof(struct ip_header), 0));
+
+    if (hdr.extended_hdr.parsed_pkt.l3_proto == IPPROTO_UDP) {
+      struct udp_header *udp_header = (struct udp_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l4_offset];
+      udp_header->check = 0;
+      udp_header->check = wrapsum(in_cksum((unsigned char *) udp_header, sizeof(struct udp_header),
+                                    in_cksum((unsigned char *) &buffer[hdr.extended_hdr.parsed_pkt.offset.payload_offset], 
+                                      buffer_len - hdr.extended_hdr.parsed_pkt.offset.payload_offset,
+                                      in_cksum((unsigned char *) &ip_header->saddr, 2 * sizeof(ip_header->saddr),
+                                        IPPROTO_UDP + ntohs(udp_header->len)))));
+    } else if (hdr.extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {
+      struct udp_header *tcp_header = (struct udp_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l4_offset];
+      int tcp_hdr_len = hdr.extended_hdr.parsed_pkt.offset.payload_offset - hdr.extended_hdr.parsed_pkt.offset.l4_offset;
+      int payload_len = buffer_len - hdr.extended_hdr.parsed_pkt.offset.payload_offset;
+      tcp_header->check = 0;
+      tcp_header->check = wrapsum(in_cksum((unsigned char *) tcp_header, tcp_hdr_len,
+                                   in_cksum((unsigned char *) &buffer[hdr.extended_hdr.parsed_pkt.offset.payload_offset],
+                                     payload_len,
+                                     in_cksum((unsigned char *) &ip_header->saddr, 2 * sizeof(ip_header->saddr),
+                                       IPPROTO_TCP + ntohs(htons(tcp_hdr_len + payload_len))))));
     }
   }
+
+  return 0;
 }
 
 /* *************************************** */
@@ -379,8 +406,12 @@ int main(int argc, char* argv[]) {
   char *pidFileName = NULL;
   int send_error_once = 1;
   int randomize = 0;
+  int reforging_idx;
+  int stdin_packet_len = 0;
 
-  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:af:r:vm:p:P:w:x:z")) != -1) {
+  srandom(time(NULL));
+
+  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:Oaf:r:vm:p:P:w:x:z")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -401,6 +432,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'o':
       pkts_offset = atoi(optarg);
+      break;
+    case 'O':
+      on_the_fly_reforging = 1;
       break;
     case 'g':
       bind_core = atoi(optarg);
@@ -525,6 +559,8 @@ int main(int argc, char* argv[]) {
     u_int64_t avg_send_len = 0;
     u_int32_t num_orig_pcap_pkts = 0;
 
+    on_the_fly_reforging = 0;
+
     if(pt) {
       struct packet *last = NULL;
       int datalink = pcap_datalink(pt);
@@ -552,7 +588,7 @@ int main(int argc, char* argv[]) {
           if (datalink == DLT_LINUX_SLL) p->len -= 2;
 	  p->ticks_from_beginning = (((h->ts.tv_sec - beginning.tv_sec) * 1000000) + (h->ts.tv_usec - beginning.tv_usec)) * hz / 1000000;
 	  p->next = NULL;
-	  p->pkt = (char*)malloc(p->len);
+	  p->pkt = (u_char *)malloc(p->len);
 
 	  if(p->pkt == NULL) {
 	    printf("Not enough memory\n");
@@ -565,7 +601,7 @@ int main(int argc, char* argv[]) {
 	      memcpy(p->pkt, pkt, p->len);
             }
 	    if(reforge_mac || reforge_ip)
-              reforge_packet((u_char *) p->pkt, p->len, pkts_offset + num_pcap_pkts); 
+              reforge_packet((u_char *) p->pkt, p->len, pkts_offset + num_pcap_pkts, 0); 
 	  }
 
 	  if(last) {
@@ -611,7 +647,6 @@ int main(int argc, char* argv[]) {
     }
   } else {
     struct packet *p = NULL, *last = NULL;
-    int stdin_packet_len;
 
     if ((stdin_packet_len = read_packet_hex(buffer, sizeof(buffer))) > 0) {
       send_len = stdin_packet_len;
@@ -619,34 +654,51 @@ int main(int argc, char* argv[]) {
 
     for (i = 0; i < num_balanced_pkts; i++) {
 
-      if (stdin_packet_len <= 0)
-        forge_udp_packet(buffer, sizeof(buffer), pkts_offset + i);
-      else
-        reforge_packet(buffer, sizeof(buffer), pkts_offset + i); 
+      if (stdin_packet_len <= 0) {
+        forge_udp_packet(buffer, send_len, pkts_offset + i);
+      } else {
+        if (reforge_packet(buffer, send_len, pkts_offset + i, 0) != 0) { 
+          fprintf(stderr, "Unable to reforge the provided packet\n");
+          return -1;
+        }
+      }
 
       p = (struct packet *) malloc(sizeof(struct packet));
-      if(p) {
-	if (i == 0) pkt_head = p;
-
-        p->len = send_len;
-        p->ticks_from_beginning = 0;
-        p->next = pkt_head;
-        p->pkt = (char *) malloc(p->len);
-
-	if (p->pkt == NULL) {
-	  printf("Not enough memory\n");
-	  break;
-	}
-
-        memcpy(p->pkt, buffer, send_len);
-
-	if (last != NULL) last->next = p;
-	last = p;
-      } else { 
-	/* oops, couldn't allocate memory */
+      if (p == NULL) { 
 	fprintf(stderr, "Unable to allocate memory requested (%s)\n", strerror(errno));
 	return (-1);
-      }      
+      }
+
+      if (i == 0) pkt_head = p;
+
+      p->len = send_len;
+      p->ticks_from_beginning = 0;
+      p->next = pkt_head;
+      p->pkt = (u_char *) malloc(p->len);
+
+      if (p->pkt == NULL) {
+	fprintf(stderr, "Unable to allocate memory requested (%s)\n", strerror(errno));
+	return (-1);
+      }
+
+      memcpy(p->pkt, buffer, send_len);
+
+      if (last != NULL) last->next = p;
+      last = p;
+
+      if (on_the_fly_reforging) {
+#if 0
+        if (stdin_packet_len <= 0) { /* forge_udp_packet, parsing packet for on the fly reforing */
+          memset(&hdr, 0, sizeof(hdr));
+          hdr.len = hdr.caplen = p->len;
+          if (pfring_parse_pkt(p->pkt, &hdr, 4, 0, 0) < 3) {
+            fprintf(stderr, "Unable to reforge the packet (unexpected)\n");
+            return -1; 
+          }
+        }
+#endif
+        break;
+      }
     }
   }
 
@@ -696,6 +748,7 @@ int main(int argc, char* argv[]) {
 
   tosend = pkt_head;
   i = 0;
+  reforging_idx = pkts_offset;
 
   pfring_set_application_stats(pd, "Statistics not yet computed: please try again...");
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
@@ -709,23 +762,23 @@ int main(int argc, char* argv[]) {
   while((num_to_send == 0) 
 	|| (i < num_to_send)) {
     int rc;
-#if 0 /* hw ts simulation */
-    struct timespec now_nsec;
-    clock_gettime(CLOCK_REALTIME, &now_nsec);
-    *((u_int32_t *) &tosend->pkt[tosend->len - 9]) = htonl(now_nsec.tv_sec);
-    *((u_int32_t *) &tosend->pkt[tosend->len - 5]) = htonl(now_nsec.tv_nsec);
-    tosend->pkt[tosend->len - 1] = 0xC3;
-#endif
 
   redo:
 
     if (unlikely(do_shutdown)) 
       break;
 
+    if (on_the_fly_reforging) {
+      if (stdin_packet_len <= 0)
+        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + i);
+      else
+        reforge_packet(tosend->pkt, tosend->len, reforging_idx + i, 1); 
+    }
+
     if (if_index != -1)
-      rc = pfring_send_ifindex(pd, tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */, if_index);
+      rc = pfring_send_ifindex(pd, (char *) tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */, if_index);
     else
-      rc = pfring_send(pd, tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
+      rc = pfring_send(pd, (char *) tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
 
     if (unlikely(verbose))
       printf("[%d] pfring_send(%d) returned %d\n", i, tosend->len, rc);
@@ -749,8 +802,11 @@ int main(int argc, char* argv[]) {
 
     if (randomize) {
       n = random() & 0xF;
-      for (j = 0; j < n; j++)
-        tosend = tosend->next;
+      if (on_the_fly_reforging)
+        reforging_idx += n;
+      else
+        for (j = 0; j < n; j++)
+          tosend = tosend->next;
     }
     tosend = tosend->next;
 
