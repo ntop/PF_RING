@@ -95,6 +95,7 @@ u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 struct timeval lastTime, startTime;
 int reforge_mac = 0, reforge_ip = 0, on_the_fly_reforging = 0;
+struct in_addr srcaddr, dstaddr;
 char mac_address[6];
 int send_len = 60;
 int if_index = -1;
@@ -233,6 +234,8 @@ void printHelp(void) {
 #endif
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
+  printf("-S <ip>         Use <ip> as base source IP -b\n");
+  printf("-D <ip>         Use <ip> as destination IP in -b\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
@@ -285,12 +288,9 @@ static u_int32_t wrapsum (u_int32_t sum) {
 /* ******************************************* */
 
 static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
-  int i;
   struct ip_header *ip_header;
   struct udp_header *udp_header;
-  u_int32_t src_ip = (0x0A000000 + idx) % 0xFFFFFFFF /* from 10.0.0.0 */;
-  u_int32_t dst_ip =  0xC0A80001 /* 192.168.0.1 */;
-  u_int16_t src_port = 2012, dst_port = 3000;
+  int i;
 
   /* Reset packet */
   memset(buffer, 0, buffer_len);
@@ -308,13 +308,13 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
   ip_header->ttl = 64;
   ip_header->frag_off = htons(0);
   ip_header->protocol = IPPROTO_UDP;
-  ip_header->daddr = htonl(dst_ip);
-  ip_header->saddr = htonl(src_ip);
+  ip_header->daddr = dstaddr.s_addr;
+  ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
   ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header, sizeof(struct ip_header), 0));
 
   udp_header = (struct udp_header*)(buffer + sizeof(struct ether_header) + sizeof(struct ip_header));
-  udp_header->source = htons(src_port);
-  udp_header->dest = htons(dst_port);
+  udp_header->source = htons(2012);
+  udp_header->dest = htons(3000);
   udp_header->len = htons(buffer_len-sizeof(struct ether_header)-sizeof(struct ip_header));
   udp_header->check = 0; /* It must be 0 to compute the checksum */
 
@@ -337,8 +337,6 @@ static struct pfring_pkthdr hdr; /* note: this is static to be (re)used by on th
 
 static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use_prev_hdr) {
   struct ip_header *ip_header;
-  u_int32_t src_ip = (0x0A000000 + idx) % 0xFFFFFFFF /* from 10.0.0.0 */;
-  u_int32_t dst_ip =  0xC0A80001 /* 192.168.0.1 */;
 
   if (reforge_mac) memcpy(buffer, mac_address, 6);
 
@@ -354,8 +352,8 @@ static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use
     }
 
     ip_header = (struct ip_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l3_offset];
-    ip_header->daddr = htonl(dst_ip);
-    ip_header->saddr = htonl(src_ip);
+    ip_header->daddr = dstaddr.s_addr;
+    ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
     ip_header->check = 0;
     ip_header->check = wrapsum(in_cksum((unsigned char *) ip_header, sizeof(struct ip_header), 0));
 
@@ -411,11 +409,17 @@ int main(int argc, char* argv[]) {
 
   srandom(time(NULL));
 
-  while((c = getopt(argc, argv, "b:dhi:n:g:l:o:Oaf:r:vm:p:P:w:x:z")) != -1) {
+  srcaddr.s_addr = 0x0000000A /* 10.0.0.0 */;
+  dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
+
+  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:r:vm:p:P:S:w:x:z")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
       reforge_ip = 1;
+      break;
+    case 'D':
+      inet_aton(optarg, &dstaddr);
       break;
     case 'h':
       printHelp();
@@ -468,6 +472,9 @@ int main(int argc, char* argv[]) {
 	mac_address[0] = mac_a, mac_address[1] = mac_b, mac_address[2] = mac_c;
 	mac_address[3] = mac_d, mac_address[4] = mac_e, mac_address[5] = mac_f;
       }
+      break;
+    case 'S':
+      inet_aton(optarg, &srcaddr);
       break;
     case 'w':
       watermark = atoi(optarg);
