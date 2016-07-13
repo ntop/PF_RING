@@ -475,7 +475,7 @@ void printHelp(void) {
 	 );
   printf("-n <threads>    Number of polling threads (default %d)\n", num_threads);
   printf("-f <filter>     [BPF filter]\n");
-  printf("-c <cluster id> cluster id\n");
+  printf("-c <cluster id> Cluster ID (kernel clustering)\n");
   printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
   printf("-l <len>        Capture length\n");
   printf("-g <core_id>    Bind this app to a core\n");
