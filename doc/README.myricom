@@ -10,9 +10,18 @@ Myricom module when configuring/compiling the pf_ring library.
 For the impatient, in order to get up and running with Myricom just run 
 the following commands:
 
+ $ tar xvf phx-tools-*.tar
+ $ cd phx-tools
+ $ ./bin/phx-replace-eeprom ./fw-8D-Q-1.4.1.rpd 
+ $ reboot
+
+ $ tar xvf myri_snf-*.x86_64.tar
+ $ mv myri_snf-*.x86_64 /opt/snf
+
  $ cd /opt/snf
  $ ./sbin/rebuild.sh
  $ ./sbin/myri_start_stop start
+
  $ echo "/opt/snf/lib" > /etc/ld.so.conf.d/snf.conf
  $ ldconfig
 
