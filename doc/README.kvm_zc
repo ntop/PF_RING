@@ -1,5 +1,7 @@
-QEMU/KVM Support
-----------------
+QEMU/KVM Support in PF_RING ZC
+------------------------------
+
+This guide shows how to run a consumer reading from a ZC queue on a KVM virtual machine.
 
 0. Prerequisites
 
