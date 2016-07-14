@@ -132,7 +132,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   int i = -1;
   int mod_found = 0;
   int ret;
-  char *str, *str1;
+  char prefix[32];
   pfring *ring;
 
   if (device_name == NULL)
@@ -185,20 +185,15 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->device_name = NULL;
 
   while (pfring_module_list[++i].name) {
-    str = str1 = NULL;
-    if(!(str = strstr(device_name, pfring_module_list[i].name))) continue;
-    if(!pfring_module_list[i].open)                              continue;
+    sprintf(prefix, "%s:", pfring_module_list[i].name);
+    if(strncmp(device_name, prefix, strlen(prefix)) != 0) continue;
+    if(!pfring_module_list[i].open)                       continue;
     mod_found = 1;
 #ifdef RING_DEBUG
     printf("[PF_RING] pfring_open: found module %s\n", pfring_module_list[i].name);
 #endif
 
-    if (str != NULL) {
-      str1 = strchr(str, ':');
-      if (str1 != NULL) str1++;
-    }
-
-    ring->device_name = strdup(str1 != NULL ? str1 : device_name);
+    ring->device_name = strdup(&device_name[strlen(prefix)]);
     if (ring->device_name == NULL) {
       errno = ENOMEM;
       free(ring);
