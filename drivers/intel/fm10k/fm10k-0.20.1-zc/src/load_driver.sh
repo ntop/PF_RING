@@ -1,6 +1,7 @@
 #!/bin/bash
 
 FAMILY=fm10k
+IS_SILICOM=0
 
 #service udev start
 
@@ -70,4 +71,24 @@ for IF in $INTERFACES ; do
 		bash ../scripts/set_irq_affinity $IF
 	fi
 done
+
+
+if [ "$IS_SILICOM" -eq 1 ]; then
+	nohup rdif start &
+
+	sleep 2
+
+	# Configure the switch to act as a standard NIC
+	# Note: 
+	# 1,2 are the external ports
+	# 3,4 are the internal interfaces
+	rdifctl set_port_mask 3 1
+	rdifctl set_port_mask 1 3
+	rdifctl set_port_mask 2 4
+	rdifctl set_port_mask 4 2
+	rdifctl dir port 3 redir_port 1
+	rdifctl dir port 1 redir_port 3
+	rdifctl dir port 2 redir_port 4
+	rdifctl dir port 4 redir_port 2
+fi
 
