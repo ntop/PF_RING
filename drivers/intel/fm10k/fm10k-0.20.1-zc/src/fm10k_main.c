@@ -60,7 +60,9 @@ static int __init fm10k_init_module(void)
 	/* create driver workqueue */
 	fm10k_workqueue = create_workqueue("fm10k");
 
+#ifndef HAVE_PF_RING /* Temporarily disabled */
 	dev_add_pack(&ies_packet_type);
+#endif
 
 	fm10k_dbg_init();
 
@@ -80,7 +82,9 @@ static void __exit fm10k_exit_module(void)
 
 	fm10k_dbg_exit();
 
+#ifndef HAVE_PF_RING /* Temporarily disabled */
 	dev_remove_pack(&ies_packet_type);
+#endif
 
 	/* destroy driver workqueue */
 	flush_workqueue(fm10k_workqueue);
