@@ -122,22 +122,6 @@ typedef struct __pfring pfring; /* Forward declaration */
 
 /* ********************************* */
 
-#define MAX_NUM_BUNDLE_ELEMENTS 32
-
-typedef enum {
-  pick_round_robin = 0,
-  pick_fifo
-} bundle_read_policy;
-
-typedef struct {
-  bundle_read_policy policy;
-  u_int16_t num_sockets, last_read_socket;
-  pfring *sockets[MAX_NUM_BUNDLE_ELEMENTS];
-  struct pollfd pfd[MAX_NUM_BUNDLE_ELEMENTS];
-} pfring_bundle;
-
-/* ********************************* */
-
 typedef struct {
   u_int32_t max_packet_size;
   u_int32_t rx_ring_slots;
@@ -1139,57 +1123,6 @@ int pfring_flush_tx_packets(pfring *ring);
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_search_payload(pfring *ring, char *string_to_search);
-
-/* PF_RING Socket bundle */
-
-/**
- * Initialize a bundle socket.
- * @param bundle             The PF_RING bundle handle.
- * @param bundle_read_policy The policy for reading ingress packets.
- */
-void pfring_bundle_init(pfring_bundle *bundle, bundle_read_policy p);
-
-/**
- * Add a ring to a bundle socket.
- * @param bundle The PF_RING bundle handle.
- * @param ring   The PF_RING handle to add.
- * @return 0 on success, a negative value otherwise.
- */
-int pfring_bundle_add(pfring_bundle *bundle, pfring *ring);
-
-/**
- * Poll on a bundle socket.
- * @param bundle        The PF_RING bundle handle.
- * @param wait_duration The poll duration.
- * @return The poll return value.
- */
-int pfring_bundle_poll(pfring_bundle *bundle, u_int wait_duration);
-
-/**
- * Same as pfring_recv() on a bundle socket.
- * @param bundle     The PF_RING bundle handle.
- * @param buffer
- * @param buffer_len
- * @param hdr
- * @param wait_for_incoming_packet
- * @return 0 in case of no packet being received (non-blocking), 1 in case of success, -1 in case of error.
- */
-int pfring_bundle_read(pfring_bundle *bundle, 
-		       u_char** buffer, u_int buffer_len,
-		       struct pfring_pkthdr *hdr,
-		       u_int8_t wait_for_incoming_packet);
-
-/**
- * Destroy a bundle socket.
- * @param bundle The PF_RING bundle handle.
- */
-void pfring_bundle_destroy(pfring_bundle *bundle);
-
-/**
- * Close a bundle socket.
- * @param bundle The PF_RING bundle handle.
- */
-void pfring_bundle_close(pfring_bundle *bundle);
 
 /* Utils (defined in pfring_utils.c) */
 
