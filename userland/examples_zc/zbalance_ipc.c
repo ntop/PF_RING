@@ -554,6 +554,7 @@ int main(int argc, char* argv[]) {
   if (zc == NULL) {
     trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",
 	    strerror(errno));
+    pfring_zc_destroy_cluster(zc);
     return -1;
   }
 
@@ -565,6 +566,7 @@ int main(int argc, char* argv[]) {
       if (inzqs[i] == NULL) {
         trace(TRACE_ERROR, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
 	        strerror(errno), devices[i]);
+        pfring_zc_destroy_cluster(zc);
         return -1;
       }
 
@@ -574,11 +576,13 @@ int main(int argc, char* argv[]) {
 
       if (inzqs[i] == NULL) {                                                                                                
         trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));                                             
+        pfring_zc_destroy_cluster(zc);
         return -1;                                                                                                           
       } 
 
       if (pfring_zc_create_buffer_pool(zc, IN_POOL_SIZE) == NULL) {
         trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
+        pfring_zc_destroy_cluster(zc);
         return -1;
       }
 
@@ -591,6 +595,7 @@ int main(int argc, char* argv[]) {
 
       if (outzqs[i] == NULL) {
         trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
+        pfring_zc_destroy_cluster(zc);
         return -1;
       }
     } else { /* Opening device instead of queue for egress */
@@ -598,12 +603,14 @@ int main(int argc, char* argv[]) {
 
       if (outzqs[i] == NULL) {
         trace(TRACE_ERROR, "pfring_zc_open_device(%s) error [%s]\n", outdevs[i], strerror(errno));
+        pfring_zc_destroy_cluster(zc);
         return -1;
       }
 
       /* creating dummy queues to keep numeration coherent */
       if (pfring_zc_create_queue(zc, 1) == NULL) {
         trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
+        pfring_zc_destroy_cluster(zc);
         return -1;
       }
     }
@@ -612,6 +619,7 @@ int main(int argc, char* argv[]) {
   for (i = 0; i < num_consumer_queues; i++) { 
     if (pfring_zc_create_buffer_pool(zc, pool_size) == NULL) {
       trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
+      pfring_zc_destroy_cluster(zc);
       return -1;
     }
   }
@@ -620,6 +628,7 @@ int main(int argc, char* argv[]) {
 
   if (wsp == NULL) {
     trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
+    pfring_zc_destroy_cluster(zc);
     return -1;
   }
 
@@ -630,6 +639,7 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < n2disk_threads; i++) {
       if (pfring_zc_create_queue(zc, N2DISK_CONSUMER_QUEUE_LEN) == NULL) {
         trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
+        pfring_zc_destroy_cluster(zc);
         return -1;
       }
       sprintf(&queues_list[strlen(queues_list)], "%ld,", i + num_consumer_queues);
@@ -638,6 +648,7 @@ int main(int argc, char* argv[]) {
 
     if (pfring_zc_create_buffer_pool(zc, N2DISK_PREFETCH_BUFFERS + n2disk_threads) == NULL) {
       trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
+      pfring_zc_destroy_cluster(zc);
       return -1;
     }
 
@@ -653,6 +664,7 @@ int main(int argc, char* argv[]) {
 
       if (rc < 0) {
         trace(TRACE_ERROR, "pfring_zc_vm_register(%s) error\n", vm_sock);
+        pfring_zc_destroy_cluster(zc);
         return -1;
       }
 
@@ -663,6 +675,7 @@ int main(int argc, char* argv[]) {
 
     if (rc < 0) {
       trace(TRACE_ERROR, "pfring_zc_vm_backend_enable error\n");
+      pfring_zc_destroy_cluster(zc);
       return -1;
     }
   }
@@ -735,6 +748,7 @@ int main(int argc, char* argv[]) {
 
     if (outzmq == NULL) {
       trace(TRACE_ERROR, "pfring_zc_create_multi_queue error [%s]\n", strerror(errno));
+      pfring_zc_destroy_cluster(zc);
       return -1;
     }
 
@@ -766,6 +780,7 @@ int main(int argc, char* argv[]) {
 
   if (zw == NULL) {
     trace(TRACE_ERROR, "pfring_zc_run_balancer error [%s]\n", strerror(errno));
+    pfring_zc_destroy_cluster(zc);
     return -1;
   }
   
