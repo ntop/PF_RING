@@ -61,7 +61,7 @@ zbalance_ipc -i zc:eth1 -c 99 -n 8 -m 1 -g 8
 Where:
 -c 99 is the cluster ID
 -n 8 is the number of queues
--g 9 is core affinity for zbalance_ipc
+-g 8 is core affinity for zbalance_ipc
 You should use as interface name zc:<cluster id> as in the example below.
 
 Example:
