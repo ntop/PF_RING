@@ -1,7 +1,7 @@
 LEX = lex
 YACC = bison
 CC=gcc
-CFLAGS=-march=native -mtune=native -Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ -O2 #-g
+CFLAGS=-Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ -O2 #-g
 OBJS=rules.o tree_match.o parser.o lex.yy.o grammar.tab.o
 BPFLIB=libfastbpf.a
 LIBS=@NDPI_LIB@

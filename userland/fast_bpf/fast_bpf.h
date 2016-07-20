@@ -31,12 +31,10 @@ typedef union {
 /***************************************************************************/
 
 /* Header qualifiers */
-
 #define Q_OUTER		1
 #define Q_INNER		2
 
 /* Protocol qualifiers */
-
 #define Q_LINK		1
 #define Q_IP		2
 #define Q_SCTP		5
@@ -45,14 +43,12 @@ typedef union {
 #define Q_IPV6		17
 
 /* Direction qualifiers */
-
 #define Q_SRC		1
 #define Q_DST		2
 #define Q_OR		3
 #define Q_AND		4
 
 /* Address qualifiers */
-
 #define Q_HOST		1
 #define Q_NET		2
 #define Q_PORT		3
@@ -62,7 +58,6 @@ typedef union {
 #define Q_L7PROTO	9
 
 /* Common qualifiers */
-
 #define Q_DEFAULT	0
 #define Q_UNDEF		255
 

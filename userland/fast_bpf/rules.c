@@ -349,7 +349,7 @@ static void merge_wildcard_filters(fast_bpf_rule_list_item_t *f, fast_bpf_rule_l
 /* ********************************************************************** */
  
 static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_item_t *headl, fast_bpf_rule_list_item_t *headr) {
-  fast_bpf_rule_list_item_t *head = NULL, *tail, *tmp, *headr_tmp;
+  fast_bpf_rule_list_item_t *head = NULL, *tail = NULL, *tmp, *headr_tmp;
 
   if (headl == NULL)
     return headr;
