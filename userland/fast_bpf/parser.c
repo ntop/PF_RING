@@ -9,6 +9,7 @@
 
 static u_int32_t errors = 0;
 static fast_bpf_tree_t tree_root = { NULL };
+static l7protocol_by_name_func l7proto_by_name = NULL;
 #ifdef HAVE_NDPI
 static struct ndpi_detection_module_struct *ndpi_struct = NULL;
 #endif
@@ -265,7 +266,7 @@ static fast_bpf_node_t* node_clone(fast_bpf_node_t *t) {
 /* ****************************************** */
 
 fast_bpf_tree_t* tree_clone(fast_bpf_tree_t *t) {
-  fast_bpf_tree_t *c = (fast_bpf_tree_t*)malloc(sizeof(fast_bpf_tree_t));
+  fast_bpf_tree_t *c = (fast_bpf_tree_t *) malloc(sizeof(fast_bpf_tree_t));
 
   if (!c) 
     return NULL;
@@ -320,10 +321,22 @@ static fast_bpf_tree_t *tree_parse(char *buffer) {
 
 /* ****************************************** */
 
-fast_bpf_tree_t *fast_bpf_parse(char *bpf_filter) {
-  fast_bpf_tree_t *t = tree_parse(bpf_filter);
+fast_bpf_tree_t *fast_bpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
+  fast_bpf_tree_t *t = (fast_bpf_tree_t *) malloc(sizeof(fast_bpf_tree_t));
 
-  return (t ? tree_clone(t) : NULL);
+  if (t == NULL)
+    return NULL;
+
+  l7proto_by_name = l7proto_by_name_callback;
+
+  if (tree_parse(bpf_filter) == NULL) {
+    free(t);
+    return NULL;
+  }
+
+  t->root = tree_root.root;
+
+  return t;
 }
 
 /* ****************************************** */
@@ -687,8 +700,13 @@ fast_bpf_node_t *fast_bpf_create_l7_node(u_int32_t id, const char *name) {
       p = 0;
     }
 #else
-    fast_bpf_syntax_error("l7proto with protocol name not supported (FastBPF library compiled without nDPI support)\n");
-    p = 0;
+    if (l7proto_by_name != NULL) {
+      p = l7proto_by_name(name);
+      if (p < 0) p = 0;
+    } else {
+      fast_bpf_syntax_error("l7proto with protocol name not supported (FastBPF library compiled without nDPI support)\n");
+      p = 0;
+    }
 #endif
     n->l7protocol = p;
   }

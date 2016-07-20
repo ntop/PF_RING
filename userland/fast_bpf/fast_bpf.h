@@ -102,9 +102,13 @@ typedef struct {
 
 /***************************************************************************/
 
+typedef int (*l7protocol_by_name_func)(const char *name);
+
+/***************************************************************************/
+
 /* Fast-BPF API */
 
-fast_bpf_tree_t *fast_bpf_parse(char *bpf_filter);
+fast_bpf_tree_t *fast_bpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback);
 void fast_bpf_free(fast_bpf_tree_t *t);
 
 /***************************************************************************/
