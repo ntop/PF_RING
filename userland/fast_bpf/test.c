@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
     return(-1);
   }
 
-  if ((tree = fast_bpf_parse(argv[1])) == NULL) {
+  if ((tree = fast_bpf_parse(argv[1], NULL)) == NULL) {
     printf("Parse error\n");
     return(-1);
   } 
