@@ -187,6 +187,16 @@ static int __pfring_parse_tunneled_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u
 
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port = ntohs(udp->source),
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port = ntohs(udp->dest);
+  } else if(hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == IPPROTO_SCTP) {
+    struct tcphdr *sctp;    /* We just want source and dest port here */
+
+    if(hdr->caplen < tunnel_offset + 12)
+      return 1;
+
+    sctp = (struct tcphdr *)(&pkt[tunnel_offset]);
+
+    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port = ntohs(sctp->source),
+    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port = ntohs(sctp->dest);
   }
 
   return 2;
@@ -431,6 +441,22 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
     } else { /* TODO handle other GRE versions */
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
     }
+  } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP /* 132 */) {
+      struct tcphdr *sctp; /* We just want source and dest port here */
+
+      if(hdr->caplen < hdr->extended_hdr.parsed_pkt.offset.l4_offset + 12)
+        goto TIMESTAMP;
+
+      sctp = (struct tcphdr *)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+
+      hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(sctp->source);
+      hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(sctp->dest);
+
+      /* No payload offset for SCTP */
+      hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
+
+      analyzed = 4;
+
   } else {
     hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
     hdr->extended_hdr.parsed_pkt.l4_src_port = hdr->extended_hdr.parsed_pkt.l4_dst_port = 0;
@@ -537,6 +563,7 @@ static char *proto2str(u_short proto) {
   case IPPROTO_UDP:  return("UDP");
   case IPPROTO_ICMP: return("ICMP");
   case IPPROTO_GRE:  return("GRE");
+  case IPPROTO_SCTP: return("SCTP");
   default:
     snprintf(protoName, sizeof(protoName), "%d", proto);
     return(protoName);
