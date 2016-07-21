@@ -777,9 +777,9 @@ int main(int argc, char* argv[]) {
 
     if (on_the_fly_reforging) {
       if (stdin_packet_len <= 0)
-        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + i);
+        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent);
       else
-        reforge_packet(tosend->pkt, tosend->len, reforging_idx + i, 1); 
+        reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
     }
 
     if (if_index != -1)
