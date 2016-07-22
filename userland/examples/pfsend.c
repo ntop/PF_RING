@@ -366,7 +366,7 @@ static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use
                                       in_cksum((unsigned char *) &ip_header->saddr, 2 * sizeof(ip_header->saddr),
                                         IPPROTO_UDP + ntohs(udp_header->len)))));
     } else if (hdr.extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {
-      struct udp_header *tcp_header = (struct udp_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l4_offset];
+      struct tcp_header *tcp_header = (struct tcp_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l4_offset];
       int tcp_hdr_len = hdr.extended_hdr.parsed_pkt.offset.payload_offset - hdr.extended_hdr.parsed_pkt.offset.l4_offset;
       int payload_len = buffer_len - hdr.extended_hdr.parsed_pkt.offset.payload_offset;
       tcp_header->check = 0;
