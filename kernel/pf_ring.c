@@ -2481,6 +2481,10 @@ static int match_filtering_rule(struct pf_ring_socket *pfr,
 
   *behaviour = rule->rule.rule_action;
 
+  if((rule->rule.core_fields.if_index > 0)
+     && (hdr->extended_hdr.if_index != rule->rule.core_fields.if_index))
+  return(0);
+
   if((rule->rule.core_fields.vlan_id > 0)
      && (hdr->extended_hdr.parsed_pkt.vlan_id != rule->rule.core_fields.vlan_id))
     return(0);

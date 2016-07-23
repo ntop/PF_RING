@@ -370,6 +370,7 @@ void term_lockless_list(lockless_list *l, u_int8_t free_memory);
 /* ************************************************* */
 
 typedef struct {
+  u_int32_t if_index;                  /* Index of the interface on which the packet has been received */
   u_int8_t smac[ETH_ALEN], dmac[ETH_ALEN]; /* Use '0' (zero-ed MAC address) for any MAC address.
 					      This is applied to both source and destination. */
   u_int16_t vlan_id;                   /* Use 0 for any vlan */
