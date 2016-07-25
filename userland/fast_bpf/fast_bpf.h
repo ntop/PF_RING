@@ -86,6 +86,7 @@ typedef struct fast_bpf_node {
   u_int8_t not;
   u_int8_t not_rule;
   u_int8_t vlan_id_defined;
+  u_int8_t __padding;
   u_int16_t vlan_id;
   u_int8_t mac[6];
   u_int8_t ip6[16], mask6[16];
