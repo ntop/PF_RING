@@ -2482,8 +2482,9 @@ static int match_filtering_rule(struct pf_ring_socket *pfr,
   *behaviour = rule->rule.rule_action;
 
   if((rule->rule.core_fields.if_index > 0)
+     && (hdr->extended_hdr.if_index != UNKNOWN_INTERFACE) 
      && (hdr->extended_hdr.if_index != rule->rule.core_fields.if_index))
-  return(0);
+    return(0);
 
   if((rule->rule.core_fields.vlan_id > 0)
      && (hdr->extended_hdr.parsed_pkt.vlan_id != rule->rule.core_fields.vlan_id))
@@ -2724,12 +2725,14 @@ success:
   }
 
   if(unlikely(enable_debug)) {
-    printk("[PF_RING] MATCH: %s(vlan=%u, proto=%u, sip=%u, sport=%u, dip=%u, dport=%u)\n"
-           "          [rule(vlan=%u, proto=%u, ip=%u:%u, port=%u:%u-%u:%u)(behaviour=%d)]\n",
+    printk("[PF_RING] MATCH: %s(if_index=%d, vlan=%u, proto=%u, sip=%u, sport=%u, dip=%u, dport=%u)\n"
+           "          [rule(if_index=%d, vlan=%u, proto=%u, ip=%u:%u, port=%u:%u-%u:%u)(behaviour=%d)]\n",
     	   __FUNCTION__,
+           hdr->extended_hdr.if_index,
 	   hdr->extended_hdr.parsed_pkt.vlan_id, hdr->extended_hdr.parsed_pkt.l3_proto,
 	   hdr->extended_hdr.parsed_pkt.ipv4_src, hdr->extended_hdr.parsed_pkt.l4_src_port,
 	   hdr->extended_hdr.parsed_pkt.ipv4_dst, hdr->extended_hdr.parsed_pkt.l4_dst_port,
+           rule->rule.core_fields.if_index,
 	   rule->rule.core_fields.vlan_id,
 	   rule->rule.core_fields.proto,
 	   rule->rule.core_fields.shost.v4,
