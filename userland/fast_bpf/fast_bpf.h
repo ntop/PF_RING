@@ -25,7 +25,8 @@
 typedef union {
   struct in6_addr v6;
   u_int32_t v4;
-} ip_addr;
+} __attribute__((packed))
+ip_addr;
 #endif
 
 /***************************************************************************/
@@ -73,7 +74,8 @@ typedef struct {
   u_int8_t protocol;
   u_int8_t direction;
   u_int8_t address;
-} fast_bpf_qualifiers_t;
+} __attribute__((packed))
+fast_bpf_qualifiers_t;
 
 struct fast_bpf_node;
 
@@ -94,11 +96,13 @@ typedef struct fast_bpf_node {
 
   struct fast_bpf_node *l;
   struct fast_bpf_node *r;
-} fast_bpf_node_t;
+} __attribute__((packed))
+fast_bpf_node_t;
 
 typedef struct {
   fast_bpf_node_t *root;
-} fast_bpf_tree_t;
+} __attribute__((packed))
+fast_bpf_tree_t;
 
 /***************************************************************************/
 
@@ -121,7 +125,8 @@ typedef struct fast_bpf_pkt_info_tuple {
   u_int8_t l3_proto, ip_tos;
   ip_addr ip_src, ip_dst;
   u_int16_t l4_src_port, l4_dst_port;
-} fast_bpf_pkt_info_tuple_t;
+} __attribute__((packed))
+fast_bpf_pkt_info_tuple_t;
 
 typedef struct {
   u_int8_t  dmac[6], smac[6];
@@ -129,7 +134,8 @@ typedef struct {
   u_int16_t master_l7_proto, l7_proto;
   fast_bpf_pkt_info_tuple_t tuple;
   fast_bpf_pkt_info_tuple_t tunneled_tuple;
-} fast_bpf_pkt_info_t;
+} __attribute__((packed))
+fast_bpf_pkt_info_t;
 
 void fast_bpf_toggle_mac_match(fast_bpf_tree_t *tree, u_int8_t enable);
 void fast_bpf_toggle_ipv6_l32_match(fast_bpf_tree_t *tree, u_int8_t enable);
@@ -145,13 +151,14 @@ int fast_bpf_match(fast_bpf_tree_t *tree, fast_bpf_pkt_info_t *h);
 
 typedef struct {
   u_int8_t  smac[6], dmac[6]; 
-  u_int16_t vlan_id, l7_proto;
   u_int8_t  proto; /* tcp, udp, sctp */
+  u_int16_t vlan_id, l7_proto;
   ip_addr   shost, dhost;
   ip_addr   shost_mask, dhost_mask;
   u_int16_t sport_low, sport_high;
   u_int16_t dport_low, dport_high;
-} fast_bpf_rule_core_fields_t;
+} __attribute__((packed))
+fast_bpf_rule_core_fields_t;
 
 struct fast_bpf_rule_list_item;
 
@@ -159,14 +166,16 @@ typedef struct fast_bpf_rule_list_item {
   fast_bpf_rule_core_fields_t fields;
   int bidirectional;
   struct fast_bpf_rule_list_item *next;
-} fast_bpf_rule_list_item_t;
+} __attribute__((packed))
+fast_bpf_rule_list_item_t;
 
 struct fast_bpf_rule_block_list_item;
 
 typedef struct fast_bpf_rule_block_list_item {
   fast_bpf_rule_list_item_t *rule_list_head;
   struct fast_bpf_rule_block_list_item *next;
-} fast_bpf_rule_block_list_item_t;
+} __attribute__((packed))
+fast_bpf_rule_block_list_item_t;
 
 int fast_bpf_check_rules_constraints(fast_bpf_tree_t *tree, int max_nesting_level);
 fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree);
