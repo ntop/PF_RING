@@ -52,13 +52,13 @@ INVEATECH_OBJS  = @INVEATECH_OBJS@
 # Fast_BPF
 #
 FASTBPF_LIB = ../fast_bpf/libfastbpf.a
-FASTBPF_OBJS = grammar.tab.o lex.yy.o parser.o rules.o tree_match.o
+FASTBPF_OBJS = `ar t ${FASTBPF_LIB} | grep -F .o | tr '\n' ' '`
 
 #
 # Object files
 #
 OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
-	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${FASTBPF_OBJS} ${PF_RING_ZC_OBJS} ${DAG_OBJS} ${NT_OBJS} ${MLX_OBJS} ${ACCOLADE_OBJS} ${MYRICOM_OBJS} ${INVEATECH_OBJS}
+	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${PF_RING_ZC_OBJS} ${DAG_OBJS} ${NT_OBJS} ${MLX_OBJS} ${ACCOLADE_OBJS} ${MYRICOM_OBJS} ${INVEATECH_OBJS}
 
 #
 # C compiler and flags
@@ -88,12 +88,12 @@ all: ${TARGETS}
 
 ${STATICLIB}: Makefile extract_fast_bpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
-	ar rs $@ ${OBJS}
+	ar rs $@ ${OBJS} ${FASTBPF_OBJS}
 	ranlib $@
 
 ${DYNAMICLIB}: ${OBJS} extract_fast_bpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
-	${CC} ${LDFLAGS} ${OBJS} ${SYSLIBS} -o $@
+	${CC} ${LDFLAGS} ${OBJS} ${FASTBPF_OBJS} ${SYSLIBS} -o $@
 
 extract_pfring_zc_lib:
 	ar x @PF_RING_ZC_LIB@
