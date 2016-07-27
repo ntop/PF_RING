@@ -1,10 +1,10 @@
 LEX = lex
 YACC = bison
 CC=gcc
-CFLAGS=-Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ -O2 #-g
-OBJS=rules.o tree_match.o parser.o lex.yy.o grammar.tab.o
-BPFLIB=libfastbpf.a
 LIBS=@NDPI_LIB@
+CFLAGS=-Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ @HAVE_REDIRECTOR@ -O2 #-g
+OBJS=intel_nic_fast_bpf.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o
+BPFLIB=libfastbpf.a
 
 all: test
 
