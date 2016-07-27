@@ -73,14 +73,31 @@ AC_CHECK_HEADERS([librdi.h])
 dnl> Silicom Redirector NIC - Default enabled
 AC_ARG_ENABLE([rdi], AS_HELP_STRING([--disable-rdi], [Disable Silicom Redirector support in PF_RING]))
 
+REDIRECTOR_LIB=
+HAVE_REDIRECTOR=
 if test "x$enable_rdi" != "xno"; then :
   if test "x$ac_cv_header_librdi_h" = x""yes; then :
     AC_CHECK_LIB( [rdi], [rdi_init])
 
     AC_MSG_CHECKING([Silicom Redirector support])
     if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
-      HAVE_REDIRECTOR="-D HAVE_REDIRECTOR"
-      SILICOM_LIBS="-lrdi"
+      HAVE_REDIRECTOR="-DHAVE_REDIRECTOR"
+      REDIRECTOR_LIB="-lrdi"
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+  fi
+fi
+
+if test "x$enable_rdi" != "xno"; then :
+  if test "x$ac_cv_header_librdi_h" = x""yes; then :
+    AC_CHECK_LIB( [rdif], [rdi_init])
+
+    AC_MSG_CHECKING([Silicom Redirector F support])
+    if test "x$ac_cv_lib_rdif_rdi_init" = x""yes; then :
+      HAVE_REDIRECTOR="-D HAVE_REDIRECTOR_F"
+      REDIRECTOR_LIB="-lrdif"
       AC_MSG_RESULT(yes)
     else
       AC_MSG_RESULT(no)
@@ -267,7 +284,7 @@ dnl> AC_SUBST(BPF_LIB)
 AC_SUBST(REDIS_LIB)
 AC_SUBST(SYSLIBS)
 AC_SUBST(INSTALL_PREFIX)
-AC_SUBST(SILICOM_LIBS)
+AC_SUBST(REDIRECTOR_LIB)
 AC_SUBST(HAVE_REDIRECTOR)
 AC_SUBST(HAVE_HW_TIMESTAMP)
 AC_SUBST(NDPI_LIB)
