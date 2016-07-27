@@ -88,7 +88,7 @@ if test "x$enable_rdi" != "xno"; then :
   fi
 fi
 
-dnl Redis - Default disabled
+dnl> Redis - Default disabled
 REDIS_LIB=""
 AC_ARG_ENABLE([redis], AS_HELP_STRING([--enable-redis], [Enable Redis support in PF_RING]))
 AC_CHECK_LIB([hiredis], [redisCommand])
@@ -193,19 +193,34 @@ if test -f pfring_mod_mlx.c; then
    fi
 fi
 
-dnl BPF - Default disabled
-dnl AC_ARG_ENABLE([bpf], AS_HELP_STRING([--enable-bpf], [Enable BPF support in PF_RING]))
-dnl AS_IF([test "x$enable_bpf" = "xyes"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
+dnl> BPF - Default disabled
+dnl> AC_ARG_ENABLE([bpf], AS_HELP_STRING([--enable-bpf], [Enable BPF support in PF_RING]))
+dnl> AS_IF([test "x$enable_bpf" = "xyes"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
 
-dnl BPF - Default enabled
+dnl> BPF - Default enabled
 AC_ARG_ENABLE([bpf], AS_HELP_STRING([--disable-bpf], [Disable BPF support in PF_RING]))
 AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
 
-dnl BPF - Dynamic
-dnl AC_CHECK_LIB( [pcap], 
-dnl               [pcap_compile_nopcap], 
-dnl               [HAVE_BPF="-D ENABLE_BPF"], 
-dnl               [], [] )
+dnl> BPF - Dynamic
+dnl> AC_CHECK_LIB( [pcap], 
+dnl>               [pcap_compile_nopcap], 
+dnl>               [HAVE_BPF="-D ENABLE_BPF"], 
+dnl>               [], [] )
+
+NDPI_LIB=
+NDPI_INC=
+HAVE_NDPI=
+dnl> AC_MSG_CHECKING([nDPI support])
+dnl> NDPI_HOME="../../../nDPI"
+dnl> if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
+dnl>   NDPI_LIB="$NDPI_HOME/src/lib/.libs/libndpi.a"
+dnl>   NDPI_INC="-I$NDPI_HOME/src/include"
+dnl>   HAVE_NDPI="-DHAVE_NDPI"
+dnl>   AC_MSG_RESULT(yes)
+dnl>   AC_DEFINE_UNQUOTED(HAVE_MYRICOM, 1, [nDPI support is present])
+dnl> else
+dnl>   AC_MSG_RESULT(no)
+dnl> fi
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
@@ -248,19 +263,23 @@ AC_SUBST(HAVE_MLX)
 AC_SUBST(MLX_OBJS)
 AC_SUBST(HAVE_BPF)
 AC_SUBST(BPF_INCLUDE)
-dnl AC_SUBST(BPF_LIB)
+dnl> AC_SUBST(BPF_LIB)
 AC_SUBST(REDIS_LIB)
 AC_SUBST(SYSLIBS)
 AC_SUBST(INSTALL_PREFIX)
 AC_SUBST(SILICOM_LIBS)
 AC_SUBST(HAVE_REDIRECTOR)
 AC_SUBST(HAVE_HW_TIMESTAMP)
+AC_SUBST(NDPI_LIB)
+AC_SUBST(NDPI_INC)
+AC_SUBST(HAVE_NDPI)
 
 dnl> AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([pfring_config])
 AC_CONFIG_FILES([../examples/Makefile])
 AC_CONFIG_FILES([../examples_zc/Makefile])
 AC_CONFIG_FILES([../c++/Makefile])
+AC_CONFIG_FILES([../fast_bpf/Makefile])
 
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT
