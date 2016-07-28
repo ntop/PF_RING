@@ -1,0 +1,66 @@
+Fast BPF for Intel NIC Card (Silicom PE3100G2DQIR card)
+
+By this functionality allows to set some filter traffic rules directly on the NIC card using BFP-like syntax.
+As the filter expression complexity affects the ability for translation into specific rules for the NIC card, 
+we will define a set of constraints and allowed expressions.
+
+An expression consists of one or more primitives. 
+The filter expressions are built by using AND and OR (NOT operation is not permitted).
+
+Protocol: tcp, udp, sctp
+Direction: src, dst, src or dst, src and dst
+Type: host, port and protocol
+
+Additional constraints for packet capture filters:
+ - is not possible using level nesting. That means you cannot use the parenthesis and it is not possible to mix 
+   different operators.
+ - is not possible using host and port without specify the direction.
+
+Primitive filter examples:
+ - ip dst host 192.168.0.1                           <--- Permitted
+ - ip host 192.168.0.1                               <--- Not permitted (you have to specify the src or dst direction)
+ - dst host 192.168.0.1                              <--- Permitted
+ - host 192.168.0.1                                  <--- Not permitted (you have to specify the src or dst direction)
+ - src port 3000                                     <--- Permitted
+ - port 3000                                         <--- Not permitted (you have to specify the src or dst direction)
+ - src host 192.168.0.1 or dst host 192.168.0.1      <--- Permitted
+ - src host 192.168.0.1 and src host 192.168.0.2     <--- Not permitted (It doesn't make sense. All the traffic will be filtered)
+ - src port 3000 and src port 2000                   <--- Not permitted (It doesn't make sense. All the traffic will be filtered)
+ - src port 3000 and src host 10.0.0.1 or port 3001  <--- Not permitted (The operators are mixed)
+ - src port 3000 and src host 10.0.0.1 and proto 17  <--- Permitted
+ - tcp src port (80 or 443)                          <--- Permitted
+
+---------------------------------------------------------------------------------------------------------------------------------
+The global interface of fast bpf filter included these function:
+
+ - int intel_nic_reset(int unit)
+   This global function reset a NIC card. Make attention if you use this function
+   and you have already set some rule for some interfaces, it will clean everything.
+   Suggestion: use this function just once (in initialize phase of the NIC card).
+ 
+ - int intel_nic_interface_init(int unit, intel_dev_interface_t intf)
+   Use this function to initialize a NIC card interface 
+
+ - int intel_nic_set_fast_bpf(int unit, intel_dev_interface_t intf, char* bpf)
+   This function parses bpf filter, checks constraints and sets specific rules for Intel NIC card.
+
+Where:
+    int unit -> device identifier
+    intel_dev_interface_t intf -> interface identifier:
+                 typedef enum {
+                   INTERFACE_1 = 0,
+                   INTERFACE_2,
+                   MAX_INTERFACE
+                 } intel_dev_interface_t;
+    char* bpf -> bpf filter to set
+
+-----------------------------------------------------------------------------------------------------------------------------------
+Note Compilation:
+intel_nic_fast_bpf is includes in pfring library. if you want to use it you have to install librdif library.
+
+Note for setting rules:
+In order to set rule on intel NIC card intel_nic_fast_bpf send the command to a rdif daemon.
+Please make sure you have run rdif daemon before using intel_nic_card functionality.
+  
+
+
