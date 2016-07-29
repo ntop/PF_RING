@@ -4,16 +4,17 @@
  *      http://www.ntop.org/
  *
  */
+
 #include <stdio.h>
 #include <string.h>
 #include <arpa/inet.h>
+
 #include "fast_bpf.h"
-#include "intel_nic_fast_bpf.h"
-
+#include "fast_bpf_mod_rdif.h"
 #ifdef HAVE_REDIRECTOR_F
-#include "../include/librdi.h"
+#include "librdi.h"
 
-//#define DEBUG_INTEL_FAST_BPF 1
+//#define DEBUG 1
 
 #define MAX_NUM_RULES 512
 
@@ -21,7 +22,7 @@ typedef struct {
    unsigned int port1;
    unsigned int port2;
    unsigned int group_rules;
-} intel_interface_t;
+} rdif_interface_t;
 
 typedef struct {
    int action;
@@ -38,7 +39,7 @@ typedef struct {
    unsigned int not_managed;
 } check_constraint_t;
 
-static intel_interface_t interface[MAX_INTERFACE] =
+static rdif_interface_t interface[MAX_INTERFACE] =
 {
   {
     1,  // port1
@@ -57,30 +58,30 @@ static rules_parameter_t rules_parameters[MAX_INTEL_DEV][MAX_INTERFACE];
 static check_constraint_t constraint_parameters[MAX_INTEL_DEV][MAX_INTERFACE];
 
 /* Static functions */
-static int intel_nic_set_port_inline(int unit, int port1, int port2);
-static int intel_nic_interface_set_port_inline(int unit, intel_dev_interface_t intf);
+static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2);
+static int __fast_bpf_rdif_interface_set_port_inline(int unit, fast_bpf_rdif_interface_t intf);
 
-static int intel_nic_interface_init_for_rule(int unit, intel_dev_interface_t intf);
-static int intel_nic_interface_set_ipv4_address(int unit, intel_dev_interface_t intf, unsigned int ipAddress, unsigned int isSrc);
-static int intel_nic_interface_set_port(int unit, intel_dev_interface_t intf, unsigned int port, unsigned int isSrc);
-static int intel_nic_interface_set_protocol(int unit, intel_dev_interface_t intf, unsigned int protocol);
+static int fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_interface_t intf, unsigned int ipAddress, unsigned int isSrc);
+static int __fast_bpf_rdif_interface_set_port(int unit, fast_bpf_rdif_interface_t intf, unsigned int port, unsigned int isSrc);
+static int __fast_bpf_rdif_interface_set_protocol(int unit, fast_bpf_rdif_interface_t intf, unsigned int protocol);
 
-static int intel_nic_interface_set_drop_action(int unit, intel_dev_interface_t intf);
-static int intel_nic_interface_set_permit_action(int unit,intel_dev_interface_t intf);
+static int __fast_bpf_rdif_interface_set_drop_action(int unit, fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_interface_set_permit_action(int unit,fast_bpf_rdif_interface_t intf);
 
-static int intel_nic_add_rule(int unit, intel_dev_interface_t intf);
-static int intel_nic_interface_set_drop_all(int unit, intel_dev_interface_t intf);
+static int __fast_bpf_rdif_add_rule(int unit, fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_interface_set_drop_all(int unit, fast_bpf_rdif_interface_t intf);
 
-static int intel_nic_fast_bpf_check_rules_constraints(int unit, intel_dev_interface_t intf, fast_bpf_tree_t *tree);
-static void intel_nic_fast_bpf_check_node_specific_constrains(int unit, intel_dev_interface_t intf, fast_bpf_node_t *n);
-static int intel_nic_fast_bpf_check_specific_constrains(int unit, intel_dev_interface_t intf, fast_bpf_tree_t *tree);
-static int intel_nic_fast_bpf_create_and_set_rules(int unit, intel_dev_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun);
-static int intel_nic_fast_bpf_set_single_rule(int unit, intel_dev_interface_t intf, fast_bpf_rule_list_item_t *rule);
-static int intel_nic_interface_clear(int unit, intel_dev_interface_t intf);
+static int __fast_bpf_rdif_fast_bpf_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
+static void __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n);
+static int __fast_bpf_rdif_fast_bpf_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
+static int __fast_bpf_rdif_fast_bpf_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun);
+static int __fast_bpf_rdif_fast_bpf_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule);
+static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t intf);
 
 #if 0
-static void intel_nic_fast_bpf_call_print_tree(fast_bpf_tree_t *tree);
-static void intel_nic_fast_bpf_print_tree(fast_bpf_node_t *n);
+static void __fast_bpf_rdif_fast_bpf_call_print_tree(fast_bpf_tree_t *tree);
+static void __fast_bpf_rdif_fast_bpf_print_tree(fast_bpf_node_t *n);
 #endif
 
 /* -------------------------------------------------- */
@@ -94,7 +95,7 @@ static void intel_nic_fast_bpf_print_tree(fast_bpf_node_t *n);
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_set_port_inline(int unit, int port1, int port2){
+static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2){
         int j, pos;
         rdi_mask_t mask;
 
@@ -127,15 +128,15 @@ static int intel_nic_set_port_inline(int unit, int port1, int port2){
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_set_port_inline(int unit, intel_dev_interface_t intf){
+static int __fast_bpf_rdif_interface_set_port_inline(int unit, fast_bpf_rdif_interface_t intf){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
   /* Set interface in inline mode (normal direction) */
-  if(!intel_nic_set_port_inline(unit, interface[intf].port1, interface[intf].port2))
+  if(!__fast_bpf_rdif_set_port_inline(unit, interface[intf].port1, interface[intf].port2))
     return (0);
   /* Set interface in inline mode (reverse direction) */
-  if(!intel_nic_set_port_inline(unit, interface[intf].port2, interface[intf].port1))
+  if(!__fast_bpf_rdif_set_port_inline(unit, interface[intf].port2, interface[intf].port1))
     return (0);
   return (1);
 }
@@ -151,7 +152,7 @@ static int intel_nic_interface_set_port_inline(int unit, intel_dev_interface_t i
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_set_drop_action(int unit, intel_dev_interface_t intf){
+static int __fast_bpf_rdif_interface_set_drop_action(int unit, fast_bpf_rdif_interface_t intf){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -173,7 +174,7 @@ static int intel_nic_interface_set_drop_action(int unit, intel_dev_interface_t i
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_set_permit_action(int unit, intel_dev_interface_t intf){
+static int __fast_bpf_rdif_interface_set_permit_action(int unit, fast_bpf_rdif_interface_t intf){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -196,11 +197,11 @@ static int intel_nic_interface_set_permit_action(int unit, intel_dev_interface_t
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_add_rule(int unit, intel_dev_interface_t intf){
+static int __fast_bpf_rdif_add_rule(int unit, fast_bpf_rdif_interface_t intf){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
-#ifdef DEBUG_INTEL_FAST_BPF
+#ifdef DEBUG
   printf("Print Rule:\n");
   printf("rule id: %d\n", rules_parameters[unit][intf].rdi_mem.rule_id);
   printf("group: %d\n", rules_parameters[unit][intf].rdi_mem.group);
@@ -236,19 +237,19 @@ static int intel_nic_add_rule(int unit, intel_dev_interface_t intf){
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_set_drop_all(int unit, intel_dev_interface_t intf){
+static int __fast_bpf_rdif_interface_set_drop_all(int unit, fast_bpf_rdif_interface_t intf){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
   bzero(&rules_parameters[unit][intf].rdi_mem, sizeof(rdi_mem_t));
   /* Set drop action */
-  intel_nic_interface_set_drop_action(unit, intf);
+  __fast_bpf_rdif_interface_set_drop_action(unit, intf);
   /* Set rule identifier, switch ingress port and group identifier */
   rules_parameters[unit][intf].rdi_mem.rule_id = current_rule_id[unit][intf]++;
   rules_parameters[unit][intf].rdi_mem.port = interface[intf].port1;
   rules_parameters[unit][intf].rdi_mem.group = ((MAX_INTERFACE * unit) + interface[intf].group_rules);
   /* Add rule in order to dropp all the traffic for a specific interface */
-  return intel_nic_add_rule(unit, intf);
+  return __fast_bpf_rdif_add_rule(unit, intf);
 }
 
 /* -------------------------------------------------- */
@@ -263,7 +264,7 @@ static int intel_nic_interface_set_drop_all(int unit, intel_dev_interface_t intf
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_init_for_rule(int unit, intel_dev_interface_t intf){
+static int fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -292,7 +293,7 @@ static int intel_nic_interface_init_for_rule(int unit, intel_dev_interface_t int
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_set_ipv4_address(int unit, intel_dev_interface_t intf, unsigned int ipAddress, unsigned int isSrc){
+static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_interface_t intf, unsigned int ipAddress, unsigned int isSrc){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -322,7 +323,7 @@ static int intel_nic_interface_set_ipv4_address(int unit, intel_dev_interface_t 
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_set_port(int unit, intel_dev_interface_t intf, unsigned int port, unsigned int isSrc){
+static int __fast_bpf_rdif_interface_set_port(int unit, fast_bpf_rdif_interface_t intf, unsigned int port, unsigned int isSrc){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -351,7 +352,7 @@ static int intel_nic_interface_set_port(int unit, intel_dev_interface_t intf, un
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_set_protocol(int unit, intel_dev_interface_t intf, unsigned int protocol){
+static int __fast_bpf_rdif_interface_set_protocol(int unit, fast_bpf_rdif_interface_t intf, unsigned int protocol){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -374,7 +375,7 @@ static int intel_nic_interface_set_protocol(int unit, intel_dev_interface_t intf
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_fast_bpf_check_rules_constraints(int unit, intel_dev_interface_t intf, fast_bpf_tree_t *tree) {
+static int __fast_bpf_rdif_fast_bpf_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree) {
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -383,7 +384,7 @@ static int intel_nic_fast_bpf_check_rules_constraints(int unit, intel_dev_interf
     return (0);
 
   /* check the intel specific rules of the fast bpf */
-  if(!intel_nic_fast_bpf_check_specific_constrains(unit, intf, tree))
+  if(!__fast_bpf_rdif_fast_bpf_check_specific_constrains(unit, intf, tree))
     return (0);
 
   return (1);
@@ -398,7 +399,7 @@ static int intel_nic_fast_bpf_check_rules_constraints(int unit, intel_dev_interf
  *     - "n" -> pointer to a node in the tree
  */
 /* -------------------------------------------------- */
-static void intel_nic_fast_bpf_check_node_specific_constrains(int unit, intel_dev_interface_t intf, fast_bpf_node_t *n){
+static void __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n){
 
   if(unit >= MAX_INTEL_DEV) return;
   if(intf >= MAX_INTERFACE) return;
@@ -444,13 +445,13 @@ static void intel_nic_fast_bpf_check_node_specific_constrains(int unit, intel_de
     case N_AND:
       /* If you enter here, you have a bpf filter with just "and" operators */
       constraint_parameters[unit][intf].is_and++;
-      intel_nic_fast_bpf_check_node_specific_constrains(unit, intf, n->l);
-      intel_nic_fast_bpf_check_node_specific_constrains(unit, intf, n->r);
+      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->l);
+      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->r);
       break;
     case N_OR:
       /* If you enter here, you have a bpf filter with just "or" operators */
-      intel_nic_fast_bpf_check_node_specific_constrains(unit, intf, n->l);
-      intel_nic_fast_bpf_check_node_specific_constrains(unit, intf, n->r);
+      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->l);
+      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->r);
       break;
     default:
       break;
@@ -470,7 +471,7 @@ static void intel_nic_fast_bpf_check_node_specific_constrains(int unit, intel_de
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_fast_bpf_check_specific_constrains(int unit, intel_dev_interface_t intf, fast_bpf_tree_t *tree){
+static int __fast_bpf_rdif_fast_bpf_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree){
 
    if(unit >= MAX_INTEL_DEV) return (0);
    if(intf >= MAX_INTERFACE) return (0);
@@ -478,7 +479,7 @@ static int intel_nic_fast_bpf_check_specific_constrains(int unit, intel_dev_inte
 
    /* reset structure for check constrains */
    memset( &constraint_parameters[unit][intf], 0, sizeof(check_constraint_t));
-   intel_nic_fast_bpf_check_node_specific_constrains(unit, intf, tree->root);
+   __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, tree->root);
 
    /* If you have element not managed, return failure */
    if (constraint_parameters[unit][intf].not_managed != 0)
@@ -514,7 +515,7 @@ static int intel_nic_fast_bpf_check_specific_constrains(int unit, intel_dev_inte
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_fast_bpf_create_and_set_rules(int unit, intel_dev_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun) {
+static int __fast_bpf_rdif_fast_bpf_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun) {
   fast_bpf_rule_block_list_item_t *currPun;
   fast_bpf_rule_list_item_t * pun;
 
@@ -522,7 +523,7 @@ static int intel_nic_fast_bpf_create_and_set_rules(int unit, intel_dev_interface
     return (0);
 
   /* Clear and initialize the environment */
-  if (!intel_nic_interface_init(unit, intf))
+  if (!fast_bpf_rdif_init(unit, intf))
     return (0);
 
   /* through the list and set the single rule*/
@@ -530,8 +531,8 @@ static int intel_nic_fast_bpf_create_and_set_rules(int unit, intel_dev_interface
   while (currPun != NULL){
     pun = currPun->rule_list_head;
     while (pun!=NULL) {
-      if( !intel_nic_fast_bpf_set_single_rule(unit, intf, pun) ){
-        intel_nic_interface_init(unit, intf);
+      if( !__fast_bpf_rdif_fast_bpf_set_single_rule(unit, intf, pun) ){
+        fast_bpf_rdif_init(unit, intf);
         return (0);
       }
       pun = pun->next;
@@ -540,8 +541,8 @@ static int intel_nic_fast_bpf_create_and_set_rules(int unit, intel_dev_interface
   }
 
   /* The last rule drop all the traffic*/
-  if( !intel_nic_interface_set_drop_all(unit, intf) ){
-    intel_nic_interface_init(unit, intf);
+  if( !__fast_bpf_rdif_interface_set_drop_all(unit, intf) ){
+    fast_bpf_rdif_init(unit, intf);
     return (0);
   }
 
@@ -560,45 +561,45 @@ static int intel_nic_fast_bpf_create_and_set_rules(int unit, intel_dev_interface
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_fast_bpf_set_single_rule(int unit, intel_dev_interface_t intf, fast_bpf_rule_list_item_t *rule){
+static int __fast_bpf_rdif_fast_bpf_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule){
 
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
   if(rule == NULL) return (0);
 
   /* Init the variables in order to set a rule */
-  if(!intel_nic_interface_init_for_rule(unit, intf))
+  if(!fast_bpf_rdif_init_for_rule(unit, intf))
     return (0);
   /*Set permit action*/
-  if(!intel_nic_interface_set_permit_action(unit, intf))
+  if(!__fast_bpf_rdif_interface_set_permit_action(unit, intf))
     return (0);
 
   if (rule->fields.shost.v4 != 0){
     /* Set ipv4 src address */
-    if(!intel_nic_interface_set_ipv4_address(unit, intf, rule->fields.shost.v4, 1))
+    if(!__fast_bpf_rdif_interface_set_ipv4_address(unit, intf, rule->fields.shost.v4, 1))
       return (0);
   }
   if (rule->fields.dhost.v4 != 0){
     /* Set ipv4 dst address */
-    if(!intel_nic_interface_set_ipv4_address(unit, intf, rule->fields.dhost.v4, 0))
+    if(!__fast_bpf_rdif_interface_set_ipv4_address(unit, intf, rule->fields.dhost.v4, 0))
       return (0);
   }
   if (rule->fields.sport_low != 0){
     /* Set src port */
-    if(!intel_nic_interface_set_port(unit, intf, ntohs(rule->fields.sport_low), 1))
+    if(!__fast_bpf_rdif_interface_set_port(unit, intf, ntohs(rule->fields.sport_low), 1))
       return (0);
   }
   if (rule->fields.dport_low != 0){
     /* Set dst port */
-    if(!intel_nic_interface_set_port(unit, intf, ntohs(rule->fields.dport_low), 0))
+    if(!__fast_bpf_rdif_interface_set_port(unit, intf, ntohs(rule->fields.dport_low), 0))
       return (0);
   }
   if (rule->fields.proto != 0){
     /* Set protocol */
-    if(!intel_nic_interface_set_protocol(unit, intf, rule->fields.proto))
+    if(!__fast_bpf_rdif_interface_set_protocol(unit, intf, rule->fields.proto))
       return (0);
   }
-  if(!intel_nic_add_rule(unit, intf))
+  if(!__fast_bpf_rdif_add_rule(unit, intf))
     return (0);
 
   return (1);
@@ -615,7 +616,7 @@ static int intel_nic_fast_bpf_set_single_rule(int unit, intel_dev_interface_t in
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int intel_nic_interface_clear(int unit, intel_dev_interface_t intf){
+static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t intf){
   rdi_query_list_t rdi_query_list;
   unsigned int group_rules;
   int m;
@@ -664,7 +665,7 @@ static int intel_nic_interface_clear(int unit, intel_dev_interface_t intf){
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-int intel_nic_set_fast_bpf(int unit, intel_dev_interface_t intf, char* bpf){
+int fast_bpf_rdif_set_filter(int unit, fast_bpf_rdif_interface_t intf, char* bpf){
 #ifdef HAVE_REDIRECTOR_F
   fast_bpf_tree_t *tree;
   fast_bpf_rule_block_list_item_t * punBlock;
@@ -677,15 +678,15 @@ int intel_nic_set_fast_bpf(int unit, intel_dev_interface_t intf, char* bpf){
 
   /* Parses the bpf filters and builds the rules tree */
   if ((tree = fast_bpf_parse(bpf, NULL)) == NULL){
-#ifdef DEBUG_INTEL_FAST_BPF
+#ifdef DEBUG
     printf("Error on parsing the bpf filter.");
 #endif
     return (0);
   }
 
   /* checks if the constrains are respected (both fast bpf and specific intel fast bpf) */
-  if(!intel_nic_fast_bpf_check_rules_constraints(0, intf, tree)){
-#ifdef DEBUG_INTEL_FAST_BPF
+  if(!__fast_bpf_rdif_fast_bpf_check_rules_constraints(0, intf, tree)){
+#ifdef DEBUG
     printf("Error on checking constrains for a bpf filter.\n");
 #endif
     return (0);
@@ -693,15 +694,15 @@ int intel_nic_set_fast_bpf(int unit, intel_dev_interface_t intf, char* bpf){
 
   /* Generates a optimized rules list */
   if( (punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL ){
-#ifdef DEBUG_INTEL_FAST_BPF
+#ifdef DEBUG
     printf("Error on generating optimized rules.");
 #endif
     return (0);
   }
 
   /* Creates and set the rules on the nic */
-  if( !intel_nic_fast_bpf_create_and_set_rules(0, intf, punBlock) ){
-#ifdef DEBUG_INTEL_FAST_BPF
+  if( !__fast_bpf_rdif_fast_bpf_create_and_set_rules(0, intf, punBlock) ){
+#ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
     return (0);
@@ -725,23 +726,23 @@ int intel_nic_set_fast_bpf(int unit, intel_dev_interface_t intf, char* bpf){
  *     - 0 on failure
  *     - 1 on success
  */
-int intel_nic_interface_init(int unit, intel_dev_interface_t intf) {
+int fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf) {
 #ifdef HAVE_REDIRECTOR_F
 
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
   /* Clear all rules for the interface */
-  if( !intel_nic_interface_clear(unit, intf) ) {
-#ifdef DEBUG_INTEL_FAST_BPF
+  if( !__fast_bpf_rdif_interface_clear(unit, intf) ) {
+#ifdef DEBUG
     printf("Error on cleaning the rules in initialization phase.");
 #endif
     return (0);
   }
 
   /* Set all interfaces inline mode */
-  if( !intel_nic_interface_set_port_inline(unit, intf) ){
-#ifdef DEBUG_INTEL_FAST_BPF
+  if( !__fast_bpf_rdif_interface_set_port_inline(unit, intf) ){
+#ifdef DEBUG
     printf("Error on setting interface in inline mode.");
 #endif
     return (0);
@@ -765,7 +766,7 @@ int intel_nic_interface_init(int unit, intel_dev_interface_t intf) {
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-int intel_nic_reset(int unit){
+int fast_bpf_rdif_reset(int unit){
 
   if(unit >= MAX_INTEL_DEV) return (0);
 
@@ -778,7 +779,7 @@ int intel_nic_reset(int unit){
 
 #if 0
 /* -------------------------------------------------- */
-void intel_nic_fast_bpf_print_tree(fast_bpf_node_t *n){
+void __fast_bpf_rdif_fast_bpf_print_tree(fast_bpf_node_t *n){
 
   if (n == NULL) return; /* empty and/or operators not allowed */
   if (n->not_rule) return;
@@ -792,8 +793,8 @@ void intel_nic_fast_bpf_print_tree(fast_bpf_node_t *n){
       break;
     case N_AND:
     case N_OR:
-      intel_nic_fast_bpf_print_tree(n->l);
-      intel_nic_fast_bpf_print_tree(n->r);
+      __fast_bpf_rdif_fast_bpf_print_tree(n->l);
+      __fast_bpf_rdif_fast_bpf_print_tree(n->r);
       break;
     default:
       break;
@@ -802,7 +803,7 @@ void intel_nic_fast_bpf_print_tree(fast_bpf_node_t *n){
 }
 
 /* -------------------------------------------------- */
-void intel_nic_fast_bpf_call_print_tree(fast_bpf_tree_t *tree){
-   intel_nic_fast_bpf_print_tree(tree->root);
+void __fast_bpf_rdif_fast_bpf_call_print_tree(fast_bpf_tree_t *tree){
+   __fast_bpf_rdif_fast_bpf_print_tree(tree->root);
 }
 #endif
