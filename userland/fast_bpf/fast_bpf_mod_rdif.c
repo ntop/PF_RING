@@ -767,14 +767,16 @@ int fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf) {
  */
 /* -------------------------------------------------- */
 int fast_bpf_rdif_reset(int unit){
-
+#ifdef HAVE_REDIRECTOR_F
   if(unit >= MAX_INTEL_DEV) return (0);
 
   /* Set MON2 configuration (value 5). No traffic in egress */
   if (rdi_set_cfg(unit, 5, RDI_FLCM_DEV) < 0)
     return (0);
-
   return (1);
+#else
+  return(0);
+#endif /* HAVE_REDIRECTOR_F */
 }
 
 #if 0
