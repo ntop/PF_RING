@@ -3891,7 +3891,7 @@ int bpf_filter_skb(struct sk_buff *skb,
     skb->data = skb_head, skb->len = skb_len;
 
   if (unlikely(enable_debug && res == 0 /* Filter failed */ )) {
-    printk("[PF_RING] %s(skb): Filter failed [len=%d][tot=%llu]"
+    printk("[PF_RING] %s: skb filtered out by bpf [len=%d][tot=%llu]"
 	   "[insert_off=%llu][pkt_type=%d][cloned=%d]\n", __FUNCTION__,
 	   (int)skb->len, pfr->slots_info->tot_pkts,
 	   pfr->slots_info->insert_off, skb->pkt_type,
