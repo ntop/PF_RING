@@ -400,6 +400,7 @@ int main(int argc, char* argv[]) {
   int opt_argc;
   char **opt_argv;
   const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:";
+  int buffer_len;
 
   start_time.tv_sec = 0;
 
@@ -540,9 +541,11 @@ int main(int argc, char* argv[]) {
   if (daemon_mode)
     daemonize();
 
+  buffer_len = max_packet_len(devices[0]);
+
   zc = pfring_zc_create_cluster(
     cluster_id, 
-    max_packet_len(devices[0]),
+    buffer_len,
     metadata_len,
     (num_real_devices * MAX_CARD_SLOTS) + (num_in_queues * (queue_len + IN_POOL_SIZE)) 
      + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers
