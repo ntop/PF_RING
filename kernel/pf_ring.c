@@ -2284,7 +2284,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
     } else
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
 
-  } else if(hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == IPPROTO_SCTP) {
+  } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) {
     struct sctphdr *sctp;
 
     sctp = (struct sctphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
