@@ -2057,10 +2057,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 
   hdr->extended_hdr.parsed_pkt.offset.l4_offset = hdr->extended_hdr.parsed_pkt.offset.l3_offset+ip_len;
 
-  if(((hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP)
-      || (hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE)
-      || (hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_UDP))
-     && (!fragment_offset)) {
+  if (!fragment_offset) {
     if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {
       struct tcphdr *tcp;
 
@@ -2281,18 +2278,22 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
       } else { /* TODO handle other GRE versions */
 	hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
       }
-    } else
+
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) {
+      struct sctphdr *sctp;
+
+      sctp = (struct sctphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+      hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(sctp->source);
+      hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(sctp->dest);
+      hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct sctphdr);
+
+    } else { /* Unknown protocol */
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
+    }
 
-  } else if(hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == IPPROTO_SCTP) {
-    struct sctphdr *sctp;
-
-    sctp = (struct sctphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
-    hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(sctp->source);
-    hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(sctp->dest);
-    hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct sctphdr);
-  } else
-    hdr->extended_hdr.parsed_pkt.l4_src_port = hdr->extended_hdr.parsed_pkt.l4_dst_port = 0;
+  } else { /* Fragment */
+    hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
+  }
 
   hash_pkt_header(hdr, 0);
 
