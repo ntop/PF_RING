@@ -912,19 +912,35 @@ u_int16_t pfring_mod_get_slot_header_len(pfring *ring) {
 
 /* **************************************************** */
 
+#ifdef ENABLE_BPF 
+int __pfring_mod_remove_bpf_filter(pfring *ring) {
+  int dummy = 0;
+  int rc;
+
+  rc = setsockopt(ring->fd, 0, SO_DETACH_FILTER, &dummy, sizeof(dummy));
+
+  if (rc == -1)
+    rc = setsockopt(ring->fd, SOL_SOCKET, SO_DETACH_FILTER, &dummy, sizeof(dummy));
+
+  return rc;
+}
+#endif
+
+/* **************************************************** */
+
 int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
   int                rc = -1;
 #ifdef ENABLE_BPF
   struct bpf_program filter;
   struct sock_fprog  fcode;
 
-  if(!filter_buffer)
+  if (!filter_buffer)
     return -1;
 
-  if(unlikely(ring->reentrant))
+  if (unlikely(ring->reentrant))
     pthread_rwlock_wrlock(&ring->rx_lock);
 
-  if(pcap_compile_nopcap(ring->caplen,  /* snaplen_arg */
+  if (pcap_compile_nopcap(ring->caplen,  /* snaplen_arg */
                          DLT_EN10MB,    /* linktype_arg */
                          &filter,       /* program */
                          filter_buffer, /* const char *buf */
@@ -935,7 +951,7 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
     goto pfring_mod_set_bpf_filter_exit;
   }
 
-  if(filter.bf_insns == NULL) {
+  if (filter.bf_insns == NULL) {
     rc = -1;
     goto pfring_mod_set_bpf_filter_exit;
   }
@@ -947,11 +963,11 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
   pcap_freecode(&filter);
 
-  if(rc == -1)
-    pfring_mod_remove_bpf_filter(ring);
+  if (rc == -1)
+    __pfring_mod_remove_bpf_filter(ring);
 
  pfring_mod_set_bpf_filter_exit:
-  if(unlikely(ring->reentrant))
+  if (unlikely(ring->reentrant))
     pthread_rwlock_unlock(&ring->rx_lock);
 
 #endif
@@ -963,16 +979,12 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
 int pfring_mod_remove_bpf_filter(pfring *ring) {
   int rc = -1;
-#ifdef ENABLE_BPF 
-  int dummy = 0;
 
+#ifdef ENABLE_BPF 
   if(unlikely(ring->reentrant))
     pthread_rwlock_wrlock(&ring->rx_lock);
 
-  rc = setsockopt(ring->fd, 0, SO_DETACH_FILTER, &dummy, sizeof(dummy));
-
-  if(rc == -1)
-    rc = setsockopt(ring->fd, SOL_SOCKET, SO_DETACH_FILTER, &dummy, sizeof(dummy));
+  rc = __pfring_mod_remove_bpf_filter(ring);
 
   if(unlikely(ring->reentrant))
     pthread_rwlock_unlock(&ring->rx_lock);
