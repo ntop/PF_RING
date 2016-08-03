@@ -3,7 +3,7 @@ YACC = bison
 CC=gcc
 LIBS=@NDPI_LIB@
 CFLAGS=-Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ @HAVE_REDIRECTOR@ -O2 #-g
-OBJS=rules.o tree_match.o parser.o lex.yy.o grammar.tab.o
+OBJS=fast_bpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o
 BPFLIB=libfastbpf.a
 
 all: test

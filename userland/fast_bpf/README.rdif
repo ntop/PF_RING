@@ -1,0 +1,50 @@
+Fast-BPF module for Intel RRC
+-----------------------------
+
+Supported cards: Silicom PE3100G2DQIR (Intel RRC FM10000)
+
+This module allows to set filtering rules directly on the NIC card using the
+BFP-like syntax supported by Fast-BPF filters.
+As the filter expression complexity affects the ability for translation into 
+specific rules for the NIC, we will define a set of constraints and allowed 
+expressions.
+
+An expression consists of one or more primitives. 
+The filter expressions are built by using AND and OR (NOT operation is not 
+permitted).
+
+Protocol: tcp, udp, sctp
+Direction: src, dst, src or dst, src and dst
+Type: host, port and protocol
+
+Additional constraints for packet capture filters:
+ - it is not possible to use more than 1-level nesting using parenthesis
+ - it is not possible to use the "or" operator inside parenthesis
+ - it is not possible to mix different operators (only "or" of "and" blocks
+   is allowed)
+ - is not possible to combine different directions in the same block using
+   the "and" operator.
+
+Permitted filters examples:
+ - dst host 192.168.0.1                              
+ - src port 3000                                     
+ - ip dst host 192.168.0.1                           
+ - src host 192.168.0.1 or dst host 192.168.0.1     
+ - src port 3000 and src host 10.0.0.1 and proto 17  
+ - tcp src port (80 or 443)
+ - (host 192.168.0.1 and port 3000) or (src host 10.0.0.1 and proto 17)
+
+Unsupported filters examples:
+ - src port 3000 and (src host 10.0.0.1 or src host 10.0.0.2)
+
+Usage
+-----
+
+This library is part of libpfring, in order to compile libpfring with RRC
+filtering support you have to install the librdif library and configure/make
+libpfring.
+
+Please make sure you have run rdif daemon running before using this functionality.
+
+Please take a look at fast_bpf_mod_rdif.h for the API.
+
