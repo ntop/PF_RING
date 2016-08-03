@@ -1213,7 +1213,7 @@ static bool e1000_clean_rx_irq(struct e1000_ring *rx_ring)
 
 #endif
 
-#ifdef HAVE_PF_RING
+#if defined(HAVE_PF_RING) && defined(CONFIG_E1000E_NAPI)
 		if (e1000_receive_skb(adapter, netdev, skb, staterr, rx_desc->wb.upper.vlan) == 2)
 			*work_done = work_to_do; /* Slow down the adapter as we have no room for packets */
 #else
@@ -1689,7 +1689,7 @@ copydone:
 		    cpu_to_le16(E1000_RXDPS_HDRSTAT_HDRSP))
 			adapter->rx_hdr_split++;
 
-#ifdef HAVE_PF_RING
+#if defined(HAVE_PF_RING) && defined(CONFIG_E1000E_NAPI)
 		if (e1000_receive_skb(adapter, netdev, skb, staterr, rx_desc->wb.middle.vlan) == 2)
 			*work_done = work_to_do; /* Slow down the adapter as we have no room for packets */
 #else
@@ -8265,7 +8265,7 @@ static void e1000_eeprom_checks(struct e1000_adapter *adapter)
 	}
 }
 
-#ifdef HAVE_NDO_SET_FEATURES
+#if defined(HAVE_NDO_SET_FEATURES) && !defined(HAVE_RHEL6_NET_DEVICE_OPS_EXT)
 static netdev_features_t e1000_fix_features(struct net_device *netdev,
 					    netdev_features_t features)
 {
@@ -8351,7 +8351,7 @@ static const struct net_device_ops e1000e_netdev_ops = {
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= e1000_netpoll,
 #endif
-#ifdef HAVE_NDO_SET_FEATURES
+#if defined(HAVE_NDO_SET_FEATURES) && !defined(HAVE_RHEL6_NET_DEVICE_OPS_EXT)
 	.ndo_set_features = e1000_set_features,
 	.ndo_fix_features = e1000_fix_features,
 #endif /* HAVE_NDO_SET_FEATURES */
@@ -8578,7 +8578,7 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 #endif
 			    NETIF_F_HW_CSUM);
 
-#ifdef HAVE_NDO_SET_FEATURES
+#if defined(HAVE_NDO_SET_FEATURES) && !defined(HAVE_RHEL6_NET_DEVICE_OPS_EXT)
 	/* Set user-changeable features (subset of all device features) */
 	netdev->hw_features = netdev->features;
 	netdev->hw_features |= NETIF_F_RXFCS;

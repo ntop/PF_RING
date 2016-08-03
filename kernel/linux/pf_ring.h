@@ -865,7 +865,9 @@ struct send_msg_to_plugin_info {
 #ifdef __KERNEL__
 
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,11,0))
+#ifndef netdev_notifier_info_to_dev
 #define netdev_notifier_info_to_dev(a) ((struct net_device*)a)
+#endif
 #endif
 
 #define CLUSTER_LEN       32
