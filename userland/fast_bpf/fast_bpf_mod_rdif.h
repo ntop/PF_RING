@@ -16,8 +16,14 @@ typedef enum {
   MAX_INTERFACE
 } fast_bpf_rdif_interface_t;
 
-int fast_bpf_rdif_reset(int unit);
-int fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf);
-int fast_bpf_rdif_set_filter(int unit, fast_bpf_rdif_interface_t intf, char *bpf);
+typedef struct { // TODO add instance data here
+  int unit;
+  fast_bpf_rdif_interface_t intf;
+} fast_bpf_rdif_handle_t;
+
+int fast_bpf_rdif_reset(int unit); //TODO needs to be moved to driver init
+
+fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname);
+int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf);
 
 #endif

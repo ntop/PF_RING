@@ -729,3 +729,9 @@ fast_bpf_rule_block_list_item_t *fast_bpf_generate_optimized_rules(fast_bpf_tree
 
 /* ********************************************************************** */
 
+void fast_bpf_rule_block_list_free(fast_bpf_rule_block_list_item_t* b) {
+  free(b); /* Note: it uses contiguous memory for all blocks */
+}
+
+/* ********************************************************************** */
+

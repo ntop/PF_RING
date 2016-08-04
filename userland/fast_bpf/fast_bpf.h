@@ -181,6 +181,7 @@ fast_bpf_rule_block_list_item_t;
 int fast_bpf_check_rules_constraints(fast_bpf_tree_t *tree, int max_nesting_level);
 fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree);
 fast_bpf_rule_block_list_item_t *fast_bpf_generate_optimized_rules(fast_bpf_tree_t *tree);
+void fast_bpf_rule_block_list_free(fast_bpf_rule_block_list_item_t *blocks);
 
 /***************************************************************************/
 

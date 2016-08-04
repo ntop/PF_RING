@@ -14,7 +14,7 @@
 #ifdef HAVE_REDIRECTOR_F
 #include "librdi.h"
 
-//#define DEBUG 1
+//#define DEBUG
 
 #define MAX_NUM_RULES 512
 
@@ -61,7 +61,7 @@ static check_constraint_t constraint_parameters[MAX_INTEL_DEV][MAX_INTERFACE];
 static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2);
 static int __fast_bpf_rdif_interface_set_port_inline(int unit, fast_bpf_rdif_interface_t intf);
 
-static int fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf);
 static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_interface_t intf, unsigned int ipAddress, unsigned int isSrc);
 static int __fast_bpf_rdif_interface_set_port(int unit, fast_bpf_rdif_interface_t intf, unsigned int port, unsigned int isSrc);
 static int __fast_bpf_rdif_interface_set_protocol(int unit, fast_bpf_rdif_interface_t intf, unsigned int protocol);
@@ -264,7 +264,7 @@ static int __fast_bpf_rdif_interface_set_drop_all(int unit, fast_bpf_rdif_interf
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf){
+static int __fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf){
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -665,13 +665,10 @@ static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t i
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-int fast_bpf_rdif_set_filter(int unit, fast_bpf_rdif_interface_t intf, char* bpf){
+int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
 #ifdef HAVE_REDIRECTOR_F
   fast_bpf_tree_t *tree;
-  fast_bpf_rule_block_list_item_t * punBlock;
-
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+  fast_bpf_rule_block_list_item_t *punBlock;
 
   if(bpf == NULL)
     return (0);
@@ -685,7 +682,7 @@ int fast_bpf_rdif_set_filter(int unit, fast_bpf_rdif_interface_t intf, char* bpf
   }
 
   /* checks if the constrains are respected (both fast bpf and specific intel fast bpf) */
-  if(!__fast_bpf_rdif_fast_bpf_check_rules_constraints(0, intf, tree)){
+  if(!__fast_bpf_rdif_fast_bpf_check_rules_constraints(0, handle->intf, tree)){
 #ifdef DEBUG
     printf("Error on checking constrains for a bpf filter.\n");
 #endif
@@ -701,14 +698,14 @@ int fast_bpf_rdif_set_filter(int unit, fast_bpf_rdif_interface_t intf, char* bpf
   }
 
   /* Creates and set the rules on the nic */
-  if( !__fast_bpf_rdif_fast_bpf_create_and_set_rules(0, intf, punBlock) ){
+  if( !__fast_bpf_rdif_fast_bpf_create_and_set_rules(0, handle->intf, punBlock) ){
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
     return (0);
   }
 
-  //fast_bpf_blocks_list_free(punBlock);
+  fast_bpf_blocks_list_free(punBlock);
   fast_bpf_free(tree);
   return (1);
 #else  /* HAVE_REDIRECTOR_F */
@@ -726,31 +723,46 @@ int fast_bpf_rdif_set_filter(int unit, fast_bpf_rdif_interface_t intf, char* bpf
  *     - 0 on failure
  *     - 1 on success
  */
-int fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf) {
+fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
 #ifdef HAVE_REDIRECTOR_F
+  fast_bpf_rdif_handle_t *handle;
 
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+  handle = calloc(1, sizeof(fast_bpf_rdif_handle_t));
+
+  if (handle == NULL)
+    return NULL;
+
+  //TODO
+  //handle->unit = 
+  //handle->intf = 
+
+  if (handle->unit >= MAX_INTEL_DEV || 
+      handle->intf >= MAX_INTERFACE) {
+    free(handle);
+    return NULL;
+  }
 
   /* Clear all rules for the interface */
-  if( !__fast_bpf_rdif_interface_clear(unit, intf) ) {
+  if( !__fast_bpf_rdif_interface_clear(handle->unit, handle->intf) ) {
 #ifdef DEBUG
     printf("Error on cleaning the rules in initialization phase.");
 #endif
-    return (0);
+    free(handle);
+    return NULL;
   }
 
   /* Set all interfaces inline mode */
-  if( !__fast_bpf_rdif_interface_set_port_inline(unit, intf) ){
+  if( !__fast_bpf_rdif_interface_set_port_inline(handle->unit, handle->intf) ){
 #ifdef DEBUG
     printf("Error on setting interface in inline mode.");
 #endif
-    return (0);
+    free(handle);
+    return NULL;
   }
 
-  return (1);
+  return handle;
 #else /* HAVE_REDIRECTOR_F */
-  return (0);
+  return NULL;
 #endif /* HAVE_REDIRECTOR_F */
 }
 
