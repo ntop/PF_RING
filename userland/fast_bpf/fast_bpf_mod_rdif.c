@@ -72,17 +72,113 @@ static int __fast_bpf_rdif_interface_set_permit_action(int unit,fast_bpf_rdif_in
 static int __fast_bpf_rdif_add_rule(int unit, fast_bpf_rdif_interface_t intf);
 static int __fast_bpf_rdif_interface_set_drop_all(int unit, fast_bpf_rdif_interface_t intf);
 
-static int __fast_bpf_rdif_fast_bpf_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
-static void __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n);
-static int __fast_bpf_rdif_fast_bpf_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
-static int __fast_bpf_rdif_fast_bpf_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun);
-static int __fast_bpf_rdif_fast_bpf_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule);
+static int __fast_bpf_rdif_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
+static void __fast_bpf_rdif_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n);
+static int __fast_bpf_rdif_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
+static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun);
+static int __fast_bpf_rdif_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule);
 static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t intf);
 
 #if 0
-static void __fast_bpf_rdif_fast_bpf_call_print_tree(fast_bpf_tree_t *tree);
-static void __fast_bpf_rdif_fast_bpf_print_tree(fast_bpf_node_t *n);
+static void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree);
+static void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n);
 #endif
+
+/* -------------------------------------------------- */
+
+static int __fast_bpf_rdif_is_supported(char *interface) {
+  char path[256];
+  char line[512];
+  FILE *fd;
+  int rc = 0;
+
+  snprintf(path, "/sys/class/net/%s/device/device", interface);
+
+  fd = fopen(path, "r");
+
+  if (fd == NULL)
+    return 0;
+
+  if (fgets(line, sizeof(line) - 1, fd)) {
+    if (strcmp(line, "0x15a4") == 0)
+      rc = 1;
+  }
+
+  fclose(fd);
+  return rc;
+}
+
+static int __fast_bpf_rdif_get_bus_id(char *interface) {
+  const char *pci_slot_name_str = "PCI_SLOT_NAME=";
+  char path[256];
+  char line[512];
+  FILE *fd;
+  char *bus_id_ptr;
+  int bus_id = -1;
+  char *domin, *bus, *slot, *func;
+
+  snprintf(path, "/sys/class/net/%s/device/uevent", interface);
+
+  fd = fopen(path, "r");
+
+  if (fd == NULL)
+    return 0;
+
+  while (fgets(line, sizeof(line) - 1, fd)) {
+    if (strncmp(line, pci_slot_name_str, strlen(pci_slot_name_str)) != 0)
+      continue;
+
+    /* PCI_SLOT_NAME=0000:04:00.0 */
+
+    bus_id_ptr = &line[strlen(pci_slot_name_str) + 5];
+    bus_id_ptr[2] = '\0';
+    sscanf("%hX", &bus_id); 
+
+    break;
+  }
+
+  fclose(fd);
+
+  return bus_id;
+}
+
+static int __fast_bpf_rdif_get_interface_id(char *interface) {
+  struct dirent **pent;
+  int pnum, i, id = -1;
+  int bus_id;
+
+  if (!__fast_bpf_rdif_is_supported(interface))
+    return -1;
+
+  bus_id = __fast_bpf_rdif_get_bus_id(interface);
+
+  if (bus_id < 0)
+    return -1;
+
+  pnum = scandir("/sys/class/net/", &pent, NULL, NULL);
+
+  if (pnum <= 0)
+    return -1;
+
+  for (i = 0; i < pnum; i++) {
+    if (id == -1) {
+      if (!(pent[i]->d_name[0] == '.' ||
+            strcmp(pent[i]->d_name, "lo") == 0)) {
+        if (__fast_bpf_rdif_is_supported(pent[i]->d_name)) { 
+          int other_bus_id = __fast_bpf_rdif_get_bus_id(interface);
+          if (other_bus_id != -1) {
+            if (other_bus_id > bus_id) id = 0;
+            else id = 1;
+          }
+        }
+      }
+    }
+    free(pent[i]);
+  }
+  free(pent);
+
+  return id;
+}
 
 /* -------------------------------------------------- */
 /*
@@ -375,7 +471,7 @@ static int __fast_bpf_rdif_interface_set_protocol(int unit, fast_bpf_rdif_interf
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_fast_bpf_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree) {
+static int __fast_bpf_rdif_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree) {
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
 
@@ -384,7 +480,7 @@ static int __fast_bpf_rdif_fast_bpf_check_rules_constraints(int unit, fast_bpf_r
     return (0);
 
   /* check the intel specific rules of the fast bpf */
-  if(!__fast_bpf_rdif_fast_bpf_check_specific_constrains(unit, intf, tree))
+  if(!__fast_bpf_rdif_check_specific_constrains(unit, intf, tree))
     return (0);
 
   return (1);
@@ -399,7 +495,7 @@ static int __fast_bpf_rdif_fast_bpf_check_rules_constraints(int unit, fast_bpf_r
  *     - "n" -> pointer to a node in the tree
  */
 /* -------------------------------------------------- */
-static void __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n){
+static void __fast_bpf_rdif_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n){
 
   if(unit >= MAX_INTEL_DEV) return;
   if(intf >= MAX_INTERFACE) return;
@@ -445,13 +541,13 @@ static void __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(int unit, fa
     case N_AND:
       /* If you enter here, you have a bpf filter with just "and" operators */
       constraint_parameters[unit][intf].is_and++;
-      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->l);
-      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->r);
+      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->l);
+      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->r);
       break;
     case N_OR:
       /* If you enter here, you have a bpf filter with just "or" operators */
-      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->l);
-      __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, n->r);
+      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->l);
+      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->r);
       break;
     default:
       break;
@@ -471,7 +567,7 @@ static void __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(int unit, fa
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_fast_bpf_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree){
+static int __fast_bpf_rdif_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree){
 
    if(unit >= MAX_INTEL_DEV) return (0);
    if(intf >= MAX_INTERFACE) return (0);
@@ -479,7 +575,7 @@ static int __fast_bpf_rdif_fast_bpf_check_specific_constrains(int unit, fast_bpf
 
    /* reset structure for check constrains */
    memset( &constraint_parameters[unit][intf], 0, sizeof(check_constraint_t));
-   __fast_bpf_rdif_fast_bpf_check_node_specific_constrains(unit, intf, tree->root);
+   __fast_bpf_rdif_check_node_specific_constrains(unit, intf, tree->root);
 
    /* If you have element not managed, return failure */
    if (constraint_parameters[unit][intf].not_managed != 0)
@@ -515,7 +611,7 @@ static int __fast_bpf_rdif_fast_bpf_check_specific_constrains(int unit, fast_bpf
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_fast_bpf_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun) {
+static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun) {
   fast_bpf_rule_block_list_item_t *currPun;
   fast_bpf_rule_list_item_t * pun;
 
@@ -531,7 +627,7 @@ static int __fast_bpf_rdif_fast_bpf_create_and_set_rules(int unit, fast_bpf_rdif
   while (currPun != NULL){
     pun = currPun->rule_list_head;
     while (pun!=NULL) {
-      if( !__fast_bpf_rdif_fast_bpf_set_single_rule(unit, intf, pun) ){
+      if( !__fast_bpf_rdif_set_single_rule(unit, intf, pun) ){
         fast_bpf_rdif_init(unit, intf);
         return (0);
       }
@@ -561,7 +657,7 @@ static int __fast_bpf_rdif_fast_bpf_create_and_set_rules(int unit, fast_bpf_rdif
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_fast_bpf_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule){
+static int __fast_bpf_rdif_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule){
 
   if(unit >= MAX_INTEL_DEV) return (0);
   if(intf >= MAX_INTERFACE) return (0);
@@ -682,7 +778,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   }
 
   /* checks if the constrains are respected (both fast bpf and specific intel fast bpf) */
-  if(!__fast_bpf_rdif_fast_bpf_check_rules_constraints(0, handle->intf, tree)){
+  if(!__fast_bpf_rdif_check_rules_constraints(0, handle->intf, tree)){
 #ifdef DEBUG
     printf("Error on checking constrains for a bpf filter.\n");
 #endif
@@ -698,7 +794,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   }
 
   /* Creates and set the rules on the nic */
-  if( !__fast_bpf_rdif_fast_bpf_create_and_set_rules(0, handle->intf, punBlock) ){
+  if( !__fast_bpf_rdif_create_and_set_rules(0, handle->intf, punBlock) ){
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
@@ -726,21 +822,25 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
 fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
 #ifdef HAVE_REDIRECTOR_F
   fast_bpf_rdif_handle_t *handle;
+  int intf, unit;
+
+  unit = 0; //TODO
+  intf = __fast_bpf_rdif_get_interface_id(ifname);
+
+  if (intf < 0)
+    return NULL;
+
+  if (unit >= MAX_INTEL_DEV || 
+      intf >= MAX_INTERFACE)
+    return NULL;
 
   handle = calloc(1, sizeof(fast_bpf_rdif_handle_t));
 
   if (handle == NULL)
     return NULL;
 
-  //TODO
-  //handle->unit = 
-  //handle->intf = 
-
-  if (handle->unit >= MAX_INTEL_DEV || 
-      handle->intf >= MAX_INTERFACE) {
-    free(handle);
-    return NULL;
-  }
+  handle->unit = unit;
+  handle->intf = intf;
 
   /* Clear all rules for the interface */
   if( !__fast_bpf_rdif_interface_clear(handle->unit, handle->intf) ) {
@@ -793,7 +893,7 @@ int fast_bpf_rdif_reset(int unit){
 
 #if 0
 /* -------------------------------------------------- */
-void __fast_bpf_rdif_fast_bpf_print_tree(fast_bpf_node_t *n){
+void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n){
 
   if (n == NULL) return; /* empty and/or operators not allowed */
   if (n->not_rule) return;
@@ -807,8 +907,8 @@ void __fast_bpf_rdif_fast_bpf_print_tree(fast_bpf_node_t *n){
       break;
     case N_AND:
     case N_OR:
-      __fast_bpf_rdif_fast_bpf_print_tree(n->l);
-      __fast_bpf_rdif_fast_bpf_print_tree(n->r);
+      __fast_bpf_rdif_print_tree(n->l);
+      __fast_bpf_rdif_print_tree(n->r);
       break;
     default:
       break;
@@ -817,7 +917,7 @@ void __fast_bpf_rdif_fast_bpf_print_tree(fast_bpf_node_t *n){
 }
 
 /* -------------------------------------------------- */
-void __fast_bpf_rdif_fast_bpf_call_print_tree(fast_bpf_tree_t *tree){
-   __fast_bpf_rdif_fast_bpf_print_tree(tree->root);
+void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree){
+   __fast_bpf_rdif_print_tree(tree->root);
 }
 #endif
