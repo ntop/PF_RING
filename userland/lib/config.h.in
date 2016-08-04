@@ -3,6 +3,12 @@
 /* Accolade support is present */
 #undef HAVE_ACCOLADE
 
+/* Exablaze support is present */
+#undef HAVE_EXABLAZE
+
+/* Define to 1 if you have the <exanic/exanic.h> header file. */
+#undef HAVE_EXANIC_EXANIC_H
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -15,8 +21,14 @@
 /* Define to 1 if you have the `rdi' library (-lrdi). */
 #undef HAVE_LIBRDI
 
+/* Define to 1 if you have the `rdif' library (-lrdif). */
+#undef HAVE_LIBRDIF
+
 /* Define to 1 if you have the <librdi.h> header file. */
 #undef HAVE_LIBRDI_H
+
+/* Define to 1 if you have the `sze2' library (-lsze2). */
+#undef HAVE_LIBSZE2
 
 /* Define to 1 if you have the <linux/net_tstamp.h> header file. */
 #undef HAVE_LINUX_NET_TSTAMP_H
@@ -26,6 +38,9 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Myricom support is present */
+#undef HAVE_MYRICOM
 
 /* libc has pthread_setaffinity_np */
 #undef HAVE_PTHREAD_SETAFFINITY_NP

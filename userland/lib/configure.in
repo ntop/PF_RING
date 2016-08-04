@@ -105,6 +105,12 @@ if test "x$enable_rdi" != "xno"; then :
   fi
 fi
 
+dnl> Exablaze - http://exablaze.com
+AC_CHECK_HEADERS(exanic/exanic.h)
+if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
+  AC_CHECK_LIB([exanic], [exanic_acquire_handle], [ EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; SYSLIBS="$SYSLIBS $EXABLAZE_LIB"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"])
+fi
+
 dnl> Redis - Default disabled
 REDIS_LIB=""
 AC_ARG_ENABLE([redis], AS_HELP_STRING([--enable-redis], [Enable Redis support in PF_RING]))
@@ -276,6 +282,10 @@ AC_SUBST(INVEATECH_INC)
 AC_SUBST(INVEATECH_LIB)
 AC_SUBST(INVEATECH_OBJS)
 AC_SUBST(HAVE_INVEATECH)
+AC_SUBST(EXABLAZE_INC)
+AC_SUBST(EXABLAZE_LIB)
+AC_SUBST(EXABLAZE_OBJS)
+AC_SUBST(HAVE_EXABLAZE)
 AC_SUBST(HAVE_MLX)
 AC_SUBST(MLX_OBJS)
 AC_SUBST(HAVE_BPF)

@@ -633,6 +633,10 @@ BPF_INCLUDE
 HAVE_BPF
 MLX_OBJS
 HAVE_MLX
+HAVE_EXABLAZE
+EXABLAZE_OBJS
+EXABLAZE_LIB
+EXABLAZE_INC
 HAVE_INVEATECH
 INVEATECH_OBJS
 INVEATECH_LIB
@@ -3544,6 +3548,61 @@ $as_echo "no" >&6; }
   fi
 fi
 
+for ac_header in exanic/exanic.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "exanic/exanic.h" "ac_cv_header_exanic_exanic_h" "$ac_includes_default"
+if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_EXANIC_EXANIC_H 1
+_ACEOF
+
+fi
+
+done
+
+if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for exanic_acquire_handle in -lexanic" >&5
+$as_echo_n "checking for exanic_acquire_handle in -lexanic... " >&6; }
+if ${ac_cv_lib_exanic_exanic_acquire_handle+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lexanic  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char exanic_acquire_handle ();
+int
+main ()
+{
+return exanic_acquire_handle ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_exanic_exanic_acquire_handle=yes
+else
+  ac_cv_lib_exanic_exanic_acquire_handle=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_exanic_exanic_acquire_handle" >&5
+$as_echo "$ac_cv_lib_exanic_exanic_acquire_handle" >&6; }
+if test "x$ac_cv_lib_exanic_exanic_acquire_handle" = xyes; then :
+   EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; SYSLIBS="$SYSLIBS $EXABLAZE_LIB"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"
+fi
+
+fi
+
 REDIS_LIB=""
 # Check whether --enable-redis was given.
 if test "${enable_redis+set}" = set; then :
@@ -3999,6 +4058,10 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
+
+
+
+
 
 
 

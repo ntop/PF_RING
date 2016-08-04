@@ -54,8 +54,13 @@
 #endif
 
 #ifdef HAVE_INVEATECH
-/* Myricom */
+/* InveaTech */
 #include "pfring_mod_invea.h"
+#endif
+
+#ifdef HAVE_EXABLAZE
+/* Exablaze */
+#include "pfring_mod_exablaze.h"
 #endif
 
 #ifdef HAVE_PF_RING_ZC
@@ -114,6 +119,13 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "invea",
     .open = pfring_invea_open,
+  },
+#endif
+
+#ifdef HAVE_EXABLAZE
+  {
+    .name = "exanic",
+    .open = pfring_exablaze_open,
   },
 #endif
 

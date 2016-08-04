@@ -203,9 +203,9 @@ struct __pfring {
   struct {
     u_int8_t enabled_rx_packet_send;
     struct pfring_pkthdr *last_received_hdr; /*
-						 Header of the past packet
-						 that has been received on this socket
-					       */
+					       Header of the past packet
+					       that has been received on this socket
+					     */
   } tx;
 
   u_int8_t zc_device;

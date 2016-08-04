@@ -61,9 +61,7 @@ unsigned long long rdtsc() {
 
 /* **************************************************** */
 
-inline int pfring_there_is_pkt_available(pfring *ring) {
-  return ring->slots_info->tot_insert != ring->slots_info->tot_read;
-}
+#define pfring_there_is_pkt_available(ring) (ring->slots_info->tot_insert != ring->slots_info->tot_read)
 
 /* **************************************************** */
 
