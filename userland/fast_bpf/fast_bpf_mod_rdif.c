@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
 #include <arpa/inet.h>
 
 #include "fast_bpf.h"
@@ -61,6 +62,7 @@ static check_constraint_t constraint_parameters[MAX_INTEL_DEV][MAX_INTERFACE];
 static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2);
 static int __fast_bpf_rdif_interface_set_port_inline(int unit, fast_bpf_rdif_interface_t intf);
 
+static int __fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf);
 static int __fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf);
 static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_interface_t intf, unsigned int ipAddress, unsigned int isSrc);
 static int __fast_bpf_rdif_interface_set_port(int unit, fast_bpf_rdif_interface_t intf, unsigned int port, unsigned int isSrc);
@@ -92,7 +94,7 @@ static int __fast_bpf_rdif_is_supported(char *interface) {
   FILE *fd;
   int rc = 0;
 
-  snprintf(path, "/sys/class/net/%s/device/device", interface);
+  sprintf(path, "/sys/class/net/%s/device/device", interface);
 
   fd = fopen(path, "r");
 
@@ -100,7 +102,7 @@ static int __fast_bpf_rdif_is_supported(char *interface) {
     return 0;
 
   if (fgets(line, sizeof(line) - 1, fd)) {
-    if (strcmp(line, "0x15a4") == 0)
+    if (strncmp(line, "0x15a4", 6) == 0)
       rc = 1;
   }
 
@@ -114,15 +116,14 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
   char line[512];
   FILE *fd;
   char *bus_id_ptr;
-  int bus_id = -1;
-  char *domin, *bus, *slot, *func;
+  short unsigned int bus_id = 0;
 
-  snprintf(path, "/sys/class/net/%s/device/uevent", interface);
+  sprintf(path, "/sys/class/net/%s/device/uevent", interface);
 
   fd = fopen(path, "r");
 
   if (fd == NULL)
-    return 0;
+    return -1;
 
   while (fgets(line, sizeof(line) - 1, fd)) {
     if (strncmp(line, pci_slot_name_str, strlen(pci_slot_name_str)) != 0)
@@ -132,7 +133,7 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
 
     bus_id_ptr = &line[strlen(pci_slot_name_str) + 5];
     bus_id_ptr[2] = '\0';
-    sscanf("%hX", &bus_id); 
+    sscanf(bus_id_ptr, "%hX", &bus_id); 
 
     break;
   }
@@ -142,7 +143,7 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
   return bus_id;
 }
 
-static int __fast_bpf_rdif_get_interface_id(char *interface) {
+int __fast_bpf_rdif_get_interface_id(char *interface) {
   struct dirent **pent;
   int pnum, i, id = -1;
   int bus_id;
@@ -619,7 +620,7 @@ static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interfac
     return (0);
 
   /* Clear and initialize the environment */
-  if (!fast_bpf_rdif_init(unit, intf))
+  if (!__fast_bpf_rdif_init(unit, intf))
     return (0);
 
   /* through the list and set the single rule*/
@@ -628,7 +629,7 @@ static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interfac
     pun = currPun->rule_list_head;
     while (pun!=NULL) {
       if( !__fast_bpf_rdif_set_single_rule(unit, intf, pun) ){
-        fast_bpf_rdif_init(unit, intf);
+        __fast_bpf_rdif_init(unit, intf);
         return (0);
       }
       pun = pun->next;
@@ -638,7 +639,7 @@ static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interfac
 
   /* The last rule drop all the traffic*/
   if( !__fast_bpf_rdif_interface_set_drop_all(unit, intf) ){
-    fast_bpf_rdif_init(unit, intf);
+    __fast_bpf_rdif_init(unit, intf);
     return (0);
   }
 
@@ -664,7 +665,7 @@ static int __fast_bpf_rdif_set_single_rule(int unit, fast_bpf_rdif_interface_t i
   if(rule == NULL) return (0);
 
   /* Init the variables in order to set a rule */
-  if(!fast_bpf_rdif_init_for_rule(unit, intf))
+  if(!__fast_bpf_rdif_init_for_rule(unit, intf))
     return (0);
   /*Set permit action*/
   if(!__fast_bpf_rdif_interface_set_permit_action(unit, intf))
@@ -801,11 +802,38 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
     return (0);
   }
 
-  fast_bpf_blocks_list_free(punBlock);
+  fast_bpf_rule_block_list_free(punBlock);
   fast_bpf_free(tree);
   return (1);
 #else  /* HAVE_REDIRECTOR_F */
   return (0);
+#endif /* HAVE_REDIRECTOR_F */
+}
+
+/* -------------------------------------------------- */
+
+static int __fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf) {
+#ifdef HAVE_REDIRECTOR_F
+
+  /* Clear all rules for the interface */
+  if( !__fast_bpf_rdif_interface_clear(unit, intf) ) {
+#ifdef DEBUG
+    printf("Error on cleaning the rules in initialization phase.");
+#endif
+    return 0;
+  }
+
+  /* Set all interfaces inline mode */
+  if( !__fast_bpf_rdif_interface_set_port_inline(unit, intf) ){
+#ifdef DEBUG
+    printf("Error on setting interface in inline mode.");
+#endif
+    return 0;
+  }
+
+  return 1;
+#else /* HAVE_REDIRECTOR_F */
+  return 0;
 #endif /* HAVE_REDIRECTOR_F */
 }
 
@@ -834,6 +862,9 @@ fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
       intf >= MAX_INTERFACE)
     return NULL;
 
+  if (!__fast_bpf_rdif_init(unit, intf));
+    return NULL;
+
   handle = calloc(1, sizeof(fast_bpf_rdif_handle_t));
 
   if (handle == NULL)
@@ -841,24 +872,6 @@ fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
 
   handle->unit = unit;
   handle->intf = intf;
-
-  /* Clear all rules for the interface */
-  if( !__fast_bpf_rdif_interface_clear(handle->unit, handle->intf) ) {
-#ifdef DEBUG
-    printf("Error on cleaning the rules in initialization phase.");
-#endif
-    free(handle);
-    return NULL;
-  }
-
-  /* Set all interfaces inline mode */
-  if( !__fast_bpf_rdif_interface_set_port_inline(handle->unit, handle->intf) ){
-#ifdef DEBUG
-    printf("Error on setting interface in inline mode.");
-#endif
-    free(handle);
-    return NULL;
-  }
 
   return handle;
 #else /* HAVE_REDIRECTOR_F */
