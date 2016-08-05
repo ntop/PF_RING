@@ -1158,13 +1158,16 @@ int pfring_next_pkt_raw_timestamp(pfring *ring, u_int64_t *ts) {
 int pfring_set_bpf_filter(pfring *ring, char *filter_buffer) {
   int rc = PF_RING_ERROR_NOT_SUPPORTED;
 
-  if(!ring)
+  if (!ring)
     return -1;
 
-  if (!ring->force_userspace_bpf && ring->set_bpf_filter)
-    return ring->set_bpf_filter(ring, filter_buffer);
+  if (!ring->force_userspace_bpf && ring->set_bpf_filter) {
+    rc = ring->set_bpf_filter(ring, filter_buffer);
+    if (rc == 0)
+      return rc;
+  }
 
-  /* no in-kernel bpf support, setting up userspace bpf */
+  /* no in-kernel or module-dependent bpf support, setting up userspace bpf */
 
   if (unlikely(ring->reentrant))
     pthread_rwlock_wrlock(&ring->rx_lock);
