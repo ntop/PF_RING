@@ -6519,7 +6519,8 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
 
   if (!found) {
     printk("[PF_RING] %s:%d something got wrong removing socket bound to %s@%u\n", 
-           __FUNCTION__, __LINE__, entry->dev.netdev->name, entry->dev.channel_id);
+           __FUNCTION__, __LINE__, 
+           entry->dev.netdev->name != NULL ? entry->dev.netdev->name : "?", entry->dev.channel_id);
     return -1; /* Something got wrong */
   }
 

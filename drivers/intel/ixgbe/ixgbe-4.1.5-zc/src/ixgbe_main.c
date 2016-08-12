@@ -10145,7 +10145,8 @@ static int ixgbe_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 #elif defined(HAVE_NDO_BRIDGE_GETLINK_NLFLAGS)
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode, 0, 0, nlflags);
 #elif defined(HAVE_NDO_FDB_ADD_VID) || \
-      defined NDO_BRIDGE_GETLINK_HAS_FILTER_MASK_PARAM
+      defined NDO_BRIDGE_GETLINK_HAS_FILTER_MASK_PARAM || \
+      (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,0))	
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode, 0, 0);
 #else
 	return ndo_dflt_bridge_getlink(skb, pid, seq, dev, mode);
