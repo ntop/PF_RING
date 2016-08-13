@@ -56,7 +56,9 @@ EXABLAZE_OBJS  = @EXABLAZE_OBJS@
 #
 # Fast_BPF
 #
-FASTBPF_LIB = ../fast_bpf/libfastbpf.a
+FASTBPF_HOME = ../fast_bpf
+FASTBPF_HDR = ${FASTBPF_HOME}/fast_bpf.h
+FASTBPF_LIB = ${FASTBPF_HOME}/libfastbpf.a
 FASTBPF_OBJS = `ar t ${FASTBPF_LIB} | grep -F .o | tr '\n' ' '`
 
 #
@@ -111,6 +113,7 @@ extract_nt_lib:
 
 extract_fast_bpf: ${FASTBPF_LIB}
 	ar x ${FASTBPF_LIB}
+	cp ${FASTBPF_HDR} .
 
 ${FASTBPF_LIB}:
 	cd ../fast_bpf; make
