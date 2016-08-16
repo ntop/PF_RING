@@ -677,7 +677,7 @@ u_int32_t pfring_mod_get_num_queued_pkts(pfring *ring) {
 
 /* **************************************************** */
 
-u_int16_t pfring_mod_get_ring_id(pfring *ring) {
+u_int32_t pfring_mod_get_ring_id(pfring *ring) {
   u_int32_t id;
   socklen_t len = sizeof(id);
 

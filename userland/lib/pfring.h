@@ -238,7 +238,7 @@ struct __pfring {
   int       (*remove_from_cluster)          (pfring *);
   int       (*set_master_id)                (pfring *, u_int32_t);
   int       (*set_master)                   (pfring *, pfring *);
-  u_int16_t (*get_ring_id)                  (pfring *);
+  u_int32_t (*get_ring_id)                  (pfring *);
   u_int32_t (*get_num_queued_pkts)          (pfring *);
   u_int8_t  (*get_packet_consumer_mode)     (pfring *);
   int       (*set_packet_consumer_mode)     (pfring *, u_int8_t, char *, u_int);
@@ -710,7 +710,7 @@ int pfring_set_master(pfring *ring, pfring *master);
  * @param ring The PF_RING handle.
  * @return The ring id.
  */
-u_int16_t pfring_get_ring_id(pfring *ring);
+u_int32_t pfring_get_ring_id(pfring *ring);
 
 /**
  * Return an estimation of the enqueued packets.

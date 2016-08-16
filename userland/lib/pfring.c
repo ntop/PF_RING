@@ -883,7 +883,7 @@ int pfring_set_master(pfring *ring, pfring *master) {
 
 /* **************************************************** */
 
-u_int16_t pfring_get_ring_id(pfring *ring) {
+u_int32_t pfring_get_ring_id(pfring *ring) {
   if(ring && ring->get_ring_id)
     return ring->get_ring_id(ring);
 

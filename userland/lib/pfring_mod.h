@@ -42,7 +42,7 @@ int pfring_mod_set_cluster(pfring *ring, u_int clusterId, cluster_type the_type)
 int pfring_mod_remove_from_cluster(pfring *ring);
 int pfring_mod_set_master_id(pfring *ring, u_int32_t master_id);
 int pfring_mod_set_master(pfring *ring, pfring *master);
-u_int16_t pfring_mod_get_ring_id(pfring *ring);
+u_int32_t pfring_mod_get_ring_id(pfring *ring);
 u_int32_t pfring_mod_get_num_queued_pkts(pfring *ring);
 u_int8_t pfring_mod_get_packet_consumer_mode(pfring *ring);
 int pfring_mod_set_packet_consumer_mode(pfring *ring, u_int8_t plugin_id,
