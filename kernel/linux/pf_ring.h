@@ -870,7 +870,7 @@ struct send_msg_to_plugin_info {
 #endif
 #endif
 
-#define CLUSTER_LEN       32
+#define CLUSTER_LEN       64
 
 /*
  * A ring cluster is used group together rings used by various applications
