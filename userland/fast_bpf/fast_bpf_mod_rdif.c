@@ -13,7 +13,6 @@
 #include "fast_bpf.h"
 #include "fast_bpf_mod_rdif.h"
 #ifdef HAVE_REDIRECTOR_F
-#include "librdi.h"
 
 //#define DEBUG
 
@@ -24,21 +23,6 @@ typedef struct {
    unsigned int port2;
    unsigned int group_rules;
 } rdif_interface_t;
-
-typedef struct {
-   int action;
-   rdi_mem_t rdi_mem;
-} rules_parameter_t;
-
-typedef struct {
-   unsigned int is_and;
-   unsigned int src_host;
-   unsigned int dst_host;
-   unsigned int src_port;
-   unsigned int dst_port;
-   unsigned int proto;
-   unsigned int not_managed;
-} check_constraint_t;
 
 static rdif_interface_t interface[MAX_INTERFACE] =
 {
@@ -54,32 +38,28 @@ static rdif_interface_t interface[MAX_INTERFACE] =
   }
 };
 
-static unsigned int current_rule_id[MAX_INTEL_DEV][MAX_INTERFACE];
-static rules_parameter_t rules_parameters[MAX_INTEL_DEV][MAX_INTERFACE];
-static check_constraint_t constraint_parameters[MAX_INTEL_DEV][MAX_INTERFACE];
-
 /* Static functions */
 static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2);
-static int __fast_bpf_rdif_interface_set_port_inline(int unit, fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *handle);
 
-static int __fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf);
-static int __fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf);
-static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_interface_t intf, unsigned int ipAddress, unsigned int isSrc);
-static int __fast_bpf_rdif_interface_set_port(int unit, fast_bpf_rdif_interface_t intf, unsigned int port, unsigned int isSrc);
-static int __fast_bpf_rdif_interface_set_protocol(int unit, fast_bpf_rdif_interface_t intf, unsigned int protocol);
+static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle);
+static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle);
+static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc);
+static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc);
+static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle, unsigned int protocol);
 
-static int __fast_bpf_rdif_interface_set_drop_action(int unit, fast_bpf_rdif_interface_t intf);
-static int __fast_bpf_rdif_interface_set_permit_action(int unit,fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *handle);
+static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *handle);
 
-static int __fast_bpf_rdif_add_rule(int unit, fast_bpf_rdif_interface_t intf);
-static int __fast_bpf_rdif_interface_set_drop_all(int unit, fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle);
+static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle);
 
-static int __fast_bpf_rdif_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
-static void __fast_bpf_rdif_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n);
-static int __fast_bpf_rdif_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree);
-static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun);
-static int __fast_bpf_rdif_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule);
-static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t intf);
+static int __fast_bpf_rdif_check_rules_constraints(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree);
+static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_node_t *n);
+static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree);
+static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_block_list_item_t *blockPun);
+static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule);
+static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle);
 
 #if 0
 static void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree);
@@ -133,7 +113,7 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
 
     bus_id_ptr = &line[strlen(pci_slot_name_str) + 5];
     bus_id_ptr[2] = '\0';
-    sscanf(bus_id_ptr, "%hX", &bus_id); 
+    sscanf(bus_id_ptr, "%hX", &bus_id);
 
     break;
   }
@@ -165,7 +145,7 @@ int __fast_bpf_rdif_get_interface_id(char *interface) {
     if (id == -1) {
       if (!(pent[i]->d_name[0] == '.' ||
             strcmp(pent[i]->d_name, "lo") == 0)) {
-        if (__fast_bpf_rdif_is_supported(pent[i]->d_name)) { 
+        if (__fast_bpf_rdif_is_supported(pent[i]->d_name)) {
           int other_bus_id = __fast_bpf_rdif_get_bus_id(interface);
           if (other_bus_id != -1) {
             if (other_bus_id > bus_id) id = 0;
@@ -218,22 +198,20 @@ static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2){
 /*
  * This function sets the switch ports for a interface in inline mode
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_port_inline(int unit, fast_bpf_rdif_interface_t intf){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *handle){
+  if(handle == NULL) return (0);
 
   /* Set interface in inline mode (normal direction) */
-  if(!__fast_bpf_rdif_set_port_inline(unit, interface[intf].port1, interface[intf].port2))
+  if(!__fast_bpf_rdif_set_port_inline(handle->unit, interface[handle->intf].port1, interface[handle->intf].port2))
     return (0);
   /* Set interface in inline mode (reverse direction) */
-  if(!__fast_bpf_rdif_set_port_inline(unit, interface[intf].port2, interface[intf].port1))
+  if(!__fast_bpf_rdif_set_port_inline(handle->unit, interface[handle->intf].port2, interface[handle->intf].port1))
     return (0);
   return (1);
 }
@@ -242,20 +220,18 @@ static int __fast_bpf_rdif_interface_set_port_inline(int unit, fast_bpf_rdif_int
 /*
  * This function is used to prepare a drop rules
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_drop_action(int unit, fast_bpf_rdif_interface_t intf){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *handle){
+  if(handle == NULL) return (0);
 
   /* Set drop action */
-  rules_parameters[unit][intf].action  = 0;
-  rules_parameters[unit][intf].action |= 1<<RDI_ACT_DROP;
+  handle->rules_parameters.action  = 0;
+  handle->rules_parameters.action |= 1<<RDI_ACT_DROP;
 
   return (1);
 }
@@ -264,20 +240,18 @@ static int __fast_bpf_rdif_interface_set_drop_action(int unit, fast_bpf_rdif_int
 /*
  * This function is used to prepare a permit rules
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_permit_action(int unit, fast_bpf_rdif_interface_t intf){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *handle){
+  if(handle == NULL) return (0);
 
   /* Set permit action */
-  rules_parameters[unit][intf].action  = 0;
-  rules_parameters[unit][intf].action |= 1<<RDI_ACT_PERMIT;
+  handle->rules_parameters.action  = 0;
+  handle->rules_parameters.action |= 1<<RDI_ACT_PERMIT;
 
   return (1);
 }
@@ -287,36 +261,34 @@ static int __fast_bpf_rdif_interface_set_permit_action(int unit, fast_bpf_rdif_i
  * This function adds a rule for an interface .
  * Use this as a first called function before to prepare and set a rule.
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_add_rule(int unit, fast_bpf_rdif_interface_t intf){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle){
+  if(handle == NULL) return (0);
 
 #ifdef DEBUG
   printf("Print Rule:\n");
-  printf("rule id: %d\n", rules_parameters[unit][intf].rdi_mem.rule_id);
-  printf("group: %d\n", rules_parameters[unit][intf].rdi_mem.group);
-  printf("port: %d\n", rules_parameters[unit][intf].rdi_mem.port);
-  printf("src_ip: %02X\n", rules_parameters[unit][intf].rdi_mem.src_ip);
-  printf("dst_ip: %02X\n", rules_parameters[unit][intf].rdi_mem.dst_ip);
-  printf("src_port: %d\n", rules_parameters[unit][intf].rdi_mem.src_port);
-  printf("dst_port: %d\n", rules_parameters[unit][intf].rdi_mem.dst_port);
-  printf("proto: %d\n\n", rules_parameters[unit][intf].rdi_mem.ip_protocol);
+  printf("rule id: %d\n", handle->rules_parameters.rdi_mem.rule_id);
+  printf("group: %d\n", handle->rules_parameters.rdi_mem.group);
+  printf("port: %d\n", handle->rules_parameters.rdi_mem.port);
+  printf("src_ip: %02X\n", handle->rules_parameters.rdi_mem.src_ip);
+  printf("dst_ip: %02X\n", handle->rules_parameters.rdi_mem.dst_ip);
+  printf("src_port: %d\n", handle->rules_parameters.rdi_mem.src_port);
+  printf("dst_port: %d\n", handle->rules_parameters.rdi_mem.dst_port);
+  printf("proto: %d\n\n", handle->rules_parameters.rdi_mem.ip_protocol);
 #endif
 
   /* Set group id rule associated to interface */
-  rules_parameters[unit][intf].rdi_mem.group = ((MAX_INTERFACE * unit) + interface[intf].group_rules);
+  handle->rules_parameters.rdi_mem.group = ((MAX_INTERFACE * handle->unit) + interface[handle->intf].group_rules);
   /* Set switch ingress port */
-  rules_parameters[unit][intf].rdi_mem.port = interface[intf].port1;
+  handle->rules_parameters.rdi_mem.port = interface[handle->intf].port1;
 
   /* Add rule to card for a specific switch ingress port */
-  if(rdi_add_rule(unit, &rules_parameters[unit][intf].rdi_mem, rules_parameters[unit][intf].action, RDI_FLCM_DEV) < 0)
+  if(rdi_add_rule(handle->unit, &handle->rules_parameters.rdi_mem, handle->rules_parameters.action, RDI_FLCM_DEV) < 0)
     return (0);
 
   return (1);
@@ -327,26 +299,24 @@ static int __fast_bpf_rdif_add_rule(int unit, fast_bpf_rdif_interface_t intf){
  * This function sets a rule that drops all the traffic for an interface.
  * Use this as the last set rule. The rules added below will be ignored.
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_drop_all(int unit, fast_bpf_rdif_interface_t intf){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle){
+  if(handle == NULL) return (0);
 
-  bzero(&rules_parameters[unit][intf].rdi_mem, sizeof(rdi_mem_t));
+  bzero(&handle->rules_parameters.rdi_mem, sizeof(rdi_mem_t));
   /* Set drop action */
-  __fast_bpf_rdif_interface_set_drop_action(unit, intf);
+  __fast_bpf_rdif_interface_set_drop_action(handle);
   /* Set rule identifier, switch ingress port and group identifier */
-  rules_parameters[unit][intf].rdi_mem.rule_id = current_rule_id[unit][intf]++;
-  rules_parameters[unit][intf].rdi_mem.port = interface[intf].port1;
-  rules_parameters[unit][intf].rdi_mem.group = ((MAX_INTERFACE * unit) + interface[intf].group_rules);
+  handle->rules_parameters.rdi_mem.rule_id = handle->current_rule_id++;
+  handle->rules_parameters.rdi_mem.port = interface[handle->intf].port1;
+  handle->rules_parameters.rdi_mem.group = ((MAX_INTERFACE * handle->unit) + interface[handle->intf].group_rules);
   /* Add rule in order to dropp all the traffic for a specific interface */
-  return __fast_bpf_rdif_add_rule(unit, intf);
+  return __fast_bpf_rdif_add_rule(handle);
 }
 
 /* -------------------------------------------------- */
@@ -354,25 +324,23 @@ static int __fast_bpf_rdif_interface_set_drop_all(int unit, fast_bpf_rdif_interf
  * This function initializes the local variabiles used in order to set a rule.
  * Use this as the first called function before to prepare and set a rule.
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t intf){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle){
+  if(handle == NULL) return (0);
 
-  bzero(&rules_parameters[unit][intf].rdi_mem, sizeof(rdi_mem_t));
+  bzero(&handle->rules_parameters.rdi_mem, sizeof(rdi_mem_t));
 
   /* set rules group for a specific interface */
-  rules_parameters[unit][intf].rdi_mem.group = ((MAX_INTERFACE * unit) + interface[intf].group_rules);
+  handle->rules_parameters.rdi_mem.group = ((MAX_INTERFACE * handle->unit) + interface[handle->intf].group_rules);
   /* set ingress port of the swicth*/
-  rules_parameters[unit][intf].rdi_mem.port = interface[intf].port1;
+  handle->rules_parameters.rdi_mem.port = interface[handle->intf].port1;
   /* set rule id*/
-  rules_parameters[unit][intf].rdi_mem.rule_id = current_rule_id[unit][intf]++;
+  handle->rules_parameters.rdi_mem.rule_id = handle->current_rule_id++;
 
   return (1);
 }
@@ -381,8 +349,7 @@ static int __fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t int
 /*
  * This function sets the source or destination ip v4 address in a rule
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "ipAddress" -> ip address
  *     - "isSrc"-> 1 for a source ip address or 0 for a destination ip address
  * Return value:
@@ -390,19 +357,18 @@ static int __fast_bpf_rdif_init_for_rule(int unit, fast_bpf_rdif_interface_t int
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_interface_t intf, unsigned int ipAddress, unsigned int isSrc){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc){
+  if(handle == NULL) return (0);
 
   if(isSrc) {
     /* Set ipv4 source address */
-    rules_parameters[unit][intf].rdi_mem.src_ip = ipAddress;
+    handle->rules_parameters.rdi_mem.src_ip = ipAddress;
   } else {
     /* Set ipv4 destination address */
-    rules_parameters[unit][intf].rdi_mem.dst_ip = ipAddress;
+    handle->rules_parameters.rdi_mem.dst_ip = ipAddress;
   }
   /* Set ipv4 mode */
-  rules_parameters[unit][intf].rdi_mem.src_ip6.flag=0;
+  handle->rules_parameters.rdi_mem.src_ip6.flag=0;
 
   return (1);
 }
@@ -411,8 +377,7 @@ static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_in
 /*
  * This function sets the source or destination port in a rule
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "port" -> port number (host format)
  *     - "isSrc"-> 1 for a source port or 0 for a destination port
  * Return value:
@@ -420,18 +385,17 @@ static int __fast_bpf_rdif_interface_set_ipv4_address(int unit, fast_bpf_rdif_in
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_port(int unit, fast_bpf_rdif_interface_t intf, unsigned int port, unsigned int isSrc){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc){
+  if(handle == NULL) return (0);
 
   if(isSrc) {
     /* Set ipv4 source port (you have also to set the mask port) */
-    rules_parameters[unit][intf].rdi_mem.src_port = port;
-    rules_parameters[unit][intf].rdi_mem.src_port_mask = 0xFFFFFFFF;
+    handle->rules_parameters.rdi_mem.src_port = port;
+    handle->rules_parameters.rdi_mem.src_port_mask = 0xFFFFFFFF;
   } else {
     /* Set ipv4 destination port (you have also to set the mask port) */
-    rules_parameters[unit][intf].rdi_mem.dst_port = port;
-    rules_parameters[unit][intf].rdi_mem.dst_port_mask = 0xFFFFFFFF;
+    handle->rules_parameters.rdi_mem.dst_port = port;
+    handle->rules_parameters.rdi_mem.dst_port_mask = 0xFFFFFFFF;
   }
 
   return (1);
@@ -441,20 +405,18 @@ static int __fast_bpf_rdif_interface_set_port(int unit, fast_bpf_rdif_interface_
 /*
  * This function sets the protocol type in a rule
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "protocol" -> protocol
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_protocol(int unit, fast_bpf_rdif_interface_t intf, unsigned int protocol){
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle, unsigned int protocol){
+  if(handle == NULL) return (0);
 
   /* Set protocol */
-  rules_parameters[unit][intf].rdi_mem.ip_protocol = protocol;
+  handle->rules_parameters.rdi_mem.ip_protocol = protocol;
 
   return (1);
 }
@@ -464,24 +426,22 @@ static int __fast_bpf_rdif_interface_set_protocol(int unit, fast_bpf_rdif_interf
  * This function checks before for a general relus constraints and after for the
  * intel NIC card specifies constrains
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
- *     - "tree" -> tree pointer
+ *     - "handle" -> data structure that contains the bpf rdif data
+ *     - "tree"   -> tree pointer
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_check_rules_constraints(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree) {
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+static int __fast_bpf_rdif_check_rules_constraints(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree) {
+  if(handle == NULL) return (0);
 
   /* check the general rules of the fast bpf */
   if(!fast_bpf_check_rules_constraints(tree, 0))
     return (0);
 
   /* check the intel specific rules of the fast bpf */
-  if(!__fast_bpf_rdif_check_specific_constrains(unit, intf, tree))
+  if(!__fast_bpf_rdif_check_specific_constrains(handle, tree))
     return (0);
 
   return (1);
@@ -491,15 +451,13 @@ static int __fast_bpf_rdif_check_rules_constraints(int unit, fast_bpf_rdif_inter
 /*
  * This function loops through the tree and checks the constrains for the specific node.
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "n" -> pointer to a node in the tree
  */
 /* -------------------------------------------------- */
-static void __fast_bpf_rdif_check_node_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_node_t *n){
+static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_node_t *n){
 
-  if(unit >= MAX_INTEL_DEV) return;
-  if(intf >= MAX_INTERFACE) return;
+  if(handle == NULL) return;
   if (n == NULL) return;
   if (n->not_rule) return;
 
@@ -508,47 +466,47 @@ static void __fast_bpf_rdif_check_node_specific_constrains(int unit, fast_bpf_rd
       if(n->qualifiers.address == Q_HOST){
         if (n->qualifiers.direction == Q_SRC){
           /* This counts how many time the src host ip is used in a bpf filter */
-          constraint_parameters[unit][intf].src_host++;
+          handle->constraint_parameters.src_host++;
         } else if(n->qualifiers.direction == Q_DST){
           /* This counts how many time the dst host ip is used */
-          constraint_parameters[unit][intf].dst_host++;
+          handle->constraint_parameters.dst_host++;
         } else {
-          //constraint_parameters[unit][intf].src_host++;
-          //constraint_parameters[unit][intf].dst_host++;
+          //handle->constraint_parameters.src_host++;
+          //handle->constraint_parameters.dst_host++;
           /* At the moment you cannot use bidirectional ip address (for example: "host 192.168.0.1") */
-          constraint_parameters[unit][intf].not_managed++;
+          handle->constraint_parameters.not_managed++;
         }
       } else if(n->qualifiers.address == Q_PORT) {
         if (n->qualifiers.direction == Q_SRC){
           /* This counts how many time the src port is used in a bpf filter */
-          constraint_parameters[unit][intf].src_port++;
+          handle->constraint_parameters.src_port++;
         } else if(n->qualifiers.direction == Q_DST){
           /* This counts how many time the dst port is used in a bpf filter */
-          constraint_parameters[unit][intf].dst_port++;
+          handle->constraint_parameters.dst_port++;
         } else {
-          //constraint_parameters[unit][intf].src_port++;
-          //constraint_parameters[unit][intf].dst_port++;
+          //handle->constraint_parameters.src_port++;
+          //handle->constraint_parameters.dst_port++;
           /* At the moment you cannot use bidirectional ip address (for example: "port 3000") */
-          constraint_parameters[unit][intf].not_managed++;
+          handle->constraint_parameters.not_managed++;
         }
       } else if(n->qualifiers.address == Q_PROTO) {
         /* This counts how many time the protocol is used in a bpf filter */
-        constraint_parameters[unit][intf].proto++;
+        handle->constraint_parameters.proto++;
       } else {
         /* The other cases aren't managed */
-        constraint_parameters[unit][intf].not_managed++;
+        handle->constraint_parameters.not_managed++;
       }
       break;
     case N_AND:
       /* If you enter here, you have a bpf filter with just "and" operators */
-      constraint_parameters[unit][intf].is_and++;
-      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->l);
-      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->r);
+      handle->constraint_parameters.is_and++;
+      __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
+      __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
       break;
     case N_OR:
       /* If you enter here, you have a bpf filter with just "or" operators */
-      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->l);
-      __fast_bpf_rdif_check_node_specific_constrains(unit, intf, n->r);
+      __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
+      __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
       break;
     default:
       break;
@@ -560,40 +518,38 @@ static void __fast_bpf_rdif_check_node_specific_constrains(int unit, fast_bpf_rd
 /*
  * This function checks specifies constraints for the intel NIC card
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "tree" -> tree that rappresents the bpf filter
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_check_specific_constrains(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_tree_t *tree){
+static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree){
 
-   if(unit >= MAX_INTEL_DEV) return (0);
-   if(intf >= MAX_INTERFACE) return (0);
+   if(handle == NULL) return (0);
    if(tree == NULL) return (0);
 
    /* reset structure for check constrains */
-   memset( &constraint_parameters[unit][intf], 0, sizeof(check_constraint_t));
-   __fast_bpf_rdif_check_node_specific_constrains(unit, intf, tree->root);
+   memset( &handle->constraint_parameters, 0, sizeof(check_constraint_t));
+   __fast_bpf_rdif_check_node_specific_constrains(handle, tree->root);
 
    /* If you have element not managed, return failure */
-   if (constraint_parameters[unit][intf].not_managed != 0)
+   if (handle->constraint_parameters.not_managed != 0)
      return (0);
 
-   if (constraint_parameters[unit][intf].is_and != 0){
+   if (handle->constraint_parameters.is_and != 0){
      /* If you have a bpf filter with just "and" operator, you cannot have more than one element in the filter.
       * For example if you have src_host>1 that means you have a bpf filter that uses more than one src host:
       * "src host 192.168.0.1 and src host 10.0.0.1"
       * But a such filter doesn't make sense so you have violated a constraint (return failure).
       */
      if(
-         (constraint_parameters[unit][intf].src_host > 1) ||
-         (constraint_parameters[unit][intf].dst_host > 1) ||
-         (constraint_parameters[unit][intf].src_port > 1) ||
-         (constraint_parameters[unit][intf].dst_port > 1) ||
-         (constraint_parameters[unit][intf].proto > 1)
+         (handle->constraint_parameters.src_host > 1) ||
+         (handle->constraint_parameters.dst_host > 1) ||
+         (handle->constraint_parameters.src_port > 1) ||
+         (handle->constraint_parameters.dst_port > 1) ||
+         (handle->constraint_parameters.proto > 1)
        )
          return (0);
    }
@@ -604,23 +560,24 @@ static int __fast_bpf_rdif_check_specific_constrains(int unit, fast_bpf_rdif_int
 /*
  * This function creates and set all the rules on the card for an interface
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "blockPun" -> block pointer that contains the rules list
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_block_list_item_t *blockPun) {
+static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_block_list_item_t *blockPun) {
   fast_bpf_rule_block_list_item_t *currPun;
   fast_bpf_rule_list_item_t * pun;
 
+  if (handle == NULL)
+    return (0);
   if (blockPun == NULL)
     return (0);
 
   /* Clear and initialize the environment */
-  if (!__fast_bpf_rdif_init(unit, intf))
+  if (!__fast_bpf_rdif_init(handle))
     return (0);
 
   /* through the list and set the single rule*/
@@ -628,8 +585,8 @@ static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interfac
   while (currPun != NULL){
     pun = currPun->rule_list_head;
     while (pun!=NULL) {
-      if( !__fast_bpf_rdif_set_single_rule(unit, intf, pun) ){
-        __fast_bpf_rdif_init(unit, intf);
+      if( !__fast_bpf_rdif_set_single_rule(handle, pun) ){
+        __fast_bpf_rdif_init(handle);
         return (0);
       }
       pun = pun->next;
@@ -638,8 +595,8 @@ static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interfac
   }
 
   /* The last rule drop all the traffic*/
-  if( !__fast_bpf_rdif_interface_set_drop_all(unit, intf) ){
-    __fast_bpf_rdif_init(unit, intf);
+  if( !__fast_bpf_rdif_interface_set_drop_all(handle) ){
+    __fast_bpf_rdif_init(handle);
     return (0);
   }
 
@@ -650,53 +607,51 @@ static int __fast_bpf_rdif_create_and_set_rules(int unit, fast_bpf_rdif_interfac
 /*
  * This function adds a rule for an interface
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "rule" -> rule rappresentation element
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_set_single_rule(int unit, fast_bpf_rdif_interface_t intf, fast_bpf_rule_list_item_t *rule){
+static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule){
 
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+  if(handle == NULL) return (0);
   if(rule == NULL) return (0);
 
   /* Init the variables in order to set a rule */
-  if(!__fast_bpf_rdif_init_for_rule(unit, intf))
+  if(!__fast_bpf_rdif_init_for_rule(handle))
     return (0);
   /*Set permit action*/
-  if(!__fast_bpf_rdif_interface_set_permit_action(unit, intf))
+  if(!__fast_bpf_rdif_interface_set_permit_action(handle))
     return (0);
 
   if (rule->fields.shost.v4 != 0){
     /* Set ipv4 src address */
-    if(!__fast_bpf_rdif_interface_set_ipv4_address(unit, intf, rule->fields.shost.v4, 1))
+    if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.shost.v4, 1))
       return (0);
   }
   if (rule->fields.dhost.v4 != 0){
     /* Set ipv4 dst address */
-    if(!__fast_bpf_rdif_interface_set_ipv4_address(unit, intf, rule->fields.dhost.v4, 0))
+    if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.dhost.v4, 0))
       return (0);
   }
   if (rule->fields.sport_low != 0){
     /* Set src port */
-    if(!__fast_bpf_rdif_interface_set_port(unit, intf, ntohs(rule->fields.sport_low), 1))
+    if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.sport_low), 1))
       return (0);
   }
   if (rule->fields.dport_low != 0){
     /* Set dst port */
-    if(!__fast_bpf_rdif_interface_set_port(unit, intf, ntohs(rule->fields.dport_low), 0))
+    if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.dport_low), 0))
       return (0);
   }
   if (rule->fields.proto != 0){
     /* Set protocol */
-    if(!__fast_bpf_rdif_interface_set_protocol(unit, intf, rule->fields.proto))
+    if(!__fast_bpf_rdif_interface_set_protocol(handle, rule->fields.proto))
       return (0);
   }
-  if(!__fast_bpf_rdif_add_rule(unit, intf))
+  if(!__fast_bpf_rdif_add_rule(handle))
     return (0);
 
   return (1);
@@ -706,33 +661,31 @@ static int __fast_bpf_rdif_set_single_rule(int unit, fast_bpf_rdif_interface_t i
 /*
  * This function clears all the rules for an interface
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  * Return value:
  *     - 0 on failure
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t intf){
+static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle){
   rdi_query_list_t rdi_query_list;
   unsigned int group_rules;
   int m;
 
-  if(unit >= MAX_INTEL_DEV) return (0);
-  if(intf >= MAX_INTERFACE) return (0);
+  if(handle == NULL) return (0);
 
   memset(&rdi_query_list, 0, sizeof(rdi_query_list_t));
 
-  group_rules = ((MAX_INTERFACE * unit) + interface[intf].group_rules);
+  group_rules = ((MAX_INTERFACE * handle->unit) + interface[handle->intf].group_rules);
   /* Get the rule identifiers list set */
-  if ((rdi_entry_query_list(unit, group_rules, &rdi_query_list, RDI_FLCM_DEV))<0)
+  if ((rdi_entry_query_list(handle->unit, group_rules, &rdi_query_list, RDI_FLCM_DEV))<0)
     return (0);
   else {
     if (rdi_query_list.rdi_id_list.rule_num) {
       if (rdi_query_list.rdi_id_list.rule_num<=MAX_NUM_RULES) {
         for (m=0; m<rdi_query_list.rdi_id_list.rule_num;m++) {
           /* through the list and removes the single rule */
-          if ((rdi_entry_remove(unit, rdi_query_list.rdi_id_list.id_list[m], group_rules, RDI_FLCM_DEV))<0) {
+          if ((rdi_entry_remove(handle->unit, rdi_query_list.rdi_id_list.id_list[m], group_rules, RDI_FLCM_DEV))<0) {
             return (0);
           }
         }
@@ -740,7 +693,7 @@ static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t i
     }
   }
   /* reset rules id counter */
-  current_rule_id[unit][intf] = 1;
+  handle->current_rule_id = 1;
 
   return 1;
 }
@@ -754,8 +707,7 @@ static int __fast_bpf_rdif_interface_clear(int unit, fast_bpf_rdif_interface_t i
  * This global function is the main function and tries
  * to set a bfp filter on a NIC card interface
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "handle" -> data structure that contains the bpf rdif data
  *     - "bpf" -> bpf filter
  * Return value:
  *     - 0 on failure
@@ -767,6 +719,8 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   fast_bpf_tree_t *tree;
   fast_bpf_rule_block_list_item_t *punBlock;
 
+  if(handle == NULL)
+    return (0);
   if(bpf == NULL)
     return (0);
 
@@ -779,7 +733,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   }
 
   /* checks if the constrains are respected (both fast bpf and specific intel fast bpf) */
-  if(!__fast_bpf_rdif_check_rules_constraints(0, handle->intf, tree)){
+  if(!__fast_bpf_rdif_check_rules_constraints(handle, tree)){
 #ifdef DEBUG
     printf("Error on checking constrains for a bpf filter.\n");
 #endif
@@ -795,7 +749,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   }
 
   /* Creates and set the rules on the nic */
-  if( !__fast_bpf_rdif_create_and_set_rules(0, handle->intf, punBlock) ){
+  if( !__fast_bpf_rdif_create_and_set_rules(handle, punBlock) ){
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
@@ -812,11 +766,12 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
 
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf) {
 #ifdef HAVE_REDIRECTOR_F
 
+static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
+
   /* Clear all rules for the interface */
-  if( !__fast_bpf_rdif_interface_clear(unit, intf) ) {
+  if( !__fast_bpf_rdif_interface_clear(handle) ) {
 #ifdef DEBUG
     printf("Error on cleaning the rules in initialization phase.");
 #endif
@@ -824,7 +779,7 @@ static int __fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf) {
   }
 
   /* Set all interfaces inline mode */
-  if( !__fast_bpf_rdif_interface_set_port_inline(unit, intf) ){
+  if( !__fast_bpf_rdif_interface_set_port_inline(handle) ){
 #ifdef DEBUG
     printf("Error on setting interface in inline mode.");
 #endif
@@ -832,10 +787,8 @@ static int __fast_bpf_rdif_init(int unit, fast_bpf_rdif_interface_t intf) {
   }
 
   return 1;
-#else /* HAVE_REDIRECTOR_F */
-  return 0;
-#endif /* HAVE_REDIRECTOR_F */
 }
+#endif /* HAVE_REDIRECTOR_F */
 
 /* -------------------------------------------------- */
 /*
@@ -858,20 +811,21 @@ fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
   if (intf < 0)
     return NULL;
 
-  if (unit >= MAX_INTEL_DEV || 
+  if (unit >= MAX_INTEL_DEV ||
       intf >= MAX_INTERFACE)
     return NULL;
 
-  if (!__fast_bpf_rdif_init(unit, intf));
-    return NULL;
-
   handle = calloc(1, sizeof(fast_bpf_rdif_handle_t));
-
   if (handle == NULL)
     return NULL;
 
   handle->unit = unit;
   handle->intf = intf;
+
+  if (!__fast_bpf_rdif_init(handle)){
+    if(handle) free(handle);
+    return NULL;
+  }
 
   return handle;
 #else /* HAVE_REDIRECTOR_F */
