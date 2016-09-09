@@ -858,6 +858,17 @@ int fast_bpf_rdif_reset(int unit){
 #endif /* HAVE_REDIRECTOR_F */
 }
 
+/* -------------------------------------------------- */
+/*
+ * This function frees the handle memory area.
+ * Input parameter:
+ *     - "handle" -> data structure that contains the bpf rdif data
+ */
+/* -------------------------------------------------- */
+void fast_bpf_rdif_handle_destroy(fast_bpf_rdif_handle_t *handle){
+        free(handle);
+}
+
 #if 0
 /* -------------------------------------------------- */
 void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n){

@@ -49,5 +49,6 @@ int fast_bpf_rdif_reset(int unit); //TODO needs to be moved to driver init
 
 fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname);
 int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf);
+void fast_bpf_rdif_handle_destroy(fast_bpf_rdif_handle_t *handle);
 
 #endif
