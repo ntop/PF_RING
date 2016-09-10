@@ -498,6 +498,9 @@ int main(int argc, char* argv[]) {
      || (optind < argc) /* Extra argument */)
     printHelp();
 
+  if (num_balanced_pkts > 1000000 && !on_the_fly_reforging)
+    printf("Warning: please use -O to reduce memory preallocation when many IPs are configured with -b\n");
+
   bind2node(bind_core);
 
   if (daemon_mode)
