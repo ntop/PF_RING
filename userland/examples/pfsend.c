@@ -416,6 +416,10 @@ int main(int argc, char* argv[]) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
+      if(num_balanced_pkts > 1000000) {
+	printf("WARNING: The -b value is pretty big and this can exhaust the available memory.\n");
+	printf("WARNING: To avoid that consider using the -O option.\n");
+      }
       reforge_ip = 1;
       break;
     case 'D':
