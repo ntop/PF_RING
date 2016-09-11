@@ -866,7 +866,11 @@ int fast_bpf_rdif_reset(int unit){
  */
 /* -------------------------------------------------- */
 void fast_bpf_rdif_handle_destroy(fast_bpf_rdif_handle_t *handle){
-        free(handle);
+        /* Clear and initialize the environment */
+        __fast_bpf_rdif_init(handle);
+        /* free handle */
+        if (handle != NULL)
+          free(handle);
 }
 
 #if 0
