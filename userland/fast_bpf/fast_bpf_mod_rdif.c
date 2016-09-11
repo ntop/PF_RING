@@ -865,12 +865,14 @@ int fast_bpf_rdif_reset(int unit){
  *     - "handle" -> data structure that contains the bpf rdif data
  */
 /* -------------------------------------------------- */
-void fast_bpf_rdif_handle_destroy(fast_bpf_rdif_handle_t *handle){
-        /* Clear and initialize the environment */
-        __fast_bpf_rdif_init(handle);
-        /* free handle */
-        if (handle != NULL)
-          free(handle);
+void fast_bpf_rdif_destroy(fast_bpf_rdif_handle_t *handle){
+#ifdef HAVE_REDIRECTOR_F
+  /* Clear and initialize the environment */
+  __fast_bpf_rdif_init(handle);
+#endif
+  /* free handle */
+  if (handle != NULL)
+    free(handle);
 }
 
 #if 0
