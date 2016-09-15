@@ -107,7 +107,7 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
   if(fd == NULL)
     return -1;
 
-  while (fgets(line, sizeof(line) - 1, fd)) {
+  while(fgets(line, sizeof(line) - 1, fd)) {
     if(strncmp(line, pci_slot_name_str, strlen(pci_slot_name_str)) != 0)
       continue;
 
@@ -582,6 +582,7 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
 
   if(handle == NULL)
     return (0);
+
   if(blockPun == NULL)
     return (0);
 
@@ -589,22 +590,25 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
   if(!__fast_bpf_rdif_init(handle))
     return (0);
 
-  /* through the list and set the single rule*/
+  /* Scan the list and set the single rule */
   currPun = blockPun;
-  while (currPun != NULL) {
+  while(currPun != NULL) {
     pun = currPun->rule_list_head;
-    while (pun!=NULL) {
-      if( !__fast_bpf_rdif_set_single_rule(handle, pun) ) {
+
+    while(pun != NULL) {
+      if(!__fast_bpf_rdif_set_single_rule(handle, pun)) {
         __fast_bpf_rdif_init(handle);
         return (0);
       }
+
       pun = pun->next;
     }
+    
     currPun = currPun->next;
   }
 
-  /* The last rule drop all the traffic*/
-  if( !__fast_bpf_rdif_interface_set_drop_all(handle) ) {
+  /* The last rule drop all the traffic */
+  if(!__fast_bpf_rdif_interface_set_drop_all(handle)) {
     __fast_bpf_rdif_init(handle);
     return (0);
   }
@@ -746,22 +750,26 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
 #ifdef DEBUG
     printf("Error on checking constrains for a bpf filter.\n");
 #endif
+    fast_bpf_free(tree);
     return (0);
   }
 
   /* Generates a optimized rules list */
-  if( (punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL ) {
+  if((punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL ) {
 #ifdef DEBUG
     printf("Error on generating optimized rules.");
 #endif
+    fast_bpf_free(tree);
     return (0);
   }
 
   /* Creates and set the rules on the nic */
-  if( !__fast_bpf_rdif_create_and_set_rules(handle, punBlock) ) {
+  if(!__fast_bpf_rdif_create_and_set_rules(handle, punBlock)) {
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
+    fast_bpf_rule_block_list_free(punBlock);
+    fast_bpf_free(tree);
     return (0);
   }
 
@@ -780,7 +788,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
 static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
 
   /* Clear all rules for the interface */
-  if( !__fast_bpf_rdif_interface_clear(handle) ) {
+  if(!__fast_bpf_rdif_interface_clear(handle)) {
 #ifdef DEBUG
     printf("Error on cleaning the rules in initialization phase.");
 #endif
@@ -788,7 +796,7 @@ static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
   }
 
   /* Set all interfaces inline mode */
-  if( !__fast_bpf_rdif_interface_set_port_inline(handle) ) {
+  if(!__fast_bpf_rdif_interface_set_port_inline(handle)) {
 #ifdef DEBUG
     printf("Error on setting interface in inline mode.");
 #endif

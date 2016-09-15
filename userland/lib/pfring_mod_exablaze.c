@@ -10,6 +10,8 @@
 
 #include "pfring_mod_exablaze.h"
 #include "pfring_mod.h" /* to print stats under /proc */
+#include "../fast_bpf/fast_bpf.h"
+
 #include <net/if.h>
 #include <sys/ioctl.h>
 
@@ -35,7 +37,7 @@ static void __pfring_exablaze_set_promiscuous_mode(exanic_t *exanic, int port_nu
 
     ioctl(fd, SIOCSIFFLAGS, &ifr);
   }
-  
+
   close(fd);
 }
 
@@ -51,7 +53,7 @@ static void __pfring_exablaze_read_mac_address(pfring_exablaze *ex, char *device
   _sock = socket(PF_INET, SOCK_DGRAM, 0);
   strncpy(ifr.ifr_name, device_name, IFNAMSIZ-1);
   res = ioctl(_sock, SIOCGIFHWADDR, &ifr);
-  
+
   if(res < 0) {
 #ifdef DEBUG
     fprintf(stderr, "[EXABLAZE] Cannot get hw addr for %s\n", device_name);
@@ -82,6 +84,134 @@ static void __pfring_exablaze_release_resources(pfring *ring) {
 
 /* **************************************************** */
 
+static int __pfring_exablaze_check_ip_rules(pfring_exablaze *exablaze,
+					    fast_bpf_rule_block_list_item_t *punBlock) {
+  fast_bpf_rule_block_list_item_t *currPun = punBlock;
+  u_int num_filters = 0;
+  
+  /* Scan the list and set the single rule */
+  while(currPun != NULL) {
+    fast_bpf_rule_list_item_t *pun = currPun->rule_list_head;
+
+    while(pun != NULL) {
+      fast_bpf_rule_core_fields_t *c = &pun->fields;
+      
+      if(c->vlan_id != 0) return(-1);
+      if(c->sport_low != c->sport_high) return(-2); /* Ranges are not supported */
+      if(c->dport_low != c->dport_high) return(-2); /* Ranges are not supported */
+
+      if(++num_filters >= 128) return(-3); /* Too many filters */
+      
+      pun = pun->next;
+    }
+
+    currPun = currPun->next;
+  }
+
+  return(0);
+}
+
+/* **************************************************** */
+
+static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
+					  fast_bpf_rule_block_list_item_t *punBlock) {
+  fast_bpf_rule_block_list_item_t *currPun = punBlock;
+
+  if(exablaze->rx == NULL) {
+    if((exablaze->rx = exanic_acquire_unused_filter_buffer(exablaze->exanic,
+							   exablaze->port_number)) == NULL)
+    return(-1);
+  }
+
+  /* Scan the list and set the single rule */
+  while(currPun != NULL) {
+    fast_bpf_rule_list_item_t *pun = currPun->rule_list_head;
+
+    while(pun != NULL) {
+      exanic_ip_filter_t f;
+
+      memset(&f, 0, sizeof(f));
+      f.protocol = pun->fields.proto,
+	f.src_addr = pun->fields.shost.v4, f.src_port = pun->fields.sport_low,
+	f.dst_addr = pun->fields.dhost.v4, f.dst_port = pun->fields.dport_low;
+
+      if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
+	fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
+	return(-1);
+      }
+
+      if(pun->bidirectional) {
+	f.dst_addr = pun->fields.shost.v4, f.dst_port = pun->fields.sport_low,
+	  f.src_addr = pun->fields.dhost.v4, f.src_port = pun->fields.dport_low;
+
+	if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
+	  fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
+	  return(-1);
+	}
+      }
+
+      pun = pun->next;
+    }
+
+    currPun = currPun->next;
+  }
+
+  return(0);
+}
+
+/* **************************************************** */
+
+int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
+  pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
+  fast_bpf_tree_t *tree;
+  fast_bpf_rule_block_list_item_t *punBlock;
+
+  /* Parses the bpf filters and builds the rules tree */
+  if((tree = fast_bpf_parse(bpf, NULL)) == NULL) {
+#ifdef DEBUG
+    printf("Error on parsing the bpf filter.");
+#endif
+    return(-1);
+  }
+
+  /* check the general rules of the fast bpf */
+  if(!fast_bpf_check_rules_constraints(tree, 0)) {
+    fast_bpf_free(tree);
+    return(-2);
+  }
+
+  /* Generates an optimized rules list */
+  if((punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL) {
+#ifdef DEBUG
+    printf("Error on generating optimized rules.");
+#endif
+
+    fast_bpf_free(tree);
+    return(-3);
+  }
+
+  /* Check if the BPF can be supported by the NIC */
+  if(__pfring_exablaze_check_ip_rules(exablaze, punBlock)
+     /* Create and set the rules on the nic */
+     || __pfring_exablaze_set_ip_rules(exablaze, punBlock)) {
+#ifdef DEBUG
+    printf("Error on creating and setting the rules list on the NIC card: using software BPF");
+#endif
+
+    fast_bpf_rule_block_list_free(punBlock);
+    fast_bpf_free(tree);
+    return(-4);
+  }
+
+  fast_bpf_rule_block_list_free(punBlock);
+  fast_bpf_free(tree);
+  return(0);
+}
+
+
+
+/* **************************************************** */
+
 int pfring_exablaze_open(pfring *ring) {
   pfring_exablaze *exablaze;
   char device_name[32];
@@ -96,6 +226,7 @@ int pfring_exablaze_open(pfring *ring) {
   ring->get_bound_device_ifindex = pfring_exablaze_get_bound_device_ifindex;
   ring->get_bound_device_address = pfring_exablaze_get_bound_device_address;
   ring->send               = pfring_exablaze_send;
+  ring->set_bpf_filter     = pfring_exablaze_set_bpf_filter;
 
   /* inherited from pfring_mod.c */
   ring->set_socket_mode          = pfring_mod_set_socket_mode;
@@ -186,7 +317,7 @@ int pfring_exablaze_set_direction(pfring *ring, packet_direction direction) {
 
 int pfring_exablaze_get_bound_device_ifindex(pfring *ring, int *if_index) {
   pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
-  
+
   *if_index = exablaze->if_index;
   return 0;
 }
@@ -197,10 +328,12 @@ int pfring_exablaze_enable_ring(pfring *ring) {
   pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
 
   if((ring->mode == recv_only_mode) || (ring->mode == send_and_recv_mode)) {
-    if((exablaze->rx = exanic_acquire_rx_buffer(exablaze->exanic, exablaze->port_number, exablaze->channel_id)) == NULL)
-      {
-      fprintf(stderr, "[EXABLAZE] Unable to acquire RX buffer %d\n", exablaze->channel_id);
-      return -1;
+    if(exablaze->rx == NULL) {
+      if((exablaze->rx = exanic_acquire_rx_buffer(exablaze->exanic,
+						  exablaze->port_number, exablaze->channel_id)) == NULL) {
+	fprintf(stderr, "[EXABLAZE] Unable to acquire RX buffer %d\n", exablaze->channel_id);
+	return -1;
+      }
     }
 
 #ifdef DEBUG
@@ -208,7 +341,7 @@ int pfring_exablaze_enable_ring(pfring *ring) {
 #endif
     __pfring_exablaze_set_promiscuous_mode(exablaze->exanic, exablaze->port_number, 1);
   }
-  
+
   if((ring->mode == send_only_mode) || (ring->mode == send_and_recv_mode)) {
     if((exablaze->tx = exanic_acquire_tx_buffer(exablaze->exanic, exablaze->port_number, 0 /* requested_size */)) == NULL) {
       fprintf(stderr, "[EXABLAZE] Unable to acquire TX buffer\n");
@@ -228,7 +361,7 @@ int pfring_exablaze_recv(pfring *ring, u_char **buffer,
   pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
   ssize_t len;
   uint32_t timestamp;
-  
+
   if(unlikely(exablaze->rx == NULL)) return(-1);
 
  exablaze_rx_read:
@@ -236,10 +369,10 @@ int pfring_exablaze_recv(pfring *ring, u_char **buffer,
     len = exanic_receive_frame(exablaze->rx, (char*)exablaze->pkt, sizeof(exablaze->pkt), &timestamp);
   else
     len = exanic_receive_frame(exablaze->rx, (char*)*buffer, buffer_len, &timestamp);
-  
+
   if(len > 0) {
     uint64_t ns;
-    
+
     hdr->len = hdr->caplen = len, hdr->caplen = min_val(hdr->caplen, ring->caplen);
     hdr->extended_hdr.pkt_hash = 0, hdr->extended_hdr.if_index = exablaze->if_index, hdr->extended_hdr.rx_direction = 1;
     ns = exanic_timestamp_to_counter(exablaze->exanic, timestamp);
@@ -265,7 +398,7 @@ int pfring_exablaze_recv(pfring *ring, u_char **buffer,
       goto exablaze_rx_read;
     }
   }
-  
+
   return 0;
 }
 
@@ -281,7 +414,7 @@ int  pfring_exablaze_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush
   pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
   int rc = exanic_transmit_frame(exablaze->tx, (const char *)pkt, pkt_len);
 
-  return (rc == 0 ? pkt_len : -1);
+  return(rc == 0 ? pkt_len : -1);
 }
 
 /* **************************************************** */
