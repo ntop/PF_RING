@@ -19,24 +19,24 @@
 #define MAX_NUM_RULES 512
 
 typedef struct {
-   unsigned int port1;
-   unsigned int port2;
-   unsigned int group_rules;
+  unsigned int port1;
+  unsigned int port2;
+  unsigned int group_rules;
 } rdif_interface_t;
 
 static rdif_interface_t interface[MAX_INTERFACE] =
-{
   {
-    1,  // port1
-    3,  // port2
-    1,  // group_rules
-  },
-  {
-    2,  // port1
-    4,  // port2
-    2   // group_rules
-  }
-};
+    {
+      1,  // port1
+      3,  // port2
+      1,  // group_rules
+    },
+    {
+      2,  // port1
+      4,  // port2
+      2   // group_rules
+    }
+  };
 
 /* Static functions */
 static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2);
@@ -61,7 +61,7 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
 static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule);
 static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle);
 
-#if 0
+#ifdef DEBUG
 static void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree);
 static void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n);
 #endif
@@ -78,17 +78,19 @@ static int __fast_bpf_rdif_is_supported(char *interface) {
 
   fd = fopen(path, "r");
 
-  if (fd == NULL)
+  if(fd == NULL)
     return 0;
 
-  if (fgets(line, sizeof(line) - 1, fd)) {
-    if (strncmp(line, "0x15a4", 6) == 0)
+  if(fgets(line, sizeof(line) - 1, fd)) {
+    if(strncmp(line, "0x15a4", 6) == 0)
       rc = 1;
   }
 
   fclose(fd);
   return rc;
 }
+
+/* -------------------------------------------------- */
 
 static int __fast_bpf_rdif_get_bus_id(char *interface) {
   const char *pci_slot_name_str = "PCI_SLOT_NAME=";
@@ -102,11 +104,11 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
 
   fd = fopen(path, "r");
 
-  if (fd == NULL)
+  if(fd == NULL)
     return -1;
 
   while (fgets(line, sizeof(line) - 1, fd)) {
-    if (strncmp(line, pci_slot_name_str, strlen(pci_slot_name_str)) != 0)
+    if(strncmp(line, pci_slot_name_str, strlen(pci_slot_name_str)) != 0)
       continue;
 
     /* PCI_SLOT_NAME=0000:04:00.0 */
@@ -123,32 +125,34 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
   return bus_id;
 }
 
+/* -------------------------------------------------- */
+
 int __fast_bpf_rdif_get_interface_id(char *interface) {
   struct dirent **pent;
   int pnum, i, id = -1;
   int bus_id;
 
-  if (!__fast_bpf_rdif_is_supported(interface))
+  if(!__fast_bpf_rdif_is_supported(interface))
     return -1;
 
   bus_id = __fast_bpf_rdif_get_bus_id(interface);
 
-  if (bus_id < 0)
+  if(bus_id < 0)
     return -1;
 
   pnum = scandir("/sys/class/net/", &pent, NULL, NULL);
 
-  if (pnum <= 0)
+  if(pnum <= 0)
     return -1;
 
   for (i = 0; i < pnum; i++) {
-    if (id == -1) {
-      if (!(pent[i]->d_name[0] == '.' ||
-            strcmp(pent[i]->d_name, "lo") == 0)) {
-        if (__fast_bpf_rdif_is_supported(pent[i]->d_name)) {
+    if(id == -1) {
+      if(!(pent[i]->d_name[0] == '.' ||
+	   strcmp(pent[i]->d_name, "lo") == 0)) {
+        if(__fast_bpf_rdif_is_supported(pent[i]->d_name)) {
           int other_bus_id = __fast_bpf_rdif_get_bus_id(interface);
-          if (other_bus_id != -1) {
-            if (other_bus_id > bus_id) id = 0;
+          if(other_bus_id != -1) {
+            if(other_bus_id > bus_id) id = 0;
             else id = 1;
           }
         }
@@ -172,26 +176,27 @@ int __fast_bpf_rdif_get_interface_id(char *interface) {
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2){
-        int j, pos;
-        rdi_mask_t mask;
 
-        if(unit >= MAX_INTEL_DEV) return 0;
+static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2) {
+  int j, pos;
+  rdi_mask_t mask;
 
-        /* Prepare parameters for rdi_set_mask library call function */
-        memset(&mask, 0, sizeof(rdi_mask_t));
-        j = port1 / 8;
-        pos = port1 % 8;
-        if(j < 16)
-          mask.ingress[j] |= (1 << pos);
-        j = port2 / 8;
-        pos = port2 % 8;
-        if(j < 16)
-          mask.egress[j] |= (1 << pos);
-        /* Set the ports in inline mode (just one direction) by library call function */
-        if ((rdi_set_mask(unit, &mask, RDI_FLCM_DEV)) < 0)
-          return (0);
-        return (1);
+  if(unit >= MAX_INTEL_DEV) return 0;
+
+  /* Prepare parameters for rdi_set_mask library call function */
+  memset(&mask, 0, sizeof(rdi_mask_t));
+  j = port1 / 8;
+  pos = port1 % 8;
+  if(j < 16)
+    mask.ingress[j] |= (1 << pos);
+  j = port2 / 8;
+  pos = port2 % 8;
+  if(j < 16)
+    mask.egress[j] |= (1 << pos);
+  /* Set the ports in inline mode (just one direction) by library call function */
+  if((rdi_set_mask(unit, &mask, RDI_FLCM_DEV)) < 0)
+    return (0);
+  return (1);
 }
 
 /* -------------------------------------------------- */
@@ -204,7 +209,8 @@ static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2){
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *handle){
+
+static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   /* Set interface in inline mode (normal direction) */
@@ -226,7 +232,8 @@ static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *han
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *handle){
+
+static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   /* Set drop action */
@@ -246,7 +253,8 @@ static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *han
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *handle){
+
+static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   /* Set permit action */
@@ -267,7 +275,8 @@ static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *h
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle){
+
+static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
 #ifdef DEBUG
@@ -305,7 +314,7 @@ static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle){
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle){
+static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   bzero(&handle->rules_parameters.rdi_mem, sizeof(rdi_mem_t));
@@ -330,7 +339,7 @@ static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle){
+static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   bzero(&handle->rules_parameters.rdi_mem, sizeof(rdi_mem_t));
@@ -357,7 +366,7 @@ static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle){
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc){
+static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc) {
   if(handle == NULL) return (0);
 
   if(isSrc) {
@@ -385,7 +394,7 @@ static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *ha
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc){
+static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc) {
   if(handle == NULL) return (0);
 
   if(isSrc) {
@@ -412,7 +421,7 @@ static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, un
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle, unsigned int protocol){
+static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle, unsigned int protocol) {
   if(handle == NULL) return (0);
 
   /* Set protocol */
@@ -455,61 +464,61 @@ static int __fast_bpf_rdif_check_rules_constraints(fast_bpf_rdif_handle_t *handl
  *     - "n" -> pointer to a node in the tree
  */
 /* -------------------------------------------------- */
-static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_node_t *n){
+static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_node_t *n) {
 
   if(handle == NULL) return;
-  if (n == NULL) return;
-  if (n->not_rule) return;
+  if(n == NULL) return;
+  if(n->not_rule) return;
 
   switch(n->type) {
-    case N_PRIMITIVE:
-      if(n->qualifiers.address == Q_HOST){
-        if (n->qualifiers.direction == Q_SRC){
-          /* This counts how many time the src host ip is used in a bpf filter */
-          handle->constraint_parameters.src_host++;
-        } else if(n->qualifiers.direction == Q_DST){
-          /* This counts how many time the dst host ip is used */
-          handle->constraint_parameters.dst_host++;
-        } else {
-          //handle->constraint_parameters.src_host++;
-          //handle->constraint_parameters.dst_host++;
-          /* At the moment you cannot use bidirectional ip address (for example: "host 192.168.0.1") */
-          handle->constraint_parameters.not_managed++;
-        }
-      } else if(n->qualifiers.address == Q_PORT) {
-        if (n->qualifiers.direction == Q_SRC){
-          /* This counts how many time the src port is used in a bpf filter */
-          handle->constraint_parameters.src_port++;
-        } else if(n->qualifiers.direction == Q_DST){
-          /* This counts how many time the dst port is used in a bpf filter */
-          handle->constraint_parameters.dst_port++;
-        } else {
-          //handle->constraint_parameters.src_port++;
-          //handle->constraint_parameters.dst_port++;
-          /* At the moment you cannot use bidirectional ip address (for example: "port 3000") */
-          handle->constraint_parameters.not_managed++;
-        }
-      } else if(n->qualifiers.address == Q_PROTO) {
-        /* This counts how many time the protocol is used in a bpf filter */
-        handle->constraint_parameters.proto++;
+  case N_PRIMITIVE:
+    if(n->qualifiers.address == Q_HOST) {
+      if(n->qualifiers.direction == Q_SRC) {
+	/* This counts how many time the src host ip is used in a bpf filter */
+	handle->constraint_parameters.src_host++;
+      } else if(n->qualifiers.direction == Q_DST) {
+	/* This counts how many time the dst host ip is used */
+	handle->constraint_parameters.dst_host++;
       } else {
-        /* The other cases aren't managed */
-        handle->constraint_parameters.not_managed++;
+	//handle->constraint_parameters.src_host++;
+	//handle->constraint_parameters.dst_host++;
+	/* At the moment you cannot use bidirectional ip address (for example: "host 192.168.0.1") */
+	handle->constraint_parameters.not_managed++;
       }
-      break;
-    case N_AND:
-      /* If you enter here, you have a bpf filter with just "and" operators */
-      handle->constraint_parameters.is_and++;
-      __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
-      __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
-      break;
-    case N_OR:
-      /* If you enter here, you have a bpf filter with just "or" operators */
-      __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
-      __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
-      break;
-    default:
-      break;
+    } else if(n->qualifiers.address == Q_PORT) {
+      if(n->qualifiers.direction == Q_SRC) {
+	/* This counts how many time the src port is used in a bpf filter */
+	handle->constraint_parameters.src_port++;
+      } else if(n->qualifiers.direction == Q_DST) {
+	/* This counts how many time the dst port is used in a bpf filter */
+	handle->constraint_parameters.dst_port++;
+      } else {
+	//handle->constraint_parameters.src_port++;
+	//handle->constraint_parameters.dst_port++;
+	/* At the moment you cannot use bidirectional ip address (for example: "port 3000") */
+	handle->constraint_parameters.not_managed++;
+      }
+    } else if(n->qualifiers.address == Q_PROTO) {
+      /* This counts how many time the protocol is used in a bpf filter */
+      handle->constraint_parameters.proto++;
+    } else {
+      /* The other cases aren't managed */
+      handle->constraint_parameters.not_managed++;
+    }
+    break;
+  case N_AND:
+    /* If you enter here, you have a bpf filter with just "and" operators */
+    handle->constraint_parameters.is_and++;
+    __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
+    __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
+    break;
+  case N_OR:
+    /* If you enter here, you have a bpf filter with just "or" operators */
+    __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
+    __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
+    break;
+  default:
+    break;
   }
   return;
 }
@@ -525,35 +534,35 @@ static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree){
+static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree) {
 
-   if(handle == NULL) return (0);
-   if(tree == NULL) return (0);
+  if(handle == NULL) return (0);
+  if(tree == NULL) return (0);
 
-   /* reset structure for check constrains */
-   memset( &handle->constraint_parameters, 0, sizeof(check_constraint_t));
-   __fast_bpf_rdif_check_node_specific_constrains(handle, tree->root);
+  /* reset structure for check constrains */
+  memset( &handle->constraint_parameters, 0, sizeof(check_constraint_t));
+  __fast_bpf_rdif_check_node_specific_constrains(handle, tree->root);
 
-   /* If you have element not managed, return failure */
-   if (handle->constraint_parameters.not_managed != 0)
-     return (0);
+  /* If you have element not managed, return failure */
+  if(handle->constraint_parameters.not_managed != 0)
+    return (0);
 
-   if (handle->constraint_parameters.is_and != 0){
-     /* If you have a bpf filter with just "and" operator, you cannot have more than one element in the filter.
-      * For example if you have src_host>1 that means you have a bpf filter that uses more than one src host:
-      * "src host 192.168.0.1 and src host 10.0.0.1"
-      * But a such filter doesn't make sense so you have violated a constraint (return failure).
-      */
-     if(
-         (handle->constraint_parameters.src_host > 1) ||
-         (handle->constraint_parameters.dst_host > 1) ||
-         (handle->constraint_parameters.src_port > 1) ||
-         (handle->constraint_parameters.dst_port > 1) ||
-         (handle->constraint_parameters.proto > 1)
+  if(handle->constraint_parameters.is_and != 0) {
+    /* If you have a bpf filter with just "and" operator, you cannot have more than one element in the filter.
+     * For example if you have src_host>1 that means you have a bpf filter that uses more than one src host:
+     * "src host 192.168.0.1 and src host 10.0.0.1"
+     * But a such filter doesn't make sense so you have violated a constraint (return failure).
+     */
+    if(
+       (handle->constraint_parameters.src_host > 1) ||
+       (handle->constraint_parameters.dst_host > 1) ||
+       (handle->constraint_parameters.src_port > 1) ||
+       (handle->constraint_parameters.dst_port > 1) ||
+       (handle->constraint_parameters.proto > 1)
        )
-         return (0);
-   }
-   return (1);
+      return (0);
+  }
+  return (1);
 }
 
 /* -------------------------------------------------- */
@@ -571,21 +580,21 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
   fast_bpf_rule_block_list_item_t *currPun;
   fast_bpf_rule_list_item_t * pun;
 
-  if (handle == NULL)
+  if(handle == NULL)
     return (0);
-  if (blockPun == NULL)
+  if(blockPun == NULL)
     return (0);
 
   /* Clear and initialize the environment */
-  if (!__fast_bpf_rdif_init(handle))
+  if(!__fast_bpf_rdif_init(handle))
     return (0);
 
   /* through the list and set the single rule*/
   currPun = blockPun;
-  while (currPun != NULL){
+  while (currPun != NULL) {
     pun = currPun->rule_list_head;
     while (pun!=NULL) {
-      if( !__fast_bpf_rdif_set_single_rule(handle, pun) ){
+      if( !__fast_bpf_rdif_set_single_rule(handle, pun) ) {
         __fast_bpf_rdif_init(handle);
         return (0);
       }
@@ -595,7 +604,7 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
   }
 
   /* The last rule drop all the traffic*/
-  if( !__fast_bpf_rdif_interface_set_drop_all(handle) ){
+  if( !__fast_bpf_rdif_interface_set_drop_all(handle) ) {
     __fast_bpf_rdif_init(handle);
     return (0);
   }
@@ -614,7 +623,7 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule){
+static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule) {
 
   if(handle == NULL) return (0);
   if(rule == NULL) return (0);
@@ -626,27 +635,27 @@ static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_
   if(!__fast_bpf_rdif_interface_set_permit_action(handle))
     return (0);
 
-  if (rule->fields.shost.v4 != 0){
+  if(rule->fields.shost.v4 != 0) {
     /* Set ipv4 src address */
     if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.shost.v4, 1))
       return (0);
   }
-  if (rule->fields.dhost.v4 != 0){
+  if(rule->fields.dhost.v4 != 0) {
     /* Set ipv4 dst address */
     if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.dhost.v4, 0))
       return (0);
   }
-  if (rule->fields.sport_low != 0){
+  if(rule->fields.sport_low != 0) {
     /* Set src port */
     if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.sport_low), 1))
       return (0);
   }
-  if (rule->fields.dport_low != 0){
+  if(rule->fields.dport_low != 0) {
     /* Set dst port */
     if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.dport_low), 0))
       return (0);
   }
-  if (rule->fields.proto != 0){
+  if(rule->fields.proto != 0) {
     /* Set protocol */
     if(!__fast_bpf_rdif_interface_set_protocol(handle, rule->fields.proto))
       return (0);
@@ -667,7 +676,7 @@ static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle){
+static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle) {
   rdi_query_list_t rdi_query_list;
   unsigned int group_rules;
   int m;
@@ -678,14 +687,14 @@ static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle){
 
   group_rules = ((MAX_INTERFACE * handle->unit) + interface[handle->intf].group_rules);
   /* Get the rule identifiers list set */
-  if ((rdi_entry_query_list(handle->unit, group_rules, &rdi_query_list, RDI_FLCM_DEV))<0)
+  if((rdi_entry_query_list(handle->unit, group_rules, &rdi_query_list, RDI_FLCM_DEV))<0)
     return (0);
   else {
-    if (rdi_query_list.rdi_id_list.rule_num) {
-      if (rdi_query_list.rdi_id_list.rule_num<=MAX_NUM_RULES) {
+    if(rdi_query_list.rdi_id_list.rule_num) {
+      if(rdi_query_list.rdi_id_list.rule_num<=MAX_NUM_RULES) {
         for (m=0; m<rdi_query_list.rdi_id_list.rule_num;m++) {
           /* through the list and removes the single rule */
-          if ((rdi_entry_remove(handle->unit, rdi_query_list.rdi_id_list.id_list[m], group_rules, RDI_FLCM_DEV))<0) {
+          if((rdi_entry_remove(handle->unit, rdi_query_list.rdi_id_list.id_list[m], group_rules, RDI_FLCM_DEV))<0) {
             return (0);
           }
         }
@@ -714,7 +723,7 @@ static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle){
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
+int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
 #ifdef HAVE_REDIRECTOR_F
   fast_bpf_tree_t *tree;
   fast_bpf_rule_block_list_item_t *punBlock;
@@ -725,7 +734,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
     return (0);
 
   /* Parses the bpf filters and builds the rules tree */
-  if ((tree = fast_bpf_parse(bpf, NULL)) == NULL){
+  if((tree = fast_bpf_parse(bpf, NULL)) == NULL) {
 #ifdef DEBUG
     printf("Error on parsing the bpf filter.");
 #endif
@@ -733,7 +742,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   }
 
   /* checks if the constrains are respected (both fast bpf and specific intel fast bpf) */
-  if(!__fast_bpf_rdif_check_rules_constraints(handle, tree)){
+  if(!__fast_bpf_rdif_check_rules_constraints(handle, tree)) {
 #ifdef DEBUG
     printf("Error on checking constrains for a bpf filter.\n");
 #endif
@@ -741,7 +750,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   }
 
   /* Generates a optimized rules list */
-  if( (punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL ){
+  if( (punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL ) {
 #ifdef DEBUG
     printf("Error on generating optimized rules.");
 #endif
@@ -749,7 +758,7 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf){
   }
 
   /* Creates and set the rules on the nic */
-  if( !__fast_bpf_rdif_create_and_set_rules(handle, punBlock) ){
+  if( !__fast_bpf_rdif_create_and_set_rules(handle, punBlock) ) {
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
@@ -779,7 +788,7 @@ static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
   }
 
   /* Set all interfaces inline mode */
-  if( !__fast_bpf_rdif_interface_set_port_inline(handle) ){
+  if( !__fast_bpf_rdif_interface_set_port_inline(handle) ) {
 #ifdef DEBUG
     printf("Error on setting interface in inline mode.");
 #endif
@@ -808,21 +817,21 @@ fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
   unit = 0; //TODO
   intf = __fast_bpf_rdif_get_interface_id(ifname);
 
-  if (intf < 0)
+  if(intf < 0)
     return NULL;
 
-  if (unit >= MAX_INTEL_DEV ||
-      intf >= MAX_INTERFACE)
+  if(unit >= MAX_INTEL_DEV ||
+     intf >= MAX_INTERFACE)
     return NULL;
 
   handle = calloc(1, sizeof(fast_bpf_rdif_handle_t));
-  if (handle == NULL)
+  if(handle == NULL)
     return NULL;
 
   handle->unit = unit;
   handle->intf = intf;
 
-  if (!__fast_bpf_rdif_init(handle)){
+  if(!__fast_bpf_rdif_init(handle)) {
     if(handle) free(handle);
     return NULL;
   }
@@ -845,12 +854,12 @@ fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-int fast_bpf_rdif_reset(int unit){
+int fast_bpf_rdif_reset(int unit) {
 #ifdef HAVE_REDIRECTOR_F
   if(unit >= MAX_INTEL_DEV) return (0);
 
   /* Set MON2 configuration (value 5). No traffic in egress */
-  if (rdi_set_cfg(unit, 5, RDI_FLCM_DEV) < 0)
+  if(rdi_set_cfg(unit, 5, RDI_FLCM_DEV) < 0)
     return (0);
   return (1);
 #else
@@ -865,43 +874,46 @@ int fast_bpf_rdif_reset(int unit){
  *     - "handle" -> data structure that contains the bpf rdif data
  */
 /* -------------------------------------------------- */
-void fast_bpf_rdif_destroy(fast_bpf_rdif_handle_t *handle){
+void fast_bpf_rdif_destroy(fast_bpf_rdif_handle_t *handle) {
 #ifdef HAVE_REDIRECTOR_F
   /* Clear and initialize the environment */
   __fast_bpf_rdif_init(handle);
 #endif
   /* free handle */
-  if (handle != NULL)
+  if(handle != NULL)
     free(handle);
 }
 
-#if 0
 /* -------------------------------------------------- */
-void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n){
+/* -------------------------------------------------- */
 
-  if (n == NULL) return; /* empty and/or operators not allowed */
-  if (n->not_rule) return;
+#ifdef DEBUG
+
+void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n) {
+
+  if(n == NULL) return; /* empty and/or operators not allowed */
+  if(n->not_rule) return;
 
   switch(n->type) {
-    case N_PRIMITIVE:
-      printf("Type: %d\n", n->type);
-      printf("Qualifiers address: %d\n", n->qualifiers.address);
-      printf("Qualifiers direction: %d\n", n->qualifiers.direction);
-      printf("Qualifiers protocol: %d\n\n", n->qualifiers.protocol);
-      break;
-    case N_AND:
-    case N_OR:
-      __fast_bpf_rdif_print_tree(n->l);
-      __fast_bpf_rdif_print_tree(n->r);
-      break;
-    default:
-      break;
+  case N_PRIMITIVE:
+    printf("Type: %d\n", n->type);
+    printf("Qualifiers address: %d\n", n->qualifiers.address);
+    printf("Qualifiers direction: %d\n", n->qualifiers.direction);
+    printf("Qualifiers protocol: %d\n\n", n->qualifiers.protocol);
+    break;
+  case N_AND:
+  case N_OR:
+    __fast_bpf_rdif_print_tree(n->l);
+    __fast_bpf_rdif_print_tree(n->r);
+    break;
+  default:
+    break;
   }
   return;
 }
 
 /* -------------------------------------------------- */
-void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree){
-   __fast_bpf_rdif_print_tree(tree->root);
+void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree) {
+  __fast_bpf_rdif_print_tree(tree->root);
 }
 #endif
