@@ -102,6 +102,7 @@ fast_bpf_node_t;
 
 typedef struct {
   fast_bpf_node_t *root;
+  int compatibility_level; /* external use */
 } __attribute__((packed))
 fast_bpf_tree_t;
 
