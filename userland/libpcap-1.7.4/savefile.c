@@ -229,7 +229,7 @@ npcap_open_offline(const char *fname, char *errbuf)
 	if (p == NULL)
 		return (NULL);
 
-	p->npcapfd = npcap_open(fname, packet_mode);
+	p->npcapfd = npcap_open(fname, 0);
 	if (p->npcapfd == NULL) {
 		snprintf(errbuf, PCAP_ERRBUF_SIZE,
 			 "error reading dump file: %d", errno);

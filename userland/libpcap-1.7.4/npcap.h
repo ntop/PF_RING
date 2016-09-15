@@ -31,11 +31,6 @@ struct pcap_disk_pkthdr_nsec {
 
 /* ************************************************************ */
 
-typedef enum {
-  packet_mode = 0,
-  chunk_mode
-} decompression_mode;
-
 typedef struct npcap_fd npcap_fd_t;
 
 /* ************************************************************ */
@@ -44,12 +39,37 @@ int     is_plain_pcap(char *file_path);
 int64_t pcap_file_size(char *file_path);
 int     npcap_decompress(char *in_file_path, char *out_file_path, u_int64_t* decompressed_len);
 
-npcap_fd_t *npcap_open(const char *in_file_path, decompression_mode mode);
+npcap_fd_t *npcap_open(const char *in_file_path, int chunk_mode /* 0 - packet mode, 1 - chunk mode */);
 void    npcap_close(npcap_fd_t *cfd);
 int     npcap_read_header(npcap_fd_t *cfd, struct pcap_file_header *pcap_file_hdr);
 int64_t npcap_read_next_chunk(npcap_fd_t *cfd, u_char *out_chunk, u_int64_t out_chunk_len);
 int     npcap_read_at(npcap_fd_t *cfd, u_int64_t pkt_offset, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt);
 int     npcap_read_next(npcap_fd_t *cfd, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt);
+
+/* ************************************************************ */
+
+#include "pfring.h"
+#include "fast_bpf.h"
+
+typedef struct npcap_extract_handle npcap_extract_handle_t;
+struct timeline_extract_handle;
+
+/* single npcap extraction */
+npcap_extract_handle_t * npcap_extract_open(char *pcap_path, char *index_path, fast_bpf_tree_t *fast_bpf_filter, struct bpf_program *pcap_filter);
+struct pcap_file_header *npcap_extract_header(struct npcap_extract_handle *handle);
+int                      npcap_extract_next(struct npcap_extract_handle *handle, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt);
+void                     npcap_extract_close(struct npcap_extract_handle *handle);
+
+/* timeline extraction */
+struct timeline_extract_handle *timeline_extract_open(char *timeline_path, time_t begin_epoch, time_t end_epoch, fast_bpf_tree_t *fast_bpf_filter, struct bpf_program *pcap_filter);
+struct pcap_file_header *  timeline_extract_header(struct timeline_extract_handle *handle);
+int                        timeline_extract_next(struct timeline_extract_handle *handle, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt, u_int64_t *match_epoch_nsec);
+void                       timeline_extract_close(struct timeline_extract_handle *handle);
+
+/* extra extraction functions */
+void extract_set_debug_level(u_int8_t level);
+void extract_toggle_index_scan_only(u_int8_t enable);
+void extract_toggle_files_list_only(u_int8_t enable);
 
 #endif /* _NPCAP_H_ */
 
