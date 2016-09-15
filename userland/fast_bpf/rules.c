@@ -307,11 +307,23 @@ static void merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
   }
 }
 
-static void merge_wildcard_filters(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1,
+static int wildcard_filter_is_non_directional(fast_bpf_rule_list_item_t *f) {
+  if (!is_empty_mac(f->fields.smac) || !is_empty_mac(f->fields.dmac)) return 0;
+  if (f->fields.ip_version /* IPs defined */) return 0;
+  if (f->fields.sport_low || f->fields.dport_low) return 0;
+  return 1;
+}
+
+static void merge_wildcard_filters(fast_bpf_rule_list_item_t *f, 
+                                   fast_bpf_rule_list_item_t *f1,
 				   fast_bpf_rule_list_item_t *f2) {
   if (f1->bidirectional != f2->bidirectional) {
     DEBUG_PRINTF("Mergind bidirectional rule with unidirectional rule\n");
-    f->bidirectional = 1; /* default bidirectional */
+    if ((f1->bidirectional && wildcard_filter_is_non_directional(f1)) ||
+        (f2->bidirectional && wildcard_filter_is_non_directional(f2)))
+      f->bidirectional = 0;
+    else
+      f->bidirectional = 1; /* TODO setting as bidirectional (false positives), actually it should be split as multiple monodirectional filters */
   } else {
     f->bidirectional = f1->bidirectional;
   }
