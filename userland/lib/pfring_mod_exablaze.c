@@ -68,7 +68,8 @@ static void __pfring_exablaze_release_resources(pfring *ring) {
   pfring_exablaze *ex = (pfring_exablaze *)ring->priv_data;
 
   if(ex) {
-    __pfring_exablaze_set_promiscuous_mode(ex->exanic, ex->port_number, 0 /* disable */);
+    if(ex->exanic)
+      __pfring_exablaze_set_promiscuous_mode(ex->exanic, ex->port_number, 0 /* disable */);
 
     if(ex->rx) exanic_release_rx_buffer(ex->rx);
     if(ex->tx) exanic_release_tx_buffer(ex->tx);
@@ -129,13 +130,16 @@ int pfring_exablaze_open(pfring *ring) {
 						&exablaze->port_number);
 
     exablaze->exanic = (rc == 0) ? exanic_acquire_handle(device) : NULL;
-    exablaze->if_index = if_nametoindex(device);
-    __pfring_exablaze_read_mac_address(exablaze, device_name);
+
+    if(exablaze->exanic != NULL) {
+      exablaze->if_index = if_nametoindex(device);
+      __pfring_exablaze_read_mac_address(exablaze, device_name);
 #ifdef DEBUG
-    if(rc == 0)
-      fprintf(stderr, "[EXABLAZE] Succesfully open device %s / port %d\n",
-	      device, exablaze->port_number);
+      if(rc == 0)
+	fprintf(stderr, "[EXABLAZE] Succesfully open device %s / port %d\n",
+		device, exablaze->port_number);
 #endif
+    }
   }
 
   if(exablaze->exanic == NULL) {
