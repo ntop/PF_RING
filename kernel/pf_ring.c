@@ -6977,8 +6977,10 @@ static int ring_setsockopt(struct socket *sock,
       if (copy_from_user(&fprog, optval, sizeof(fprog)))
         break;
 
-      if (fprog.len <= 1) /* empty filter */
+      if (fprog.len <= 1) { /* empty filter */
+        ret = 0;
         break;
+      }
 
       if (unlikely(enable_debug))
         printk("[PF_RING] BPF filter (len = %u)\n", fprog.len);
