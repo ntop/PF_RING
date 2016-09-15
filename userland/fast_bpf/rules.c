@@ -112,10 +112,12 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
     case Q_AND:
       memcpy(f->fields.smac, n->mac, 6);
       if(n->ip) {
+        f->fields.ip_version = 4;
         f->fields.shost.v4 = n->ip;
         f->fields.shost_mask.v4 = n->mask;
       } else {
 	if (!is_empty_ipv6(n->ip6)) {
+          f->fields.ip_version = 6;
           memcpy(f->fields.shost.v6.s6_addr, n->ip6, 16);
           memcpy(f->fields.shost_mask.v6.s6_addr, n->mask6, 16);
 	}
@@ -127,10 +129,12 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
     case Q_DST:
       memcpy(f->fields.dmac, n->mac, 6);
       if(n->ip) {
+        f->fields.ip_version = 4;
         f->fields.dhost.v4 = n->ip;
         f->fields.dhost_mask.v4 = n->mask;
       } else {
 	if (!is_empty_ipv6(n->ip6)) {
+          f->fields.ip_version = 6;
           memcpy(f->fields.dhost.v6.s6_addr, n->ip6, 16);
           memcpy(f->fields.dhost_mask.v6.s6_addr, n->mask6, 16);
 	}
@@ -142,11 +146,12 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
     case Q_OR:
       memcpy(f->fields.smac, n->mac, 6);
       if(n->ip) {
+        f->fields.ip_version = 4;
         f->fields.shost.v4 = n->ip;
         f->fields.shost_mask.v4 = n->mask;
-
       } else {
 	if (!is_empty_ipv6(n->ip6)) {
+          f->fields.ip_version = 6;
           memcpy(f->fields.shost.v6.s6_addr, n->ip6, 16);
           memcpy(f->fields.shost_mask.v6.s6_addr, n->mask6, 16);
 	}
@@ -206,7 +211,6 @@ static void merge_wildcard_dmac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list
   }
 }
 
-#if 0
 static void merge_wildcard_shost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
   if (f1->fields.shost.v4) {
     if (!f->fields.shost.v4) {
@@ -238,7 +242,6 @@ static void merge_wildcard_dhost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
     }
   }
 }
-#endif
 
 static void merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
   if (!is_empty_ipv6(f1->fields.shost.v6.s6_addr)) {
@@ -325,19 +328,25 @@ static void merge_wildcard_filters(fast_bpf_rule_list_item_t *f, fast_bpf_rule_l
   merge_wildcard_dmac(f, f1); 
   merge_wildcard_dmac(f, f2); 
 
-  merge_wildcard_shost6(f, f1); 
-  merge_wildcard_shost6(f, f2); 
+  if (f1->fields.ip_version == 4) {
+    f->fields.ip_version = 4;
+    merge_wildcard_shost(f, f1); 
+    merge_wildcard_dhost(f, f1); 
+  } else if (f1->fields.ip_version == 6) {
+    f->fields.ip_version = 6;
+    merge_wildcard_shost6(f, f1); 
+    merge_wildcard_dhost6(f, f1); 
+  }
 
-  merge_wildcard_dhost6(f, f1); 
-  merge_wildcard_dhost6(f, f2);
-
-  /* IPv6 merge is also merging IPv4 as they share the union
-  merge_wildcard_shost(f, f1); 
-  merge_wildcard_shost(f, f2); 
-
-  merge_wildcard_dhost(f, f1); 
-  merge_wildcard_dhost(f, f2); 
-  */
+  if (f2->fields.ip_version == 4) {
+    f->fields.ip_version = 4;
+    merge_wildcard_shost(f, f2); 
+    merge_wildcard_dhost(f, f2); 
+  } else if (f2->fields.ip_version == 6) {
+    f->fields.ip_version = 6;
+    merge_wildcard_shost6(f, f2); 
+    merge_wildcard_dhost6(f, f2);
+  }
 
   merge_wildcard_sport(f, f1); 
   merge_wildcard_sport(f, f2); 

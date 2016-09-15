@@ -639,16 +639,17 @@ static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_
   if(!__fast_bpf_rdif_interface_set_permit_action(handle))
     return (0);
 
-  if(rule->fields.shost.v4 != 0) {
+  if(rule->fields.ip_version == 4 && rule->fields.shost.v4 != 0) {
     /* Set ipv4 src address */
     if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.shost.v4, 1))
       return (0);
   }
-  if(rule->fields.dhost.v4 != 0) {
+  if(rule->fields.ip_version == 4 && rule->fields.dhost.v4 != 0) {
     /* Set ipv4 dst address */
     if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.dhost.v4, 0))
       return (0);
   }
+  //TODO IPv6
   if(rule->fields.sport_low != 0) {
     /* Set src port */
     if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.sport_low), 1))

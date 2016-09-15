@@ -154,6 +154,8 @@ int fast_bpf_match(fast_bpf_tree_t *tree, fast_bpf_pkt_info_t *h);
 typedef struct {
   u_int8_t  smac[6], dmac[6]; 
   u_int8_t  proto; /* tcp, udp, sctp */
+  u_int8_t  ip_version;
+  u_int8_t  __padding[2];
   u_int16_t vlan_id, l7_proto;
   ip_addr   shost, dhost;
   ip_addr   shost_mask, dhost_mask;
