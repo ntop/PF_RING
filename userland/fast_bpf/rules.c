@@ -123,8 +123,8 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
       } else {
 	if (!is_empty_ipv6(n->ip6)) {
           f->fields.ip_version = 6;
-          memcpy(f->fields.shost.v6.s6_addr, n->ip6, 16);
-          memcpy(f->fields.shost_mask.v6.s6_addr, n->mask6, 16);
+          memcpy(f->fields.shost.v6.u6_addr.u6_addr8, n->ip6, 16);
+          memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
 	}
       }
       f->fields.sport_low = n->port_from;
@@ -140,8 +140,8 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
       } else {
 	if (!is_empty_ipv6(n->ip6)) {
           f->fields.ip_version = 6;
-          memcpy(f->fields.dhost.v6.s6_addr, n->ip6, 16);
-          memcpy(f->fields.dhost_mask.v6.s6_addr, n->mask6, 16);
+          memcpy(f->fields.dhost.v6.u6_addr.u6_addr8, n->ip6, 16);
+          memcpy(f->fields.dhost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
 	}
       }
       f->fields.dport_low = n->port_from;
@@ -157,8 +157,8 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
       } else {
 	if (!is_empty_ipv6(n->ip6)) {
           f->fields.ip_version = 6;
-          memcpy(f->fields.shost.v6.s6_addr, n->ip6, 16);
-          memcpy(f->fields.shost_mask.v6.s6_addr, n->mask6, 16);
+          memcpy(f->fields.shost.v6.u6_addr.u6_addr8, n->ip6, 16);
+          memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
 	}
       }
       f->fields.sport_low = n->port_from;
@@ -249,15 +249,15 @@ static void merge_wildcard_dhost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
 }
 
 static void merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
-  if (!is_empty_ipv6(f1->fields.shost.v6.s6_addr)) {
-    if (is_empty_ipv6(f->fields.shost.v6.s6_addr)) {
-      memcpy(f->fields.shost.v6.s6_addr, f1->fields.shost.v6.s6_addr, 16);
-      memcpy(f->fields.shost_mask.v6.s6_addr, f1->fields.shost_mask.v6.s6_addr, 16);
+  if (!is_empty_ipv6(f1->fields.shost.v6.u6_addr.u6_addr8)) {
+    if (is_empty_ipv6(f->fields.shost.v6.u6_addr.u6_addr8)) {
+      memcpy(f->fields.shost.v6.u6_addr.u6_addr8, f1->fields.shost.v6.u6_addr.u6_addr8, 16);
+      memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, f1->fields.shost_mask.v6.u6_addr.u6_addr8, 16);
     } else {
       if (f1->bidirectional) {
-        if (is_empty_ipv6(f->fields.dhost.v6.s6_addr)) {
-	  memcpy(f->fields.dhost.v6.s6_addr, f1->fields.shost.v6.s6_addr, 16);
-	  memcpy(f->fields.dhost_mask.v6.s6_addr, f1->fields.shost_mask.v6.s6_addr, 16);
+        if (is_empty_ipv6(f->fields.dhost.v6.u6_addr.u6_addr8)) {
+	  memcpy(f->fields.dhost.v6.u6_addr.u6_addr8, f1->fields.shost.v6.u6_addr.u6_addr8, 16);
+	  memcpy(f->fields.dhost_mask.v6.u6_addr.u6_addr8, f1->fields.shost_mask.v6.u6_addr.u6_addr8, 16);
 	} else DEBUG_PRINTF("Conflict merging filters on dst ipv6\n");
       } else DEBUG_PRINTF("Conflict merging filters on src ipv6\n");
     }
@@ -265,15 +265,15 @@ static void merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_li
 }
 
 static void merge_wildcard_dhost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
-  if (!is_empty_ipv6(f1->fields.dhost.v6.s6_addr)) {
-    if (is_empty_ipv6(f->fields.dhost.v6.s6_addr)) {
-      memcpy(f->fields.dhost.v6.s6_addr, f1->fields.dhost.v6.s6_addr, 16);
-      memcpy(f->fields.dhost_mask.v6.s6_addr, f1->fields.dhost_mask.v6.s6_addr, 16);
+  if (!is_empty_ipv6(f1->fields.dhost.v6.u6_addr.u6_addr8)) {
+    if (is_empty_ipv6(f->fields.dhost.v6.u6_addr.u6_addr8)) {
+      memcpy(f->fields.dhost.v6.u6_addr.u6_addr8, f1->fields.dhost.v6.u6_addr.u6_addr8, 16);
+      memcpy(f->fields.dhost_mask.v6.u6_addr.u6_addr8, f1->fields.dhost_mask.v6.u6_addr.u6_addr8, 16);
     } else {
       if (f1->bidirectional) {
-        if (is_empty_ipv6(f->fields.shost.v6.s6_addr)) {
-	  memcpy(f->fields.shost.v6.s6_addr, f1->fields.dhost.v6.s6_addr, 16);
-	  memcpy(f->fields.shost_mask.v6.s6_addr, f1->fields.dhost_mask.v6.s6_addr, 16);
+        if (is_empty_ipv6(f->fields.shost.v6.u6_addr.u6_addr8)) {
+	  memcpy(f->fields.shost.v6.u6_addr.u6_addr8, f1->fields.dhost.v6.u6_addr.u6_addr8, 16);
+	  memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, f1->fields.dhost_mask.v6.u6_addr.u6_addr8, 16);
 	} else DEBUG_PRINTF("Conflict merging filters on src ipv6\n");
       } else DEBUG_PRINTF("Conflict merging filters on dst ipv6\n");
     }
