@@ -26,13 +26,19 @@
 #include <ws2tcpip.h>
 #endif
 
-#ifndef RING_VERSION
+struct fast_bpf_in6_addr {
+  union {
+    u_int8_t   u6_addr8[16];
+    u_int16_t  u6_addr16[8];
+    u_int32_t  u6_addr32[4];
+  } u6_addr;  /* 128-bit IP6 address */
+};
+
 typedef union {
-  struct in6_addr v6;
+  struct fast_bpf_in6_addr v6;
   u_int32_t v4;
 } __attribute__((packed))
-ip_addr;
-#endif
+fast_bpf_ip_addr;
 
 /***************************************************************************/
 
@@ -130,7 +136,7 @@ typedef struct fast_bpf_pkt_info_tuple {
   u_int16_t eth_type;
   u_int8_t ip_version;
   u_int8_t l3_proto, ip_tos;
-  ip_addr ip_src, ip_dst;
+  fast_bpf_ip_addr ip_src, ip_dst;
   u_int16_t l4_src_port, l4_dst_port;
 } __attribute__((packed))
 fast_bpf_pkt_info_tuple_t;
@@ -162,8 +168,8 @@ typedef struct {
   u_int8_t  ip_version;
   u_int8_t  __padding[2];
   u_int16_t vlan_id, l7_proto;
-  ip_addr   shost, dhost;
-  ip_addr   shost_mask, dhost_mask;
+  fast_bpf_ip_addr shost, dhost;
+  fast_bpf_ip_addr shost_mask, dhost_mask;
   u_int16_t sport_low, sport_high;
   u_int16_t dport_low, dport_high;
 } __attribute__((packed))
