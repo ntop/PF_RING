@@ -50,6 +50,7 @@ static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *han
 static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle);
 static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle);
 static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc);
+static int __fast_bpf_rdif_interface_set_ipv6_address(fast_bpf_rdif_handle_t *handle, unsigned char* ipv6_addr, unsigned int isSrc);
 static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc);
 static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle, unsigned int protocol);
 
@@ -70,6 +71,16 @@ static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle);
 static void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree);
 static void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n);
 #endif
+
+/* ********************************************************************** */
+
+static /* inline */ int is_empty_ipv6(unsigned char ipv6[16]);
+
+static unsigned char  __empty_ipv6[16] = { 0 };
+
+static /* inline */ int is_empty_ipv6(unsigned char ipv6[16]) {
+  return memcmp(ipv6, __empty_ipv6, 16) == 0;
+}
 
 /* -------------------------------------------------- */
 
@@ -377,12 +388,46 @@ static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *ha
   if(isSrc) {
     /* Set ipv4 source address */
     handle->rules_parameters.rdi_mem.src_ip = ipAddress;
+    /* Set ipv4 mode */
+    handle->rules_parameters.rdi_mem.src_ip6.flag=0;
   } else {
     /* Set ipv4 destination address */
     handle->rules_parameters.rdi_mem.dst_ip = ipAddress;
+    /* Set ipv4 mode */
+    handle->rules_parameters.rdi_mem.dst_ip6.flag=0;
   }
-  /* Set ipv4 mode */
-  handle->rules_parameters.rdi_mem.src_ip6.flag=0;
+
+
+  return (1);
+}
+
+/* -------------------------------------------------- */
+/*
+ * This function sets the source or destination ip v4 address in a rule
+ * Input parameter:
+ *     - "handle" -> data structure that contains the bpf rdif data
+ *     - "ipAddress" -> ip address
+ *     - "isSrc"-> 1 for a source ip address or 0 for a destination ip address
+ * Return value:
+ *     - 0 on failure
+ *     - 1 on success
+ */
+/* -------------------------------------------------- */
+static int __fast_bpf_rdif_interface_set_ipv6_address(fast_bpf_rdif_handle_t *handle, unsigned char* ipv6_addr, unsigned int isSrc) {
+  if(handle == NULL) return (0);
+  if(ipv6_addr == NULL) return (0);
+
+  if(isSrc) {
+    /* Set ipv4 source address */
+    memcpy(handle->rules_parameters.rdi_mem.src_ip6.ip, ipv6_addr, 16);
+    /* Set ipv4 mode */
+    handle->rules_parameters.rdi_mem.src_ip6.flag=1;
+  } else {
+    /* Set ipv4 destination address */
+    memcpy(handle->rules_parameters.rdi_mem.dst_ip6.ip, ipv6_addr, 16);
+    /* Set ipv4 mode */
+    handle->rules_parameters.rdi_mem.dst_ip6.flag=1;
+  }
 
   return (1);
 }
@@ -608,7 +653,7 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
 
       pun = pun->next;
     }
-    
+
     currPun = currPun->next;
   }
 
@@ -654,7 +699,16 @@ static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_
     if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.dhost.v4, 0))
       return (0);
   }
-  //TODO IPv6
+  if( (rule->fields.ip_version == 6) && (! is_empty_ipv6(rule->fields.shost.v6.u6_addr.u6_addr8) ) ) {
+    /* Set ipv6 src address */
+    if(!__fast_bpf_rdif_interface_set_ipv6_address(handle, rule->fields.shost.v6.u6_addr.u6_addr8, 1))
+      return (0);
+  }
+  if( (rule->fields.ip_version == 6) && (! is_empty_ipv6(rule->fields.dhost.v6.u6_addr.u6_addr8) ) ) {
+    /* Set ipv6 dst address */
+    if(!__fast_bpf_rdif_interface_set_ipv6_address(handle, rule->fields.dhost.v6.u6_addr.u6_addr8, 0))
+      return (0);
+  }
   if(rule->fields.sport_low != 0) {
     /* Set src port */
     if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.sport_low), 1))
