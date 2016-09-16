@@ -96,11 +96,12 @@ static int __pfring_exablaze_check_ip_rules(pfring_exablaze *exablaze,
     while(pun != NULL) {
       fast_bpf_rule_core_fields_t *c = &pun->fields;
       
-      if(c->vlan_id != 0) return(-1);
-      if(c->sport_low != c->sport_high) return(-2); /* Ranges are not supported */
-      if(c->dport_low != c->dport_high) return(-2); /* Ranges are not supported */
+      if(c->ip_version != 4) return(-1); /* Hardware IPv6 filters are not supported */
+      if(c->vlan_id != 0) return(-2);
+      if(c->sport_low != c->sport_high) return(-3); /* Ranges are not supported */
+      if(c->dport_low != c->dport_high) return(-3); /* Ranges are not supported */
 
-      if(++num_filters >= 128) return(-3); /* Too many filters */
+      if(++num_filters >= 128) return(-4); /* Too many filters */
       
       pun = pun->next;
     }
