@@ -92,12 +92,16 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
       } else if (n->qualifiers.address == Q_PROTO) {
         DEBUG_PRINTF("Ethernet protocol cannot be compared with wildcard filters\n");  
       }
+      if (n->protocol == 0x800)
+        f->fields.ip_version = 4;
+      else if (n->protocol == 0x86DD)
+        f->fields.ip_version = 6;
       break;
     case Q_DEFAULT:
     case Q_IP:
     case Q_IPV6:
       if (n->qualifiers.address == Q_PROTO)
-        f->fields.proto =(u_int8_t)(n->protocol);
+        f->fields.proto = (u_int8_t) (n->protocol); 
       break;
     case Q_TCP:
       f->fields.proto = 6;
@@ -120,12 +124,10 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
         f->fields.ip_version = 4;
         f->fields.shost.v4 = n->ip;
         f->fields.shost_mask.v4 = n->mask;
-      } else {
-	if (!is_empty_ipv6(n->ip6)) {
-          f->fields.ip_version = 6;
-          memcpy(f->fields.shost.v6.u6_addr.u6_addr8, n->ip6, 16);
-          memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
-	}
+      } else if (!is_empty_ipv6(n->ip6)) {
+        f->fields.ip_version = 6;
+        memcpy(f->fields.shost.v6.u6_addr.u6_addr8, n->ip6, 16);
+        memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
       }
       f->fields.sport_low = n->port_from;
       f->fields.sport_high = n->port_to;
@@ -137,12 +139,10 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
         f->fields.ip_version = 4;
         f->fields.dhost.v4 = n->ip;
         f->fields.dhost_mask.v4 = n->mask;
-      } else {
-	if (!is_empty_ipv6(n->ip6)) {
-          f->fields.ip_version = 6;
-          memcpy(f->fields.dhost.v6.u6_addr.u6_addr8, n->ip6, 16);
-          memcpy(f->fields.dhost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
-	}
+      } else if (!is_empty_ipv6(n->ip6)) {
+        f->fields.ip_version = 6;
+        memcpy(f->fields.dhost.v6.u6_addr.u6_addr8, n->ip6, 16);
+        memcpy(f->fields.dhost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
       }
       f->fields.dport_low = n->port_from;
       f->fields.dport_high = n->port_to;
@@ -154,16 +154,15 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
         f->fields.ip_version = 4;
         f->fields.shost.v4 = n->ip;
         f->fields.shost_mask.v4 = n->mask;
-      } else {
-	if (!is_empty_ipv6(n->ip6)) {
-          f->fields.ip_version = 6;
-          memcpy(f->fields.shost.v6.u6_addr.u6_addr8, n->ip6, 16);
-          memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
-	}
+      } else if (!is_empty_ipv6(n->ip6)) {
+        f->fields.ip_version = 6;
+        memcpy(f->fields.shost.v6.u6_addr.u6_addr8, n->ip6, 16);
+        memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, n->mask6, 16);
       }
       f->fields.sport_low = n->port_from;
       f->fields.sport_high = n->port_to;
-      f->bidirectional = 1;
+      if (!is_empty_mac(n->mac) || n->ip || !is_empty_ipv6(n->ip6) || n->port_from)
+        f->bidirectional = 1;
       break;
     default:
       DEBUG_PRINTF("Unexpected direction qualifier (%d)\n", __LINE__);
@@ -312,22 +311,26 @@ static void merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
   }
 }
 
+#if 0
 static int wildcard_filter_is_non_directional(fast_bpf_rule_list_item_t *f) {
   if (!is_empty_mac(f->fields.smac) || !is_empty_mac(f->fields.dmac)) return 0;
   if (f->fields.ip_version /* IPs defined */) return 0;
   if (f->fields.sport_low || f->fields.dport_low) return 0;
   return 1;
 }
+#endif
 
 static void merge_wildcard_filters(fast_bpf_rule_list_item_t *f, 
                                    fast_bpf_rule_list_item_t *f1,
 				   fast_bpf_rule_list_item_t *f2) {
   if (f1->bidirectional != f2->bidirectional) {
     DEBUG_PRINTF("Mergind bidirectional rule with unidirectional rule\n");
+#if 0
     if ((f1->bidirectional && wildcard_filter_is_non_directional(f1)) ||
         (f2->bidirectional && wildcard_filter_is_non_directional(f2)))
       f->bidirectional = 0;
     else
+#endif
       f->bidirectional = 1; /* TODO setting as bidirectional (false positives), actually it should be split as multiple monodirectional filters */
   } else {
     f->bidirectional = f1->bidirectional;
