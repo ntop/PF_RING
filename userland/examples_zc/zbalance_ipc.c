@@ -282,6 +282,7 @@ void printHelp(void) {
   printf("-g <core id>     Bind this app to a core\n");
   printf("-q <size>        Number of slots in each consumer queue (default: %u)\n", QUEUE_LEN);
   printf("-b <size>        Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
+  printf("-w               Use hw aggregation when specifying multiple devices in -i (when supported)\n");
   printf("-N <num>         Producer for n2disk multi-thread (<num> threads)\n");
   printf("-a               Active packet wait\n");
   printf("-Q <sock list>   Enable VM support (comma-separated list of QEMU monitor sockets)\n");
@@ -390,7 +391,7 @@ int main(int argc, char* argv[]) {
   char *applications = NULL, *app, *app_pos = NULL;
   char *vm_sockets = NULL, *vm_sock; 
   long i, j, off;
-  int hash_mode = 0;
+  int hash_mode = 0, hw_aggregation = 0;
   int num_additional_buffers = 0;
   pthread_t time_thread;
   int rc;
@@ -399,7 +400,7 @@ int main(int argc, char* argv[]) {
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
-  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:";
+  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:w";
 
   start_time.tv_sec = 0;
 
@@ -471,6 +472,9 @@ int main(int argc, char* argv[]) {
       time_pulse = 1;
       bind_time_pulse_core = atoi(optarg);
       break;
+    case 'w':
+      hw_aggregation = 1;
+      break;
     case 'z':
       proc_stats_only = 1;
       break;
@@ -487,12 +491,18 @@ int main(int argc, char* argv[]) {
     num_additional_buffers += (n2disk_threads * (N2DISK_CONSUMER_QUEUE_LEN + 1)) + N2DISK_PREFETCH_BUFFERS;
   }
 
-  dev = strtok(device, ",");
-  while(dev != NULL) {
-    devices = realloc(devices, sizeof(char *) * (num_devices+1));
-    devices[num_devices] = strdup(dev);
-    num_devices++;
-    dev = strtok(NULL, ",");
+  if (hw_aggregation) {
+    dev = strtok(device, ",");
+    while(dev != NULL) {
+      devices = realloc(devices, sizeof(char *) * (num_devices+1));
+      devices[num_devices] = strdup(dev);
+      num_devices++;
+      dev = strtok(NULL, ",");
+    }
+  } else {
+    devices = calloc(1, sizeof(char *));
+    devices[0] = device;
+    num_devices = 1;
   }
 
   app = strtok_r(applications, ",", &app_pos);
