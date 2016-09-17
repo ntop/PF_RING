@@ -94,7 +94,7 @@ typedef struct fast_bpf_node {
   int type;
   int level;
   fast_bpf_qualifiers_t qualifiers;
-  u_int8_t not;
+  u_int8_t not_expr;
   u_int8_t not_rule;
   u_int8_t vlan_id_defined;
   u_int8_t __padding;
