@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "fast_bpf.h"
 
@@ -164,12 +165,12 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
   napatech_cmd("Assign[StreamId=1] = Port == 0");
   napatech_cmd("DefineMacro(\"mUdpSrcPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=0;DataType=ByteStr2] == $1\")");
   napatech_cmd("DefineMacro(\"mUdpDestPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=2;DataType=ByteStr2] == $1\")");
-  napatech_cmd("DefineMacro(\"mTcpSrcPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=0;DataType=ByteStr2]\")\"");
-  napatech_cmd("DefineMacro(\"mTcpDestPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=2;DataType=ByteStr2]\")\"");
-  napatech_cmd("DefineMacro(\"mIPv4SrcAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=12;DataType=IPv4Addr]\")");
-  napatech_cmd("DefineMacro(\"mIPv4DestAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=16;DataType=IPv4Addr]\")");
-  napatech_cmd("DefineMacro(\"mIPv6SrcAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=8;DataType=IPv6Addr]\")");
-  napatech_cmd("DefineMacro(\"mIPv6DestAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=24;DataType=IPv6Addr]\")");
+  napatech_cmd("DefineMacro(\"mTcpSrcPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=0;DataType=ByteStr2] == $1\")");
+  napatech_cmd("DefineMacro(\"mTcpDestPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=2;DataType=ByteStr2] == $1\")");
+  napatech_cmd("DefineMacro(\"mIPv4SrcAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=12;DataType=IPv4Addr] == $1\")");
+  napatech_cmd("DefineMacro(\"mIPv4DestAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=16;DataType=IPv4Addr] == $1\")");
+  napatech_cmd("DefineMacro(\"mIPv6SrcAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=8;DataType=IPv6Addr] == $1\")");
+  napatech_cmd("DefineMacro(\"mIPv6DestAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=24;DataType=IPv6Addr] == $1\")");
 
   /* Scan the list and set the single rule */
   while(currPun != NULL) {
@@ -192,17 +193,42 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
 
 /* *********************************************************** */
 
+void help() {
+  printf("test [-n] -f \"BPF filter\"\n");
+  exit(0);
+}
+
+/* *********************************************************** */
+
 int main(int argc, char *argv[]) {
   fast_bpf_tree_t *tree;
   fast_bpf_pkt_info_t pkt;
   fast_bpf_rule_block_list_item_t *punBlock;
+  int dump_napatech = 0;
+  char *filter = NULL, c;
 
-  if (argc != 2) {
-    printf("%s <bpf>\n", argv[0]);
-    return -1;
+  while((c = getopt(argc, argv, "hf:n")) != '?') {
+    if((c == 255) || (c == -1)) break;
+    
+    switch(c) {
+    case 'h':
+      help();
+      break;
+
+    case 'f':
+      filter = optarg;
+      break;
+
+    case 'n':
+      dump_napatech = 1;
+      break;
+    }
   }
 
-  if ((tree = fast_bpf_parse(argv[1], NULL)) == NULL) {
+if(filter == NULL)
+  help();
+
+  if ((tree = fast_bpf_parse(filter, NULL)) == NULL) {
     printf("Parse error\n");
     return -1;
   }
@@ -221,7 +247,9 @@ int main(int argc, char *argv[]) {
 
   dump_rules(punBlock);
 
-  napatech_dump_rules(punBlock);
+  if(dump_napatech)
+    napatech_dump_rules(punBlock);
+
   fast_bpf_rule_block_list_free(punBlock);
 
   printf("\n");
