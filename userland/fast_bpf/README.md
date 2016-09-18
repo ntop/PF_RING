@@ -16,8 +16,8 @@ filtering expressions onto hardware filters supported by popular network adapter
 An expression consists of one or more primitives.
 The filter expressions are built by using AND and OR (NOT operation is not permitted).
 
-* Protocol: tcp, udp, scup
-* Direction: src, dst, src or dst, src and pst
+* Protocol: tcp, udp, sctp
+* Direction: src, dst, src or dst, src and dst
 * Type: host, port and protocol
 
 Additional constraints for packet capture filters include:
