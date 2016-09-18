@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
   char *filter = NULL, c;
 
   while((c = getopt(argc, argv, "hf:n")) != '?') {
-    if((c == 255) || (c == -1)) break;
+    if(c == -1) break;
     
     switch(c) {
     case 'h':

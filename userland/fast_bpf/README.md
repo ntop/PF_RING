@@ -1,40 +1,46 @@
-Fast BPF
---------
+----
+## Welcome to Fast BPF
 
-This directory contains an impementation of the BPF (Berkeley Packet Filter) interpreter 
+This directory contains an impementation of the BPF (Berkeley Packet Filter) interpreter
 that can be used as alternative to the implementation that can be found in libpcap.
 
-This version implements a subset of the filtering expressions supported by the original BPF, 
-and it is designed to be fast and small in size, with no external depedencies. 
-This library has been designed to be efficient, and easy to embed in applications (e.g. n2disk 
-uses it to filter traffic). Currently it is used by selected PF_RING modules to convert BPF 
-filtering expressions onto hardware filters supported by popular network adapters such as 
-Napatech, Intel FM10K, and Exablaze.
+This version implements a subset of the filtering expressions supported by the original BPF, and it is designed to be fast and small in size, with no external dependencies.
 
-An expression consists of one or more primitives. 
-The filter expressions are built by using AND and OR (NOT operation is not 
-permitted).
+This library has been designed to be efficient, and easy to embed in applications (e.g. n2disk uses it to filter traffic). 
+Currently it is used by selected PF_RING modules to convert BPF
+filtering expressions onto hardware filters supported by popular network adapters such as Napatech, Intel FM10K, and Exablaze.
 
-Protocol: tcp, udp, sctp
-Direction: src, dst, src or dst, src and dst
-Type: host, port and protocol
+----
+## BPF Expressions
 
-Additional constraints for packet capture filters:
- - it is not possible to use more than 1-level nesting using parenthesis
- - it is not possible to use the "or" operator inside parenthesis
- - it is not possible to mix different operators (only 1-level "or" of "and" 
-   blocks is allowed)
- - is not possible to combine different directions in the same block using
-   the "and" operator.
+An expression consists of one or more primitives.
+The filter expressions are built by using AND and OR (NOT operation is not permitted).
 
-Permitted filters examples:
- - dst host 192.168.0.1                              
- - src port 3000                                     
- - ip dst host 192.168.0.1                           
- - src host 192.168.0.1 or dst host 192.168.0.1     
- - src port 3000 and src host 10.0.0.1 and proto 17  
- - tcp src port (80 or 443)
- - (host 192.168.0.1 and port 3000) or (src host 10.0.0.1 and proto 17)
+* Protocol: tcp, udp, scup
+* Direction: src, dst, src or dst, src and pst
+* Type: host, port and protocol
 
-Unsupported filters examples:
- - src port 3000 and (src host 10.0.0.1 or src host 10.0.0.2)
+Additional constraints for packet capture filters include:
+
+* it is not possible to use more than 1-level nesting using parenthesis
+* it is not possible to use the "or" operator inside parenthesis
+* it is not possible to mix different operators (only 1-level "or" of "and" blocks is allowed)
+* is not possible to combine different directions in the same block using   the "and" operator.
+
+
+----
+### BPF Filter Examples
+
+Valid Filters
+
+* dst host 192.168.0.1
+* src port 3000
+* ip dst host 192.168.0.1
+* src host 192.168.0.1 or dst host 192.168.0.1
+* src port 3000 and src host 10.0.0.1 and proto 17
+* tcp src port (80 or 443)
+* (host 192.168.0.1 and port 3000) or (src host 10.0.0.1 and proto 17)
+
+Unsupported Filters
+
+* src port 3000 and (src host 10.0.0.1 or src host 10.0.0.2)
