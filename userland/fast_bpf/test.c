@@ -56,12 +56,12 @@ void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c, u_int8_t revert) {
 
     if(!revert)
       printf("[%s:%u-%u -> %s:%u-%u]",
-	     _intoaV4(c->shost.v4, a, sizeof(a)), ntohs(c->sport_low), ntohs(c->sport_high),
-	     _intoaV4(c->dhost.v4, b, sizeof(b)), ntohs(c->dport_low), ntohs(c->dport_high));
+	     _intoaV4(ntohl(c->shost.v4), a, sizeof(a)), ntohs(c->sport_low), ntohs(c->sport_high),
+	     _intoaV4(ntohl(c->dhost.v4), b, sizeof(b)), ntohs(c->dport_low), ntohs(c->dport_high));
     else
       printf("[%s:%u-%u -> %s:%u-%u]",
-	     _intoaV4(c->dhost.v4, b, sizeof(b)), ntohs(c->dport_low), ntohs(c->dport_high),
-	     _intoaV4(c->shost.v4, a, sizeof(a)), ntohs(c->sport_low), ntohs(c->sport_high));
+	     _intoaV4(ntohl(c->dhost.v4), b, sizeof(b)), ntohs(c->dport_low), ntohs(c->dport_high),
+	     _intoaV4(ntohl(c->shost.v4), a, sizeof(a)), ntohs(c->sport_low), ntohs(c->sport_high));
 
   } else if(c->ip_version == 6) {
 
