@@ -287,18 +287,14 @@ static void merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
   }
 }
 
-static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item_t *f1, fast_bpf_rule_list_item_t *f2) {
+static fast_bpf_rule_list_item_t *merge_wildcard_filters_single(fast_bpf_rule_list_item_t *f1, fast_bpf_rule_list_item_t *f2, u_int8_t swap1, u_int8_t swap2) {
   fast_bpf_rule_list_item_t *f;
  
   f = allocate_filtering_rule_list_item();
   if (f == NULL)
     return NULL;
 
-  if (f1->bidirectional != f2->bidirectional) {
-    DEBUG_PRINTF("Mergind bidirectional rule with unidirectional rule is not supported\n");
-  } else {
-    f->bidirectional = f1->bidirectional;
-  }
+  f->bidirectional = 0;
 
   merge_wildcard_vlan(f, f1);
   merge_wildcard_vlan(f, f2);
@@ -306,37 +302,59 @@ static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item
   merge_wildcard_proto(f, f1);
   merge_wildcard_proto(f, f2);
 
-  merge_wildcard_smac(f, f1, 0); 
-  merge_wildcard_smac(f, f2, 0); 
+  merge_wildcard_smac(f, f1, swap1); 
+  merge_wildcard_smac(f, f2, swap2); 
 
-  merge_wildcard_dmac(f, f1, 0); 
-  merge_wildcard_dmac(f, f2, 0); 
+  merge_wildcard_dmac(f, f1, swap1); 
+  merge_wildcard_dmac(f, f2, swap2); 
 
   if (f1->fields.ip_version == 4) {
     f->fields.ip_version = 4;
-    merge_wildcard_shost(f, f1, 0); 
-    merge_wildcard_dhost(f, f1, 0); 
+    merge_wildcard_shost(f, f1, swap1); 
+    merge_wildcard_dhost(f, f1, swap1); 
   } else if (f1->fields.ip_version == 6) {
     f->fields.ip_version = 6;
-    merge_wildcard_shost6(f, f1, 0); 
-    merge_wildcard_dhost6(f, f1, 0); 
+    merge_wildcard_shost6(f, f1, swap1); 
+    merge_wildcard_dhost6(f, f1, swap1); 
   }
 
   if (f2->fields.ip_version == 4) {
     f->fields.ip_version = 4;
-    merge_wildcard_shost(f, f2, 0); 
-    merge_wildcard_dhost(f, f2, 0); 
+    merge_wildcard_shost(f, f2, swap2); 
+    merge_wildcard_dhost(f, f2, swap2); 
   } else if (f2->fields.ip_version == 6) {
     f->fields.ip_version = 6;
-    merge_wildcard_shost6(f, f2, 0); 
-    merge_wildcard_dhost6(f, f2, 0);
+    merge_wildcard_shost6(f, f2, swap2); 
+    merge_wildcard_dhost6(f, f2, swap2);
   }
 
-  merge_wildcard_sport(f, f1, 0); 
-  merge_wildcard_sport(f, f2, 0); 
+  merge_wildcard_sport(f, f1, swap1); 
+  merge_wildcard_sport(f, f2, swap2); 
 
-  merge_wildcard_dport(f, f1, 0); 
-  merge_wildcard_dport(f, f2, 0); 
+  merge_wildcard_dport(f, f1, swap1); 
+  merge_wildcard_dport(f, f2, swap2);
+
+  return f; 
+}
+
+static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item_t *f1, fast_bpf_rule_list_item_t *f2) {
+  fast_bpf_rule_list_item_t *f, *last;
+
+  last = f = merge_wildcard_filters_single(f1, f2, 0, 0);
+
+  if (f1->bidirectional) {
+    last->next = merge_wildcard_filters_single(f1, f2, 1, 0);
+    last = last->next;
+  }
+
+  if (f2->bidirectional) {
+    last->next = merge_wildcard_filters_single(f1, f2, 0, 1);
+    last = last->next;
+    if (f1->bidirectional) {
+      last->next = merge_wildcard_filters_single(f1, f2, 1, 1);
+      last = last->next;
+    }
+  }
 
   return f;
 }
