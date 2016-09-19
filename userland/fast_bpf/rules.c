@@ -616,49 +616,6 @@ fast_bpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_m
 
 /***************************************************************************/
 
-#if 0
-static /* inline */ int get_primitive_family(fast_bpf_node_t *n) {
-  switch(n->qualifiers.address) {
-    case Q_DEFAULT:
-    case Q_HOST: 
-    case Q_NET:
-      switch(n->qualifiers.protocol) {
-        case Q_LINK:
-          return Q_LINK;
-        case Q_DEFAULT:
-        case Q_IP:
-        case Q_IPV6:
-          return Q_IP;
-	default:
-	  DEBUG_PRINTF("Unexpected protocol qualifier (%d)\n", __LINE__);
-      }
-      break;
-    case Q_PORT:
-    case Q_PORTRANGE:
-      switch(n->qualifiers.protocol) {
-        case Q_TCP:
-        case Q_UDP:
-        case Q_SCTP:
-          return Q_PORT;
-	default:
-	  DEBUG_PRINTF("Unexpected protocol qualifier (%d)\n", __LINE__);
-      }
-      break;
-    case Q_PROTO:
-      return Q_PROTO;
-      break;
-    case Q_L7_PROTO:
-      return Q_L7_PROTO;
-      break;
-    default:
-      DEBUG_PRINTF("Unexpected address qualifier (%d)\n", __LINE__);
-  }
-  return Q_UNDEF;
-}
-#endif
-
-/* ********************************************************************** */
-
 int check_filter_constraints(fast_bpf_node_t *n, int max_nesting_level) {
   if (n == NULL) {
     DEBUG_PRINTF("Empty operator subtree\n");
@@ -672,9 +629,7 @@ int check_filter_constraints(fast_bpf_node_t *n, int max_nesting_level) {
 
   switch(n->type) {
     case N_PRIMITIVE:
-#if 0
-      n->family = get_primitive_family(n);
-#endif
+      n->level = 0;
       break;
     case N_AND:
     case N_OR:
@@ -683,33 +638,13 @@ int check_filter_constraints(fast_bpf_node_t *n, int max_nesting_level) {
 
       n->level = max(n->l->level, n->r->level);
 
-#if 0 /* mixed families -> new level */
-      if (n->l->family != n->r->family) {
-	n->family = Q_UNDEF;
-        n->level++;
-	if (n->level > 1) {
-          DEBUG_PRINTF("Too many nested levels or different types mixed\n");
-	  return 0;
-	}
-      } else {
-        n->family = n->l->family; 
-      }
-      
-      if (((n->level == n->l->level) && (n->l->type != N_PRIMITIVE) && (n->l->type != n->type)) ||
-          ((n->level == n->r->level) && (n->r->type != N_PRIMITIVE) && (n->r->type != n->type))) {
-	DEBUG_PRINTF("Mixed operators on the same nesting level\n");
-	return 0;
-      }
-#else /* mixed operators -> new level */
-      if (((n->l->type != N_PRIMITIVE) && (n->l->type != n->type)) ||
-          ((n->r->type != N_PRIMITIVE) && (n->r->type != n->type))) {
+      if (n->type == N_AND && (n->l->type == N_OR || n->r->type == N_OR)) {
         n->level++;
 	if (n->level > max_nesting_level) {
           DEBUG_PRINTF("Too many nested levels (%d) or different operators mixed: not supported with capture filters\n", n->level);
 	  return 0;
 	}
       }
-#endif
 
       break;
     default:
@@ -729,7 +664,7 @@ int fast_bpf_check_rules_constraints(fast_bpf_tree_t *tree, int max_nesting_leve
 /* ********************************************************************** */
 
 fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree) {
-  if (!fast_bpf_check_rules_constraints(tree, 1 /* default */))
+  if (!fast_bpf_check_rules_constraints(tree, 0 /* default */))
     return NULL;
 
   return generate_pfring_wildcard_filters(tree->root);
@@ -740,7 +675,7 @@ fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree) {
 fast_bpf_rule_block_list_item_t *fast_bpf_generate_optimized_rules(fast_bpf_tree_t *tree) {
   fast_bpf_rule_block_list_item_t *blocks;
 
-  if (!fast_bpf_check_rules_constraints(tree, 1 /* default */))
+  if (!fast_bpf_check_rules_constraints(tree, 0 /* default */))
     return NULL;
 
   if ((blocks = generate_optimized_wildcard_filters(tree->root)) == NULL)
