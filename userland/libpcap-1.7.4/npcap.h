@@ -52,19 +52,19 @@ int     npcap_read_next(npcap_fd_t *cfd, struct pcap_disk_pkthdr **extracted_hdr
 #include "fast_bpf.h"
 
 typedef struct npcap_extract_handle npcap_extract_handle_t;
-struct timeline_extract_handle;
+typedef struct timeline_extract_handle timeline_extract_handle_t;
 
 /* single npcap extraction */
 npcap_extract_handle_t * npcap_extract_open(char *pcap_path, char *index_path, fast_bpf_tree_t *fast_bpf_filter, struct bpf_program *pcap_filter);
-struct pcap_file_header *npcap_extract_header(struct npcap_extract_handle *handle);
-int                      npcap_extract_next(struct npcap_extract_handle *handle, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt);
-void                     npcap_extract_close(struct npcap_extract_handle *handle);
+struct pcap_file_header *npcap_extract_header(npcap_extract_handle_t *handle);
+int                      npcap_extract_next(npcap_extract_handle_t *handle, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt);
+void                     npcap_extract_close(npcap_extract_handle_t *handle);
 
 /* timeline extraction */
-struct timeline_extract_handle *timeline_extract_open(char *timeline_path, time_t begin_epoch, time_t end_epoch, fast_bpf_tree_t *fast_bpf_filter, struct bpf_program *pcap_filter);
-struct pcap_file_header *  timeline_extract_header(struct timeline_extract_handle *handle);
-int                        timeline_extract_next(struct timeline_extract_handle *handle, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt, u_int64_t *match_epoch_nsec);
-void                       timeline_extract_close(struct timeline_extract_handle *handle);
+timeline_extract_handle_t *timeline_extract_open(char *timeline_path, time_t begin_epoch, time_t end_epoch, fast_bpf_tree_t *fast_bpf_filter, struct bpf_program *pcap_filter);
+struct pcap_file_header *  timeline_extract_header(timeline_extract_handle_t *handle);
+int                        timeline_extract_next(timeline_extract_handle_t *handle, struct pcap_disk_pkthdr **extracted_hdr, u_char **extracted_pkt, u_int64_t *match_epoch_nsec);
+void                       timeline_extract_close(timeline_extract_handle_t *handle);
 
 /* extra extraction functions */
 void extract_set_debug_level(u_int8_t level);
