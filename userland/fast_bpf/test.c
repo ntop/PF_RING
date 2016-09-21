@@ -123,7 +123,7 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
 
   if (n == NULL)
     return;
-  
+
   switch(n->type) {
     case N_PRIMITIVE:
       type_str[0] = '\0';
@@ -132,9 +132,9 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
         sprintf(type_str, "%s INNER", type_str);
 
       sprintf(type_str, "%s %s %s", type_str,
-        dir_to_string[n->qualifiers.direction], 
+        dir_to_string[n->qualifiers.direction],
 	addr_to_string[n->qualifiers.address]);
-      
+
       if (n->qualifiers.protocol <= Q_UDP)
         sprintf(type_str, "%s Proto:%s", type_str, proto_to_string[n->qualifiers.protocol]);
       else if (n->qualifiers.protocol == Q_IPV6)
@@ -166,9 +166,9 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
 
       if (n->qualifiers.address == Q_PORT) {
         sprintf(type_str, "%s Port:%d", type_str, ntohs(n->port_from));
-	if (n->port_to != n->port_from) sprintf(type_str, "%s-%d", type_str, ntohs(n->port_to)); 
+	if (n->port_to != n->port_from) sprintf(type_str, "%s-%d", type_str, ntohs(n->port_to));
       }
-      
+
       break;
     case N_AND:
       sprintf(type_str, "AND");
@@ -257,7 +257,7 @@ void napatech_cmd(char *cmd) {
 
 void append_str(char *cmd, u_int cmd_len, int num_cmds, char *str) {
   int l = strlen(cmd);
-  
+
   if(cmd_len > l)
     snprintf(&cmd[l], cmd_len-l, "%s%s",
 	     (num_cmds > 0) ? " AND " : "", str);
@@ -269,7 +269,7 @@ void napatech_dump_rule(u_int id, fast_bpf_rule_core_fields_t *c, u_int8_t rever
   char cmd[1024] = { 0 }, *proto = "", buf[256];
   int num_cmds = 0;
 
-  append_str(cmd, sizeof(cmd), 0, "Assign[StreamId = 1] = ");
+  append_str(cmd, sizeof(cmd), 0, "Assign[StreamId = 1] = Port == 0 AND ");
 
   if(c->vlan_id) append_str(cmd, sizeof(cmd), num_cmds++, "((Encapsulation == VLAN)");
 
@@ -281,15 +281,15 @@ void napatech_dump_rule(u_int id, fast_bpf_rule_core_fields_t *c, u_int8_t rever
 
   if(c->ip_version == 4) {
     char a[32];
-    
-    if(c->shost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr(\"%s\")", (!revert) ? "Src" : "Dest", _intoaV4(c->shost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-    if(c->dhost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr(\"%s\")", (!revert) ? "Dest" : "Src", _intoaV4(c->dhost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+
+    if(c->shost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", (!revert) ? "Src" : "Dest", _intoaV4(c->shost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+    if(c->dhost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", (!revert) ? "Dest" : "Src", _intoaV4(c->dhost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
   } else if(c->ip_version == 6) {
 
   }
 
-  if(c->sport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort(\"%u\")", proto, (!revert) ? "Src" : "Dest", ntohs(c->sport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-  if(c->dport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort(\"%u\")", proto, (!revert) ? "Dest" : "Src", ntohs(c->dport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+  if(c->sport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, (!revert) ? "Src" : "Dest", ntohs(c->sport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+  if(c->dport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, (!revert) ? "Dest" : "Src", ntohs(c->dport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
 
   if(c->vlan_id) append_str(cmd, sizeof(cmd), num_cmds++, ")");
 
@@ -307,15 +307,14 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
 	 "---------------\n");
 
   napatech_cmd("Delete = All");
-  napatech_cmd("Assign[StreamId=1] = Port == 0");
-  napatech_cmd("DefineMacro(\"mUdpSrcPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=0;DataType=ByteStr2] == $1\")");
-  napatech_cmd("DefineMacro(\"mUdpDestPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=2;DataType=ByteStr2] == $1\")");
-  napatech_cmd("DefineMacro(\"mTcpSrcPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=0;DataType=ByteStr2] == $1\")");
-  napatech_cmd("DefineMacro(\"mTcpDestPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=2;DataType=ByteStr2] == $1\")");
-  napatech_cmd("DefineMacro(\"mIPv4SrcAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=12;DataType=IPv4Addr] == $1\")");
-  napatech_cmd("DefineMacro(\"mIPv4DestAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=16;DataType=IPv4Addr] == $1\")");
-  napatech_cmd("DefineMacro(\"mIPv6SrcAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=8;DataType=IPv6Addr] == $1\")");
-  napatech_cmd("DefineMacro(\"mIPv6DestAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=24;DataType=IPv6Addr] == $1\")");
+  napatech_cmd("DefineMacro(\"mUdpSrcPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=0;DataType=ByteStr2]\")");
+  napatech_cmd("DefineMacro(\"mUdpDestPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=2;DataType=ByteStr2]\")");
+  napatech_cmd("DefineMacro(\"mTcpSrcPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=0;DataType=ByteStr2]\")");
+  napatech_cmd("DefineMacro(\"mTcpDestPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=2;DataType=ByteStr2]\")");
+  napatech_cmd("DefineMacro(\"mIPv4SrcAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=12;DataType=IPv4Addr]\")");
+  napatech_cmd("DefineMacro(\"mIPv4DestAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=16;DataType=IPv4Addr]\")");
+  napatech_cmd("DefineMacro(\"mIPv6SrcAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=8;DataType=IPv6Addr]\")");
+  napatech_cmd("DefineMacro(\"mIPv6DestAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=24;DataType=IPv6Addr]\")");
 
   /* Scan the list and set the single rule */
   while(currPun != NULL) {
@@ -354,7 +353,7 @@ int main(int argc, char *argv[]) {
 
   while((c = getopt(argc, argv, "hf:n")) != '?') {
     if(c == -1) break;
-    
+
     switch(c) {
     case 'h':
       help();
