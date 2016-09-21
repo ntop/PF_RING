@@ -188,7 +188,7 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
 
 /* *********************************************************** */
 
-void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c, u_int8_t revert) {
+void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
   printf("[%u] ", id);
 
   if(c->ip_version) printf("[IPv%d] ", c->ip_version);
@@ -196,27 +196,34 @@ void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c, u_int8_t revert) {
   if(c->vlan_id) printf("[VLAN: %u]", c->vlan_id);
   if(c->proto)   printf("[L4 Proto: %u]", c->proto);
 
-  if(c->ip_version == 4) {
-    char a[32], b[32];
+  if(!c->ip_version || c->ip_version == 4) {
+    char a[32];
 
-    if(!revert)
-      printf("[%s:%u-%u -> %s:%u-%u]",
-	     _intoaV4(ntohl(c->shost.v4), a, sizeof(a)), ntohs(c->sport_low), ntohs(c->sport_high),
-	     _intoaV4(ntohl(c->dhost.v4), b, sizeof(b)), ntohs(c->dport_low), ntohs(c->dport_high));
-    else
-      printf("[%s:%u-%u -> %s:%u-%u]",
-	     _intoaV4(ntohl(c->dhost.v4), b, sizeof(b)), ntohs(c->dport_low), ntohs(c->dport_high),
-	     _intoaV4(ntohl(c->shost.v4), a, sizeof(a)), ntohs(c->sport_low), ntohs(c->sport_high));
+    printf("[");
+
+    if (c->shost.v4) printf("%s", _intoaV4(ntohl(c->shost.v4), a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if (c->sport_low) {
+      printf("%u", ntohs(c->sport_low));
+      if (c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
+    } else printf("*");
+
+    printf(" -> ");
+
+    if (c->dhost.v4) printf("%s", _intoaV4(ntohl(c->dhost.v4), a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if (c->dport_low) {
+      printf("%u", ntohs(c->dport_low));
+      if (c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
+    } else printf("*");
+
+    printf("]");
 
   } else if(c->ip_version == 6) {
+    //TODO
 
-  } else {
-    if(ntohs(c->sport_low) || ntohs(c->dport_low)) {
-      if(!revert)
-	printf("[any:%u-%u -> any:%u-%u]", ntohs(c->sport_low), ntohs(c->sport_high), ntohs(c->dport_low), ntohs(c->dport_high));
-      else
-	printf("[any:%u-%u -> any:%u-%u]", ntohs(c->dport_low), ntohs(c->dport_high), ntohs(c->sport_low), ntohs(c->sport_high));
-    }
   }
 
   printf("\n");
@@ -235,10 +242,7 @@ void dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
     while(pun != NULL) {
       fast_bpf_rule_core_fields_t *c = &pun->fields;
 
-      dump_rule(id++, c, 0);
-
-      if(pun->bidirectional)
-	dump_rule(id++, c, 1);
+      dump_rule(id++, c);
 
       pun = pun->next;
     }
@@ -265,7 +269,7 @@ void append_str(char *cmd, u_int cmd_len, int num_cmds, char *str) {
 
 /* *********************************************************** */
 
-void napatech_dump_rule(u_int id, fast_bpf_rule_core_fields_t *c, u_int8_t revert) {
+void napatech_dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
   char cmd[1024] = { 0 }, *proto = "", buf[256];
   int num_cmds = 0;
 
@@ -282,14 +286,14 @@ void napatech_dump_rule(u_int id, fast_bpf_rule_core_fields_t *c, u_int8_t rever
   if(c->ip_version == 4) {
     char a[32];
 
-    if(c->shost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", (!revert) ? "Src" : "Dest", _intoaV4(c->shost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-    if(c->dhost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", (!revert) ? "Dest" : "Src", _intoaV4(c->dhost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+    if(c->shost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", "Src",  _intoaV4(c->shost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+    if(c->dhost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", "Dest", _intoaV4(c->dhost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
   } else if(c->ip_version == 6) {
 
   }
 
-  if(c->sport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, (!revert) ? "Src" : "Dest", ntohs(c->sport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-  if(c->dport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, (!revert) ? "Dest" : "Src", ntohs(c->dport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+  if(c->sport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, "Src",  ntohs(c->sport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
+  if(c->dport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, "Dest", ntohs(c->dport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
 
   if(c->vlan_id) append_str(cmd, sizeof(cmd), num_cmds++, ")");
 
@@ -323,10 +327,7 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
     while(pun != NULL) {
       fast_bpf_rule_core_fields_t *c = &pun->fields;
 
-      napatech_dump_rule(id++, c, 0);
-
-      if(pun->bidirectional)
-	napatech_dump_rule(id++, c, 1);
+      napatech_dump_rule(id++, c);
 
       pun = pun->next;
     }
@@ -406,7 +407,7 @@ int main(int argc, char *argv[]) {
   memset(&pkt, 0, sizeof(pkt));
 
   pkt.vlan_id = 34, pkt.tuple.l4_src_port = htons(34), pkt.tuple.l4_dst_port = htons(345), pkt.l7_proto = 7;
-  printf("VlanID=34 SrcPort=34 DstPort=345 L7Proto=7> -> %s\n", fast_bpf_match(tree, &pkt) ? "MATCHED" : "DISCARDED");
+  printf("VlanID=34 SrcPort=34 DstPort=345 L7Proto=7 -> %s\n", fast_bpf_match(tree, &pkt) ? "MATCHED" : "DISCARDED");
 
   fast_bpf_free(tree);
 
