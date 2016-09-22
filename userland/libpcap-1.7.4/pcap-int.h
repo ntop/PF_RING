@@ -53,6 +53,7 @@ extern CRITICAL_SECTION g_PcapCompileCriticalSection;
 #ifdef HAVE_PF_RING
 #define HAVE_PCAP
 #include "pfring.h"
+#include "fast_bpf.h"
 #endif
 
 #ifdef HAVE_NPCAP
@@ -263,6 +264,14 @@ struct pcap {
 
 #ifdef HAVE_PF_RING
 	pfring *ring;
+	char *bpf_filter;
+	fast_bpf_tree_t *fast_bpf_filter;
+	char *real_device;
+	char *timeline;
+	char *timeline_start, *timeline_end;
+#ifdef HAVE_NPCAP
+	timeline_extract_handle_t *timeline_handle;
+#endif
 #endif
 #ifdef HAVE_NPCAP
 	npcap_fd_t *npcapfd;

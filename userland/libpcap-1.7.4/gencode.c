@@ -435,6 +435,21 @@ pcap_compile(pcap_t *p, struct bpf_program *program,
 	u_int len;
 	int  rc;
 
+#ifdef HAVE_PF_RING
+	if (p->ring || p->timeline) {
+		p->bpf_filter = strdup(buf);
+		if (p->bpf_filter == NULL)
+			return -1;
+#ifdef HAVE_NPCAP
+		if (p->timeline) {
+			p->fast_bpf_filter = fast_bpf_parse(p->bpf_filter, NULL /* l7 callback */);
+			if (p->fast_bpf_filter == NULL)
+				return -1;
+		}
+#endif
+	}
+#endif
+
 	/*
 	 * XXX - single-thread this code path with pthread calls on
 	 * UN*X, if the platform supports pthreads?  If that requires
@@ -517,6 +532,25 @@ quit:
 
 #ifdef WIN32
 	LeaveCriticalSection(&g_PcapCompileCriticalSection);
+#endif
+
+#ifdef HAVE_PF_RING
+#ifdef HAVE_NPCAP
+	if (p->timeline) {
+		if (rc != 0) {
+			/* Returning an empty filter as this seems to be not supported by standard BPF */
+			program->bf_insns = calloc(1, sizeof(*program->bf_insns));
+			if (program->bf_insns) {
+				program->bf_len = 1;
+				program->bf_insns->code = BPF_RET;
+				program->bf_insns->jt = 0;
+				program->bf_insns->jf = 0;
+				program->bf_insns->k = 256;		
+				rc = 0;
+			}
+ 		}
+	}
+#endif
 #endif
 
 	return (rc);
