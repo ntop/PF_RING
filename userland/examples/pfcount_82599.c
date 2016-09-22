@@ -223,7 +223,7 @@ char* etheraddr_string(const u_char *ep, char *buf) {
 /*
  * A faster replacement for inet_ntoa().
  */
-char* _intoa(unsigned int addr, char* buf, u_short bufLen) {
+char* __intoa(unsigned int addr, char* buf, u_short bufLen) {
   char *cp, *retStr;
   u_int byte;
   int n;
@@ -257,7 +257,7 @@ char* _intoa(unsigned int addr, char* buf, u_short bufLen) {
 static char buf[sizeof "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"];
 
 char* intoa(unsigned int addr) {
-  return(_intoa(addr, buf, sizeof(buf)));
+  return(__intoa(addr, buf, sizeof(buf)));
 }
 
 /* ************************************ */

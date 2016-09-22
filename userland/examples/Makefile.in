@@ -53,8 +53,8 @@ LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_conf
 # Main targets
 #
 PFPROGS   = pfcount pfcount_multichannel preflect \
-	    pfbridge alldevs dummy_plugin_pfcount pcap2nspcap pfcount_dummy_plugin pffilter_test \
-	    pfcount_aggregator pfcount_82599 pfsystest pfsend pflatency
+	    pfbridge alldevs pcap2nspcap \
+	    pfcount_82599 pfsystest pfsend pflatency
 
 PCAPPROGS = pcount pfwrite
 TARGETS   = ${PFPROGS} ${PCAPPROGS}
@@ -81,12 +81,6 @@ pcaps: ${RPOBJS}
 pfcount: pfcount.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfcount.o ${LIBS} -o $@
 
-dummy_plugin_pfcount: dummy_plugin_pfcount.o ${LIBPFRING}
-	${CC} ${CFLAGS} dummy_plugin_pfcount.o ${LIBS} -o $@
-
-pffilter_test: pffilter_test.o ${LIBPFRING}
-	${CC} ${CFLAGS} pffilter_test.o ${LIBS} -o $@
-
 pcap2nspcap: pcap2nspcap.o ${LIBPFRING}
 	${CC} ${CFLAGS} pcap2nspcap.o ${LIBS} -o $@
 
@@ -95,12 +89,6 @@ pfcount_multichannel: pfcount_multichannel.o ${LIBPFRING}
 
 pfcount_82599: pfcount_82599.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfcount_82599.o ${LIBS} -o $@
-
-pfcount_dummy_plugin: pfcount_dummy_plugin.o ${LIBPFRING}
-	${CC} ${CFLAGS} pfcount_dummy_plugin.o ${LIBS} -o $@
-
-pfcount_aggregator: pfcount_aggregator.o ${LIBPFRING}
-	${CC} ${CFLAGS} pfcount_aggregator.o ${LIBS} -o $@
 
 preflect: preflect.o ${LIBPFRING}
 	${CC} ${CFLAGS} preflect.o ${LIBS} -o $@
