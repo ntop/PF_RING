@@ -135,10 +135,30 @@ void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
     } else printf("*");
 
     printf("]");
-
   } else if(c->ip_version == 6) {
-    //TODO
+    char a[64];
 
+    printf("[");
+
+    if (c->shost.v4) printf("[%s]", bpf_intoaV6(&c->shost.v6, a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if (c->sport_low) {
+      printf("%u", ntohs(c->sport_low));
+      if (c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
+    } else printf("*");
+
+    printf(" -> ");
+
+    if (c->dhost.v4) printf("[%s]", bpf_intoaV6(&c->dhost.v6, a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if (c->dport_low) {
+      printf("%u", ntohs(c->dport_low));
+      if (c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
+    } else printf("*");
+
+    printf("]");
   }
 
   printf("\n");
