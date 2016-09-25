@@ -197,6 +197,11 @@ fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree);
 fast_bpf_rule_block_list_item_t *fast_bpf_generate_optimized_rules(fast_bpf_tree_t *tree);
 void fast_bpf_rule_block_list_free(fast_bpf_rule_block_list_item_t *blocks);
 
+void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds, char *str);
+char* bpf_ethtoa(const u_char *ep, char *buf);
+char* bpf_intoaV4(unsigned int addr, char* buf, u_int bufLen);
+char* bpf_intoaV6(struct fast_bpf_in6_addr *ipv6, char* buf, u_short bufLen);
+
 /***************************************************************************/
 
 #endif

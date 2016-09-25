@@ -10,6 +10,9 @@
  *
  */
 
+#include <arpa/inet.h>
+#include <stdio.h>
+
 #include "fast_bpf.h"
 
 //#define DEBUG
@@ -367,5 +370,93 @@ int fast_bpf_match(fast_bpf_tree_t *tree, fast_bpf_pkt_info_t *h) {
   return packet_match_filter(tree->root, h);
 }
 
+/* *********************************************************** */
+
+static char hex[] = "0123456789ABCDEF";
+
+char* bpf_ethtoa(const u_char *ep, char *buf) {
+  u_int i, j;
+  char *cp;
+
+  cp = buf;
+  if ((j = *ep >> 4) != 0)
+    *cp++ = hex[j];
+  else
+    *cp++ = '0';
+
+  *cp++ = hex[*ep++ & 0xf];
+
+  for(i = 5; (int)--i >= 0;) {
+    *cp++ = ':';
+    if ((j = *ep >> 4) != 0)
+      *cp++ = hex[j];
+    else
+      *cp++ = '0';
+
+    *cp++ = hex[*ep++ & 0xf];
+  }
+
+  *cp = '\0';
+  return buf;
+}
+
 /* ********************************************************************** */
 
+char* bpf_intoaV4(unsigned int addr, char* buf, u_int bufLen) {
+  char *cp, *retStr;
+  u_int byte;
+  int n;
+
+  cp = &buf[bufLen];
+  *--cp = '\0';
+
+  n = 4;
+  do {
+    byte = addr & 0xff;
+    *--cp = byte % 10 + '0';
+    byte /= 10;
+    if (byte > 0) {
+      *--cp = byte % 10 + '0';
+      byte /= 10;
+      if (byte > 0)
+	*--cp = byte + '0';
+    }
+    *--cp = '.';
+    addr >>= 8;
+  } while (--n > 0);
+
+  retStr = (char*)(cp+1);
+
+  return retStr;
+}
+
+/* *********************************************************** */
+
+void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds, char *str) {
+  int l = strlen(cmd);
+
+  if(cmd_len > l)
+    snprintf(&cmd[l], cmd_len-l, "%s%s",
+	     (num_cmds > 0) ? " AND " : "", str);
+}
+
+/* ****************************************************** */
+
+/* Napatech does not like short IPv6 address format */
+
+char* bpf_intoaV6(struct fast_bpf_in6_addr *ipv6, char* buf, u_short bufLen) {
+  int i, len = 0;
+  
+  buf[0] = '\0';
+
+  for(i = 0; i<16; i++) {
+    char tmp[8];
+    
+    snprintf(tmp, sizeof(tmp), "%02X", ipv6->u6_addr.u6_addr8[i] & 0xFF);
+    len += snprintf(&buf[len], bufLen-len, "%s%s", (i > 0) ? ":" : "", tmp);
+  }
+
+  return(buf);
+}
+
+/* ****************************************************** */

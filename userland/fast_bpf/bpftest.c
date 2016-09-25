@@ -1,3 +1,15 @@
+/*
+ *  Copyright (C) 2016 ntop.org
+ *
+ *      http://www.ntop.org/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesses General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
+ * (at your option) any later version.
+ *
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -5,103 +17,7 @@
 #include <unistd.h>
 
 #include "fast_bpf.h"
-
-/* *********************************************************** */
-
-/*
- * A faster replacement for inet_ntoa().
- */
-char* _intoaV4(unsigned int addr, char* buf, u_short bufLen) {
-  char *cp, *retStr;
-  int n;
-
-  cp = &buf[bufLen];
-  *--cp = '\0';
-
-  n = 4;
-  do {
-    u_int byte;
-
-    byte = addr & 0xff;
-    *--cp = byte % 10 + '0';
-    byte /= 10;
-    if(byte > 0) {
-      *--cp = byte % 10 + '0';
-      byte /= 10;
-      if(byte > 0)
-	*--cp = byte + '0';
-    }
-    *--cp = '.';
-    addr >>= 8;
-  } while (--n > 0);
-
-  /* Convert the string to lowercase */
-  retStr = (char*)(cp+1);
-
-  return(retStr);
-}
-
-/* *********************************************************** */
-
-static char hex[] = "0123456789ABCDEF";
-
-static char *ethtoa(const u_char *ep, char *buf) {
-  u_int i, j;
-  char *cp;
-
-  cp = buf;
-  if ((j = *ep >> 4) != 0)
-    *cp++ = hex[j];
-  else
-    *cp++ = '0';
-
-  *cp++ = hex[*ep++ & 0xf];
-
-  for(i = 5; (int)--i >= 0;) {
-    *cp++ = ':';
-    if ((j = *ep >> 4) != 0)
-      *cp++ = hex[j];
-    else
-      *cp++ = '0';
-
-    *cp++ = hex[*ep++ & 0xf];
-  }
-
-  *cp = '\0';
-  return buf;
-}
-
-/* ****************************************** */
-
-static char *intoa(unsigned int addr, char* buf, u_short bufLen) {
-  char *cp, *retStr;
-  u_int byte;
-  int n;
-
-  cp = &buf[bufLen];
-  *--cp = '\0';
-
-  n = 4;
-  do {
-    byte = addr & 0xff;
-    *--cp = byte % 10 + '0';
-    byte /= 10;
-    if (byte > 0) {
-      *--cp = byte % 10 + '0';
-      byte /= 10;
-      if (byte > 0)
-	*--cp = byte + '0';
-    }
-    *--cp = '.';
-    addr >>= 8;
-  } while (--n > 0);
-
-  retStr = (char*)(cp+1);
-
-  return retStr;
-}
-
-/* ****************************************** */
+#include "bpf_mod_napatech.h"
 
 static char *dir_to_string[] =   { "SrcOrDst", "Src", "Dst", "SrcOrDst", "SrcAndDst", "?", "?", "?", "?" };
 static char *addr_to_string[] =  { "Host", "Host", "Net", "Port", "?", "Proto", "?", "PortRange", "VLAN" };
@@ -142,20 +58,19 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
       else
         sprintf(type_str, "%s Proto:%d", type_str, n->qualifiers.protocol);
 
-
       if (n->qualifiers.protocol == Q_LINK) {
         if (n->qualifiers.address == Q_VLAN) {
           sprintf(type_str, "%s VLAN", type_str);
           if (n->vlan_id_defined) sprintf(type_str, "%s:%u", type_str, n->vlan_id);
         } else {
-          sprintf(type_str, "%s MAC:%s", type_str, ethtoa(n->mac, tmp));
+          sprintf(type_str, "%s MAC:%s", type_str, bpf_ethtoa(n->mac, tmp));
         }
 
       } else if (n->qualifiers.protocol == Q_DEFAULT || n->qualifiers.protocol == Q_IP) {
         if (n->qualifiers.address == Q_DEFAULT || n->qualifiers.address == Q_HOST) {
-          sprintf(type_str, "%s IP:%s", type_str, intoa(ntohl(n->ip), tmp, sizeof(tmp)));
+          sprintf(type_str, "%s IP:%s", type_str, bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
         } else if (n->qualifiers.address == Q_NET) {
-          sprintf(type_str, "%s Net:%s", type_str, intoa(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
+          sprintf(type_str, "%s Net:%s", type_str, bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
 	}
 
       } else if (n->qualifiers.protocol == Q_IPV6) {
@@ -201,7 +116,7 @@ void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
 
     printf("[");
 
-    if (c->shost.v4) printf("%s", _intoaV4(ntohl(c->shost.v4), a, sizeof(a)));
+    if (c->shost.v4) printf("%s", bpf_intoaV4(ntohl(c->shost.v4), a, sizeof(a)));
     else printf("*");
     printf(":");
     if (c->sport_low) {
@@ -211,7 +126,7 @@ void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
 
     printf(" -> ");
 
-    if (c->dhost.v4) printf("%s", _intoaV4(ntohl(c->dhost.v4), a, sizeof(a)));
+    if (c->dhost.v4) printf("%s", bpf_intoaV4(ntohl(c->dhost.v4), a, sizeof(a)));
     else printf("*");
     printf(":");
     if (c->dport_low) {
@@ -259,52 +174,9 @@ void napatech_cmd(char *cmd) {
 
 /* *********************************************************** */
 
-void append_str(char *cmd, u_int cmd_len, int num_cmds, char *str) {
-  int l = strlen(cmd);
-
-  if(cmd_len > l)
-    snprintf(&cmd[l], cmd_len-l, "%s%s",
-	     (num_cmds > 0) ? " AND " : "", str);
-}
-
-/* *********************************************************** */
-
-void napatech_dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
-  char cmd[1024] = { 0 }, *proto = "", buf[256];
-  int num_cmds = 0;
-
-  append_str(cmd, sizeof(cmd), 0, "Assign[StreamId = 1] = Port == 0 AND ");
-
-  if(c->vlan_id) append_str(cmd, sizeof(cmd), num_cmds++, "((Encapsulation == VLAN)");
-
-  switch(c->proto) {
-  case 1:  append_str(cmd, sizeof(cmd), num_cmds++, "(Layer4Protocol == ICMP)"); break;
-  case 6:  append_str(cmd, sizeof(cmd), num_cmds++, "(Layer4Protocol == TCP)"), proto = "Tcp";  break;
-  case 17: append_str(cmd, sizeof(cmd), num_cmds++, "(Layer4Protocol == UDP)"), proto = "Udp";  break;
-  }
-
-  if(c->ip_version == 4) {
-    char a[32];
-
-    if(c->shost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", "Src",  _intoaV4(c->shost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-    if(c->dhost.v4) { snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", "Dest", _intoaV4(c->dhost.v4, a, sizeof(a))); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-  } else if(c->ip_version == 6) {
-
-  }
-
-  if(c->sport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, "Src",  ntohs(c->sport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-  if(c->dport_low > 0) { snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, "Dest", ntohs(c->dport_low)); append_str(cmd, sizeof(cmd), num_cmds++,  buf); }
-
-  if(c->vlan_id) append_str(cmd, sizeof(cmd), num_cmds++, ")");
-
-  napatech_cmd(cmd);
-}
-
-/* *********************************************************** */
-
 void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
   fast_bpf_rule_block_list_item_t *currPun = punBlock;
-  u_int id = 1;
+  u_int8_t port_id = 0, stream_id = 1;
 
   printf("\n"
 	 "Napatech Rules\n"
@@ -325,9 +197,10 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
     fast_bpf_rule_list_item_t *pun = currPun->rule_list_head;
 
     while(pun != NULL) {
-      fast_bpf_rule_core_fields_t *c = &pun->fields;
-
-      napatech_dump_rule(id++, c);
+      char cmd[256] = { 0 };
+      
+      rule_to_napatech(stream_id, port_id, cmd, sizeof(cmd), &pun->fields);
+      napatech_cmd(cmd);
 
       pun = pun->next;
     }

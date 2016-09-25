@@ -3,7 +3,7 @@ YACC = bison
 CC=gcc
 LIBS=@NDPI_LIB@ `../lib/pfring_config --libs`
 CFLAGS=-Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ @HAVE_REDIRECTOR@ -O2 #-g
-OBJS=fast_bpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o
+OBJS=fast_bpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o bpf_mod_napatech.o
 BPFLIB=libfastbpf.a
 
 all: test
@@ -12,8 +12,8 @@ $(BPFLIB): $(OBJS)
 	ar rs $@ $(OBJS)
 	ranlib $@
 
-test: $(BPFLIB) test.c
-	gcc $(CFLAGS) -g test.c -o test $(BPFLIB) $(LIBS)
+bpftest: $(BPFLIB) bpftest.c
+	gcc $(CFLAGS) -g bpftest.c -o bpftest $(BPFLIB) $(LIBS)
 
 lex.yy.c: scanner.l grammar.tab.h
 	$(LEX) scanner.l
@@ -24,5 +24,5 @@ grammar.tab.c: grammar.y
 	$(YACC) -d grammar.y
 
 clean:
-	rm -f test *~ *.o lex.yy.* grammar.tab.* $(BPFLIB)
+	rm -f bpftest *~ *.o lex.yy.* grammar.tab.* $(BPFLIB)
 	rm -rf *.dSYM
