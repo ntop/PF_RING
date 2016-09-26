@@ -65,6 +65,34 @@ static int num_filtering_rule_list_items(fast_bpf_rule_list_item_t *list) {
 
 /* ********************************************************************** */
 
+void free_filtering_rule_list_items(fast_bpf_rule_list_item_t *list) {
+  fast_bpf_rule_list_item_t *zombie;
+
+  while (list != NULL) {
+    zombie = list;
+    list = list->next;
+    free(zombie);
+  }
+}
+
+/* ********************************************************************** */
+
+/* Not used
+static void free_filtering_rule_block_list_items(fast_bpf_rule_block_list_item_t *blocks) {
+  fast_bpf_rule_block_list_item_t *zombie_block;
+
+  zombie_block = blocks;
+  while (blocks != NULL) {
+    free_filtering_rule_list_items(zombie_block->rule_list_head);
+    zombie_block = blocks;
+    blocks = blocks->next;
+    free(zombie_block);
+  }
+}
+*/
+
+/* ********************************************************************** */
+
 static u_int8_t __empty_mac[6] = { 0 };
 
 static /* inline */ int is_empty_mac(u_int8_t mac[6]) {
@@ -171,42 +199,56 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
 
 /* ********************************************************************** */
 
-static void merge_wildcard_vlan(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
+static int merge_wildcard_vlan(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
   if (f1->fields.vlan_id) {
-    if (!f->fields.vlan_id)
-      f->fields.vlan_id = f1->fields.vlan_id;
-    else DEBUG_PRINTF("Conflict merging filters on vlan\n");
+    if (f->fields.vlan_id) {
+      DEBUG_PRINTF("Conflict merging filters on vlan\n");
+      return -1;
+    }
+    f->fields.vlan_id = f1->fields.vlan_id;
   }
+  return 0;
 }
 
-static void merge_wildcard_proto(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
+static int merge_wildcard_proto(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
   if (f1->fields.proto) {
-    if (!f->fields.proto)
-      f->fields.proto = f1->fields.proto;
-    else DEBUG_PRINTF("Conflict merging filters on protocol\n");
+    if (f->fields.proto) {
+      DEBUG_PRINTF("Conflict merging filters on protocol\n");
+      return -1;
+    }
+    f->fields.proto = f1->fields.proto;
   }
+  return 0;
 }
 
-static void merge_wildcard_smac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_smac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_mac(f1->fields.smac)) {
-    if (!is_empty_mac(!swap ? f->fields.smac : f->fields.dmac))
+    if (!is_empty_mac(!swap ? f->fields.smac : f->fields.dmac)) {
       DEBUG_PRINTF("Conflict merging filters on dst mac\n");
+      return -1;
+    }
     memcpy(!swap ? f->fields.smac : f->fields.dmac, f1->fields.smac, 6);
   }
+  return 0;
 }
 
-static void merge_wildcard_dmac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dmac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_mac(f1->fields.dmac)) {
-    if (!is_empty_mac(!swap ? f->fields.dmac : f->fields.smac))
+    if (!is_empty_mac(!swap ? f->fields.dmac : f->fields.smac)) {
       DEBUG_PRINTF("Conflict merging filters on src mac\n");
+      return -1;
+    }
     memcpy(!swap ? f->fields.dmac : f->fields.smac, f1->fields.dmac, 6);
   }
+  return 0;
 }
 
-static void merge_wildcard_shost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_shost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.shost.v4) {
-    if ((!swap ? f->fields.shost.v4 : f->fields.dhost.v4))
+    if ((!swap ? f->fields.shost.v4 : f->fields.dhost.v4)) {
       DEBUG_PRINTF("Conflict merging filters on src ip\n");
+      return -1;
+    }
     if (!swap) {
       f->fields.shost.v4 = f1->fields.shost.v4;
       f->fields.shost_mask.v4 = f1->fields.shost_mask.v4;
@@ -215,12 +257,15 @@ static void merge_wildcard_shost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
       f->fields.dhost_mask.v4 = f1->fields.shost_mask.v4;
     }
   }
+  return 0;
 }
 
-static void merge_wildcard_dhost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dhost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.dhost.v4) {
-    if ((!swap ? f->fields.dhost.v4 : f->fields.shost.v4))
+    if ((!swap ? f->fields.dhost.v4 : f->fields.shost.v4)) {
       DEBUG_PRINTF("Conflict merging filters on dst ip\n");
+      return -1;
+    }
     if (!swap) {
       f->fields.dhost.v4 = f1->fields.dhost.v4;
       f->fields.dhost_mask.v4 = f1->fields.dhost_mask.v4;
@@ -229,12 +274,15 @@ static void merge_wildcard_dhost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
       f->fields.shost_mask.v4 = f1->fields.dhost_mask.v4;
     }
   }
+  return 0;
 }
 
-static void merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_ipv6(f1->fields.shost.v6.u6_addr.u6_addr8)) {
-    if (!is_empty_ipv6(!swap ? f->fields.shost.v6.u6_addr.u6_addr8 : f->fields.dhost.v6.u6_addr.u6_addr8))
+    if (!is_empty_ipv6(!swap ? f->fields.shost.v6.u6_addr.u6_addr8 : f->fields.dhost.v6.u6_addr.u6_addr8)) {
       DEBUG_PRINTF("Conflict merging filters on src ipv6\n");
+      return -1;
+    }
     if (!swap) {
       memcpy(f->fields.shost.v6.u6_addr.u6_addr8, f1->fields.shost.v6.u6_addr.u6_addr8, 16);
       memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, f1->fields.shost_mask.v6.u6_addr.u6_addr8, 16);
@@ -243,12 +291,15 @@ static void merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_li
       memcpy(f->fields.dhost_mask.v6.u6_addr.u6_addr8, f1->fields.shost_mask.v6.u6_addr.u6_addr8, 16);
     }
   }
+  return 0;
 }
 
-static void merge_wildcard_dhost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dhost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_ipv6(f1->fields.dhost.v6.u6_addr.u6_addr8)) {
-    if (!is_empty_ipv6(!swap ? f->fields.dhost.v6.u6_addr.u6_addr8 : f->fields.shost.v6.u6_addr.u6_addr8))
+    if (!is_empty_ipv6(!swap ? f->fields.dhost.v6.u6_addr.u6_addr8 : f->fields.shost.v6.u6_addr.u6_addr8)) {
       DEBUG_PRINTF("Conflict merging filters on dst ipv6\n");
+      return -1;
+    }
     if (!swap) {
       memcpy(f->fields.dhost.v6.u6_addr.u6_addr8, f1->fields.dhost.v6.u6_addr.u6_addr8, 16);
       memcpy(f->fields.dhost_mask.v6.u6_addr.u6_addr8, f1->fields.dhost_mask.v6.u6_addr.u6_addr8, 16);
@@ -257,12 +308,15 @@ static void merge_wildcard_dhost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_li
       memcpy(f->fields.shost_mask.v6.u6_addr.u6_addr8, f1->fields.dhost_mask.v6.u6_addr.u6_addr8, 16);
     }
   }
+  return 0;
 }
 
-static void merge_wildcard_sport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_sport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.sport_low) {
-    if ((!swap ? f->fields.sport_low : f->fields.dport_low))
+    if ((!swap ? f->fields.sport_low : f->fields.dport_low)) {
       DEBUG_PRINTF("Conflict merging filters on src port\n");
+      return -1;
+    }
     if (!swap) {
       f->fields.sport_low = f1->fields.sport_low;
       f->fields.sport_high = f1->fields.sport_high;
@@ -271,12 +325,15 @@ static void merge_wildcard_sport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
       f->fields.dport_high = f1->fields.sport_high;
     }
   }
+  return 0;
 }
 
-static void merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.dport_low) {
-    if ((!swap ? f->fields.dport_low : f->fields.sport_low))
-      DEBUG_PRINTF("Conflict merging filters on dst port\n"); 
+    if ((!swap ? f->fields.dport_low : f->fields.sport_low)) {
+      DEBUG_PRINTF("Conflict merging filters on dst port\n");
+      return -1;
+    }
     if (!swap) {
       f->fields.dport_low = f1->fields.dport_low;
       f->fields.dport_high = f1->fields.dport_high;
@@ -285,54 +342,84 @@ static void merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
       f->fields.sport_high = f1->fields.dport_high;
     }
   }
+  return 0;
 }
 
 static fast_bpf_rule_list_item_t *merge_wildcard_filters_single(fast_bpf_rule_list_item_t *f1, fast_bpf_rule_list_item_t *f2, u_int8_t swap1, u_int8_t swap2) {
   fast_bpf_rule_list_item_t *f;
+  int rc;
+
+  /* checking rules constraints */
+
+  if (f1->fields.ip_version && f2->fields.ip_version && 
+      f1->fields.ip_version != f2->fields.ip_version)
+    return NULL; /* error: merging v4 AND v6 */
  
+  /* merging */
+
   f = allocate_filtering_rule_list_item();
   if (f == NULL)
     return NULL;
 
   f->bidirectional = 0;
 
-  merge_wildcard_vlan(f, f1);
-  merge_wildcard_vlan(f, f2);
+  rc = merge_wildcard_vlan(f, f1); if (rc != 0) goto exit;
+  rc = merge_wildcard_vlan(f, f2); if (rc != 0) goto exit;
 
-  merge_wildcard_proto(f, f1);
-  merge_wildcard_proto(f, f2);
+  rc = merge_wildcard_proto(f, f1); if (rc != 0) goto exit;
+  rc = merge_wildcard_proto(f, f2); if (rc != 0) goto exit;
 
-  merge_wildcard_smac(f, f1, swap1); 
-  merge_wildcard_smac(f, f2, swap2); 
+  rc = merge_wildcard_smac(f, f1, swap1); if (rc != 0) goto exit;
+  rc = merge_wildcard_smac(f, f2, swap2); if (rc != 0) goto exit;
 
-  merge_wildcard_dmac(f, f1, swap1); 
-  merge_wildcard_dmac(f, f2, swap2); 
+  rc = merge_wildcard_dmac(f, f1, swap1); if (rc != 0) goto exit;
+  rc = merge_wildcard_dmac(f, f2, swap2); if (rc != 0) goto exit;
+
+  if (f->fields.ip_version && f1->fields.ip_version &&
+    f->fields.ip_version != f1->fields.ip_version) {
+    DEBUG_PRINTF("Conflict merging filters with different IP version\n");
+    rc = -1;
+    goto exit;
+  }
 
   if (f1->fields.ip_version == 4) {
     f->fields.ip_version = 4;
-    merge_wildcard_shost(f, f1, swap1); 
-    merge_wildcard_dhost(f, f1, swap1); 
+    rc = merge_wildcard_shost(f, f1, swap1); if (rc != 0) goto exit;
+    rc = merge_wildcard_dhost(f, f1, swap1); if (rc != 0) goto exit;
   } else if (f1->fields.ip_version == 6) {
     f->fields.ip_version = 6;
-    merge_wildcard_shost6(f, f1, swap1); 
-    merge_wildcard_dhost6(f, f1, swap1); 
+    rc = merge_wildcard_shost6(f, f1, swap1); if (rc != 0) goto exit;
+    rc = merge_wildcard_dhost6(f, f1, swap1); if (rc != 0) goto exit;
+  }
+
+  if (f->fields.ip_version && f2->fields.ip_version &&
+    f->fields.ip_version != f2->fields.ip_version) {
+    DEBUG_PRINTF("Conflict merging filters with different IP version\n");
+    rc = -1;
+    goto exit;
   }
 
   if (f2->fields.ip_version == 4) {
     f->fields.ip_version = 4;
-    merge_wildcard_shost(f, f2, swap2); 
-    merge_wildcard_dhost(f, f2, swap2); 
+    rc = merge_wildcard_shost(f, f2, swap2); if (rc != 0) goto exit;
+    rc = merge_wildcard_dhost(f, f2, swap2); if (rc != 0) goto exit;
   } else if (f2->fields.ip_version == 6) {
     f->fields.ip_version = 6;
-    merge_wildcard_shost6(f, f2, swap2); 
-    merge_wildcard_dhost6(f, f2, swap2);
+    rc = merge_wildcard_shost6(f, f2, swap2); if (rc != 0) goto exit;
+    rc = merge_wildcard_dhost6(f, f2, swap2); if (rc != 0) goto exit;
   }
 
-  merge_wildcard_sport(f, f1, swap1); 
-  merge_wildcard_sport(f, f2, swap2); 
+  merge_wildcard_sport(f, f1, swap1); if (rc != 0) goto exit;
+  merge_wildcard_sport(f, f2, swap2); if (rc != 0) goto exit;
 
-  merge_wildcard_dport(f, f1, swap1); 
-  merge_wildcard_dport(f, f2, swap2);
+  merge_wildcard_dport(f, f1, swap1); if (rc != 0) goto exit;
+  merge_wildcard_dport(f, f2, swap2); if (rc != 0) goto exit;
+
+exit:
+  if (rc != 0) {
+    free(f);
+    f = NULL;
+  }
 
   return f; 
 }
@@ -341,18 +428,23 @@ static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item
   fast_bpf_rule_list_item_t *f, *last;
 
   last = f = merge_wildcard_filters_single(f1, f2, 0, 0);
+  if (last == NULL) return NULL;
 
   if (f1->bidirectional) {
     last->next = merge_wildcard_filters_single(f1, f2, 1, 0);
     last = last->next;
+    if (last == NULL) { free_filtering_rule_list_items(f); return NULL; }
   }
 
   if (f2->bidirectional) {
     last->next = merge_wildcard_filters_single(f1, f2, 0, 1);
     last = last->next;
+    if (last == NULL) { free_filtering_rule_list_items(f); return NULL; }
+
     if (f1->bidirectional) {
       last->next = merge_wildcard_filters_single(f1, f2, 1, 1);
       last = last->next;
+      if (last == NULL) { free_filtering_rule_list_items(f); return NULL; }
     }
   }
 
@@ -362,7 +454,7 @@ static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item
 /* ********************************************************************** */
  
 static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_item_t *headl, fast_bpf_rule_list_item_t *headr) {
-  fast_bpf_rule_list_item_t *head = NULL, *tail = NULL, *tmp, *headr_tmp;
+  fast_bpf_rule_list_item_t *head = NULL, *tail = NULL, *tmp, *headr_tmp, *headl_tmp;
 
   if (headl == NULL)
     return headr;
@@ -370,36 +462,37 @@ static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_
   if (headr == NULL)
     return headl;
 
-  while (headl != NULL) {
+  headl_tmp = headl;
+  while (headl_tmp != NULL) {
     headr_tmp = headr;
     while (headr_tmp != NULL) {
 
-      tmp = merge_wildcard_filters(headl, headr_tmp);
+      tmp = merge_wildcard_filters(headl_tmp, headr_tmp);
 
-      if (tmp != NULL) {
-        if (head == NULL) /* first item */
-          head = tmp;
-        else
-          tail->next = tmp;
-
-        while (tmp->next != NULL)
-          tmp = tmp->next;
-        tail = tmp;
+      if (tmp == NULL) {
+        free_filtering_rule_list_items(head);
+        head = NULL;
+        goto exit;
       }
+
+      if (head == NULL) /* first item */
+        head = tmp;
+      else
+        tail->next = tmp;
+
+      while (tmp->next != NULL)
+        tmp = tmp->next;
+      tail = tmp;
 
       headr_tmp = headr_tmp->next;
     }
 
-    tmp = headl; 
-    headl = headl->next; 
-    free(tmp);
+    headl_tmp = headl_tmp->next; 
   }
 
-  while (headr != NULL) { 
-    tmp = headr; 
-    headr = headr->next; 
-    free(tmp); 
-  }
+exit:
+  free_filtering_rule_list_items(headl);
+  free_filtering_rule_list_items(headr);
 
   return head;
 }
@@ -435,7 +528,7 @@ fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) 
   switch(n->type) {
     case N_PRIMITIVE:
       head = allocate_filtering_rule_list_item();      
-      if (head == NULL) /* memory allocation failure */
+      if (head == NULL)
         return NULL;
 
       primitive_to_wildcard_filter(head, n);
@@ -445,15 +538,25 @@ fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) 
       headl = generate_pfring_wildcard_filters(n->l);
       headr = generate_pfring_wildcard_filters(n->r); 
 
-      head = merge_filtering_rule_lists(headl, headr);
-      if (head == NULL) /* memory allocation failure */
+      if (headl == NULL || headr == NULL) {
+        if (headl != NULL) free_filtering_rule_list_items(headl);
+        if (headr != NULL) free_filtering_rule_list_items(headr);
         return NULL;
+      }
+
+      head = merge_filtering_rule_lists(headl, headr);
 
       break;
     case N_OR:
       headl = generate_pfring_wildcard_filters(n->l);
       headr = generate_pfring_wildcard_filters(n->r);
-  
+
+      if (headl == NULL || headr == NULL) {
+        if (headl != NULL) free_filtering_rule_list_items(headl);
+        if (headr != NULL) free_filtering_rule_list_items(headr);
+        return NULL;
+      }
+
       head = chain_filtering_rule_lists(headl, headr);
 
       break;
@@ -488,7 +591,9 @@ fast_bpf_rule_block_list_item_t *generate_optimized_wildcard_filters(fast_bpf_no
       blockl = generate_optimized_wildcard_filters(n->l);
       blockr = generate_optimized_wildcard_filters(n->r); 
       
-      if (blockl == NULL) {
+      if (blockl == NULL && blockr == NULL) {
+        return NULL; /* error */
+      } else if (blockl == NULL) {
         block = blockr;
       } else if (blockr == NULL) {
         block = blockl;
@@ -500,6 +605,12 @@ fast_bpf_rule_block_list_item_t *generate_optimized_wildcard_filters(fast_bpf_no
 	  blockl->rule_list_head = merge_filtering_rule_lists(
 	    blockl->rule_list_head,
 	    blockr->rule_list_head);
+
+          if (blockl->rule_list_head == NULL) {
+            DEBUG_PRINTF("Error merging AND block into rule list\n");
+            free(blockl);
+            return NULL; /* error */
+          }
 
           free(blockr);
 	} else {
@@ -520,7 +631,9 @@ fast_bpf_rule_block_list_item_t *generate_optimized_wildcard_filters(fast_bpf_no
   
       /* Note that according to the constraints it expects single blocks from each subtree */
 
-      if (blockl == NULL) {
+      if (blockl == NULL && blockr == NULL) {
+        return NULL; /* error */
+      } else if (blockl == NULL) {
         block = blockr;
       } else if (blockr == NULL) {
         block = blockl;
@@ -565,7 +678,7 @@ fast_bpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_m
     bitem = bitem->next;
   }
 
-  contiguous_memory = (u_char*)malloc((bnum * sizeof(*bitem)) + (fnum * sizeof(*fitem)));
+  contiguous_memory = (u_char *) malloc((bnum * sizeof(*bitem)) + (fnum * sizeof(*fitem)));
   
   if (contiguous_memory == NULL)
     return NULL;

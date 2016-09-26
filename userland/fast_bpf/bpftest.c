@@ -226,23 +226,16 @@ void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
 
 /* *********************************************************** */
 
-void dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
-  fast_bpf_rule_block_list_item_t *currPun = punBlock;
+void dump_rules(fast_bpf_rule_list_item_t *pun) {
   u_int id = 1;
 
   /* Scan the list and set the single rule */
-  while(currPun != NULL) {
-    fast_bpf_rule_list_item_t *pun = currPun->rule_list_head;
+  while(pun != NULL) {
+    fast_bpf_rule_core_fields_t *c = &pun->fields;
 
-    while(pun != NULL) {
-      fast_bpf_rule_core_fields_t *c = &pun->fields;
+    dump_rule(id++, c);
 
-      dump_rule(id++, c);
-
-      pun = pun->next;
-    }
-
-    currPun = currPun->next;
+    pun = pun->next;
   }
 }
 
@@ -255,8 +248,7 @@ int napatech_cmd(u_int8_t stream_id, u_int8_t port_id, char *cmd) {
 
 /* *********************************************************** */
 
-void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
-  fast_bpf_rule_block_list_item_t *currPun = punBlock;
+void napatech_dump_rules(fast_bpf_rule_list_item_t *pun) {
   u_int8_t port_id = 0, stream_id = 1;
 
   printf("\n"
@@ -266,18 +258,13 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
   bpf_init_napatech_rules(stream_id, port_id, napatech_cmd);
 
   /* Scan the list and set the single rule */
-  while(currPun != NULL) {
-    fast_bpf_rule_list_item_t *pun = currPun->rule_list_head;
 
-    while(pun != NULL) {
-      char cmd[256] = { 0 };
+  while(pun != NULL) {
+    char cmd[256] = { 0 };
       
-      bpf_rule_to_napatech(stream_id, port_id, cmd, sizeof(cmd), &pun->fields, napatech_cmd);
+    bpf_rule_to_napatech(stream_id, port_id, cmd, sizeof(cmd), &pun->fields, napatech_cmd);
 
-      pun = pun->next;
-    }
-
-    currPun = currPun->next;
+    pun = pun->next;
   }
 }
 
@@ -293,7 +280,7 @@ void help() {
 int main(int argc, char *argv[]) {
   fast_bpf_tree_t *tree;
   fast_bpf_pkt_info_t pkt;
-  fast_bpf_rule_block_list_item_t *punBlock;
+  fast_bpf_rule_list_item_t *pun;
   int dump_napatech = 0;
   char *filter = NULL, c;
 
@@ -328,8 +315,8 @@ int main(int argc, char *argv[]) {
   dump_tree(tree->root, 0);
 
   /* Generates an optimized rules list */
-  if((punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL) {
-    printf("Error: filter seems to be too complex\n");
+  if((pun = fast_bpf_generate_rules(tree)) == NULL) {
+    printf("Error: filtering rules cannot be generated for the provided filter\n");
     fast_bpf_free(tree);
     return -1;
   }
@@ -338,12 +325,12 @@ int main(int argc, char *argv[]) {
 	 "Dumping Rules\n"
 	 "-------------\n");
 
-  dump_rules(punBlock);
+  dump_rules(pun);
 
   if(dump_napatech)
-    napatech_dump_rules(punBlock);
+    napatech_dump_rules(pun);
 
-  fast_bpf_rule_block_list_free(punBlock);
+  free_filtering_rule_list_items(pun);
 
   printf("\n"
          "Testing Filtering\n"
