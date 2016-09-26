@@ -1157,11 +1157,11 @@ static void	pcap_cleanup_linux( pcap_t *handle )
 
 #ifdef HAVE_PF_RING
 #ifdef HAVE_NPCAP
-	if (handle->timeline != NULL) { free(handle->timeline); handle->timeline = NULL; }
-	if (handle->timeline_start != NULL) free(handle->timeline_start);
-	if (handle->timeline_end != NULL) free(handle->timeline_end);
-	if (handle->timeline_handle) timeline_extract_close(handle->timeline_handle);
-	if (handle->fast_bpf_filter) fast_bpf_free(handle->fast_bpf_filter);
+	if (handle->timeline != NULL) {      free(handle->timeline); handle->timeline = NULL; }
+	if (handle->timeline_start != NULL)  free(handle->timeline_start);
+	if (handle->timeline_end != NULL)    free(handle->timeline_end);
+	if (handle->timeline_handle != NULL) timeline_extract_close(handle->timeline_handle);
+	if (handle->fast_bpf_filter != NULL) fast_bpf_free(handle->fast_bpf_filter);
 #endif
 	if (handle->real_device != NULL) free(handle->real_device);
 	if (handle->ring != NULL) {
@@ -1359,14 +1359,10 @@ pcap_setfilter_timeline(pcap_t *handle, struct bpf_program *filter)
 	if (!handle)
 		return -1;
 
-	if (!handle->fast_bpf_filter) 
-		return -1;
-
 	if (install_bpf_program(handle, filter) < 0)
 		return -1;
 
-	printf("PF-DEBUG pcap_setfilter -> using fast_bpf_filter '%s'\n", 
-		handle->bpf_filter ? handle->bpf_filter : "");
+	/* Nothing to do with fast_bpf_filter */
 
 	return 0;
 }
@@ -1524,8 +1520,6 @@ pcap_activate_linux(pcap_t *handle)
 		if (active) pf_ring_active_poll = atoi(active);
 
 		if (is_dummy_interface(device, &handle->timeline, &handle->timeline_start, &handle->timeline_end, &handle->real_device)) {
-			printf("PF-DEBUG found dummy interface '%s' '%s' '%s' '%s'\n", 
-			       handle->timeline, handle->timeline_start, handle->timeline_end, handle->real_device);
 #ifdef HAVE_NPCAP
 			if (handle->timeline != NULL) {
 				struct tm begin_tm, end_tm;
