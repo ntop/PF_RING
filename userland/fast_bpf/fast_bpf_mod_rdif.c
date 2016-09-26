@@ -869,13 +869,14 @@ static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
 
 /* -------------------------------------------------- */
 /*
- * This global function initializes a NIC card interface
+ * This function initializes the switch in order to put the port in inline mode:
+ * port 1 with port 3 for interface 0
+ * port 2 with port 4 for interface 1
  * Input parameter:
- *     - "unit" -> intel NIC card indentifier [range from 0 to (MAX_INTEL_DEV - 1)]
- *     - "intf" -> interface identifier [range from INTERFACE_1 to (MAX_INTERFACE - 1)]
+ *     - "ifname" -> Interface name (for example "eth0", "ens9"....)
  * Return value:
- *     - 0 on failure
- *     - 1 on success
+ *     - NULL on failure
+ *     - handle pointer on success
  */
 fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
 #ifdef HAVE_REDIRECTOR_F
