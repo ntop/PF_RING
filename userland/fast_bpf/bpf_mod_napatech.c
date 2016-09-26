@@ -21,16 +21,34 @@ int _is_emptyv6(struct fast_bpf_in6_addr *a) {
 
   for(i=0; i<4; i++)
     if(a->u6_addr.u6_addr32[i] != 0)
-      return(1);
+      return(0);
 
-  return(0);
+  return(1);
 }
 
 /* *********************************************************** */
 
-void rule_to_napatech(u_int8_t stream_id, u_int8_t port_id,
-		      char *cmd, u_int cmd_len,
-		      fast_bpf_rule_core_fields_t *c) {
+void bpf_init_napatech_rules(u_int8_t stream_id, u_int8_t port_id,
+			     int (execCmd)(u_int8_t stream_id, u_int8_t port_id, char *cmd)) {
+  if(stream_id == 1) {
+    if(execCmd) execCmd(stream_id, port_id, "Delete = All");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mUdpSrcPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=0;DataType=ByteStr2]\")");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mUdpDestPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=2;DataType=ByteStr2]\")");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mTcpSrcPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=0;DataType=ByteStr2]\")");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mTcpDestPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=2;DataType=ByteStr2]\")");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mIPv4SrcAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=12;DataType=IPv4Addr]\")");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mIPv4DestAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=16;DataType=IPv4Addr]\")");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mIPv6SrcAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=8;DataType=IPv6Addr]\")");
+    if(execCmd) execCmd(stream_id, port_id, "DefineMacro(\"mIPv6DestAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=24;DataType=IPv6Addr]\")");
+  }
+}
+
+/* *********************************************************** */
+
+void bpf_rule_to_napatech(u_int8_t stream_id, u_int8_t port_id,
+			  char *cmd, u_int cmd_len,
+			  fast_bpf_rule_core_fields_t *c,
+			  int (execCmd)(u_int8_t stream_id, u_int8_t port_id, char *cmd)) {
   char *proto = "", buf[256];
   int num_cmds = 0;
 
@@ -81,4 +99,6 @@ void rule_to_napatech(u_int8_t stream_id, u_int8_t port_id,
   }
 
   if(c->vlan_id) bpf_append_str(cmd, cmd_len, num_cmds++, ")");
+
+  if(execCmd) execCmd(stream_id, port_id, cmd);
 }

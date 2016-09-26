@@ -248,8 +248,9 @@ void dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
 
 /* *********************************************************** */
 
-void napatech_cmd(char *cmd) {
+int napatech_cmd(u_int8_t stream_id, u_int8_t port_id, char *cmd) {
   printf("/opt/napatech3/bin/ntpl -e '%s'\n", cmd);
+  return(0);
 }
 
 /* *********************************************************** */
@@ -262,15 +263,7 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
 	 "Napatech Rules\n"
 	 "---------------\n");
 
-  napatech_cmd("Delete = All");
-  napatech_cmd("DefineMacro(\"mUdpSrcPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=0;DataType=ByteStr2]\")");
-  napatech_cmd("DefineMacro(\"mUdpDestPort\",\"Data[DynOffset=DynOffUDPFrame;Offset=2;DataType=ByteStr2]\")");
-  napatech_cmd("DefineMacro(\"mTcpSrcPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=0;DataType=ByteStr2]\")");
-  napatech_cmd("DefineMacro(\"mTcpDestPort\",\"Data[DynOffset=DynOffTCPFrame;Offset=2;DataType=ByteStr2]\")");
-  napatech_cmd("DefineMacro(\"mIPv4SrcAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=12;DataType=IPv4Addr]\")");
-  napatech_cmd("DefineMacro(\"mIPv4DestAddr\",\"Data[DynOffset=DynOffIPv4Frame;Offset=16;DataType=IPv4Addr]\")");
-  napatech_cmd("DefineMacro(\"mIPv6SrcAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=8;DataType=IPv6Addr]\")");
-  napatech_cmd("DefineMacro(\"mIPv6DestAddr\",\"Data[DynOffset=DynOffIPv6Frame;Offset=24;DataType=IPv6Addr]\")");
+  bpf_init_napatech_rules(stream_id, port_id, napatech_cmd);
 
   /* Scan the list and set the single rule */
   while(currPun != NULL) {
@@ -279,8 +272,7 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
     while(pun != NULL) {
       char cmd[256] = { 0 };
       
-      rule_to_napatech(stream_id, port_id, cmd, sizeof(cmd), &pun->fields);
-      napatech_cmd(cmd);
+      bpf_rule_to_napatech(stream_id, port_id, cmd, sizeof(cmd), &pun->fields, napatech_cmd);
 
       pun = pun->next;
     }
