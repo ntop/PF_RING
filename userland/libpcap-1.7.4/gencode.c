@@ -437,16 +437,18 @@ pcap_compile(pcap_t *p, struct bpf_program *program,
 
 #ifdef HAVE_PF_RING
 	if (p->ring || p->timeline) {
-		p->bpf_filter = strdup(buf);
-		if (p->bpf_filter == NULL)
-			return -1;
-#ifdef HAVE_NPCAP
-		if (p->timeline) {
-			p->fast_bpf_filter = fast_bpf_parse(p->bpf_filter, NULL /* l7 callback */);
-			if (p->fast_bpf_filter == NULL)
+		if (buf != NULL) {
+			p->bpf_filter = strdup(buf);
+			if (p->bpf_filter == NULL)
 				return -1;
-		}
+#ifdef HAVE_NPCAP
+			if (p->timeline) {
+				p->fast_bpf_filter = fast_bpf_parse(p->bpf_filter, NULL /* l7 callback */);
+				if (p->fast_bpf_filter == NULL)
+					return -1;
+			}
 #endif
+		}
 	}
 #endif
 
