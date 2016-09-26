@@ -19,9 +19,65 @@
 #include "fast_bpf.h"
 #include "bpf_mod_napatech.h"
 
-static char *dir_to_string[] =   { "SrcOrDst", "Src", "Dst", "SrcOrDst", "SrcAndDst", "?", "?", "?", "?" };
-static char *addr_to_string[] =  { "Host", "Host", "Net", "Port", "?", "Proto", "?", "PortRange", "VLAN" };
-static char *proto_to_string[] = { "IP", "Eth", "IP", "?", "?", "SCTP", "TCP", "UDP" };
+/* ****************************************** */
+
+static char *dir_to_string(int dirq) {
+  switch (dirq) {
+    case Q_SRC:
+      return "Src"; 
+    case Q_DST:
+      return "Dst";
+    case Q_AND: 
+      return "SrcAndDst";
+    case Q_OR: 
+    default:
+      return "SrcOrDst";
+  }
+}
+
+static char __addr[8];
+static char *addr_to_string(int addrq) {
+  switch (addrq) {
+    case Q_NET:
+      return "Net";
+    case Q_PORT: 
+      return "Port";
+    case Q_PROTO: 
+      return "Proto";
+    case Q_PORTRANGE: 
+      return "PortRange";
+    case Q_VLAN: 
+      return "VLAN";
+    case Q_L7PROTO: 
+      return "L7Proto";
+    case Q_HOST:
+      return "Host";
+    default:
+      snprintf(__addr, sizeof(__addr), "(%d)", addrq);
+      return __addr;
+  }
+}
+
+static char __proto[8];
+static char *proto_to_string(int protoq) {
+  switch (protoq) {
+    case Q_LINK:
+      return "Eth";
+    case Q_IP:
+      return "IP";
+    case Q_SCTP:
+      return "SCTP";
+    case Q_TCP:
+      return "TCP";
+    case Q_UDP:
+      return "UDP";
+    case Q_IPV6:
+      return "IP6";
+    default:
+      snprintf(__proto, sizeof(__proto), "%d", protoq);
+      return __proto;
+  }
+}
 
 /* ****************************************** */
 
@@ -34,70 +90,71 @@ static void print_padding(char ch, int n) {
 /* ****************************************** */
 
 static void dump_tree(fast_bpf_node_t *n, int level) {
-  char type_str[1024];
   char tmp[32];
 
   if (n == NULL)
     return;
 
+  dump_tree(n->r, level + 1);
+
+  print_padding('\t', level);
+
+  printf("%s", n->not_expr ? "!" : "");
+
   switch(n->type) {
     case N_PRIMITIVE:
-      type_str[0] = '\0';
 
       if (n->qualifiers.header == Q_INNER)
-        sprintf(type_str, "%s INNER", type_str);
+        printf(" INNER");
 
-      sprintf(type_str, "%s %s %s", type_str,
-        dir_to_string[n->qualifiers.direction],
-	addr_to_string[n->qualifiers.address]);
+      if (n->qualifiers.direction)
+        printf(" %s", dir_to_string(n->qualifiers.direction));
 
-      if (n->qualifiers.protocol <= Q_UDP)
-        sprintf(type_str, "%s Proto:%s", type_str, proto_to_string[n->qualifiers.protocol]);
-      else if (n->qualifiers.protocol == Q_IPV6)
-        sprintf(type_str, "%s Proto:%s", type_str, "IPv6");
-      else
-        sprintf(type_str, "%s Proto:%d", type_str, n->qualifiers.protocol);
+      if (n->qualifiers.address)
+        printf(" %s", addr_to_string(n->qualifiers.address));
+
+      if (n->qualifiers.protocol)
+        printf(" Proto:%s", proto_to_string(n->qualifiers.protocol));
 
       if (n->qualifiers.protocol == Q_LINK) {
         if (n->qualifiers.address == Q_VLAN) {
-          sprintf(type_str, "%s VLAN", type_str);
-          if (n->vlan_id_defined) sprintf(type_str, "%s:%u", type_str, n->vlan_id);
+          printf(" VLAN");
+          if (n->vlan_id_defined) printf(":%u", n->vlan_id);
         } else {
-          sprintf(type_str, "%s MAC:%s", type_str, bpf_ethtoa(n->mac, tmp));
+          printf(" MAC:%s", bpf_ethtoa(n->mac, tmp));
         }
 
       } else if (n->qualifiers.protocol == Q_DEFAULT || n->qualifiers.protocol == Q_IP) {
         if (n->qualifiers.address == Q_DEFAULT || n->qualifiers.address == Q_HOST) {
-          sprintf(type_str, "%s IP:%s", type_str, bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
+          printf(" IP:%s", bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
         } else if (n->qualifiers.address == Q_NET) {
-          sprintf(type_str, "%s Net:%s", type_str, bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
+          printf(" Net:%s", bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
 	}
 
       } else if (n->qualifiers.protocol == Q_IPV6) {
-	sprintf(type_str, "%s IPv6: %02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X", type_str,
+	printf(" IPv6: %02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
 	        n->ip6[0], n->ip6[1], n->ip6[2],  n->ip6[3],  n->ip6[4],  n->ip6[5],  n->ip6[6],  n->ip6[7],
 	        n->ip6[8], n->ip6[9], n->ip6[10], n->ip6[11], n->ip6[12], n->ip6[13], n->ip6[14], n->ip6[15]);
       }
 
       if (n->qualifiers.address == Q_PORT) {
-        sprintf(type_str, "%s Port:%d", type_str, ntohs(n->port_from));
-	if (n->port_to != n->port_from) sprintf(type_str, "%s-%d", type_str, ntohs(n->port_to));
+        printf(" Port:%d", ntohs(n->port_from));
+	if (n->port_to != n->port_from) printf("-%d", ntohs(n->port_to));
       }
 
       break;
     case N_AND:
-      sprintf(type_str, "AND");
+      printf("AND");
       break;
     case N_OR:
-      sprintf(type_str, "OR");
+      printf("OR");
       break;
     default:
-      sprintf(type_str, "?");
+      printf("?");
   }
 
-  dump_tree(n->r, level + 1);
-  print_padding('\t', level);
-  printf("%s%s\n", n->not_expr ? "!" : "", type_str);
+  printf("\n");
+
   dump_tree(n->l, level + 1);
 }
 
