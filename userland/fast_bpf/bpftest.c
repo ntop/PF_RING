@@ -124,23 +124,27 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
           printf(" MAC:%s", bpf_ethtoa(n->mac, tmp));
         }
 
-      } else if (n->qualifiers.protocol == Q_DEFAULT || n->qualifiers.protocol == Q_IP || n->qualifiers.protocol == Q_IPV6) {
-        if (n->qualifiers.protocol == Q_IP || n->ip) {
-          if (n->qualifiers.address == Q_DEFAULT || n->qualifiers.address == Q_HOST) {
-            printf(" IP:%s", bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
-          } else if (n->qualifiers.address == Q_NET) {
-            printf(" Net:%s", bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
-  	  }
-        } else {
-	  printf(" IPv6: %02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
-	          n->ip6[0], n->ip6[1], n->ip6[2],  n->ip6[3],  n->ip6[4],  n->ip6[5],  n->ip6[6],  n->ip6[7],
-	          n->ip6[8], n->ip6[9], n->ip6[10], n->ip6[11], n->ip6[12], n->ip6[13], n->ip6[14], n->ip6[15]);
+      } else if (n->qualifiers.address == Q_HOST || n->qualifiers.address == Q_NET) {
+        if (n->qualifiers.protocol == Q_DEFAULT || n->qualifiers.protocol == Q_IP || n->qualifiers.protocol == Q_IPV6) {
+          if (n->qualifiers.protocol == Q_IP || n->ip) {
+            if (n->qualifiers.address == Q_DEFAULT || n->qualifiers.address == Q_HOST) {
+              printf(" IP:%s", bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
+            } else if (n->qualifiers.address == Q_NET) {
+              printf(" Net:%s", bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
+    	    }
+          } else {
+  	    printf(" IPv6: %02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+  	           n->ip6[0], n->ip6[1], n->ip6[2],  n->ip6[3],  n->ip6[4],  n->ip6[5],  n->ip6[6],  n->ip6[7],
+  	           n->ip6[8], n->ip6[9], n->ip6[10], n->ip6[11], n->ip6[12], n->ip6[13], n->ip6[14], n->ip6[15]);
+          }
         }
-      }
 
-      if (n->qualifiers.address == Q_PORT) {
+      } else if (n->qualifiers.address == Q_PORT) {
         printf(" Port:%d", ntohs(n->port_from));
 	if (n->port_to != n->port_from) printf("-%d", ntohs(n->port_to));
+
+      } else if (n->qualifiers.address == Q_L7PROTO) {
+        printf(" L7Proto:%d", n->l7protocol);
       }
 
       break;
