@@ -248,7 +248,7 @@ void dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
 
 /* *********************************************************** */
 
-int napatech_cmd(u_int8_t stream_id, u_int8_t port_id, char *cmd) {
+int napatech_cmd(void *opt, char *cmd) {
   printf("/opt/napatech3/bin/ntpl -e '%s'\n", cmd);
   return(0);
 }
@@ -263,7 +263,7 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
 	 "Napatech Rules\n"
 	 "---------------\n");
 
-  bpf_init_napatech_rules(stream_id, port_id, napatech_cmd);
+  bpf_init_napatech_rules(stream_id, NULL, napatech_cmd);
 
   /* Scan the list and set the single rule */
   while(currPun != NULL) {
@@ -272,7 +272,7 @@ void napatech_dump_rules(fast_bpf_rule_block_list_item_t *punBlock) {
     while(pun != NULL) {
       char cmd[256] = { 0 };
       
-      bpf_rule_to_napatech(stream_id, port_id, cmd, sizeof(cmd), &pun->fields, napatech_cmd);
+      bpf_rule_to_napatech(stream_id, port_id, NULL, cmd, sizeof(cmd), &pun->fields, napatech_cmd);
 
       pun = pun->next;
     }

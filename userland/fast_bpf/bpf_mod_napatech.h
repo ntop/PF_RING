@@ -10,11 +10,11 @@
  *
  */
 
-extern void bpf_init_napatech_rules(u_int8_t stream_id, u_int8_t port_id,
-				    int (execCmd)(u_int8_t stream_id, u_int8_t port_id, char *cmd));
+extern void bpf_init_napatech_rules(u_int8_t stream_id, void *opt,
+				    int (execCmd)(void *opt, char *cmd));
 
 extern int bpf_rule_to_napatech(u_int8_t stream_id, u_int8_t port_id,
-				char *cmd, u_int cmd_len,
+				void *opt, char *cmd, u_int cmd_len,
 				fast_bpf_rule_core_fields_t *c,
-				int (execCmd)(u_int8_t stream_id, u_int8_t port_id, char *cmd));
+				int (execCmd)(void *opt, char *cmd));
 
