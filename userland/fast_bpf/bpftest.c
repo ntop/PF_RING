@@ -99,7 +99,7 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
 
   print_padding('\t', level);
 
-  printf("%s", n->not_expr ? "!" : "");
+  printf("%s", n->not_rule ? "!" : "");
 
   switch(n->type) {
     case N_PRIMITIVE:
@@ -124,17 +124,18 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
           printf(" MAC:%s", bpf_ethtoa(n->mac, tmp));
         }
 
-      } else if (n->qualifiers.protocol == Q_DEFAULT || n->qualifiers.protocol == Q_IP) {
-        if (n->qualifiers.address == Q_DEFAULT || n->qualifiers.address == Q_HOST) {
-          printf(" IP:%s", bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
-        } else if (n->qualifiers.address == Q_NET) {
-          printf(" Net:%s", bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
-	}
-
-      } else if (n->qualifiers.protocol == Q_IPV6) {
-	printf(" IPv6: %02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
-	        n->ip6[0], n->ip6[1], n->ip6[2],  n->ip6[3],  n->ip6[4],  n->ip6[5],  n->ip6[6],  n->ip6[7],
-	        n->ip6[8], n->ip6[9], n->ip6[10], n->ip6[11], n->ip6[12], n->ip6[13], n->ip6[14], n->ip6[15]);
+      } else if (n->qualifiers.protocol == Q_DEFAULT || n->qualifiers.protocol == Q_IP || n->qualifiers.protocol == Q_IPV6) {
+        if (n->qualifiers.protocol == Q_IP || n->ip) {
+          if (n->qualifiers.address == Q_DEFAULT || n->qualifiers.address == Q_HOST) {
+            printf(" IP:%s", bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
+          } else if (n->qualifiers.address == Q_NET) {
+            printf(" Net:%s", bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
+  	  }
+        } else {
+	  printf(" IPv6: %02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X",
+	          n->ip6[0], n->ip6[1], n->ip6[2],  n->ip6[3],  n->ip6[4],  n->ip6[5],  n->ip6[6],  n->ip6[7],
+	          n->ip6[8], n->ip6[9], n->ip6[10], n->ip6[11], n->ip6[12], n->ip6[13], n->ip6[14], n->ip6[15]);
+        }
       }
 
       if (n->qualifiers.address == Q_PORT) {
