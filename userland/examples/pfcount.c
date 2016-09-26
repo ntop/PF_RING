@@ -319,10 +319,8 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
   u_int usec, nsec = 0;
   char dump_str[512] = { 0 };
 
-  if((!is_sysdig) && (h->ts.tv_sec == 0 || h->extended_hdr.parsed_pkt.offset.l3_offset == 0)) {
-    memset((void*)&h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
-    pfring_parse_pkt((u_char*)p, (struct pfring_pkthdr*)h, 5, 0, 1);
-  }
+  memset((void *) &h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
+  pfring_parse_pkt((u_char *) p, (struct pfring_pkthdr *) h, 5, 0, 1);
   
   s = (h->ts.tv_sec + thiszone) % 86400;
   
