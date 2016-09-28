@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
          "----------------\n");
   dump_tree(tree->root, 0);
 
-  /* Generates an optimized rules list */
+  /* Generates rules list */
   if((pun = fast_bpf_generate_rules(tree)) == NULL) {
     printf("Error: filtering rules cannot be generated for the provided filter\n");
     fast_bpf_free(tree);

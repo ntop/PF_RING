@@ -85,28 +85,21 @@ static void __pfring_exablaze_release_resources(pfring *ring) {
 /* **************************************************** */
 
 static int __pfring_exablaze_check_ip_rules(pfring_exablaze *exablaze,
-					    fast_bpf_rule_block_list_item_t *punBlock) {
-  fast_bpf_rule_block_list_item_t *currPun = punBlock;
+					    fast_bpf_rule_list_item_t *pun) {
   u_int num_filters = 0;
   
   /* Scan the list and set the single rule */
-  while(currPun != NULL) {
-    fast_bpf_rule_list_item_t *pun = currPun->rule_list_head;
-
-    while(pun != NULL) {
-      fast_bpf_rule_core_fields_t *c = &pun->fields;
+  while(pun != NULL) {
+    fast_bpf_rule_core_fields_t *c = &pun->fields;
       
-      if(c->ip_version != 4) return(-1); /* Hardware IPv6 filters are not supported */
-      if(c->vlan_id != 0) return(-2);
-      if(c->sport_low != c->sport_high) return(-3); /* Ranges are not supported */
-      if(c->dport_low != c->dport_high) return(-3); /* Ranges are not supported */
+    if(c->ip_version != 4) return(-1); /* Hardware IPv6 filters are not supported */
+    if(c->vlan_id != 0) return(-2);
+    if(c->sport_low != c->sport_high) return(-3); /* Ranges are not supported */
+    if(c->dport_low != c->dport_high) return(-3); /* Ranges are not supported */
 
-      if(++num_filters >= 128) return(-4); /* Too many filters */
+    if(++num_filters >= 128) return(-4); /* Too many filters */
       
-      pun = pun->next;
-    }
-
-    currPun = currPun->next;
+    pun = pun->next;
   }
 
   return(0);
@@ -115,8 +108,7 @@ static int __pfring_exablaze_check_ip_rules(pfring_exablaze *exablaze,
 /* **************************************************** */
 
 static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
-					  fast_bpf_rule_block_list_item_t *punBlock) {
-  fast_bpf_rule_block_list_item_t *currPun = punBlock;
+					  fast_bpf_rule_list_item_t *pun) {
 
   if(exablaze->rx == NULL) {
     if((exablaze->rx = exanic_acquire_unused_filter_buffer(exablaze->exanic,
@@ -125,36 +117,30 @@ static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
   }
 
   /* Scan the list and set the single rule */
-  while(currPun != NULL) {
-    fast_bpf_rule_list_item_t *pun = currPun->rule_list_head;
+  while(pun != NULL) {
+    exanic_ip_filter_t f;
 
-    while(pun != NULL) {
-      exanic_ip_filter_t f;
+    memset(&f, 0, sizeof(f));
+    f.protocol = pun->fields.proto,
+      f.src_addr = pun->fields.shost.v4, f.src_port = pun->fields.sport_low,
+      f.dst_addr = pun->fields.dhost.v4, f.dst_port = pun->fields.dport_low;
 
-      memset(&f, 0, sizeof(f));
-      f.protocol = pun->fields.proto,
-	f.src_addr = pun->fields.shost.v4, f.src_port = pun->fields.sport_low,
-	f.dst_addr = pun->fields.dhost.v4, f.dst_port = pun->fields.dport_low;
-
-      if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
-	fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
-	return(-1);
-      }
-
-      if(pun->bidirectional) {
-	f.dst_addr = pun->fields.shost.v4, f.dst_port = pun->fields.sport_low,
-	  f.src_addr = pun->fields.dhost.v4, f.src_port = pun->fields.dport_low;
-
-	if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
-	  fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
-	  return(-1);
-	}
-      }
-
-      pun = pun->next;
+    if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
+      fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
+      return(-1);
     }
 
-    currPun = currPun->next;
+    if(pun->bidirectional) {
+      f.dst_addr = pun->fields.shost.v4, f.dst_port = pun->fields.sport_low,
+        f.src_addr = pun->fields.dhost.v4, f.src_port = pun->fields.dport_low;
+
+      if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
+        fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
+        return(-1);
+      }
+    }
+
+    pun = pun->next;
   }
 
   return(0);
@@ -165,7 +151,7 @@ static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
 int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
   pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
   fast_bpf_tree_t *tree;
-  fast_bpf_rule_block_list_item_t *punBlock;
+  fast_bpf_rule_list_item_t *pun;
 
   /* Parses the bpf filters and builds the rules tree */
   if((tree = fast_bpf_parse(bpf, NULL)) == NULL) {
@@ -181,10 +167,10 @@ int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
     return(-2);
   }
 
-  /* Generates an optimized rules list */
-  if((punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL) {
+  /* Generates rules list */
+  if((pun = fast_bpf_generate_rules(tree)) == NULL) {
 #ifdef DEBUG
-    printf("Error on generating optimized rules.");
+    printf("Error generating rules.");
 #endif
 
     fast_bpf_free(tree);
@@ -192,19 +178,19 @@ int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
   }
 
   /* Check if the BPF can be supported by the NIC */
-  if(__pfring_exablaze_check_ip_rules(exablaze, punBlock)
+  if(__pfring_exablaze_check_ip_rules(exablaze, pun)
      /* Create and set the rules on the nic */
-     || __pfring_exablaze_set_ip_rules(exablaze, punBlock)) {
+     || __pfring_exablaze_set_ip_rules(exablaze, pun)) {
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card: using software BPF");
 #endif
 
-    fast_bpf_rule_block_list_free(punBlock);
+    fast_bpf_rule_list_free(pun);
     fast_bpf_free(tree);
     return(-4);
   }
 
-  fast_bpf_rule_block_list_free(punBlock);
+  fast_bpf_rule_list_free(pun);
   fast_bpf_free(tree);
   return(0);
 }

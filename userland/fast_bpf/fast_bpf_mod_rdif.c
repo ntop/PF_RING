@@ -63,7 +63,7 @@ static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle
 static int __fast_bpf_rdif_check_rules_constraints(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree);
 static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_node_t *n);
 static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree);
-static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_block_list_item_t *blockPun);
+static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *pun);
 static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule);
 static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle);
 
@@ -626,14 +626,12 @@ static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *han
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_block_list_item_t *blockPun) {
-  fast_bpf_rule_block_list_item_t *currPun;
-  fast_bpf_rule_list_item_t * pun;
+static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_block_list_item_t *pun) {
 
   if(handle == NULL)
     return (0);
 
-  if(blockPun == NULL)
+  if(pun == NULL)
     return (0);
 
   /* Clear and initialize the environment */
@@ -641,20 +639,13 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
     return (0);
 
   /* Scan the list and set the single rule */
-  currPun = blockPun;
-  while(currPun != NULL) {
-    pun = currPun->rule_list_head;
-
-    while(pun != NULL) {
-      if(!__fast_bpf_rdif_set_single_rule(handle, pun)) {
-        __fast_bpf_rdif_init(handle);
-        return (0);
-      }
-
-      pun = pun->next;
+  while(pun != NULL) {
+    if(!__fast_bpf_rdif_set_single_rule(handle, pun)) {
+      __fast_bpf_rdif_init(handle);
+      return (0);
     }
 
-    currPun = currPun->next;
+    pun = pun->next;
   }
 
   /* The last rule drop all the traffic */
@@ -790,7 +781,7 @@ static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle) {
 int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
 #ifdef HAVE_REDIRECTOR_F
   fast_bpf_tree_t *tree;
-  fast_bpf_rule_block_list_item_t *punBlock;
+  fast_bpf_rule_list_item_t *pun;
 
   if(handle == NULL)
     return (0);
@@ -814,8 +805,8 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
     return (0);
   }
 
-  /* Generates a optimized rules list */
-  if((punBlock = fast_bpf_generate_optimized_rules(tree)) == NULL ) {
+  /* Generates rules list */
+  if((pun = fast_bpf_generate_rules(tree)) == NULL ) {
 #ifdef DEBUG
     printf("Error on generating optimized rules.");
 #endif
@@ -824,16 +815,16 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
   }
 
   /* Creates and set the rules on the nic */
-  if(!__fast_bpf_rdif_create_and_set_rules(handle, punBlock)) {
+  if(!__fast_bpf_rdif_create_and_set_rules(handle, pun)) {
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
-    fast_bpf_rule_block_list_free(punBlock);
+    fast_bpf_rule_list_free(pun);
     fast_bpf_free(tree);
     return (0);
   }
 
-  fast_bpf_rule_block_list_free(punBlock);
+  fast_bpf_rule_list_free(pun);
   fast_bpf_free(tree);
   return (1);
 #else  /* HAVE_REDIRECTOR_F */
