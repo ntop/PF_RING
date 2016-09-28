@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
   if(dump_napatech)
     napatech_dump_rules(pun);
 
-  free_filtering_rule_list_items(pun);
+  fast_bpf_rule_list_free(pun);
 
   printf("\n"
          "Testing Filtering\n"

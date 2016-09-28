@@ -65,7 +65,7 @@ static int num_filtering_rule_list_items(fast_bpf_rule_list_item_t *list) {
 
 /* ********************************************************************** */
 
-void free_filtering_rule_list_items(fast_bpf_rule_list_item_t *list) {
+void fast_bpf_rule_list_free(fast_bpf_rule_list_item_t *list) {
   fast_bpf_rule_list_item_t *zombie;
 
   while (list != NULL) {
@@ -83,7 +83,7 @@ static void free_filtering_rule_block_list_items(fast_bpf_rule_block_list_item_t
 
   zombie_block = blocks;
   while (blocks != NULL) {
-    free_filtering_rule_list_items(zombie_block->rule_list_head);
+    fast_bpf_rule_list_free(zombie_block->rule_list_head);
     zombie_block = blocks;
     blocks = blocks->next;
     free(zombie_block);
@@ -433,18 +433,18 @@ static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item
   if (f1->bidirectional) {
     last->next = merge_wildcard_filters_single(f1, f2, 1, 0);
     last = last->next;
-    if (last == NULL) { free_filtering_rule_list_items(f); return NULL; }
+    if (last == NULL) { fast_bpf_rule_list_free(f); return NULL; }
   }
 
   if (f2->bidirectional) {
     last->next = merge_wildcard_filters_single(f1, f2, 0, 1);
     last = last->next;
-    if (last == NULL) { free_filtering_rule_list_items(f); return NULL; }
+    if (last == NULL) { fast_bpf_rule_list_free(f); return NULL; }
 
     if (f1->bidirectional) {
       last->next = merge_wildcard_filters_single(f1, f2, 1, 1);
       last = last->next;
-      if (last == NULL) { free_filtering_rule_list_items(f); return NULL; }
+      if (last == NULL) { fast_bpf_rule_list_free(f); return NULL; }
     }
   }
 
@@ -470,7 +470,7 @@ static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_
       tmp = merge_wildcard_filters(headl_tmp, headr_tmp);
 
       if (tmp == NULL) {
-        free_filtering_rule_list_items(head);
+        fast_bpf_rule_list_free(head);
         head = NULL;
         goto exit;
       }
@@ -491,8 +491,8 @@ static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_
   }
 
 exit:
-  free_filtering_rule_list_items(headl);
-  free_filtering_rule_list_items(headr);
+  fast_bpf_rule_list_free(headl);
+  fast_bpf_rule_list_free(headr);
 
   return head;
 }
@@ -539,8 +539,8 @@ fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) 
       headr = generate_pfring_wildcard_filters(n->r); 
 
       if (headl == NULL || headr == NULL) {
-        if (headl != NULL) free_filtering_rule_list_items(headl);
-        if (headr != NULL) free_filtering_rule_list_items(headr);
+        if (headl != NULL) fast_bpf_rule_list_free(headl);
+        if (headr != NULL) fast_bpf_rule_list_free(headr);
         return NULL;
       }
 
@@ -552,8 +552,8 @@ fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) 
       headr = generate_pfring_wildcard_filters(n->r);
 
       if (headl == NULL || headr == NULL) {
-        if (headl != NULL) free_filtering_rule_list_items(headl);
-        if (headr != NULL) free_filtering_rule_list_items(headr);
+        if (headl != NULL) fast_bpf_rule_list_free(headl);
+        if (headr != NULL) fast_bpf_rule_list_free(headr);
         return NULL;
       }
 
