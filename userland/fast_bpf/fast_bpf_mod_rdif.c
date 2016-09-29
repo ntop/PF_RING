@@ -626,7 +626,7 @@ static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *han
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_block_list_item_t *pun) {
+static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *pun) {
 
   if(handle == NULL)
     return (0);
