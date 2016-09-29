@@ -3569,19 +3569,20 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			i40e_clean_rx_ring(rx_ring);
 			i40e_control_rxq(vsi, pf_q, true);
 			*/
-
-			/* FIXX needed to disable IRQs */
-			//if (n >= vsi->num_queue_pairs) { /* last user */
-			if (n == 1) { /* first user */
-				i40e_vsi_disable_irq(rx_ring->vsi);
-				i40e_napi_disable_all(rx_ring->vsi);
-			}
 		}
+
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 			/* nothing to do besides increasing the counter */
 
 			if(unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
+		}
+
+		/* FIXX needed to disable IRQs */
+		//if (n >= vsi->num_queue_pairs) { /* last user */
+		if (n == 1) { /* first user */
+			i40e_vsi_disable_irq(xx_ring->vsi);
+			i40e_napi_disable_all(xx_ring->vsi);
 		}
 
 	} else { /* restore card memory */
@@ -3627,12 +3628,10 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */)
 			module_put(THIS_MODULE);  /* -- */
 
-		if (rx_ring != NULL) {
-			/* FIXX needed to disable IRQs */
-			if (n == 0) {
-				i40e_napi_enable_all(rx_ring->vsi);
-				i40e_vsi_enable_irq(rx_ring->vsi);
-			}
+		/* FIXX needed to disable IRQs */
+		if (n == 0) { /* last user */
+			i40e_napi_enable_all(xx_ring->vsi);
+			i40e_vsi_enable_irq(xx_ring->vsi);
 		}
 	}
 
