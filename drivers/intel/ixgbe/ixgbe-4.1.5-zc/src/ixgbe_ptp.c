@@ -23,6 +23,8 @@
 *******************************************************************************/
 
 #include "ixgbe.h"
+
+#include <linux/clocksource.h>
 #include <linux/ptp_classify.h>
 
 /*

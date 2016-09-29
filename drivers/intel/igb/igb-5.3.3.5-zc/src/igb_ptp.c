@@ -30,6 +30,7 @@
 #include "igb.h"
 
 #ifdef HAVE_PTP_1588_CLOCK
+#include <linux/clocksource.h>
 #include <linux/module.h>
 #include <linux/device.h>
 #include <linux/pci.h>

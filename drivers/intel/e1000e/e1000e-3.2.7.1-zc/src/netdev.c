@@ -259,7 +259,7 @@ static void e1000e_dump(struct e1000_adapter *adapter)
 		dev_info(pci_dev_to_dev(adapter->pdev), "Net device Info\n");
 		pr_info("Device Name     state            trans_start      last_rx\n");
 		pr_info("%-15s %016lX %016lX %016lX\n", netdev->name,
-			netdev->state, netdev->trans_start, netdev->last_rx);
+			netdev->state, dev_trans_start(netdev), netdev->last_rx);
 	}
 
 	/* Print Registers */
@@ -7006,7 +7006,7 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 		tx_ring->buffer_info[first].time_stamp = 0;
 		tx_ring->next_to_use = first;
 	}
-	netdev->trans_start = jiffies;
+	netif_trans_update(netdev);
 
 	return NETDEV_TX_OK;
 }
