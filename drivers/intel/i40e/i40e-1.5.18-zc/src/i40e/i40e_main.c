@@ -3570,9 +3570,9 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			i40e_control_rxq(vsi, pf_q, true);
 			*/
 
-
 			/* FIXX needed to disable IRQs */
-			if (n >= vsi->num_queue_pairs) {
+			//if (n >= vsi->num_queue_pairs) { /* last user */
+			if (n == 1) { /* first user */
 				i40e_vsi_disable_irq(rx_ring->vsi);
 				i40e_napi_disable_all(rx_ring->vsi);
 			}
@@ -3603,7 +3603,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			writel(0, rx_ring->tail);
 			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
 			i40e_alloc_rx_buffers(rx_ring, I40E_DESC_UNUSED(rx_ring));
-    
+
 			//i40e_vsi_enable_irq(rx_ring->vsi);
 			i40e_control_rxq(vsi, pf_q, true /* start */);
 		}
@@ -4771,6 +4771,9 @@ static void i40e_napi_enable_all(struct i40e_vsi *vsi)
 		return;
 
 	for (q_idx = 0; q_idx < vsi->num_q_vectors; q_idx++)
+#ifdef HAVE_PF_RING
+		if (test_bit(NAPI_STATE_SCHED, &vsi->q_vectors[q_idx]->napi.state)) /* safety check */
+#endif
 		napi_enable(&vsi->q_vectors[q_idx]->napi);
 }
 
