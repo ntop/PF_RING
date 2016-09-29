@@ -1356,11 +1356,24 @@ static int is_dummy_interface(const char *device, char **path, char **start, cha
 static int
 pcap_setfilter_timeline(pcap_t *handle, struct bpf_program *filter) 
 {
+	struct tm begin_tm, end_tm;
+	time_t begin_epoch, end_epoch;
+
 	if (!handle)
 		return -1;
 
 	if (install_bpf_program(handle, filter) < 0)
 		return -1;
+
+	if (strptime(handle->timeline_start, "%Y-%m-%d %H:%M:%S", &begin_tm) &&
+    	   strptime(handle->timeline_end,    "%Y-%m-%d %H:%M:%S", &end_tm)) {
+		begin_tm.tm_isdst = -1;
+		begin_epoch = mktime(&begin_tm);
+		end_tm.tm_isdst = -1;
+		end_epoch = mktime(&end_tm);
+		//printf("timeline_extract_open(%s, %s, %s, %p)\n", handle->bpf_filter, handle->timeline_start, handle->timeline_end, handle->fast_bpf_filter);	
+		handle->timeline_handle = timeline_extract_open(handle->timeline, begin_epoch, end_epoch, handle->fast_bpf_filter, NULL);
+	}
 
 	/* Nothing to do with fast_bpf_filter */
 
@@ -1379,6 +1392,9 @@ pcap_read_timeline(pcap_t *handle, int max_packets, pcap_handler callback, u_cha
 	u_int64_t match_epoch_nsec;
 	int convert_endian, caplen;
 
+	if (!handle->timeline_handle) /* setfilter has not been called or an error occurred */
+		return -1;
+
 	if (handle->break_loop) {
 		handle->break_loop = 0;
 		return -2;
@@ -1389,7 +1405,7 @@ pcap_read_timeline(pcap_t *handle, int max_packets, pcap_handler callback, u_cha
 	caplen = timeline_extract_next(handle->timeline_handle, &extracted_hdr, &extracted_pkt, &match_epoch_nsec);
 
 	if (caplen <= 0) /* Done with extraction */
-		return 0;
+		return -2;
 
 	file_header = timeline_extract_header(handle->timeline_handle);
 	convert_endian = (file_header->snaplen > 0x4000);
@@ -1427,7 +1443,7 @@ static int
 pcap_stats_timeline(pcap_t *handle, struct pcap_stat *stats)
 {
 	struct pcap_linux *handlep = handle->priv;
-	handlep->stat.ps_recv = handlep->packets_read++;
+	handlep->stat.ps_recv = handlep->packets_read;
 	handlep->stat.ps_drop = 0;
 	*stats = handlep->stat;
 	return 0;
@@ -1522,28 +1538,10 @@ pcap_activate_linux(pcap_t *handle)
 		if (is_dummy_interface(device, &handle->timeline, &handle->timeline_start, &handle->timeline_end, &handle->real_device)) {
 #ifdef HAVE_NPCAP
 			if (handle->timeline != NULL) {
-				struct tm begin_tm, end_tm;
-				time_t begin_epoch, end_epoch;
-
-				if (strptime(handle->timeline_start, "%Y-%m-%d %H:%M:%S", &begin_tm) &&
-    				    strptime(handle->timeline_end,   "%Y-%m-%d %H:%M:%S", &end_tm)) {
-					begin_tm.tm_isdst = -1;
-					begin_epoch = mktime(&begin_tm);
-					end_tm.tm_isdst = -1;
-					end_epoch = mktime(&end_tm);
-				
-					handle->timeline_handle = timeline_extract_open(handle->timeline, begin_epoch, end_epoch, handle->fast_bpf_filter, NULL);
-				}
-
-				if (handle->timeline_handle != NULL) {
-					handle->inject_op = NULL;
-					handle->setfilter_op = pcap_setfilter_timeline;
-					handle->read_op = pcap_read_timeline;
-					handle->stats_op = pcap_stats_timeline;
-				} else {
-					free(handle->timeline);
-					handle->timeline = NULL;
-				}
+				handle->inject_op = NULL;
+				handle->setfilter_op = pcap_setfilter_timeline;
+				handle->read_op = pcap_read_timeline;
+				handle->stats_op = pcap_stats_timeline;
 			} else 
 #endif
 			if (handle->real_device != NULL) {
