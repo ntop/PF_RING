@@ -13,7 +13,7 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 
-#include "fast_bpf.h"
+#include "nbpf.h"
 
 //#define DEBUG
 #ifdef DEBUG_PRINTF
@@ -30,7 +30,7 @@ static u_int8_t ignore_inner_header = 0;
 
 /***************************************************************************/
 
-static /* inline */ int packet_match_mac(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
+static /* inline */ int packet_match_mac(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   if(ignore_mac_addr)
     return 1;
 
@@ -58,8 +58,8 @@ static /* inline */ int packet_match_mac(fast_bpf_node_t *n, fast_bpf_pkt_info_t
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_ip(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
-  fast_bpf_pkt_info_tuple_t *t = &h->tuple;
+static /* inline */ int packet_match_ip(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  nbpf_pkt_info_tuple_t *t = &h->tuple;
 
   if(n->qualifiers.header == Q_INNER) {
     if(ignore_inner_header) return 1;
@@ -108,8 +108,8 @@ static /* inline */ int match_ip6(u_int32_t *ip6, u_int32_t *rulemask6, u_int32_
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_ip6(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
-  fast_bpf_pkt_info_tuple_t *t = &h->tuple;
+static /* inline */ int packet_match_ip6(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  nbpf_pkt_info_tuple_t *t = &h->tuple;
 
   if(n->qualifiers.header == Q_INNER) {
     if(ignore_inner_header) return 1;
@@ -141,8 +141,8 @@ static /* inline */ int packet_match_ip6(fast_bpf_node_t *n, fast_bpf_pkt_info_t
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_port(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
-  fast_bpf_pkt_info_tuple_t *t = &h->tuple;
+static /* inline */ int packet_match_port(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  nbpf_pkt_info_tuple_t *t = &h->tuple;
   u_int16_t h_l4_src_port, h_l4_dst_port; 
   u_int16_t h_port_from, h_port_to;
 
@@ -184,8 +184,8 @@ static /* inline */ int packet_match_port(fast_bpf_node_t *n, fast_bpf_pkt_info_
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_host(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
-  fast_bpf_pkt_info_tuple_t *t = &h->tuple;
+static /* inline */ int packet_match_host(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  nbpf_pkt_info_tuple_t *t = &h->tuple;
 
   if(n->qualifiers.header == Q_INNER) {
     if(ignore_inner_header) return 1;
@@ -218,8 +218,8 @@ static /* inline */ int packet_match_host(fast_bpf_node_t *n, fast_bpf_pkt_info_
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_l4(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
-  fast_bpf_pkt_info_tuple_t *t = &h->tuple;
+static /* inline */ int packet_match_l4(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  nbpf_pkt_info_tuple_t *t = &h->tuple;
 
   if(n->qualifiers.header == Q_INNER) {
     if(ignore_inner_header) return 1;
@@ -251,8 +251,8 @@ static /* inline */ int packet_match_l4(fast_bpf_node_t *n, fast_bpf_pkt_info_t 
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_proto(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
-  fast_bpf_pkt_info_tuple_t *t = &h->tuple;
+static /* inline */ int packet_match_proto(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  nbpf_pkt_info_tuple_t *t = &h->tuple;
 
   if(n->qualifiers.header == Q_INNER) {
     if(ignore_inner_header) return 1;
@@ -279,7 +279,7 @@ static /* inline */ int packet_match_proto(fast_bpf_node_t *n, fast_bpf_pkt_info
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_l7_proto(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
+static /* inline */ int packet_match_l7_proto(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   if(ignore_l7_proto || h->master_l7_proto == n->l7protocol || h->l7_proto == n->l7protocol)
     return 1;
 
@@ -289,7 +289,7 @@ static /* inline */ int packet_match_l7_proto(fast_bpf_node_t *n, fast_bpf_pkt_i
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_vlan(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
+static /* inline */ int packet_match_vlan(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   switch(n->qualifiers.protocol) {
     case Q_LINK:
       if(h->vlan_id == n->vlan_id || h->vlan_id_qinq == n->vlan_id)
@@ -304,7 +304,7 @@ static /* inline */ int packet_match_vlan(fast_bpf_node_t *n, fast_bpf_pkt_info_
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_primitive(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
+static /* inline */ int packet_match_primitive(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   switch(n->qualifiers.address) {
     case Q_DEFAULT:
     case Q_HOST: 
@@ -328,7 +328,7 @@ static /* inline */ int packet_match_primitive(fast_bpf_node_t *n, fast_bpf_pkt_
 
 /* ********************************************************************** */
 
-static int packet_match_filter(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
+static int packet_match_filter(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   if(n == NULL)
     return 1;
 
@@ -344,29 +344,29 @@ static int packet_match_filter(fast_bpf_node_t *n, fast_bpf_pkt_info_t *h) {
 
 /* ********************************************************************** */
 
-void fast_bpf_toggle_mac_match(fast_bpf_tree_t *tree, u_int8_t enable) {
+void nbpf_toggle_mac_match(nbpf_tree_t *tree, u_int8_t enable) {
   ignore_mac_addr = !enable;
 }
 
-void fast_bpf_toggle_ipv6_l32_match(fast_bpf_tree_t *tree, u_int8_t enable) {
+void nbpf_toggle_ipv6_l32_match(nbpf_tree_t *tree, u_int8_t enable) {
   use_ipv6_l32_match = enable;
 }
 
-void fast_bpf_toggle_l3_proto_match(fast_bpf_tree_t *tree, u_int8_t enable) {
+void nbpf_toggle_l3_proto_match(nbpf_tree_t *tree, u_int8_t enable) {
   ignore_l3_proto = !enable;
 }
 
-void fast_bpf_toggle_l7_proto_match(fast_bpf_tree_t *tree, u_int8_t enable) {
+void nbpf_toggle_l7_proto_match(nbpf_tree_t *tree, u_int8_t enable) {
   ignore_l7_proto = !enable;
 }
 
-void fast_bpf_toggle_inner_header_match(fast_bpf_tree_t *tree, u_int8_t enable) {
+void nbpf_toggle_inner_header_match(nbpf_tree_t *tree, u_int8_t enable) {
   ignore_inner_header = !enable;
 }
 
 /***************************************************************************/ 
 
-int fast_bpf_match(fast_bpf_tree_t *tree, fast_bpf_pkt_info_t *h) {
+int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h) {
   return packet_match_filter(tree->root, h);
 }
 
@@ -444,7 +444,7 @@ void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds, char *str) {
 
 /* Napatech does not like short IPv6 address format */
 
-char* bpf_intoaV6(struct fast_bpf_in6_addr *ipv6, char* buf, u_short bufLen) {
+char* bpf_intoaV6(struct nbpf_in6_addr *ipv6, char* buf, u_short bufLen) {
   int i, len = 0;
   
   buf[0] = '\0';

@@ -156,24 +156,24 @@ vlan	return VLAN;
 		hints.ai_family = AF_INET6;
 		hints.ai_flags = AI_NUMERICHOST;
 		if (getaddrinfo(yytext, NULL, &hints, &res))
-			fast_bpf_syntax_error("bogus IPv6 address %s", yytext);
+			nbpf_syntax_error("bogus IPv6 address %s", yytext);
 		else {
 			freeaddrinfo(res);
 			yylval.s = strdup((char *)yytext); return HID6;
 		}
 	}
-{B}:+({B}:+)+ { fast_bpf_syntax_error("bogus ethernet address %s", yytext); }
+{B}:+({B}:+)+ { nbpf_syntax_error("bogus ethernet address %s", yytext); }
 [A-Za-z]+ { yylval.s = strdup((char *)yytext); return ID; } // l7proto name
 [0-9]*(-[0-9]*)? { yylval.s = strdup((char *)yytext); return ID; } // portrange
-[^ \[\]\t\n\-_.A-Za-z0-9!<>()&|=]+ { fast_bpf_syntax_error("illegal token: %s", yytext); }
-.	{ fast_bpf_syntax_error("illegal char '%c'", *yytext); }
+[^ \[\]\t\n\-_.A-Za-z0-9!<>()&|=]+ { nbpf_syntax_error("illegal token: %s", yytext); }
+.	{ nbpf_syntax_error("illegal char '%c'", *yytext); }
 %%
 
-void fast_bpf_lex_init(const char *buffer) {
+void nbpf_lex_init(const char *buffer) {
   input_stream = yy_scan_string(buffer);
 }
 
-void fast_bpf_lex_cleanup() {
+void nbpf_lex_cleanup() {
   if (input_stream != NULL)
     yy_delete_buffer(input_stream);
   input_stream = NULL;

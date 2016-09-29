@@ -1,5 +1,5 @@
 ----
-## Welcome to Fast BPF
+## Welcome to nBPF
 
 This directory contains an impementation of the BPF (Berkeley Packet Filter) interpreter
 that can be used as alternative to the implementation that can be found in libpcap.

@@ -13,7 +13,7 @@
 #include "parser.h"
 
 static u_int32_t errors = 0;
-static fast_bpf_tree_t tree_root = { NULL };
+static nbpf_tree_t tree_root = { NULL };
 static l7protocol_by_name_func l7proto_by_name = NULL;
 #ifdef HAVE_NDPI
 static struct ndpi_detection_module_struct *ndpi_struct = NULL;
@@ -21,10 +21,10 @@ static struct ndpi_detection_module_struct *ndpi_struct = NULL;
 
 /* ****************************************** */
 
-static fast_bpf_node_t *alloc_node() {
-  fast_bpf_node_t *n;
+static nbpf_node_t *alloc_node() {
+  nbpf_node_t *n;
 
-  n = (fast_bpf_node_t *) calloc(1, sizeof(fast_bpf_node_t));
+  n = (nbpf_node_t *) calloc(1, sizeof(nbpf_node_t));
 
   if (n == NULL) {
     fprintf(stderr, "Error in memory allocation\n");
@@ -76,7 +76,7 @@ struct addrinfo *nametoaddrinfo(const char *name) {
 
 /* ****************************************** */
 
-void fast_bpf_syntax_error(char *format, ...) {
+void nbpf_syntax_error(char *format, ...) {
   va_list va_ap;
   char buf[2048];
 
@@ -92,14 +92,14 @@ void fast_bpf_syntax_error(char *format, ...) {
 
 /* ****************************************** */
 
-void fast_bpf_set_tree_root(fast_bpf_node_t *n) {
+void nbpf_set_tree_root(nbpf_node_t *n) {
   tree_root.root = n;
 }
 
 /* ****************************************** */
 
-static fast_bpf_node_t* node_clone(fast_bpf_node_t *t) {
-  fast_bpf_node_t *root;
+static nbpf_node_t* node_clone(nbpf_node_t *t) {
+  nbpf_node_t *root;
 
   if (t == NULL)
     return NULL;
@@ -109,7 +109,7 @@ static fast_bpf_node_t* node_clone(fast_bpf_node_t *t) {
   if (!root) 
     return NULL; 
 
-  memcpy(root, t, sizeof(fast_bpf_node_t));
+  memcpy(root, t, sizeof(nbpf_node_t));
   root->l = node_clone(t->l);
   root->r = node_clone(t->r);
   return root;
@@ -117,8 +117,8 @@ static fast_bpf_node_t* node_clone(fast_bpf_node_t *t) {
 
 /* ****************************************** */
 
-fast_bpf_tree_t* tree_clone(fast_bpf_tree_t *t) {
-  fast_bpf_tree_t *c = (fast_bpf_tree_t *) malloc(sizeof(fast_bpf_tree_t));
+nbpf_tree_t* tree_clone(nbpf_tree_t *t) {
+  nbpf_tree_t *c = (nbpf_tree_t *) malloc(sizeof(nbpf_tree_t));
 
   if (!c) 
     return NULL;
@@ -129,7 +129,7 @@ fast_bpf_tree_t* tree_clone(fast_bpf_tree_t *t) {
 
 /* ****************************************** */
 
-static void node_purge(fast_bpf_node_t *n) {
+static void node_purge(nbpf_node_t *n) {
   if (n->l) node_purge(n->l);
   if (n->r) node_purge(n->r);
   free(n);
@@ -137,7 +137,7 @@ static void node_purge(fast_bpf_node_t *n) {
 
 /* ****************************************** */
 
-void fast_bpf_free(fast_bpf_tree_t *t) {
+void nbpf_free(nbpf_tree_t *t) {
   if (!t) return;
   if (t->root) node_purge(t->root);
   free(t);
@@ -145,7 +145,7 @@ void fast_bpf_free(fast_bpf_tree_t *t) {
 
 /* ****************************************** */
 
-static fast_bpf_tree_t *tree_parse(char *buffer) {
+static nbpf_tree_t *tree_parse(char *buffer) {
 #ifdef HAVE_NDPI
   ndpi_struct = ndpi_init_detection_module();
 
@@ -153,12 +153,12 @@ static fast_bpf_tree_t *tree_parse(char *buffer) {
     return NULL;
 #endif
 
-  fast_bpf_lex_init(buffer);
+  nbpf_lex_init(buffer);
 
   errors = 0;
   yyparse();
 
-  fast_bpf_lex_cleanup();
+  nbpf_lex_cleanup();
 
   if (errors) {
     return NULL;
@@ -173,8 +173,8 @@ static fast_bpf_tree_t *tree_parse(char *buffer) {
 
 /* ****************************************** */
 
-fast_bpf_tree_t *fast_bpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
-  fast_bpf_tree_t *t = (fast_bpf_tree_t *) malloc(sizeof(fast_bpf_tree_t));
+nbpf_tree_t *nbpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
+  nbpf_tree_t *t = (nbpf_tree_t *) malloc(sizeof(nbpf_tree_t));
 
   if (t == NULL)
     return NULL;
@@ -193,8 +193,8 @@ fast_bpf_tree_t *fast_bpf_parse(char *bpf_filter, l7protocol_by_name_func l7prot
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_and(fast_bpf_node_t *n1, fast_bpf_node_t *n2) {
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_and(nbpf_node_t *n1, nbpf_node_t *n2) {
+  nbpf_node_t *n = alloc_node();
   
   n->type = N_AND; 
   n->l = n1;
@@ -205,8 +205,8 @@ fast_bpf_node_t *fast_bpf_create_and(fast_bpf_node_t *n1, fast_bpf_node_t *n2) {
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_or(fast_bpf_node_t *n1, fast_bpf_node_t *n2) {
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_or(nbpf_node_t *n1, nbpf_node_t *n2) {
+  nbpf_node_t *n = alloc_node();
 
   n->type = N_OR;
   n->l = n1;
@@ -217,16 +217,16 @@ fast_bpf_node_t *fast_bpf_create_or(fast_bpf_node_t *n1, fast_bpf_node_t *n2) {
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_portrange_node(const char *range, fast_bpf_qualifiers_t q) {
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_portrange_node(const char *range, nbpf_qualifiers_t q) {
+  nbpf_node_t *n = alloc_node();
   int proto = q.protocol;
   int port1, port2;
   
   if (proto != Q_DEFAULT && proto != Q_UDP && proto != Q_TCP && proto != Q_SCTP)
-    fast_bpf_syntax_error("illegal qualifier of 'portrange'");
+    nbpf_syntax_error("illegal qualifier of 'portrange'");
 
   if (sscanf(range, "%d-%d", &port1, &port2) != 2)
-    fast_bpf_syntax_error("illegal 'portrange' value");
+    nbpf_syntax_error("illegal 'portrange' value");
 
   n->type = N_PRIMITIVE;
   n->qualifiers = q;
@@ -238,8 +238,8 @@ fast_bpf_node_t *fast_bpf_create_portrange_node(const char *range, fast_bpf_qual
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_eth_node(const u_char *eaddr, fast_bpf_qualifiers_t q) { 
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_eth_node(const u_char *eaddr, nbpf_qualifiers_t q) { 
+  nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
   n->qualifiers = q;
@@ -252,7 +252,7 @@ fast_bpf_node_t *fast_bpf_create_eth_node(const u_char *eaddr, fast_bpf_qualifie
     case Q_OR: case Q_DEFAULT:
       break;
     default:
-      fast_bpf_syntax_error("eth address applied to unsupported direction");
+      nbpf_syntax_error("eth address applied to unsupported direction");
   }
 
   return n;
@@ -260,8 +260,8 @@ fast_bpf_node_t *fast_bpf_create_eth_node(const u_char *eaddr, fast_bpf_qualifie
 
 /* ****************************************** */
 
-fast_bpf_node_t *__fast_bpf_create_net_node(u_int32_t net, u_int32_t mask, fast_bpf_qualifiers_t q) {
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *__nbpf_create_net_node(u_int32_t net, u_int32_t mask, nbpf_qualifiers_t q) {
+  nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
   n->qualifiers = q;
@@ -275,7 +275,7 @@ fast_bpf_node_t *__fast_bpf_create_net_node(u_int32_t net, u_int32_t mask, fast_
     case Q_OR: case Q_DEFAULT:
       break;
     default:
-      fast_bpf_syntax_error("host or net applied to unsupported direction");
+      nbpf_syntax_error("host or net applied to unsupported direction");
   }
 
   return n;
@@ -283,7 +283,7 @@ fast_bpf_node_t *__fast_bpf_create_net_node(u_int32_t net, u_int32_t mask, fast_
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_host_node(const char *s, fast_bpf_qualifiers_t q) {
+nbpf_node_t *nbpf_create_host_node(const char *s, nbpf_qualifiers_t q) {
   u_int32_t hh, mask = 0xffffffff;
   int vlen;
   
@@ -291,25 +291,25 @@ fast_bpf_node_t *fast_bpf_create_host_node(const char *s, fast_bpf_qualifiers_t 
       q.address != Q_HOST &&
       q.address != Q_NET /* && 
       q.address != Q_GATEWAY */)
-    fast_bpf_syntax_error("ip syntax for host and network only");
+    nbpf_syntax_error("ip syntax for host and network only");
 
   vlen = atoin(s, &hh);
 
   hh <<= 32 - vlen;
   mask <<= 32 - vlen;
 
-  return __fast_bpf_create_net_node(hh, mask, q);
+  return __nbpf_create_net_node(hh, mask, q);
 }
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_net_node(const char *net, const char *netmask, 
-				 int masklen, fast_bpf_qualifiers_t q) {
+nbpf_node_t *nbpf_create_net_node(const char *net, const char *netmask, 
+				 int masklen, nbpf_qualifiers_t q) {
   int nlen, mlen;
   u_int32_t nn, mask;
 
   if (q.address != Q_NET)
-    fast_bpf_syntax_error("mask syntax for networks only");
+    nbpf_syntax_error("mask syntax for networks only");
 
   switch (q.protocol) {
     case Q_DEFAULT:
@@ -319,7 +319,7 @@ fast_bpf_node_t *fast_bpf_create_net_node(const char *net, const char *netmask,
     /* case Q_ARP:  */
     /* case Q_RARP: */
     default:
-      fast_bpf_syntax_error("net mask applied to unsupported protocol");
+      nbpf_syntax_error("net mask applied to unsupported protocol");
   }
 
   nlen = atoin(net, &nn);
@@ -329,11 +329,11 @@ fast_bpf_node_t *fast_bpf_create_net_node(const char *net, const char *netmask,
     mlen = atoin(netmask, &mask);
     mask <<= 32 - mlen;
     if ((nn & ~mask) != 0)
-      fast_bpf_syntax_error("non-network bits set in \"%s mask %s\"", net, netmask);
+      nbpf_syntax_error("non-network bits set in \"%s mask %s\"", net, netmask);
   } else {
   /* Convert mask len to mask */
     if (masklen > 32)
-      fast_bpf_syntax_error("mask length must be <= 32");
+      nbpf_syntax_error("mask length must be <= 32");
 
     if (masklen == 0)
       mask = 0;
@@ -341,16 +341,16 @@ fast_bpf_node_t *fast_bpf_create_net_node(const char *net, const char *netmask,
       mask = 0xffffffff << (32 - masklen);
 
     if ((nn & ~mask) != 0)
-      fast_bpf_syntax_error("non-network bits set in \"%s/%d\"", net, masklen);
+      nbpf_syntax_error("non-network bits set in \"%s/%d\"", net, masklen);
   }
 
-  return __fast_bpf_create_net_node(nn, mask, q); 
+  return __nbpf_create_net_node(nn, mask, q); 
 }
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_net6_node(const char *net, int masklen, fast_bpf_qualifiers_t q) {
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_net6_node(const char *net, int masklen, nbpf_qualifiers_t q) {
+  nbpf_node_t *n = alloc_node();
   struct addrinfo *res;
   struct in6_addr *addr;
   struct in6_addr mask;
@@ -359,15 +359,15 @@ fast_bpf_node_t *fast_bpf_create_net6_node(const char *net, int masklen, fast_bp
   res = nametoaddrinfo(net);
 
   if (!res)
-    fast_bpf_syntax_error("invalid ip6 address %s", net);
+    nbpf_syntax_error("invalid ip6 address %s", net);
 
   if (res->ai_next)
-    fast_bpf_syntax_error("%s resolved to multiple address", net);
+    nbpf_syntax_error("%s resolved to multiple address", net);
 
   addr = &((struct sockaddr_in6 *)res->ai_addr)->sin6_addr;
 
   if (sizeof(mask) * 8 < masklen)
-    fast_bpf_syntax_error("mask length must be <= %u", (unsigned int)(sizeof(mask) * 8));
+    nbpf_syntax_error("mask length must be <= %u", (unsigned int)(sizeof(mask) * 8));
   
   memset(&mask, 0, sizeof(mask));
   memset(&mask, 0xff, masklen / 8);
@@ -378,18 +378,18 @@ fast_bpf_node_t *fast_bpf_create_net6_node(const char *net, int masklen, fast_bp
   m = (u_int32_t *)&mask;
 
   if ((a[0] & ~m[0]) || (a[1] & ~m[1]) || (a[2] & ~m[2]) || (a[3] & ~m[3]))
-    fast_bpf_syntax_error("non-network bits set in \"%s/%d\"", net, masklen);
+    nbpf_syntax_error("non-network bits set in \"%s/%d\"", net, masklen);
 
   switch (q.address) {
     case Q_DEFAULT:
     case Q_HOST:
       if (masklen != 128)
-        fast_bpf_syntax_error("mask syntax for networks only");
+        nbpf_syntax_error("mask syntax for networks only");
     case Q_NET:
       /* Ok */
       break;
     default:
-      fast_bpf_syntax_error("invalid qualifier against IPv6 address");
+      nbpf_syntax_error("invalid qualifier against IPv6 address");
       freeaddrinfo(res);
       return n; /* a dummy node */
   }
@@ -400,7 +400,7 @@ fast_bpf_node_t *fast_bpf_create_net6_node(const char *net, int masklen, fast_bp
       /* Ok */
       break;
     default:
-      fast_bpf_syntax_error("invalid proto modifies applied to ipv6");
+      nbpf_syntax_error("invalid proto modifies applied to ipv6");
   }
 
   n->type = N_PRIMITIVE;
@@ -416,7 +416,7 @@ fast_bpf_node_t *fast_bpf_create_net6_node(const char *net, int masklen, fast_bp
     case Q_OR: case Q_DEFAULT:
       break;
     default:
-      fast_bpf_syntax_error("net mask applied to unsupported direction");
+      nbpf_syntax_error("net mask applied to unsupported direction");
   }
 
   freeaddrinfo(res);
@@ -425,8 +425,8 @@ fast_bpf_node_t *fast_bpf_create_net6_node(const char *net, int masklen, fast_bp
 
 /* ****************************************** */
 
-fast_bpf_node_t *fast_bpf_create_n_node(u_int32_t nn, fast_bpf_qualifiers_t q) {
-  fast_bpf_node_t *n;
+nbpf_node_t *nbpf_create_n_node(u_int32_t nn, nbpf_qualifiers_t q) {
+  nbpf_node_t *n;
   u_int32_t mask = 0xffffffff;
 
   switch (q.address) {
@@ -440,7 +440,7 @@ fast_bpf_node_t *fast_bpf_create_n_node(u_int32_t nn, fast_bpf_qualifiers_t q) {
         }
       }
       
-      n = __fast_bpf_create_net_node(nn, mask, q);
+      n = __nbpf_create_net_node(nn, mask, q);
 
       break;
     case Q_PORT:
@@ -450,7 +450,7 @@ fast_bpf_node_t *fast_bpf_create_n_node(u_int32_t nn, fast_bpf_qualifiers_t q) {
           q.protocol != Q_UDP &&
           q.protocol != Q_TCP &&
           q.protocol != Q_SCTP)
-        fast_bpf_syntax_error("illegal qualifier of 'port'");
+        nbpf_syntax_error("illegal qualifier of 'port'");
       
       n = alloc_node();
 
@@ -469,21 +469,21 @@ fast_bpf_node_t *fast_bpf_create_n_node(u_int32_t nn, fast_bpf_qualifiers_t q) {
       
       break;
     default:
-      fast_bpf_syntax_error("unexpected number for the specified address qualifier");
+      nbpf_syntax_error("unexpected number for the specified address qualifier");
       n = alloc_node(); /* a dummy node */
   }
 
   return n;
 }
 
-void fast_bpf_create_not(fast_bpf_node_t *n) {
+void nbpf_create_not(nbpf_node_t *n) {
   n->not_rule = !n->not_rule;
 }
 
 /* ****************************************************** */
 
-fast_bpf_node_t *fast_bpf_create_proto_node(int proto) { 
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_proto_node(int proto) { 
+  nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
   n->qualifiers.protocol = proto;
@@ -500,7 +500,7 @@ fast_bpf_node_t *fast_bpf_create_proto_node(int proto) {
       n->qualifiers.protocol = Q_IP;
       break;
     default:
-      fast_bpf_syntax_error("Unexpected protocol\n"); 
+      nbpf_syntax_error("Unexpected protocol\n"); 
   }
 
   switch (proto) {
@@ -516,8 +516,8 @@ fast_bpf_node_t *fast_bpf_create_proto_node(int proto) {
 
 /* ****************************************************** */
 
-fast_bpf_node_t *fast_bpf_create_vlan_node(int vlan_id) { 
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_vlan_node(int vlan_id) { 
+  nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
   n->qualifiers.protocol = Q_LINK;
@@ -533,8 +533,8 @@ fast_bpf_node_t *fast_bpf_create_vlan_node(int vlan_id) {
 
 /* ****************************************************** */
 
-fast_bpf_node_t *fast_bpf_create_l7_node(u_int32_t id, const char *name) {
-  fast_bpf_node_t *n = alloc_node();
+nbpf_node_t *nbpf_create_l7_node(u_int32_t id, const char *name) {
+  nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
   n->qualifiers.address = Q_L7PROTO;
@@ -548,7 +548,7 @@ fast_bpf_node_t *fast_bpf_create_l7_node(u_int32_t id, const char *name) {
       if (strcasecmp(ndpi_get_proto_by_id(ndpi_struct, i), name) == 0)
         p = i;
     if (p == -1) {
-      fast_bpf_syntax_error("Unexpected l7 protocol '%s'\n", name);
+      nbpf_syntax_error("Unexpected l7 protocol '%s'\n", name);
       p = 0;
     }
 #else
@@ -556,7 +556,7 @@ fast_bpf_node_t *fast_bpf_create_l7_node(u_int32_t id, const char *name) {
       p = l7proto_by_name(name);
       if (p < 0) p = 0;
     } else {
-      fast_bpf_syntax_error("l7proto with protocol name not supported (FastBPF library compiled without nDPI support)\n");
+      nbpf_syntax_error("l7proto with protocol name not supported (nBPF library compiled without nDPI support)\n");
       p = 0;
     }
 #endif

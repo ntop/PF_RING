@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef FAST_BPF_MOD_RDIF_H
-#define FAST_BPF_MOD_RDIF_H
+#ifndef NBPF_MOD_RDIF_H
+#define NBPF_MOD_RDIF_H
 
 #ifdef HAVE_REDIRECTOR_F
 #include "librdi.h"
@@ -23,7 +23,7 @@ typedef enum {
   INTERFACE_1 = 0,
   INTERFACE_2,
   MAX_INTERFACE
-} fast_bpf_rdif_interface_t;
+} nbpf_rdif_interface_t;
 
 typedef struct {
    unsigned int is_and;
@@ -44,16 +44,16 @@ typedef struct {
 
 typedef struct { // TODO add instance data here
   int unit;
-  fast_bpf_rdif_interface_t intf;
+  nbpf_rdif_interface_t intf;
   check_constraint_t constraint_parameters;
   unsigned int current_rule_id;
   rules_parameter_t rules_parameters;
-} fast_bpf_rdif_handle_t;
+} nbpf_rdif_handle_t;
 
-int fast_bpf_rdif_reset(int unit); //TODO needs to be moved to driver init
+int nbpf_rdif_reset(int unit); //TODO needs to be moved to driver init
 
-fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname);
-int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf);
-void fast_bpf_rdif_destroy(fast_bpf_rdif_handle_t *handle);
+nbpf_rdif_handle_t *nbpf_rdif_init(char *ifname);
+int nbpf_rdif_set_filter(nbpf_rdif_handle_t *handle, char *bpf);
+void nbpf_rdif_destroy(nbpf_rdif_handle_t *handle);
 
 #endif

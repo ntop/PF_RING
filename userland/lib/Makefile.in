@@ -54,12 +54,12 @@ INVEATECH_OBJS  = @INVEATECH_OBJS@
 EXABLAZE_OBJS  = @EXABLAZE_OBJS@
 
 #
-# Fast_BPF
+# nBPF
 #
-FASTBPF_HOME = ../fast_bpf
-FASTBPF_HDR = ${FASTBPF_HOME}/fast_bpf.h
-FASTBPF_LIB = ${FASTBPF_HOME}/libfastbpf.a
-FASTBPF_OBJS = `ar t ${FASTBPF_LIB} | grep -F .o | tr '\n' ' '`
+NBPF_HOME = ../nbpf
+NBPF_HDR = ${NBPF_HOME}/nbpf.h
+NBPF_LIB = ${NBPF_HOME}/libnbpf.a
+NBPF_OBJS = `ar t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 
 #
 # Object files
@@ -93,14 +93,14 @@ RING_H     = ../../kernel/linux/pf_ring.h
 
 all: ${TARGETS}
 
-${STATICLIB}: Makefile extract_fast_bpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ ${OBJS} pfring.h ${RING_H}
+${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
-	ar rs $@ ${OBJS} ${FASTBPF_OBJS}
+	ar rs $@ ${OBJS} ${NBPF_OBJS}
 	ranlib $@
 
-${DYNAMICLIB}: ${OBJS} extract_fast_bpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ pfring.h ${RING_H} Makefile
+${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
-	${CC} ${LDFLAGS} ${OBJS} ${FASTBPF_OBJS} ${SYSLIBS} -o $@
+	${CC} ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
 
 extract_pfring_zc_lib:
 	ar x @PF_RING_ZC_LIB@
@@ -111,18 +111,18 @@ extract_myricom_lib:
 extract_nt_lib:
 	ar x @MOD_NT_LIB@
 
-extract_fast_bpf: ${FASTBPF_LIB}
-	ar x ${FASTBPF_LIB}
-	cp ${FASTBPF_HDR} .
+extract_nbpf: ${NBPF_LIB}
+	ar x ${NBPF_LIB}
+	cp ${NBPF_HDR} .
 
-${FASTBPF_LIB}:
-	cd ../fast_bpf; make
+${NBPF_LIB}:
+	cd ../nbpf; make
 
 install: install-static install-shared
 
 install-includes:
 	mkdir -p ${INSTDIR}/include
-	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ ${FASTBPF_HDR} ${INSTDIR}/include/
+	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ ${NBPF_HDR} ${INSTDIR}/include/
 
 install-static: ${STATICLIB} install-includes
 	mkdir -p ${INSTDIR}/lib

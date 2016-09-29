@@ -22,7 +22,7 @@ tcpdump_build:
 
 ###################
 
-clean: libpfring_clean pcap_clean ring_examples_clean zc_examples_clean lib_c++_clean tcpdump_clean fast_bpf_clean
+clean: libpfring_clean pcap_clean ring_examples_clean zc_examples_clean lib_c++_clean tcpdump_clean nbpf_clean
 
 libpfring_clean:
 	cd lib; make clean
@@ -42,5 +42,5 @@ lib_c++_clean:
 tcpdump_clean:
 	if test -f tcpdump/config.status; then cd tcpdump; make clean; fi
 
-fast_bpf_clean:
-	cd fast_bpf; make clean
+nbpf_clean:
+	cd nbpf; make clean

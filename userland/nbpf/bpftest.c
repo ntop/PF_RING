@@ -16,7 +16,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "fast_bpf.h"
+#include "nbpf.h"
 #include "bpf_mod_napatech.h"
 
 /* ****************************************** */
@@ -89,7 +89,7 @@ static void print_padding(char ch, int n) {
 
 /* ****************************************** */
 
-static void dump_tree(fast_bpf_node_t *n, int level) {
+static void dump_tree(nbpf_node_t *n, int level) {
   char tmp[32];
 
   if (n == NULL)
@@ -163,7 +163,7 @@ static void dump_tree(fast_bpf_node_t *n, int level) {
 
 /* *********************************************************** */
 
-void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
+void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
   printf("[%u] ", id);
 
   if(c->ip_version) printf("[IPv%d] ", c->ip_version);
@@ -226,12 +226,12 @@ void dump_rule(u_int id, fast_bpf_rule_core_fields_t *c) {
 
 /* *********************************************************** */
 
-void dump_rules(fast_bpf_rule_list_item_t *pun) {
+void dump_rules(nbpf_rule_list_item_t *pun) {
   u_int id = 1;
 
   /* Scan the list and set the single rule */
   while(pun != NULL) {
-    fast_bpf_rule_core_fields_t *c = &pun->fields;
+    nbpf_rule_core_fields_t *c = &pun->fields;
 
     dump_rule(id++, c);
 
@@ -248,7 +248,7 @@ int napatech_cmd(void *opt, char *cmd) {
 
 /* *********************************************************** */
 
-void napatech_dump_rules(fast_bpf_rule_list_item_t *pun) {
+void napatech_dump_rules(nbpf_rule_list_item_t *pun) {
   u_int8_t port_id = 0, stream_id = 1;
 
   printf("\n"
@@ -278,9 +278,9 @@ void help() {
 /* *********************************************************** */
 
 int main(int argc, char *argv[]) {
-  fast_bpf_tree_t *tree;
-  fast_bpf_pkt_info_t pkt;
-  fast_bpf_rule_list_item_t *pun;
+  nbpf_tree_t *tree;
+  nbpf_pkt_info_t pkt;
+  nbpf_rule_list_item_t *pun;
   int dump_napatech = 0;
   char *filter = NULL, c;
 
@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
   if (filter == NULL)
     help();
 
-  if ((tree = fast_bpf_parse(filter, NULL)) == NULL) {
+  if ((tree = nbpf_parse(filter, NULL)) == NULL) {
     printf("Parse error\n");
     return -1;
   }
@@ -315,9 +315,9 @@ int main(int argc, char *argv[]) {
   dump_tree(tree->root, 0);
 
   /* Generates rules list */
-  if((pun = fast_bpf_generate_rules(tree)) == NULL) {
+  if((pun = nbpf_generate_rules(tree)) == NULL) {
     printf("Error: filtering rules cannot be generated for the provided filter\n");
-    fast_bpf_free(tree);
+    nbpf_free(tree);
     return -1;
   }
 
@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
   if(dump_napatech)
     napatech_dump_rules(pun);
 
-  fast_bpf_rule_list_free(pun);
+  nbpf_rule_list_free(pun);
 
   printf("\n"
          "Testing Filtering\n"
@@ -339,19 +339,19 @@ int main(int argc, char *argv[]) {
   memset(&pkt, 0, sizeof(pkt));
 
   pkt.vlan_id = 34, pkt.tuple.l4_src_port = htons(34), pkt.tuple.l4_dst_port = htons(345), pkt.l7_proto = 7;
-  printf("VlanID=34 SrcPort=34 DstPort=345 L7Proto=7 -> %s\n", fast_bpf_match(tree, &pkt) ? "MATCHED" : "DISCARDED");
+  printf("VlanID=34 SrcPort=34 DstPort=345 L7Proto=7 -> %s\n", nbpf_match(tree, &pkt) ? "MATCHED" : "DISCARDED");
 
-  fast_bpf_free(tree);
+  nbpf_free(tree);
 
 #if 0
-  fast_bpf_rdif_handle_t *rdif_handle = fast_bpf_rdif_init("eth1");
+  nbpf_rdif_handle_t *rdif_handle = nbpf_rdif_init("eth1");
 
   if (rdif_handle == NULL) {
     printf("RDIF Init error\n");
     return -1;
   }
 
-  if (!fast_bpf_rdif_set_filter(rdif_handle, argv[1])){
+  if (!nbpf_rdif_set_filter(rdif_handle, argv[1])){
     printf("RDIF Set BPF error\n");
     return -1;
   }

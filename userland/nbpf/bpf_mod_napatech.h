@@ -15,6 +15,6 @@ extern void bpf_init_napatech_rules(u_int8_t stream_id, void *opt,
 
 extern int bpf_rule_to_napatech(u_int8_t stream_id, u_int8_t port_id,
 				void *opt, char *cmd, u_int cmd_len,
-				fast_bpf_rule_core_fields_t *c,
+				nbpf_rule_core_fields_t *c,
 				int (execCmd)(void *opt, char *cmd));
 

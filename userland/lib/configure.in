@@ -306,7 +306,7 @@ AC_CONFIG_FILES([pfring_config])
 AC_CONFIG_FILES([../examples/Makefile])
 AC_CONFIG_FILES([../examples_zc/Makefile])
 AC_CONFIG_FILES([../c++/Makefile])
-AC_CONFIG_FILES([../fast_bpf/Makefile])
+AC_CONFIG_FILES([../nbpf/Makefile])
 
 AC_CONFIG_HEADERS(config.h)
 AC_OUTPUT

@@ -12,11 +12,11 @@
 
 #include <stdio.h>
 
-#include "fast_bpf.h"
+#include "nbpf.h"
 
 /* *********************************************************** */
 
-int _is_emptyv6(struct fast_bpf_in6_addr *a) {
+int _is_emptyv6(struct nbpf_in6_addr *a) {
   int i;
 
   for(i=0; i<4; i++)
@@ -44,7 +44,7 @@ void bpf_init_napatech_rules(u_int8_t stream_id, void *opt,
 
 void bpf_rule_to_napatech(u_int8_t stream_id, u_int8_t port_id, void *opt,
 			  char *cmd, u_int cmd_len,
-			  fast_bpf_rule_core_fields_t *c,
+			  nbpf_rule_core_fields_t *c,
 			  int (execCmd)(void *opt, char *cmd)) {
   char *proto = "", buf[256];
   int num_cmds = 0;

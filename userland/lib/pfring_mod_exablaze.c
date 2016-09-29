@@ -10,7 +10,7 @@
 
 #include "pfring_mod_exablaze.h"
 #include "pfring_mod.h" /* to print stats under /proc */
-#include "../fast_bpf/fast_bpf.h"
+#include "../nbpf/nbpf.h"
 
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -85,12 +85,12 @@ static void __pfring_exablaze_release_resources(pfring *ring) {
 /* **************************************************** */
 
 static int __pfring_exablaze_check_ip_rules(pfring_exablaze *exablaze,
-					    fast_bpf_rule_list_item_t *pun) {
+					    nbpf_rule_list_item_t *pun) {
   u_int num_filters = 0;
   
   /* Scan the list and set the single rule */
   while(pun != NULL) {
-    fast_bpf_rule_core_fields_t *c = &pun->fields;
+    nbpf_rule_core_fields_t *c = &pun->fields;
       
     if(c->ip_version != 4) return(-1); /* Hardware IPv6 filters are not supported */
     if(c->vlan_id != 0) return(-2);
@@ -108,7 +108,7 @@ static int __pfring_exablaze_check_ip_rules(pfring_exablaze *exablaze,
 /* **************************************************** */
 
 static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
-					  fast_bpf_rule_list_item_t *pun) {
+					  nbpf_rule_list_item_t *pun) {
 
   if(exablaze->rx == NULL) {
     if((exablaze->rx = exanic_acquire_unused_filter_buffer(exablaze->exanic,
@@ -150,30 +150,30 @@ static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
 
 int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
   pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
-  fast_bpf_tree_t *tree;
-  fast_bpf_rule_list_item_t *pun;
+  nbpf_tree_t *tree;
+  nbpf_rule_list_item_t *pun;
 
   /* Parses the bpf filters and builds the rules tree */
-  if((tree = fast_bpf_parse(bpf, NULL)) == NULL) {
+  if((tree = nbpf_parse(bpf, NULL)) == NULL) {
 #ifdef DEBUG
     printf("Error on parsing the bpf filter.");
 #endif
     return(-1);
   }
 
-  /* check the general rules of the fast bpf */
-  if(!fast_bpf_check_rules_constraints(tree, 0)) {
-    fast_bpf_free(tree);
+  /* check the general rules of the nbpf */
+  if(!nbpf_check_rules_constraints(tree, 0)) {
+    nbpf_free(tree);
     return(-2);
   }
 
   /* Generates rules list */
-  if((pun = fast_bpf_generate_rules(tree)) == NULL) {
+  if((pun = nbpf_generate_rules(tree)) == NULL) {
 #ifdef DEBUG
     printf("Error generating rules.");
 #endif
 
-    fast_bpf_free(tree);
+    nbpf_free(tree);
     return(-3);
   }
 
@@ -185,13 +185,13 @@ int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
     printf("Error on creating and setting the rules list on the NIC card: using software BPF");
 #endif
 
-    fast_bpf_rule_list_free(pun);
-    fast_bpf_free(tree);
+    nbpf_rule_list_free(pun);
+    nbpf_free(tree);
     return(-4);
   }
 
-  fast_bpf_rule_list_free(pun);
-  fast_bpf_free(tree);
+  nbpf_rule_list_free(pun);
+  nbpf_free(tree);
   return(0);
 }
 

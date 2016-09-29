@@ -15,8 +15,8 @@
 #include <dirent.h>
 #include <arpa/inet.h>
 
-#include "fast_bpf.h"
-#include "fast_bpf_mod_rdif.h"
+#include "nbpf.h"
+#include "nbpf_mod_rdif.h"
 #ifdef HAVE_REDIRECTOR_F
 
 //#define DEBUG
@@ -44,32 +44,32 @@ static rdif_interface_t interface[MAX_INTERFACE] =
   };
 
 /* Static functions */
-static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2);
-static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *handle);
+static int __nbpf_rdif_set_port_inline(int unit, int port1, int port2);
+static int __nbpf_rdif_interface_set_port_inline(nbpf_rdif_handle_t *handle);
 
-static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle);
-static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle);
-static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc);
-static int __fast_bpf_rdif_interface_set_ipv6_address(fast_bpf_rdif_handle_t *handle, unsigned char* ipv6_addr, unsigned int isSrc);
-static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc);
-static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle, unsigned int protocol);
+static int __nbpf_rdif_init(nbpf_rdif_handle_t *handle);
+static int __nbpf_rdif_init_for_rule(nbpf_rdif_handle_t *handle);
+static int __nbpf_rdif_interface_set_ipv4_address(nbpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc);
+static int __nbpf_rdif_interface_set_ipv6_address(nbpf_rdif_handle_t *handle, unsigned char* ipv6_addr, unsigned int isSrc);
+static int __nbpf_rdif_interface_set_port(nbpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc);
+static int __nbpf_rdif_interface_set_protocol(nbpf_rdif_handle_t *handle, unsigned int protocol);
 
-static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *handle);
-static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *handle);
+static int __nbpf_rdif_interface_set_drop_action(nbpf_rdif_handle_t *handle);
+static int __nbpf_rdif_interface_set_permit_action(nbpf_rdif_handle_t *handle);
 
-static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle);
-static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle);
+static int __nbpf_rdif_add_rule(nbpf_rdif_handle_t *handle);
+static int __nbpf_rdif_interface_set_drop_all(nbpf_rdif_handle_t *handle);
 
-static int __fast_bpf_rdif_check_rules_constraints(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree);
-static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_node_t *n);
-static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree);
-static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *pun);
-static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule);
-static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle);
+static int __nbpf_rdif_check_rules_constraints(nbpf_rdif_handle_t *handle, nbpf_tree_t *tree);
+static void __nbpf_rdif_check_node_specific_constrains(nbpf_rdif_handle_t *handle, nbpf_node_t *n);
+static int __nbpf_rdif_check_specific_constrains(nbpf_rdif_handle_t *handle, nbpf_tree_t *tree);
+static int __nbpf_rdif_create_and_set_rules(nbpf_rdif_handle_t *handle, nbpf_rule_list_item_t *pun);
+static int __nbpf_rdif_set_single_rule(nbpf_rdif_handle_t *handle, nbpf_rule_list_item_t *rule);
+static int __nbpf_rdif_interface_clear(nbpf_rdif_handle_t *handle);
 
 #ifdef DEBUG
-static void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree);
-static void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n);
+static void __nbpf_rdif_call_print_tree(nbpf_tree_t *tree);
+static void __nbpf_rdif_print_tree(nbpf_node_t *n);
 #endif
 
 /* ********************************************************************** */
@@ -84,7 +84,7 @@ static /* inline */ int is_empty_ipv6(unsigned char ipv6[16]) {
 
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_is_supported(char *interface) {
+static int __nbpf_rdif_is_supported(char *interface) {
   char path[256];
   char line[512];
   FILE *fd;
@@ -108,7 +108,7 @@ static int __fast_bpf_rdif_is_supported(char *interface) {
 
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_get_bus_id(char *interface) {
+static int __nbpf_rdif_get_bus_id(char *interface) {
   const char *pci_slot_name_str = "PCI_SLOT_NAME=";
   char path[256];
   char line[512];
@@ -143,15 +143,15 @@ static int __fast_bpf_rdif_get_bus_id(char *interface) {
 
 /* -------------------------------------------------- */
 
-int __fast_bpf_rdif_get_interface_id(char *interface) {
+int __nbpf_rdif_get_interface_id(char *interface) {
   struct dirent **pent;
   int pnum, i, id = -1;
   int bus_id;
 
-  if(!__fast_bpf_rdif_is_supported(interface))
+  if(!__nbpf_rdif_is_supported(interface))
     return -1;
 
-  bus_id = __fast_bpf_rdif_get_bus_id(interface);
+  bus_id = __nbpf_rdif_get_bus_id(interface);
 
   if(bus_id < 0)
     return -1;
@@ -165,8 +165,8 @@ int __fast_bpf_rdif_get_interface_id(char *interface) {
     if(id == -1) {
       if(!(pent[i]->d_name[0] == '.' ||
 	   strcmp(pent[i]->d_name, "lo") == 0)) {
-        if(__fast_bpf_rdif_is_supported(pent[i]->d_name)) {
-          int other_bus_id = __fast_bpf_rdif_get_bus_id(interface);
+        if(__nbpf_rdif_is_supported(pent[i]->d_name)) {
+          int other_bus_id = __nbpf_rdif_get_bus_id(interface);
           if(other_bus_id != -1) {
             if(other_bus_id > bus_id) id = 0;
             else id = 1;
@@ -193,7 +193,7 @@ int __fast_bpf_rdif_get_interface_id(char *interface) {
  */
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2) {
+static int __nbpf_rdif_set_port_inline(int unit, int port1, int port2) {
   int j, pos;
   rdi_mask_t mask;
 
@@ -226,14 +226,14 @@ static int __fast_bpf_rdif_set_port_inline(int unit, int port1, int port2) {
  */
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_interface_set_port_inline(nbpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   /* Set interface in inline mode (normal direction) */
-  if(!__fast_bpf_rdif_set_port_inline(handle->unit, interface[handle->intf].port1, interface[handle->intf].port2))
+  if(!__nbpf_rdif_set_port_inline(handle->unit, interface[handle->intf].port1, interface[handle->intf].port2))
     return (0);
   /* Set interface in inline mode (reverse direction) */
-  if(!__fast_bpf_rdif_set_port_inline(handle->unit, interface[handle->intf].port2, interface[handle->intf].port1))
+  if(!__nbpf_rdif_set_port_inline(handle->unit, interface[handle->intf].port2, interface[handle->intf].port1))
     return (0);
   return (1);
 }
@@ -249,7 +249,7 @@ static int __fast_bpf_rdif_interface_set_port_inline(fast_bpf_rdif_handle_t *han
  */
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_interface_set_drop_action(nbpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   /* Set drop action */
@@ -270,7 +270,7 @@ static int __fast_bpf_rdif_interface_set_drop_action(fast_bpf_rdif_handle_t *han
  */
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_interface_set_permit_action(nbpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   /* Set permit action */
@@ -292,7 +292,7 @@ static int __fast_bpf_rdif_interface_set_permit_action(fast_bpf_rdif_handle_t *h
  */
 /* -------------------------------------------------- */
 
-static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_add_rule(nbpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
 #ifdef DEBUG
@@ -330,18 +330,18 @@ static int __fast_bpf_rdif_add_rule(fast_bpf_rdif_handle_t *handle) {
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_interface_set_drop_all(nbpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   bzero(&handle->rules_parameters.rdi_mem, sizeof(rdi_mem_t));
   /* Set drop action */
-  __fast_bpf_rdif_interface_set_drop_action(handle);
+  __nbpf_rdif_interface_set_drop_action(handle);
   /* Set rule identifier, switch ingress port and group identifier */
   handle->rules_parameters.rdi_mem.rule_id = handle->current_rule_id++;
   handle->rules_parameters.rdi_mem.port = interface[handle->intf].port1;
   handle->rules_parameters.rdi_mem.group = ((MAX_INTERFACE * handle->unit) + interface[handle->intf].group_rules);
   /* Add rule in order to dropp all the traffic for a specific interface */
-  return __fast_bpf_rdif_add_rule(handle);
+  return __nbpf_rdif_add_rule(handle);
 }
 
 /* -------------------------------------------------- */
@@ -355,7 +355,7 @@ static int __fast_bpf_rdif_interface_set_drop_all(fast_bpf_rdif_handle_t *handle
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_init_for_rule(nbpf_rdif_handle_t *handle) {
   if(handle == NULL) return (0);
 
   bzero(&handle->rules_parameters.rdi_mem, sizeof(rdi_mem_t));
@@ -382,7 +382,7 @@ static int __fast_bpf_rdif_init_for_rule(fast_bpf_rdif_handle_t *handle) {
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc) {
+static int __nbpf_rdif_interface_set_ipv4_address(nbpf_rdif_handle_t *handle, unsigned int ipAddress, unsigned int isSrc) {
   if(handle == NULL) return (0);
 
   if(isSrc) {
@@ -413,7 +413,7 @@ static int __fast_bpf_rdif_interface_set_ipv4_address(fast_bpf_rdif_handle_t *ha
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_ipv6_address(fast_bpf_rdif_handle_t *handle, unsigned char* ipv6_addr, unsigned int isSrc) {
+static int __nbpf_rdif_interface_set_ipv6_address(nbpf_rdif_handle_t *handle, unsigned char* ipv6_addr, unsigned int isSrc) {
   if(handle == NULL) return (0);
   if(ipv6_addr == NULL) return (0);
 
@@ -444,7 +444,7 @@ static int __fast_bpf_rdif_interface_set_ipv6_address(fast_bpf_rdif_handle_t *ha
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc) {
+static int __nbpf_rdif_interface_set_port(nbpf_rdif_handle_t *handle, unsigned int port, unsigned int isSrc) {
   if(handle == NULL) return (0);
 
   if(isSrc) {
@@ -471,7 +471,7 @@ static int __fast_bpf_rdif_interface_set_port(fast_bpf_rdif_handle_t *handle, un
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle, unsigned int protocol) {
+static int __nbpf_rdif_interface_set_protocol(nbpf_rdif_handle_t *handle, unsigned int protocol) {
   if(handle == NULL) return (0);
 
   /* Set protocol */
@@ -492,15 +492,15 @@ static int __fast_bpf_rdif_interface_set_protocol(fast_bpf_rdif_handle_t *handle
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_check_rules_constraints(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree) {
+static int __nbpf_rdif_check_rules_constraints(nbpf_rdif_handle_t *handle, nbpf_tree_t *tree) {
   if(handle == NULL) return (0);
 
-  /* check the general rules of the fast bpf */
-  if(!fast_bpf_check_rules_constraints(tree, 0))
+  /* check the general rules of the bpf */
+  if(!nbpf_check_rules_constraints(tree, 0))
     return (0);
 
-  /* check the intel specific rules of the fast bpf */
-  if(!__fast_bpf_rdif_check_specific_constrains(handle, tree))
+  /* check the intel specific rules of the bpf */
+  if(!__nbpf_rdif_check_specific_constrains(handle, tree))
     return (0);
 
   return (1);
@@ -514,7 +514,7 @@ static int __fast_bpf_rdif_check_rules_constraints(fast_bpf_rdif_handle_t *handl
  *     - "n" -> pointer to a node in the tree
  */
 /* -------------------------------------------------- */
-static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_node_t *n) {
+static void __nbpf_rdif_check_node_specific_constrains(nbpf_rdif_handle_t *handle, nbpf_node_t *n) {
 
   if(handle == NULL) return;
   if(n == NULL) return;
@@ -559,13 +559,13 @@ static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_
   case N_AND:
     /* If you enter here, you have a bpf filter with just "and" operators */
     handle->constraint_parameters.is_and++;
-    __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
-    __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
+    __nbpf_rdif_check_node_specific_constrains(handle, n->l);
+    __nbpf_rdif_check_node_specific_constrains(handle, n->r);
     break;
   case N_OR:
     /* If you enter here, you have a bpf filter with just "or" operators */
-    __fast_bpf_rdif_check_node_specific_constrains(handle, n->l);
-    __fast_bpf_rdif_check_node_specific_constrains(handle, n->r);
+    __nbpf_rdif_check_node_specific_constrains(handle, n->l);
+    __nbpf_rdif_check_node_specific_constrains(handle, n->r);
     break;
   default:
     break;
@@ -584,14 +584,14 @@ static void __fast_bpf_rdif_check_node_specific_constrains(fast_bpf_rdif_handle_
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *handle, fast_bpf_tree_t *tree) {
+static int __nbpf_rdif_check_specific_constrains(nbpf_rdif_handle_t *handle, nbpf_tree_t *tree) {
 
   if(handle == NULL) return (0);
   if(tree == NULL) return (0);
 
   /* reset structure for check constrains */
   memset( &handle->constraint_parameters, 0, sizeof(check_constraint_t));
-  __fast_bpf_rdif_check_node_specific_constrains(handle, tree->root);
+  __nbpf_rdif_check_node_specific_constrains(handle, tree->root);
 
   /* If you have element not managed, return failure */
   if(handle->constraint_parameters.not_managed != 0)
@@ -626,7 +626,7 @@ static int __fast_bpf_rdif_check_specific_constrains(fast_bpf_rdif_handle_t *han
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *pun) {
+static int __nbpf_rdif_create_and_set_rules(nbpf_rdif_handle_t *handle, nbpf_rule_list_item_t *pun) {
 
   if(handle == NULL)
     return (0);
@@ -635,13 +635,13 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
     return (0);
 
   /* Clear and initialize the environment */
-  if(!__fast_bpf_rdif_init(handle))
+  if(!__nbpf_rdif_init(handle))
     return (0);
 
   /* Scan the list and set the single rule */
   while(pun != NULL) {
-    if(!__fast_bpf_rdif_set_single_rule(handle, pun)) {
-      __fast_bpf_rdif_init(handle);
+    if(!__nbpf_rdif_set_single_rule(handle, pun)) {
+      __nbpf_rdif_init(handle);
       return (0);
     }
 
@@ -649,8 +649,8 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
   }
 
   /* The last rule drop all the traffic */
-  if(!__fast_bpf_rdif_interface_set_drop_all(handle)) {
-    __fast_bpf_rdif_init(handle);
+  if(!__nbpf_rdif_interface_set_drop_all(handle)) {
+    __nbpf_rdif_init(handle);
     return (0);
   }
 
@@ -668,54 +668,54 @@ static int __fast_bpf_rdif_create_and_set_rules(fast_bpf_rdif_handle_t *handle, 
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_bpf_rule_list_item_t *rule) {
+static int __nbpf_rdif_set_single_rule(nbpf_rdif_handle_t *handle, nbpf_rule_list_item_t *rule) {
 
   if(handle == NULL) return (0);
   if(rule == NULL) return (0);
 
   /* Init the variables in order to set a rule */
-  if(!__fast_bpf_rdif_init_for_rule(handle))
+  if(!__nbpf_rdif_init_for_rule(handle))
     return (0);
   /*Set permit action*/
-  if(!__fast_bpf_rdif_interface_set_permit_action(handle))
+  if(!__nbpf_rdif_interface_set_permit_action(handle))
     return (0);
 
   if(rule->fields.ip_version == 4 && rule->fields.shost.v4 != 0) {
     /* Set ipv4 src address */
-    if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.shost.v4, 1))
+    if(!__nbpf_rdif_interface_set_ipv4_address(handle, rule->fields.shost.v4, 1))
       return (0);
   }
   if(rule->fields.ip_version == 4 && rule->fields.dhost.v4 != 0) {
     /* Set ipv4 dst address */
-    if(!__fast_bpf_rdif_interface_set_ipv4_address(handle, rule->fields.dhost.v4, 0))
+    if(!__nbpf_rdif_interface_set_ipv4_address(handle, rule->fields.dhost.v4, 0))
       return (0);
   }
   if( (rule->fields.ip_version == 6) && (! is_empty_ipv6(rule->fields.shost.v6.u6_addr.u6_addr8) ) ) {
     /* Set ipv6 src address */
-    if(!__fast_bpf_rdif_interface_set_ipv6_address(handle, rule->fields.shost.v6.u6_addr.u6_addr8, 1))
+    if(!__nbpf_rdif_interface_set_ipv6_address(handle, rule->fields.shost.v6.u6_addr.u6_addr8, 1))
       return (0);
   }
   if( (rule->fields.ip_version == 6) && (! is_empty_ipv6(rule->fields.dhost.v6.u6_addr.u6_addr8) ) ) {
     /* Set ipv6 dst address */
-    if(!__fast_bpf_rdif_interface_set_ipv6_address(handle, rule->fields.dhost.v6.u6_addr.u6_addr8, 0))
+    if(!__nbpf_rdif_interface_set_ipv6_address(handle, rule->fields.dhost.v6.u6_addr.u6_addr8, 0))
       return (0);
   }
   if(rule->fields.sport_low != 0) {
     /* Set src port */
-    if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.sport_low), 1))
+    if(!__nbpf_rdif_interface_set_port(handle, ntohs(rule->fields.sport_low), 1))
       return (0);
   }
   if(rule->fields.dport_low != 0) {
     /* Set dst port */
-    if(!__fast_bpf_rdif_interface_set_port(handle, ntohs(rule->fields.dport_low), 0))
+    if(!__nbpf_rdif_interface_set_port(handle, ntohs(rule->fields.dport_low), 0))
       return (0);
   }
   if(rule->fields.proto != 0) {
     /* Set protocol */
-    if(!__fast_bpf_rdif_interface_set_protocol(handle, rule->fields.proto))
+    if(!__nbpf_rdif_interface_set_protocol(handle, rule->fields.proto))
       return (0);
   }
-  if(!__fast_bpf_rdif_add_rule(handle))
+  if(!__nbpf_rdif_add_rule(handle))
     return (0);
 
   return (1);
@@ -731,7 +731,7 @@ static int __fast_bpf_rdif_set_single_rule(fast_bpf_rdif_handle_t *handle, fast_
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_interface_clear(nbpf_rdif_handle_t *handle) {
   rdi_query_list_t rdi_query_list;
   unsigned int group_rules;
   int m;
@@ -778,10 +778,10 @@ static int __fast_bpf_rdif_interface_clear(fast_bpf_rdif_handle_t *handle) {
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
+int nbpf_rdif_set_filter(nbpf_rdif_handle_t *handle, char *bpf) {
 #ifdef HAVE_REDIRECTOR_F
-  fast_bpf_tree_t *tree;
-  fast_bpf_rule_list_item_t *pun;
+  nbpf_tree_t *tree;
+  nbpf_rule_list_item_t *pun;
 
   if(handle == NULL)
     return (0);
@@ -789,43 +789,43 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
     return (0);
 
   /* Parses the bpf filters and builds the rules tree */
-  if((tree = fast_bpf_parse(bpf, NULL)) == NULL) {
+  if((tree = nbpf_parse(bpf, NULL)) == NULL) {
 #ifdef DEBUG
     printf("Error on parsing the bpf filter.");
 #endif
     return (0);
   }
 
-  /* checks if the constrains are respected (both fast bpf and specific intel fast bpf) */
-  if(!__fast_bpf_rdif_check_rules_constraints(handle, tree)) {
+  /* checks if the constrains are respected (both bpf and specific intel bpf) */
+  if(!__nbpf_rdif_check_rules_constraints(handle, tree)) {
 #ifdef DEBUG
     printf("Error on checking constrains for a bpf filter.\n");
 #endif
-    fast_bpf_free(tree);
+    nbpf_free(tree);
     return (0);
   }
 
   /* Generates rules list */
-  if((pun = fast_bpf_generate_rules(tree)) == NULL ) {
+  if((pun = nbpf_generate_rules(tree)) == NULL ) {
 #ifdef DEBUG
     printf("Error on generating optimized rules.");
 #endif
-    fast_bpf_free(tree);
+    nbpf_free(tree);
     return (0);
   }
 
   /* Creates and set the rules on the nic */
-  if(!__fast_bpf_rdif_create_and_set_rules(handle, pun)) {
+  if(!__nbpf_rdif_create_and_set_rules(handle, pun)) {
 #ifdef DEBUG
     printf("Error on creating and setting the rules list on the NIC card.");
 #endif
-    fast_bpf_rule_list_free(pun);
-    fast_bpf_free(tree);
+    nbpf_rule_list_free(pun);
+    nbpf_free(tree);
     return (0);
   }
 
-  fast_bpf_rule_list_free(pun);
-  fast_bpf_free(tree);
+  nbpf_rule_list_free(pun);
+  nbpf_free(tree);
   return (1);
 #else  /* HAVE_REDIRECTOR_F */
   return (0);
@@ -836,10 +836,10 @@ int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf) {
 
 #ifdef HAVE_REDIRECTOR_F
 
-static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
+static int __nbpf_rdif_init(nbpf_rdif_handle_t *handle) {
 
   /* Clear all rules for the interface */
-  if(!__fast_bpf_rdif_interface_clear(handle)) {
+  if(!__nbpf_rdif_interface_clear(handle)) {
 #ifdef DEBUG
     printf("Error on cleaning the rules in initialization phase.");
 #endif
@@ -847,7 +847,7 @@ static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
   }
 
   /* Set all interfaces inline mode */
-  if(!__fast_bpf_rdif_interface_set_port_inline(handle)) {
+  if(!__nbpf_rdif_interface_set_port_inline(handle)) {
 #ifdef DEBUG
     printf("Error on setting interface in inline mode.");
 #endif
@@ -869,13 +869,13 @@ static int __fast_bpf_rdif_init(fast_bpf_rdif_handle_t *handle) {
  *     - NULL on failure
  *     - handle pointer on success
  */
-fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
+nbpf_rdif_handle_t *nbpf_rdif_init(char *ifname) {
 #ifdef HAVE_REDIRECTOR_F
-  fast_bpf_rdif_handle_t *handle;
+  nbpf_rdif_handle_t *handle;
   int intf, unit;
 
   unit = 0; //TODO
-  intf = __fast_bpf_rdif_get_interface_id(ifname);
+  intf = __nbpf_rdif_get_interface_id(ifname);
 
   if(intf < 0)
     return NULL;
@@ -884,14 +884,14 @@ fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
      intf >= MAX_INTERFACE)
     return NULL;
 
-  handle = calloc(1, sizeof(fast_bpf_rdif_handle_t));
+  handle = calloc(1, sizeof(nbpf_rdif_handle_t));
   if(handle == NULL)
     return NULL;
 
   handle->unit = unit;
   handle->intf = intf;
 
-  if(!__fast_bpf_rdif_init(handle)) {
+  if(!__nbpf_rdif_init(handle)) {
     if(handle) free(handle);
     return NULL;
   }
@@ -914,7 +914,7 @@ fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname) {
  *     - 1 on success
  */
 /* -------------------------------------------------- */
-int fast_bpf_rdif_reset(int unit) {
+int nbpf_rdif_reset(int unit) {
 #ifdef HAVE_REDIRECTOR_F
   if(unit >= MAX_INTEL_DEV) return (0);
 
@@ -934,10 +934,10 @@ int fast_bpf_rdif_reset(int unit) {
  *     - "handle" -> data structure that contains the bpf rdif data
  */
 /* -------------------------------------------------- */
-void fast_bpf_rdif_destroy(fast_bpf_rdif_handle_t *handle) {
+void nbpf_rdif_destroy(nbpf_rdif_handle_t *handle) {
 #ifdef HAVE_REDIRECTOR_F
   /* Clear and initialize the environment */
-  __fast_bpf_rdif_init(handle);
+  __nbpf_rdif_init(handle);
 #endif
   /* free handle */
   if(handle != NULL)
@@ -949,7 +949,7 @@ void fast_bpf_rdif_destroy(fast_bpf_rdif_handle_t *handle) {
 
 #ifdef DEBUG
 
-void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n) {
+void __nbpf_rdif_print_tree(nbpf_node_t *n) {
 
   if(n == NULL) return; /* empty and/or operators not allowed */
   if(n->not_rule) return;
@@ -963,8 +963,8 @@ void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n) {
     break;
   case N_AND:
   case N_OR:
-    __fast_bpf_rdif_print_tree(n->l);
-    __fast_bpf_rdif_print_tree(n->r);
+    __nbpf_rdif_print_tree(n->l);
+    __nbpf_rdif_print_tree(n->r);
     break;
   default:
     break;
@@ -973,7 +973,7 @@ void __fast_bpf_rdif_print_tree(fast_bpf_node_t *n) {
 }
 
 /* -------------------------------------------------- */
-void __fast_bpf_rdif_call_print_tree(fast_bpf_tree_t *tree) {
-  __fast_bpf_rdif_print_tree(tree->root);
+void __nbpf_rdif_call_print_tree(nbpf_tree_t *tree) {
+  __nbpf_rdif_print_tree(tree->root);
 }
 #endif

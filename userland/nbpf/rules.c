@@ -10,7 +10,7 @@
  *
  */
 
-#include "fast_bpf.h"
+#include "nbpf.h"
 
 /* 
  * Note: for setting the rule in pf_ring (kernel filters):
@@ -35,18 +35,18 @@
 
 /***************************************************************************/
 
-static fast_bpf_rule_list_item_t *allocate_filtering_rule_list_item() {
-  fast_bpf_rule_list_item_t *item;
-  item = (fast_bpf_rule_list_item_t *) calloc(1, sizeof(fast_bpf_rule_list_item_t));
+static nbpf_rule_list_item_t *allocate_filtering_rule_list_item() {
+  nbpf_rule_list_item_t *item;
+  item = (nbpf_rule_list_item_t *) calloc(1, sizeof(nbpf_rule_list_item_t));
   item->next = NULL;
   return item;
 }
 
 /* ********************************************************************** */
 
-static fast_bpf_rule_block_list_item_t *allocate_filtering_rule_block_list_item() {
-  fast_bpf_rule_block_list_item_t *block;
-  block = (fast_bpf_rule_block_list_item_t*)calloc(1, sizeof(fast_bpf_rule_block_list_item_t));
+static nbpf_rule_block_list_item_t *allocate_filtering_rule_block_list_item() {
+  nbpf_rule_block_list_item_t *block;
+  block = (nbpf_rule_block_list_item_t*)calloc(1, sizeof(nbpf_rule_block_list_item_t));
   block->rule_list_head = NULL;
   block->next = NULL;
   return block;
@@ -54,7 +54,7 @@ static fast_bpf_rule_block_list_item_t *allocate_filtering_rule_block_list_item(
 
 /* ********************************************************************** */
 
-static int num_filtering_rule_list_items(fast_bpf_rule_list_item_t *list) {
+static int num_filtering_rule_list_items(nbpf_rule_list_item_t *list) {
   int i = 0;
   while (list != NULL) {
     list = list->next;
@@ -65,8 +65,8 @@ static int num_filtering_rule_list_items(fast_bpf_rule_list_item_t *list) {
 
 /* ********************************************************************** */
 
-void fast_bpf_rule_list_free(fast_bpf_rule_list_item_t *list) {
-  fast_bpf_rule_list_item_t *zombie;
+void nbpf_rule_list_free(nbpf_rule_list_item_t *list) {
+  nbpf_rule_list_item_t *zombie;
 
   while (list != NULL) {
     zombie = list;
@@ -78,12 +78,12 @@ void fast_bpf_rule_list_free(fast_bpf_rule_list_item_t *list) {
 /* ********************************************************************** */
 
 /* Not used
-static void free_filtering_rule_block_list_items(fast_bpf_rule_block_list_item_t *blocks) {
-  fast_bpf_rule_block_list_item_t *zombie_block;
+static void free_filtering_rule_block_list_items(nbpf_rule_block_list_item_t *blocks) {
+  nbpf_rule_block_list_item_t *zombie_block;
 
   zombie_block = blocks;
   while (blocks != NULL) {
-    fast_bpf_rule_list_free(zombie_block->rule_list_head);
+    nbpf_rule_list_free(zombie_block->rule_list_head);
     zombie_block = blocks;
     blocks = blocks->next;
     free(zombie_block);
@@ -109,7 +109,7 @@ static /* inline */ int is_empty_ipv6(u_int8_t ipv6[16]) {
 
 /* ********************************************************************** */
 
-static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_node_t *n) {
+static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *n) {
   switch(n->qualifiers.protocol) {
     case Q_LINK:
       if (n->qualifiers.address == Q_VLAN) {
@@ -199,7 +199,7 @@ static void primitive_to_wildcard_filter(fast_bpf_rule_list_item_t *f, fast_bpf_
 
 /* ********************************************************************** */
 
-static int merge_wildcard_vlan(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
+static int merge_wildcard_vlan(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1) {
   if (f1->fields.vlan_id) {
     if (f->fields.vlan_id) {
       DEBUG_PRINTF("Conflict merging filters on vlan\n");
@@ -210,7 +210,7 @@ static int merge_wildcard_vlan(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_
   return 0;
 }
 
-static int merge_wildcard_proto(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1) {
+static int merge_wildcard_proto(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1) {
   if (f1->fields.proto) {
     if (f->fields.proto) {
       DEBUG_PRINTF("Conflict merging filters on protocol\n");
@@ -221,7 +221,7 @@ static int merge_wildcard_proto(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list
   return 0;
 }
 
-static int merge_wildcard_smac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_smac(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_mac(f1->fields.smac)) {
     if (!is_empty_mac(!swap ? f->fields.smac : f->fields.dmac)) {
       DEBUG_PRINTF("Conflict merging filters on dst mac\n");
@@ -232,7 +232,7 @@ static int merge_wildcard_smac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_
   return 0;
 }
 
-static int merge_wildcard_dmac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dmac(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_mac(f1->fields.dmac)) {
     if (!is_empty_mac(!swap ? f->fields.dmac : f->fields.smac)) {
       DEBUG_PRINTF("Conflict merging filters on src mac\n");
@@ -243,7 +243,7 @@ static int merge_wildcard_dmac(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_
   return 0;
 }
 
-static int merge_wildcard_shost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_shost(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.shost.v4) {
     if ((!swap ? f->fields.shost.v4 : f->fields.dhost.v4)) {
       DEBUG_PRINTF("Conflict merging filters on src ip\n");
@@ -260,7 +260,7 @@ static int merge_wildcard_shost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list
   return 0;
 }
 
-static int merge_wildcard_dhost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dhost(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.dhost.v4) {
     if ((!swap ? f->fields.dhost.v4 : f->fields.shost.v4)) {
       DEBUG_PRINTF("Conflict merging filters on dst ip\n");
@@ -277,7 +277,7 @@ static int merge_wildcard_dhost(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list
   return 0;
 }
 
-static int merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_shost6(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_ipv6(f1->fields.shost.v6.u6_addr.u6_addr8)) {
     if (!is_empty_ipv6(!swap ? f->fields.shost.v6.u6_addr.u6_addr8 : f->fields.dhost.v6.u6_addr.u6_addr8)) {
       DEBUG_PRINTF("Conflict merging filters on src ipv6\n");
@@ -294,7 +294,7 @@ static int merge_wildcard_shost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
   return 0;
 }
 
-static int merge_wildcard_dhost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dhost6(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (!is_empty_ipv6(f1->fields.dhost.v6.u6_addr.u6_addr8)) {
     if (!is_empty_ipv6(!swap ? f->fields.dhost.v6.u6_addr.u6_addr8 : f->fields.shost.v6.u6_addr.u6_addr8)) {
       DEBUG_PRINTF("Conflict merging filters on dst ipv6\n");
@@ -311,7 +311,7 @@ static int merge_wildcard_dhost6(fast_bpf_rule_list_item_t *f, fast_bpf_rule_lis
   return 0;
 }
 
-static int merge_wildcard_sport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_sport(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.sport_low) {
     if ((!swap ? f->fields.sport_low : f->fields.dport_low)) {
       DEBUG_PRINTF("Conflict merging filters on src port\n");
@@ -328,7 +328,7 @@ static int merge_wildcard_sport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list
   return 0;
 }
 
-static int merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list_item_t *f1, u_int8_t swap) {
+static int merge_wildcard_dport(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1, u_int8_t swap) {
   if (f1->fields.dport_low) {
     if ((!swap ? f->fields.dport_low : f->fields.sport_low)) {
       DEBUG_PRINTF("Conflict merging filters on dst port\n");
@@ -345,8 +345,8 @@ static int merge_wildcard_dport(fast_bpf_rule_list_item_t *f, fast_bpf_rule_list
   return 0;
 }
 
-static fast_bpf_rule_list_item_t *merge_wildcard_filters_single(fast_bpf_rule_list_item_t *f1, fast_bpf_rule_list_item_t *f2, u_int8_t swap1, u_int8_t swap2) {
-  fast_bpf_rule_list_item_t *f;
+static nbpf_rule_list_item_t *merge_wildcard_filters_single(nbpf_rule_list_item_t *f1, nbpf_rule_list_item_t *f2, u_int8_t swap1, u_int8_t swap2) {
+  nbpf_rule_list_item_t *f;
   int rc;
 
   /* checking rules constraints */
@@ -424,8 +424,8 @@ exit:
   return f; 
 }
 
-static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item_t *f1, fast_bpf_rule_list_item_t *f2) {
-  fast_bpf_rule_list_item_t *f, *last;
+static nbpf_rule_list_item_t *merge_wildcard_filters(nbpf_rule_list_item_t *f1, nbpf_rule_list_item_t *f2) {
+  nbpf_rule_list_item_t *f, *last;
 
   last = f = merge_wildcard_filters_single(f1, f2, 0, 0);
   if (last == NULL) return NULL;
@@ -433,18 +433,18 @@ static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item
   if (f1->bidirectional) {
     last->next = merge_wildcard_filters_single(f1, f2, 1, 0);
     last = last->next;
-    if (last == NULL) { fast_bpf_rule_list_free(f); return NULL; }
+    if (last == NULL) { nbpf_rule_list_free(f); return NULL; }
   }
 
   if (f2->bidirectional) {
     last->next = merge_wildcard_filters_single(f1, f2, 0, 1);
     last = last->next;
-    if (last == NULL) { fast_bpf_rule_list_free(f); return NULL; }
+    if (last == NULL) { nbpf_rule_list_free(f); return NULL; }
 
     if (f1->bidirectional) {
       last->next = merge_wildcard_filters_single(f1, f2, 1, 1);
       last = last->next;
-      if (last == NULL) { fast_bpf_rule_list_free(f); return NULL; }
+      if (last == NULL) { nbpf_rule_list_free(f); return NULL; }
     }
   }
 
@@ -453,8 +453,8 @@ static fast_bpf_rule_list_item_t *merge_wildcard_filters(fast_bpf_rule_list_item
 
 /* ********************************************************************** */
  
-static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_item_t *headl, fast_bpf_rule_list_item_t *headr) {
-  fast_bpf_rule_list_item_t *head = NULL, *tail = NULL, *tmp, *headr_tmp, *headl_tmp;
+static nbpf_rule_list_item_t *merge_filtering_rule_lists(nbpf_rule_list_item_t *headl, nbpf_rule_list_item_t *headr) {
+  nbpf_rule_list_item_t *head = NULL, *tail = NULL, *tmp, *headr_tmp, *headl_tmp;
 
   if (headl == NULL)
     return headr;
@@ -470,7 +470,7 @@ static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_
       tmp = merge_wildcard_filters(headl_tmp, headr_tmp);
 
       if (tmp == NULL) {
-        fast_bpf_rule_list_free(head);
+        nbpf_rule_list_free(head);
         head = NULL;
         goto exit;
       }
@@ -491,16 +491,16 @@ static fast_bpf_rule_list_item_t *merge_filtering_rule_lists(fast_bpf_rule_list_
   }
 
 exit:
-  fast_bpf_rule_list_free(headl);
-  fast_bpf_rule_list_free(headr);
+  nbpf_rule_list_free(headl);
+  nbpf_rule_list_free(headr);
 
   return head;
 }
 
 /* ********************************************************************** */
 
-static fast_bpf_rule_list_item_t *chain_filtering_rule_lists(fast_bpf_rule_list_item_t *headl, fast_bpf_rule_list_item_t *headr) {
-  fast_bpf_rule_list_item_t *head = NULL, *tail;
+static nbpf_rule_list_item_t *chain_filtering_rule_lists(nbpf_rule_list_item_t *headl, nbpf_rule_list_item_t *headr) {
+  nbpf_rule_list_item_t *head = NULL, *tail;
 
   if (headl == NULL)
     return headr;
@@ -519,8 +519,8 @@ static fast_bpf_rule_list_item_t *chain_filtering_rule_lists(fast_bpf_rule_list_
 
 /***************************************************************************/
 
-fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) {
-  fast_bpf_rule_list_item_t *head = NULL, *headl, *headr;
+nbpf_rule_list_item_t *generate_pfring_wildcard_filters(nbpf_node_t *n) {
+  nbpf_rule_list_item_t *head = NULL, *headl, *headr;
 
   if (n == NULL)
     return NULL;
@@ -539,8 +539,8 @@ fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) 
       headr = generate_pfring_wildcard_filters(n->r); 
 
       if (headl == NULL || headr == NULL) {
-        if (headl != NULL) fast_bpf_rule_list_free(headl);
-        if (headr != NULL) fast_bpf_rule_list_free(headr);
+        if (headl != NULL) nbpf_rule_list_free(headl);
+        if (headr != NULL) nbpf_rule_list_free(headr);
         return NULL;
       }
 
@@ -552,8 +552,8 @@ fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) 
       headr = generate_pfring_wildcard_filters(n->r);
 
       if (headl == NULL || headr == NULL) {
-        if (headl != NULL) fast_bpf_rule_list_free(headl);
-        if (headr != NULL) fast_bpf_rule_list_free(headr);
+        if (headl != NULL) nbpf_rule_list_free(headl);
+        if (headr != NULL) nbpf_rule_list_free(headr);
         return NULL;
       }
 
@@ -570,9 +570,9 @@ fast_bpf_rule_list_item_t *generate_pfring_wildcard_filters(fast_bpf_node_t *n) 
 
 /***************************************************************************/
 
-fast_bpf_rule_block_list_item_t *generate_optimized_wildcard_filters(fast_bpf_node_t *n) {
-  fast_bpf_rule_list_item_t *head = NULL;
-  fast_bpf_rule_block_list_item_t *block, *blockl, *blockr, *tail_block;
+nbpf_rule_block_list_item_t *generate_optimized_wildcard_filters(nbpf_node_t *n) {
+  nbpf_rule_list_item_t *head = NULL;
+  nbpf_rule_block_list_item_t *block, *blockl, *blockr, *tail_block;
 
   if (n == NULL)
     return NULL;
@@ -659,9 +659,9 @@ fast_bpf_rule_block_list_item_t *generate_optimized_wildcard_filters(fast_bpf_no
 
 /***************************************************************************/
 
-fast_bpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_memory(fast_bpf_rule_block_list_item_t *blocks) {
-  fast_bpf_rule_block_list_item_t *bitem, *new_bitem, *prev_bitem, *zombie_bitem;
-  fast_bpf_rule_list_item_t *fitem, *new_fitem, *prev_fitem, *zombie_fitem;
+nbpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_memory(nbpf_rule_block_list_item_t *blocks) {
+  nbpf_rule_block_list_item_t *bitem, *new_bitem, *prev_bitem, *zombie_bitem;
+  nbpf_rule_list_item_t *fitem, *new_fitem, *prev_fitem, *zombie_fitem;
   int bnum = 0, fnum = 0;
   u_char *contiguous_memory;
   u_int32_t mem_offset = 0;
@@ -687,7 +687,7 @@ fast_bpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_m
   prev_bitem = NULL;
   while (bitem != NULL) {
     /* moving block */
-    new_bitem = (fast_bpf_rule_block_list_item_t *) &contiguous_memory[mem_offset];
+    new_bitem = (nbpf_rule_block_list_item_t *) &contiguous_memory[mem_offset];
     mem_offset += sizeof(*new_bitem);
     
     memcpy(new_bitem, bitem, sizeof(*new_bitem));
@@ -702,7 +702,7 @@ fast_bpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_m
     while (fitem != NULL) {
 
       /* moving rule */
-      new_fitem = (fast_bpf_rule_list_item_t *) &contiguous_memory[mem_offset];
+      new_fitem = (nbpf_rule_list_item_t *) &contiguous_memory[mem_offset];
       mem_offset += sizeof(*new_fitem);
 
       memcpy(new_fitem, fitem, sizeof(*new_fitem));
@@ -724,12 +724,12 @@ fast_bpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_m
     free(zombie_bitem);
   }
 
-  return (fast_bpf_rule_block_list_item_t *) contiguous_memory;
+  return (nbpf_rule_block_list_item_t *) contiguous_memory;
 }
 
 /***************************************************************************/
 
-int check_filter_constraints(fast_bpf_node_t *n, int max_nesting_level) {
+int check_filter_constraints(nbpf_node_t *n, int max_nesting_level) {
   if (n == NULL) {
     DEBUG_PRINTF("Empty operator subtree\n");
     return 0; /* empty and/or operators not allowed */
@@ -770,14 +770,14 @@ int check_filter_constraints(fast_bpf_node_t *n, int max_nesting_level) {
 
 /* ********************************************************************** */
 
-int fast_bpf_check_rules_constraints(fast_bpf_tree_t *tree, int max_nesting_level) {
+int nbpf_check_rules_constraints(nbpf_tree_t *tree, int max_nesting_level) {
   return check_filter_constraints(tree->root, max_nesting_level);
 }
 
 /* ********************************************************************** */
 
-fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree) {
-  if (!fast_bpf_check_rules_constraints(tree, 0 /* default */))
+nbpf_rule_list_item_t *nbpf_generate_rules(nbpf_tree_t *tree) {
+  if (!nbpf_check_rules_constraints(tree, 0 /* default */))
     return NULL;
 
   return generate_pfring_wildcard_filters(tree->root);
@@ -785,10 +785,10 @@ fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree) {
 
 /* ********************************************************************** */
 
-fast_bpf_rule_block_list_item_t *fast_bpf_generate_optimized_rules(fast_bpf_tree_t *tree) {
-  fast_bpf_rule_block_list_item_t *blocks;
+nbpf_rule_block_list_item_t *nbpf_generate_optimized_rules(nbpf_tree_t *tree) {
+  nbpf_rule_block_list_item_t *blocks;
 
-  if (!fast_bpf_check_rules_constraints(tree, 0 /* default */))
+  if (!nbpf_check_rules_constraints(tree, 0 /* default */))
     return NULL;
 
   if ((blocks = generate_optimized_wildcard_filters(tree->root)) == NULL)
@@ -801,7 +801,7 @@ fast_bpf_rule_block_list_item_t *fast_bpf_generate_optimized_rules(fast_bpf_tree
 
 /* ********************************************************************** */
 
-void fast_bpf_rule_block_list_free(fast_bpf_rule_block_list_item_t* b) {
+void nbpf_rule_block_list_free(nbpf_rule_block_list_item_t* b) {
   free(b); /* Note: it uses contiguous memory for all blocks */
 }
 

@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef FAST_BPF_H
-#define FAST_BPF_H
+#ifndef NBPF_H
+#define NBPF_H
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@
 #include <ws2tcpip.h>
 #endif
 
-struct fast_bpf_in6_addr {
+struct nbpf_in6_addr {
   union {
     u_int8_t   u6_addr8[16];
     u_int16_t  u6_addr16[8];
@@ -35,10 +35,10 @@ struct fast_bpf_in6_addr {
 };
 
 typedef union {
-  struct fast_bpf_in6_addr v6;
+  struct nbpf_in6_addr v6;
   u_int32_t v4;
 } __attribute__((packed))
-fast_bpf_ip_addr;
+nbpf_ip_addr;
 
 /***************************************************************************/
 
@@ -86,14 +86,14 @@ typedef struct {
   u_int8_t direction;
   u_int8_t address;
 } __attribute__((packed))
-fast_bpf_qualifiers_t;
+nbpf_qualifiers_t;
 
-struct fast_bpf_node;
+struct nbpf_node;
 
-typedef struct fast_bpf_node {
+typedef struct nbpf_node {
   int type;
   int level;
-  fast_bpf_qualifiers_t qualifiers;
+  nbpf_qualifiers_t qualifiers;
   u_int8_t not_rule;
   u_int8_t vlan_id_defined;
   u_int8_t __padding[2];
@@ -105,16 +105,16 @@ typedef struct fast_bpf_node {
   u_int16_t protocol;
   u_int16_t l7protocol;
 
-  struct fast_bpf_node *l;
-  struct fast_bpf_node *r;
+  struct nbpf_node *l;
+  struct nbpf_node *r;
 } __attribute__((packed))
-fast_bpf_node_t;
+nbpf_node_t;
 
 typedef struct {
-  fast_bpf_node_t *root;
+  nbpf_node_t *root;
   int compatibility_level; /* external use */
 } __attribute__((packed))
-fast_bpf_tree_t;
+nbpf_tree_t;
 
 /***************************************************************************/
 
@@ -122,44 +122,44 @@ typedef int (*l7protocol_by_name_func)(const char *name);
 
 /***************************************************************************/
 
-/* Fast-BPF API */
+/* nBPF API */
 
-fast_bpf_tree_t *fast_bpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback);
-void fast_bpf_free(fast_bpf_tree_t *t);
+nbpf_tree_t *nbpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback);
+void nbpf_free(nbpf_tree_t *t);
 
 /***************************************************************************/
 
-/* Fast-BPF Tree Match API */
+/* nBPF Tree Match API */
 
-typedef struct fast_bpf_pkt_info_tuple {
+typedef struct nbpf_pkt_info_tuple {
   u_int16_t eth_type;
   u_int8_t ip_version;
   u_int8_t l3_proto, ip_tos;
-  fast_bpf_ip_addr ip_src, ip_dst;
+  nbpf_ip_addr ip_src, ip_dst;
   u_int16_t l4_src_port, l4_dst_port;
 } __attribute__((packed))
-fast_bpf_pkt_info_tuple_t;
+nbpf_pkt_info_tuple_t;
 
 typedef struct {
   u_int8_t  dmac[6], smac[6];
   u_int16_t vlan_id, vlan_id_qinq;
   u_int16_t master_l7_proto, l7_proto;
-  fast_bpf_pkt_info_tuple_t tuple;
-  fast_bpf_pkt_info_tuple_t tunneled_tuple;
+  nbpf_pkt_info_tuple_t tuple;
+  nbpf_pkt_info_tuple_t tunneled_tuple;
 } __attribute__((packed))
-fast_bpf_pkt_info_t;
+nbpf_pkt_info_t;
 
-void fast_bpf_toggle_mac_match(fast_bpf_tree_t *tree, u_int8_t enable);
-void fast_bpf_toggle_ipv6_l32_match(fast_bpf_tree_t *tree, u_int8_t enable);
-void fast_bpf_toggle_l3_proto_match(fast_bpf_tree_t *tree, u_int8_t enable);
-void fast_bpf_toggle_l7_proto_match(fast_bpf_tree_t *tree, u_int8_t enable);
-void fast_bpf_toggle_inner_header_match(fast_bpf_tree_t *tree, u_int8_t enable);
+void nbpf_toggle_mac_match(nbpf_tree_t *tree, u_int8_t enable);
+void nbpf_toggle_ipv6_l32_match(nbpf_tree_t *tree, u_int8_t enable);
+void nbpf_toggle_l3_proto_match(nbpf_tree_t *tree, u_int8_t enable);
+void nbpf_toggle_l7_proto_match(nbpf_tree_t *tree, u_int8_t enable);
+void nbpf_toggle_inner_header_match(nbpf_tree_t *tree, u_int8_t enable);
 
-int fast_bpf_match(fast_bpf_tree_t *tree, fast_bpf_pkt_info_t *h);
+int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h);
 
 /***************************************************************************/
 
-/* Fast-BPF Filtering Rules Generation API */
+/* nBPF Filtering Rules Generation API */
 
 typedef struct {
   u_int8_t smac[6], dmac[6]; 
@@ -167,42 +167,42 @@ typedef struct {
   u_int8_t ip_version;
   u_int8_t __padding[2];
   u_int16_t vlan_id, l7_proto;
-  fast_bpf_ip_addr shost, dhost;
-  fast_bpf_ip_addr shost_mask, dhost_mask;
+  nbpf_ip_addr shost, dhost;
+  nbpf_ip_addr shost_mask, dhost_mask;
   u_int16_t sport_low, sport_high;
   u_int16_t dport_low, dport_high;
 } __attribute__((packed))
-fast_bpf_rule_core_fields_t;
+nbpf_rule_core_fields_t;
 
-struct fast_bpf_rule_list_item;
+struct nbpf_rule_list_item;
 
-typedef struct fast_bpf_rule_list_item {
-  fast_bpf_rule_core_fields_t fields;
+typedef struct nbpf_rule_list_item {
+  nbpf_rule_core_fields_t fields;
   int bidirectional;
-  struct fast_bpf_rule_list_item *next;
+  struct nbpf_rule_list_item *next;
 } __attribute__((packed))
-fast_bpf_rule_list_item_t;
+nbpf_rule_list_item_t;
 
-struct fast_bpf_rule_block_list_item;
+struct nbpf_rule_block_list_item;
 
-typedef struct fast_bpf_rule_block_list_item {
-  fast_bpf_rule_list_item_t *rule_list_head;
-  struct fast_bpf_rule_block_list_item *next;
+typedef struct nbpf_rule_block_list_item {
+  nbpf_rule_list_item_t *rule_list_head;
+  struct nbpf_rule_block_list_item *next;
 } __attribute__((packed))
-fast_bpf_rule_block_list_item_t;
+nbpf_rule_block_list_item_t;
 
-int fast_bpf_check_rules_constraints(fast_bpf_tree_t *tree, int max_nesting_level);
+int nbpf_check_rules_constraints(nbpf_tree_t *tree, int max_nesting_level);
 
-fast_bpf_rule_list_item_t *fast_bpf_generate_rules(fast_bpf_tree_t *tree);
-void fast_bpf_rule_list_free(fast_bpf_rule_list_item_t *list);
+nbpf_rule_list_item_t *nbpf_generate_rules(nbpf_tree_t *tree);
+void nbpf_rule_list_free(nbpf_rule_list_item_t *list);
 
-fast_bpf_rule_block_list_item_t *fast_bpf_generate_optimized_rules(fast_bpf_tree_t *tree);
-void fast_bpf_rule_block_list_free(fast_bpf_rule_block_list_item_t *blocks);
+nbpf_rule_block_list_item_t *nbpf_generate_optimized_rules(nbpf_tree_t *tree);
+void nbpf_rule_block_list_free(nbpf_rule_block_list_item_t *blocks);
 
 void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds, char *str);
 char *bpf_ethtoa(const u_char *ep, char *buf);
 char *bpf_intoaV4(unsigned int addr, char* buf, u_int bufLen);
-char *bpf_intoaV6(struct fast_bpf_in6_addr *ipv6, char* buf, u_short bufLen);
+char *bpf_intoaV6(struct nbpf_in6_addr *ipv6, char* buf, u_short bufLen);
 
 /***************************************************************************/
 

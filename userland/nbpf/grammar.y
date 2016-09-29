@@ -17,10 +17,10 @@
 
 #define QSET(q, h, p, d, a) (q).header = (h), (q).protocol = (p), (q).direction = (d), (q).address = (a)
 
-static fast_bpf_qualifiers_t qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF };
+static nbpf_qualifiers_t qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF };
 
 static void yyerror(const char *msg) {
-  fast_bpf_syntax_error("%s", msg);
+  nbpf_syntax_error("%s", msg);
 }
 
 %}
@@ -30,8 +30,8 @@ static void yyerror(const char *msg) {
   u_char *e; /* EIX (mac) */
   char *s; /* HID (ip, subnetv6), HID6 (ipv6, subnetv6), ID (portrange, l7proto) */
   struct {
-    fast_bpf_qualifiers_t q;
-    fast_bpf_node_t *n;
+    nbpf_qualifiers_t q;
+    nbpf_node_t *n;
   } block;
 }
 
@@ -65,55 +65,55 @@ static void yyerror(const char *msg) {
 %%
 prog:	  null expr
 {
-	fast_bpf_set_tree_root($2.n);
+	nbpf_set_tree_root($2.n);
 }
 	| null
 	;
 null:	  			{ $$.q = qerr; }
 	;
 expr:	  term
-	| expr and term		{ $$.n = fast_bpf_create_and($1.n, $3.n); }
-	| expr and id		{ $$.n = fast_bpf_create_and($1.n, $3.n); } 
-	| expr or term		{ $$.n = fast_bpf_create_or($1.n, $3.n);  }
-	| expr or id		{ $$.n = fast_bpf_create_or($1.n, $3.n);  }
+	| expr and term		{ $$.n = nbpf_create_and($1.n, $3.n); }
+	| expr and id		{ $$.n = nbpf_create_and($1.n, $3.n); } 
+	| expr or term		{ $$.n = nbpf_create_or($1.n, $3.n);  }
+	| expr or id		{ $$.n = nbpf_create_or($1.n, $3.n);  }
 	;
 and:	  AND			{ $$ = $<block>0; }
 	;
 or:	  OR			{ $$ = $<block>0; }
 	;
 id:	  nid
-	| pnum			{ $$.n = fast_bpf_create_n_node((u_int32_t)$1, $$.q = $<block>0.q); }
+	| pnum			{ $$.n = nbpf_create_n_node((u_int32_t)$1, $$.q = $<block>0.q); }
 	| paren pid ')'		{ $$ = $2; }
 	;
 nid:	  ID			{
 				  if($<block>0.q.address != Q_PORTRANGE) /* Note: ID used for numeric portrange only */
-				    fast_bpf_syntax_error("'portrange' modifier expected with number ranges");
-				  $$.n = fast_bpf_create_portrange_node($1, $$.q = $<block>0.q); 
+				    nbpf_syntax_error("'portrange' modifier expected with number ranges");
+				  $$.n = nbpf_create_portrange_node($1, $$.q = $<block>0.q); 
 				}
-	| HID '/' NUM		{ $$.n = fast_bpf_create_net_node($1, NULL, $3, $$.q = $<block>0.q); }
-	| HID NETMASK HID	{ $$.n = fast_bpf_create_net_node($1,   $3,  0, $$.q = $<block>0.q); }
-	| HID			{ $$.n = fast_bpf_create_host_node($1, $<block>0.q); }
-	| HID6 '/' NUM		{ $$.n = fast_bpf_create_net6_node($1,  $3, $$.q = $<block>0.q); }
-	| HID6			{ $$.n = fast_bpf_create_net6_node($1, 128, $$.q = $<block>0.q); }
+	| HID '/' NUM		{ $$.n = nbpf_create_net_node($1, NULL, $3, $$.q = $<block>0.q); }
+	| HID NETMASK HID	{ $$.n = nbpf_create_net_node($1,   $3,  0, $$.q = $<block>0.q); }
+	| HID			{ $$.n = nbpf_create_host_node($1, $<block>0.q); }
+	| HID6 '/' NUM		{ $$.n = nbpf_create_net6_node($1,  $3, $$.q = $<block>0.q); }
+	| HID6			{ $$.n = nbpf_create_net6_node($1, 128, $$.q = $<block>0.q); }
 	| EID			{ 
-				  $$.n = fast_bpf_create_eth_node($1, $$.q = $<block>0.q /* TODO check this */);
+				  $$.n = nbpf_create_eth_node($1, $$.q = $<block>0.q /* TODO check this */);
 				  free($1); /* $1 was allocated by ether_aton() */
 				}
-	| not id		{ fast_bpf_create_not($2.n); $$ = $2; }
+	| not id		{ nbpf_create_not($2.n); $$ = $2; }
 	;
 not:	  '!'			{ $$ = $<block>0; }
 	;
 paren:	  '('			{ $$ = $<block>0; }
 	;
 pid:	  nid
-	| qid and id		{ $$.n = fast_bpf_create_and($1.n, $3.n); }
-	| qid or id		{ $$.n = fast_bpf_create_or($1.n, $3.n);  }
+	| qid and id		{ $$.n = nbpf_create_and($1.n, $3.n); }
+	| qid or id		{ $$.n = nbpf_create_or($1.n, $3.n);  }
 	;
-qid:	  pnum			{ $$.n = fast_bpf_create_n_node((u_int32_t)$1, $$.q = $<block>0.q); }
+qid:	  pnum			{ $$.n = nbpf_create_n_node((u_int32_t)$1, $$.q = $<block>0.q); }
 	| pid
 	;
 term:	  rterm
-	| not term		{ fast_bpf_create_not($2.n); $$ = $2; }
+	| not term		{ nbpf_create_not($2.n); $$ = $2; }
 	;
 head:	  hqual pqual dqual aqual	{ QSET($$.q, $1,        $2, $3,        $4); }
 	| pqual dqual aqual		{ QSET($$.q, Q_DEFAULT, $1, $2,        $3); }
@@ -125,10 +125,10 @@ head:	  hqual pqual dqual aqual	{ QSET($$.q, $1,        $2, $3,        $4); }
 	| pqual PROTO			{ QSET($$.q, Q_DEFAULT, $1, Q_DEFAULT, Q_PROTO); }
 	;
 rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
-	| L7PROTO ID		{ $$.n = fast_bpf_create_l7_node(0, (char *)$2); }
-	| L7PROTO pnum		{ $$.n = fast_bpf_create_l7_node($2, NULL); }
+	| L7PROTO ID		{ $$.n = nbpf_create_l7_node(0, (char *)$2); }
+	| L7PROTO pnum		{ $$.n = nbpf_create_l7_node($2, NULL); }
 	| paren expr ')'	{ $$.n = $2.n; $$.q = $1.q; /* TODO check this */ }
-	| pname			{ $$.n = fast_bpf_create_proto_node($1); $$.q = qerr; }
+	| pname			{ $$.n = nbpf_create_proto_node($1); $$.q = qerr; }
 	| other			{ $$.n = $1.n; $$.q = qerr; }
 	;
 /* header level qualifiers */
@@ -161,8 +161,8 @@ pname:	  LINK			{ $$ = Q_LINK; }
 	| UDP			{ $$ = Q_UDP; }
 	| IPV6			{ $$ = Q_IPV6; }
 	;
-other:	  VLAN pnum		{ $$.n = fast_bpf_create_vlan_node($2); }
-	| VLAN			{ $$.n = fast_bpf_create_vlan_node(-1); }
+other:	  VLAN pnum		{ $$.n = nbpf_create_vlan_node($2); }
+	| VLAN			{ $$.n = nbpf_create_vlan_node(-1); }
 	;
 pnum:	  NUM
 	| paren pnum ')'	{ $$ = $2; }

@@ -1,10 +1,10 @@
-Fast-BPF module for Intel RRC
------------------------------
+nBPF module for Intel RRC
+-------------------------
 
 Supported cards: Silicom PE3100G2DQIR (Intel RRC FM10000)
 
 This module allows to set filtering rules directly on the NIC card using the
-BFP-like syntax supported by Fast-BPF filters.
+BFP-like syntax supported by nBPF filters.
 As the filter expression complexity affects the ability for translation into 
 specific rules for the NIC, we will define a set of constraints and allowed 
 expressions.
@@ -21,10 +21,10 @@ Please make sure you have run rdif daemon running before using this functionalit
 API
 ---
 
-The API of Fast-BPF module for Intel RRC includes the following functions:
+The API of nBPF module for Intel RRC includes the following functions:
 
-1) int fast_bpf_rdif_reset(int unit)
-   The fast_bpf_rdif_reset function set the nic card in MON2 mode.
+1) int nbpf_rdif_reset(int unit)
+   The nbpf_rdif_reset function set the nic card in MON2 mode.
    In MON2 mode every port of the switch is unlinked and no traffic pass between
    the ports.
    Input parameter:
@@ -34,8 +34,8 @@ The API of Fast-BPF module for Intel RRC includes the following functions:
      - 1 on success 
    Suggestion: use this function just once (in initialize phase of the NIC card).
 
-2) fast_bpf_rdif_handle_t *fast_bpf_rdif_init(char *ifname)
-   The fast_bpf_rdif_init function initializes the switch in order to put the port
+2) nbpf_rdif_handle_t *nbpf_rdif_init(char *ifname)
+   The nbpf_rdif_init function initializes the switch in order to put the port
    in inline mode:
    port 1 with port 3 for interface 0
    port 2 with port 4 for interface 1
@@ -43,24 +43,24 @@ The API of Fast-BPF module for Intel RRC includes the following functions:
      - "ifname" -> Interface name (for example "eth0", "ens9"....)
    Return value:
      - NULL on failure
-     - handle pointer on success. Please use the handle with "fast_bpf_rdif_set_filter"
-       and "fast_bpf_rdif_destroy" functions.
+     - handle pointer on success. Please use the handle with "nbpf_rdif_set_filter"
+       and "nbpf_rdif_destroy" functions.
 
-3) int fast_bpf_rdif_set_filter(fast_bpf_rdif_handle_t *handle, char *bpf)
-   If possible the fast_bpf_rdif_set_filter transforms the bpf filter in rules for the 
+3) int nbpf_rdif_set_filter(nbpf_rdif_handle_t *handle, char *bpf)
+   If possible the nbpf_rdif_set_filter transforms the bpf filter in rules for the 
    switch. Not all the bpf filters can be set (please read README.md.
    Input parameter:
      - handle -> data structure that contains the bpf rdif data.
-                 This handle is returned from fast_bpf_rdif_init function.
+                 This handle is returned from nbpf_rdif_init function.
      - bpf -> bpf filter
    Return value:
      - 0 on failure
      - 1 on success
 
-4) void fast_bpf_rdif_destroy(fast_bpf_rdif_handle_t *handle)
-   The fast_bpf_rdif_destroy function removes the dinamic memory of the handle 
+4) void nbpf_rdif_destroy(nbpf_rdif_handle_t *handle)
+   The nbpf_rdif_destroy function removes the dinamic memory of the handle 
    and deletes the rules on the switch for an interface (puts it in inline mode).
    Input parameter:
      - handle -> data structure that contains the bpf rdif data. This handle is returned 
-                 from fast_bpf_rdif_init function. Before exiting, the function frees the
+                 from nbpf_rdif_init function. Before exiting, the function frees the
                  dinamic memory.

@@ -3,8 +3,8 @@ YACC = bison
 CC=gcc
 LIBS=@NDPI_LIB@ `../lib/pfring_config --libs`
 CFLAGS=-Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ @HAVE_REDIRECTOR@ -O2 #-g
-OBJS=fast_bpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o bpf_mod_napatech.o
-BPFLIB=libfastbpf.a
+OBJS=nbpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o bpf_mod_napatech.o
+BPFLIB=libnbpf.a
 
 all: bpftest
 
