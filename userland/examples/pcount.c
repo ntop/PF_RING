@@ -133,8 +133,6 @@ void sigproc(int sig) {
   fprintf(stderr, "Leaving...\n");
   if (called) return; else called = 1;
 
-  print_stats();
-
   pcap_breakloop(pd);
 }
 
@@ -451,6 +449,8 @@ int main(int argc, char* argv[]) {
   pcap_set_watermark(pd, 128);
 
   pcap_loop(pd, -1, dummyProcesssPacket, NULL);
+
+  print_stats();
 
   pcap_close(pd);
 
