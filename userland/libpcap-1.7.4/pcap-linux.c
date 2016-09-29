@@ -1161,7 +1161,7 @@ static void	pcap_cleanup_linux( pcap_t *handle )
 	if (handle->timeline_start != NULL)  free(handle->timeline_start);
 	if (handle->timeline_end != NULL)    free(handle->timeline_end);
 	if (handle->timeline_handle != NULL) timeline_extract_close(handle->timeline_handle);
-	if (handle->fast_bpf_filter != NULL) fast_bpf_free(handle->fast_bpf_filter);
+	if (handle->nbpf_filter != NULL) nbpf_free(handle->nbpf_filter);
 #endif
 	if (handle->real_device != NULL) free(handle->real_device);
 	if (handle->ring != NULL) {
@@ -1371,11 +1371,11 @@ pcap_setfilter_timeline(pcap_t *handle, struct bpf_program *filter)
 		begin_epoch = mktime(&begin_tm);
 		end_tm.tm_isdst = -1;
 		end_epoch = mktime(&end_tm);
-		//printf("timeline_extract_open(%s, %s, %s, %p)\n", handle->bpf_filter, handle->timeline_start, handle->timeline_end, handle->fast_bpf_filter);	
-		handle->timeline_handle = timeline_extract_open(handle->timeline, begin_epoch, end_epoch, handle->fast_bpf_filter, NULL);
+		//printf("timeline_extract_open(%s, %s, %s, %p)\n", handle->bpf_filter, handle->timeline_start, handle->timeline_end, handle->nbpf_filter);	
+		handle->timeline_handle = timeline_extract_open(handle->timeline, begin_epoch, end_epoch, handle->nbpf_filter, NULL);
 	}
 
-	/* Nothing to do with fast_bpf_filter */
+	/* Nothing to do with nbpf_filter */
 
 	return 0;
 }

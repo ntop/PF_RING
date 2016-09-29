@@ -443,8 +443,8 @@ pcap_compile(pcap_t *p, struct bpf_program *program,
 				return -1;
 #ifdef HAVE_NPCAP
 			if (p->timeline) {
-				p->fast_bpf_filter = fast_bpf_parse(p->bpf_filter, NULL /* l7 callback */);
-				if (p->fast_bpf_filter == NULL)
+				p->nbpf_filter = nbpf_parse(p->bpf_filter, NULL /* l7 callback */);
+				if (p->nbpf_filter == NULL)
 					return -1;
 			}
 #endif
