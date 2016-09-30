@@ -1716,7 +1716,10 @@ pcap_activate_linux(pcap_t *handle)
 #ifdef HAVE_PF_RING
 	if (handle->ring != NULL) {
         	pfring_enable_ring(handle->ring);
-		handle->selectable_fd = pfring_get_selectable_fd(handle->ring);
+		if (handle->timeline)
+			handle->selectable_fd = -1;
+		else
+			pfring_get_selectable_fd(handle->ring);
 	} else
 #endif
 	handle->selectable_fd = handle->fd;
