@@ -268,7 +268,7 @@ struct pcap {
 	nbpf_tree_t *nbpf_filter;
 	char *real_device;
 	char *timeline;
-	char *timeline_start, *timeline_end;
+	time_t timeline_start, timeline_end;
 #ifdef HAVE_NPCAP
 	timeline_extract_handle_t *timeline_handle;
 #endif

@@ -17,7 +17,7 @@
 
 #define QSET(q, h, p, d, a) (q).header = (h), (q).protocol = (p), (q).direction = (d), (q).address = (a)
 
-static nbpf_qualifiers_t qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF };
+static nbpf_qualifiers_t qerr = { NBPF_Q_UNDEF, NBPF_Q_UNDEF, NBPF_Q_UNDEF };
 
 static void yyerror(const char *msg) {
   nbpf_syntax_error("%s", msg);
@@ -86,7 +86,7 @@ id:	  nid
 	| paren pid ')'		{ $$ = $2; }
 	;
 nid:	  ID			{
-				  if($<block>0.q.address != Q_PORTRANGE) /* Note: ID used for numeric portrange only */
+				  if($<block>0.q.address != NBPF_Q_PORTRANGE) /* Note: ID used for numeric portrange only */
 				    nbpf_syntax_error("'portrange' modifier expected with number ranges");
 				  $$.n = nbpf_create_portrange_node($1, $$.q = $<block>0.q); 
 				}
@@ -116,13 +116,13 @@ term:	  rterm
 	| not term		{ nbpf_create_not($2.n); $$ = $2; }
 	;
 head:	  hqual pqual dqual aqual	{ QSET($$.q, $1,        $2, $3,        $4); }
-	| pqual dqual aqual		{ QSET($$.q, Q_DEFAULT, $1, $2,        $3); }
-	| hqual pqual dqual		{ QSET($$.q, $1,        $2, $3,        Q_DEFAULT); }
-	| pqual dqual			{ QSET($$.q, Q_DEFAULT, $1, $2,        Q_DEFAULT); }
-	| hqual pqual aqual		{ QSET($$.q, $1,        $2, Q_DEFAULT, $3); }
-	| pqual aqual			{ QSET($$.q, Q_DEFAULT, $1, Q_DEFAULT, $2); }
-	| hqual pqual PROTO		{ QSET($$.q, $1,        $2, Q_DEFAULT, Q_PROTO); }
-	| pqual PROTO			{ QSET($$.q, Q_DEFAULT, $1, Q_DEFAULT, Q_PROTO); }
+	| pqual dqual aqual		{ QSET($$.q, NBPF_Q_DEFAULT, $1, $2,        $3); }
+	| hqual pqual dqual		{ QSET($$.q, $1,        $2, $3,        NBPF_Q_DEFAULT); }
+	| pqual dqual			{ QSET($$.q, NBPF_Q_DEFAULT, $1, $2,        NBPF_Q_DEFAULT); }
+	| hqual pqual aqual		{ QSET($$.q, $1,        $2, NBPF_Q_DEFAULT, $3); }
+	| pqual aqual			{ QSET($$.q, NBPF_Q_DEFAULT, $1, NBPF_Q_DEFAULT, $2); }
+	| hqual pqual PROTO		{ QSET($$.q, $1,        $2, NBPF_Q_DEFAULT, NBPF_Q_PROTO); }
+	| pqual PROTO			{ QSET($$.q, NBPF_Q_DEFAULT, $1, NBPF_Q_DEFAULT, NBPF_Q_PROTO); }
 	;
 rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
 	| L7PROTO ID		{ $$.n = nbpf_create_l7_node(0, (char *)$2); }
@@ -132,34 +132,34 @@ rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
 	| other			{ $$.n = $1.n; $$.q = qerr; }
 	;
 /* header level qualifiers */
-hqual:	  OUTER			{ $$ = Q_OUTER; }
-	| INNER			{ $$ = Q_INNER; }
+hqual:	  OUTER			{ $$ = NBPF_Q_OUTER; }
+	| INNER			{ $$ = NBPF_Q_INNER; }
 	;
 /* protocol level qualifiers */
 pqual:	  pname
-	|			{ $$ = Q_DEFAULT; }
+	|			{ $$ = NBPF_Q_DEFAULT; }
 	;
 /* direction qualifiers */
-dqual:	  SRC			{ $$ = Q_SRC; }
-	| DST			{ $$ = Q_DST; }
-	| SRC OR DST		{ $$ = Q_OR; }
-	| DST OR SRC		{ $$ = Q_OR; }
-	| SRC AND DST		{ $$ = Q_AND; }
-	| DST AND SRC		{ $$ = Q_AND; }
+dqual:	  SRC			{ $$ = NBPF_Q_SRC; }
+	| DST			{ $$ = NBPF_Q_DST; }
+	| SRC OR DST		{ $$ = NBPF_Q_OR; }
+	| DST OR SRC		{ $$ = NBPF_Q_OR; }
+	| SRC AND DST		{ $$ = NBPF_Q_AND; }
+	| DST AND SRC		{ $$ = NBPF_Q_AND; }
 	;
 /* address type qualifiers */
-aqual:	  HOST			{ $$ = Q_HOST; }
-	| NET			{ $$ = Q_NET; }
-	| PORT			{ $$ = Q_PORT; }
-	| PORTRANGE		{ $$ = Q_PORTRANGE; }
+aqual:	  HOST			{ $$ = NBPF_Q_HOST; }
+	| NET			{ $$ = NBPF_Q_NET; }
+	| PORT			{ $$ = NBPF_Q_PORT; }
+	| PORTRANGE		{ $$ = NBPF_Q_PORTRANGE; }
 	;
 /* non-directional address type qualifiers */
-pname:	  LINK			{ $$ = Q_LINK; }
-	| IP			{ $$ = Q_IP; }
-	| SCTP			{ $$ = Q_SCTP; }
-	| TCP			{ $$ = Q_TCP; }
-	| UDP			{ $$ = Q_UDP; }
-	| IPV6			{ $$ = Q_IPV6; }
+pname:	  LINK			{ $$ = NBPF_Q_LINK; }
+	| IP			{ $$ = NBPF_Q_IP; }
+	| SCTP			{ $$ = NBPF_Q_SCTP; }
+	| TCP			{ $$ = NBPF_Q_TCP; }
+	| UDP			{ $$ = NBPF_Q_UDP; }
+	| IPV6			{ $$ = NBPF_Q_IPV6; }
 	;
 other:	  VLAN pnum		{ $$.n = nbpf_create_vlan_node($2); }
 	| VLAN			{ $$.n = nbpf_create_vlan_node(-1); }

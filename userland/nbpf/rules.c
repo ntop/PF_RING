@@ -111,16 +111,16 @@ static /* inline */ int is_empty_ipv6(u_int8_t ipv6[16]) {
 
 static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *n) {
   switch(n->qualifiers.protocol) {
-    case Q_LINK:
-      if (n->qualifiers.address == Q_VLAN) {
+    case NBPF_Q_LINK:
+      if (n->qualifiers.address == NBPF_Q_VLAN) {
         f->fields.vlan = 1;
         if (n->vlan_id_defined)
           f->fields.vlan_id = n->vlan_id;
-      } else if (n->qualifiers.address == Q_MPLS) {
+      } else if (n->qualifiers.address == NBPF_Q_MPLS) {
         f->fields.mpls = 1;
         if (n->mpls_label_defined)
           f->fields.mpls_label = n->mpls_label;
-      } else if (n->qualifiers.address == Q_PROTO) {
+      } else if (n->qualifiers.address == NBPF_Q_PROTO) {
         DEBUG_PRINTF("Ethernet protocol cannot be compared with wildcard filters\n");  
       }
       if (n->protocol == 0x800)
@@ -128,30 +128,30 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
       else if (n->protocol == 0x86DD)
         f->fields.ip_version = 6;
       break;
-    case Q_DEFAULT:
-    case Q_IP:
-    case Q_IPV6:
-      if (n->qualifiers.address == Q_PROTO)
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_IP:
+    case NBPF_Q_IPV6:
+      if (n->qualifiers.address == NBPF_Q_PROTO)
         f->fields.proto = (u_int8_t) (n->protocol); 
       break;
-    case Q_TCP:
+    case NBPF_Q_TCP:
       f->fields.proto = 6;
       break;
-    case Q_UDP:
+    case NBPF_Q_UDP:
       f->fields.proto = 17;
       break;
-    case Q_SCTP:
+    case NBPF_Q_SCTP:
       f->fields.proto = 132;
       break;
-    case Q_GTP:
+    case NBPF_Q_GTP:
       f->fields.gtp = 1; /* TODO do we need to handle version? */
     default:
       DEBUG_PRINTF("Unexpected protocol qualifier (%d)\n", __LINE__);
   }
 
   switch(n->qualifiers.direction) {
-    case Q_SRC:
-    case Q_AND:
+    case NBPF_Q_SRC:
+    case NBPF_Q_AND:
       memcpy(f->fields.smac, n->mac, 6);
       if(n->ip) {
         f->fields.ip_version = 4;
@@ -164,9 +164,9 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
       }
       f->fields.sport_low = n->port_from;
       f->fields.sport_high = n->port_to;
-      if (n->qualifiers.direction != Q_AND)
+      if (n->qualifiers.direction != NBPF_Q_AND)
         break;
-    case Q_DST:
+    case NBPF_Q_DST:
       memcpy(f->fields.dmac, n->mac, 6);
       if(n->ip) {
         f->fields.ip_version = 4;
@@ -180,8 +180,8 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
       f->fields.dport_low = n->port_from;
       f->fields.dport_high = n->port_to;
       break;
-    case Q_DEFAULT:
-    case Q_OR:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_OR:
       memcpy(f->fields.smac, n->mac, 6);
       if(n->ip) {
         f->fields.ip_version = 4;

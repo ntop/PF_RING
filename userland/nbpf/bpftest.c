@@ -23,13 +23,13 @@
 
 static char *dir_to_string(int dirq) {
   switch (dirq) {
-    case Q_SRC:
+    case NBPF_Q_SRC:
       return "Src"; 
-    case Q_DST:
+    case NBPF_Q_DST:
       return "Dst";
-    case Q_AND: 
+    case NBPF_Q_AND: 
       return "SrcAndDst";
-    case Q_OR: 
+    case NBPF_Q_OR: 
     default:
       return "SrcOrDst";
   }
@@ -38,21 +38,21 @@ static char *dir_to_string(int dirq) {
 static char __addr[8];
 static char *addr_to_string(int addrq) {
   switch (addrq) {
-    case Q_NET:
+    case NBPF_Q_NET:
       return "Net";
-    case Q_PORT: 
+    case NBPF_Q_PORT: 
       return "Port";
-    case Q_PROTO: 
+    case NBPF_Q_PROTO: 
       return "Proto";
-    case Q_PORTRANGE: 
+    case NBPF_Q_PORTRANGE: 
       return "PortRange";
-    case Q_VLAN: 
+    case NBPF_Q_VLAN: 
       return "VLAN";
-    case Q_MPLS: 
+    case NBPF_Q_MPLS: 
       return "MPLS";
-    case Q_L7PROTO: 
+    case NBPF_Q_L7PROTO: 
       return "L7Proto";
-    case Q_HOST:
+    case NBPF_Q_HOST:
       return "Host";
     default:
       snprintf(__addr, sizeof(__addr), "(%d)", addrq);
@@ -63,19 +63,19 @@ static char *addr_to_string(int addrq) {
 static char __proto[8];
 static char *proto_to_string(int protoq) {
   switch (protoq) {
-    case Q_LINK:
+    case NBPF_Q_LINK:
       return "Eth";
-    case Q_IP:
+    case NBPF_Q_IP:
       return "IP";
-    case Q_SCTP:
+    case NBPF_Q_SCTP:
       return "SCTP";
-    case Q_TCP:
+    case NBPF_Q_TCP:
       return "TCP";
-    case Q_UDP:
+    case NBPF_Q_UDP:
       return "UDP";
-    case Q_IPV6:
+    case NBPF_Q_IPV6:
       return "IP6";
-    case Q_GTP:
+    case NBPF_Q_GTP:
       return "GTP";
     default:
       snprintf(__proto, sizeof(__proto), "%d", protoq);
@@ -108,7 +108,7 @@ static void dump_tree(nbpf_node_t *n, int level) {
   switch(n->type) {
     case N_PRIMITIVE:
 
-      if (n->qualifiers.header == Q_INNER)
+      if (n->qualifiers.header == NBPF_Q_INNER)
         printf(" INNER");
 
       if (n->qualifiers.direction)
@@ -120,22 +120,22 @@ static void dump_tree(nbpf_node_t *n, int level) {
       if (n->qualifiers.protocol)
         printf(" Proto:%s", proto_to_string(n->qualifiers.protocol));
 
-      if (n->qualifiers.protocol == Q_LINK) {
-        if (n->qualifiers.address == Q_VLAN) {
+      if (n->qualifiers.protocol == NBPF_Q_LINK) {
+        if (n->qualifiers.address == NBPF_Q_VLAN) {
           printf(" VLAN");
           if (n->vlan_id_defined) printf(":%u", n->vlan_id);
-        } else if (n->qualifiers.address == Q_MPLS) {
+        } else if (n->qualifiers.address == NBPF_Q_MPLS) {
           printf(" MPLS");
           if (n->mpls_label_defined) printf(":%u", n->mpls_label);
         } else {
           printf(" MAC:%s", bpf_ethtoa(n->mac, tmp));
         }
 
-      } else if (n->qualifiers.address == Q_HOST || n->qualifiers.address == Q_NET) {
-        if (n->qualifiers.protocol == Q_IP || n->ip) {
-          if (n->qualifiers.address == Q_DEFAULT || n->qualifiers.address == Q_HOST) {
+      } else if (n->qualifiers.address == NBPF_Q_HOST || n->qualifiers.address == NBPF_Q_NET) {
+        if (n->qualifiers.protocol == NBPF_Q_IP || n->ip) {
+          if (n->qualifiers.address == NBPF_Q_DEFAULT || n->qualifiers.address == NBPF_Q_HOST) {
             printf(" IP:%s", bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
-          } else if (n->qualifiers.address == Q_NET) {
+          } else if (n->qualifiers.address == NBPF_Q_NET) {
             printf(" Net:%s", bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
     	  }
         } else {
@@ -144,11 +144,11 @@ static void dump_tree(nbpf_node_t *n, int level) {
   	         n->ip6[8], n->ip6[9], n->ip6[10], n->ip6[11], n->ip6[12], n->ip6[13], n->ip6[14], n->ip6[15]);
         }
 
-      } else if (n->qualifiers.address == Q_PORT) {
+      } else if (n->qualifiers.address == NBPF_Q_PORT) {
         printf(" Port:%d", ntohs(n->port_from));
 	if (n->port_to != n->port_from) printf("-%d", ntohs(n->port_to));
 
-      } else if (n->qualifiers.address == Q_L7PROTO) {
+      } else if (n->qualifiers.address == NBPF_Q_L7PROTO) {
         printf(" L7Proto:%d", n->l7protocol);
       }
 

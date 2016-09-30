@@ -43,37 +43,37 @@ nbpf_ip_addr;
 /***************************************************************************/
 
 /* Header qualifiers */
-#define Q_OUTER		1
-#define Q_INNER		2
+#define NBPF_Q_OUTER		1
+#define NBPF_Q_INNER		2
 
 /* Protocol qualifiers */
-#define Q_LINK		1
-#define Q_IP		2
-#define Q_SCTP		3
-#define Q_TCP		4
-#define Q_UDP		5
-#define Q_IPV6		6
-#define Q_GTP		7
+#define NBPF_Q_LINK		1
+#define NBPF_Q_IP		2
+#define NBPF_Q_SCTP		3
+#define NBPF_Q_TCP		4
+#define NBPF_Q_UDP		5
+#define NBPF_Q_IPV6		6
+#define NBPF_Q_GTP		7
 
 /* Direction qualifiers */
-#define Q_SRC		1
-#define Q_DST		2
-#define Q_OR		3
-#define Q_AND		4
+#define NBPF_Q_SRC		1
+#define NBPF_Q_DST		2
+#define NBPF_Q_OR		3
+#define NBPF_Q_AND		4
 
 /* Address qualifiers */
-#define Q_HOST		1
-#define Q_NET		2
-#define Q_PORT		3
-#define Q_PROTO		5
-#define Q_PORTRANGE	7
-#define Q_VLAN		8
-#define Q_MPLS		9
-#define Q_L7PROTO	10
+#define NBPF_Q_HOST		1
+#define NBPF_Q_NET		2
+#define NBPF_Q_PORT		3
+#define NBPF_Q_PROTO		5
+#define NBPF_Q_PORTRANGE	7
+#define NBPF_Q_VLAN		8
+#define NBPF_Q_MPLS		9
+#define NBPF_Q_L7PROTO	10
 
 /* Common qualifiers */
-#define Q_DEFAULT	0
-#define Q_UNDEF		255
+#define NBPF_Q_DEFAULT	0
+#define NBPF_Q_UNDEF		255
 
 /* Node types */
 #define N_PRIMITIVE     1
@@ -127,7 +127,7 @@ typedef int (*l7protocol_by_name_func)(const char *name);
 
 /* nBPF API */
 
-nbpf_tree_t *nbpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback);
+nbpf_tree_t *nbpf_parse(const char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback);
 void nbpf_free(nbpf_tree_t *t);
 
 /***************************************************************************/

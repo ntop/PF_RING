@@ -522,11 +522,11 @@ static void __nbpf_rdif_check_node_specific_constrains(nbpf_rdif_handle_t *handl
 
   switch(n->type) {
   case N_PRIMITIVE:
-    if(n->qualifiers.address == Q_HOST) {
-      if(n->qualifiers.direction == Q_SRC) {
+    if(n->qualifiers.address == NBPF_Q_HOST) {
+      if(n->qualifiers.direction == NBPF_Q_SRC) {
 	/* This counts how many time the src host ip is used in a bpf filter */
 	handle->constraint_parameters.src_host++;
-      } else if(n->qualifiers.direction == Q_DST) {
+      } else if(n->qualifiers.direction == NBPF_Q_DST) {
 	/* This counts how many time the dst host ip is used */
 	handle->constraint_parameters.dst_host++;
       } else {
@@ -535,11 +535,11 @@ static void __nbpf_rdif_check_node_specific_constrains(nbpf_rdif_handle_t *handl
 	/* At the moment you cannot use bidirectional ip address (for example: "host 192.168.0.1") */
 	handle->constraint_parameters.not_managed++;
       }
-    } else if(n->qualifiers.address == Q_PORT) {
-      if(n->qualifiers.direction == Q_SRC) {
+    } else if(n->qualifiers.address == NBPF_Q_PORT) {
+      if(n->qualifiers.direction == NBPF_Q_SRC) {
 	/* This counts how many time the src port is used in a bpf filter */
 	handle->constraint_parameters.src_port++;
-      } else if(n->qualifiers.direction == Q_DST) {
+      } else if(n->qualifiers.direction == NBPF_Q_DST) {
 	/* This counts how many time the dst port is used in a bpf filter */
 	handle->constraint_parameters.dst_port++;
       } else {
@@ -548,7 +548,7 @@ static void __nbpf_rdif_check_node_specific_constrains(nbpf_rdif_handle_t *handl
 	/* At the moment you cannot use bidirectional ip address (for example: "port 3000") */
 	handle->constraint_parameters.not_managed++;
       }
-    } else if(n->qualifiers.address == Q_PROTO) {
+    } else if(n->qualifiers.address == NBPF_Q_PROTO) {
       /* This counts how many time the protocol is used in a bpf filter */
       handle->constraint_parameters.proto++;
     } else {

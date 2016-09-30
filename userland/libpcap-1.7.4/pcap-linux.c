@@ -1158,8 +1158,6 @@ static void	pcap_cleanup_linux( pcap_t *handle )
 #ifdef HAVE_PF_RING
 #ifdef HAVE_NPCAP
 	if (handle->timeline != NULL) {      free(handle->timeline); handle->timeline = NULL; }
-	if (handle->timeline_start != NULL)  free(handle->timeline_start);
-	if (handle->timeline_end != NULL)    free(handle->timeline_end);
 	if (handle->timeline_handle != NULL) timeline_extract_close(handle->timeline_handle);
 	if (handle->nbpf_filter != NULL) nbpf_free(handle->nbpf_filter);
 #endif
@@ -1313,19 +1311,17 @@ static void	pcap_cleanup_linux( pcap_t *handle )
 }
 
 #ifdef HAVE_PF_RING
-static int is_dummy_interface(const char *device, char **path, char **start, char **end, char **interface) 
+static int is_dummy_interface(const char *device, char **path, char **interface) 
 {
 	const char conf_root[] = "/var/tmp/pf_ring/dummy";
 	const char type_token[]  = "type=";
 	const char path_token[]  = "path=";
-	const char start_token[] = "start_time=";
-	const char end_token[]   = "end_time=";
 	const char interface_token[] = "interface=";
 	char conf_path[256];
 	char buffer[256];
 	FILE *fd;
 
-	*path = *start = *end = *interface = NULL;
+	*path = *interface = NULL;
 
 	snprintf(conf_path, sizeof(conf_path), "%s/%s", conf_root, device);
 	fd = fopen(conf_path, "r");
@@ -1338,10 +1334,6 @@ static int is_dummy_interface(const char *device, char **path, char **start, cha
 			
 		} else if (strncmp(buffer, path_token, sizeof(path_token) - 1) == 0) {
 			*path = strdup(&buffer[sizeof(path_token) - 1]);
-		} else if (strncmp(buffer, start_token, sizeof(start_token) - 1) == 0) {
-			*start = strdup(&buffer[sizeof(start_token) - 1]);
-		} else if (strncmp(buffer, end_token, sizeof(end_token) - 1) == 0) {
-			*end = strdup(&buffer[sizeof(end_token) - 1]);
 		} else if (strncmp(buffer, interface_token, sizeof(interface_token) - 1) == 0) {
 			*interface = strdup(&buffer[sizeof(interface_token) - 1]);
 		}
@@ -1356,24 +1348,17 @@ static int is_dummy_interface(const char *device, char **path, char **start, cha
 static int
 pcap_setfilter_timeline(pcap_t *handle, struct bpf_program *filter) 
 {
-	struct tm begin_tm, end_tm;
-	time_t begin_epoch, end_epoch;
-
 	if (!handle)
 		return -1;
 
 	if (install_bpf_program(handle, filter) < 0)
 		return -1;
 
-	if (strptime(handle->timeline_start, "%Y-%m-%d %H:%M:%S", &begin_tm) &&
-    	   strptime(handle->timeline_end,    "%Y-%m-%d %H:%M:%S", &end_tm)) {
-		begin_tm.tm_isdst = -1;
-		begin_epoch = mktime(&begin_tm);
-		end_tm.tm_isdst = -1;
-		end_epoch = mktime(&end_tm);
-		//printf("timeline_extract_open(%s, %s, %s, %p)\n", handle->bpf_filter, handle->timeline_start, handle->timeline_end, handle->nbpf_filter);	
-		handle->timeline_handle = timeline_extract_open(handle->timeline, begin_epoch, end_epoch, handle->nbpf_filter, NULL);
-	}
+	//printf("timeline_extract_open(%s, %u, %u, %p)\n", handle->bpf_filter, handle->timeline_start, handle->timeline_end, handle->nbpf_filter);	
+	handle->timeline_handle = timeline_extract_open(handle->timeline, handle->timeline_start, handle->timeline_end, handle->nbpf_filter, NULL);
+
+	if (handle->timeline_handle == NULL)
+		return -1;
 
 	/* Nothing to do with nbpf_filter */
 
@@ -1535,7 +1520,7 @@ pcap_activate_linux(pcap_t *handle)
 
 		if (active) pf_ring_active_poll = atoi(active);
 
-		if (is_dummy_interface(device, &handle->timeline, &handle->timeline_start, &handle->timeline_end, &handle->real_device)) {
+		if (is_dummy_interface(device, &handle->timeline, &handle->real_device)) {
 #ifdef HAVE_NPCAP
 			if (handle->timeline != NULL) {
 				handle->inject_op = NULL;
@@ -2798,8 +2783,7 @@ pcap_setfilter_linux_common(pcap_t *handle, struct bpf_program *filter,
 #ifdef HAVE_PF_RING
 	if (handle->ring) {
 		if (handle->bpf_filter) {
-			printf("pcap_setfilter -> pfring_set_bpf_filter '%s'\n", 
-				handle->bpf_filter ? handle->bpf_filter : "");
+			//printf("pcap_setfilter -> pfring_set_bpf_filter '%s'\n", handle->bpf_filter ? handle->bpf_filter : "");
 			return pfring_set_bpf_filter(handle->ring, handle->bpf_filter);
 		}
 	}

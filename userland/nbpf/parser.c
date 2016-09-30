@@ -145,7 +145,7 @@ void nbpf_free(nbpf_tree_t *t) {
 
 /* ****************************************** */
 
-static nbpf_tree_t *tree_parse(char *buffer) {
+static nbpf_tree_t *tree_parse(const char *buffer) {
 #ifdef HAVE_NDPI
   ndpi_struct = ndpi_init_detection_module();
 
@@ -173,7 +173,7 @@ static nbpf_tree_t *tree_parse(char *buffer) {
 
 /* ****************************************** */
 
-nbpf_tree_t *nbpf_parse(char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
+nbpf_tree_t *nbpf_parse(const char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
   nbpf_tree_t *t = (nbpf_tree_t *) malloc(sizeof(nbpf_tree_t));
 
   if (t == NULL)
@@ -222,7 +222,7 @@ nbpf_node_t *nbpf_create_portrange_node(const char *range, nbpf_qualifiers_t q) 
   int proto = q.protocol;
   int port1, port2;
   
-  if (proto != Q_DEFAULT && proto != Q_UDP && proto != Q_TCP && proto != Q_SCTP)
+  if (proto != NBPF_Q_DEFAULT && proto != NBPF_Q_UDP && proto != NBPF_Q_TCP && proto != NBPF_Q_SCTP)
     nbpf_syntax_error("illegal qualifier of 'portrange'");
 
   if (sscanf(range, "%d-%d", &port1, &port2) != 2)
@@ -246,10 +246,10 @@ nbpf_node_t *nbpf_create_eth_node(const u_char *eaddr, nbpf_qualifiers_t q) {
   memcpy(n->mac, eaddr, sizeof(n->mac));
 
   switch (q.direction) {
-   case Q_SRC:
-    case Q_DST:
-    case Q_AND:
-    case Q_OR: case Q_DEFAULT:
+   case NBPF_Q_SRC:
+    case NBPF_Q_DST:
+    case NBPF_Q_AND:
+    case NBPF_Q_OR: case NBPF_Q_DEFAULT:
       break;
     default:
       nbpf_syntax_error("eth address applied to unsupported direction");
@@ -269,10 +269,10 @@ nbpf_node_t *__nbpf_create_net_node(u_int32_t net, u_int32_t mask, nbpf_qualifie
   n->mask = htonl(mask);
 
   switch (q.direction) {
-    case Q_SRC:
-    case Q_DST:
-    case Q_AND:
-    case Q_OR: case Q_DEFAULT:
+    case NBPF_Q_SRC:
+    case NBPF_Q_DST:
+    case NBPF_Q_AND:
+    case NBPF_Q_OR: case NBPF_Q_DEFAULT:
       break;
     default:
       nbpf_syntax_error("host or net applied to unsupported direction");
@@ -287,10 +287,10 @@ nbpf_node_t *nbpf_create_host_node(const char *s, nbpf_qualifiers_t q) {
   u_int32_t hh, mask = 0xffffffff;
   int vlen;
   
-  if (q.address != Q_DEFAULT &&
-      q.address != Q_HOST &&
-      q.address != Q_NET /* && 
-      q.address != Q_GATEWAY */)
+  if (q.address != NBPF_Q_DEFAULT &&
+      q.address != NBPF_Q_HOST &&
+      q.address != NBPF_Q_NET /* && 
+      q.address != NBPF_Q_GATEWAY */)
     nbpf_syntax_error("ip syntax for host and network only");
 
   vlen = atoin(s, &hh);
@@ -308,16 +308,16 @@ nbpf_node_t *nbpf_create_net_node(const char *net, const char *netmask,
   int nlen, mlen;
   u_int32_t nn, mask;
 
-  if (q.address != Q_NET)
+  if (q.address != NBPF_Q_NET)
     nbpf_syntax_error("mask syntax for networks only");
 
   switch (q.protocol) {
-    case Q_DEFAULT:
-    case Q_IP:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_IP:
       /* Ok */
       break;
-    /* case Q_ARP:  */
-    /* case Q_RARP: */
+    /* case NBPF_Q_ARP:  */
+    /* case NBPF_Q_RARP: */
     default:
       nbpf_syntax_error("net mask applied to unsupported protocol");
   }
@@ -381,11 +381,11 @@ nbpf_node_t *nbpf_create_net6_node(const char *net, int masklen, nbpf_qualifiers
     nbpf_syntax_error("non-network bits set in \"%s/%d\"", net, masklen);
 
   switch (q.address) {
-    case Q_DEFAULT:
-    case Q_HOST:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_HOST:
       if (masklen != 128)
         nbpf_syntax_error("mask syntax for networks only");
-    case Q_NET:
+    case NBPF_Q_NET:
       /* Ok */
       break;
     default:
@@ -395,8 +395,8 @@ nbpf_node_t *nbpf_create_net6_node(const char *net, int masklen, nbpf_qualifiers
   }
 
   switch (q.protocol) {
-    case Q_DEFAULT:
-    case Q_IPV6:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_IPV6:
       /* Ok */
       break;
     default:
@@ -410,10 +410,10 @@ nbpf_node_t *nbpf_create_net6_node(const char *net, int masklen, nbpf_qualifiers
   memcpy(n->mask6, m, sizeof(n->mask6));
 
   switch (q.direction) {
-    case Q_SRC:
-    case Q_DST:
-    case Q_AND:
-    case Q_OR: case Q_DEFAULT:
+    case NBPF_Q_SRC:
+    case NBPF_Q_DST:
+    case NBPF_Q_AND:
+    case NBPF_Q_OR: case NBPF_Q_DEFAULT:
       break;
     default:
       nbpf_syntax_error("net mask applied to unsupported direction");
@@ -430,10 +430,10 @@ nbpf_node_t *nbpf_create_n_node(u_int32_t nn, nbpf_qualifiers_t q) {
   u_int32_t mask = 0xffffffff;
 
   switch (q.address) {
-    case Q_DEFAULT:
-    case Q_HOST:
-    case Q_NET:
-      if (q.address == Q_NET) {
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_HOST:
+    case NBPF_Q_NET:
+      if (q.address == NBPF_Q_NET) {
         while (nn && (nn & 0xff000000) == 0) {
           nn <<= 8;
           mask <<= 8;
@@ -443,13 +443,13 @@ nbpf_node_t *nbpf_create_n_node(u_int32_t nn, nbpf_qualifiers_t q) {
       n = __nbpf_create_net_node(nn, mask, q);
 
       break;
-    case Q_PORT:
-    case Q_PORTRANGE:
+    case NBPF_Q_PORT:
+    case NBPF_Q_PORTRANGE:
 
-      if (q.protocol != Q_DEFAULT &&
-          q.protocol != Q_UDP &&
-          q.protocol != Q_TCP &&
-          q.protocol != Q_SCTP)
+      if (q.protocol != NBPF_Q_DEFAULT &&
+          q.protocol != NBPF_Q_UDP &&
+          q.protocol != NBPF_Q_TCP &&
+          q.protocol != NBPF_Q_SCTP)
         nbpf_syntax_error("illegal qualifier of 'port'");
       
       n = alloc_node();
@@ -459,7 +459,7 @@ nbpf_node_t *nbpf_create_n_node(u_int32_t nn, nbpf_qualifiers_t q) {
       n->port_from = n->port_to = htons(nn);
      
       break;
-    case Q_PROTO:
+    case NBPF_Q_PROTO:
       
       n = alloc_node();
 
@@ -486,28 +486,28 @@ nbpf_node_t *nbpf_create_proto_node(int proto) {
   nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
-  n->qualifiers.address = Q_PROTO;
+  n->qualifiers.address = NBPF_Q_PROTO;
 
   switch (proto) {
-    case Q_IP:
-    case Q_IPV6:
-      n->qualifiers.protocol = Q_LINK;
+    case NBPF_Q_IP:
+    case NBPF_Q_IPV6:
+      n->qualifiers.protocol = NBPF_Q_LINK;
       break;
-    case Q_TCP:
-    case Q_UDP:
-    case Q_SCTP:
-      n->qualifiers.protocol = Q_IP;
+    case NBPF_Q_TCP:
+    case NBPF_Q_UDP:
+    case NBPF_Q_SCTP:
+      n->qualifiers.protocol = NBPF_Q_IP;
       break;
     default:
       nbpf_syntax_error("Unexpected protocol\n"); 
   }
 
   switch (proto) {
-    case Q_IP:   n->protocol = 0x800;  break;
-    case Q_IPV6: n->protocol = 0x86DD; break;
-    case Q_TCP:  n->protocol = 6;      break;
-    case Q_UDP:  n->protocol = 17;     break;
-    case Q_SCTP: n->protocol = 132;    break;
+    case NBPF_Q_IP:   n->protocol = 0x800;  break;
+    case NBPF_Q_IPV6: n->protocol = 0x86DD; break;
+    case NBPF_Q_TCP:  n->protocol = 6;      break;
+    case NBPF_Q_UDP:  n->protocol = 17;     break;
+    case NBPF_Q_SCTP: n->protocol = 132;    break;
     //default:     n->protocol = proto;  break;
   }
 
@@ -520,8 +520,8 @@ nbpf_node_t *nbpf_create_vlan_node(int vlan_id) {
   nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
-  n->qualifiers.protocol = Q_LINK;
-  n->qualifiers.address = Q_VLAN;
+  n->qualifiers.protocol = NBPF_Q_LINK;
+  n->qualifiers.address = NBPF_Q_VLAN;
 
   if (vlan_id != -1) {
     n->vlan_id_defined = 1;
@@ -537,8 +537,8 @@ nbpf_node_t *nbpf_create_mpls_node(int label) {
   nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
-  n->qualifiers.protocol = Q_LINK;
-  n->qualifiers.address = Q_MPLS;
+  n->qualifiers.protocol = NBPF_Q_LINK;
+  n->qualifiers.address = NBPF_Q_MPLS;
 
   if (label != -1) {
     n->mpls_label_defined = 1;
@@ -554,7 +554,7 @@ nbpf_node_t *nbpf_create_gtp_node() {
   nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
-  n->qualifiers.protocol = Q_GTP;
+  n->qualifiers.protocol = NBPF_Q_GTP;
 
   return n;
 }
@@ -565,7 +565,7 @@ nbpf_node_t *nbpf_create_l7_node(u_int32_t id, const char *name) {
   nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
-  n->qualifiers.address = Q_L7PROTO;
+  n->qualifiers.address = NBPF_Q_L7PROTO;
   if (name == NULL)
     n->l7protocol = id;
   else {

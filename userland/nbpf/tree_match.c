@@ -35,18 +35,18 @@ static /* inline */ int packet_match_mac(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     return 1;
 
   switch(n->qualifiers.direction) {
-    case Q_SRC:
+    case NBPF_Q_SRC:
       if(memcmp(h->smac, n->mac, 6) == 0) return 1;
       break;
-    case Q_DST:
+    case NBPF_Q_DST:
       if(memcmp(h->dmac, n->mac, 6) == 0) return 1;
       break;
-    case Q_DEFAULT:
-    case Q_OR:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_OR:
       if(memcmp(h->smac, n->mac, 6) == 0 ||
           memcmp(h->dmac, n->mac, 6) == 0) return 1;
       break;
-    case Q_AND:
+    case NBPF_Q_AND:
       if(memcmp(h->smac, n->mac, 6) == 0 &&
           memcmp(h->dmac, n->mac, 6) == 0) return 1;
     default:
@@ -61,24 +61,24 @@ static /* inline */ int packet_match_mac(nbpf_node_t *n, nbpf_pkt_info_t *h) {
 static /* inline */ int packet_match_ip(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   nbpf_pkt_info_tuple_t *t = &h->tuple;
 
-  if(n->qualifiers.header == Q_INNER) {
+  if(n->qualifiers.header == NBPF_Q_INNER) {
     if(ignore_inner_header) return 1;
     t = &h->tunneled_tuple;
   }
 
   switch(n->qualifiers.direction) {
-    case Q_SRC:
+    case NBPF_Q_SRC:
       if((t->ip_src.v4 & n->mask) == n->ip) return 1;
       break;
-    case Q_DST:
+    case NBPF_Q_DST:
       if((t->ip_dst.v4 & n->mask) == n->ip) return 1;
       break;
-    case Q_DEFAULT:
-    case Q_OR:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_OR:
       if((t->ip_src.v4 & n->mask) == n->ip ||
          (t->ip_dst.v4 & n->mask) == n->ip) return 1;
       break;
-    case Q_AND:
+    case NBPF_Q_AND:
       if((t->ip_src.v4 & n->mask) == n->ip &&
          (t->ip_dst.v4 & n->mask) == n->ip) return 1;
       break;
@@ -111,24 +111,24 @@ static /* inline */ int match_ip6(u_int32_t *ip6, u_int32_t *rulemask6, u_int32_
 static /* inline */ int packet_match_ip6(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   nbpf_pkt_info_tuple_t *t = &h->tuple;
 
-  if(n->qualifiers.header == Q_INNER) {
+  if(n->qualifiers.header == NBPF_Q_INNER) {
     if(ignore_inner_header) return 1;
     t = &h->tunneled_tuple;
   }
 
   switch(n->qualifiers.direction) {
-    case Q_SRC:
+    case NBPF_Q_SRC:
       if(match_ip6(t->ip_src.v6.u6_addr.u6_addr32, (u_int32_t *) n->mask6, (u_int32_t *) n->ip6)) return 1;
       break;
-    case Q_DST:
+    case NBPF_Q_DST:
       if(match_ip6(t->ip_dst.v6.u6_addr.u6_addr32, (u_int32_t *) n->mask6, (u_int32_t *) n->ip6)) return 1;
       break;
-    case Q_DEFAULT:
-    case Q_OR:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_OR:
       if(match_ip6(t->ip_src.v6.u6_addr.u6_addr32, (u_int32_t *) n->mask6, (u_int32_t *) n->ip6) ||
           match_ip6(t->ip_dst.v6.u6_addr.u6_addr32, (u_int32_t *) n->mask6, (u_int32_t *) n->ip6)) return 1;
       break;
-    case Q_AND:
+    case NBPF_Q_AND:
       if(match_ip6(t->ip_src.v6.u6_addr.u6_addr32, (u_int32_t *) n->mask6, (u_int32_t *) n->ip6) &&
           match_ip6(t->ip_dst.v6.u6_addr.u6_addr32, (u_int32_t *) n->mask6, (u_int32_t *) n->ip6)) return 1;
       break;
@@ -146,7 +146,7 @@ static /* inline */ int packet_match_port(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   u_int16_t h_l4_src_port, h_l4_dst_port; 
   u_int16_t h_port_from, h_port_to;
 
-  if(n->qualifiers.header == Q_INNER) {
+  if(n->qualifiers.header == NBPF_Q_INNER) {
     if(ignore_inner_header) return 1;
     t = &h->tunneled_tuple;
   }
@@ -154,22 +154,22 @@ static /* inline */ int packet_match_port(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   h_l4_src_port = ntohs(t->l4_src_port), h_l4_dst_port = ntohs(t->l4_dst_port); 
   h_port_from = ntohs(n->port_from), h_port_to = ntohs(n->port_to);
   switch(n->qualifiers.direction) {
-    case Q_SRC:
+    case NBPF_Q_SRC:
       if(h_l4_src_port >= h_port_from &&
           h_l4_src_port <= h_port_to) return 1;
       break;
-    case Q_DST:
+    case NBPF_Q_DST:
       if(h_l4_dst_port >= h_port_from &&
           h_l4_dst_port <= h_port_to) return 1;
       break;
-    case Q_DEFAULT:
-    case Q_OR:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_OR:
       if((h_l4_src_port >= h_port_from &&
            h_l4_src_port <= h_port_to) ||
 	  (h_l4_dst_port >= h_port_from &&
 	   h_l4_dst_port <= h_port_to)) return 1;
       break;
-    case Q_AND:
+    case NBPF_Q_AND:
       if(h_l4_src_port >= h_port_from &&
           h_l4_src_port <= h_port_to &&
 	  h_l4_dst_port >= h_port_from &&
@@ -187,24 +187,24 @@ static /* inline */ int packet_match_port(nbpf_node_t *n, nbpf_pkt_info_t *h) {
 static /* inline */ int packet_match_host(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   nbpf_pkt_info_tuple_t *t = &h->tuple;
 
-  if(n->qualifiers.header == Q_INNER) {
+  if(n->qualifiers.header == NBPF_Q_INNER) {
     if(ignore_inner_header) return 1;
     t = &h->tunneled_tuple;
   }
  
   switch(n->qualifiers.protocol) {
-    case Q_LINK:
-      /* supported qualifiers: Q_HOST/Q_PROTO */
+    case NBPF_Q_LINK:
+      /* supported qualifiers: NBPF_Q_HOST/NBPF_Q_PROTO */
       return packet_match_mac(n, h);
       break;
-    case Q_DEFAULT:
-    case Q_IP:
-      /* supported qualifiers: Q_HOST/Q_NET/Q_PROTO */
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_IP:
+      /* supported qualifiers: NBPF_Q_HOST/NBPF_Q_NET/NBPF_Q_PROTO */
       if(t->eth_type == 0x0800)
         return packet_match_ip(n, h);
       break;
-    case Q_IPV6:
-      /* supported qualifiers: Q_HOST/Q_NET/Q_PROTO */
+    case NBPF_Q_IPV6:
+      /* supported qualifiers: NBPF_Q_HOST/NBPF_Q_NET/NBPF_Q_PROTO */
       if(t->eth_type == 0x86DD)
         return packet_match_ip6(n, h);
       break;
@@ -221,24 +221,24 @@ static /* inline */ int packet_match_host(nbpf_node_t *n, nbpf_pkt_info_t *h) {
 static /* inline */ int packet_match_l4(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   nbpf_pkt_info_tuple_t *t = &h->tuple;
 
-  if(n->qualifiers.header == Q_INNER) {
+  if(n->qualifiers.header == NBPF_Q_INNER) {
     if(ignore_inner_header) return 1;
     t = &h->tunneled_tuple;
   }
  
   switch(n->qualifiers.protocol) {
-    case Q_DEFAULT:
+    case NBPF_Q_DEFAULT:
       return packet_match_port(n, h);
       break;
-    case Q_TCP:
+    case NBPF_Q_TCP:
       if(ignore_l3_proto || t->l3_proto == 6)
         return packet_match_port(n, h);
       break;
-    case Q_UDP:
+    case NBPF_Q_UDP:
       if(ignore_l3_proto || t->l3_proto == 17)
         return packet_match_port(n, h);
       break;
-    case Q_SCTP:
+    case NBPF_Q_SCTP:
       if(ignore_l3_proto || t->l3_proto == 132)
         return packet_match_port(n, h);
       break;
@@ -254,19 +254,19 @@ static /* inline */ int packet_match_l4(nbpf_node_t *n, nbpf_pkt_info_t *h) {
 static /* inline */ int packet_match_proto(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   nbpf_pkt_info_tuple_t *t = &h->tuple;
 
-  if(n->qualifiers.header == Q_INNER) {
+  if(n->qualifiers.header == NBPF_Q_INNER) {
     if(ignore_inner_header) return 1;
     t = &h->tunneled_tuple;
   }
 
   switch(n->qualifiers.protocol) {
-    case Q_LINK:
+    case NBPF_Q_LINK:
       if(t->eth_type == n->protocol)
         return 1;
       break;
-    case Q_DEFAULT:
-    case Q_IP:
-    case Q_IPV6:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_IP:
+    case NBPF_Q_IPV6:
       if(ignore_l3_proto || t->l3_proto == n->protocol)
         return 1;
       break;
@@ -291,7 +291,7 @@ static /* inline */ int packet_match_l7_proto(nbpf_node_t *n, nbpf_pkt_info_t *h
 
 static /* inline */ int packet_match_vlan(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   switch(n->qualifiers.protocol) {
-    case Q_LINK:
+    case NBPF_Q_LINK:
       if(h->vlan_id == n->vlan_id || h->vlan_id_qinq == n->vlan_id)
         return 1;
       break;
@@ -306,18 +306,18 @@ static /* inline */ int packet_match_vlan(nbpf_node_t *n, nbpf_pkt_info_t *h) {
 
 static /* inline */ int packet_match_primitive(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   switch(n->qualifiers.address) {
-    case Q_DEFAULT:
-    case Q_HOST: 
-    case Q_NET:
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_HOST: 
+    case NBPF_Q_NET:
       return packet_match_host(n, h);
-    case Q_PORT:
-    case Q_PORTRANGE:
+    case NBPF_Q_PORT:
+    case NBPF_Q_PORTRANGE:
       return packet_match_l4(n, h);
-    case Q_PROTO:
+    case NBPF_Q_PROTO:
       return packet_match_proto(n, h);
-    case Q_L7PROTO:
+    case NBPF_Q_L7PROTO:
       return packet_match_l7_proto(n, h);
-    case Q_VLAN:
+    case NBPF_Q_VLAN:
       return packet_match_vlan(n, h);
     default:
       DEBUG_PRINTF("Unexpected address qualifier (%d)\n", __LINE__);
