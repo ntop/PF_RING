@@ -277,6 +277,30 @@ pfring_zc_sync_queue(
 /* **************************************************************************************** */
 
 /**
+ * Set a BPF filter.
+ * @param queue  The queue handle.
+ * @param filter The BPF filter.
+ * @return       0 on success, a negative value otherwise.
+ */
+int
+pfring_zc_set_bpf_filter(
+	pfring_zc_queue *queue,
+	char *filter
+);
+
+/**
+ * Remove the BPF filter.
+ * @param queue  The queue handle.
+ * @return       0 on success, a negative value otherwise.
+ */
+int
+pfring_zc_remove_bpf_filter(
+	pfring_zc_queue *queue
+);
+
+/* **************************************************************************************** */
+
+/**
  * Add an hw filtering rule to the network device, when the queue is bound to a supported card.
  * @param queue The queue handle.
  * @param rule  The filtering rule.
