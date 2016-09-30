@@ -139,6 +139,8 @@ or|"||" return OR;
 not	return '!';
 
 vlan	return VLAN;
+mpls	return MPLS;
+gtp	return GTP;
 
 [ \r\n\t] ;
 [+\-*/:\[\]!<>()&|=] return yytext[0];

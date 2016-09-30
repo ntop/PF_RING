@@ -486,7 +486,6 @@ nbpf_node_t *nbpf_create_proto_node(int proto) {
   nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
-  n->qualifiers.protocol = proto;
   n->qualifiers.address = Q_PROTO;
 
   switch (proto) {
@@ -509,6 +508,7 @@ nbpf_node_t *nbpf_create_proto_node(int proto) {
     case Q_TCP:  n->protocol = 6;      break;
     case Q_UDP:  n->protocol = 17;     break;
     case Q_SCTP: n->protocol = 132;    break;
+    //default:     n->protocol = proto;  break;
   }
 
   return n;
@@ -527,6 +527,34 @@ nbpf_node_t *nbpf_create_vlan_node(int vlan_id) {
     n->vlan_id_defined = 1;
     n->vlan_id = vlan_id;
   }
+
+  return n;
+}
+
+/* ****************************************************** */
+
+nbpf_node_t *nbpf_create_mpls_node(int label) { 
+  nbpf_node_t *n = alloc_node();
+
+  n->type = N_PRIMITIVE;
+  n->qualifiers.protocol = Q_LINK;
+  n->qualifiers.address = Q_MPLS;
+
+  if (label != -1) {
+    n->mpls_label_defined = 1;
+    n->mpls_label = label;
+  }
+
+  return n;
+}
+
+/* ****************************************************** */
+
+nbpf_node_t *nbpf_create_gtp_node() { 
+  nbpf_node_t *n = alloc_node();
+
+  n->type = N_PRIMITIVE;
+  n->qualifiers.protocol = Q_GTP;
 
   return n;
 }

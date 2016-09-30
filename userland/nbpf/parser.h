@@ -33,6 +33,8 @@ nbpf_node_t *nbpf_create_net_node(const char *, const char *, int, nbpf_qualifie
 nbpf_node_t *nbpf_create_net6_node(const char *, int, nbpf_qualifiers_t);
 nbpf_node_t *nbpf_create_proto_node(int);
 nbpf_node_t *nbpf_create_vlan_node(int);
+nbpf_node_t *nbpf_create_mpls_node(int);
+nbpf_node_t *nbpf_create_gtp_node();
 nbpf_node_t *nbpf_create_l7_node(u_int32_t, const char *);
 void nbpf_create_not(nbpf_node_t *);
 

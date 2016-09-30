@@ -52,7 +52,7 @@ static void yyerror(const char *msg) {
 %token GEQ LEQ NEQ
 %token ID EID HID HID6
 %token IPV6
-%token VLAN
+%token VLAN MPLS GTP
 %token L7PROTO
 
 %type	<s> ID
@@ -163,6 +163,9 @@ pname:	  LINK			{ $$ = Q_LINK; }
 	;
 other:	  VLAN pnum		{ $$.n = nbpf_create_vlan_node($2); }
 	| VLAN			{ $$.n = nbpf_create_vlan_node(-1); }
+	| MPLS pnum		{ $$.n = nbpf_create_mpls_node($2); }
+	| MPLS			{ $$.n = nbpf_create_mpls_node(-1); }
+	| GTP			{ $$.n = nbpf_create_gtp_node(); }
 	;
 pnum:	  NUM
 	| paren pnum ')'	{ $$ = $2; }

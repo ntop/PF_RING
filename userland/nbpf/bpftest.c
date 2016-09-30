@@ -48,6 +48,8 @@ static char *addr_to_string(int addrq) {
       return "PortRange";
     case Q_VLAN: 
       return "VLAN";
+    case Q_MPLS: 
+      return "MPLS";
     case Q_L7PROTO: 
       return "L7Proto";
     case Q_HOST:
@@ -73,6 +75,8 @@ static char *proto_to_string(int protoq) {
       return "UDP";
     case Q_IPV6:
       return "IP6";
+    case Q_GTP:
+      return "GTP";
     default:
       snprintf(__proto, sizeof(__proto), "%d", protoq);
       return __proto;
@@ -120,6 +124,9 @@ static void dump_tree(nbpf_node_t *n, int level) {
         if (n->qualifiers.address == Q_VLAN) {
           printf(" VLAN");
           if (n->vlan_id_defined) printf(":%u", n->vlan_id);
+        } else if (n->qualifiers.address == Q_MPLS) {
+          printf(" MPLS");
+          if (n->mpls_label_defined) printf(":%u", n->mpls_label);
         } else {
           printf(" MAC:%s", bpf_ethtoa(n->mac, tmp));
         }
@@ -168,8 +175,15 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
 
   if(c->ip_version) printf("[IPv%d] ", c->ip_version);
 
-  if(c->vlan_id) printf("[VLAN: %u]", c->vlan_id);
-  if(c->proto)   printf("[L4 Proto: %u]", c->proto);
+  if (c->vlan) {
+    if (c->vlan_id) printf("[VLAN: %u] ", c->vlan_id);
+    else            printf("[VLAN] ");
+  }
+  if (c->mpls) {
+    if (c->mpls_label) printf("[MPLS: %u] ", c->mpls_label);
+    else               printf("[MPLS] ");
+  }
+  if(c->proto)      printf("[L4 Proto: %u] ", c->proto);
 
   if(!c->ip_version || c->ip_version == 4) {
     char a[32];
@@ -218,8 +232,10 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
       if (c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
     } else printf("*");
 
-    printf("]");
+    printf("] ");
   }
+
+  if (c->gtp) printf("[GTP] ");
 
   printf("\n");
 }

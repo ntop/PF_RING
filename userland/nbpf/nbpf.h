@@ -49,10 +49,11 @@ nbpf_ip_addr;
 /* Protocol qualifiers */
 #define Q_LINK		1
 #define Q_IP		2
-#define Q_SCTP		5
-#define Q_TCP		6
-#define Q_UDP		7
-#define Q_IPV6		17
+#define Q_SCTP		3
+#define Q_TCP		4
+#define Q_UDP		5
+#define Q_IPV6		6
+#define Q_GTP		7
 
 /* Direction qualifiers */
 #define Q_SRC		1
@@ -67,7 +68,8 @@ nbpf_ip_addr;
 #define Q_PROTO		5
 #define Q_PORTRANGE	7
 #define Q_VLAN		8
-#define Q_L7PROTO	9
+#define Q_MPLS		9
+#define Q_L7PROTO	10
 
 /* Common qualifiers */
 #define Q_DEFAULT	0
@@ -95,9 +97,10 @@ typedef struct nbpf_node {
   int level;
   nbpf_qualifiers_t qualifiers;
   u_int8_t not_rule;
-  u_int8_t vlan_id_defined;
-  u_int8_t __padding[2];
+  u_int8_t vlan_id_defined, mpls_label_defined;
+  u_int8_t __padding;
   u_int16_t vlan_id;
+  u_int16_t mpls_label;
   u_int8_t mac[6];
   u_int8_t ip6[16], mask6[16];
   u_int32_t ip, mask;
@@ -165,8 +168,10 @@ typedef struct {
   u_int8_t smac[6], dmac[6]; 
   u_int8_t proto; /* tcp, udp, sctp */
   u_int8_t ip_version;
-  u_int8_t __padding[2];
+  u_int8_t gtp, vlan, mpls;
+  u_int8_t __padding;
   u_int16_t vlan_id, l7_proto;
+  u_int16_t mpls_label;
   nbpf_ip_addr shost, dhost;
   nbpf_ip_addr shost_mask, dhost_mask;
   u_int16_t sport_low, sport_high;

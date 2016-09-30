@@ -113,10 +113,13 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
   switch(n->qualifiers.protocol) {
     case Q_LINK:
       if (n->qualifiers.address == Q_VLAN) {
+        f->fields.vlan = 1;
         if (n->vlan_id_defined)
           f->fields.vlan_id = n->vlan_id;
-        else
-          DEBUG_PRINTF("VLAN id must be specified with wildcard filters (presence check not available)\n");
+      } else if (n->qualifiers.address == Q_MPLS) {
+        f->fields.mpls = 1;
+        if (n->mpls_label_defined)
+          f->fields.mpls_label = n->mpls_label;
       } else if (n->qualifiers.address == Q_PROTO) {
         DEBUG_PRINTF("Ethernet protocol cannot be compared with wildcard filters\n");  
       }
@@ -140,6 +143,8 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
     case Q_SCTP:
       f->fields.proto = 132;
       break;
+    case Q_GTP:
+      f->fields.gtp = 1; /* TODO do we need to handle version? */
     default:
       DEBUG_PRINTF("Unexpected protocol qualifier (%d)\n", __LINE__);
   }
@@ -200,12 +205,27 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
 /* ********************************************************************** */
 
 static int merge_wildcard_vlan(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1) {
+  if (f1->fields.vlan)
+    f->fields.vlan = 1;
   if (f1->fields.vlan_id) {
     if (f->fields.vlan_id) {
-      DEBUG_PRINTF("Conflict merging filters on vlan\n");
+      DEBUG_PRINTF("Conflict merging filters on VLAN\n");
       return -1;
     }
     f->fields.vlan_id = f1->fields.vlan_id;
+  }
+  return 0;
+}
+
+static int merge_wildcard_mpls(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1) {
+  if (f1->fields.mpls)
+    f->fields.mpls = 1;
+  if (f1->fields.mpls_label) {
+    if (f->fields.mpls_label) {
+      DEBUG_PRINTF("Conflict merging filters on MPLS\n");
+      return -1;
+    }
+    f->fields.mpls_label = f1->fields.mpls_label;
   }
   return 0;
 }
@@ -366,6 +386,9 @@ static nbpf_rule_list_item_t *merge_wildcard_filters_single(nbpf_rule_list_item_
   rc = merge_wildcard_vlan(f, f1); if (rc != 0) goto exit;
   rc = merge_wildcard_vlan(f, f2); if (rc != 0) goto exit;
 
+  rc = merge_wildcard_mpls(f, f1); if (rc != 0) goto exit;
+  rc = merge_wildcard_mpls(f, f2); if (rc != 0) goto exit;
+
   rc = merge_wildcard_proto(f, f1); if (rc != 0) goto exit;
   rc = merge_wildcard_proto(f, f2); if (rc != 0) goto exit;
 
@@ -414,6 +437,14 @@ static nbpf_rule_list_item_t *merge_wildcard_filters_single(nbpf_rule_list_item_
 
   merge_wildcard_dport(f, f1, swap1); if (rc != 0) goto exit;
   merge_wildcard_dport(f, f2, swap2); if (rc != 0) goto exit;
+
+  if (f1->fields.gtp && f2->fields.gtp && f1->fields.gtp != f2->fields.gtp) {
+    DEBUG_PRINTF("Conflict merging filters with different GTP version\n");
+    rc = -1;
+    goto exit;
+  }
+  if (f1->fields.gtp) f->fields.gtp = f1->fields.gtp;
+  if (f2->fields.gtp) f->fields.gtp = f2->fields.gtp;
 
 exit:
   if (rc != 0) {
