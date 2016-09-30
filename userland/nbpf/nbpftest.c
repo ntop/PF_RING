@@ -17,12 +17,12 @@
 #include <unistd.h>
 
 #include "nbpf.h"
-#include "bpf_mod_napatech.h"
+#include "nbpf_mod_napatech.h"
 
 /* ****************************************** */
 
 static char *dir_to_string(int dirq) {
-  switch (dirq) {
+  switch(dirq) {
     case NBPF_Q_SRC:
       return "Src"; 
     case NBPF_Q_DST:
@@ -35,9 +35,12 @@ static char *dir_to_string(int dirq) {
   }
 }
 
+/* ****************************************** */
+
 static char __addr[8];
+
 static char *addr_to_string(int addrq) {
-  switch (addrq) {
+  switch(addrq) {
     case NBPF_Q_NET:
       return "Net";
     case NBPF_Q_PORT: 
@@ -60,9 +63,12 @@ static char *addr_to_string(int addrq) {
   }
 }
 
+/* ****************************************** */
+
 static char __proto[8];
+
 static char *proto_to_string(int protoq) {
-  switch (protoq) {
+  switch(protoq) {
     case NBPF_Q_LINK:
       return "Eth";
     case NBPF_Q_IP:
@@ -87,7 +93,8 @@ static char *proto_to_string(int protoq) {
 
 static void print_padding(char ch, int n) {
   int i;
-  for (i = 0; i < n; i++)
+
+  for(i = 0; i < n; i++)
     putchar(ch);
 }
 
@@ -96,7 +103,7 @@ static void print_padding(char ch, int n) {
 static void dump_tree(nbpf_node_t *n, int level) {
   char tmp[32];
 
-  if (n == NULL)
+  if(n == NULL)
     return;
 
   dump_tree(n->r, level + 1);
@@ -108,34 +115,34 @@ static void dump_tree(nbpf_node_t *n, int level) {
   switch(n->type) {
     case N_PRIMITIVE:
 
-      if (n->qualifiers.header == NBPF_Q_INNER)
+      if(n->qualifiers.header == NBPF_Q_INNER)
         printf(" INNER");
 
-      if (n->qualifiers.direction)
+      if(n->qualifiers.direction)
         printf(" %s", dir_to_string(n->qualifiers.direction));
 
-      if (n->qualifiers.address)
+      if(n->qualifiers.address)
         printf(" %s", addr_to_string(n->qualifiers.address));
 
-      if (n->qualifiers.protocol)
+      if(n->qualifiers.protocol)
         printf(" Proto:%s", proto_to_string(n->qualifiers.protocol));
 
-      if (n->qualifiers.protocol == NBPF_Q_LINK) {
-        if (n->qualifiers.address == NBPF_Q_VLAN) {
+      if(n->qualifiers.protocol == NBPF_Q_LINK) {
+        if(n->qualifiers.address == NBPF_Q_VLAN) {
           printf(" VLAN");
-          if (n->vlan_id_defined) printf(":%u", n->vlan_id);
-        } else if (n->qualifiers.address == NBPF_Q_MPLS) {
+          if(n->vlan_id_defined) printf(":%u", n->vlan_id);
+        } else if(n->qualifiers.address == NBPF_Q_MPLS) {
           printf(" MPLS");
-          if (n->mpls_label_defined) printf(":%u", n->mpls_label);
+          if(n->mpls_label_defined) printf(":%u", n->mpls_label);
         } else {
           printf(" MAC:%s", bpf_ethtoa(n->mac, tmp));
         }
 
-      } else if (n->qualifiers.address == NBPF_Q_HOST || n->qualifiers.address == NBPF_Q_NET) {
-        if (n->qualifiers.protocol == NBPF_Q_IP || n->ip) {
-          if (n->qualifiers.address == NBPF_Q_DEFAULT || n->qualifiers.address == NBPF_Q_HOST) {
+      } else if(n->qualifiers.address == NBPF_Q_HOST || n->qualifiers.address == NBPF_Q_NET) {
+        if(n->qualifiers.protocol == NBPF_Q_IP || n->ip) {
+          if(n->qualifiers.address == NBPF_Q_DEFAULT || n->qualifiers.address == NBPF_Q_HOST) {
             printf(" IP:%s", bpf_intoaV4(ntohl(n->ip), tmp, sizeof(tmp)));
-          } else if (n->qualifiers.address == NBPF_Q_NET) {
+          } else if(n->qualifiers.address == NBPF_Q_NET) {
             printf(" Net:%s", bpf_intoaV4(ntohl(n->ip & n->mask), tmp, sizeof(tmp)));
     	  }
         } else {
@@ -144,11 +151,11 @@ static void dump_tree(nbpf_node_t *n, int level) {
   	         n->ip6[8], n->ip6[9], n->ip6[10], n->ip6[11], n->ip6[12], n->ip6[13], n->ip6[14], n->ip6[15]);
         }
 
-      } else if (n->qualifiers.address == NBPF_Q_PORT) {
+      } else if(n->qualifiers.address == NBPF_Q_PORT) {
         printf(" Port:%d", ntohs(n->port_from));
-	if (n->port_to != n->port_from) printf("-%d", ntohs(n->port_to));
+	if(n->port_to != n->port_from) printf("-%d", ntohs(n->port_to));
 
-      } else if (n->qualifiers.address == NBPF_Q_L7PROTO) {
+      } else if(n->qualifiers.address == NBPF_Q_L7PROTO) {
         printf(" L7Proto:%d", n->l7protocol);
       }
 
@@ -175,12 +182,12 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
 
   if(c->ip_version) printf("[IPv%d] ", c->ip_version);
 
-  if (c->vlan) {
-    if (c->vlan_id) printf("[VLAN: %u] ", c->vlan_id);
+  if(c->vlan) {
+    if(c->vlan_id) printf("[VLAN: %u] ", c->vlan_id);
     else            printf("[VLAN] ");
   }
-  if (c->mpls) {
-    if (c->mpls_label) printf("[MPLS: %u] ", c->mpls_label);
+  if(c->mpls) {
+    if(c->mpls_label) printf("[MPLS: %u] ", c->mpls_label);
     else               printf("[MPLS] ");
   }
   if(c->proto)      printf("[L4 Proto: %u] ", c->proto);
@@ -190,22 +197,22 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
 
     printf("[");
 
-    if (c->shost.v4) printf("%s", bpf_intoaV4(ntohl(c->shost.v4), a, sizeof(a)));
+    if(c->shost.v4) printf("%s", bpf_intoaV4(ntohl(c->shost.v4), a, sizeof(a)));
     else printf("*");
     printf(":");
-    if (c->sport_low) {
+    if(c->sport_low) {
       printf("%u", ntohs(c->sport_low));
-      if (c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
+      if(c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
     } else printf("*");
 
     printf(" -> ");
 
-    if (c->dhost.v4) printf("%s", bpf_intoaV4(ntohl(c->dhost.v4), a, sizeof(a)));
+    if(c->dhost.v4) printf("%s", bpf_intoaV4(ntohl(c->dhost.v4), a, sizeof(a)));
     else printf("*");
     printf(":");
-    if (c->dport_low) {
+    if(c->dport_low) {
       printf("%u", ntohs(c->dport_low));
-      if (c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
+      if(c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
     } else printf("*");
 
     printf("]");
@@ -214,28 +221,28 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
 
     printf("[");
 
-    if (c->shost.v4) printf("[%s]", bpf_intoaV6(&c->shost.v6, a, sizeof(a)));
+    if(c->shost.v4) printf("[%s]", bpf_intoaV6(&c->shost.v6, a, sizeof(a)));
     else printf("*");
     printf(":");
-    if (c->sport_low) {
+    if(c->sport_low) {
       printf("%u", ntohs(c->sport_low));
-      if (c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
+      if(c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
     } else printf("*");
 
     printf(" -> ");
 
-    if (c->dhost.v4) printf("[%s]", bpf_intoaV6(&c->dhost.v6, a, sizeof(a)));
+    if(c->dhost.v4) printf("[%s]", bpf_intoaV6(&c->dhost.v6, a, sizeof(a)));
     else printf("*");
     printf(":");
-    if (c->dport_low) {
+    if(c->dport_low) {
       printf("%u", ntohs(c->dport_low));
-      if (c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
+      if(c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
     } else printf("*");
 
     printf("] ");
   }
 
-  if (c->gtp) printf("[GTP] ");
+  if(c->gtp) printf("[GTP] ");
 
   printf("\n");
 }
@@ -287,7 +294,7 @@ void napatech_dump_rules(nbpf_rule_list_item_t *pun) {
 /* *********************************************************** */
 
 void help() {
-  printf("test [-n] -f \"BPF filter\"\n");
+  printf("nbpftest [-n] -f \"BPF filter\"\n");
   exit(0);
 }
 
@@ -318,16 +325,15 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (filter == NULL)
+  if(filter == NULL)
     help();
 
-  if ((tree = nbpf_parse(filter, NULL)) == NULL) {
+  if((tree = nbpf_parse(filter, NULL)) == NULL) {
     printf("Parse error\n");
     return -1;
   }
 
-  printf("Dumping BPF Tree\n"
-         "----------------\n");
+  printf("Dumping BPF Tree\n----------------\n");
   dump_tree(tree->root, 0);
 
   /* Generates rules list */
@@ -337,9 +343,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
 
-  printf("\n"
-	 "Dumping Rules\n"
-	 "-------------\n");
+  printf("\nDumping Rules\n-------------\n");
 
   dump_rules(pun);
 
@@ -348,9 +352,7 @@ int main(int argc, char *argv[]) {
 
   nbpf_rule_list_free(pun);
 
-  printf("\n"
-         "Testing Filtering\n"
-         "-----------------\n");
+  printf("\nTesting Filtering\n-----------------\n");
 
   memset(&pkt, 0, sizeof(pkt));
 
@@ -362,12 +364,12 @@ int main(int argc, char *argv[]) {
 #if 0
   nbpf_rdif_handle_t *rdif_handle = nbpf_rdif_init("eth1");
 
-  if (rdif_handle == NULL) {
+  if(rdif_handle == NULL) {
     printf("RDIF Init error\n");
     return -1;
   }
 
-  if (!nbpf_rdif_set_filter(rdif_handle, argv[1])){
+  if(!nbpf_rdif_set_filter(rdif_handle, argv[1])){
     printf("RDIF Set BPF error\n");
     return -1;
   }
