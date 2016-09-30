@@ -26,6 +26,7 @@ MACHINE=`uname -m`
 PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 
 dnl> Check for a modern pthread library
 AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
@@ -45,6 +46,22 @@ else
   PF_RING_ZC_OBJS=""
   PF_RING_ZC_DEP=""
   PF_RING_ZC_H=""
+  AC_MSG_RESULT(no)
+fi
+
+AC_MSG_CHECKING([PF_RING NPCAP support])
+if test -f $NPCAP_LIB; then
+  HAVE_NPCAP="-D HAVE_NPCAP"
+  NPCAP_OBJS=`ar t $NPCAP_LIB | grep -F .o | tr '\n' ' '`
+  NPCAP_DEP="extract_npcap_lib"
+  NPCAP_H="pfring_zc.h"
+  AC_MSG_RESULT(yes)
+else
+  NPCAP_LIB=""
+  HAVE_NPCAP=""
+  NPCAP_OBJS=""
+  NPCAP_DEP=""
+  NPCAP_H=""
   AC_MSG_RESULT(no)
 fi
 
@@ -261,6 +278,11 @@ AC_SUBST(PF_RING_ZC_LIB)
 AC_SUBST(PF_RING_ZC_OBJS)
 AC_SUBST(PF_RING_ZC_DEP)
 AC_SUBST(PF_RING_ZC_H)
+AC_SUBST(HAVE_NPCAP)
+AC_SUBST(NPCAP_LIB)
+AC_SUBST(NPCAP_OBJS)
+AC_SUBST(NPCAP_DEP)
+AC_SUBST(NPCAP_H)
 AC_SUBST(HAVE_DAG)
 AC_SUBST(DAG_LIB)
 AC_SUBST(DAG_OBJS)
