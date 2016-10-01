@@ -63,6 +63,11 @@
 #include "pfring_mod_exablaze.h"
 #endif
 
+#ifdef HAVE_NPCAP
+/* n2disk timeline */
+#include "pfring_mod_timeline.h"
+#endif
+
 #ifdef HAVE_PF_RING_ZC
 extern int pfring_zc_open(pfring *ring);
 #endif
@@ -135,6 +140,14 @@ static pfring_module_info pfring_module_list[] = {
     .open = pfring_zc_open,
   },
 #endif
+
+#ifdef HAVE_NPCAP
+  {
+    .name = "timeline",
+    .open = pfring_timeline_open,
+  },
+#endif
+
   {0}
 };
 
