@@ -924,6 +924,12 @@ int main(int argc, char* argv[]) {
       fprintf(stderr, "Error setting device clock\n");
   }
 
+  if((rc = pfring_set_direction(pd, direction)) != 0)
+    ; //fprintf(stderr, "pfring_set_direction returned %d (perhaps you use a direction other than rx only with ZC?)\n", rc);
+
+  if((rc = pfring_set_socket_mode(pd, recv_only_mode)) != 0)
+    fprintf(stderr, "pfring_set_socket_mode returned [rc=%d]\n", rc);
+
   if(bpfFilter != NULL) {
     rc = pfring_set_bpf_filter(pd, bpfFilter);
     if(rc != 0)
@@ -936,12 +942,6 @@ int main(int argc, char* argv[]) {
     rc = pfring_set_cluster(pd, clusterId, cluster_per_flow_5_tuple);
     printf("pfring_set_cluster returned %d\n", rc);
   }
-
-  if((rc = pfring_set_direction(pd, direction)) != 0)
-    ; //fprintf(stderr, "pfring_set_direction returned %d (perhaps you use a direction other than rx only with ZC?)\n", rc);
-
-  if((rc = pfring_set_socket_mode(pd, recv_only_mode)) != 0)
-    fprintf(stderr, "pfring_set_socket_mode returned [rc=%d]\n", rc);
 
   if(watermark > 0) {
     if((rc = pfring_set_poll_watermark(pd, watermark)) != 0)
