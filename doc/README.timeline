@@ -1,0 +1,40 @@
+n2disk timeline module
+----------------------
+
+This module can be used to seamlessly extract traffic from a n2disk timeline using the PF_RING API.
+n2disk is a traffic recording application producing multiple PCAP files (a per-file limit in duration 
+or size can be used to control the file size), an index per file, and a timeline for keeping all the 
+files in chronological order. Thanks to this module it is possible to query the timeline for specific
+packets belonging to the whole dump set in a given time interval, matching a specific BPF filter.
+
+In order to use the timeline module, you should use the "timeline:" prefix followed by the timeline path.
+The BPF filter, provided through PF_RING, must contain the time interval ("start" and "end") followed by
+the actual packet filter (a subset of the BPF syntax is supported, please refer to the n2disk documentation).
+
+Example:
+
+# pfcount -i timeline:/storage/n2disk/eth1 -f "start 2016-09-22 8:40:53 and end 2016-09-22 10:43:54 and host 192.168.2.130"
+
+Wireshark support
+-----------------
+
+One of the most common use cases for the timeline module is the Wireshark integration, in fact it is very 
+convenient to run wireshark directly on a n2disk timeline, specifying a BPF filter for extracting a small
+portion of the whole dump set, and starting the analysis task while the extraction is progressing.
+Since you cannot use timeline:<path> as interface name (Wireshark lets you choose PCAP files and devices 
+as traffic sources, but it is not aware of n2disk timelines), you have to create a virtual interface 
+(which is just a placeholder) bound to your actual timeline, and select it as traffic source. The 
+PF_RING-aware libpcap will do all the rest. In order to create the virtual interface please use the 
+'n2interface' script under the misc folder at https://github.com/ntop/n2disk
+
+Example:
+
+# ./n2interface up -t /storage/n2disk/eth1 -d timeline0
+
+Now you should be able to run an extraction using Wireshark (or tshark) setting the LD_LIBRARY_PATH
+for loading the correct PF_RING-aware libpcap.
+
+Example:
+
+# LD_LIBRARY_PATH=/usr/local/lib/ tshark -i timeline0  -f "start 2016-09-22 8:40:53 and end 2016-09-22 10:43:54 and host 192.168.2.130"
+
