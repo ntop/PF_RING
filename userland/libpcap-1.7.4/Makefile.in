@@ -53,8 +53,6 @@ PF_RING_LIBS= ../lib/libpfring.a -lpthread -lrt
 INCLS = -I. $(PF_RING_INCLUDES) @V_INCLS@
 DEFS = @DEFS@ @V_DEFS@ -DHAVE_PF_RING @HAVE_NPCAP@ 
 MACHINE=$(shell uname -m)
-LIBNPCAP=@LIBNPCAP@
-NPCAPOBJS = @NPCAPOBJS@
 ADDLOBJS = @ADDLOBJS@
 ADDLARCHIVEOBJS = @ADDLARCHIVEOBJS@
 LIBS = $(PF_RING_LIBS) @LIBS@
@@ -96,7 +94,7 @@ CSRC =	pcap.c inet.c gencode.c optimize.c nametoaddr.c etherent.c \
 	savefile.c sf-pcap.c sf-pcap-ng.c pcap-common.c \
 	bpf_image.c bpf_dump.c
 GENSRC = scanner.c grammar.c bpf_filter.c version.c
-LIBOBJS = @LIBOBJS@ $(NPCAPOBJS)
+LIBOBJS = @LIBOBJS@
 
 SRC =	$(PSRC) $(FSRC) $(CSRC) $(SSRC) $(GENSRC)
 
@@ -304,7 +302,7 @@ EXTRA_DIST = \
 
 all: libpcap.a shared pcap-config
 
-libpcap.a: @EXTRACT_LIBNPCAP@ $(OBJ)
+libpcap.a: $(OBJ)
 	@rm -f $@
 	$(AR) rc $@ $(OBJ) $(ADDLARCHIVEOBJS)
 	$(RANLIB) $@
@@ -386,9 +384,6 @@ libpcap.shareda: $(OBJ)
 # don't support shared libraries).
 #
 libpcap.none:
-
-extract_libnpcap:
-	ar x $(LIBNPCAP)
 
 scanner.c: $(srcdir)/scanner.l
 	@rm -f $@ $@.bottom

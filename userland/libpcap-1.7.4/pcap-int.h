@@ -265,13 +265,7 @@ struct pcap {
 #ifdef HAVE_PF_RING
 	pfring *ring;
 	char *bpf_filter;
-	nbpf_tree_t *nbpf_filter;
-	char *real_device;
 	char *timeline;
-	time_t timeline_start, timeline_end;
-#ifdef HAVE_NPCAP
-	timeline_extract_handle_t *timeline_handle;
-#endif
 #endif
 #ifdef HAVE_NPCAP
 	npcap_fd_t *npcapfd;

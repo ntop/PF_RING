@@ -1156,12 +1156,7 @@ static void	pcap_cleanup_linux( pcap_t *handle )
 #endif /* IW_MODE_MONITOR */
 
 #ifdef HAVE_PF_RING
-#ifdef HAVE_NPCAP
-	if (handle->timeline != NULL) {      free(handle->timeline); handle->timeline = NULL; }
-	if (handle->timeline_handle != NULL) timeline_extract_close(handle->timeline_handle);
-	if (handle->nbpf_filter != NULL) nbpf_free(handle->nbpf_filter);
-#endif
-	if (handle->real_device != NULL) free(handle->real_device);
+	if (handle->timeline != NULL) { free(handle->timeline); handle->timeline = NULL; }
 	if (handle->ring != NULL) {
 		pfring_close(handle->ring);
 		handle->ring = NULL;
@@ -1331,7 +1326,7 @@ static int is_dummy_interface(const char *device, char **path, char **interface)
 		if (buffer[strlen(buffer) - 1] == '\n') buffer[strlen(buffer) - 1] = '\0';
 
 		if (strncmp(buffer, type_token, sizeof(type_token) - 1) == 0) {
-			
+			// nothing to do
 		} else if (strncmp(buffer, path_token, sizeof(path_token) - 1) == 0) {
 			*path = strdup(&buffer[sizeof(path_token) - 1]);
 		} else if (strncmp(buffer, interface_token, sizeof(interface_token) - 1) == 0) {
@@ -1343,97 +1338,6 @@ static int is_dummy_interface(const char *device, char **path, char **interface)
 
 	return 1;
 }
-
-#ifdef HAVE_NPCAP
-static int
-pcap_setfilter_timeline(pcap_t *handle, struct bpf_program *filter) 
-{
-	if (!handle)
-		return -1;
-
-	if (install_bpf_program(handle, filter) < 0)
-		return -1;
-
-	//printf("timeline_extract_open(%s, %u, %u, %p)\n", handle->bpf_filter, handle->timeline_start, handle->timeline_end, handle->nbpf_filter);	
-	handle->timeline_handle = timeline_extract_open(handle->timeline, handle->timeline_start, handle->timeline_end, handle->nbpf_filter, NULL);
-
-	if (handle->timeline_handle == NULL)
-		return -1;
-
-	/* Nothing to do with nbpf_filter */
-
-	return 0;
-}
-
-static int
-pcap_read_timeline(pcap_t *handle, int max_packets, pcap_handler callback, u_char *user)
-{
-	struct pcap_linux *handlep = handle->priv;
-	struct pcap_file_header *file_header;
-        struct pfring_pkthdr pcap_header;
-        struct bpf_aux_data aux_data;
-	struct pcap_disk_pkthdr *extracted_hdr;
-	u_char *extracted_pkt;
-	u_int64_t match_epoch_nsec;
-	int convert_endian, caplen;
-
-	if (!handle->timeline_handle) /* setfilter has not been called or an error occurred */
-		return -1;
-
-	if (handle->break_loop) {
-		handle->break_loop = 0;
-		return -2;
-	}
-
-	errno = 0;
-
-	caplen = timeline_extract_next(handle->timeline_handle, &extracted_hdr, &extracted_pkt, &match_epoch_nsec);
-
-	if (caplen <= 0) /* Done with extraction */
-		return -2;
-
-	file_header = timeline_extract_header(handle->timeline_handle);
-	convert_endian = (file_header->snaplen > 0x4000);
-
-	if (convert_endian) {
-		pcap_header.caplen = ntohl(extracted_hdr->caplen);
-		pcap_header.len = ntohl(extracted_hdr->len);
-		pcap_header.ts.tv_sec = ntohl(extracted_hdr->ts.tv_sec);
-		pcap_header.ts.tv_usec = ntohl(extracted_hdr->ts.tv_usec);
-	} else {
-		pcap_header.caplen = extracted_hdr->caplen;
-		pcap_header.len = extracted_hdr->len;
-		pcap_header.ts.tv_sec = extracted_hdr->ts.tv_sec;
-		pcap_header.ts.tv_usec = extracted_hdr->ts.tv_usec;
-	}
-
-	pcap_header.caplen = min(pcap_header.caplen, handle->bufsize);
-
-	/* Standard BPF fallback
-	if (handle->fcode.bf_insns) {
-		if (bpf_filter_with_aux_data(handle->fcode.bf_insns, extracted_pkt,
-		    pcap_header.len, pcap_header.caplen, &aux_data) == 0)
-			return 0;
-	} 
-	*/
-
-	handlep->packets_read++;
-
-	callback(user, (struct pcap_pkthdr*) &pcap_header, extracted_pkt);
-
-	return 1;
-}
-
-static int
-pcap_stats_timeline(pcap_t *handle, struct pcap_stat *stats)
-{
-	struct pcap_linux *handlep = handle->priv;
-	handlep->stat.ps_recv = handlep->packets_read;
-	handlep->stat.ps_drop = 0;
-	*stats = handlep->stat;
-	return 0;
-}
-#endif
 #endif
 
 /*
@@ -1511,6 +1415,8 @@ pcap_activate_linux(pcap_t *handle)
 		char *clusterId;
 		int flags = PF_RING_TIMESTAMP;
 		char *appname, *active = getenv("PCAP_PF_RING_ACTIVE_POLL"), *rss_rehash;
+		char timeline_device[256];
+		char *real_device = NULL;
 
 		if (handle->opt.promisc) flags |= PF_RING_PROMISC;
 		if (getenv("PCAP_PF_RING_DNA_RSS" /* deprecated (backward compatibility) */ )) flags |= PF_RING_ZC_SYMMETRIC_RSS;
@@ -1520,21 +1426,19 @@ pcap_activate_linux(pcap_t *handle)
 
 		if (active) pf_ring_active_poll = atoi(active);
 
-		if (is_dummy_interface(device, &handle->timeline, &handle->real_device)) {
-#ifdef HAVE_NPCAP
-			if (handle->timeline != NULL) {
-				handle->inject_op = NULL;
-				handle->setfilter_op = pcap_setfilter_timeline;
-				handle->read_op = pcap_read_timeline;
-				handle->stats_op = pcap_stats_timeline;
-			} else 
-#endif
-			if (handle->real_device != NULL) {
-				device = handle->real_device;
+		if (is_dummy_interface(device, &handle->timeline, &real_device)) {
+			if (real_device != NULL) {
+				device = real_device;
+			} else if (handle->timeline) {
+				snprintf(timeline_device, sizeof(timeline_device), "timeline:%s", handle->timeline);
+				device = timeline_device; 
 			}
 		}
 
 		handle->ring = pfring_open((char *) device, handle->snapshot, flags);
+
+		if (real_device != NULL) free(real_device);
+		device = real_device = NULL;
 
 		if (handle->ring != NULL) {
 
@@ -1701,10 +1605,7 @@ pcap_activate_linux(pcap_t *handle)
 #ifdef HAVE_PF_RING
 	if (handle->ring != NULL) {
         	pfring_enable_ring(handle->ring);
-		if (handle->timeline)
-			handle->selectable_fd = -1;
-		else
-			pfring_get_selectable_fd(handle->ring);
+		handle->selectable_fd = pfring_get_selectable_fd(handle->ring);
 	} else
 #endif
 	handle->selectable_fd = handle->fd;

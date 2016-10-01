@@ -426,57 +426,6 @@ static bpf_u_int32 netmask;
 static int snaplen;
 int no_optimize;
 
-#ifdef HAVE_PF_RING
-#ifdef HAVE_NPCAP
-char *strcasestr(const char *haystack, const char *needle);
-// Format: start "2016-09-29 14:42:53" and end "2016-09-29 14:42:54" [and <BPF>]
-static const char *
-timeline_filter_parse_start_end(const char *filter, time_t *start, time_t *end) {
-	char start_str[64], end_str[64], *t;
-	struct tm start_tm, end_tm;
-	const char *s, *se = NULL, *a = NULL, *e, *ee, *ret;
-
-	if (strncasecmp(filter, "start ", strlen("start ")) != 0) return NULL;
-	s = &filter[strlen("start ")];
-
-	if ((a = (const char *) strcasestr(s, " and ")) == NULL) a = s;
-	else se = a;	
-
-	if ((e = (const char *) strcasestr(a, " end ")) == NULL) return NULL;
- 	if (se == NULL) se = e;
-	e = &e[strlen(" end ")];
-
-	if (se-s >= sizeof(start_str)) return NULL;
- 	strncpy(start_str, s, se-s);
- 	start_str[se-s] = '\0';
-
-	if ((a = (const char *) strcasestr(e, " and ")) == NULL) { ee = &e[strlen(e)]; ret = ee; }
-	else { ee = a; ret = &a[strlen(" and ")]; }
-	
-	if (ee-e >= sizeof(end_str)) return NULL;
- 	strncpy(end_str, e, ee-e);
- 	end_str[ee-e] = '\0';
-
-        t = start_str; while (*t != '\0') { if (*t == '"') *t = ' '; t++; }
-        t = end_str;   while (*t != '\0') { if (*t == '"') *t = ' '; t++; }
-
-	//printf("found interval: <%s,%s>\n", start_str, end_str);
-
-	if (strptime(start_str, "%Y-%m-%d %H:%M:%S", &start_tm) &&
-    	   strptime(end_str,    "%Y-%m-%d %H:%M:%S", &end_tm)) {
-		start_tm.tm_isdst = -1;
-		*start = mktime(&start_tm);
-		end_tm.tm_isdst = -1;
-		*end = mktime(&end_tm);
-		//printf("returning <%u,%u,%s>\n", *start, *end, ret);
-		return ret;
-	}
-
-	return NULL;
-}
-#endif
-#endif
-
 int
 pcap_compile(pcap_t *p, struct bpf_program *program,
 	     const char *buf, int optimize, bpf_u_int32 mask)
@@ -489,23 +438,25 @@ pcap_compile(pcap_t *p, struct bpf_program *program,
 #ifdef HAVE_PF_RING
 	if (p->ring || p->timeline) {
 		if (buf != NULL) {
-#ifdef HAVE_NPCAP
-			if (p->timeline) {
-				/* Note: we are parsing and removing start/end from the filter for several reason:
-				 * 1. we do not want to add timeline-specific syntax to the generic bpf
-				 * 2. start/end are global constraints (they cannot be mixed with other primitives and nested)
-				 * 3. we want to remove start/end from the filter in order to let pcap compile it as fallback */
-				xbuf = timeline_filter_parse_start_end(xbuf, &p->timeline_start, &p->timeline_end);
-				if (xbuf == NULL) 
-					return -1;
-				p->nbpf_filter = nbpf_parse(xbuf, NULL /* l7 callback */);
-				if (p->nbpf_filter == NULL)
-						return -1;
-			}
-#endif
-			p->bpf_filter = strdup(xbuf);
+			p->bpf_filter = strdup(buf);
 			if (p->bpf_filter == NULL)
 				return -1;
+			if (p->timeline) {
+#if 0
+				/* Returning an empty filter as it is likely to be not supported 
+				 * by standard BPF (at least start/end time) */
+				program->bf_insns = calloc(1, sizeof(*program->bf_insns));
+				if (program->bf_insns) {
+					program->bf_len = 1;
+					program->bf_insns->code = BPF_RET;
+					program->bf_insns->jt = 0;
+					program->bf_insns->jf = 0;
+					program->bf_insns->k = 256;		
+					rc = 0;
+				}
+#endif
+				return 0;
+			}
 		}
 	}
 #endif
@@ -592,25 +543,6 @@ quit:
 
 #ifdef WIN32
 	LeaveCriticalSection(&g_PcapCompileCriticalSection);
-#endif
-
-#ifdef HAVE_PF_RING
-#ifdef HAVE_NPCAP
-	if (p->timeline) {
-		if (rc != 0) {
-			/* Returning an empty filter as this seems to be not supported by standard BPF */
-			program->bf_insns = calloc(1, sizeof(*program->bf_insns));
-			if (program->bf_insns) {
-				program->bf_len = 1;
-				program->bf_insns->code = BPF_RET;
-				program->bf_insns->jt = 0;
-				program->bf_insns->jf = 0;
-				program->bf_insns->k = 256;		
-				rc = 0;
-			}
- 		}
-	}
-#endif
 #endif
 
 	return (rc);

@@ -661,9 +661,6 @@ RANLIB
 V_YACC
 V_LEX
 HAVE_NPCAP
-EXTRACT_LIBNPCAP
-NPCAPOBJS
-LIBNPCAP
 HAVE_LINUX_TPACKET_AUXDATA
 LIBOBJS
 EGREP
@@ -6454,9 +6451,6 @@ LIBS="$LIBS `../lib/pfring_config --libs`"
 
 
 # NPCAP - Default disabled
-LIBNPCAP=""
-NPCAPOBJS=""
-EXTRACT_LIBNPCAP=""
 HAVE_NPCAP=""
 # Check whether --enable-npcap was given.
 if test "${enable_npcap+set}" = set; then :
@@ -6464,24 +6458,13 @@ if test "${enable_npcap+set}" = set; then :
 fi
 
 if test "x$enable_npcap" = "xyes"; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we have NPCAP support" >&5
-$as_echo_n "checking whether we have NPCAP support... " >&6; }
-	MACHINE=`uname -m`
-	if test -f "libnpcap_${MACHINE}.a"; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	        LIBNPCAP='libnpcap_${MACHINE}.a'
-		NPCAPOBJS='$(shell ar t libnpcap_${MACHINE}.a | grep .o)'
-		EXTRACT_LIBNPCAP="extract_libnpcap"
-		HAVE_NPCAP="-DHAVE_NPCAP"
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+	HAVE_NPCAP="-DHAVE_NPCAP"
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-	fi
 fi
-
-
-
 
 
 
