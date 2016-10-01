@@ -80,3 +80,18 @@ Napatech and Packet Copy
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
 if you use PF_RING ZC API, there is a per-packet copy requested to move
 payload data from Napatech-memory to ZC memory. Keep this in mind!
+
+Transmission Support
+--------------------
+In order to use Napatech in transmission you neeed to make sure you have
+configured TX properly. Edit /opt/napatech3/config/ntservice.ini and
+make sure you have the following sections configured
+
+[Adapter0]
+..
+HostBuffersTx = [4,16,0]
+..
+
+[Debug]
+RntcTxEnable=1
+
