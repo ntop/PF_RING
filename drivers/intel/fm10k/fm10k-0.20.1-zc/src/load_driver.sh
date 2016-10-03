@@ -72,16 +72,28 @@ for IF in $INTERFACES ; do
 	fi
 done
 
+#if you have Silicom card (rdif and rdifctl installed),
+#configure the switch
+IS_RDIF_INSTALLED=`which rdif | wc -l`
+IS_RDIFCTL_INSTALLED=`which rdifctl | wc -l`
+
+if [ "$IS_RDIF_INSTALLED" -eq 1 ]; then
+        if [ "$IS_RDIFCTL_INSTALLED" -eq 1 ]; then
+                IS_SILICOM=1
+        fi
+fi
+
 
 if [ "$IS_SILICOM" -eq 1 ]; then
 	nohup rdif start &
 
-	sleep 2
+	sleep 4
 
 	# Configure the switch to act as a standard NIC
 	# Note: 
 	# 1,2 are the external ports
 	# 3,4 are the internal interfaces
+        rdifctl set_cfg 5
 	rdifctl set_port_mask 3 1
 	rdifctl set_port_mask 1 3
 	rdifctl set_port_mask 2 4
