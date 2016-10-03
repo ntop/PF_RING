@@ -85,6 +85,7 @@ fi
 
 
 if [ "$IS_SILICOM" -eq 1 ]; then
+        rdif stop
 	nohup rdif start &
 
 	sleep 4
