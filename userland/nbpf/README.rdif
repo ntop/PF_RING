@@ -16,7 +16,7 @@ This library is part of libpfring, in order to compile libpfring with RRC
 filtering support you have to install the librdif library and configure/make
 libpfring.
 
-Please make sure you have run rdif daemon running before using this functionality.
+Please make sure you have run rdif daemon running before using this functionality. 
 
 API
 ---
@@ -64,3 +64,43 @@ The API of nBPF module for Intel RRC includes the following functions:
      - handle -> data structure that contains the bpf rdif data. This handle is returned 
                  from nbpf_rdif_init function. Before exiting, the function frees the
                  dinamic memory.
+
+Pre-Requirements
+----------------
+Before using nbpf filter, please install rdif deamon and rdifctl application.
+Please get "RRC_100G_1R1b" package (owned by Silicom) and run these commands:
+
+cd RRC_100G_1R1b/Linux/Redirect/RD_RRC_Control
+tar xzvf rdif-*.tar.gz
+cp fm_platform_attributes.cfg rdif-*/driver/
+cd rdif-*/
+./clean
+./install
+
+Then load the fm10k driver:
+
+cd PF_RING/drivers/intel/fm10k/fm10k-0.20.1-zc/src/
+$ make
+$ ./load_driver.sh 
+
+Now everything is ready to set a bpf filter on the NIC card.
+
+Useful for testing
+------------------
+You can use some commands to get stats about the packets that match with the rule you have 
+set on the switch. 
+The Silicom PE3100G2DQIR has two interfaces and two rules groups are set the bpf filter (group 1
+for the first one and group 2 for the second one).
+
+Commands:
+- "rdifctl query_list 1" return how many rules the bpf filter has set on the switch for group 1 (interface 1)
+- "rdifctl query_list 2" return how many rules the bpf filter has set on the switch for group 2 (interface 2)
+- "sudo rdifctl rule_stat 1 1" how many packets of group 1 match with the rule 1
+- "sudo rdifctl rule_stat 1 2" how many packets of group 1 match with the rule 2
+- ect
+
+Tipically when a bpf filter is set you have two rule. For instance for "src host 10.0.0.1" bpf filter you have:
+
+rule 1: permit traffic with src ip 10.0.0.1
+rule 2: deny all
+
