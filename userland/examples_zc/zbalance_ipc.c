@@ -491,7 +491,7 @@ int main(int argc, char* argv[]) {
     num_additional_buffers += (n2disk_threads * (N2DISK_CONSUMER_QUEUE_LEN + 1)) + N2DISK_PREFETCH_BUFFERS;
   }
 
-  if (hw_aggregation) {
+  if (!hw_aggregation) {
     dev = strtok(device, ",");
     while(dev != NULL) {
       devices = realloc(devices, sizeof(char *) * (num_devices+1));
