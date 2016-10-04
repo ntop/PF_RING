@@ -95,3 +95,13 @@ HostBuffersTx = [4,16,0]
 [Debug]
 RntcTxEnable=1
 
+Hardware Filtering
+------------------
+Napatech NICs support full-blown hardware filtering  out of the box. Thanks
+to nBPF we convert BPF expressions to hardware filters. This feature is
+upported transparently, and thus all PF_RING/libpcap-over-PF_RING can benefit
+from it.
+
+Example: pfcount -i nt:3 -f "tcp and port 80 and src host 192.168.1.1"
+
+As Napatech harware filters are very advanced, filtering happens all in hardware.

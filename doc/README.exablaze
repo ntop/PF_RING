@@ -65,3 +65,15 @@ Example:
 
 # pfsend -i exanic:enp6s0
 # pfcount -i exanic:enp6s0@1 <== @1 means connect the application to RSS queue 1
+
+Hardware Filtering
+------------------
+Exablaze NICs support (limited, e.g. IPv6 is not supported) hardware filtering
+out of the box. Thanks to nBPF we convert BPF expressions to hardware filters.
+This feature is supported transparently, and thus all PF_RING/libpcap-over-PF_RING
+can benefit from it.
+
+Example: pfcount -i exanic:enp6s0d4 -f "udp and port 3001"
+
+When a BPF filter cannot be mapped 1:1 to a hardware filter, software packet
+filtering will take place to guarantee that the specified filter is enforced.

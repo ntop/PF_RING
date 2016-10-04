@@ -87,28 +87,103 @@ static void __pfring_exablaze_release_resources(pfring *ring) {
 static int __pfring_exablaze_check_ip_rules(pfring_exablaze *exablaze,
 					    nbpf_rule_list_item_t *pun) {
   u_int num_filters = 0;
-  
+
   /* Scan the list and set the single rule */
   while(pun != NULL) {
     nbpf_rule_core_fields_t *c = &pun->fields;
-      
-    if(c->ip_version != 4) return(-1); /* Hardware IPv6 filters are not supported */
+
+    if(c->ip_version == 6) return(-1); /* Hardware IPv6 filters are not supported */
     if(c->vlan_id != 0) return(-2);
     if(c->sport_low != c->sport_high) return(-3); /* Ranges are not supported */
     if(c->dport_low != c->dport_high) return(-3); /* Ranges are not supported */
 
     if(++num_filters >= 128) return(-4); /* Too many filters */
-      
+
     pun = pun->next;
   }
 
   return(0);
 }
 
+/* *********************************************************** */
+
+#ifdef DEBUG
+static void exablaze_dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
+  printf("[%u] ", id);
+
+  if(c->ip_version) printf("[IPv%d] ", c->ip_version);
+
+  if(c->vlan) {
+    if(c->vlan_id) printf("[VLAN: %u] ", c->vlan_id);
+    else            printf("[VLAN] ");
+  }
+  if(c->mpls) {
+    if(c->mpls_label) printf("[MPLS: %u] ", c->mpls_label);
+    else               printf("[MPLS] ");
+  }
+  if(c->proto)      printf("[L4 Proto: %u] ", c->proto);
+
+  if(!c->ip_version || c->ip_version == 4) {
+    char a[32];
+
+    printf("[");
+
+    if(c->shost.v4) printf("%s", bpf_intoaV4(ntohl(c->shost.v4), a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if(c->sport_low) {
+      printf("%u", ntohs(c->sport_low));
+      if(c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
+    } else printf("*");
+
+    printf(" -> ");
+
+    if(c->dhost.v4) printf("%s", bpf_intoaV4(ntohl(c->dhost.v4), a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if(c->dport_low) {
+      printf("%u", ntohs(c->dport_low));
+      if(c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
+    } else printf("*");
+
+    printf("]");
+  } else if(c->ip_version == 6) {
+    char a[64];
+
+    printf("[");
+
+    if(c->shost.v4) printf("[%s]", bpf_intoaV6(&c->shost.v6, a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if(c->sport_low) {
+      printf("%u", ntohs(c->sport_low));
+      if(c->sport_high && c->sport_high != c->sport_low) printf("-%u", ntohs(c->sport_high));
+    } else printf("*");
+
+    printf(" -> ");
+
+    if(c->dhost.v4) printf("[%s]", bpf_intoaV6(&c->dhost.v6, a, sizeof(a)));
+    else printf("*");
+    printf(":");
+    if(c->dport_low) {
+      printf("%u", ntohs(c->dport_low));
+      if(c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
+    } else printf("*");
+
+    printf("] ");
+  }
+
+  if(c->gtp) printf("[GTP] ");
+
+  printf("\n");
+}
+#endif
+
 /* **************************************************** */
 
 static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
 					  nbpf_rule_list_item_t *pun) {
+  u_int i = 0;
 
   if(exablaze->rx == NULL) {
     if((exablaze->rx = exanic_acquire_unused_filter_buffer(exablaze->exanic,
@@ -120,6 +195,10 @@ static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
   while(pun != NULL) {
     exanic_ip_filter_t f;
 
+#ifdef DEBUG
+    exablaze_dump_rule(i++, &pun->fields);
+#endif
+    
     memset(&f, 0, sizeof(f));
     f.protocol = pun->fields.proto,
       f.src_addr = pun->fields.shost.v4, f.src_port = pun->fields.sport_low,
@@ -128,16 +207,6 @@ static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
     if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
       fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
       return(-1);
-    }
-
-    if(pun->bidirectional) {
-      f.dst_addr = pun->fields.shost.v4, f.dst_port = pun->fields.sport_low,
-        f.src_addr = pun->fields.dhost.v4, f.src_port = pun->fields.dport_low;
-
-      if(exanic_filter_add_ip(exablaze->exanic, exablaze->rx, &f) == -1) {
-        fprintf(stderr, "[EXABLAZE] exanic_filter_add_ip() error: %s\n", exanic_get_last_error());
-        return(-1);
-      }
     }
 
     pun = pun->next;
