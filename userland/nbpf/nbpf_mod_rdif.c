@@ -166,7 +166,7 @@ int __nbpf_rdif_get_interface_id(char *interface) {
       if(!(pent[i]->d_name[0] == '.' ||
 	   strcmp(pent[i]->d_name, "lo") == 0)) {
         if(__nbpf_rdif_is_supported(pent[i]->d_name)) {
-          int other_bus_id = __nbpf_rdif_get_bus_id(interface);
+          int other_bus_id = __nbpf_rdif_get_bus_id(pent[i]->d_name);
           if(other_bus_id != -1) {
             if(other_bus_id > bus_id) id = 0;
             else id = 1;
