@@ -183,8 +183,6 @@ static void exablaze_dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
 
 static int __pfring_exablaze_set_ip_rules(pfring_exablaze *exablaze,
 					  nbpf_rule_list_item_t *pun) {
-  u_int i = 0;
-
   if(exablaze->rx == NULL) {
     if((exablaze->rx = exanic_acquire_unused_filter_buffer(exablaze->exanic,
 							   exablaze->port_number)) == NULL)
