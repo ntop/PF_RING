@@ -1187,6 +1187,13 @@ int pfring_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
   rc = pfring_parse_bpf_filter(filter_buffer, ring->caplen, &ring->userspace_bpf_filter);
 
+#ifdef DEBUG
+#ifdef ENABLE_BPF
+  if (rc == 0)
+    bpf_dump(&ring->userspace_bpf_filter, 1);
+#endif
+#endif
+
   if(unlikely(ring->reentrant))
     pthread_rwlock_unlock(&ring->rx_lock);
 
