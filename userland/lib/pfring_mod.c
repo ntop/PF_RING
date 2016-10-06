@@ -959,6 +959,11 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
   rc = setsockopt(ring->fd, 0, SO_ATTACH_FILTER, &fcode, sizeof(fcode));
 
+#ifdef DEBUG
+  if (rc == 0)
+    bpf_dump(&filter, 1);
+#endif
+
   pcap_freecode(&filter);
 
   if (rc == -1)

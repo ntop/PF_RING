@@ -441,22 +441,8 @@ pcap_compile(pcap_t *p, struct bpf_program *program,
 			p->bpf_filter = strdup(buf);
 			if (p->bpf_filter == NULL)
 				return -1;
-			if (p->timeline) {
-#if 0
-				/* Returning an empty filter as it is likely to be not supported 
-				 * by standard BPF (at least start/end time) */
-				program->bf_insns = calloc(1, sizeof(*program->bf_insns));
-				if (program->bf_insns) {
-					program->bf_len = 1;
-					program->bf_insns->code = BPF_RET;
-					program->bf_insns->jt = 0;
-					program->bf_insns->jf = 0;
-					program->bf_insns->k = 256;		
-					rc = 0;
-				}
-#endif
+			if (p->timeline)
 				return 0;
-			}
 		}
 	}
 #endif
