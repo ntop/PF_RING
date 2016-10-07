@@ -44,3 +44,7 @@ tcpdump_clean:
 
 nbpf_clean:
 	cd nbpf; make clean
+
+install: libpfring pcap
+	cd lib; make install
+	cd libpcap; make install
