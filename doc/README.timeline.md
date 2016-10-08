@@ -64,7 +64,7 @@ LD_LIBRARY_PATH=/usr/local/lib/ tshark -i timeline0  -f "start 2016-09-22 8:40:5
 ```
 
 Note: if you are using the Wireshark GUI, you should run just the wireshark command without any option, then
-select the virtual interface from the GUI and set a capture filter as abobe.
+select the virtual interface from the GUI and set a capture filter as above.
 
 ```
 LD_LIBRARY_PATH=/usr/local/lib/ wireshark
