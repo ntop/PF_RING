@@ -769,6 +769,7 @@ int main(int argc, char* argv[]) {
 	printHelp();
         exit(-1);
       }
+      use_extended_pkt_header = 1;
       break;
     case 'f':
       bpfFilter = strdup(optarg);
