@@ -39,6 +39,11 @@ as traffic sources, but it is not aware of n2disk timelines), you have to create
 PF_RING-aware libpcap will do all the rest. In order to create the virtual interface please use the 
 'n2interface' script under the misc folder at https://github.com/ntop/n2disk
 
+```
+wget https://raw.githubusercontent.com/ntop/n2disk/master/misc/n2interface
+chmod +x n2interface
+```
+
 Example of creating a virtual interface using the n2interface tool:
 
 ``` 
