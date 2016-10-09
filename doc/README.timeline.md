@@ -7,6 +7,14 @@ or size can be used to control the file size), an index per file, and a timeline
 files in chronological order. Thanks to this module it is possible to query the timeline for specific
 packets belonging to the whole dump set in a given time interval, matching a specific BPF filter.
 
+## Requirements
+Install pfring and n2disk following the instruction at http://packages.ntop.org according to your 
+linux distribution and load the PF_RING kernel module:
+
+```
+/etc/init.d/pf_ring forcestart
+```
+
 ## Creating a dump set with n2disk
 This module extracts traffic from a n2disk dump set consisting of PCAP files, index files, and a timeline.
 In order to instruct n2disk to create on-the-fly indexes you should use the -I option. The -A <path> option
@@ -17,6 +25,8 @@ Command line example:
 ```
 n2disk -i eth1 -o /storage/n2disk/eth1 -I -A /storage/n2disk/eth1/timeline
 ```
+
+For additional options please refer to the n2disk documentation.
 
 ## Using the "timeline" module
 In order to tell PF_RING that you want to select the timeline module, you should use the "timeline:" prefix 
