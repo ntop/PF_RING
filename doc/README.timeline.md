@@ -47,17 +47,12 @@ Since you cannot use timeline:<path> as interface name (Wireshark lets you choos
 as traffic sources, but it is not aware of n2disk timelines), you have to create a virtual interface 
 (which is just a placeholder) bound to your actual timeline, and select it as traffic source. The 
 PF_RING-aware libpcap will do all the rest. In order to create the virtual interface please use the 
-'n2interface' script under the misc folder at https://github.com/ntop/n2disk
+'n2if' script (under the tools/ folder if you are not using packages). 
 
-```
-wget https://raw.githubusercontent.com/ntop/n2disk/master/misc/n2interface
-chmod +x n2interface
-```
-
-Example of creating a virtual interface using the n2interface tool:
+Example:
 
 ``` 
-n2interface up -t /storage/n2disk/eth1/timeline -d timeline0
+n2if up -t /storage/n2disk/eth1/timeline -d timeline0
 ``` 
 
 After creating the virtual interface bound to the timeline, you should be able to run an extraction using 
@@ -71,7 +66,7 @@ an ad-hoc symlink:
 ln -s /usr/local/lib/libpcap.so /usr/local/lib/libpcap.so.0.8 
 ``` 
 
-At this point you should be able to run Wireshark providing the virtual interface created with n2interface
+At this point you should be able to run Wireshark providing the virtual interface created with n2if
 and a BPF filter containing the time interval as described above:
 
 ```
