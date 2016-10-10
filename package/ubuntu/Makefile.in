@@ -55,6 +55,7 @@ pre-build-examples:
 #	cd $(PF_RING_HOME)/userland/tcpdump/ ; ./configure; make; cp tcpdump $(HERE)/debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland/examples; cp pfcount pfsend pfwrite $(HERE)/debian/usr/local/bin
 	cd $(PF_RING_HOME)/userland/examples_zc; cp zbalance_ipc zsend zcount zcount_ipc $(HERE)/debian/usr/local/bin
+	cd $(PF_RING_HOME)/tools; cp n2if $(HERE)/debian/usr/local/bin
 
 build-nodrivers: pre-kernel-nodrivers build
 

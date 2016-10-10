@@ -49,6 +49,7 @@ cp $HOME/PF_RING/userland/libpcap/libpcap.so.1.7.4	$RPM_BUILD_ROOT/usr/local/lib
 #cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
@@ -99,6 +100,7 @@ rm -fr $RPM_BUILD_ROOT
 #/usr/local/bin/tcpdump
 /usr/local/bin/pfcount
 /usr/local/bin/pfsend
+/usr/local/bin/n2if
 /usr/local/pfring/README.FIRST
 /usr/local/pfring/README-DAQ.1st
 /etc/init.d/pf_ring
