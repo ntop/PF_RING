@@ -145,7 +145,7 @@ void nbpf_free(nbpf_tree_t *t) {
 
 /* ****************************************** */
 
-static nbpf_tree_t *tree_parse(const char *buffer) {
+static nbpf_node_t *tree_parse(const char *buffer) {
 #ifdef HAVE_NDPI
   ndpi_struct = ndpi_init_detection_module();
 
@@ -168,25 +168,30 @@ static nbpf_tree_t *tree_parse(const char *buffer) {
   ndpi_exit_detection_module(ndpi_struct);
 #endif
 
-  return &tree_root;
+  return tree_root.root;
 }
 
 /* ****************************************** */
 
 nbpf_tree_t *nbpf_parse(const char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
   nbpf_tree_t *t = (nbpf_tree_t *) malloc(sizeof(nbpf_tree_t));
+  pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 
   if (t == NULL)
     return NULL;
 
   l7proto_by_name = l7proto_by_name_callback;
 
-  if (tree_parse(bpf_filter) == NULL) {
+  pthread_rwlock_wrlock(&lock);
+
+  t->root = tree_parse(bpf_filter);
+
+  pthread_rwlock_unlock(&lock);
+
+  if (t->root == NULL) {
     free(t);
     return NULL;
   }
-
-  t->root = tree_root.root;
 
   return t;
 }
