@@ -18,6 +18,7 @@ static l7protocol_by_name_func l7proto_by_name = NULL;
 #ifdef HAVE_NDPI
 static struct ndpi_detection_module_struct *ndpi_struct = NULL;
 #endif
+static pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 
 /* ****************************************** */
 
@@ -175,7 +176,6 @@ static nbpf_node_t *tree_parse(const char *buffer) {
 
 nbpf_tree_t *nbpf_parse(const char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
   nbpf_tree_t *t = (nbpf_tree_t *) malloc(sizeof(nbpf_tree_t));
-  pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 
   if (t == NULL)
     return NULL;
