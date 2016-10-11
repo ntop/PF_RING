@@ -66,6 +66,7 @@ Please note that:
    /opt/napatech3/config/ntservice.ini should contain:
      TimestampFormat = PCAP_NS
      PacketDescriptor = PCAP
+     HostBufferSegmentSizeRx = 4
 
 Compiling PF_RING apps with Napatech support on Ubuntu
 ------------------------------------------------------
