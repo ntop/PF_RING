@@ -1057,13 +1057,13 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
       }
     }
 
-    seq_printf(m, "Name:              %s\n", dev->name);
-    seq_printf(m, "Index:             %d\n", dev->ifindex);
-    seq_printf(m, "Address:           %02X:%02X:%02X:%02X:%02X:%02X\n",
+    seq_printf(m, "Name:         %s\n", dev->name);
+    seq_printf(m, "Index:        %d\n", dev->ifindex);
+    seq_printf(m, "Address:      %02X:%02X:%02X:%02X:%02X:%02X\n",
 	       dev->perm_addr[0], dev->perm_addr[1], dev->perm_addr[2],
 	       dev->perm_addr[3], dev->perm_addr[4], dev->perm_addr[5]);
     
-    seq_printf(m, "Polling Mode:      %s\n", dev_ptr->is_zc_device ? "NAPI/ZC" : "NAPI");
+    seq_printf(m, "Polling Mode: %s\n", dev_ptr->is_zc_device ? "NAPI/ZC" : "NAPI");
 
     switch(dev->type) {
     case 1:   strcpy(dev_buf, "Ethernet"); break;
@@ -1071,26 +1071,26 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     default: sprintf(dev_buf, "%d", dev->type); break;
     }
 
-    seq_printf(m, "Type:              %s\n", dev_buf);
-    seq_printf(m, "Family:            %s\n", dev_family);
+    seq_printf(m, "Type:         %s\n", dev_buf);
+    seq_printf(m, "Family:       %s\n", dev_family);
 
     if(!dev_ptr->is_zc_device) {
       if(dev->ifindex < MAX_NUM_IFIDX) {
-	seq_printf(m, "# Bound Sockets:   %d\n",
+	seq_printf(m, "# Bound Sockets:  %d\n",
 		   num_rings_per_device[dev->ifindex]);
       }
     }
 
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
-    seq_printf(m, "Max # TX Queues:   %d\n", dev->real_num_tx_queues);
+    seq_printf(m, "TX Queues:    %d\n", dev->real_num_tx_queues);
 #endif
 
-    seq_printf(m, "# Used RX Queues:  %d\n",
+    seq_printf(m, "RX Queues:    %d\n",
 	       dev_ptr->is_zc_device ? dev_ptr->num_zc_dev_rx_queues : get_num_rx_queues(dev));
 
     if(dev_ptr->is_zc_device) {
-      seq_printf(m, "Num RX Slots:      %d\n", dev_ptr->num_zc_rx_slots);
-      seq_printf(m, "Num TX Slots:      %d\n", dev_ptr->num_zc_tx_slots);
+      seq_printf(m, "Num RX Slots: %d\n", dev_ptr->num_zc_rx_slots);
+      seq_printf(m, "Num TX Slots: %d\n", dev_ptr->num_zc_tx_slots);
     }	
   }
 
