@@ -121,33 +121,34 @@ load_hugepages() {
 	check_hugepages
 	HUGEPAGES_NUMBER=0
 	if [ ${LOAD_HUGEPAGES} -eq 0 ]; then
-		return
 		#hugepages already loaded
-	else
-		if [ -f ${HUGEPAGES_CONFIG} ]; then
-			cat ${HUGEPAGES_CONFIG} | while read node ; do
-				HUGEPAGES_NODE=`echo ${node} | cut -d ' ' -f 1 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
-				HUGEPAGES_NUMBER=`echo ${node} | cut -d ' ' -f 2 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
-				if [ ${HUGEPAGES_NUMBER} -gt 0 ] && [ -f /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages ]; then
-					echo ${HUGEPAGES_NUMBER} >  /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
-				fi
-                HUGEPAGES_NODE=""
-                HUGEPAGES_NUMBER=""
-			done
-		else # set it to max available
-			#MEM_AVAIL=`grep MemFree /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'`;
-			#MEM_AVAIL=$(( MEM_AVAIL - 524288 ))
-			MEM_AVAIL=1048576 # 1GB Hugepages (this avoids consuming all memory at boot time, causing kernel panic)
-			HUGEPAGES_NUMBER=$(( MEM_AVAIL / HUGEPAGES_SIZE ))
-			if [ ${HUGEPAGES_NUMBER} -gt 0 ]; then
-				echo ${HUGEPAGES_NUMBER} > /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
-			fi
-		fi
-		if [ ! -d ${HUGEPAGES_MOUNTPOINT} ]; then
-			mkdir ${HUGEPAGES_MOUNTPOINT}
-		fi
-		mount -t hugetlbfs none ${HUGEPAGES_MOUNTPOINT}
+		return
 	fi
+
+	if [ -f ${HUGEPAGES_CONFIG} ]; then
+		cat ${HUGEPAGES_CONFIG} | while read node ; do
+			HUGEPAGES_NODE=`echo ${node} | cut -d ' ' -f 1 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
+			HUGEPAGES_NUMBER=`echo ${node} | cut -d ' ' -f 2 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
+			if [ ${HUGEPAGES_NUMBER} -gt 0 ] && [ -f /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages ]; then
+				echo ${HUGEPAGES_NUMBER} >  /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
+			fi
+			HUGEPAGES_NODE=""
+			HUGEPAGES_NUMBER=""
+		done
+	else # set it to default
+		# Computing max available
+		#MEM_AVAIL=`grep MemFree /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'`;
+		#MEM_AVAIL=$(( MEM_AVAIL - 524288 ))
+		MEM_AVAIL=1048576 # 1GB Hugepages (this avoids consuming all memory at boot time, causing kernel panic)
+		HUGEPAGES_NUMBER=$(( MEM_AVAIL / HUGEPAGES_SIZE ))
+		if [ ${HUGEPAGES_NUMBER} -gt 0 ]; then
+			echo ${HUGEPAGES_NUMBER} > /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
+		fi
+	fi
+	if [ ! -d ${HUGEPAGES_MOUNTPOINT} ]; then
+		mkdir ${HUGEPAGES_MOUNTPOINT}
+	fi
+	mount -t hugetlbfs none ${HUGEPAGES_MOUNTPOINT}
 }
 
 set_interface_mtu() {
@@ -242,11 +243,11 @@ load_driver() {
 
 load_zc() {
 	# load dependencies
-	/sbin/modprobe uio
-	/sbin/modprobe ptp
-	/sbin/modprobe vxlan
-	/sbin/modprobe dca
-	/sbin/modprobe configfs
+	/sbin/modprobe uio > /dev/null 2>&1
+	/sbin/modprobe ptp > /dev/null 2>&1
+	/sbin/modprobe vxlan > /dev/null 2>&1
+	/sbin/modprobe dca > /dev/null 2>&1
+	/sbin/modprobe configfs > /dev/null 2>&1
 
 	# load dkms drivers
 	# search for file under /etc/pf_ring/zc/{e1000e,igb,ixgbe,i40e,fm10k}/{e1000e,igb,ixgbe,i40e,fm10k}.conf
@@ -261,16 +262,16 @@ load_zc() {
 		done
 	done
 	
-	if [ ${DRIVER_INSTALLED} -eq 0 ]; then
-		echo "ZC drivers not loaded: missing driver or configuration"
-	fi
-
         CLUSTER_HUGEPAGES=0
         if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null |wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
                 LOAD_HUGEPAGES=1
         fi
 
-	if [ ${LOAD_HUGEPAGES} -eq 1 ]; then
+	if [ -f ${HUGEPAGES_CONFIG} ] ; then
+		LOAD_HUGEPAGES=1
+	fi
+
+	if [ ${LOAD_HUGEPAGES} -eq 1 ] ; then
 		load_hugepages
 	fi
 }
