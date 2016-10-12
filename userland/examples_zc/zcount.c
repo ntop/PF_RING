@@ -46,16 +46,12 @@
 #define MIN_BUFFER_LEN       1536
 #define CACHE_LINE_LEN         64
 
-#define NBUFF      256 /* pow */
-#define NBUFFMASK 0xFF /* 256-1 */
-
 //#define USE_BURST_API
 #define BURST_LEN   32
 
 pfring_zc_cluster *zc;
 pfring_zc_queue *zq;
-pfring_zc_pkt_buff *buffers[NBUFF];
-u_int32_t lru = 0;
+pfring_zc_pkt_buff *buffers[BURST_LEN];
 
 struct timeval startTime;
 unsigned long long numPkts = 0, numBytes = 0;
@@ -218,7 +214,7 @@ void *packet_consumer_thread(void *user) {
   while(!do_shutdown) {
 
 #ifndef USE_BURST_API
-    if(pfring_zc_recv_pkt(zq, &buffers[lru], wait_for_packet) > 0) {
+    if(pfring_zc_recv_pkt(zq, &buffers[0], wait_for_packet) > 0) {
 
       if (unlikely(time_pulse)) {
         u_int64_t now_ns = *pulse_timestamp_ns;
@@ -229,12 +225,10 @@ void *packet_consumer_thread(void *user) {
       }
 
       if (unlikely(verbose))
-        print_packet(buffers[lru]);
+        print_packet(buffers[0]);
 
       numPkts++;
-      numBytes += buffers[lru]->len + 24; /* 8 Preamble + 4 CRC + 12 IFG */
-
-      lru++; lru &= NBUFFMASK;
+      numBytes += buffers[0]->len + 24; /* 8 Preamble + 4 CRC + 12 IFG */
     }
 #else
     if((n = pfring_zc_recv_pkt_burst(zq, buffers, BURST_LEN, wait_for_packet)) > 0) {
@@ -319,7 +313,7 @@ int main(int argc, char* argv[]) {
     cluster_id, 
     buffer_len,
     0, 
-    MAX_CARD_SLOTS + NBUFF,
+    MAX_CARD_SLOTS + BURST_LEN,
     pfring_zc_numa_get_cpu_node(bind_core),
     NULL /* auto hugetlb mountpoint */ 
   );
@@ -353,7 +347,7 @@ int main(int argc, char* argv[]) {
     goto cleanup;
   }
 
-  for (i = 0; i < NBUFF; i++) { 
+  for (i = 0; i < BURST_LEN; i++) { 
 
     buffers[i] = pfring_zc_get_packet_handle(zc);
 
