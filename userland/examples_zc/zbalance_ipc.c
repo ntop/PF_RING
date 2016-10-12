@@ -564,7 +564,6 @@ int main(int argc, char* argv[]) {
   if (zc == NULL) {
     trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",
 	    strerror(errno));
-    pfring_zc_destroy_cluster(zc);
     return -1;
   }
 
