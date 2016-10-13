@@ -2683,7 +2683,7 @@ pcap_setfilter_linux_common(pcap_t *handle, struct bpf_program *filter,
 
 #ifdef HAVE_PF_RING
 	if (handle->ring) {
-		if (handle->bpf_filter) {
+		if (handle->bpf_filter && strlen(handle->bpf_filter) > 0) {
 			//printf("pcap_setfilter -> pfring_set_bpf_filter '%s'\n", handle->bpf_filter ? handle->bpf_filter : "");
 			return pfring_set_bpf_filter(handle->ring, handle->bpf_filter);
 		}
