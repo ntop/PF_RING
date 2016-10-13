@@ -336,6 +336,7 @@ static int packet_match_filter(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     case N_PRIMITIVE: return !!(n->not_rule- packet_match_primitive(n, h));
     case N_AND:       return !!(n->not_rule- (packet_match_filter(n->l, h) && packet_match_filter(n->r, h)));
     case N_OR:        return !!(n->not_rule- (packet_match_filter(n->l, h) || packet_match_filter(n->r, h)));
+    case N_EMPTY:     return 1;
     default:          DEBUG_PRINTF("Unexpected node type\n");
   }
 

@@ -169,6 +169,9 @@ static nbpf_node_t *tree_parse(const char *buffer) {
   ndpi_exit_detection_module(ndpi_struct);
 #endif
 
+  if (tree_root.root == NULL) /* empty filter? */
+    tree_root.root = nbpf_create_empty_node();
+
   return tree_root.root;
 }
 
@@ -194,6 +197,16 @@ nbpf_tree_t *nbpf_parse(const char *bpf_filter, l7protocol_by_name_func l7proto_
   }
 
   return t;
+}
+
+/* ****************************************** */
+
+nbpf_node_t *nbpf_create_empty_node() {
+  nbpf_node_t *n = alloc_node();
+
+  n->type = N_EMPTY;
+
+  return n;
 }
 
 /* ****************************************** */

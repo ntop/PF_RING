@@ -69,16 +69,17 @@ nbpf_ip_addr;
 #define NBPF_Q_PORTRANGE	7
 #define NBPF_Q_VLAN		8
 #define NBPF_Q_MPLS		9
-#define NBPF_Q_L7PROTO	10
+#define NBPF_Q_L7PROTO		10
 
 /* Common qualifiers */
-#define NBPF_Q_DEFAULT	0
+#define NBPF_Q_DEFAULT		0
 #define NBPF_Q_UNDEF		255
 
 /* Node types */
-#define N_PRIMITIVE     1
-#define N_AND           2
-#define N_OR            3
+#define N_EMPTY			0
+#define N_PRIMITIVE     	1
+#define N_AND           	2
+#define N_OR            	3
 
 /***************************************************************************/
 

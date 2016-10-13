@@ -557,6 +557,12 @@ nbpf_rule_list_item_t *generate_pfring_wildcard_filters(nbpf_node_t *n) {
     return NULL;
 
   switch(n->type) {
+    case N_EMPTY:
+      head = allocate_filtering_rule_list_item();      
+      if (head == NULL)
+        return NULL;
+      break;
+
     case N_PRIMITIVE:
       head = allocate_filtering_rule_list_item();      
       if (head == NULL)
@@ -609,6 +615,13 @@ nbpf_rule_block_list_item_t *generate_optimized_wildcard_filters(nbpf_node_t *n)
     return NULL;
 
   switch(n->type) {
+    case N_EMPTY:
+      block = allocate_filtering_rule_block_list_item();
+      block->rule_list_head = head = allocate_filtering_rule_list_item();
+      if (head == NULL) /* memory allocation failure */
+        return NULL;
+      break;
+
     case N_PRIMITIVE:
       block = allocate_filtering_rule_block_list_item();
       block->rule_list_head = head = allocate_filtering_rule_list_item();
@@ -772,6 +785,9 @@ int check_filter_constraints(nbpf_node_t *n, int max_nesting_level) {
   }
 
   switch(n->type) {
+    case N_EMPTY:
+      n->level = 0;
+      break;
     case N_PRIMITIVE:
       n->level = 0;
       break;

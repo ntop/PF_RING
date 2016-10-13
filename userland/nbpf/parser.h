@@ -24,6 +24,7 @@
 #include "ndpi_main.h"
 #endif
 
+nbpf_node_t *nbpf_create_empty_node();
 nbpf_node_t *nbpf_create_and(nbpf_node_t *, nbpf_node_t *);
 nbpf_node_t *nbpf_create_or(nbpf_node_t *, nbpf_node_t *);
 nbpf_node_t *nbpf_create_eth_node(const u_char *, nbpf_qualifiers_t);

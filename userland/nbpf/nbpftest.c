@@ -113,6 +113,9 @@ static void dump_tree(nbpf_node_t *n, int level) {
   printf("%s", n->not_rule ? "!" : "");
 
   switch(n->type) {
+    case N_EMPTY:
+      printf("EMPTY");
+      break;
     case N_PRIMITIVE:
 
       if(n->qualifiers.header == NBPF_Q_INNER)
