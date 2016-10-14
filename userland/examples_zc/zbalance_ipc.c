@@ -517,6 +517,15 @@ int main(int argc, char* argv[]) {
   if (num_apps == 0) printHelp();
   if (num_apps != 1 && hash_mode != 1 && hash_mode != 4) printHelp();
 
+  if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4) && num_apps == 1)) { /* balancer */
+    /* no constraints on number of queues */
+  } else { /* fan-out */ 
+    if (num_consumer_queues > 32 /* egress mask is 32 bit */) { 
+      trace(TRACE_ERROR, "Misconfiguration detected: you cannot use more than 32 egress queues in fan-out or multi-app mode\n");
+      return -1;
+    }
+  }
+
   for (i = 0; i < num_devices; i++) {
     if (strcmp(devices[i], "Q") != 0) num_real_devices++;
     else num_in_queues++;
