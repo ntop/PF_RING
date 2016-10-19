@@ -983,8 +983,6 @@ int main(int argc, char* argv[]) {
     rule.rule_id = 5;
     rule.rule_action = forward_packet_and_stop_rule_evaluation;
     rule.core_fields.proto = 6 /* tcp */;
-    // rule.plugin_action.plugin_id = DUMMY_PLUGIN_ID; /* Dummy plugin */
-    // rule.extended_fields.filter_plugin_id = DUMMY_PLUGIN_ID; /* Enable packet parsing/filtering */
 
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
       fprintf(stderr, "pfring_add_filtering_rule(2) failed\n");

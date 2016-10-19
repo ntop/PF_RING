@@ -274,30 +274,6 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 
 /* **************************************************** */
 
-pfring *pfring_open_consumer(const char *device_name, u_int32_t caplen, u_int32_t flags,
-			     u_int8_t consumer_plugin_id,
-			     char* consumer_data, u_int consumer_data_len) {
-  pfring *ring = pfring_open(device_name, caplen, flags);
-
-  if(ring) {
-    if(consumer_plugin_id > 0) {
-      int rc;
-
-      ring->kernel_packet_consumer = consumer_plugin_id;
-      rc = pfring_set_packet_consumer_mode(ring, consumer_plugin_id,
-					   consumer_data, consumer_data_len);
-      if(rc < 0) {
-	pfring_close(ring);
-	return(NULL);
-      }
-    }
-  }
-
-  return ring;
-}
-
-/* **************************************************** */
-
 u_int8_t pfring_open_multichannel(const char *device_name, u_int32_t caplen,
 				  u_int32_t flags,
 				  pfring *ring[MAX_NUM_RX_CHANNELS]) {
@@ -910,25 +886,6 @@ u_int32_t pfring_get_num_queued_pkts(pfring *ring) {
     return ring->get_num_queued_pkts(ring);
 
   return 0;
-}
-
-/* **************************************************** */
-
-u_int8_t pfring_get_packet_consumer_mode(pfring *ring) {
-  if(ring && ring->get_packet_consumer_mode)
-    return ring->get_packet_consumer_mode(ring);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-int pfring_set_packet_consumer_mode(pfring *ring, u_int8_t plugin_id,
-				    char *plugin_data, u_int plugin_data_len) {
-  if(ring && ring->set_packet_consumer_mode)
-    return ring->set_packet_consumer_mode(ring, plugin_id, plugin_data, plugin_data_len);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
 }
 
 /* **************************************************** */

@@ -381,8 +381,8 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h, const u_char *p, long th
 	  printf("[eth_type=0x%04X]", h->extended_hdr.parsed_pkt.eth_type);
       }
 
-      printf(" [caplen=%d][len=%d][parsed_header_len=%d][eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]\n",
-        h->caplen, h->len, h->extended_hdr.parsed_header_len,
+      printf(" [caplen=%d][len=%d][eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]\n",
+        h->caplen, h->len,
         h->extended_hdr.parsed_pkt.offset.eth_offset,
         h->extended_hdr.parsed_pkt.offset.l3_offset,
         h->extended_hdr.parsed_pkt.offset.l4_offset,
@@ -777,8 +777,6 @@ int main(int argc, char* argv[]) {
     rule.rule_id = 5;
     rule.rule_action = forward_packet_and_stop_rule_evaluation;
     rule.core_fields.proto = 6 /* tcp */;
-    // rule.plugin_action.plugin_id = DUMMY_PLUGIN_ID; /* Dummy plugin */
-    // rule.extended_fields.filter_plugin_id = DUMMY_PLUGIN_ID; /* Enable packet parsing/filtering */
 
     if(pfring_add_filtering_rule(pd, &rule) < 0)
       printf("pfring_add_hash_filtering_rule(2) failed\n");

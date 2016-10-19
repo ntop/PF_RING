@@ -240,8 +240,6 @@ struct __pfring {
   int       (*set_master)                   (pfring *, pfring *);
   u_int32_t (*get_ring_id)                  (pfring *);
   u_int32_t (*get_num_queued_pkts)          (pfring *);
-  u_int8_t  (*get_packet_consumer_mode)     (pfring *);
-  int       (*set_packet_consumer_mode)     (pfring *, u_int8_t, char *, u_int);
   int       (*get_hash_filtering_rule_stats)(pfring *, hash_filtering_rule *, char *, u_int *);
   int       (*handle_hash_filtering_rule)   (pfring *, hash_filtering_rule *, u_char);
   int       (*purge_idle_hash_rules)        (pfring *, u_int16_t);
@@ -304,7 +302,7 @@ struct __pfring {
   u_int32_t sampling_rate, sampling_counter;
   packet_slicing_level slicing_level;
   u_int32_t slicing_additional_bytes;
-  u_int8_t kernel_packet_consumer, is_shutting_down, socket_default_accept_policy;
+  u_int8_t is_shutting_down, socket_default_accept_policy;
   int fd, device_id;
   FlowSlotInfo *slots_info;
   u_int poll_sleep;
@@ -362,20 +360,6 @@ struct __pfring {
  * @return On success a handle is returned, NULL otherwise.
  */
 pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags);
-
-/**
- * Same as pfring_open(), but initializes a kernel plugin for packet processing.
- * @param device_name
- * @param caplen
- * @param flags
- * @param consumer_plugin_id The plugin id.
- * @param consumer_data      The plugin data.
- * @param consumer_data_len  The size of the plugin data.
- * @return On success a handle is returned, NULL otherwise. 
- */
-pfring *pfring_open_consumer(const char *device_name, u_int32_t caplen, u_int32_t flags,
-			     u_int8_t consumer_plugin_id,
-			     char* consumer_data, u_int consumer_data_len);
 
 /**
  * This call is similar to pfring_open() with the exception that in case of a multi RX-queue NIC, 
@@ -721,24 +705,6 @@ u_int32_t pfring_get_ring_id(pfring *ring);
 u_int32_t pfring_get_num_queued_pkts(pfring *ring);
 
 /**
- * Return the identifier of the kernel plugin responsible for consuming packets.
- * @param ring The PF_RING handle.
- * @return The kernel plugin identifier.
- */
-u_int8_t pfring_get_packet_consumer_mode(pfring *ring);
-
-/**
- * Initialize the kernel plugin for packet processing.
- * @param ring The PF_RING handle.
- * @param plugin_id       The plugin id.
- * @param plugin_data     The plugin data.
- * @param plugin_data_len The size of the plugin data.
- * @return 0 on success, a negative value otherwise.
- */
-int pfring_set_packet_consumer_mode(pfring *ring, u_int8_t plugin_id,
-				    char *plugin_data, u_int plugin_data_len);
-
-/**
  * Add or remove a hash filtering rule. 
  * All rule parameters should be defined in the filtering rule (no wildcards).
  * @param ring        The PF_RING handle from which stats will be read.
@@ -806,9 +772,7 @@ int pfring_purge_idle_rules(pfring *ring, u_int16_t inactivity_sec);
  * @param ring      The PF_RING handle on which the rule will be added/removed.
  * @param rule      The rule for which stats are read. This needs to be the same rule that has been previously added.
  * @param stats     A buffer allocated by the user that will contain the rule statistics. 
- *                  Please make sure that the buffer is large enough to contain the statistics. 
- *                  Such buffer will contain plugin-defined data in case of kernel plugin, a hash_filtering_rule_stats 
- *                  struct otherwise.
+ *                  Please make sure that the buffer is large enough to contain the statistics (hash_filtering_rule_stats struct).
  * @param stats_len The size (in bytes) of the stats buffer.
  * @return 0 on success, a negative value otherwise (e.g. the rule to be removed does not exist). 
  */

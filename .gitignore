@@ -91,7 +91,6 @@ userland/tcpdump-4.1.1/version.c
 # executables
 userland/c++/pf_test
 userland/examples/alldevs
-userland/examples/dummy_plugin_pfcount
 userland/examples/pcap2nspcap
 userland/examples/pcount
 userland/examples/pfbounce
@@ -100,7 +99,6 @@ userland/examples/pfcount
 userland/examples/pfcount_82599
 userland/examples/pfcount_aggregator
 userland/examples/pfcount_bundle
-userland/examples/pfcount_dummy_plugin
 userland/examples/pfcount_multichannel
 userland/examples/pfdump
 userland/examples/pffilter_test

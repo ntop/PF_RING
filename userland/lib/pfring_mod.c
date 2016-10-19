@@ -106,8 +106,6 @@ int pfring_mod_open_setup(pfring *ring) {
     return -1;
   }
 
-  ring->kernel_packet_consumer = 0;
-
   ring->buffer = (char *)mmap(NULL, PAGE_SIZE, PROT_READ|PROT_WRITE,
 			      MAP_SHARED, ring->fd, 0);
 
@@ -204,8 +202,6 @@ int pfring_mod_open(pfring *ring) {
   ring->set_master = pfring_mod_set_master;
   ring->get_ring_id = pfring_mod_get_ring_id;
   ring->get_num_queued_pkts = pfring_mod_get_num_queued_pkts;
-  ring->get_packet_consumer_mode = pfring_mod_get_packet_consumer_mode;
-  ring->set_packet_consumer_mode = pfring_mod_set_packet_consumer_mode;
   ring->get_hash_filtering_rule_stats = pfring_mod_get_hash_filtering_rule_stats;
   ring->handle_hash_filtering_rule = pfring_mod_handle_hash_filtering_rule;
   ring->purge_idle_hash_rules = pfring_mod_purge_idle_hash_rules;
@@ -485,18 +481,14 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 
       bktLen = hdr->caplen;
 
-      if(ring->slot_header_len == sizeof(struct pfring_pkthdr)) /* using long pkt header, parsed_header_len is available */
-        bktLen += hdr->extended_hdr.parsed_header_len;
-
       real_slot_len = ring->slot_header_len + bktLen;
 
       /* padding at the end of the packet (it should contain the magic number) */
       real_slot_len += sizeof(u_int16_t);
 
 #if 0 /* ring debug */
-      printf("[PF_RING] slot len = %lu bytes [%u header, %u caplen, %u parsed header, %lu magic, %lu align]\n",
+      printf("[PF_RING] slot len = %lu bytes [%u header, %u caplen, %lu magic, %lu align]\n",
         ALIGN(real_slot_len, sizeof(u_int64_t)), ring->slot_header_len, hdr->caplen,
-        (ring->slot_header_len == sizeof(struct pfring_pkthdr)) ? hdr->extended_hdr.parsed_header_len : 0,
         sizeof(u_int16_t), ALIGN(real_slot_len, sizeof(u_int64_t)) - real_slot_len);
 #endif
 
@@ -807,33 +799,6 @@ int pfring_mod_handle_hash_filtering_rule(pfring *ring,
     rc = pfring_hw_ft_handle_hash_filtering_rule(ring, rule_to_add, add_rule);
 
   return rc;
-}
-
-/* ******************************* */
-
-u_int8_t pfring_mod_get_packet_consumer_mode(pfring *ring) {
-  u_int8_t id;
-  socklen_t len = sizeof(id);
-  int rc = getsockopt(ring->fd, 0, SO_GET_PACKET_CONSUMER_MODE, &id, &len);
-
-  return((rc == 0) ? id : -1);
-}
-
-/* **************************************************** */
-
-int pfring_mod_set_packet_consumer_mode(pfring *ring, u_int8_t plugin_id,
-				  	char *plugin_data, u_int plugin_data_len) {
-  char buffer[4096];
-
-  if(plugin_data_len > (sizeof(buffer)-1)) return(-2);
-
-  memcpy(buffer, &plugin_id, 1);
-
-  if(plugin_data_len > 0)
-    memcpy(&buffer[1], plugin_data, plugin_data_len);
-
-  return(setsockopt(ring->fd, 0, SO_SET_PACKET_CONSUMER_MODE,
-		    buffer, plugin_data_len+1));
 }
 
 /* **************************************************** */

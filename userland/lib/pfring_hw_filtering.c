@@ -125,9 +125,6 @@ int pfring_hw_ft_handle_hash_filtering_rule(pfring *ring, hash_filtering_rule* r
   if(!rule_to_add)
     return -2;
 
-  if(rule_to_add->plugin_action.plugin_id != NO_PLUGIN_ID)
-    return 0;
-
   switch (ring->ft_device_type) {
     case intel_82599_family:
       if(add_rule)
@@ -164,9 +161,6 @@ int pfring_hw_ft_add_filtering_rule(pfring *ring, filtering_rule* rule_to_add) {
 
   if(!rule_to_add)
     return -2;
-
-  if(rule_to_add->plugin_action.plugin_id != NO_PLUGIN_ID)
-    return 0;
 
   switch (ring->ft_device_type) {
     case intel_82599_family:

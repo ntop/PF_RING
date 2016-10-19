@@ -215,7 +215,6 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
   /* Note: in order to optimize the computation, this function expects a zero-ed
    * or partially parsed pkthdr */
   //memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
-  //hdr->extended_hdr.parsed_header_len = 0;
 
   if (hdr->extended_hdr.parsed_pkt.offset.l3_offset != 0)
     goto L3;
@@ -657,8 +656,8 @@ int pfring_print_parsed_pkt(char *buff, u_int buff_len, const u_char *p, const s
   }
 
   buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
-    " [caplen=%d][len=%d][parsed_header_len=%d][eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]\n",
-    h->caplen, h->len, h->extended_hdr.parsed_header_len,
+    " [caplen=%d][len=%d][eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]\n",
+    h->caplen, h->len, 
     h->extended_hdr.parsed_pkt.offset.eth_offset,
     h->extended_hdr.parsed_pkt.offset.l3_offset,
     h->extended_hdr.parsed_pkt.offset.l4_offset,
