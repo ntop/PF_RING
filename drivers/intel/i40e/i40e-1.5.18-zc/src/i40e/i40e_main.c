@@ -8370,8 +8370,8 @@ static int i40e_init_msix(struct i40e_pf *pf)
 	/* reserve vectors for the main PF traffic queues */
 	pf->num_lan_msix = min_t(int, num_online_cpus(), vectors_left);
 #ifdef HAVE_PF_RING
-	if (RSS[0 /* TODO port id */ ] != 0)
-		pf->num_lan_msix = min_t(int, pf->num_lan_msix, RSS[0 /* TODO port id */ ]);
+	if (RSS[pf->instance] != 0)
+		pf->num_lan_msix = min_t(int, pf->num_lan_msix, RSS[pf->instance]);
 #endif
 	vectors_left -= pf->num_lan_msix;
 	v_budget += pf->num_lan_msix;
@@ -9261,9 +9261,8 @@ static int i40e_sw_init(struct i40e_pf *pf)
 		pf->alloc_rss_size = min_t(int, pf->rss_size_max,
 					   num_online_cpus());
 #ifdef HAVE_PF_RING
-		if (RSS[0 /* TODO port id */ ] != 0) {
-			pf->flags &= ~I40E_FLAG_RSS_ENABLED;
-			pf->alloc_rss_size = min_t(int, pf->alloc_rss_size, RSS[0 /* TODO port id */ ]);
+		if (RSS[pf->instance] != 0) {
+			pf->alloc_rss_size = min_t(int, pf->alloc_rss_size, RSS[pf->instance]);
 			pf->rss_size_max = pf->alloc_rss_size;
 		}
 #endif
@@ -11661,8 +11660,8 @@ static void i40e_determine_queue_usage(struct i40e_pf *pf)
 		pf->num_lan_qps = min_t(int, pf->num_lan_qps,
 					pf->hw.func_caps.num_tx_qp);
 #ifdef HAVE_PF_RING
-		if (RSS[0 /* TODO port id */ ] != 0)
-			pf->num_lan_qps = min_t(int, pf->num_lan_qps, RSS[0 /* TODO port id */ ]);
+		if (RSS[pf->instance] != 0)
+			pf->num_lan_qps = min_t(int, pf->num_lan_qps, RSS[pf->instance]);
 #endif
 
 		queues_left -= pf->num_lan_qps;
