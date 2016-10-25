@@ -185,11 +185,6 @@ start_interfaces() {
 				/sbin/ethtool -G $D rx $MAX_RX_SLOTS
 				/sbin/ethtool -G $D tx $MAX_TX_SLOTS
 			fi
-			F="$(/sbin/ethtool -i $D | grep driver | cut -f 2 -d ':' | tr -d ' ')"
-			if [ "$F" = "i40e" ]; then
-				# FIXX setting single-queue by default (RSS option is not supported)
-				/sbin/ethtool -L $D combined 1
-			fi
 
 			set_interface_mtu ${D}
 		fi
