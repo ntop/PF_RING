@@ -194,6 +194,11 @@ function do_down {
 
 }
 
+function do_up_all {
+    rmmod_dummy
+    modprobe_dummy
+}
+
 function do_list {
     for INTERFACE in `find $INTERFACE_FILES_PATH -type f`; do
 	echo "`basename ${INTERFACE}`"
@@ -208,7 +213,7 @@ function do_list {
 
 function print_usage {
     echo -e "\nCommand line utility to map n2disk timelines or pf_ring devices to virtual interfaces\n"
-    echo -e "Usage: $0 [up | down | list] <contextual options>"
+    echo -e "Usage: $0 [up | down | up-all | list] <contextual options>"
     echo -e ""
     echo -e "up -i <pf_ring_interface_name> [-d <virtual_interface_name>]"
     echo -e ""
@@ -235,6 +240,11 @@ case "$1" in
 	OPTIND=2
 	shift
 	do_down "$@"
+	;;
+    up-all)
+	OPTIND=2
+	shift
+	do_up_all "$@"
 	;;
     list)
 	do_list "$@"

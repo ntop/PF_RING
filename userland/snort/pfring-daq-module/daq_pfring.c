@@ -753,7 +753,6 @@ static int pfring_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t callbac
 	  memcpy(&hash_rule.host_peer_b, &phdr.extended_hdr.parsed_pkt.ipv4_dst, sizeof(ip_addr));
 	  hash_rule.port_peer_a = phdr.extended_hdr.parsed_pkt.l4_src_port;
 	  hash_rule.port_peer_b = phdr.extended_hdr.parsed_pkt.l4_dst_port;
-	  hash_rule.plugin_action.plugin_id = NO_PLUGIN_ID;
 
 	  if (context->mode == DAQ_MODE_PASSIVE && context->num_reflector_devices > rx_ring_idx) { /* lowlevelbridge ON */
 	    hash_rule.rule_action = reflect_packet_and_stop_rule_evaluation;

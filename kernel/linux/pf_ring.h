@@ -61,7 +61,6 @@
 #define SO_SET_MASTER_RING               112
 #define SO_ADD_HW_FILTERING_RULE         113
 #define SO_DEL_HW_FILTERING_RULE         114
-#define SO_SET_PACKET_CONSUMER_MODE      115
 #define SO_DEACTIVATE_RING               116
 #define SO_SET_POLL_WATERMARK            117
 #define SO_SET_VIRTUAL_FILTERING_DEVICE  118
@@ -71,7 +70,6 @@
 #define SO_SET_SOCKET_MODE               126
 #define SO_USE_SHORT_PKT_HEADER          127
 #define SO_ENABLE_RX_PACKET_BOUNCE       131
-#define SO_SEND_MSG_TO_PLUGIN            132 /* send user msg to plugin */
 #define SO_SET_APPL_STATS                133
 #define SO_SET_STACK_INJECTION_MODE      134 /* stack injection/interception from userspace */
 #define SO_CREATE_CLUSTER_REFEREE        135
@@ -88,7 +86,6 @@
 #define SO_GET_ZC_DEVICE_INFO            173
 #define SO_GET_NUM_RX_CHANNELS           174
 #define SO_GET_RING_ID                   175
-#define SO_GET_PACKET_CONSUMER_MODE      176
 #define SO_GET_BOUND_DEVICE_ADDRESS      177
 #define SO_GET_NUM_QUEUED_PKTS           178
 #define SO_GET_PKT_HEADER_LEN            179
@@ -137,8 +134,7 @@
 struct pkt_offset {
   int16_t eth_offset; /* 
 			 This offset *must* be added to all offsets below 
-			 ONLY if you are inside the kernel (e.g. when you
-			 code a pf_ring plugin). Ignore it in user-space.
+			 ONLY if you are inside the kernel. Ignore it in user-space.
 		       */
   int16_t vlan_offset;
   int16_t l3_offset;
@@ -291,8 +287,7 @@ struct pkt_parsing_info {
   } tcp;
 
   tunnel_info tunnel;
-  u_int16_t last_matched_plugin_id; /* If > 0 identifies a plugin to that matched the packet */
-  u_int16_t last_matched_rule_id; /* If > 0 identifies a rule that matched the packet */
+  int last_matched_rule_id; /* If > 0 identifies a rule that matched the packet */
   struct pkt_offset offset; /* Offsets of L3/L4/payload elements */
 };
 
@@ -324,7 +319,6 @@ struct pfring_extended_pkthdr {
 			     if its values is other than UNKNOWN_INTERFACE */
     struct sk_buff *reserved; /* Kernel only pointer */
   } tx;
-  u_int16_t parsed_header_len; /* Extra parsing data before packet */
 
   /* NOTE: leave it as last field of the memset on parse_pkt() will fail */
   struct pkt_parsing_info parsed_pkt; /* packet parsing info */
@@ -341,12 +335,6 @@ struct pfring_pkthdr {
 };
 
 /* *********************************** */
-
-#define NO_PLUGIN_ID        0
-#define MAX_PLUGIN_ID      72
-#define MAX_PLUGIN_FIELDS  32
-
-/* ************************************************* */
 
 #define MAX_NUM_LIST_ELEMENTS MAX_NUM_RING_SOCKETS /* sizeof(bits_set) [see below] */
 
@@ -384,8 +372,6 @@ typedef struct {
 
 /* ************************************************* */
 
-#define FILTER_PLUGIN_DATA_LEN   256
-
 typedef struct {
 
 #define FILTER_TUNNEL_ID_FLAG 1 << 0
@@ -399,30 +385,16 @@ typedef struct {
 
   char payload_pattern[32];         /* If strlen(payload_pattern) > 0, the packet payload
 				       must match the specified pattern */
-  u_int16_t filter_plugin_id;       /* If > 0 identifies a plugin to which the datastructure
-				       below will be passed for matching */
-  char      filter_plugin_data[FILTER_PLUGIN_DATA_LEN];
-  /* Opaque datastructure that is interpreted by the
-     specified plugin and that specifies a filtering
-     criteria to be checked for match. Usually this data
-     is re-casted to a more meaningful datastructure
-  */
 } filtering_rule_extended_fields;
 
 /* ************************************************* */
-
-typedef struct {
-  /* Plugin Action */
-  u_int16_t plugin_id; /* ('0'=no plugin) id of the plugin associated with this rule */
-} filtering_rule_plugin_action;
 
 typedef enum {
   forward_packet_and_stop_rule_evaluation = 0,
   dont_forward_packet_and_stop_rule_evaluation,
   execute_action_and_continue_rule_evaluation,
   execute_action_and_stop_rule_evaluation,
-  forward_packet_add_rule_and_stop_rule_evaluation, /* auto-filled hash rule or via plugin_add_rule() */
-  forward_packet_del_rule_and_stop_rule_evaluation, /* via plugin_del_rule() only */
+  forward_packet_add_rule_and_stop_rule_evaluation, /* auto-filled hash rule */
   reflect_packet_and_stop_rule_evaluation,
   reflect_packet_and_continue_rule_evaluation,
   bounce_packet_and_stop_rule_evaluation,
@@ -460,7 +432,6 @@ typedef struct {
   u_int8_t bidirectional;	     /* Swap peers when checking if they match the rule. Default: monodir */
   filtering_rule_core_fields     core_fields;
   filtering_rule_extended_fields extended_fields;
-  filtering_rule_plugin_action   plugin_action;
   char reflector_device_name[REFLECTOR_NAME_LEN];
 
   filtering_internals internals;   /* PF_RING internal fields */
@@ -619,7 +590,6 @@ typedef struct {
   u_int16_t port_peer_a, port_peer_b;
 
   rule_action_behaviour rule_action; /* What to do in case of match */
-  filtering_rule_plugin_action plugin_action;
   char reflector_device_name[REFLECTOR_NAME_LEN];
 
   filtering_internals internals;   /* PF_RING internal fields */
@@ -634,9 +604,6 @@ typedef struct {
 
 typedef struct _sw_filtering_hash_bucket {
   hash_filtering_rule           rule;
-  void                          *plugin_data_ptr; /* ptr to a *continuous* memory area
-						     allocated by the plugin */
-  u_int16_t                     plugin_data_ptr_len;
   u_int64_t                     match; /* number of packets matching the rule */
   struct _sw_filtering_hash_bucket *next;
 } sw_filtering_hash_bucket;
@@ -850,15 +817,6 @@ typedef enum {
   cluster_slave  = 0,
   cluster_master = 1
 } cluster_client_type;
-
-/* ************************************************* */
-
-struct send_msg_to_plugin_info {
-  u_int16_t __padding;
-  u_int16_t plugin_id;
-  u_int32_t data_len;
-  u_char    data[];
-};
 
 /* ************************************************* */
 
@@ -1140,7 +1098,6 @@ struct pf_ring_socket {
   do_add_raw_packet_to_ring add_raw_packet_to_ring;
 
   /* Kernel consumer */
-  u_int8_t kernel_consumer_plugin_id; /* If != 0 it identifies a plugin responsible for consuming packets */
   char *kernel_consumer_options, *kernel_consumer_private;
 
   /* Userspace cluster (ZC) */
@@ -1159,9 +1116,6 @@ typedef struct {
   struct ts_config *pattern[MAX_NUM_PATTERN];
 #endif
   struct list_head list;
-
-  /* Plugin action */
-  void *plugin_data_ptr; /* ptr to a *continuous* memory area allocated by the plugin */
 } sw_filtering_rule_element;
 
 typedef struct {
@@ -1169,140 +1123,25 @@ typedef struct {
   struct list_head list;
 } hw_filtering_rule_element;
 
-struct parse_buffer {
-  void      *mem;
-  u_int16_t  mem_len;
-};
-
 /* **************************************** */
 
-/* Plugins */
-/* Execute an action (e.g. update rule stats) */
-typedef int (*plugin_handle_skb)(struct pf_ring_socket *pfr,
-				 sw_filtering_rule_element *rule,       /* In case the match is on the list */
-				 sw_filtering_hash_bucket *hash_bucket, /* In case the match is on the hash */
-				 struct pfring_pkthdr *hdr,
-				 struct sk_buff *skb, int displ,
-				 u_int16_t filter_plugin_id,
-				 struct parse_buffer **filter_rule_memory_storage,
-				 rule_action_behaviour *behaviour);
-/* Return 1/0 in case of match/no match for the given skb */
-typedef int (*plugin_filter_skb)(struct pf_ring_socket *pfr,
-				 sw_filtering_rule_element *rule,
-				 struct pfring_pkthdr *hdr,
-				 struct sk_buff *skb, int displ,
-				 struct parse_buffer **filter_rule_memory_storage);
-/* Get stats about the rule */
-typedef int (*plugin_get_stats)(struct pf_ring_socket *pfr,
-				sw_filtering_rule_element *rule,
-				sw_filtering_hash_bucket  *hash_bucket,
-				u_char* stats_buffer, u_int stats_buffer_len);
-
-/* Check the expiration status. Return 1 if the rule must be removed, 0 otherwise. */
-typedef int (*plugin_purge_idle)(struct pf_ring_socket *pfr,
-				 sw_filtering_rule_element *rule,
-				 sw_filtering_hash_bucket  *hash_bucket,
-				 u_int16_t rule_inactivity);
-
-/* Build a new rule when forward_packet_add_rule_and_stop_rule_evaluation is specified
-   return 0 in case of success, an error code (< 0) otherwise.
-   Rule memory (sw_filtering_rule_element or sw_filtering_hash_bucket) must be allocated
-   by the plugin, the non-NULL rule will be added. */
-typedef int (*plugin_add_rule)(sw_filtering_rule_element *rule,
-			       struct pfring_pkthdr *hdr,
-			       u_int16_t new_rule_element_id, /* next free rule id */
-			       sw_filtering_rule_element **new_rule_element,
-			       sw_filtering_hash_bucket **new_hash_bucket,
-			       u_int16_t filter_plugin_id,
-			       struct parse_buffer **filter_rule_memory_storage);
-/* Build an hash rule or return the wildcard rule id when forward_packet_del_rule_and_stop_rule_evaluation
-   is specified. Return values: 0 - no action, 1 - remove hash rule, 2 - remove wildcard rule, 3 - remove both,
-   an error code (< 0) otherwise. */
-typedef int (*plugin_del_rule)(sw_filtering_rule_element *rule,
-			       struct pfring_pkthdr *hdr,
-			       u_int16_t *zombie_rule_element_id,
-			       sw_filtering_hash_bucket *zombie_hash_bucket,
-			       u_int16_t filter_plugin_id,
-			       struct parse_buffer **filter_rule_memory_storage);
-/* called when there is a message for the plugin */
-typedef int (*plugin_handle_msg)(struct pf_ring_socket *pfr,
-				 u_char *msg_data,
-				 u_int msg_len);
-
-typedef void (*plugin_register)(u_int8_t register_plugin);
-
-/* Called when a rule is removed */
-typedef void (*plugin_free_rule_mem)(sw_filtering_rule_element *rule);
-
-/* Called when a ring is disposed */
-typedef void (*plugin_free_ring_mem)(sw_filtering_rule_element *rule);
-
-typedef int (*copy_raw_data_2ring)(struct pf_ring_socket *pfr,
-				   struct pfring_pkthdr *dummy_hdr,
-				   void *raw_data, uint raw_data_len);
-
-/* Kernel packet poller */
-typedef int (*kernel_packet_start)(struct pf_ring_socket *pfr, copy_raw_data_2ring raw_copier);
-typedef void (*kernel_packet_term)(struct pf_ring_socket *pfr);
-typedef void (*kernel_packet_reader)(struct pf_ring_socket *pfr, struct sk_buff *skb,
-				     u_int8_t channel_id, struct pfring_pkthdr *hdr, int displ);
-
-struct pfring_plugin_registration {
-  u_int16_t plugin_id;
-  char name[16];          /* Unique plugin name (e.g. sip, udp) */
-  char description[64];   /* Short plugin description */
-
-  plugin_filter_skb    pfring_plugin_filter_skb; /* Filter skb: 1=match, 0=no match */
-  plugin_handle_skb    pfring_plugin_handle_skb;
-  plugin_get_stats     pfring_plugin_get_stats;
-  plugin_purge_idle    pfring_plugin_purge_idle;
-  plugin_free_rule_mem pfring_plugin_free_rule_mem;
-  plugin_free_ring_mem pfring_plugin_free_ring_mem;
-  plugin_add_rule      pfring_plugin_add_rule;
-  plugin_del_rule      pfring_plugin_del_rule;
-  plugin_handle_msg    pfring_plugin_handle_msg;
-  plugin_register      pfring_plugin_register;
-
-  /* ************** */
-
-  kernel_packet_start  pfring_packet_start;
-  kernel_packet_reader pfring_packet_reader;
-  kernel_packet_term   pfring_packet_term;
-};
-
-typedef int   (*register_pfring_plugin)(struct pfring_plugin_registration *reg);
-typedef int   (*unregister_pfring_plugin)(u_int16_t pfring_plugin_id);
-typedef u_int (*read_device_pfring_free_slots)(int ifindex);
 typedef void  (*handle_pfring_zc_dev)(zc_dev_operation operation,
-					mem_ring_info *rx_info,
-					mem_ring_info *tx_info,
-					void          *rx_descr_packet_memory,
-					void          *tx_descr_packet_memory,
-					void          *phys_card_memory,
-					u_int          phys_card_memory_len,
-					u_int channel_id,
-					struct net_device *netdev,
-					struct device *hwdev,
-					zc_dev_model device_model,
-					u_char *device_address,
-					wait_queue_head_t *packet_waitqueue,
-					u_int8_t *interrupt_received,
-					void *rx_adapter_ptr, void *tx_adapter_ptr,
-					zc_dev_wait_packet wait_packet_function_ptr,
-					zc_dev_notify dev_notify_function_ptr);
-typedef u_int8_t (*pfring_tx_pkt)(void* private_data, char *pkt, u_int pkt_len);
-
-extern register_pfring_plugin get_register_pfring_plugin(void);
-extern unregister_pfring_plugin get_unregister_pfring_plugin(void);
-extern read_device_pfring_free_slots get_read_device_pfring_free_slots(void);
-
-extern void set_register_pfring_plugin(register_pfring_plugin the_handler);
-extern void set_unregister_pfring_plugin(unregister_pfring_plugin the_handler);
-extern void set_read_device_pfring_free_slots(read_device_pfring_free_slots the_handler);
-
-extern int do_register_pfring_plugin(struct pfring_plugin_registration *reg);
-extern int do_unregister_pfring_plugin(u_int16_t pfring_plugin_id);
-extern int do_read_device_pfring_free_slots(int deviceidx);
+                                      mem_ring_info *rx_info,
+                                      mem_ring_info *tx_info,
+                                      void          *rx_descr_packet_memory,
+                                      void          *tx_descr_packet_memory,
+                                      void          *phys_card_memory,
+                                      u_int          phys_card_memory_len,
+                                      u_int channel_id,
+                                      struct net_device *netdev,
+                                      struct device *hwdev,
+                                      zc_dev_model device_model,
+                                      u_char *device_address,
+                                      wait_queue_head_t *packet_waitqueue,
+                                      u_int8_t *interrupt_received,
+                                      void *rx_adapter_ptr, void *tx_adapter_ptr,
+                                      zc_dev_wait_packet wait_packet_function_ptr,
+                                      zc_dev_notify dev_notify_function_ptr);
 
 extern handle_pfring_zc_dev get_ring_zc_dev_handler(void);
 extern void set_ring_zc_dev_handler(handle_pfring_zc_dev the_zc_device_handler);
@@ -1332,9 +1171,6 @@ typedef int (*handle_ring_skb)(struct sk_buff *skb, u_char recv_packet,
 			       u_int32_t num_rx_channels);
 typedef int (*handle_ring_buffer)(struct net_device *dev,
 				  char *data, int len);
-typedef int (*handle_add_hdr_to_ring)(struct pf_ring_socket *pfr,
-				      u_int8_t real_skb,
-				      struct pfring_pkthdr *hdr);
 
 /* Hack to jump from a device directly to PF_RING */
 struct pfring_hooks {
@@ -1342,15 +1178,9 @@ struct pfring_hooks {
 		     It should be set to PF_RING
 		     and is MUST be the first one on this struct
 		   */
-  void *rx_private_data, *tx_private_data;
   handle_ring_skb ring_handler;
   handle_ring_buffer buffer_ring_handler;
-  handle_add_hdr_to_ring buffer_add_hdr_to_ring;
-  register_pfring_plugin pfring_registration;
-  unregister_pfring_plugin pfring_unregistration;
   handle_pfring_zc_dev zc_dev_handler;
-  read_device_pfring_free_slots pfring_free_device_slots;
-  pfring_tx_pkt pfring_send_packet;
 };
 
 /* *************************************************************** */
@@ -1385,122 +1215,6 @@ extern int bpctl_kernel_ioctl(unsigned int ioctl_num, void *ioctl_param);
 
 extern void pf_ring_add_module_dependency(void);
 extern int pf_ring_inject_packet_to_ring(int if_index, int channel_id, u_char *data, int data_len, struct pfring_pkthdr *hdr);
-
-#ifdef PF_RING_PLUGIN
-static struct pfring_plugin_registration plugin_reg;
-static struct list_head plugin_registered_devices_list;
-static u_int16_t pfring_plugin_id = 0;
-
-int add_plugin_to_device_list(struct net_device *dev) {
-  ring_device_element *dev_ptr;
-
-  if ((dev_ptr = kmalloc(sizeof(ring_device_element),
-			 GFP_KERNEL)) == NULL)
-    return (-ENOMEM);
-
-  INIT_LIST_HEAD(&dev_ptr->device_list);
-  dev_ptr->dev = dev;
-
-  list_add(&dev_ptr->device_list, &plugin_registered_devices_list);
-
-  return(0);
-}
-
-void remove_plugin_from_device_list(struct net_device *dev) {
-  struct list_head *ptr, *tmp_ptr;
-  struct pfring_hooks* hook = (struct pfring_hooks*)dev->pfring_ptr;
-
-  if(hook && (hook->magic == PF_RING)) {
-    hook->pfring_unregistration(pfring_plugin_id);
-  }
-
-  list_for_each_safe(ptr, tmp_ptr, &plugin_registered_devices_list) {
-    ring_device_element *dev_ptr;
-
-    dev_ptr = list_entry(ptr, ring_device_element, device_list);
-    if(dev_ptr->dev == dev) {
-      list_del(ptr);
-      kfree(dev_ptr);
-      break;
-    }
-  }
-}
-
-static int ring_plugin_notifier(struct notifier_block *this, unsigned long msg, void *data)
-{
-  struct net_device *dev;
-  struct pfring_hooks *hook;
-
-  if (data == NULL)
-    return NOTIFY_DONE;
-
-  dev = netdev_notifier_info_to_dev(data);
-
-  if (dev == NULL)
-    return NOTIFY_DONE;
-
-  switch(msg) {
-  case NETDEV_REGISTER:
-    hook = (struct pfring_hooks*)dev->pfring_ptr;
-    if(hook && (hook->magic == PF_RING)) {
-      hook->pfring_registration(&plugin_reg);
-      add_plugin_to_device_list(dev);
-    }
-    break;
-
-  case NETDEV_UNREGISTER:
-    hook = (struct pfring_hooks*)dev->pfring_ptr;
-    if(hook && (hook->magic == PF_RING)) {
-      hook->pfring_unregistration(pfring_plugin_id);
-    }
-    break;
-  }
-
-  return NOTIFY_DONE;
-}
-
-static struct notifier_block ring_netdev_notifier = {
-  .notifier_call = ring_plugin_notifier,
-};
-
-static void register_plugin(struct pfring_plugin_registration *reg_info) {
-  INIT_LIST_HEAD(&plugin_registered_devices_list);
-  memcpy(&plugin_reg, reg_info, sizeof(struct pfring_plugin_registration));
-  pfring_plugin_id = reg_info->plugin_id;
-
-  /*
-    Trick to push the kernel to call the above ring_plugin_notifier()
-    and this to register the plugin in PF_RING
-  */
-  register_netdevice_notifier(&ring_netdev_notifier);
-}
-
-static void unregister_plugin(int pfring_plugin_id) {
-  struct list_head *ptr, *tmp_ptr;
-
-  /*
-    Trick to push the kernel to call the above ring_plugin_notifier()
-    and this to register the plugin in PF_RING
-  */
-  unregister_netdevice_notifier(&ring_netdev_notifier);
-
-  list_for_each_safe(ptr, tmp_ptr, &plugin_registered_devices_list) {
-    ring_device_element *dev_ptr;
-    struct pfring_hooks *hook;
-
-    dev_ptr = list_entry(ptr, ring_device_element, device_list);
-    hook = (struct pfring_hooks*)dev_ptr->dev->pfring_ptr;
-    if(hook && (hook->magic == PF_RING)) {
-      printk("[PF_RING] Unregister plugin_id %d for %s\n",
-	     pfring_plugin_id, dev_ptr->dev->name);
-      hook->pfring_unregistration(pfring_plugin_id);
-      list_del(ptr);
-      kfree(dev_ptr);
-    }
-  }
-}
-
-#endif /* PF_RING_PLUGIN */
 
 /* *********************************** */
 

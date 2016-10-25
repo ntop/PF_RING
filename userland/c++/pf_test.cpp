@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
     the_rule.rule_id = rule_id;
     the_rule.rule_action = forward_packet_and_stop_rule_evaluation;
     the_rule.core_fields.proto = 1 /* icmp */;
-    the_rule.plugin_action.plugin_id = 1; /* Dummy plugin */
     rc = ring->add_filtering_rule(&the_rule);
 
     cout << "Added filtering rule " << rule_id << " [rc=" << rc << "]\n", rule_id, rc;
