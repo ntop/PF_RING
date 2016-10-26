@@ -277,6 +277,7 @@ struct pkt_parsing_info {
   u_int8_t dmac[ETH_ALEN], smac[ETH_ALEN];  /* MAC src/dst addresses */
   u_int16_t eth_type;   /* Ethernet type */
   u_int16_t vlan_id;    /* VLAN Id or NO_VLAN */
+  u_int16_t qinq_vlan_id;    /* VLAN Id or NO_VLAN */
   u_int8_t  ip_version;
   u_int8_t  l3_proto, ip_tos; /* Layer 3 protocol/TOS */
   ip_addr   ip_src, ip_dst;   /* IPv4 src/dst IP addresses */

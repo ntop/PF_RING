@@ -99,17 +99,17 @@ static u_int32_t pfring_hash_pkt(struct pfring_pkthdr *hdr) {
 
 /* ******************************* */
 
-static int __pfring_parse_tunneled_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int16_t ip_version, u_int16_t tunnel_offset) {
-  u_int32_t ip_len = 0;
+static int __pfring_parse_tunneled_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int16_t ip_version, u_int16_t tunnel_offset) {
+  u_int32_t data_len = hdr->caplen, ip_len = 0;
   u_int16_t fragment_offset = 0;
 
   if(ip_version == 4 /* IPv4 */ ) {
     struct iphdr *tunneled_ip;
 
-    if(hdr->caplen < (tunnel_offset+sizeof(struct iphdr)))
+    if(data_len < (tunnel_offset+sizeof(struct iphdr)))
       return 0;
 
-    tunneled_ip = (struct iphdr *) (&pkt[tunnel_offset]);
+    tunneled_ip = (struct iphdr *) (&data[tunnel_offset]);
 
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ip->protocol;
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v4 = ntohl(tunneled_ip->saddr);
@@ -122,10 +122,10 @@ static int __pfring_parse_tunneled_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u
   } else if(ip_version == 6 /* IPv6 */ ) {
     struct kcompact_ipv6_hdr *tunneled_ipv6;
 
-    if(hdr->caplen < (tunnel_offset+sizeof(struct kcompact_ipv6_hdr)))
+    if(data_len < (tunnel_offset+sizeof(struct kcompact_ipv6_hdr)))
       return 0;
 
-    tunneled_ipv6 = (struct kcompact_ipv6_hdr *) (&pkt[tunnel_offset]);
+    tunneled_ipv6 = (struct kcompact_ipv6_hdr *) (&data[tunnel_offset]);
 
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ipv6->nexthdr;
 
@@ -142,10 +142,10 @@ static int __pfring_parse_tunneled_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u
 	   hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == NEXTHDR_FRAGMENT) {
       struct kcompact_ipv6_opt_hdr *ipv6_opt;
 
-      if (hdr->caplen < tunnel_offset + ip_len + sizeof(struct kcompact_ipv6_opt_hdr))
+      if (data_len < tunnel_offset + ip_len + sizeof(struct kcompact_ipv6_opt_hdr))
         return 1;
 
-      ipv6_opt = (struct kcompact_ipv6_opt_hdr *)(&pkt[tunnel_offset + ip_len]);
+      ipv6_opt = (struct kcompact_ipv6_opt_hdr *)(&data[tunnel_offset + ip_len]);
       ip_len += sizeof(struct kcompact_ipv6_opt_hdr);
       fragment_offset = 0;
       if (hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == NEXTHDR_HOP     ||
@@ -170,30 +170,30 @@ static int __pfring_parse_tunneled_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u
   if(hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == IPPROTO_TCP) {
     struct tcphdr *tcp;
 
-    if(hdr->caplen < tunnel_offset + sizeof(struct tcphdr))
+    if(data_len < tunnel_offset + sizeof(struct tcphdr))
       return 1;
 
-    tcp = (struct tcphdr *)(&pkt[tunnel_offset]);
+    tcp = (struct tcphdr *)(&data[tunnel_offset]);
 
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port = ntohs(tcp->source),
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port = ntohs(tcp->dest);
   } else if(hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == IPPROTO_UDP) {
     struct udphdr *udp;
 
-    if(hdr->caplen < tunnel_offset + sizeof(struct udphdr))
+    if(data_len < tunnel_offset + sizeof(struct udphdr))
       return 1;
 
-    udp = (struct udphdr *)(&pkt[tunnel_offset]);
+    udp = (struct udphdr *)(&data[tunnel_offset]);
 
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port = ntohs(udp->source),
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port = ntohs(udp->dest);
   } else if(hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto == IPPROTO_SCTP) {
     struct tcphdr *sctp;    /* We just want source and dest port here */
 
-    if(hdr->caplen < tunnel_offset + 12)
+    if(data_len < tunnel_offset + 12)
       return 1;
 
-    sctp = (struct tcphdr *)(&pkt[tunnel_offset]);
+    sctp = (struct tcphdr *)(&data[tunnel_offset]);
 
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port = ntohs(sctp->source),
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port = ntohs(sctp->dest);
@@ -204,10 +204,10 @@ static int __pfring_parse_tunneled_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u
 
 /* ******************************* */
 
-int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L2..L4, 5 (tunnel) */,
+int pfring_parse_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int8_t level /* L2..L4, 5 (tunnel) */,
 		     u_int8_t add_timestamp /* 0,1 */, u_int8_t add_hash /* 0,1 */) {
-  struct ethhdr *eh = (struct ethhdr*) pkt;
-  u_int32_t displ = 0, ip_len;
+  struct ethhdr *eh = (struct ethhdr*) data;
+  u_int32_t data_len = hdr->caplen, displ = 0, ip_len;
   u_int16_t analyzed = 0, fragment_offset = 0;
 
   hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id = NO_TUNNEL_ID;
@@ -227,15 +227,29 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
   hdr->extended_hdr.parsed_pkt.offset.vlan_offset = 0;
   hdr->extended_hdr.parsed_pkt.vlan_id = 0; /* Any VLAN */
 
+#ifndef VLAN_VID_MASK
+#define VLAN_VID_MASK 0x0fff
+#endif
+
   if (hdr->extended_hdr.parsed_pkt.eth_type == 0x8100 /* 802.1q (VLAN) */) {
     struct eth_vlan_hdr *vh;
-    hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr) - sizeof(struct eth_vlan_hdr);
-    while (hdr->extended_hdr.parsed_pkt.eth_type == 0x8100 /* 802.1q (VLAN) */ ) {
+    hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+    vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
+    hdr->extended_hdr.parsed_pkt.vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK /* 0x0fff */;
+    hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
+    displ += sizeof(struct eth_vlan_hdr);
+    if (hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_8021Q /* 0x8100 802.1q (VLAN) */) { /* QinQ */
       hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
-      vh = (struct eth_vlan_hdr *) &pkt[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
-      hdr->extended_hdr.parsed_pkt.vlan_id = ntohs(vh->h_vlan_id) & 0x0fff;
+      vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
+      hdr->extended_hdr.parsed_pkt.qinq_vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
       hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
       displ += sizeof(struct eth_vlan_hdr);
+      while (hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_8021Q /* 802.1q (VLAN) */ && displ <= data_len) { /* More QinQ */
+        hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
+        vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
+        hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
+        displ += sizeof(struct eth_vlan_hdr);
+      }
     }
   }
 
@@ -256,10 +270,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
 
     hdr->extended_hdr.parsed_pkt.ip_version = 4;
 
-    if (hdr->caplen < hdr->extended_hdr.parsed_pkt.offset.l3_offset + sizeof(struct iphdr))
+    if (data_len < hdr->extended_hdr.parsed_pkt.offset.l3_offset + sizeof(struct iphdr))
       goto TIMESTAMP;
 
-    ip = (struct iphdr *)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
+    ip = (struct iphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
 
     hdr->extended_hdr.parsed_pkt.ipv4_src = ntohl(ip->saddr);
     hdr->extended_hdr.parsed_pkt.ipv4_dst = ntohl(ip->daddr);
@@ -273,10 +287,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
 
     hdr->extended_hdr.parsed_pkt.ip_version = 6;
 
-    if (hdr->caplen < hdr->extended_hdr.parsed_pkt.offset.l3_offset + sizeof(struct kcompact_ipv6_hdr))
+    if (data_len < hdr->extended_hdr.parsed_pkt.offset.l3_offset + sizeof(struct kcompact_ipv6_hdr))
       goto TIMESTAMP;
 
-    ipv6 = (struct kcompact_ipv6_hdr*)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
+    ipv6 = (struct kcompact_ipv6_hdr*)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
     ip_len = sizeof(struct kcompact_ipv6_hdr);
 
     /* Values of IPv6 addresses are stored as network byte order */
@@ -293,10 +307,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
 	   hdr->extended_hdr.parsed_pkt.l3_proto == NEXTHDR_FRAGMENT) {
       struct kcompact_ipv6_opt_hdr *ipv6_opt;
 
-      if(hdr->caplen < hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len + sizeof(struct kcompact_ipv6_opt_hdr))
+      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len + sizeof(struct kcompact_ipv6_opt_hdr))
         goto TIMESTAMP;
 
-      ipv6_opt = (struct kcompact_ipv6_opt_hdr *)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len]);
+      ipv6_opt = (struct kcompact_ipv6_opt_hdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len]);
       ip_len += sizeof(struct kcompact_ipv6_opt_hdr);
       if (hdr->extended_hdr.parsed_pkt.l3_proto == NEXTHDR_HOP     ||
           hdr->extended_hdr.parsed_pkt.l3_proto == NEXTHDR_DEST    ||
@@ -325,10 +339,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
   if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {
     struct tcphdr *tcp;
 
-    if(hdr->caplen < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct tcphdr))
+    if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct tcphdr))
       goto TIMESTAMP;
 
-    tcp = (struct tcphdr *)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+    tcp = (struct tcphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
 
     hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(tcp->source);
     hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(tcp->dest);
@@ -343,10 +357,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
   } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_UDP) {
     struct udphdr *udp;
 
-    if(hdr->caplen < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct udphdr))
+    if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct udphdr))
       goto TIMESTAMP;
 
-    udp = (struct udphdr *)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+    udp = (struct udphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
 
     hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(udp->source), hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(udp->dest);
     hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct udphdr);
@@ -364,10 +378,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
       struct gtp_v1_hdr *gtp;
       u_int16_t gtp_len;
 
-      if(hdr->caplen < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(struct gtp_v1_hdr)))
+      if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(struct gtp_v1_hdr)))
         goto TIMESTAMP;
 
-      gtp = (struct gtp_v1_hdr *) (&pkt[hdr->extended_hdr.parsed_pkt.offset.payload_offset]);
+      gtp = (struct gtp_v1_hdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset]);
       gtp_len = sizeof(struct gtp_v1_hdr);
 
       if(((gtp->flags & GTP_FLAGS_VERSION) >> GTP_FLAGS_VERSION_SHIFT) == GTP_VERSION_1) {
@@ -380,10 +394,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
 	  if(gtp->flags & (GTP_FLAGS_EXTENSION | GTP_FLAGS_SEQ_NUM | GTP_FLAGS_NPDU_NUM)) {
 	    struct gtp_v1_opt_hdr *gtpopt;
 
-            if(hdr->caplen < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len+sizeof(struct gtp_v1_opt_hdr)))
+            if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len+sizeof(struct gtp_v1_opt_hdr)))
 	      goto TIMESTAMP;
 
-	    gtpopt = (struct gtp_v1_opt_hdr *) (&pkt[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
+	    gtpopt = (struct gtp_v1_opt_hdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
 	    gtp_len += sizeof(struct gtp_v1_opt_hdr);
 
 	    if((gtp->flags & GTP_FLAGS_EXTENSION) && gtpopt->next_ext_hdr) {
@@ -391,26 +405,26 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
 	      u_int8_t *next_ext_hdr;
 
 	      do {
-		if(hdr->caplen < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len +1/* 8bit len field */)) goto TIMESTAMP;
-		gtpext = (struct gtp_v1_ext_hdr *) (&pkt[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
+		if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len +1/* 8bit len field */)) goto TIMESTAMP;
+		gtpext = (struct gtp_v1_ext_hdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
 		gtp_len += (gtpext->len * GTP_EXT_HDR_LEN_UNIT_BYTES);
-		if(gtpext->len == 0 || hdr->caplen < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len)) goto TIMESTAMP;
-		next_ext_hdr = (u_int8_t *) (&pkt[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len - 1/* 8bit next_ext_hdr field*/]);
+		if(gtpext->len == 0 || data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len)) goto TIMESTAMP;
+		next_ext_hdr = (u_int8_t *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len - 1/* 8bit next_ext_hdr field*/]);
 	      } while (*next_ext_hdr);
 	    }
 	  }
 
-	  if(hdr->caplen < (hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len + sizeof(struct iphdr)))
+	  if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len + sizeof(struct iphdr)))
 	    goto TIMESTAMP;
 
-	  tunneled_ip = (struct iphdr *) (&pkt[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
+	  tunneled_ip = (struct iphdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
 
-          analyzed += __pfring_parse_tunneled_pkt(pkt, hdr, tunneled_ip->version, hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len);
+          analyzed += __pfring_parse_tunneled_pkt(data, hdr, tunneled_ip->version, hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len);
         }
       }
     }
   } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {
-    struct gre_header *gre = (struct gre_header*)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+    struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
     int gre_offset;
 
     gre->flags_and_version = ntohs(gre->flags_and_version);
@@ -421,7 +435,7 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
     if((gre->flags_and_version & GRE_HEADER_VERSION) == 0) {
       if(gre->flags_and_version & (GRE_HEADER_CHECKSUM | GRE_HEADER_ROUTING)) gre_offset += 4;
       if(gre->flags_and_version & GRE_HEADER_KEY) {
-        u_int32_t *tunnel_id = (u_int32_t*)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l4_offset+gre_offset]);
+        u_int32_t *tunnel_id = (u_int32_t*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset+gre_offset]);
         gre_offset += 4;
 	hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id = ntohl(*tunnel_id);
       }
@@ -435,7 +449,7 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
         goto TIMESTAMP;
 
       if (gre->proto == ETH_P_IP /* IPv4 */ || gre->proto == ETH_P_IPV6 /* IPv6 */)
-        analyzed += __pfring_parse_tunneled_pkt(pkt, hdr, gre->proto == ETH_P_IP ? 4 : 6, hdr->extended_hdr.parsed_pkt.offset.payload_offset);
+        analyzed += __pfring_parse_tunneled_pkt(data, hdr, gre->proto == ETH_P_IP ? 4 : 6, hdr->extended_hdr.parsed_pkt.offset.payload_offset);
 
     } else { /* TODO handle other GRE versions */
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
@@ -443,10 +457,10 @@ int pfring_parse_pkt(u_char *pkt, struct pfring_pkthdr *hdr, u_int8_t level /* L
   } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP /* 132 */) {
       struct tcphdr *sctp; /* We just want source and dest port here */
 
-      if(hdr->caplen < hdr->extended_hdr.parsed_pkt.offset.l4_offset + 12)
+      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + 12)
         goto TIMESTAMP;
 
-      sctp = (struct tcphdr *)(&pkt[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+      sctp = (struct tcphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
 
       hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(sctp->source);
       hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(sctp->dest);
@@ -580,9 +594,13 @@ int pfring_print_parsed_pkt(char *buff, u_int buff_len, const u_char *p, const s
     etheraddr2string(h->extended_hdr.parsed_pkt.smac, buf1),
     etheraddr2string(h->extended_hdr.parsed_pkt.dmac, buf2));
 
-  if(h->extended_hdr.parsed_pkt.offset.vlan_offset)
+  if (h->extended_hdr.parsed_pkt.offset.vlan_offset) {
     buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
       "[vlan %u] ", h->extended_hdr.parsed_pkt.vlan_id);
+    if (h->extended_hdr.parsed_pkt.qinq_vlan_id)
+      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+        "[QinQ-vlan %u] ", h->extended_hdr.parsed_pkt.qinq_vlan_id);
+  }
 
   if (h->extended_hdr.parsed_pkt.eth_type == 0x0800 /* IPv4*/ || h->extended_hdr.parsed_pkt.eth_type == 0x86DD /* IPv6*/) {
 
