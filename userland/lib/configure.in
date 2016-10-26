@@ -125,7 +125,7 @@ fi
 dnl> Exablaze - http://exablaze.com
 AC_CHECK_HEADERS(exanic/exanic.h)
 if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
-  AC_CHECK_LIB([exanic], [exanic_acquire_handle], [ EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; SYSLIBS="$SYSLIBS $EXABLAZE_LIB"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"])
+  AC_CHECK_LIB([exanic], [exanic_acquire_handle], [ EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"])
 fi
 
 dnl> Redis - Default disabled

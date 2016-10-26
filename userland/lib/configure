@@ -3611,7 +3611,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_exanic_exanic_acquire_handle" >&5
 $as_echo "$ac_cv_lib_exanic_exanic_acquire_handle" >&6; }
 if test "x$ac_cv_lib_exanic_exanic_acquire_handle" = xyes; then :
-   EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; SYSLIBS="$SYSLIBS $EXABLAZE_LIB"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"
+   EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"
 fi
 
 fi
