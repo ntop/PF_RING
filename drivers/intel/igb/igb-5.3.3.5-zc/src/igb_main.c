@@ -4120,7 +4120,9 @@ static void igb_setup_mrqc(struct igb_adapter *adapter)
 		else
 			mrqc |= E1000_MRQC_ENABLE_VMDQ;
 	} else {
+#ifndef HAVE_PF_RING
 		if (hw->mac.type != e1000_i211)
+#endif
 			mrqc |= E1000_MRQC_ENABLE_RSS_4Q;
 	}
 	igb_vmm_control(adapter);
