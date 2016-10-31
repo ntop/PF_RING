@@ -477,6 +477,11 @@ static int pfring_daq_initialize(const DAQ_Config_t *config,
     }
   }
 
+  if (context->num_devices == 0) {
+    snprintf(errbuf, len, "%s: no device specified (self-test mode?)\n", __func__);
+    return DAQ_ERROR;  
+  }
+
   /* catching the SIGRELOAD signal, replacing the default snort handler */
   if ((default_sig_reload_handler = signal(SIGHUP, pfring_daq_sig_reload)) == SIG_ERR)
     default_sig_reload_handler = NULL;
