@@ -98,12 +98,12 @@ RING_H     = ../../kernel/linux/pf_ring.h
 
 all: ${TARGETS}
 
-${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
+${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
 	ar rs $@ ${OBJS} ${NBPF_OBJS}
 	ranlib $@
 
-${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
+${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
 	${CC} ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
 
@@ -115,6 +115,9 @@ extract_myricom_lib:
 
 extract_nt_lib:
 	ar x @MOD_NT_LIB@
+
+extract_dag_lib:
+	ar x @MOD_DAG_LIB@
 
 extract_npcap_lib:
 	ar x @NPCAP_LIB@

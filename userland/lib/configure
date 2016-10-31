@@ -651,12 +651,14 @@ ACCOLADE_OBJS
 ACCOLADE_LIB
 ACCOLADE_INC
 MOD_NT_LIB
-HAVE_NT
 NT_DEP
 NT_LIB
 NT_OBJS
-DAG_OBJS
+HAVE_NT
+MOD_DAG_LIB
+DAG_DEP
 DAG_LIB
+DAG_OBJS
 HAVE_DAG
 NPCAP_H
 NPCAP_DEP
@@ -697,6 +699,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -770,6 +773,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1022,6 +1026,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1159,7 +1172,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1312,6 +1325,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -3286,6 +3300,7 @@ MACHINE=`uname -m`
 PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
 NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setaffinity_np in -lpthread" >&5
@@ -3764,7 +3779,7 @@ if ${ac_cv_lib_dag_dag_get_stream_erf_types+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-ldag   $LIBS"
+LIBS="-ldag  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3795,9 +3810,29 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_dag_dag_get_stream_erf_types" >&5
 $as_echo "$ac_cv_lib_dag_dag_get_stream_erf_types" >&6; }
 if test "x$ac_cv_lib_dag_dag_get_stream_erf_types" = xyes; then :
-  HAVE_DAG="-D HAVE_DAG"; DAG_OBJS="pfring_mod_dag.o"; DAG_LIB="-L/usr/local/lib -ldag -lm"
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBDAG 1
+_ACEOF
+
+  LIBS="-ldag $LIBS"
+
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if libdag is present" >&5
+$as_echo_n "checking if libdag is present... " >&6; }
+if test "x$ac_cv_lib_dag_dag_get_stream_erf_types" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking DAG support" >&5
+$as_echo_n "checking DAG support... " >&6; }
+  if test -f $MOD_DAG_LIB; then
+    DAG_LIB="-L/usr/local/lib -ldag -ldagconf -lm"
+    HAVE_DAG="-D HAVE_DAG"
+    DAG_OBJS=`ar t $MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
+    DAG_DEP="extract_dag_lib"
+  fi
+fi
 
 OLD_LIBS=$LIBS
 LIBS="-L/opt/napatech3/lib -lntos $LIBS"
@@ -3849,19 +3884,19 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if ntapi is present" >&5
 $as_echo_n "checking if ntapi is present... " >&6; }
 if test "x$ac_cv_lib_ntapi_NT_Init" = xyes; then :
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking Napatech support" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking Napatech support" >&5
 $as_echo_n "checking Napatech support... " >&6; }
-    if test -f $MOD_NT_LIB; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+  if test -f $MOD_NT_LIB; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-      NT_LIB="-L/opt/napatech3/lib -lntapi -lntos"
-      HAVE_NT="-D HAVE_NT"
-      NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
-      NT_DEP="extract_nt_lib"
-     fi
+    NT_LIB="-L/opt/napatech3/lib -lntapi -lntos"
+    HAVE_NT="-D HAVE_NT"
+    NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
+    NT_DEP="extract_nt_lib"
+  fi
 fi
 LIBS=$OLD_LIBS
 
@@ -4071,6 +4106,8 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
+
+
 
 
 
