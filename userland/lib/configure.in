@@ -140,19 +140,10 @@ fi
 AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])
 AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 
-AC_CHECK_LIB( [dag], [dag_get_stream_erf_types], )
-AC_MSG_CHECKING([if libdag is present]) 
-if test "x$ac_cv_lib_dag_dag_get_stream_erf_types" = xyes; then :
-  AC_MSG_RESULT([yes])
-  
-  AC_MSG_CHECKING([DAG support]) 
-  if test -f $MOD_DAG_LIB; then
-    DAG_LIB="-L/usr/local/lib -ldag -ldagconf -lm" 
-    HAVE_DAG="-D HAVE_DAG"
-    DAG_OBJS=`ar t $MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
-    DAG_DEP="extract_dag_lib"
-  fi
-fi
+DAG_LIB="-lm -ldl" 
+HAVE_DAG="-D HAVE_DAG"
+DAG_OBJS=`ar t $MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
+DAG_DEP="extract_dag_lib"
 
 OLD_LIBS=$LIBS
 LIBS="-L/opt/napatech3/lib -lntos $LIBS"

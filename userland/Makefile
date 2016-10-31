@@ -6,7 +6,7 @@ libpfring:
 	cd lib; ./configure; make
 
 pcap:
-	cd libpcap; ./configure --enable-ipv6 --enable-dbus=no --without-libnl --with-snf=no --disable-bluetooth --disable-canusb; make
+	cd libpcap; ./configure --enable-ipv6 --enable-dbus=no --without-libnl --with-snf=no --disable-bluetooth --disable-canusb --with-dag=no; make
 
 ring_examples:
 	cd examples; make
