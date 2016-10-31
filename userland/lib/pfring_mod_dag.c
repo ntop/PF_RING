@@ -326,12 +326,10 @@ int pfring_dag_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfri
   ts += ((erf_hdr->ts >> 32) * 1000000000);
   hdr->extended_hdr.timestamp_ns = ts;
 
-#ifdef PFRING_DAG_PARSE_PKT
-  pfring_parse_pkt(*buffer, hdr, 4, 0, 1);
-#else
-  hdr->extended_hdr.parsed_header_len = 0;
-#endif
-
+  if(likely(buffer_len > 0)) {
+    pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
+  }
+  
   hdr->extended_hdr.if_index = UNKNOWN_INTERFACE; //TODO
 
   d->stats_recv++;
@@ -339,7 +337,6 @@ int pfring_dag_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfri
   retval = 1;
            
  exit:
-
   if(ring->reentrant) 
     pthread_rwlock_unlock(&ring->rx_lock);
 
@@ -453,7 +450,7 @@ int pfring_dag_poll(pfring *ring, u_int wait_duration) {
 /* **************************************************** */
 
 u_int32_t pfring_dag_get_interface_speed(pfring *ring) {
-  pfring_dag *d = (pfring_dag *) ring->priv_data;
+  // pfring_dag *d = (pfring_dag *) ring->priv_data;
 
   /* TODO */
 
