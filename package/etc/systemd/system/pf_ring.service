@@ -1,0 +1,15 @@
+[Unit]
+Description=Start/stop pfring service
+After=network.target syslog.target
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+ExecStart=/etc/init.d/pf_ring start
+ExecStop=/etc/init.d/pf_ring stop
+Restart=on-abnormal
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
