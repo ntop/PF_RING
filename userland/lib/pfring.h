@@ -1265,6 +1265,14 @@ typedef struct {
   char   *name;
   int   (*open)  (pfring *);
 } pfring_module_info;
+  
+struct thirdparty_func {
+  const char *name;   /* Function name */
+  void  (*ptr)(void); /* Function pointer */
+};
+  
+void pfring_thirdparty_lib_init(const char* thirdparty_lib_name,
+				struct thirdparty_func thirdparty_function_ptr[]);
 
 #ifdef __cplusplus
 }

@@ -15,8 +15,8 @@
 #include "pfring_mod_sysdig.h"
 #include "pfring_utils.h"
 
+#include <dlfcn.h> /* dlXXXX (e.g. dlopen()) */
 #include <linux/if.h>
-
 #ifdef ENABLE_HW_TIMESTAMP
 #include <linux/net_tstamp.h>
 #endif
@@ -886,5 +886,36 @@ int32_t gmt_to_local(time_t t) {
   dt += dir * 24 * 60 * 60;
 
   return (dt);
+}
+
+/* **************************************************** */
+
+void pfring_thirdparty_lib_init(const char* thirdparty_lib_name,
+				struct thirdparty_func thirdparty_function_ptr[]) {
+  void *thirdparty_handle;
+
+  if((thirdparty_handle = dlopen(thirdparty_lib_name, RTLD_LAZY)) == NULL) {
+    printf("Unable to load library %s: is installed properly?\n",
+	   thirdparty_lib_name);
+  } else {
+    int i;
+
+    for(i = 0; thirdparty_function_ptr[i].name != NULL; i++) {
+      if(thirdparty_function_ptr[i].ptr == NULL) {
+	thirdparty_function_ptr[i].ptr = dlsym(thirdparty_handle,
+					       thirdparty_function_ptr[i].name);
+
+#ifdef RING_DEBUG
+	if(thirdparty_function_ptr[i].ptr != NULL)
+	  printf("Loaded function %s from %s\n",
+		 thirdparty_function_ptr[i].name,
+		 thirdparty_lib_name);
+#endif
+      }
+    }
+
+    /* Don't dlclose() as otherwise symbols will disappead */
+    /* dlclose(thirdparty_handle); */
+  }
 }
 
