@@ -171,21 +171,10 @@ else
    AC_MSG_RESULT(no)
 fi
 
-MYRICOM_HOME="/opt/snf"
 MYRICOM_LIB=
-MYRICOM_OBJS=
-HAVE_MYRICOM=
-AC_MSG_CHECKING([Myricom support])
-if test -d "$MYRICOM_HOME"; then
-  MYRICOM_LIB="-L/opt/snf/lib -lsnf"
-  HAVE_MYRICOM="-DHAVE_MYRICOM"
-  MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-  MYRICOM_DEP="extract_myricom_lib"
-  AC_MSG_RESULT(yes)
-  AC_DEFINE_UNQUOTED(HAVE_MYRICOM, 1, [Myricom support is present])
-else
-  AC_MSG_RESULT(no)
-fi
+HAVE_MYRICOM="-DHAVE_MYRICOM"
+MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+MYRICOM_DEP="extract_myricom_lib"
 
 LIBS="-lsze2 $LIBS"
 AC_CHECK_LIB([sze2], [szedata_open], )

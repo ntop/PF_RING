@@ -3811,28 +3811,10 @@ else
 $as_echo "no" >&6; }
 fi
 
-MYRICOM_HOME="/opt/snf"
 MYRICOM_LIB=
-MYRICOM_OBJS=
-HAVE_MYRICOM=
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Myricom support" >&5
-$as_echo_n "checking Myricom support... " >&6; }
-if test -d "$MYRICOM_HOME"; then
-  MYRICOM_LIB="-L/opt/snf/lib -lsnf"
-  HAVE_MYRICOM="-DHAVE_MYRICOM"
-  MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-  MYRICOM_DEP="extract_myricom_lib"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_MYRICOM 1
-_ACEOF
-
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
+HAVE_MYRICOM="-DHAVE_MYRICOM"
+MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+MYRICOM_DEP="extract_myricom_lib"
 
 LIBS="-lsze2 $LIBS"
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for szedata_open in -lsze2" >&5
