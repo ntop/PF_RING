@@ -25,18 +25,14 @@ if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so         /lib
 
 DATE=`date -R`
 KERNEL=`uname -r`
-ACCOLADE_LIBS=""
-ACCOLADE_LIB_COPY=""
+ACCOLADE_LIBS=
+ACCOLADE_LIB_COPY=
 
 NAPATECH_LIBS=
 NAPATECH_LIB_COPY=
 
 MYRICOM_LIBS=
 MYRICOM_LIB_COPY=
-if test -d /opt/snf/; then	
-   MYRICOM_LIB_COPY="mkdir -p \$RPM_BUILD_ROOT/lib64/; cp /lib64/libsnf.so \$RPM_BUILD_ROOT/lib64/"
-   MYRICOM_LIBS="/lib64/libsnf.so"
-fi
 
 
 AC_SUBST(VERS)

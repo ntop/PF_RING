@@ -40,7 +40,6 @@ fi
 
 dnl> The step below is necessary to make sure the package will work on the
 dnl> target system without having to deal with ldconfig
-if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so /usr/local/lib; ln -s /usr/local/lib/libsnf.so /usr/local/lib/libsnf.so.0; fi
 dnl> if test -d /opt/accolade/lib/;  then sudo cp /opt/accolade/lib/libanic.so /usr/local/lib; fi
 
 

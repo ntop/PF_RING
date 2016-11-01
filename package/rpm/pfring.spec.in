@@ -119,7 +119,6 @@ rm -fr $RPM_BUILD_ROOT
 %post
 /sbin/chkconfig pf_ring on > /dev/null 2>&1
 /sbin/chkconfig cluster on > /dev/null 2>&1
-if [ -f /opt/snf/lib/libsnf.so ];         then cp /opt/snf/lib/libsnf.so /lib64; ln -s /lib64/libsnf.so /lib64/libsnf.so.0; fi
 /sbin/ldconfig > /dev/null 2>&1
  
 %changelog
