@@ -20,12 +20,6 @@ PFRING_VERS=`cat $HOME/PF_RING/kernel/linux/pf_ring.h | grep RING_VERSION | head
 
 PRE_BUILD_EXAMPLES="pre-build-examples"
 
-if test "$UBUNTU_RELEASE" = "16.04"; then
-  BUILD_PRE_DNA=""
-else
-  BUILD_PRE_DNA="pre-dna"
-fi
-
 PRE_DEP="pre"
 if test $MACHINE = "x86_64"; then
    EXTN="amd64"
@@ -42,7 +36,6 @@ dnl> The step below is necessary to make sure the package will work on the
 dnl> target system without having to deal with ldconfig
 dnl> if test -d /opt/accolade/lib/;  then sudo cp /opt/accolade/lib/libanic.so /usr/local/lib; fi
 
-
 DATE=`date -R`
 KERNEL=`uname -r`
 
@@ -55,7 +48,6 @@ AC_SUBST(GIT_HASH)
 AC_SUBST(PFRING_VERS)
 AC_SUBST(PRE_DEP)
 AC_SUBST(PRE_BUILD_EXAMPLES)
-AC_SUBST(BUILD_PRE_DNA)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(debian/changelog)
