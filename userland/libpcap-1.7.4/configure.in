@@ -735,7 +735,8 @@ AC_HELP_STRING([--with-dag@<:@=DIR@:>@],[include Endace DAG support @<:@"yes", "
 	#
 	# Use DAG API if present, otherwise don't
 	#
-	want_dag=ifpresent
+	#want_dag=ifpresent
+	want_dag=no
 ])
 
 AC_ARG_WITH([dag-includes],
@@ -985,7 +986,8 @@ AC_HELP_STRING([--with-snf@<:@=DIR@:>@],[include Myricom SNF support @<:@"yes", 
 	#
 	# Use Sniffer API if present, otherwise don't
 	#
-	want_snf=ifpresent
+	#want_snf=ifpresent
+	want_snf=no
 ])
 
 AC_ARG_WITH([snf-includes],

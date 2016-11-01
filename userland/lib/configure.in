@@ -99,10 +99,10 @@ fi
 AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])
 AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 
-AC_CHECK_LIB( [dag], 
-              [dag_get_stream_erf_types], 
-              [HAVE_DAG="-D HAVE_DAG"; DAG_OBJS="pfring_mod_dag.o"; DAG_LIB="-L/usr/local/lib -ldag -lm"], 
-              [], [] )
+dnl AC_CHECK_LIB( [dag], 
+dnl              [dag_get_stream_erf_types], 
+dnl              [HAVE_DAG="-D HAVE_DAG"; DAG_OBJS="pfring_mod_dag.o"; DAG_LIB="-L/usr/local/lib -ldag -lm"], 
+dnl              [], [] )
 
 OLD_LIBS=$LIBS
 LIBS="-L/opt/napatech3/lib -lntos $LIBS"
