@@ -145,23 +145,10 @@ HAVE_DAG="-D HAVE_DAG"
 DAG_OBJS=`ar t $MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
 DAG_DEP="extract_dag_lib"
 
-OLD_LIBS=$LIBS
-LIBS="-L/opt/napatech3/lib -lntos $LIBS"
-AC_CHECK_LIB([ntapi], [NT_Init], )
-AC_MSG_CHECKING([if ntapi is present])
-if test "x$ac_cv_lib_ntapi_NT_Init" = xyes; then :
-  AC_MSG_RESULT([yes])
-
-  AC_MSG_CHECKING([Napatech support])
-  if test -f $MOD_NT_LIB; then
-    AC_MSG_RESULT(yes)
-    NT_LIB="-L/opt/napatech3/lib -lntapi -lntos"
-    HAVE_NT="-D HAVE_NT"
-    NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
-    NT_DEP="extract_nt_lib"
-  fi
-fi
-LIBS=$OLD_LIBS
+dnl> Napatech
+HAVE_NT="-D HAVE_NT"
+NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
+NT_DEP="extract_nt_lib"
 
 ACCOLADE_HOME="/opt/accolade"
 ACCOLADE_INC=
