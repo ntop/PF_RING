@@ -1656,7 +1656,7 @@ if test "x$enable_can" != "xno" ; then
 fi
 
 AC_ARG_ENABLE([dbus],
-[AC_HELP_STRING([--enable-dbus],[enable D-Bus capture support @<:@default=yes, if support available@:>@])],
+[AC_HELP_STRING([--enable-dbus],[enable D-Bus capture support @<:@default=no, if support available@:>@])],
     [],
     [enable_dbus=ifavailable])
 
@@ -1692,7 +1692,7 @@ if test "x$enable_dbus" != "xno"; then
 	fi
 fi
 
-if test "x$enable_dbus" != "xno"; then
+if test "x$enable_dbus" = "xyes"; then
 	AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [no])
 	if test "x$PKGCONFIG" != "xno"; then
 		AC_MSG_CHECKING([for D-Bus])

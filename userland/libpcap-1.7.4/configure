@@ -1406,8 +1406,8 @@ Optional Features:
                           available]
   --enable-can            enable CAN support [default=yes, if support
                           available]
-  --enable-dbus           enable D-Bus capture support [default=yes, if
-                          support available]
+  --enable-dbus           enable D-Bus capture support [default=no, if support
+                          available]
   --enable-packet-ring    enable Linux packet ring support [default=yes]
 
 Optional Packages:
@@ -8393,7 +8393,7 @@ if test "x$enable_dbus" != "xno"; then
 	fi
 fi
 
-if test "x$enable_dbus" != "xno"; then
+if test "x$enable_dbus" = "xyes"; then
 	# Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
