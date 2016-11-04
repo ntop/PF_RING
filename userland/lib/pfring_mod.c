@@ -1021,7 +1021,7 @@ static u_int32_t __ethtool_get_link_settings(const char *ifname) {
   close(sock);
 
   if (rc < 0) {
-    fprintf(stderr, "I/O Control error [%s]\n", ifname);
+    fprintf(stderr, "error reading link speed on %s\n", ifname);
     return speed;
   }
 
