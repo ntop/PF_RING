@@ -371,7 +371,6 @@ typedef struct {
   u_int16_t dport_low, dport_high;     /* All ports between port_low...port_high means 'any' port */
   struct {
     u_int8_t flags;             /* TCP flags (0 if not available) */
-    u_int32_t seq_num, ack_num; /* TCP sequence number */
   } tcp;
 } filtering_rule_core_fields;
 
