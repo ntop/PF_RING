@@ -129,5 +129,39 @@ userland/lib/libpfring.so
 !/Makefile
 !/.pc/
 
-# Use "git clean -ndX" to test
 
+drivers/intel/i40e/i40e-1.5.18-zc/src/i40e/Module.symvers
+drivers/intel/i40e/i40e-1.5.18-zc/src/i40e/i40e.mod.c
+drivers/intel/i40e/i40e-1.5.18-zc/src/i40e/modules.order
+userland/c++/Makefile
+userland/examples/Makefile
+userland/examples_zc/Makefile
+userland/examples_zc/zsanitycheck
+userland/lib/Makefile
+userland/lib/nbpf.h
+userland/lib/npcap.h
+userland/lib/pfring_mod_dag.h
+userland/lib/pfring_mod_myricom.h
+userland/lib/pfring_mod_nt.h
+userland/lib/pfring_mod_timeline.h
+userland/libpcap-1.7.4/Makefile
+userland/libpcap-1.7.4/bpf_filter.c
+userland/libpcap-1.7.4/config.h
+userland/libpcap-1.7.4/grammar.c
+userland/libpcap-1.7.4/libpcap.a
+userland/libpcap-1.7.4/libpcap.so.1.7.4
+userland/libpcap-1.7.4/net
+userland/libpcap-1.7.4/pcap-config
+userland/libpcap-1.7.4/scanner.c
+userland/libpcap-1.7.4/scanner.h
+userland/libpcap-1.7.4/tokdefs.h
+userland/libpcap-1.7.4/version.c
+userland/libpcap-1.7.4/version.h
+userland/nbpf/Makefile
+userland/nbpf/grammar.tab.c
+userland/nbpf/grammar.tab.h
+userland/nbpf/lex.yy.c
+userland/nbpf/libnbpf.a
+userland/nbpf/nbpftest
+
+# Use "git clean -ndX" to test
