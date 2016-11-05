@@ -369,6 +369,9 @@ typedef struct {
   ip_addr   shost_mask, dhost_mask;    /* IPv4/6 network mask */
   u_int16_t sport_low, sport_high;     /* All ports between port_low...port_high means 'any' port */
   u_int16_t dport_low, dport_high;     /* All ports between port_low...port_high means 'any' port */
+  struct {
+    u_int8_t flags;             /* TCP flags (0 if not available) */
+  } tcp;
 } filtering_rule_core_fields;
 
 /* ************************************************* */
