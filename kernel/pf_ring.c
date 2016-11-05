@@ -8391,5 +8391,6 @@ module_exit(ring_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("ntop.org");
 MODULE_DESCRIPTION("Packet capture acceleration and analysis");
+MODULE_VERSION(RING_VERSION);
 
 MODULE_ALIAS_NETPROTO(PF_RING);
