@@ -33,7 +33,7 @@ Run the sample application to make sure everything is working:
 
 If you are installing from repository:
 
- $ pfcount -i myri:0
+ $ pfcount -i dag:0
 
 Please note that in order to open port 0 from the DAG adapter you should 
 specify "dag:0" as interface name, if you want to open stream 2 (default is 0)
