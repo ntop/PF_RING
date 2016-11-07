@@ -2441,9 +2441,10 @@ static int match_filtering_rule(struct pf_ring_socket *pfr,
 
   *behaviour = rule->rule.rule_action;
 
-  if((hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP)
-     && ((hdr->extended_hdr.parsed_pkt.tcp.flags & rule->rule.core_fields.tcp.flags) != rule->rule.core_fields.tcp.flags))
-    return(0);
+   if((hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP)
+      && rule->rule.core_fields.tcp.flags > 0
+      && (hdr->extended_hdr.parsed_pkt.tcp.flags != rule->rule.core_fields.tcp.flags))
+     return(0);
 
   if((rule->rule.core_fields.if_index > 0)
      && (hdr->extended_hdr.if_index != UNKNOWN_INTERFACE) 
