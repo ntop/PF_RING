@@ -295,7 +295,11 @@ static void i40e_tx_timeout(struct net_device *netdev)
 		unsigned long trans_start;
 
 		q = netdev_get_tx_queue(netdev, i);
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
 		trans_start = q->trans_start ? : dev_trans_start(netdev);
+#else
+		trans_start = q->trans_start ? : netdev->trans_start;
+#endif
 		if (netif_xmit_stopped(q) && time_after(jiffies,
 			(trans_start + netdev->watchdog_timeo))) {
 			hung_queue = i;

@@ -146,7 +146,11 @@ static void fm10k_reinit(struct fm10k_intfc *interface)
 	WARN_ON(in_interrupt());
 
 	/* put off any impending NetWatchDogTimeout */
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
 	netif_trans_update(netdev);
+#else
+	netdev->trans_start = jiffies;
+#endif
 
 	while (test_and_set_bit(__FM10K_RESETTING, &interface->state))
 		usleep_range(1000, 2000);
