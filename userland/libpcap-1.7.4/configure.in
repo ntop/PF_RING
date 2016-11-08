@@ -988,6 +988,7 @@ AC_HELP_STRING([--with-snf@<:@=DIR@:>@],[include Myricom SNF support @<:@"yes", 
 	#
 	#want_snf=ifpresent
 	want_snf=no
+	with_snf=no
 ])
 
 AC_ARG_WITH([snf-includes],
