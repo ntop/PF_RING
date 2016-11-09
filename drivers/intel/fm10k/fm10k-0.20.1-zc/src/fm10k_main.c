@@ -257,7 +257,7 @@ static bool fm10k_can_reuse_rx_page(struct fm10k_rx_buffer *rx_buffer,
 	 * This would break get_page_unless_zero() users.
 	 */
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
-	atomic_inc(&page->_mapcount);
+	page_ref_inc(page);
 #else
 	atomic_inc(&page->_count);
 #endif
