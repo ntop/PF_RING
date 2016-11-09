@@ -199,7 +199,7 @@ load_driver() {
 		# driver is available
 		DRV_PARAM=`cat ${DRIVERS_CONFIG_DIR}/${2}/${1}/${1}.conf`
 		if [ ${MGMT_INTERFACE_DRIVER} == ${1} ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
-			echo "Skipping driver ${1}: driver matches ${MGMT_INTERFACE}"
+			echo "Skipping driver ${1}: driver matches the management interface ${MGMT_INTERFACE}"
 			return
 		fi
 		# unload old module if needed
@@ -455,7 +455,7 @@ check_driver_status() {
 	if [ $NUM_CONFIGED_DRIVERS -eq $NUM_LOADED_DRIVERS ]; then
 		echo "UP"
 	else
-		local MSG="The following drivers are not loaded: "
+		local MSG="The following drivers has not been loaded: "
 		for driver in ${UNLOADED_DRIVERS[@]}; do
 			 MSG+="$driver "
 		done
