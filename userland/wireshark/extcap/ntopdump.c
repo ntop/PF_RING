@@ -1,7 +1,12 @@
-/* ntopdump.c
- * ntopdump is a Wireshark extcap used to get packets exported from ntop tools such as n2disk
+/*
  *
- * Copyright 2016, Simone Mainardi <mainardi@ntop.org>
+ * (C) 2005-16 - ntop.org
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lessed General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or
+ * (at your option) any later version.
  *
 */
 
@@ -96,16 +101,20 @@ void extcap_version() {
 }
 
 void extcap_list_interfaces() {
+  int i;
+  
   /* Print version */
   extcap_version();
-  for(int i = 0; i < extcap_interfaces_num; i++) {
+  for(i = 0; i < extcap_interfaces_num; i++) {
     printf("interface {value=%s}{display=%s}\n", extcap_interfaces[i].interface, extcap_interfaces[i].description);    
   }
 }
 
 void extcap_dlts() {
+  int i;
+  
   if(!extcap_selected_interface) return;
-  for(int i = 0; i < extcap_interfaces_num; i++) {
+  for(i = 0; i < extcap_interfaces_num; i++) {
     extcap_interface *eif = &extcap_interfaces[i];
     if(!strncmp(extcap_selected_interface, eif->interface, strlen(eif->interface))) {
       printf("dlt {number=%u}{name=%s}{display=%s}\n", eif->dlt, eif->interface, eif->dltdescription);
