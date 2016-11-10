@@ -471,21 +471,40 @@ void printHelp(void) {
 	 "                - dag:dagX:Y for Endace DAG cards\n"
 #endif
 	 );
-  printf("-n <threads>    Number of polling threads (default %d)\n", num_threads);
-  printf("-f <filter>     [BPF filter]\n");
-  printf("-c <cluster id> Cluster ID (kernel clustering)\n");
-  printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
-  printf("-l <len>        Capture length\n");
-  printf("-g <core_id>    Bind this app to a core\n");
-  printf("-d <device>     Device on which incoming packets are copied\n");
-  printf("-w <watermark>  Watermark\n");
-  printf("-p <poll wait>  Poll wait (msec)\n");
-  printf("-b <cpu %%>      CPU pergentage priority (0-99)\n");
-  printf("-a              Active packet wait\n");
-  printf("-N <num>        Read <num> packets and exit\n");
-  printf("-q              If -v is set, force printing packets as sysdig events\n");
-  printf("-m              Long packet header (with PF_RING extensions)\n");
-  printf("-r              Rehash RSS packets\n");
+  printf("-n <threads>      Number of polling threads (default %d)\n", num_threads);
+  printf("-f <filter>       BPF filter\n");
+  printf("-e <direction>    0=RX+TX, 1=RX only, 2=TX only\n");
+  printf("-l <len>          Capture length\n");
+  printf("-g <core_id>      Bind this app to a core\n");
+  printf("-d <device>       Device on which incoming packets are copied\n");
+  printf("-w <watermark>    Watermark\n");
+  printf("-p <poll wait>    Poll wait (msec)\n");
+  printf("-b <cpu %%>        CPU pergentage priority (0-99)\n");
+  printf("-a                Active packet wait\n");
+  printf("-N <num>          Read <num> packets and exit\n");
+  printf("-q                Force printing packets as sysdig events with -v\n");
+  printf("-m                Long packet header (with PF_RING extensions)\n");
+  printf("-r                Rehash RSS packets\n");
+  printf("-c <cluster id>   Cluster ID (kernel clustering)\n");
+  printf("-H <cluster hash> Cluster hash type (kernel clustering)\n"
+         "                   %d - src ip,           dst ip \n"
+         "                   %d - src ip, src port, dst ip, dst port\n"
+         "                   %d - src ip, src port, dst ip, dst port, proto (default)\n"
+         "                   %d - src ip, src port, dst ip, dst port, proto, vlan\n"
+         "                   %d - src ip, src port, dst ip, dst port, proto for TCP, src ip, dst ip otherwise\n"
+         "                   %d - tunneled src ip,           dst ip\n"
+         "                   %d - tunneled src ip, src port, dst ip, dst port\n"
+         "                   %d - tunneled src ip, src port, dst ip, dst port, proto (default)\n"
+         "                   %d - tunneled src ip, src port, dst ip, dst port, proto, vlan\n"
+         "                  %d - tunneled src ip, src port, dst ip, dst port, proto for TCP, src ip, dst ip otherwise\n"
+         "                   %d - round-robin\n",
+    cluster_per_flow_2_tuple, cluster_per_flow_4_tuple,
+    cluster_per_flow_5_tuple, cluster_per_flow,
+    cluster_per_flow_tcp_5_tuple,
+    cluster_per_inner_flow_2_tuple, cluster_per_inner_flow_4_tuple,
+    cluster_per_inner_flow_5_tuple, cluster_per_inner_flow,
+    cluster_per_inner_flow_tcp_5_tuple,
+    cluster_round_robin);
   printf("-s              Enable hw timestamping\n");
   printf("-S              Do not strip hw timestamps (if present)\n");
   printf("-t              Touch payload (to force packet load on cache)\n");
@@ -717,11 +736,12 @@ int main(int argc, char* argv[]) {
   u_int16_t watermark = 0, poll_duration = 0,
     cpu_percentage = 0, rehash_rss = 0;
   char *bpfFilter = NULL;
+  cluster_type cluster_hash_type = cluster_per_flow_5_tuple;
 
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:l:v:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:M")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:H:l:v:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:M")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -749,6 +769,18 @@ int main(int argc, char* argv[]) {
       break;
     case 'd':
       reflector_device = strdup(optarg);
+      break;
+    case 'H':
+      switch (atoi(optarg)) {
+        case cluster_per_flow_2_tuple:
+        case cluster_per_flow_4_tuple:
+        case cluster_per_flow_5_tuple: 
+        case cluster_per_flow:
+        case cluster_per_flow_tcp_5_tuple:
+        case cluster_round_robin:
+          cluster_hash_type = atoi(optarg); break;
+        default: printf("WARNING: Invalid hash type %u\n", atoi(optarg)); break;
+      }
       break;
     case 'l':
       snaplen = atoi(optarg);
@@ -940,7 +972,7 @@ int main(int argc, char* argv[]) {
   }
 
   if(clusterId > 0) {
-    rc = pfring_set_cluster(pd, clusterId, cluster_per_flow_5_tuple);
+    rc = pfring_set_cluster(pd, clusterId, cluster_hash_type);
     printf("pfring_set_cluster returned %d\n", rc);
   }
 

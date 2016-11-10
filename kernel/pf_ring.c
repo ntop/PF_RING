@@ -1816,38 +1816,40 @@ static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t proto,
 
 /* ********************************** */
 
-#define HASH_PKT_HDR_RECOMPUTE  1<<0
-#define HASH_PKT_HDR_MASK_SRC   1<<1
-#define HASH_PKT_HDR_MASK_DST   1<<2
-#define HASH_PKT_HDR_MASK_PORT  1<<3
-#define HASH_PKT_HDR_MASK_PROTO 1<<4
-#define HASH_PKT_HDR_MASK_VLAN  1<<5
+#define HASH_PKT_HDR_RECOMPUTE   (1<<0)
+#define HASH_PKT_HDR_MASK_SRC    (1<<1)
+#define HASH_PKT_HDR_MASK_DST    (1<<2)
+#define HASH_PKT_HDR_MASK_PORT   (1<<3)
+#define HASH_PKT_HDR_MASK_PROTO  (1<<4)
+#define HASH_PKT_HDR_MASK_VLAN   (1<<5)
+#define HASH_PKT_HDR_MASK_TUNNEL (1<<6)
 
 static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t flags)
 {
-  if(hdr->extended_hdr.pkt_hash == 0 || flags & HASH_PKT_HDR_RECOMPUTE) {
-    u_int8_t use_tunneled_peers = hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id == NO_TUNNEL_ID ? 0 : 1;
+  if (hdr->extended_hdr.pkt_hash == 0 || flags & HASH_PKT_HDR_RECOMPUTE) {
+    u_int8_t use_tunneled = hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id != NO_TUNNEL_ID && 
+        !(flags & HASH_PKT_HDR_MASK_TUNNEL);
 
     hdr->extended_hdr.pkt_hash = hash_pkt(
       (flags & HASH_PKT_HDR_MASK_VLAN)  ? 0 : hdr->extended_hdr.parsed_pkt.vlan_id,
       (flags & HASH_PKT_HDR_MASK_PROTO) ? 0 :
-        (use_tunneled_peers ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto
-			    : hdr->extended_hdr.parsed_pkt.l3_proto),
+        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto
+		      : hdr->extended_hdr.parsed_pkt.l3_proto),
       (flags & HASH_PKT_HDR_MASK_SRC) ? ip_zero :
-        (use_tunneled_peers ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src
-			    : hdr->extended_hdr.parsed_pkt.ip_src),
+        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src
+		      : hdr->extended_hdr.parsed_pkt.ip_src),
       (flags & HASH_PKT_HDR_MASK_DST) ? ip_zero :
-        (use_tunneled_peers ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst
-			    : hdr->extended_hdr.parsed_pkt.ip_dst),
+        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst
+		      : hdr->extended_hdr.parsed_pkt.ip_dst),
       (flags & (HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_PORT)) ? 0 :
-        (use_tunneled_peers ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port
-			    : hdr->extended_hdr.parsed_pkt.l4_src_port),
+        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port
+		      : hdr->extended_hdr.parsed_pkt.l4_src_port),
       (flags & (HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_PORT)) ? 0 :
-        (use_tunneled_peers ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port
-			    : hdr->extended_hdr.parsed_pkt.l4_dst_port));
+        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port
+		      : hdr->extended_hdr.parsed_pkt.l4_dst_port));
   }
 
-  return(hdr->extended_hdr.pkt_hash);
+  return hdr->extended_hdr.pkt_hash;
 }
 
 /* ******************************************************* */
@@ -3640,41 +3642,61 @@ static int add_skb_to_ring(struct sk_buff *skb,
 static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
 			    struct pfring_pkthdr *hdr)
 {
-  int hash;
+  int flags = 0;
 
-  switch(cluster_ptr->cluster.hashing_mode) {
+  if (cluster_ptr->cluster.hashing_mode == cluster_round_robin)
+    return cluster_ptr->cluster.hashing_id++;
 
-  case cluster_round_robin:
-    hash = cluster_ptr->cluster.hashing_id++;
-    break;
-
-  case cluster_per_flow_2_tuple:
-    hash = hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_VLAN);
-    break;
-
-  case cluster_per_flow_4_tuple:
-    hash = hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_VLAN);
-    break;
-
-  case cluster_per_flow_tcp_5_tuple:
-    if(((hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id == NO_TUNNEL_ID) ?
-	hdr->extended_hdr.parsed_pkt.l3_proto : hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto) == IPPROTO_TCP)
-      hash = hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN); /* 5 tuple for TCP */
-    else 
-      hash = hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_VLAN); /* 2 tuple for non-TCP */
-    break;
-
+  switch (cluster_ptr->cluster.hashing_mode) {
   case cluster_per_flow_5_tuple:
-    hash = hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN);
-    break;
-
+  case cluster_per_flow_2_tuple:
+  case cluster_per_flow_4_tuple:   
+  case cluster_per_flow_tcp_5_tuple:
   case cluster_per_flow:
+    flags |= HASH_PKT_HDR_MASK_TUNNEL;
+    break;
   default:
-    hash = hash_pkt_header(hdr, 0);
     break;
   }
 
-  return(hash);
+  switch (cluster_ptr->cluster.hashing_mode) {
+  case cluster_per_flow_2_tuple:
+  case cluster_per_inner_flow_2_tuple:
+    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_VLAN; 
+    break;
+
+  case cluster_per_flow_4_tuple:
+  case cluster_per_inner_flow_4_tuple:
+    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_VLAN;
+    break;
+
+  case cluster_per_flow_tcp_5_tuple:
+  case cluster_per_inner_flow_tcp_5_tuple:
+    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN;
+    if (cluster_ptr->cluster.hashing_mode == cluster_per_flow_5_tuple ||
+        (cluster_ptr->cluster.hashing_mode == cluster_per_inner_flow_tcp_5_tuple &&
+         hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id == NO_TUNNEL_ID)) {
+      if (hdr->extended_hdr.parsed_pkt.l3_proto != IPPROTO_TCP)
+        flags |= HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO; /* 2 tuple for non-TCP */
+    } else if (cluster_ptr->cluster.hashing_mode == cluster_per_inner_flow_tcp_5_tuple && 
+        hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id != NO_TUNNEL_ID) {
+      if (hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto != IPPROTO_TCP)
+        flags |= HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO; /* 2 tuple for non-TCP */
+    } 
+    break;
+
+  case cluster_per_flow_5_tuple:
+  case cluster_per_inner_flow_5_tuple:
+    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN;
+    break;
+
+  case cluster_per_flow:
+  case cluster_per_inner_flow:
+  default:
+    break;
+  }
+
+  return hash_pkt_header(hdr, flags);
 }
 
 /* ********************************** */
