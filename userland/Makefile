@@ -1,4 +1,4 @@
-all: libpfring pcap ring_examples zc_examples # tcpdump_build lib_c++
+all: libpfring pcap ring_examples zc_examples extcap # tcpdump_build lib_c++
 
 ###################
 
@@ -20,9 +20,12 @@ lib_c++:
 tcpdump_build:
 	cd tcpdump; ./configure ; make
 
+extcap: libpfring pcap
+	cd wireshark/extcap; make
+
 ###################
 
-clean: libpfring_clean pcap_clean ring_examples_clean zc_examples_clean lib_c++_clean tcpdump_clean nbpf_clean
+clean: libpfring_clean pcap_clean ring_examples_clean zc_examples_clean lib_c++_clean tcpdump_clean nbpf_clean extcap_clean
 
 libpfring_clean:
 	cd lib; make clean
@@ -44,6 +47,9 @@ tcpdump_clean:
 
 nbpf_clean:
 	cd nbpf; make clean
+
+extcap_clean:
+	cd wireshark/extcap; make clean
 
 install: libpfring pcap
 	cd lib; make install

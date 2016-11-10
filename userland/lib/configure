@@ -4033,6 +4033,8 @@ ac_config_files="$ac_config_files ../c++/Makefile"
 
 ac_config_files="$ac_config_files ../nbpf/Makefile"
 
+ac_config_files="$ac_config_files ../wireshark/extcap/Makefile"
+
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -4731,6 +4733,7 @@ do
     "../examples_zc/Makefile") CONFIG_FILES="$CONFIG_FILES ../examples_zc/Makefile" ;;
     "../c++/Makefile") CONFIG_FILES="$CONFIG_FILES ../c++/Makefile" ;;
     "../nbpf/Makefile") CONFIG_FILES="$CONFIG_FILES ../nbpf/Makefile" ;;
+    "../wireshark/extcap/Makefile") CONFIG_FILES="$CONFIG_FILES ../wireshark/extcap/Makefile" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
