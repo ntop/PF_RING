@@ -27,6 +27,7 @@ PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
 MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
+MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
 NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 
 dnl> Check for a modern pthread library
@@ -150,28 +151,11 @@ HAVE_NT="-D HAVE_NT"
 NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
 NT_DEP="extract_nt_lib"
 
-ACCOLADE_HOME="/opt/accolade"
-ACCOLADE_INC=
-ACCOLADE_LIB=
-ACCOLADE_OBJS=
-HAVE_ACCOLADE=
-AC_MSG_CHECKING([Accolade support])
-if test -d "$ACCOLADE_HOME"; then
-   if test -f pfring_mod_accolade.c; then
-      ACCOLADE_INC="-I$ACCOLADE_HOME/include"
-      ACCOLADE_LIB="-L/opt/accolade/lib -lanic"
-      ACCOLADE_OBJS="pfring_mod_accolade.o"
-      HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-      AC_MSG_RESULT(yes)
-      AC_DEFINE_UNQUOTED(HAVE_ACCOLADE, 1, [Accolade support is present])
-    else
-      AC_MSG_RESULT(no)
-    fi
-else
-   AC_MSG_RESULT(no)
-fi
+dnl> Accolade
+HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+ACCOLADE_OBJS=`ar t $MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
+ACCOLADE_DEP="extract_accolade_lib"
 
-MYRICOM_LIB=
 HAVE_MYRICOM="-DHAVE_MYRICOM"
 MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
 MYRICOM_DEP="extract_myricom_lib"
@@ -267,14 +251,12 @@ AC_SUBST(DAG_DEP)
 AC_SUBST(MOD_DAG_LIB)
 AC_SUBST(HAVE_NT)
 AC_SUBST(NT_OBJS)
-AC_SUBST(NT_LIB)
 AC_SUBST(NT_DEP)
 AC_SUBST(MOD_NT_LIB)
-AC_SUBST(ACCOLADE_INC)
-AC_SUBST(ACCOLADE_LIB)
-AC_SUBST(ACCOLADE_OBJS)
 AC_SUBST(HAVE_ACCOLADE)
-AC_SUBST(MYRICOM_LIB)
+AC_SUBST(ACCOLADE_OBJS)
+AC_SUBST(ACCOLADE_DEP)
+AC_SUBST(MOD_ACCOLADE_LIB)
 AC_SUBST(MYRICOM_OBJS)
 AC_SUBST(HAVE_MYRICOM)
 AC_SUBST(MOD_MYRICOM_LIB)
