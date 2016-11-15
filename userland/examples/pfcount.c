@@ -416,7 +416,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
 void dummyProcesssPacket(const struct pfring_pkthdr *h,
 			 const u_char *p, const u_char *user_bytes) {
   long threadId = (long)user_bytes;
-  u_int8_t dump_match = 0;
+  u_int8_t dump_match = 1;
 
   stats->numPkts[threadId]++, stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
 
@@ -429,17 +429,20 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h,
     memcpy((void *) memcpy_test_buffer, p, h->caplen);
 
   if(unlikely(automa != NULL)) {
-    if(unlikely(do_close_dump)) openDump();
-
     if((h->caplen > 42 /* FIX: do proper parsing */)
        && (search_string((char*)&p[42], h->caplen-42) == 1)) {
-      if(dumper) {
-	pcap_dump((u_char*)dumper, (struct pcap_pkthdr*)h, p);
-	pcap_dump_flush(dumper);
-      }
-
       stats->numStringMatches[threadId]++;
-      dump_match = 1;
+    } else {
+      dump_match = 0;
+    }
+  }
+
+  if (dumper) {
+    if(unlikely(do_close_dump)) openDump();
+
+    if (dumper) {
+      pcap_dump((u_char*)dumper, (struct pcap_pkthdr*)h, p);
+      pcap_dump_flush(dumper);
     }
   }
 
@@ -694,12 +697,14 @@ void openDump() {
   if(dumper == NULL)
     printf("Unable to create dump file %s\n", path);
   else {
-    snprintf(path, sizeof(path), "%s.log.%u", out_pcap_file, dump_id);
+    if(automa != NULL) {
+      snprintf(path, sizeof(path), "%s.log.%u", out_pcap_file, dump_id);
 
-    match_dumper = fopen(path, "w");
+      match_dumper = fopen(path, "w");
 
-    if(match_dumper == NULL)
-      printf("Unable to create dump log file %s\n", path);
+      if(match_dumper == NULL)
+        printf("Unable to create dump log file %s\n", path);
+    }
   }
 
   do_close_dump = 0;
@@ -892,17 +897,17 @@ int main(int argc, char* argv[]) {
       snaplen = 1500;
       printf("WARNING: Snaplen smaller than the MTU. Enlarging it (new snaplen %u)\n", snaplen);
     }
+  }
 
-    if(out_pcap_file) {
-      openDump();
+  if(out_pcap_file) {
+    openDump();
 
-      if(dumper == NULL) return(-1);
+    if(dumper == NULL) return(-1);
 
-      (void)signal(SIGHUP, handleSigHup);
-    }
+    (void)signal(SIGHUP, handleSigHup);
 
     if(num_threads > 1) {
-      printf("WARNING: Disabling threads when using -x/-o\n");
+      printf("WARNING: Disabling threads when using -o\n");
       num_threads = 1;
     }
   }
