@@ -20,7 +20,7 @@ MGMT_INTERFACE="$(/sbin/route | grep default | head -n 1 | tr -s ' ' | cut -d ' 
 
 #Don't remove init_script function. 
 #It is needed for systemd in ubuntu 16
-init_script() {
+#init_script() {
   if [ -f /lib/lsb/init-functions ]; then
      DISTRO="debian"
      . /lib/lsb/init-functions
@@ -33,7 +33,7 @@ init_script() {
   if [ "${MGMT_INTERFACE}" == "" ]; then
     MGMT_INTERFACE="eth0"
   fi
-}
+#}
 MGMT_INTERFACE_DRIVER="$(/sbin/ethtool -i $MGMT_INTERFACE | grep driver | cut -d ' ' -f 2)"
 PFRING="pf_ring"
 DRIVERS_CONFIG_DIR="/etc/pf_ring"
@@ -204,7 +204,7 @@ load_driver() {
 	if [ `/sbin/modinfo ${1}-${2} | wc -l` -gt 1 ]; then
 		# driver is available
 		DRV_PARAM=`cat ${DRIVERS_CONFIG_DIR}/${2}/${1}/${1}.conf`
-		if [ ${MGMT_INTERFACE_DRIVER} == ${1} ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
+		if [ "${MGMT_INTERFACE_DRIVER}" == "${1}" ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
 			echo "Skipping driver ${1}: driver matches the management interface ${MGMT_INTERFACE}"
 			return
 		fi
@@ -515,7 +515,7 @@ init_config() {
 }
 ########
 
-init_script
+#init_script
 
 case "$1" in
   start)
