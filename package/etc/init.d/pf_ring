@@ -15,25 +15,25 @@
 # Short-Description: Start/stop pf_ring
 ### END INIT INFO
 
+#Needed to skip systemctl redirect in ubuntu 16
+_SYSTEMCTL_SKIP_REDIRECT=yes
+
 DISTRO="unknown"
 MGMT_INTERFACE="$(/sbin/route | grep default | head -n 1 | tr -s ' ' | cut -d ' ' -f 8)"
 
-#Don't remove init_script function. 
-#It is needed for systemd in ubuntu 16
-#init_script() {
-  if [ -f /lib/lsb/init-functions ]; then
-     DISTRO="debian"
-     . /lib/lsb/init-functions
-  fi
-  if [ -f /etc/init.d/functions ]; then
-     DISTRO="centos"
-     . /etc/init.d/functions
-  fi
+if [ -f /lib/lsb/init-functions ]; then
+  DISTRO="debian"
+  . /lib/lsb/init-functions
+fi
+if [ -f /etc/init.d/functions ]; then
+  DISTRO="centos"
+  . /etc/init.d/functions
+fi
 
-  if [ "${MGMT_INTERFACE}" == "" ]; then
-    MGMT_INTERFACE="eth0"
-  fi
-#}
+if [ "${MGMT_INTERFACE}" == "" ]; then
+  MGMT_INTERFACE="eth0"
+fi
+
 MGMT_INTERFACE_DRIVER="$(/sbin/ethtool -i $MGMT_INTERFACE | grep driver | cut -d ' ' -f 2)"
 PFRING="pf_ring"
 DRIVERS_CONFIG_DIR="/etc/pf_ring"
@@ -514,8 +514,6 @@ init_config() {
 	done
 }
 ########
-
-#init_script
 
 case "$1" in
   start)
