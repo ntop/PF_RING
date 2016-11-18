@@ -3441,7 +3441,7 @@ REDIRECTOR_LIB=
 HAVE_REDIRECTOR=
 if test "x$enable_rdi" != "xno"; then :
   if test "x$ac_cv_header_librdi_h" = x""yes; then :
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdi_init in -lrdi" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdi_init in -lrdi" >&5
 $as_echo_n "checking for rdi_init in -lrdi... " >&6; }
 if ${ac_cv_lib_rdi_rdi_init+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3486,7 +3486,6 @@ _ACEOF
 
 fi
 
-
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking Silicom Redirector support" >&5
 $as_echo_n "checking Silicom Redirector support... " >&6; }
     if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
@@ -3498,12 +3497,8 @@ $as_echo "yes" >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
     fi
-  fi
-fi
 
-if test "x$enable_rdi" != "xno"; then :
-  if test "x$ac_cv_header_librdi_h" = x""yes; then :
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdi_init in -lrdif" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdi_init in -lrdif" >&5
 $as_echo_n "checking for rdi_init in -lrdif... " >&6; }
 if ${ac_cv_lib_rdif_rdi_init+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3548,12 +3543,10 @@ _ACEOF
 
 fi
 
-
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking Silicom Redirector F support" >&5
 $as_echo_n "checking Silicom Redirector F support... " >&6; }
     if test "x$ac_cv_lib_rdif_rdi_init" = x""yes; then :
       HAVE_REDIRECTOR="-D HAVE_REDIRECTOR_F"
-      #REDIRECTOR_LIB="-lrdif"
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     else

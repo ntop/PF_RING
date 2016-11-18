@@ -96,8 +96,8 @@ REDIRECTOR_LIB=
 HAVE_REDIRECTOR=
 if test "x$enable_rdi" != "xno"; then :
   if test "x$ac_cv_header_librdi_h" = x""yes; then :
+    dnl> Legacy RDI
     AC_CHECK_LIB( [rdi], [rdi_init])
-
     AC_MSG_CHECKING([Silicom Redirector support])
     if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
       HAVE_REDIRECTOR="-DHAVE_REDIRECTOR"
@@ -106,17 +106,12 @@ if test "x$enable_rdi" != "xno"; then :
     else
       AC_MSG_RESULT(no)
     fi
-  fi
-fi
 
-if test "x$enable_rdi" != "xno"; then :
-  if test "x$ac_cv_header_librdi_h" = x""yes; then :
+    dnl> RDIF
     AC_CHECK_LIB( [rdif], [rdi_init])
-
     AC_MSG_CHECKING([Silicom Redirector F support])
     if test "x$ac_cv_lib_rdif_rdi_init" = x""yes; then :
       HAVE_REDIRECTOR="-D HAVE_REDIRECTOR_F"
-      REDIRECTOR_LIB="-lrdif"
       AC_MSG_RESULT(yes)
     else
       AC_MSG_RESULT(no)
