@@ -15,7 +15,7 @@
 #include <dirent.h>
 #include <arpa/inet.h>
 
-#include "../lib/pfring.h"
+#include "pfring.h"
 #include "nbpf.h"
 #include "nbpf_mod_rdif.h"
 #ifdef HAVE_REDIRECTOR_F

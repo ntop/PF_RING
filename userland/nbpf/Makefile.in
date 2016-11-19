@@ -1,8 +1,9 @@
 LEX = lex
 YACC = bison
-CC=gcc
+INCLUDE = -I../lib -I../../kernel
 LIBS=@NDPI_LIB@ `../lib/pfring_config --libs` -lpthread
-CFLAGS=-Wall -fPIC @NDPI_INC@ @HAVE_NDPI@ @HAVE_REDIRECTOR@ -O2 #-g
+CC=gcc
+CFLAGS=-Wall -fPIC ${INCLUDE} @NDPI_INC@ @HAVE_NDPI@ @HAVE_REDIRECTOR@ -O2 #-g
 OBJS=nbpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o nbpf_mod_napatech.o
 BPFLIB=libnbpf.a
 
@@ -13,7 +14,7 @@ $(BPFLIB): $(OBJS)
 	ranlib $@
 
 nbpftest: $(BPFLIB) nbpftest.c
-	gcc $(CFLAGS) -g nbpftest.c -o nbpftest $(BPFLIB) $(LIBS)
+	${CC} $(CFLAGS) -g nbpftest.c -o nbpftest $(BPFLIB) $(LIBS)
 
 lex.yy.c: scanner.l grammar.tab.h
 	$(LEX) scanner.l
