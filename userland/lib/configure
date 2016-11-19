@@ -3553,7 +3553,7 @@ fi
 $as_echo_n "checking Silicom Redirector F support... " >&6; }
     if test "x$ac_cv_lib_rdif_rdi_init" = x""yes; then :
       HAVE_REDIRECTOR="-D HAVE_REDIRECTOR_F"
-      REDIRECTOR_LIB="-lrdif"
+      #REDIRECTOR_LIB="-lrdif"
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     else

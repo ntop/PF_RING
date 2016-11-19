@@ -15,11 +15,29 @@
 #include <dirent.h>
 #include <arpa/inet.h>
 
+#include "pfring.h"
 #include "nbpf.h"
 #include "nbpf_mod_rdif.h"
 #ifdef HAVE_REDIRECTOR_F
 
 //#define DEBUG
+
+static struct thirdparty_func rdi_function_ptr[] = {
+  { "rdi_add_rule",         NULL },
+  { "rdi_entry_query_list", NULL },
+  { "rdi_entry_remove",     NULL },
+  { "rdi_set_mask",         NULL },
+  { "rdi_set_cfg",          NULL },
+  { NULL,                   NULL }
+};
+
+#define RDI_add_rule (* (int (*)(int unit, rdi_mem_t *rdi_mem, int action, rdi_type_t rdi_type)) rdi_function_ptr[0].ptr)
+#define RDI_entry_query_list (* (int (*)(int unit, int group, rdi_query_list_t *rdi_query_list, rdi_type_t rdi_type)) rdi_function_ptr[1].ptr)
+#define RDI_entry_remove (* (int (*)(int unit, int rule_id, int group, rdi_type_t rdi_type)) rdi_function_ptr[2].ptr)
+#define RDI_set_mask (* (int (*)(int unit, rdi_mask_t *mask, rdi_type_t rdi_type)) rdi_function_ptr[3].ptr)
+#define RDI_set_cfg (* (int (*)(int unit, int cfg, rdi_type_t rdi_type)) rdi_function_ptr[4].ptr)
+
+static unsigned char rdi_initialized_ok = 0;
 
 #define MAX_NUM_RULES 512
 
@@ -210,7 +228,7 @@ static int __nbpf_rdif_set_port_inline(int unit, int port1, int port2) {
   if(j < 16)
     mask.egress[j] |= (1 << pos);
   /* Set the ports in inline mode (just one direction) by library call function */
-  if((rdi_set_mask(unit, &mask, RDI_FLCM_DEV)) < 0)
+  if((RDI_set_mask(unit, &mask, RDI_FLCM_DEV)) < 0)
     return (0);
   return (1);
 }
@@ -313,7 +331,7 @@ static int __nbpf_rdif_add_rule(nbpf_rdif_handle_t *handle) {
   handle->rules_parameters.rdi_mem.port = interface[handle->intf].port1;
 
   /* Add rule to card for a specific switch ingress port */
-  if(rdi_add_rule(handle->unit, &handle->rules_parameters.rdi_mem, handle->rules_parameters.action, RDI_FLCM_DEV) < 0)
+  if(RDI_add_rule(handle->unit, &handle->rules_parameters.rdi_mem, handle->rules_parameters.action, RDI_FLCM_DEV) < 0)
     return (0);
 
   return (1);
@@ -742,14 +760,14 @@ static int __nbpf_rdif_interface_clear(nbpf_rdif_handle_t *handle) {
 
   group_rules = ((MAX_INTERFACE * handle->unit) + interface[handle->intf].group_rules);
   /* Get the rule identifiers list set */
-  if((rdi_entry_query_list(handle->unit, group_rules, &rdi_query_list, RDI_FLCM_DEV))<0)
+  if((RDI_entry_query_list(handle->unit, group_rules, &rdi_query_list, RDI_FLCM_DEV))<0)
     return (0);
   else {
     if(rdi_query_list.rdi_id_list.rule_num) {
       if(rdi_query_list.rdi_id_list.rule_num<=MAX_NUM_RULES) {
         for (m=0; m<rdi_query_list.rdi_id_list.rule_num;m++) {
           /* through the list and removes the single rule */
-          if((rdi_entry_remove(handle->unit, rdi_query_list.rdi_id_list.id_list[m], group_rules, RDI_FLCM_DEV))<0) {
+          if((RDI_entry_remove(handle->unit, rdi_query_list.rdi_id_list.id_list[m], group_rules, RDI_FLCM_DEV))<0) {
             return (0);
           }
         }
@@ -874,6 +892,12 @@ nbpf_rdif_handle_t *nbpf_rdif_init(char *ifname) {
   nbpf_rdif_handle_t *handle;
   int intf, unit;
 
+  if (rdi_initialized_ok == 0) {
+    //Initialize thirdparty libraries
+    rdi_initialized_ok = 1;
+    pfring_thirdparty_lib_init("/usr/local/lib/librdif.so", rdi_function_ptr);
+  }
+
   unit = 0; //TODO
   intf = __nbpf_rdif_get_interface_id(ifname);
 
@@ -918,8 +942,14 @@ int nbpf_rdif_reset(int unit) {
 #ifdef HAVE_REDIRECTOR_F
   if(unit >= MAX_INTEL_DEV) return (0);
 
+  if (rdi_initialized_ok == 0) {
+    //Initialize thirdparty libraries
+    rdi_initialized_ok = 1;
+    pfring_thirdparty_lib_init("/usr/local/lib/librdif.so", rdi_function_ptr);
+  }
+  
   /* Set MON2 configuration (value 5). No traffic in egress */
-  if(rdi_set_cfg(unit, 5, RDI_FLCM_DEV) < 0)
+  if(RDI_set_cfg(unit, 5, RDI_FLCM_DEV) < 0)
     return (0);
   return (1);
 #else
