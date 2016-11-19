@@ -416,7 +416,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
 void dummyProcesssPacket(const struct pfring_pkthdr *h,
 			 const u_char *p, const u_char *user_bytes) {
   long threadId = (long)user_bytes;
-  u_int8_t dump_match = 1;
+  u_int8_t dump_match = !!dumper;
 
   stats->numPkts[threadId]++, stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
 
