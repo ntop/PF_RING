@@ -38,6 +38,11 @@
 #include "pfring_mod_dag.h"
 #endif
 
+#ifdef HAVE_FIBERBLAZE
+/* Fiberblaze */
+#include "pfring_mod_fiberblaze.h"
+#endif
+
 #ifdef HAVE_MELLANOX
 /* Mellanox */
 #include "pfring_mod_mlx.h"
@@ -89,6 +94,13 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "dag",
     .open = pfring_dag_open,
+  },
+#endif
+
+#ifdef HAVE_FIBERBLAZE
+  {
+    .name = "fbcard",
+    .open = pfring_fiberblaze_open,
   },
 #endif
 

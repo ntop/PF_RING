@@ -24,6 +24,11 @@ PF_RING_ZC_OBJS  = @PF_RING_ZC_OBJS@
 DAG_OBJS  = @DAG_OBJS@
 
 #
+# FIBERBLAZE
+#
+FIBERBLAZE_OBJS = @FIBERBLAZE_OBJS@
+
+#
 # NT
 #
 NT_OBJS  = @NT_OBJS@
@@ -70,7 +75,7 @@ NBPF_OBJS = `ar t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 # Object files
 #
 OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
-	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${PF_RING_ZC_OBJS} ${DAG_OBJS} ${NT_OBJS} ${MLX_OBJS} ${ACCOLADE_OBJS} ${MYRICOM_OBJS} ${INVEATECH_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
+	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${PF_RING_ZC_OBJS} ${DAG_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${MLX_OBJS} ${ACCOLADE_OBJS} ${MYRICOM_OBJS} ${INVEATECH_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
 
 #
 # C compiler and flags
@@ -79,9 +84,9 @@ OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_fi
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC        = ${CROSS_COMPILE}gcc
-CFLAGS    = @CFLAGS@ -Wall -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_DAG@ @HAVE_ACCOLADE@ @HAVE_MYRICOM@ @HAVE_INVEATECH@ @HAVE_EXABLAZE@ @HAVE_BPF@ @HAVE_REDIRECTOR@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_MLX@ @HAVE_NPCAP@ -O2 # -g
+CFLAGS    = @CFLAGS@ -Wall -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_DAG@ @HAVE_FIBERBLAZE@ @HAVE_ACCOLADE@ @HAVE_MYRICOM@ @HAVE_INVEATECH@ @HAVE_EXABLAZE@ @HAVE_BPF@ @HAVE_REDIRECTOR@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_MLX@ @HAVE_NPCAP@ -O2 # -g
 LDFLAGS   = -g -shared
-SYSLIBS   = -lpthread @SYSLIBS@ @DAG_LIB@ @INVEATECH_LIB@ @EXABLAZE_LIB@ @REDIRECTOR_LIB@
+SYSLIBS   = -lpthread @SYSLIBS@ @DAG_LIB@ @FIBERBLAZE_LIB@ @INVEATECH_LIB@ @EXABLAZE_LIB@ @REDIRECTOR_LIB@
 
 # How to make an object file
 %.o: %.c %.h Makefile
@@ -98,12 +103,12 @@ RING_H     = ../../kernel/linux/pf_ring.h
 
 all: ${TARGETS}
 
-${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @ACCOLADE_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
+${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
 	ar rs $@ ${OBJS} ${NBPF_OBJS}
 	ranlib $@
 
-${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @ACCOLADE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
+${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
 	${CC} ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
 
@@ -118,6 +123,9 @@ extract_nt_lib:
 
 extract_dag_lib:
 	ar x @MOD_DAG_LIB@
+
+extract_fiberblaze_lib:
+	ar x @MOD_FIBERBLAZE_LIB@
 
 extract_accolade_lib:
 	ar x @MOD_ACCOLADE_LIB@
