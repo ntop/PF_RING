@@ -1,7 +1,7 @@
-AC_INIT([pfring.c], 1.0)
+AC_INIT([pfring], 1.0)
 
 AC_PROG_CC
-AC_CONFIG_FILES(Makefile)
+AC_CONFIG_FILES(lib/Makefile)
 
 AC_CHECK_HEADERS([linux/net_tstamp.h librdi.h])
 
@@ -10,7 +10,7 @@ SYS_LIBS=""
 
 dnl> Checking for supported libraries (corei7, corei7-avx, core-avx2)
 NATIVE=`$CC -c -Q -march=native --help=target| grep "march" | xargs | cut -d ' ' -f 2`
-if test -f "libs/libpfring_zc_x86_64_$NATIVE.a"; then
+if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   CFLAGS="-march=native -mtune=native $CFLAGS"
   LIBARCH="_$NATIVE"
 fi
@@ -36,9 +36,9 @@ AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SE
 if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
 AC_MSG_CHECKING([PF_RING ZC support])
-if test -f $PF_RING_ZC_LIB; then
+if test -f lib/$PF_RING_ZC_LIB; then
   HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
-  PF_RING_ZC_OBJS=`ar t $PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
+  PF_RING_ZC_OBJS=`ar t lib/$PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
   PF_RING_ZC_DEP="extract_pfring_zc_lib"
   PF_RING_ZC_H="pfring_zc.h"
   AC_MSG_RESULT(yes)
@@ -52,9 +52,9 @@ else
 fi
 
 AC_MSG_CHECKING([PF_RING NPCAP support])
-if test -f $NPCAP_LIB; then
+if test -f lib/$NPCAP_LIB; then
   HAVE_NPCAP="-D HAVE_NPCAP"
-  NPCAP_OBJS=`ar t $NPCAP_LIB | grep -F .o | tr '\n' ' '`
+  NPCAP_OBJS=`ar t lib/$NPCAP_LIB | grep -F .o | tr '\n' ' '`
   NPCAP_DEP="extract_npcap_lib"
   NPCAP_H="pfring_zc.h"
   AC_MSG_RESULT(yes)
@@ -138,21 +138,21 @@ AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 
 DAG_LIB="-lm -ldl" 
 HAVE_DAG="-D HAVE_DAG"
-DAG_OBJS=`ar t $MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
+DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
 DAG_DEP="extract_dag_lib"
 
 dnl> Napatech
 HAVE_NT="-D HAVE_NT"
-NT_OBJS=`ar t $MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
+NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
 NT_DEP="extract_nt_lib"
 
 dnl> Accolade
 HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-ACCOLADE_OBJS=`ar t $MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
+ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
 ACCOLADE_DEP="extract_accolade_lib"
 
 HAVE_MYRICOM="-DHAVE_MYRICOM"
-MYRICOM_OBJS=`ar t $MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
 MYRICOM_DEP="extract_myricom_lib"
 
 LIBS="-lsze2 $LIBS"
@@ -207,7 +207,7 @@ NDPI_LIB=
 NDPI_INC=
 HAVE_NDPI=
 dnl> AC_MSG_CHECKING([nDPI support])
-dnl> NDPI_HOME="../../../nDPI"
+dnl> NDPI_HOME="../../nDPI"
 dnl> if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
 dnl>   NDPI_LIB="$NDPI_HOME/src/lib/.libs/libndpi.a"
 dnl>   NDPI_INC="-I$NDPI_HOME/src/include"
@@ -279,16 +279,16 @@ AC_SUBST(NDPI_LIB)
 AC_SUBST(NDPI_INC)
 AC_SUBST(HAVE_NDPI)
 
-dnl> AC_CONFIG_FILES([Makefile])
-AC_CONFIG_FILES([pfring_config])
-AC_CONFIG_FILES([../examples/Makefile])
-AC_CONFIG_FILES([../examples_zc/Makefile])
-AC_CONFIG_FILES([../c++/Makefile])
-AC_CONFIG_FILES([../nbpf/Makefile])
-AC_CONFIG_FILES([../wireshark/extcap/Makefile])
+dnl> AC_CONFIG_FILES([lib/Makefile])
+AC_CONFIG_FILES([lib/pfring_config])
+AC_CONFIG_FILES([examples/Makefile])
+AC_CONFIG_FILES([examples_zc/Makefile])
+AC_CONFIG_FILES([c++/Makefile])
+AC_CONFIG_FILES([nbpf/Makefile])
+AC_CONFIG_FILES([wireshark/extcap/Makefile])
 
-AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_HEADERS(lib/config.h)
 AC_OUTPUT
 
 dnl> Make sure pfring_config is executable
-chmod gou+x pfring_config
+chmod gou+x lib/pfring_config
