@@ -66,35 +66,47 @@ int pfring_enable_hw_timestamp(pfring* ring, char *device_name, u_int8_t enable_
 /* ******************************* */
 
 static u_int32_t pfring_hash_pkt(struct pfring_pkthdr *hdr) {
+  u_int32_t hash = hdr->extended_hdr.parsed_pkt.vlan_id;
   if (hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id == NO_TUNNEL_ID) {
-    return
-      hdr->extended_hdr.parsed_pkt.vlan_id +
+    if (hdr->extended_hdr.parsed_pkt.ip_version == 4)
+      hash +=
+        hdr->extended_hdr.parsed_pkt.ip_src.v4 +
+        hdr->extended_hdr.parsed_pkt.ip_dst.v4;
+    else
+      hash +=
+        hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[0] +
+        hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[1] +
+        hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[2] +
+        hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[3] +
+        hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[0] +
+        hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[1] +
+        hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[2] +
+        hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[3];
+    hash +=
       hdr->extended_hdr.parsed_pkt.l3_proto +
-      hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[0] +
-      hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[1] +
-      hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[2] +
-      hdr->extended_hdr.parsed_pkt.ip_src.v6.s6_addr32[3] +
-      hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[0] +
-      hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[1] +
-      hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[2] +
-      hdr->extended_hdr.parsed_pkt.ip_dst.v6.s6_addr32[3] +
       hdr->extended_hdr.parsed_pkt.l4_src_port +
       hdr->extended_hdr.parsed_pkt.l4_dst_port;
   } else {
-    return
-      hdr->extended_hdr.parsed_pkt.vlan_id +
+    if (hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version == 4)
+      hash += 
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v4 + 
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v4;
+    else
+      hash +=
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[0] +
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[1] +
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[2] +
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[3] +
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[0] +
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[1] +
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[2] +
+        hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[3];
+    hash += 
       hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[0] +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[1] +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[2] +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6.s6_addr32[3] +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[0] +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[1] +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[2] +
-      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6.s6_addr32[3] +
       hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port +
       hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port;
   }
+  return hash;
 }
 
 /* ******************************* */
@@ -111,9 +123,10 @@ static int __pfring_parse_tunneled_pkt(u_char *data, struct pfring_pkthdr *hdr, 
 
     tunneled_ip = (struct iphdr *) (&data[tunnel_offset]);
 
-    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ip->protocol;
+    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version = 4;
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v4 = ntohl(tunneled_ip->saddr);
     hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v4 = ntohl(tunneled_ip->daddr);
+    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ip->protocol;
 
     fragment_offset = tunneled_ip->frag_off & htons(IP_OFFSET); /* fragment, but not the first */
     ip_len = tunneled_ip->ihl*4;
@@ -127,11 +140,12 @@ static int __pfring_parse_tunneled_pkt(u_char *data, struct pfring_pkthdr *hdr, 
 
     tunneled_ipv6 = (struct kcompact_ipv6_hdr *) (&data[tunnel_offset]);
 
-    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ipv6->nexthdr;
 
+    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version = 6;
     /* Values of IPv6 addresses are stored as network byte order */
     memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6, &tunneled_ipv6->saddr, sizeof(tunneled_ipv6->saddr));
     memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6, &tunneled_ipv6->daddr, sizeof(tunneled_ipv6->daddr));
+    hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ipv6->nexthdr;
 
     ip_len = sizeof(struct kcompact_ipv6_hdr);
 
