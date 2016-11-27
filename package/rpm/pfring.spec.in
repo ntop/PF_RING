@@ -46,6 +46,13 @@ cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/nbpf/nbpf.h  $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/libpcap/libpcap.a    $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/libpcap/libpcap.so.1.7.4	$RPM_BUILD_ROOT/usr/local/lib
+#
+# NOTE
+# Unless you install wireshark 2.x you cannot use the extcap plugin as CentOS
+# comes with wireshark 1.x
+#
+mkdir -p $RPM_BUILD_ROOT/usr/lib64/wireshark/extcap
+cp $HOME/PF_RING/userland/wireshark/extcap/ntopdump $RPM_BUILD_ROOT/usr/lib64/wireshark/extcap
 #cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/local/bin
@@ -91,6 +98,7 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/lib/daq/daq_pfring_zc.so
 /usr/local/lib/libsfbpf.so.0
 /usr/local/lib/libsfbpf.so.0.0.1
+/usr/lib64/wireshark/extcap
 %if %nozc == 0
 /usr/local/bin/zbalance_ipc
 /usr/local/bin/zsend
