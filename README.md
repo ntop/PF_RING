@@ -2,7 +2,7 @@
 # PF_RING™
 
 [![Build Status](https://travis-ci.org/ntop/PF_RING.png?branch=dev)](https://travis-ci.org/ntop/PF_RING)
-[![Coverage Status](https://coveralls.io/repos/github/ntop/PF_RING/badge.svg?branch=dev)](https://coveralls.io/github/ntop/PF_RING?branch=dev)
+
 
 ### Introduction
 
