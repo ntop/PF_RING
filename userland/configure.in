@@ -27,6 +27,7 @@ PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
 MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
+MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
 MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
 NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 
@@ -136,10 +137,17 @@ fi
 AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])
 AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 
+dnl> DAG
 DAG_LIB="-lm -ldl" 
 HAVE_DAG="-D HAVE_DAG"
 DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
 DAG_DEP="extract_dag_lib"
+
+dnl> Fiberblaze
+dnl> FIBERBLAZE_LIB="-lm -ldl" 
+dnl> HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
+dnl> FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
+dnl> FIBERBLAZE_DEP="extract_fiberblaze_lib"
 
 dnl> Napatech
 HAVE_NT="-D HAVE_NT"
@@ -244,6 +252,11 @@ AC_SUBST(DAG_OBJS)
 AC_SUBST(DAG_LIB)
 AC_SUBST(DAG_DEP)
 AC_SUBST(MOD_DAG_LIB)
+AC_SUBST(HAVE_FIBERBLAZE)
+AC_SUBST(FIBERBLAZE_OBJS)
+AC_SUBST(FIBERBLAZE_LIB)
+AC_SUBST(FIBERBLAZE_DEP)
+AC_SUBST(MOD_FIBERBLAZE_LIB)
 AC_SUBST(HAVE_NT)
 AC_SUBST(NT_OBJS)
 AC_SUBST(NT_DEP)
