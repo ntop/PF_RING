@@ -44,13 +44,13 @@ tree /etc/pf_ring/
 In order to run the init script, after all the files have been configured:
 
 ```
-# /etc/init.d/pf_ring start
+/etc/init.d/pf_ring start
 ```
 
 You can check that the ZC driver is actually running with:
 
 ```
-# cat /proc/net/pf_ring/dev/eth1/info | grep ZC
+cat /proc/net/pf_ring/dev/eth1/info | grep ZC
 Polling Mode:      ZC/NAPI
 ```
 
