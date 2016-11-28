@@ -1,5 +1,4 @@
-Using PF_RING packages
-----------------------
+# Using PF_RING packages
 At http://packages.ntop.org we build binary PF_RING packages ready to use.
 
 An option for configuring PF_RING and drivers is doing it through the nBox GUI. 
@@ -25,13 +24,14 @@ module and drivers loading. The init script acts as follows:
 Below you can find a configuration example for a dual-port ixgbe card with ZC drivers, 
 for other packages/drivers configuration steps are similar.
 
-# mkdir -p /etc/pf_ring/zc/ixgbe
-# echo "RSS=4,4" > /etc/pf_ring/zc/ixgbe/ixgbe.conf 
-# touch /etc/pf_ring/zc/ixgbe/ixgbe.start
-# touch /etc/pf_ring/pf_ring.conf
-# touch /etc/pf_ring/pf_ring.start
-# echo "node=0 hugepagenumber=1024" > /etc/pf_ring/hugepages.conf 
-# tree /etc/pf_ring/
+```
+mkdir -p /etc/pf_ring/zc/ixgbe
+echo "RSS=4,4" > /etc/pf_ring/zc/ixgbe/ixgbe.conf 
+touch /etc/pf_ring/zc/ixgbe/ixgbe.start
+touch /etc/pf_ring/pf_ring.conf
+touch /etc/pf_ring/pf_ring.start
+echo "node=0 hugepagenumber=1024" > /etc/pf_ring/hugepages.conf 
+tree /etc/pf_ring/
 |-- hugepages.conf
 |-- pf_ring.conf
 |-- pf_ring.start
@@ -39,13 +39,18 @@ for other packages/drivers configuration steps are similar.
     `-- ixgbe
         |-- ixgbe.conf
         `-- ixgbe.start
+```
 
 In order to run the init script, after all the files have been configured:
 
+```
 # /etc/init.d/pf_ring start
+```
 
 You can check that the ZC driver is actually running with:
 
+```
 # cat /proc/net/pf_ring/dev/eth1/info | grep ZC
 Polling Mode:      ZC/NAPI
+```
 

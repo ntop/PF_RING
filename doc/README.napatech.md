@@ -1,7 +1,7 @@
-Napatech support in PF_RING
----------------------------
+# Napatech support in PF_RING
 
-Prerequisite: Napatech drivers and SDK installed.
+## Prerequisite
+Napatech drivers and SDK installed.
 
 As of PF_RING 6.2 you need ntanl v.4.0.1 and 
 with ntanl 3.2 being what normal support provides this vershion of 
@@ -11,26 +11,29 @@ PF_RING has native support for Napatech adapters, the Napatech library
 needs to be installed (under /opt/napatech3) in order to enable the 
 Napatech module when configuring/compiling the pf_ring library.
 
+## Installation
 For the impatient, in order to get up and running with Napatech just run 
 the following commands:
 
- $ cd /opt/napatech3/bin
- $ ./ntload.sh 
- $ ./ntstart.sh 
+```
+cd /opt/napatech3/bin
+./ntload.sh 
+./ntstart.sh 
 
- $ cd PF_RING/kernel
- $ make
- $ sudo insmod pf_ring.ko
- $ cd ../userland/lib
- $ ./configure
- $ ln -s /opt/napatech3/lib/libntapi.so /usr/local/lib/
- $ make
- $ cd ../libpcap
- $ ./configure
- $ make
- $ cd ../examples
- $ make
- $ sudo ./pfcount -i nt:0
+cd PF_RING/kernel
+make
+sudo insmod pf_ring.ko
+cd ../userland/lib
+./configure
+ln -s /opt/napatech3/lib/libntapi.so /usr/local/lib/
+make
+cd ../libpcap
+./configure
+make
+cd ../examples
+make
+sudo ./pfcount -i nt:0
+```
 
 Please note that:
  - in order to open port 0 from the Napatech adapter you should specify 
@@ -68,26 +71,26 @@ Please note that:
      PacketDescriptor = PCAP
      HostBufferSegmentSizeRx = 4
 
-Compiling PF_RING apps with Napatech support on Ubuntu
-------------------------------------------------------
+## Compiling PF_RING apps with Napatech support on Ubuntu
 Please run the command below in order to setup libraries on your Ubuntu system
 
-# sudo su
-# cd /usr/local/lib
-# ln -s /opt/napatech3/lib/* .
+```
+sudo su
+cd /usr/local/lib
+ln -s /opt/napatech3/lib/* .
+```
 
-Napatech and Packet Copy
-------------------------
+## Napatech and Packet Copy
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
 if you use PF_RING ZC API, there is a per-packet copy requested to move
 payload data from Napatech-memory to ZC memory. Keep this in mind!
 
-Transmission Support
---------------------
+## Transmission Support
 In order to use Napatech in transmission you neeed to make sure you have
 configured TX properly. Edit /opt/napatech3/config/ntservice.ini and
 make sure you have the following sections configured
 
+```
 [Adapter0]
 ..
 HostBuffersTx = [4,16,0]
@@ -95,14 +98,18 @@ HostBuffersTx = [4,16,0]
 
 [Debug]
 RntcTxEnable=1
+```
 
-Hardware Filtering
-------------------
+## Hardware Filtering
 Napatech NICs support full-blown hardware filtering  out of the box. Thanks
 to nBPF we convert BPF expressions to hardware filters. This feature is
 upported transparently, and thus all PF_RING/libpcap-over-PF_RING can benefit
 from it.
 
-Example: pfcount -i nt:3 -f "tcp and port 80 and src host 192.168.1.1"
+Example: 
+```
+pfcount -i nt:3 -f "tcp and port 80 and src host 192.168.1.1"
+```
 
 As Napatech harware filters are very advanced, filtering happens all in hardware.
+

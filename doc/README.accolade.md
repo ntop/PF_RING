@@ -1,34 +1,37 @@
-Accolade support in PF_RING
----------------------------
+# Accolade support in PF_RING
 
-Prerequisite: Accolade SDK v.1.2.17.20150903 or later installed.
+## Prerequisite
+Accolade SDK v.1.2.17.20150903 or later installed.
 
 PF_RING has native support for Accolade adapters, the Accolade library
 needs to be installed (under /opt/accolade) in order to enable the 
 Accolade module when configuring/compiling the pf_ring library.
 
-For the impatient, in order to get up and running with Accolade just run 
+## Installation
+In order to get up and running with Accolade just run 
 the following commands:
 
- $ echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+```
+echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
- $ cd /opt/accolade/
- $ insmod driver/anic_mem.ko mbytes_per_device=64
- $ cd bin
- $ ./anic_load
+cd /opt/accolade/
+insmod driver/anic_mem.ko mbytes_per_device=64
+cd bin
+./anic_load
 
- $ cd PF_RING/kernel
- $ make
- $ sudo insmod pf_ring.ko
- $ cd ../userland/lib
- $ ./configure
- $ make
- $ cd ../libpcap
- $ ./configure
- $ make
- $ cd ../examples
- $ make
- $ sudo ./pfcount -i anic:0
+cd PF_RING/kernel
+make
+sudo insmod pf_ring.ko
+cd ../userland/lib
+./configure
+make
+cd ../libpcap
+./configure
+make
+cd ../examples
+make
+sudo ./pfcount -i anic:0
+```
 
 Please note that:
  - in order to open port 0 from adapter 0 you should specify "anic:0:0" 
@@ -45,16 +48,16 @@ Please note that:
    Example of port-to-ring (ring 0 is port 0) binding:
      anic_rx_block_mfl -i 0 --mode=port
 
-Compiling PF_RING apps with Accolade support on Ubuntu
-------------------------------------------------------
+## Compiling PF_RING apps with Accolade support on Ubuntu
 Please run the command below in order to setup libraries on your Ubuntu system
 
-# sudo su
-# cd /usr/local/lib
-# ln -s /opt/accolade/lib/* .
+```
+sudo su
+cd /usr/local/lib
+ln -s /opt/accolade/lib/* .
+```
 
-Accolade and Packet Copy
-------------------------
+## Accolade and Packet Copy
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
 if you use PF_RING ZC API, there is a per-packet copy requested to move
 payload data from Accolade-memory to ZC memory. Keep this in mind!
