@@ -247,7 +247,7 @@ void printHelp(void) {
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
   printf("-S <ip>         Use <ip> as base source IP -b\n");
   printf("-D <ip>         Use <ip> as destination IP in -b\n");
-  printf("-V <version>    Generate IP version <version> packets (default: 4)\n");
+  printf("-V <version>    Generate IP version <version> packets (default: 4, mixed: 0)\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
@@ -523,8 +523,7 @@ int main(int argc, char* argv[]) {
       pidFileName = strdup(optarg);
       break;
     case 'V':
-      if (atoi(optarg) == 6) ip_v = 6;
-      else ip_v = 4;
+      ip_v = atoi(optarg);
       break;
     case 'z':
       randomize = 1;
@@ -585,8 +584,8 @@ int main(int argc, char* argv[]) {
   if(send_len < 60)
     send_len = 60;
 
-  if (ip_v == 6 && send_len < 62)
-    send_len = 62;
+  if (ip_v != 4 && send_len < 62)
+    send_len = 62; /* min len with IPv6 */
 
 #if !(defined(__arm__) || defined(__mips__))
   if(gbit_s != 0 || pps != 0) {
@@ -708,7 +707,7 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < num_balanced_pkts; i++) {
 
       if (stdin_packet_len <= 0) {
-        forge_udp_packet(buffer, send_len, pkts_offset + i, ip_v);
+        forge_udp_packet(buffer, send_len, pkts_offset + i, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
       } else {
         if (reforge_packet(buffer, send_len, pkts_offset + i, 0) != 0) { 
           fprintf(stderr, "Unable to reforge the provided packet\n");
@@ -823,7 +822,7 @@ int main(int argc, char* argv[]) {
 
     if (on_the_fly_reforging) {
       if (stdin_packet_len <= 0)
-        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, ip_v);
+        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
       else
         reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
     }
