@@ -68,6 +68,17 @@ struct ip_header {
   u_int32_t saddr, daddr;	/* source and dest address */
 } __attribute__((packed));
 
+struct ip6_header {
+  u_int8_t	priority:4,
+		version:4;
+  u_int8_t	flow_lbl[3];
+  u_int16_t	payload_len;
+  u_int8_t	nexthdr;
+  u_int8_t	hop_limit;
+  u_int32_t     saddr[4];
+  u_int32_t     daddr[4];
+} __attribute__((packed));
+
 struct udp_header {
   u_int16_t	source;		/* source port */
   u_int16_t	dest;		/* destination port */
@@ -236,6 +247,7 @@ void printHelp(void) {
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
   printf("-S <ip>         Use <ip> as base source IP -b\n");
   printf("-D <ip>         Use <ip> as destination IP in -b\n");
+  printf("-V <version>    Generate IP version <version> packets (default: 4)\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
@@ -287,36 +299,55 @@ static u_int32_t wrapsum (u_int32_t sum) {
 
 /* ******************************************* */
 
-static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
-  struct ip_header *ip_header;
-  struct udp_header *udp_header;
-  int i;
+static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int ip_version) {
+  struct ip_header *ip;
+  struct ip6_header *ip6;
+  struct udp_header *udp;
+  u_char *addr;
+  int ip_len, addr_len, i;
 
   /* Reset packet */
   memset(buffer, 0, buffer_len);
 
   for(i=0; i<12; i++) buffer[i] = i;
-  buffer[12] = 0x08, buffer[13] = 0x00; /* IP */
   if(reforge_mac) memcpy(buffer, mac_address, 6);
 
-  ip_header = (struct ip_header*) &buffer[sizeof(struct ether_header)];
-  ip_header->ihl = 5;
-  ip_header->version = 4;
-  ip_header->tos = 0;
-  ip_header->tot_len = htons(buffer_len-sizeof(struct ether_header));
-  ip_header->id = htons(2012);
-  ip_header->ttl = 64;
-  ip_header->frag_off = htons(0);
-  ip_header->protocol = IPPROTO_UDP;
-  ip_header->daddr = dstaddr.s_addr;
-  ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
-  ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header, sizeof(struct ip_header), 0));
+  if (ip_version == 6) {
+    buffer[12] = 0x86, buffer[13] = 0xDD;
+    ip6 = (struct ip6_header*) &buffer[sizeof(struct ether_header)];
+    ip_len = sizeof(*ip6);
+    ip6->version = 6;
+    ip6->payload_len = htons(buffer_len - sizeof(struct ether_header) - ip_len);
+    ip6->nexthdr = IPPROTO_UDP;
+    ip6->hop_limit = 0xFF;
+    ip6->saddr[0] = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
+    ip6->daddr[0] = dstaddr.s_addr;
+    addr = (u_char *) ip6->saddr;
+    addr_len = sizeof(ip6->saddr);
+  } else {
+    buffer[12] = 0x08, buffer[13] = 0x00;
+    ip = (struct ip_header*) &buffer[sizeof(struct ether_header)];
+    ip_len = sizeof(*ip);
+    ip->ihl = 5;
+    ip->version = 4;
+    ip->tos = 0;
+    ip->tot_len = htons(buffer_len - sizeof(struct ether_header));
+    ip->id = htons(2012);
+    ip->ttl = 64;
+    ip->frag_off = htons(0);
+    ip->protocol = IPPROTO_UDP;
+    ip->daddr = dstaddr.s_addr;
+    ip->saddr = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
+    ip->check = wrapsum(in_cksum((unsigned char *) ip, ip_len, 0));
+    addr = (u_char *) &ip->saddr;
+    addr_len = sizeof(ip->saddr);
+  }
 
-  udp_header = (struct udp_header*)(buffer + sizeof(struct ether_header) + sizeof(struct ip_header));
-  udp_header->source = htons(2012);
-  udp_header->dest = htons(3000);
-  udp_header->len = htons(buffer_len-sizeof(struct ether_header)-sizeof(struct ip_header));
-  udp_header->check = 0; /* It must be 0 to compute the checksum */
+  udp = (struct udp_header*)(buffer + sizeof(struct ether_header) + ip_len);
+  udp->source = htons(2012);
+  udp->dest = htons(3000);
+  udp->len = htons(buffer_len - sizeof(struct ether_header) - ip_len);
+  udp->check = 0; /* It must be 0 to compute the checksum */
 
   /*
     http://www.cs.nyu.edu/courses/fall01/G22.2262-001/class11.htm
@@ -324,11 +355,11 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx) {
     http://www.ietf.org/rfc/rfc0768.txt
   */
 
-  i = sizeof(struct ether_header) + sizeof(struct ip_header) + sizeof(struct udp_header);
-  udp_header->check = wrapsum(in_cksum((unsigned char *)udp_header, sizeof(struct udp_header),
-                                in_cksum((unsigned char *)&buffer[i], buffer_len-i,
-				  in_cksum((unsigned char *)&ip_header->saddr, 2 * sizeof(ip_header->saddr),
-				    IPPROTO_UDP + ntohs(udp_header->len)))));
+  i = sizeof(struct ether_header) + ip_len + sizeof(struct udp_header);
+  udp->check = wrapsum(in_cksum((unsigned char *) udp, sizeof(struct udp_header),
+                                in_cksum((unsigned char *) &buffer[i], buffer_len - i,
+				  in_cksum((unsigned char *) addr, 2 * addr_len,
+				    IPPROTO_UDP + ntohs(udp->len)))));
 }
 
 /* ******************************************* */
@@ -406,13 +437,14 @@ int main(int argc, char* argv[]) {
   int randomize = 0;
   int reforging_idx;
   int stdin_packet_len = 0;
+  u_int ip_v = 4;
 
   srandom(time(NULL));
 
   srcaddr.s_addr = 0x0000000A /* 10.0.0.0 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:r:vm:p:P:S:w:x:z")) != -1) {
+  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:r:vm:p:P:S:w:x:V:z")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -490,6 +522,10 @@ int main(int argc, char* argv[]) {
     case 'P':
       pidFileName = strdup(optarg);
       break;
+    case 'V':
+      if (atoi(optarg) == 6) ip_v = 6;
+      else ip_v = 4;
+      break;
     case 'z':
       randomize = 1;
       break;
@@ -548,6 +584,9 @@ int main(int argc, char* argv[]) {
 
   if(send_len < 60)
     send_len = 60;
+
+  if (ip_v == 6 && send_len < 62)
+    send_len = 62;
 
 #if !(defined(__arm__) || defined(__mips__))
   if(gbit_s != 0 || pps != 0) {
@@ -669,7 +708,7 @@ int main(int argc, char* argv[]) {
     for (i = 0; i < num_balanced_pkts; i++) {
 
       if (stdin_packet_len <= 0) {
-        forge_udp_packet(buffer, send_len, pkts_offset + i);
+        forge_udp_packet(buffer, send_len, pkts_offset + i, ip_v);
       } else {
         if (reforge_packet(buffer, send_len, pkts_offset + i, 0) != 0) { 
           fprintf(stderr, "Unable to reforge the provided packet\n");
@@ -784,7 +823,7 @@ int main(int argc, char* argv[]) {
 
     if (on_the_fly_reforging) {
       if (stdin_packet_len <= 0)
-        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent);
+        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, ip_v);
       else
         reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
     }
