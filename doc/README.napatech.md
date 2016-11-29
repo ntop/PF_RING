@@ -4,7 +4,7 @@
 Napatech drivers and SDK installed.
 
 As of PF_RING 6.2 you need ntanl v.4.0.1 and 
-with ntanl 3.2 being what normal support provides this vershion of 
+with ntanl 3.2 being what normal support provides this version of
 PF_RING may not work for you 
 
 PF_RING has native support for Napatech adapters, the Napatech library
@@ -37,7 +37,7 @@ sudo ./pfcount -i nt:0
 
 Please note that:
  - in order to open port 0 from the Napatech adapter you should specify 
-   "nt:0", in order to open stream 0 you should speficy "nt:stream0"
+   "nt:0", in order to open stream 0 you should specify "nt:stream0"
 
  - streams are logical port aggregations or packet spread (similar to RSS)
    can be created using the ntpl tool (ntpl -e "<command>")
@@ -82,11 +82,11 @@ ln -s /opt/napatech3/lib/* .
 
 ## Napatech and Packet Copy
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
-if you use PF_RING ZC API, there is a per-packet copy requested to move
+if you use PF_RING ZC API, a per-packet copy takes place, which is required to move
 payload data from Napatech-memory to ZC memory. Keep this in mind!
 
 ## Transmission Support
-In order to use Napatech in transmission you neeed to make sure you have
+In order to use Napatech in transmission you need to make sure you have
 configured TX properly. Edit /opt/napatech3/config/ntservice.ini and
 make sure you have the following sections configured
 
@@ -103,7 +103,7 @@ RntcTxEnable=1
 ## Hardware Filtering
 Napatech NICs support full-blown hardware filtering  out of the box. Thanks
 to nBPF we convert BPF expressions to hardware filters. This feature is
-upported transparently, and thus all PF_RING/libpcap-over-PF_RING can benefit
+supported transparently, and thus all PF_RING/libpcap-over-PF_RING can benefit
 from it.
 
 Example: 
@@ -111,5 +111,5 @@ Example:
 pfcount -i nt:3 -f "tcp and port 80 and src host 192.168.1.1"
 ```
 
-As Napatech harware filters are very advanced, filtering happens all in hardware.
+As Napatech hardware filters are very advanced, filtering happens all in hardware.
 

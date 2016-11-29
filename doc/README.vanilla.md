@@ -35,7 +35,7 @@ the user-space application is the filter specification without any further packe
 ## Packet Clustering
 PF_RING can also increase the performance of packet capture applications by implementing two mechanisms named 
 balancing and clustering. These mechanisms allow applications, willing to partition the set of packets to 
-handle, to handle a portion of the whole packet stream while sending all the remaining packets to the other 
+process, to handle a portion of the whole packet stream while sending all the remaining packets to the other
 members of the cluster. This means that different applications opening PF_RING sockets can bind them to a 
 specific cluster Id (via pfring_set_cluster) for joining the forces and each analyze a portion of the packets.
 

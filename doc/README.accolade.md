@@ -36,11 +36,11 @@ sudo ./pfcount -i anic:0
 Please note that:
  - in order to open port 0 from adapter 0 you should specify "anic:0:0" 
    (anic:<device>:<port>) or just "anic:0" (anic:<port>) if device is 0.
-   Opening a port this way, the full card is initialised, causesing issues
+   Opening a port this way, the full card is initialised, causing issues
    when opening other ports later (previous ports stop working): this can
    be avoided using the port-to-ring binding as explained later on.
- - in order to open ring 0 from adapter 0 you should speficy "anic:0@0"
-   (anic:<device>@<ring>). This is usually used for in combination with 
+ - in order to open ring 0 from adapter 0 you should specify "anic:0@0"
+   (anic:<device>@<ring>). This is usually used in combination with
    anic_rx_block_mfl which is used to setup the card for multi-process
    applications. 
    Example of ports aggregation and load-balancing to 2 rings:
@@ -59,5 +59,5 @@ ln -s /opt/accolade/lib/* .
 
 ## Accolade and Packet Copy
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
-if you use PF_RING ZC API, there is a per-packet copy requested to move
+if you use PF_RING ZC API, a per-packet copy takes place, which is required to move
 payload data from Accolade-memory to ZC memory. Keep this in mind!

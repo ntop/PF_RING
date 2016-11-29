@@ -12,7 +12,7 @@ module and drivers loading. The init script acts as follows:
 
 1. loads the pf_ring.ko kernel module.
 2. scans the folders /etc/pf_ring/zc/{e1000e,igb,ixgbe,i40e,fm10k}/ searching files:
-- {e1000e,igb,ixgbe,i40e,fm10k}.conf containinig the driver parameters
+- {e1000e,igb,ixgbe,i40e,fm10k}.conf containing the driver parameters
 - {e1000e,igb,ixgbe,i40e,fm10k}.start that should be just an empty file
 3. loads the drivers whose corresponding {e1000e,igb,ixgbe,i40e,fm10k}.start file is present, 
    unloading the vanilla driver.

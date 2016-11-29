@@ -33,7 +33,7 @@ cat /proc/meminfo | grep Hugepagesize
 Hugepagesize: 2048 kB 
 ```
 
-Hugepages can be dinamically reserved with:
+Hugepages can be dynamically reserved with:
 
 ```
 echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
@@ -67,7 +67,7 @@ cat /proc/cpuinfo | grep pdpe1gb
 ```
 
 In order to make the hugepages available for use, Linux provides a 
-RAM-based filesystem called "hugetlbfs" that have to be mount'ed with:
+RAM-based filesystem called "hugetlbfs" that have to be mounted with:
 
 ```
 mount -t hugetlbfs none /mnt/hugepages
@@ -109,7 +109,7 @@ ulimit -l 4194304
 ```
 
 - Increase the value in /proc/sys/kernel/shmmax. Please note that on 
-  32bit sytems it will wrap around 4 GBytes.
+  32bit systems it will wrap around 4 GBytes.
 
 ```
 echo 2147483648 > /proc/sys/kernel/shmmax

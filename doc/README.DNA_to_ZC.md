@@ -1,7 +1,7 @@
 # Migrating from DNA to ZC
 DNA/Libzero have been replaced by PF_RING ZC that includes a superset of both technologies.
 We have decided to allow you to migrate your existing DNA/libzero licenses to ZC at no cost.
-All ypu have to do it so go to http://www.nmon.net/dnatozc/ and specify the MAC address for
+All you have to do it so go to http://www.nmon.net/dnatozc/ and specify the MAC address for
 which an existing DNA license has been created and you will receive an equivalent ZC license.
 
 ## Introduction

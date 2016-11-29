@@ -17,8 +17,8 @@ linux distribution and load the PF_RING kernel module:
 
 ## Creating a dump set with n2disk
 This module extracts traffic from a n2disk dump set consisting of PCAP files, index files, and a timeline.
-In order to instruct n2disk to create on-the-fly indexes you should use the -I option. The -A <path> option
-instead should be used to create a timeline in <path>.
+In order to instruct n2disk to create on-the-fly indexes you should use the -I option. The -A \<path\> option
+instead should be used to create a timeline in \<path\>.
 
 Command line example:
 

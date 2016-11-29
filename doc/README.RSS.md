@@ -1,5 +1,5 @@
 # RSS (Receive Side Scaling)
-Allmost all Intel (and other vendors) NICs have RSS support, this means they 
+Almost all Intel (and other vendors) NICs have RSS support, this means they
 are able to hash packets in hardware in order to distribute the load across 
 multiple RX queues.
 
@@ -63,6 +63,6 @@ you open it using ZC with zc:eth1, this is the same as opening zc:eth1@0.
 This does not apply in standard kernel mode, where kernel abstracts the
 interface and capturing from eth1 means capturing from all the queues. This
 happens because ZC is a kernel-bypass technology, thus there is no abstraction,
-and the application directly open an interface queue, which corresponds to the
+and the application directly opens an interface queue, which corresponds to the
 full interface only when RSS=1.
 
