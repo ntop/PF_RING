@@ -55,9 +55,22 @@ the '-zc' suffix. Three driver families are currently available:
 
 These drivers can be found in drivers/
 
-Note: ZC needs hugepages for memory allocation, they are automatically initialised by 
-the load_driver.sh script you can use to load the driver. For more informations 
-please read README.hugepages.
+Please note that:
+* the PF_RING kernel module must be loaded before the ZC driver
+* in order to correctly configure the device, it is highly recommended to use the 
+  load_driver.sh script provided with the drivers (take a look at the script to fine-tune the configuration)
+* ZC drivers need hugepages, the load_driver.sh script takes care of hugepages configuration. 
+  For more informations please read README.hugepages.
+
+Example loading PF_RING and the ixgbe-ZC driver:
+
+```
+cd <PF_RING PATH>/kernel
+insmod pf_ring.ko
+cd PF_RING/drivers/intel/ixgbe/ixgbe-X.X.X-zc/src
+make
+./load_driver.sh
+```
 
 ## ZC API
 PF_RING ZC (Zero Copy) is a flexible packet processing framework that allows you to 

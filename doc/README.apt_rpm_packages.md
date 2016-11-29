@@ -19,14 +19,16 @@ module and drivers loading. The init script acts as follows:
 2. configures hugepages if a ZC driver has been loaded, reading the configuration 
    from /etc/pf_ring/hugepages. Each line (one per CPU) of the configuration file 
    should contain:
-     node=<NUMA node id> hugepagenumber=<number of pages>
+```
+node=<NUMA node id> hugepagenumber=<number of pages>
+```
 
 Below you can find a configuration example for a dual-port ixgbe card with ZC drivers, 
 for other packages/drivers configuration steps are similar.
 
 ```
 mkdir -p /etc/pf_ring/zc/ixgbe
-echo "RSS=4,4" > /etc/pf_ring/zc/ixgbe/ixgbe.conf 
+echo "RSS=1,1" > /etc/pf_ring/zc/ixgbe/ixgbe.conf 
 touch /etc/pf_ring/zc/ixgbe/ixgbe.start
 touch /etc/pf_ring/pf_ring.conf
 touch /etc/pf_ring/pf_ring.start
