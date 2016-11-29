@@ -3,8 +3,10 @@ all: libpfring pcap build_examples build_examples_zc build_extcap
 
 ###################
 
-config:
+lib/Makefile:
 	./configure
+
+config: lib/Makefile
 
 libpfring: config
 	cd lib; make
@@ -12,8 +14,11 @@ libpfring: config
 build_nbpf: config
 	cd nbpf; make
 
-pcap: libpfring
-	cd libpcap; ./configure --enable-ipv6 --enable-dbus=no --without-libnl --with-snf=no --disable-bluetooth --disable-canusb --with-dag=no; make
+libpcap/Makefile:
+	cd libpcap; ./configure --enable-ipv6 --enable-dbus=no --without-libnl --with-snf=no --disable-bluetooth --disable-canusb --with-dag=no
+
+pcap: libpfring libpcap/Makefile
+	cd libpcap; make
 
 build_examples: config
 	cd examples; make
@@ -24,8 +29,11 @@ build_examples_zc: config
 build_c++: libpfring
 	cd c++; make
 
-build_tcpdump: libpfring pcap
-	cd tcpdump; ./configure; make
+tcpdump/Makefile:
+	cd tcpdump; ./configure
+
+build_tcpdump: libpfring pcap tcpdump/Makefile
+	cd tcpdump; make
 
 build_extcap: libpfring pcap
 	cd wireshark/extcap; make
