@@ -36,7 +36,7 @@ INCLUDE    = -I${PFRING_KERNEL} -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../..
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC         = ${CROSS_COMPILE}gcc #--platform=native
-CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_BPF@ @HAVE_PF_RING_ZC@ @HAVE_REDIRECTOR@ -O2 # -g
+CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_BPF@ @HAVE_PF_RING_ZC@ -O2 # -g
 # LDFLAGS  =
 
 #

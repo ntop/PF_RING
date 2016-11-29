@@ -100,7 +100,7 @@ static pfring_module_info pfring_module_list[] = {
 #ifdef HAVE_FIBERBLAZE
   {
     .name = "fbcard",
-    .open = pfring_fiberblaze_open,
+    .open = pfring_fb_open,
   },
 #endif
 

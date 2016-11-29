@@ -88,38 +88,6 @@ fi
 dnl> end of pthread_setaffinity_np check
 fi
 
-AC_CHECK_HEADERS([librdi.h])
-
-dnl> Silicom Redirector NIC - Default enabled
-AC_ARG_ENABLE([rdi], AS_HELP_STRING([--disable-rdi], [Disable Silicom Redirector support in PF_RING]))
-
-REDIRECTOR_LIB=
-HAVE_REDIRECTOR=
-if test "x$enable_rdi" != "xno"; then :
-  if test "x$ac_cv_header_librdi_h" = x""yes; then :
-    dnl> Legacy RDI
-    AC_CHECK_LIB( [rdi], [rdi_init])
-    AC_MSG_CHECKING([Silicom Redirector support])
-    if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
-      HAVE_REDIRECTOR="-DHAVE_REDIRECTOR"
-      REDIRECTOR_LIB="-lrdi"
-      AC_MSG_RESULT(yes)
-    else
-      AC_MSG_RESULT(no)
-    fi
-
-    dnl> RDIF
-    AC_CHECK_LIB( [rdif], [rdi_init])
-    AC_MSG_CHECKING([Silicom Redirector F support])
-    if test "x$ac_cv_lib_rdif_rdi_init" = x""yes; then :
-      HAVE_REDIRECTOR="-D HAVE_REDIRECTOR_F"
-      AC_MSG_RESULT(yes)
-    else
-      AC_MSG_RESULT(no)
-    fi
-  fi
-fi
-
 dnl> Exablaze - http://exablaze.com
 AC_CHECK_HEADERS(exanic/exanic.h)
 if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
@@ -144,10 +112,10 @@ DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
 DAG_DEP="extract_dag_lib"
 
 dnl> Fiberblaze
-dnl> FIBERBLAZE_LIB="-lm -ldl" 
-dnl> HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
-dnl> FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
-dnl> FIBERBLAZE_DEP="extract_fiberblaze_lib"
+FIBERBLAZE_LIB="-lm -ldl" 
+HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
+FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
+FIBERBLAZE_DEP="extract_fiberblaze_lib"
 
 dnl> Napatech
 HAVE_NT="-D HAVE_NT"
@@ -285,8 +253,6 @@ dnl> AC_SUBST(BPF_LIB)
 AC_SUBST(REDIS_LIB)
 AC_SUBST(SYSLIBS)
 AC_SUBST(INSTALL_PREFIX)
-AC_SUBST(REDIRECTOR_LIB)
-AC_SUBST(HAVE_REDIRECTOR)
 AC_SUBST(HAVE_HW_TIMESTAMP)
 AC_SUBST(NDPI_LIB)
 AC_SUBST(NDPI_INC)

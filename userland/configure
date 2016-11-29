@@ -624,8 +624,6 @@ HAVE_NDPI
 NDPI_INC
 NDPI_LIB
 HAVE_HW_TIMESTAMP
-HAVE_REDIRECTOR
-REDIRECTOR_LIB
 INSTALL_PREFIX
 SYSLIBS
 REDIS_LIB
@@ -725,7 +723,6 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-enable_rdi
 enable_redis
 enable_bpf
 '
@@ -1358,7 +1355,6 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --disable-rdi           Disable Silicom Redirector support in PF_RING
   --enable-redis          Enable Redis support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
 
@@ -3436,144 +3432,6 @@ fi
 
 fi
 
-for ac_header in librdi.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "librdi.h" "ac_cv_header_librdi_h" "$ac_includes_default"
-if test "x$ac_cv_header_librdi_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBRDI_H 1
-_ACEOF
-
-fi
-
-done
-
-
-# Check whether --enable-rdi was given.
-if test "${enable_rdi+set}" = set; then :
-  enableval=$enable_rdi;
-fi
-
-
-REDIRECTOR_LIB=
-HAVE_REDIRECTOR=
-if test "x$enable_rdi" != "xno"; then :
-  if test "x$ac_cv_header_librdi_h" = x""yes; then :
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdi_init in -lrdi" >&5
-$as_echo_n "checking for rdi_init in -lrdi... " >&6; }
-if ${ac_cv_lib_rdi_rdi_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lrdi  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char rdi_init ();
-int
-main ()
-{
-return rdi_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_rdi_rdi_init=yes
-else
-  ac_cv_lib_rdi_rdi_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rdi_rdi_init" >&5
-$as_echo "$ac_cv_lib_rdi_rdi_init" >&6; }
-if test "x$ac_cv_lib_rdi_rdi_init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBRDI 1
-_ACEOF
-
-  LIBS="-lrdi $LIBS"
-
-fi
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking Silicom Redirector support" >&5
-$as_echo_n "checking Silicom Redirector support... " >&6; }
-    if test "x$ac_cv_lib_rdi_rdi_init" = x""yes; then :
-      HAVE_REDIRECTOR="-DHAVE_REDIRECTOR"
-      REDIRECTOR_LIB="-lrdi"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    fi
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdi_init in -lrdif" >&5
-$as_echo_n "checking for rdi_init in -lrdif... " >&6; }
-if ${ac_cv_lib_rdif_rdi_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lrdif  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char rdi_init ();
-int
-main ()
-{
-return rdi_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_rdif_rdi_init=yes
-else
-  ac_cv_lib_rdif_rdi_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rdif_rdi_init" >&5
-$as_echo "$ac_cv_lib_rdif_rdi_init" >&6; }
-if test "x$ac_cv_lib_rdif_rdi_init" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBRDIF 1
-_ACEOF
-
-  LIBS="-lrdif $LIBS"
-
-fi
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking Silicom Redirector F support" >&5
-$as_echo_n "checking Silicom Redirector F support... " >&6; }
-    if test "x$ac_cv_lib_rdif_rdi_init" = x""yes; then :
-      HAVE_REDIRECTOR="-D HAVE_REDIRECTOR_F"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    else
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    fi
-  fi
-fi
-
 for ac_header in exanic/exanic.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "exanic/exanic.h" "ac_cv_header_exanic_exanic_h" "$ac_includes_default"
@@ -3776,6 +3634,10 @@ HAVE_DAG="-D HAVE_DAG"
 DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
 DAG_DEP="extract_dag_lib"
 
+FIBERBLAZE_LIB="-lm -ldl"
+HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
+FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
+FIBERBLAZE_DEP="extract_fiberblaze_lib"
 
 HAVE_NT="-D HAVE_NT"
 NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
@@ -3943,8 +3805,6 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
-
-
 
 
 

@@ -13,10 +13,6 @@
 
 #include "pfring.h"
 
-#ifdef HAVE_REDIRECTOR
-#include "pfring_redirector.c"
-#endif
-
 /* ********************************* */
 
 static int virtual_filtering_device_add_hw_rule(pfring *ring, hw_filtering_rule *rule) {
@@ -41,23 +37,12 @@ void pfring_hw_ft_init(pfring *ring) {
 
   if(rc < 0)
     ring->ft_device_type = standard_nic_family;
-
-#ifdef HAVE_REDIRECTOR
-  init_redirector(ring);
-#endif
 }
 
 /* ********************************* */
 
 int pfring_hw_ft_set_traffic_policy(pfring *ring, u_int8_t rules_default_accept_policy) {
-  int rc = 0;
- 
-#ifdef HAVE_REDIRECTOR
-  if(ring->rdi.port_id != -1)
-    rc = redirector_set_traffic_policy(ring, rules_default_accept_policy);
-#endif
-
-  return rc;
+  return 0;
 }
 
 /* ********************************* */
@@ -79,14 +64,6 @@ int pfring_hw_ft_add_hw_rule(pfring *ring, hw_filtering_rule *rule) {
     break;
   }
 
-  if(rc < 0)
-    return rc;
-
-#ifdef HAVE_REDIRECTOR
-  if(ring && (ring->rdi.port_id != -1))
-    rc = redirector_add_hw_rule(ring, rule, NULL, NULL);
-#endif
-
   return rc;
 }
 
@@ -105,14 +82,6 @@ int pfring_hw_ft_remove_hw_rule(pfring *ring, u_int16_t rule_id) {
       rc = 0;
     break;
   }
-
-  if(rc < 0)
-    return rc;
-
-#ifdef HAVE_REDIRECTOR
-  if(ring && (ring->rdi.port_id != -1))
-    rc = redirector_remove_hw_rule(ring, rule_id);
-#endif
 
   return rc;
 }
@@ -139,18 +108,6 @@ int pfring_hw_ft_handle_hash_filtering_rule(pfring *ring, hash_filtering_rule* r
     break;
   }
 
-  if(rc < 0)
-    return rc;
-
-#ifdef HAVE_REDIRECTOR
-  if(ring->rdi.port_id != -1) {
-    if(add_rule)
-      rc = redirector_add_hash_filtering_rule(ring, rule_to_add);
-    else
-      rc = redirector_remove_filtering_rule(ring, rule_to_add->rule_id);
-  }
-#endif
-
   return rc;
 }
 
@@ -173,14 +130,6 @@ int pfring_hw_ft_add_filtering_rule(pfring *ring, filtering_rule* rule_to_add) {
     break;
   }
 
-  if(rc < 0)
-    return rc;
-
-#ifdef HAVE_REDIRECTOR
-  if(ring->rdi.port_id != -1)
-    rc = redirector_add_filtering_rule(ring, rule_to_add);
-#endif
-
   return rc;
 }
 
@@ -199,14 +148,6 @@ int pfring_hw_ft_remove_filtering_rule(pfring *ring, u_int16_t rule_id) {
       rc = 0;
     break;
   }
-
-  if(rc < 0)
-    return rc;
-
-#ifdef HAVE_REDIRECTOR
-  if(ring->rdi.port_id != -1)
-    rc = redirector_remove_filtering_rule(ring, rule_id);
-#endif
 
   return rc;
 }
