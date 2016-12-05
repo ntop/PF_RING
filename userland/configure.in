@@ -23,13 +23,17 @@ dnl> AC_TRY_RUN([ int main() { return 0; } ], [ AC_MSG_RESULT(yes) ], [AC_MSG_RE
 dnl> CFLAGS="$save_CFLAGS"
 
 MACHINE=`uname -m`
-PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
-MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
-MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
-MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
+AR_X=
+if test $MACHINE = "x86_64"; then
+   AR_X="ar x"
+   PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
+   MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
+   MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+   MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
+   MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
+   MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
+   NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
+fi
 
 dnl> Check for a modern pthread library
 AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
@@ -105,6 +109,7 @@ fi
 AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])
 AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 
+if test $MACHINE = "x86_64"; then
 dnl> DAG
 DAG_LIB="-lm -ldl" 
 HAVE_DAG="-D HAVE_DAG"
@@ -163,6 +168,7 @@ if test -f pfring_mod_mlx.c; then
      HAVE_MLX=""
      AC_MSG_RESULT(no)
    fi
+fi
 fi
 
 dnl> BPF - Default disabled
@@ -257,6 +263,7 @@ AC_SUBST(HAVE_HW_TIMESTAMP)
 AC_SUBST(NDPI_LIB)
 AC_SUBST(NDPI_INC)
 AC_SUBST(HAVE_NDPI)
+AC_SUBST(AR_X)
 
 dnl> AC_CONFIG_FILES([lib/Makefile])
 AC_CONFIG_FILES([lib/pfring_config])

@@ -113,25 +113,25 @@ ${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG
 	${CC} ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
 
 extract_pfring_zc_lib:
-	ar x @PF_RING_ZC_LIB@
+	@AR_X@ @PF_RING_ZC_LIB@
 
 extract_myricom_lib:
-	ar x @MOD_MYRICOM_LIB@
+	@AR_X@ @MOD_MYRICOM_LIB@
 
 extract_nt_lib:
-	ar x @MOD_NT_LIB@
+	@AR_X@ @MOD_NT_LIB@
 
 extract_dag_lib:
-	ar x @MOD_DAG_LIB@
+	@AR_X@ @MOD_DAG_LIB@
 
 extract_fiberblaze_lib:
-	ar x @MOD_FIBERBLAZE_LIB@
+	@AR_X@ @MOD_FIBERBLAZE_LIB@
 
 extract_accolade_lib:
-	ar x @MOD_ACCOLADE_LIB@
+	@AR_X@ @MOD_ACCOLADE_LIB@
 
 extract_npcap_lib:
-	ar x @NPCAP_LIB@
+	@AR_X@ @NPCAP_LIB@
 
 extract_nbpf: ${NBPF_LIB}
 	ar x ${NBPF_LIB}
