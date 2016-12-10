@@ -2251,8 +2251,8 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
       struct icmphdr *icmp;
 
       icmp = (struct icmphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
-      hdr->extended_hdr.parsed_pkt.icmp_type = ntohs(icmp->type);
-      hdr->extended_hdr.parsed_pkt.icmp_code = ntohs(icmp->code);
+      hdr->extended_hdr.parsed_pkt.icmp_type = icmp->type;
+      hdr->extended_hdr.parsed_pkt.icmp_code = icmp->code;
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct icmphdr);
 
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) { /* SCTP */
