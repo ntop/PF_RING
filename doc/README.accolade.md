@@ -12,6 +12,11 @@ In order to get up and running with Accolade just run
 the following commands:
 
 ```
+tar xvzf SDK_*.tgz
+cd SDK_*
+cd drv; make install; cd ..
+cd lib; make install; cd ..
+
 echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
 cd /opt/accolade/
