@@ -275,19 +275,19 @@ typedef enum {
 
 struct pkt_parsing_info {
   /* Core fields (also used by NetFlow) */
-  u_int8_t dmac[ETH_ALEN], smac[ETH_ALEN];  /* MAC src/dst addresses */
-  u_int16_t eth_type;   /* Ethernet type */
-  u_int16_t vlan_id;    /* VLAN Id or NO_VLAN */
-  u_int16_t qinq_vlan_id;    /* VLAN Id or NO_VLAN */
+  u_int8_t  dmac[ETH_ALEN], smac[ETH_ALEN];  /* MAC src/dst addresses */
+  u_int16_t eth_type;         /* Ethernet type */
+  u_int16_t vlan_id;          /* VLAN Id or NO_VLAN */
+  u_int16_t qinq_vlan_id;     /* VLAN Id or NO_VLAN */
   u_int8_t  ip_version;
   u_int8_t  l3_proto, ip_tos; /* Layer 4 protocol, TOS */
   ip_addr   ip_src, ip_dst;   /* IPv4 src/dst IP addresses */
-  u_int16_t l4_src_port, l4_dst_port; /* Layer 4 src/dst ports */
+  u_int16_t l4_src_port, l4_dst_port;/* Layer 4 src/dst ports */
+  u_int8_t  icmp_type, icmp_code;    /* Variables for ICMP packets */
   struct {
     u_int8_t flags;   /* TCP flags (0 if not available) */
     u_int32_t seq_num, ack_num; /* TCP sequence number */
   } tcp;
-
   tunnel_info tunnel;
   int last_matched_rule_id; /* If > 0 identifies a rule that matched the packet */
   struct pkt_offset offset; /* Offsets of L3/L4/payload elements */
