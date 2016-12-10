@@ -4,8 +4,8 @@
 Myricom SNF v3 or v4 installed.
 
 PF_RING has native support for Myricom adapters, the Myricom library needs 
-to be installed (under /opt/snf) in order to enable the Myricom module when
-configuring/compiling the pf_ring library.
+to be installed (under /opt/snf) in order to enable the Myricom module at
+runtime.
 
 ## Installation
 In order to get up and running with Myricom just run the following commands.
@@ -38,8 +38,6 @@ Myricom service start:
 If you are compiling PF_RING from sources:
 
 ```
-echo "/opt/snf/lib" > /etc/ld.so.conf.d/snf.conf
-ldconfig
 
 cd PF_RING/kernel
 make
@@ -56,13 +54,9 @@ make
 sudo ./pfcount -i myri:0
 ```
 
-If you are installing from repository and using SNF v3 (not needed for v4)
+If you are installing from repository:
 
 ```
-rm /usr/local/lib/libsnf.so*
-ln -s /opt/snf/lib/libsnf.so /usr/local/lib/libsnf.so
-ln -s /opt/snf/lib/libsnf.so /usr/local/lib/libsnf.so.0
-
 pfcount -i myri:0
 ```
 

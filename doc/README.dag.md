@@ -4,8 +4,7 @@
 DAG SDK installed.
 
 PF_RING has native support for Endace DAG adapters, the DAG SDK needs to be 
-installed in order to enable the DAG module when configuring/compiling the 
-pf_ring library.
+installed in order to enable the DAG module at runtime.
 
 ## Installation
 In order to get up and running with a DAG adapter just run the following commands.

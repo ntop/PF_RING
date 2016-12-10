@@ -9,7 +9,7 @@ PF_RING may not work for you
 
 PF_RING has native support for Napatech adapters, the Napatech library
 needs to be installed (under /opt/napatech3) in order to enable the 
-Napatech module when configuring/compiling the pf_ring library.
+Napatech module at runtime.
 
 ## Installation
 For the impatient, in order to get up and running with Napatech just run 
@@ -25,7 +25,6 @@ make
 sudo insmod pf_ring.ko
 cd ../userland/lib
 ./configure
-ln -s /opt/napatech3/lib/libntapi.so /usr/local/lib/
 make
 cd ../libpcap
 ./configure
@@ -70,15 +69,6 @@ Please note that:
      TimestampFormat = PCAP_NS
      PacketDescriptor = PCAP
      HostBufferSegmentSizeRx = 4
-
-## Compiling PF_RING apps with Napatech support on Ubuntu
-Please run the command below in order to setup libraries on your Ubuntu system
-
-```
-sudo su
-cd /usr/local/lib
-ln -s /opt/napatech3/lib/* .
-```
 
 ## Napatech and Packet Copy
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead

@@ -5,7 +5,7 @@ Accolade SDK v.1.2.17.20150903 or later installed.
 
 PF_RING has native support for Accolade adapters, the Accolade library
 needs to be installed (under /opt/accolade) in order to enable the 
-Accolade module when configuring/compiling the pf_ring library.
+Accolade module at runtime.
 
 ## Installation
 In order to get up and running with Accolade just run 
@@ -52,15 +52,6 @@ Please note that:
      anic_rx_block_mfl -i 0 --mode=2 
    Example of port-to-ring (ring 0 is port 0) binding:
      anic_rx_block_mfl -i 0 --mode=port
-
-## Compiling PF_RING apps with Accolade support on Ubuntu
-Please run the command below in order to setup libraries on your Ubuntu system
-
-```
-sudo su
-cd /usr/local/lib
-ln -s /opt/accolade/lib/* .
-```
 
 ## Accolade and Packet Copy
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead

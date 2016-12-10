@@ -3,9 +3,6 @@
 ## Prerequisites
 We expect you to have installed the ExaNIC drivers (v. 1.7 or later) and loaded the drivers.
 
-## Compilation
-If you have the ExaNIC drivers/SDK installed the configure under userland/lib will enable Exablaze support in PF_RING.
-
 ## Usage
 Using the exanic-config tool, you can see how the NIC has been mapped by Linux to the device name
 
