@@ -44,6 +44,7 @@
  * - Momina Khan <momina.azam@gmail.com>
  * - XTao <xutao881001@gmail.com>
  * - James Juran <james.juran@mandiant.com>
+ * - Paulo Angelo Alves Resende <pa@pauloangelo.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,6 +95,7 @@
 #include <linux/tcp.h>
 #include <linux/udp.h>
 #include <linux/sctp.h>
+#include <linux/icmp.h>
 #include <linux/list.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
@@ -2020,7 +2022,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
   hdr->extended_hdr.parsed_pkt.offset.l4_offset = hdr->extended_hdr.parsed_pkt.offset.l3_offset+ip_len;
 
   if (!fragment_offset) {
-    if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {
+    if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {          /* TCP */
       struct tcphdr *tcp;
 
       if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct tcphdr)) return(1);
@@ -2034,7 +2036,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
       hdr->extended_hdr.parsed_pkt.tcp.flags = (tcp->fin * TH_FIN_MULTIPLIER) + (tcp->syn * TH_SYN_MULTIPLIER) +
 	(tcp->rst * TH_RST_MULTIPLIER) + (tcp->psh * TH_PUSH_MULTIPLIER) +
 	(tcp->ack * TH_ACK_MULTIPLIER) + (tcp->urg * TH_URG_MULTIPLIER);
-    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_UDP) {
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_UDP) {   /* UDP */
       struct udphdr *udp;
 
       if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct udphdr)) return(1);
@@ -2170,7 +2172,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 		|| (hdr->extended_hdr.parsed_pkt.l4_dst_port == MOBILE_IP_PORT)) {
 	/* FIX: missing implementation (TODO) */
       }
-    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {    /* GRE */
       struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       int gre_offset;
 
@@ -2245,7 +2247,15 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
       }
 
-    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) {
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_ICMP) {  /* ICMP */
+      struct icmphdr *icmp;
+
+      icmp = (struct icmphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+      hdr->extended_hdr.parsed_pkt.icmp_type = ntohs(icmp->type);
+      hdr->extended_hdr.parsed_pkt.icmp_code = ntohs(icmp->code);
+      hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct icmphdr);
+
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) { /* SCTP */
       struct sctphdr *sctp;
 
       sctp = (struct sctphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
