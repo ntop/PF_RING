@@ -12,8 +12,8 @@ HUGEPAGES=1024
 if [ `cat /proc/mounts | grep hugetlbfs | wc -l` -eq 0 ]; then
 	sync && echo 3 > /proc/sys/vm/drop_caches
 	echo $HUGEPAGES > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-	mkdir /mnt/huge
-	mount -t hugetlbfs nodev /mnt/huge
+	mkdir /mnt/hugepages
+	mount -t hugetlbfs nodev /mnt/hugepages
 fi
 AVAILHUGEPAGES=$(grep HugePages_Total /sys/devices/system/node/node0/meminfo | cut -d ':' -f 2|sed 's/ //g')
 if [ $AVAILHUGEPAGES -ne $HUGEPAGES ]; then 
