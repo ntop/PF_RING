@@ -23,8 +23,17 @@ module and drivers loading. The init script acts as follows:
 node=<NUMA node id> hugepagenumber=<number of pages>
 ```
 
-Below you can find a configuration example for a dual-port ixgbe card with ZC drivers, 
-for other packages/drivers configuration steps are similar.
+Note: in order to figure out what is the driver model that you need, please use
+ethtool -i <interface>. Example:
+
+```
+ethtool -i eth1 | grep driver
+driver: ixgbe
+```
+
+Below you can find a configuration example for a dual-port ixgbe card (replace
+ixgbe with your actual driver model) with ZC drivers, for other packages/drivers 
+configuration steps are similar.
 
 ```
 mkdir -p /etc/pf_ring/zc/ixgbe
