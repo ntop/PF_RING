@@ -414,7 +414,10 @@ pfring_zc_release_packet_handle(
 /* **************************************************************************************** */
 
 /**
- * Create a multi-queue object to send the same packet to multiple queues. This call will disable standard send on the queues (only pfring_zc_send_pkt_multi() is allowed).
+ * Create a multi-queue object to send the same packet to multiple queues. 
+ * Constraints: when using fan-out with multiqueue (i.e. calling pfring_zc_send_pkt_multi() with multiple bits set in queues_mask)
+ * it is not possible to have multiple multiqueue sharing the same consumers (expect metadata corruptions in this case).
+ * Note: this call will disable standard send on the queues (only pfring_zc_send_pkt_multi() is allowed).
  * @param queues     The array with the queues to bind to the multi-queue object. 
  * @param num_queues The number of egress queues.
  * @return           The multi-queue handle on success, NULL otherwise (errno is set appropriately). 

@@ -44,6 +44,7 @@
  * - Momina Khan <momina.azam@gmail.com>
  * - XTao <xutao881001@gmail.com>
  * - James Juran <james.juran@mandiant.com>
+ * - Paulo Angelo Alves Resende <pa@pauloangelo.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,6 +95,7 @@
 #include <linux/tcp.h>
 #include <linux/udp.h>
 #include <linux/sctp.h>
+#include <linux/icmp.h>
 #include <linux/list.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
@@ -1802,16 +1804,21 @@ static inline void ring_remove(struct sock *sk_to_delete)
 
 /* ********************************** */
 
-static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t proto,
+static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t ip_version, u_int8_t l3_proto,
 			         ip_addr host_peer_a, ip_addr host_peer_b,
 			         u_int16_t port_peer_a, u_int16_t port_peer_b)
 {
-  return(vlan_id+proto+
-	 host_peer_a.v6.s6_addr32[0]+host_peer_a.v6.s6_addr32[1]+
-	 host_peer_a.v6.s6_addr32[2]+host_peer_a.v6.s6_addr32[3]+
-	 host_peer_b.v6.s6_addr32[0]+host_peer_b.v6.s6_addr32[1]+
-	 host_peer_b.v6.s6_addr32[2]+host_peer_b.v6.s6_addr32[3]+
-	 port_peer_a+port_peer_b);
+  u_int32_t hash = vlan_id;
+  if (ip_version == 4)
+    hash += host_peer_a.v4 + host_peer_b.v4;
+  else if (ip_version == 6)
+    hash +=
+      host_peer_a.v6.s6_addr32[0] + host_peer_a.v6.s6_addr32[1] +
+      host_peer_a.v6.s6_addr32[2] + host_peer_a.v6.s6_addr32[3] +
+      host_peer_b.v6.s6_addr32[0] + host_peer_b.v6.s6_addr32[1] +
+      host_peer_b.v6.s6_addr32[2] + host_peer_b.v6.s6_addr32[3];
+  hash += l3_proto + port_peer_a + port_peer_b;
+  return hash;
 }
 
 /* ********************************** */
@@ -1832,6 +1839,8 @@ static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t fla
 
     hdr->extended_hdr.pkt_hash = hash_pkt(
       (flags & HASH_PKT_HDR_MASK_VLAN)  ? 0 : hdr->extended_hdr.parsed_pkt.vlan_id,
+      use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version
+                   : hdr->extended_hdr.parsed_pkt.ip_version,
       (flags & HASH_PKT_HDR_MASK_PROTO) ? 0 :
         (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto
 		      : hdr->extended_hdr.parsed_pkt.l3_proto),
@@ -2013,7 +2022,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
   hdr->extended_hdr.parsed_pkt.offset.l4_offset = hdr->extended_hdr.parsed_pkt.offset.l3_offset+ip_len;
 
   if (!fragment_offset) {
-    if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {
+    if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP) {          /* TCP */
       struct tcphdr *tcp;
 
       if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct tcphdr)) return(1);
@@ -2027,7 +2036,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
       hdr->extended_hdr.parsed_pkt.tcp.flags = (tcp->fin * TH_FIN_MULTIPLIER) + (tcp->syn * TH_SYN_MULTIPLIER) +
 	(tcp->rst * TH_RST_MULTIPLIER) + (tcp->psh * TH_PUSH_MULTIPLIER) +
 	(tcp->ack * TH_ACK_MULTIPLIER) + (tcp->urg * TH_URG_MULTIPLIER);
-    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_UDP) {
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_UDP) {   /* UDP */
       struct udphdr *udp;
 
       if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct udphdr)) return(1);
@@ -2083,9 +2092,10 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	    tunneled_ip = (struct iphdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
 
 	    if(tunneled_ip->version == 4 /* IPv4 */) {
-	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ip->protocol;
+	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version = 4;
 	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v4 = ntohl(tunneled_ip->saddr);
 	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v4 = ntohl(tunneled_ip->daddr);
+	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ip->protocol;
 	      fragment_offset = tunneled_ip->frag_off & htons(IP_OFFSET); /* fragment, but not the first */
 	      ip_len = tunneled_ip->ihl*4;
 	      tunnel_offset = hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len+ip_len;
@@ -2095,10 +2105,11 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	      if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len+sizeof(struct kcompact_ipv6_hdr))) return(1);
 	      tunneled_ipv6 = (struct kcompact_ipv6_hdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset + gtp_len]);
 
-	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ipv6->nexthdr;
+	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version = 6;
 	      /* Values of IPv6 addresses are stored as network byte order */
 	      memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6, &tunneled_ipv6->saddr, sizeof(tunneled_ipv6->saddr));
 	      memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6, &tunneled_ipv6->daddr, sizeof(tunneled_ipv6->daddr));
+	      hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ipv6->nexthdr;
 
 	      ip_len = sizeof(struct kcompact_ipv6_hdr), tunnel_offset = hdr->extended_hdr.parsed_pkt.offset.payload_offset+gtp_len;
 
@@ -2161,7 +2172,7 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 		|| (hdr->extended_hdr.parsed_pkt.l4_dst_port == MOBILE_IP_PORT)) {
 	/* FIX: missing implementation (TODO) */
       }
-    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {    /* GRE */
       struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       int gre_offset;
 
@@ -2185,9 +2196,10 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	  if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(struct iphdr))) return(1);
 	  tunneled_ip = (struct iphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset]);
 
-	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ip->protocol;
+	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version = 4;
 	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v4 = ntohl(tunneled_ip->saddr);
 	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v4 = ntohl(tunneled_ip->daddr);
+	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ip->protocol;
 
 	  fragment_offset = tunneled_ip->frag_off & htons(IP_OFFSET); /* fragment, but not the first */
 	  ip_len = tunneled_ip->ihl*4;
@@ -2198,10 +2210,11 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	  if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(struct kcompact_ipv6_hdr))) return(1);
 	  tunneled_ipv6 = (struct kcompact_ipv6_hdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset]);
 
-	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ipv6->nexthdr;
+	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version = 6;
 	  /* Values of IPv6 addresses are stored as network byte order */
 	  memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6, &tunneled_ipv6->saddr, sizeof(tunneled_ipv6->saddr));
 	  memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6, &tunneled_ipv6->daddr, sizeof(tunneled_ipv6->daddr));
+	  hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto = tunneled_ipv6->nexthdr;
 
 	  ip_len = sizeof(struct kcompact_ipv6_hdr), tunnel_offset = hdr->extended_hdr.parsed_pkt.offset.payload_offset;
 
@@ -2234,7 +2247,15 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
       }
 
-    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) {
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_ICMP) {  /* ICMP */
+      struct icmphdr *icmp;
+
+      icmp = (struct icmphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+      hdr->extended_hdr.parsed_pkt.icmp_type = icmp->type;
+      hdr->extended_hdr.parsed_pkt.icmp_code = icmp->code;
+      hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct icmphdr);
+
+    } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) { /* SCTP */
       struct sctphdr *sctp;
 
       sctp = (struct sctphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
@@ -2958,7 +2979,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 					   u_char add_rule)
 {
   int rc = -1;
-  u_int32_t hash_value = hash_pkt(rule->rule.vlan_id, rule->rule.proto,
+  u_int32_t hash_value = hash_pkt(rule->rule.vlan_id, rule->rule.ip_version, rule->rule.proto,
 				  rule->rule.host_peer_a, rule->rule.host_peer_b,
 				  rule->rule.port_peer_a, rule->rule.port_peer_b)
     % perfect_rules_hash_size;
@@ -3297,6 +3318,7 @@ int check_perfect_rules(struct sk_buff *skb,
 
   hash_idx = hash_pkt(
     hdr->extended_hdr.parsed_pkt.vlan_id,
+    hdr->extended_hdr.parsed_pkt.ip_version,
     hdr->extended_hdr.parsed_pkt.l3_proto,
     hdr->extended_hdr.parsed_pkt.ip_src,
     hdr->extended_hdr.parsed_pkt.ip_dst,
@@ -7253,7 +7275,7 @@ static int ring_getsockopt(struct socket *sock,
 		 rule.host4_peer_b,
 		 rule.port_peer_b);
 
-	hash_idx = hash_pkt(rule.vlan_id, rule.proto,
+	hash_idx = hash_pkt(rule.vlan_id, rule.ip_version, rule.proto,
 			    rule.host_peer_a, rule.host_peer_b,
 			    rule.port_peer_a, rule.port_peer_b) % perfect_rules_hash_size;
 

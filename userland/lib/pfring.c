@@ -38,6 +38,11 @@
 #include "pfring_mod_dag.h"
 #endif
 
+#ifdef HAVE_FIBERBLAZE
+/* Fiberblaze */
+#include "pfring_mod_fiberblaze.h"
+#endif
+
 #ifdef HAVE_MELLANOX
 /* Mellanox */
 #include "pfring_mod_mlx.h"
@@ -89,6 +94,13 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "dag",
     .open = pfring_dag_open,
+  },
+#endif
+
+#ifdef HAVE_FIBERBLAZE
+  {
+    .name = "fbcard",
+    .open = pfring_fb_open,
   },
 #endif
 
@@ -1237,80 +1249,6 @@ int pfring_adjust_device_clock(pfring *ring, struct timespec *offset, int8_t sig
   if(ring && ring->adjust_device_clock) {
     return ring->adjust_device_clock(ring, offset, sign);
   }
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-u_char* pfring_get_pkt_buff_data(pfring *ring, pfring_pkt_buff *pkt_handle) {
-  if(ring && ring->get_pkt_buff_data)
-    return ring->get_pkt_buff_data(ring, pkt_handle);
-
-  return NULL;
-}
-
-/* **************************************************** */
-
-int pfring_set_pkt_buff_len(pfring *ring, pfring_pkt_buff *pkt_handle, u_int32_t len) {
-  if(ring && ring->set_pkt_buff_len)
-    return ring->set_pkt_buff_len(ring, pkt_handle, len);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-int pfring_set_pkt_buff_ifindex(pfring *ring, pfring_pkt_buff *pkt_handle, int if_index) {
-  if(ring && ring->set_pkt_buff_ifindex)
-    return ring->set_pkt_buff_ifindex(ring, pkt_handle, if_index);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-int pfring_add_pkt_buff_ifindex(pfring *ring, pfring_pkt_buff *pkt_handle, int if_index) {
-  if(ring && ring->add_pkt_buff_ifindex)
-    return ring->add_pkt_buff_ifindex(ring, pkt_handle, if_index);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-pfring_pkt_buff* pfring_alloc_pkt_buff(pfring *ring) {
-  if(ring && ring->alloc_pkt_buff)
-    return ring->alloc_pkt_buff(ring);
-
-  return NULL;
-}
-
-/* **************************************************** */
-
-void pfring_release_pkt_buff(pfring *ring, pfring_pkt_buff *pkt_handle) {
-  if(ring && ring->release_pkt_buff)
-    ring->release_pkt_buff(ring, pkt_handle);
-}
-
-/* **************************************************** */
-
-int pfring_recv_pkt_buff(pfring *ring, pfring_pkt_buff *pkt_handle, struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet) {
-  /* Note: this function fills the buffer pointed by pkt_handle */
-
-  if(ring && ring->recv_pkt_buff)
-    return ring->recv_pkt_buff(ring, pkt_handle, hdr, wait_for_incoming_packet);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
-int pfring_send_pkt_buff(pfring *ring, pfring_pkt_buff *pkt_handle, u_int8_t flush_packet) {
-  /* Note: this function reset the buffer pointed by pkt_handle */
-
-  if(ring && ring->send_pkt_buff)
-    return ring->send_pkt_buff(ring, pkt_handle, flush_packet);
 
   return(PF_RING_ERROR_NOT_SUPPORTED);
 }

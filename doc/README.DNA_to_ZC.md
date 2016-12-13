@@ -1,20 +1,15 @@
-Migrating from DNA to ZC
-------------------------
-
+# Migrating from DNA to ZC
 DNA/Libzero have been replaced by PF_RING ZC that includes a superset of both technologies.
 We have decided to allow you to migrate your existing DNA/libzero licenses to ZC at no cost.
-All ypu have to do it so go to http://www.nmon.net/dnatozc/ and specify the MAC address for
+All you have to do it so go to http://www.nmon.net/dnatozc/ and specify the MAC address for
 which an existing DNA license has been created and you will receive an equivalent ZC license.
 
-Introduction
-------------
+## Introduction
 PF_RING ZC is a technology that combines the former DNA+libzero into a single and
 comprehensive API. Please consider migrating to ZC as this offers several advantages
 with respect to DNA and libzero.
 
-
-Moving from DNA to ZC
----------------------
+## Moving from DNA to ZC
 The main things to know are:
 1. Load PF_RING-aware drivers instead of DNA drivers
 2. Configure huge-pages. Please read README.hugepages
@@ -25,14 +20,11 @@ The main things to know are:
 5. You can still use the old DNA drivers with ZC, although we suggest to move to
    PF_RING-aware drivers.
 
+## Moving from Libzero to ZC
+Libzero applications do not run on top of ZC and non-DNA drivers, code porting is mandatory
+replacing the Libzero-based implementation with a ZC-based implementation.
 
-Moving from Libzero to ZC
--------------------------
-1. Libzero applications do not run on top of ZC and non-DNA drivers.
-
-
-Support
--------
+## Support
 At the moment both DNA/Libzero and ZC are supported, but we plan in the long run to
 discontinue DNA/Libzero in favour of ZC.
 
