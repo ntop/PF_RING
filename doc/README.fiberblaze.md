@@ -29,12 +29,12 @@ prbGroup "b"
 ```
 
 the device names are
-
+```
 fbcard:0:b:0
 fbcard:0:b:1
 ...
 fbcard:0:b:7
-
+```
 
 Example (receive packets from card 0, group "b, ring 0): 
 ```
