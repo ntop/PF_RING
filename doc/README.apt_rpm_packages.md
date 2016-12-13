@@ -52,6 +52,10 @@ tree /etc/pf_ring/
         `-- ixgbe.start
 ```
 
+Please note that in this configuration RSS is disabled (RSS=1 means single queue). 
+For learning more about RSS and enable multiple queues for hw traffic distribution 
+please read the RSS guide.
+
 In order to run the init script, after all the files have been configured:
 
 ```
