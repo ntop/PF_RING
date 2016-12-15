@@ -1465,12 +1465,31 @@ static netdev_features_t fm10k_features_check(struct sk_buff *skb,
 #endif /* HAVE_NDO_FEATURES_CHECK */
 
 static const struct net_device_ops fm10k_netdev_ops = {
+#ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
+	.ndo_size		= sizeof(const struct net_device_ops),
+
+	/* All ops backported into RHEL7.x must go here. Do not place any ops
+	 * which haven't been backported here, as they will otherwise fail to
+	 * compile
+	 */
+	.extended = {
+#endif
+#ifdef NETIF_F_HW_L2FW_DOFFLOAD
+	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,
+	.ndo_dfwd_del_station	= fm10k_dfwd_del_station,
+#endif
+#ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
+	/* End of ops backported into RHEL7.x */
+	},
+#endif
 	.ndo_open		= fm10k_open,
 	.ndo_stop		= fm10k_close,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_start_xmit		= fm10k_xmit_frame,
 	.ndo_set_mac_address	= fm10k_set_mac,
+#ifndef HAVE_NETDEVICE_MIN_MAX_MTU
 	.ndo_change_mtu		= fm10k_change_mtu,
+#endif
 	.ndo_tx_timeout		= fm10k_tx_timeout,
 	.ndo_vlan_rx_add_vid	= fm10k_vlan_rx_add_vid,
 	.ndo_vlan_rx_kill_vid	= fm10k_vlan_rx_kill_vid,
@@ -1510,13 +1529,17 @@ static const struct net_device_ops fm10k_netdev_ops = {
 	.ndo_fdb_dump		= ndo_dflt_fdb_dump,
 #endif
 #endif
-#ifdef HAVE_VXLAN_CHECKS
+#ifdef HAVE_VXLAN_RX_OFFLOAD
 	.ndo_add_vxlan_port	= fm10k_add_vxlan_port,
 	.ndo_del_vxlan_port	= fm10k_del_vxlan_port,
 #endif
-#ifdef NETIF_F_HW_L2FW_DOFFLOAD
-	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,
-	.ndo_dfwd_del_station	= fm10k_dfwd_del_station,
+#ifdef HAVE_GENEVE_RX_OFFLOAD
+	.ndo_add_geneve_port	= fm10k_add_geneve_port,
+	.ndo_del_geneve_port	= fm10k_del_geneve_port,
+#endif
+#ifdef HAVE_UDP_ENC_RX_OFFLOAD
+	.ndo_udp_tunnel_add	= fm10k_udp_tunnel_add,
+	.ndo_udp_tunnel_del	= fm10k_udp_tunnel_del,
 #endif
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= fm10k_netpoll,
