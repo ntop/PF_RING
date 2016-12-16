@@ -27,10 +27,8 @@ static nbpf_node_t *alloc_node() {
 
   n = (nbpf_node_t *) calloc(1, sizeof(nbpf_node_t));
 
-  if (n == NULL) {
+  if (n == NULL)
     fprintf(stderr, "Error in memory allocation\n");
-    /* exit(-1); */
-  }
 
   return n;
 }
@@ -153,6 +151,8 @@ static nbpf_node_t *tree_parse(const char *buffer) {
   if (ndpi_struct == NULL) 
     return NULL;
 #endif
+
+  memset(&tree_root, 0, sizeof(tree_root));
 
   nbpf_lex_init(buffer);
 
