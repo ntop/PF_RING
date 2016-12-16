@@ -76,8 +76,8 @@ As PF_RING ZC needs huge-pages to work, you need to make sure they have been set
 already as follows:
 
 # echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-# mkdir /mnt/huge
-# mount -t hugetlbfs nodev /mnt/huge
+# mkdir /dev/hugepages
+# mount -t hugetlbfs nodev /dev/hugepages
 
 Note that:
 1. Depending on your setup you might need to increase the number of huge pages

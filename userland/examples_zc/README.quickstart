@@ -16,8 +16,8 @@ Quick Start Guide
    Note: hugepages are automatically initialised by the load_driver.sh script you can use to load the driver.
 
  $ echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
- $ mkdir /mnt/huge
- $ mount -t hugetlbfs nodev /mnt/huge
+ $ mkdir /dev/hugepages
+ $ mount -t hugetlbfs nodev /dev/hugepages
 
 3. Run one of the PF_RING ZC sample applications available. Please use a unique cluster id per application (unless you are using a multi-process application).
 

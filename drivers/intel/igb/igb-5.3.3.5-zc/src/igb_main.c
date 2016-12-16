@@ -5994,9 +5994,9 @@ static netdev_tx_t igb_xmit_frame(struct sk_buff *skb,
 
 #ifdef HAVE_PF_RING
 	/* We don't allow legacy send when in zc mode */
-	if(atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
-	  dev_kfree_skb_any(skb);
-	  return NETDEV_TX_OK;
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		dev_kfree_skb_any(skb);
+		return NETDEV_TX_OK;
 	}
 #endif
 
