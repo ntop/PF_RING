@@ -91,15 +91,18 @@ for IF in $INTERFACES ; do
 	fi
 done
 
-HUGEPAGES=1024
-if [ `cat /proc/mounts | grep hugetlbfs | wc -l` -eq 0 ]; then
-	sync && echo 3 > /proc/sys/vm/drop_caches
-	echo $HUGEPAGES > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-	mkdir /mnt/hugepages
-	mount -t hugetlbfs nodev /mnt/hugepages
+HUGEPAGES_NUM=1024
+HUGEPAGES_PATH=/dev/hugepages
+sync && echo 3 > /proc/sys/vm/drop_caches
+echo $HUGEPAGES_NUM > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+if [ `cat /proc/mounts | grep hugetlbfs | grep $HUGEPAGES_PATH | wc -l` -eq 0 ]; then
+	if [ ! -d $HUGEPAGES_PATH ]; then
+		mkdir $HUGEPAGES_PATH
+	fi
+	mount -t hugetlbfs nodev $HUGEPAGES_PATH
 fi
-AVAILHUGEPAGES=$(grep HugePages_Total /sys/devices/system/node/node0/meminfo | cut -d ':' -f 2|sed 's/ //g')
-if [ $AVAILHUGEPAGES -ne $HUGEPAGES ]; then 
-	printf "Warning: %s hugepages available, %s requested\n" "$AVAILHUGEPAGES" "$HUGEPAGES"
+HUGEPAGES_AVAIL=$(grep HugePages_Total /sys/devices/system/node/node0/meminfo | cut -d ':' -f 2|sed 's/ //g')
+if [ $HUGEPAGES_AVAIL -ne $HUGEPAGES_NUM ]; then 
+	printf "Warning: %s hugepages available, %s requested\n" "$HUGEPAGES_AVAIL" "$HUGEPAGES_NUM"
 fi
 

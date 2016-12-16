@@ -44,7 +44,7 @@ DRIVER_INSTALLED=0
 OLD_HUGEPAGES_CONFIG="/etc/pf_ring/hugepages"
 HUGEPAGES_CONFIG="/etc/pf_ring/hugepages.conf"
 HUGEPAGES_SIZE=`grep Hugepagesize /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'` # KB
-HUGEPAGES_MOUNTPOINT="/mnt/hugepages"
+HUGEPAGES_MOUNTPOINT="/dev/hugepages"
 MTU_CONFIG="/etc/pf_ring/mtu.conf"
 FORCESTART=0
 FORCESTART_FILE="/etc/pf_ring/forcestart"
@@ -119,11 +119,6 @@ unload_hugepages() {
 }
 
 load_hugepages() {
-	if [ -d /dev/hugepages ]; then
-		# umount hugepages on systems with a default hugepages configurations, such as CentOS 7
-		umount /dev/hugepages
-	fi
-
 	check_hugepages
 	HUGEPAGES_NUMBER=0
 	if [ ${LOAD_HUGEPAGES} -eq 0 ]; then

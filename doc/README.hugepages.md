@@ -6,7 +6,7 @@ how to enable them into your system.
 ## For the impatient
 ```
 echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-mount -t hugetlbfs nodev /mnt/huge
+mount -t hugetlbfs nodev /dev/hugepages
 ```
 
 ## The whole story
@@ -70,7 +70,7 @@ In order to make the hugepages available for use, Linux provides a
 RAM-based filesystem called "hugetlbfs" that have to be mounted with:
 
 ```
-mount -t hugetlbfs none /mnt/hugepages
+mount -t hugetlbfs none /dev/hugepages
 ```
 
 With no options the default hugepage size is used. To use a different
@@ -81,7 +81,7 @@ the nearest hugepage size).
 Example:
 
 ```
-mount -t hugetlbfs -o pagesize=1G,size=2G none /mnt/hugepages
+mount -t hugetlbfs -o pagesize=1G,size=2G none /dev/hugepages
 ```
 
 It is possible to see what pages are currently in use using the
