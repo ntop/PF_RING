@@ -524,12 +524,12 @@ case "$1" in
 	start_pf_ring;
 	;;
 
-  forcestart)
+  force-start | forcestart)
 	FORCESTART=1
 	start_pf_ring;
 	;;
 
-  forcerestart)
+  force-restart | forcerestart)
 	FORCESTART=1
 	stop_pf_ring;
 	start_pf_ring;
@@ -540,7 +540,7 @@ case "$1" in
 	;;
 
   *)
-	echo "Usage: /etc/init.d/pf_ring {start|stop|restart|forcestart|forcerestart|status}"
+	echo "Usage: /etc/init.d/pf_ring {start|stop|restart|force-start|force-restart|status}"
 	exit 1
 esac
 
