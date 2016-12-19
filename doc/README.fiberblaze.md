@@ -15,7 +15,7 @@ We expect you to have installed the Fiberblaze drivers and loaded them. Typical 
 PF_RING-enabled apps see Fiberblaze cards as fbcard:XXXX devices. However due to the Fiberblaze naming, you need to use different device names, depending if you send or receive traffic.
 
 # RX
-The naming convention is fbcard:<card_id>:<group name>:<group ring id> where <card_id> is the id of the card we want to open, <group name> is the name of the group specified in fbcard.cfg used by configurecard, and <ring id> (in case of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs.
+The naming convention is fbcard:CARD_ID:GROUP_NAME:GROUP_RING_ID where CARD_ID is the id of the card we want to open, GROUP_NAME is the name of the group specified in fbcard.cfg used by configurecard, and RING_ID (in case of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs.
 
 Example if you have set in fbcard.cfg
 
@@ -42,7 +42,7 @@ pfcount -i fbcard:0:b:0
 ```
 
 # TX
-The naming convention is fbcard:<card_id>:<port id>. If you have a 4 port NIC, the <port id> will be 0 to 3.
+The naming convention is fbcard:CARD_ID:PORT_ID. If you have a 4 port NIC, the PORT_ID will be 0 to 3.
 
 Example (send packets from port 1 of cardId 0):
 ```
