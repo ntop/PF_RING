@@ -2293,8 +2293,10 @@ static int parse_pkt(struct sk_buff *skb,
   rc = parse_raw_pkt(buffer, data_len, hdr, ip_id);
 
   if (!hdr->extended_hdr.parsed_pkt.vlan_id) { /* check for stripped vlan id */
-    if (__vlan_hwaccel_get_tag(skb, &hdr->extended_hdr.parsed_pkt.vlan_id) == 0)
+    if (__vlan_hwaccel_get_tag(skb, &hdr->extended_hdr.parsed_pkt.vlan_id) == 0) {
       hdr->extended_hdr.parsed_pkt.vlan_id &= VLAN_VID_MASK;
+      hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE); /* force hash recomputation */
+    }
   }
 
   return(rc);
