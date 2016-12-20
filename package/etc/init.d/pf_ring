@@ -101,7 +101,7 @@ rebuild_dkms() {
 }
 
 check_hugepages() {
-	if [ `cat /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages` -gt 0 ]; then # hugepages already loaded
+	if [ `cat /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages` -gt 0 ]  && [ `cat /proc/mounts | grep ${HUGEPAGES_MOUNTPOINT} | wc -l` -gt 0]; then # hugepages already loaded
 		LOAD_HUGEPAGES=0
 		return
 	fi
