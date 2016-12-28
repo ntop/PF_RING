@@ -1,14 +1,18 @@
 ----
-## Welcome to nBPF
+## nBPF
 
-This directory contains an impementation of the BPF (Berkeley Packet Filter) interpreter
-that can be used as alternative to the implementation that can be found in libpcap.
+nBPF is a filtering engine/SDK supporting the BPF (Berkeley Packet Filter) syntax 
+and can be used as alternative to the implementation that can be found in libpcap 
+and inside the kernel.
 
-This version implements a subset of the filtering expressions supported by the original BPF, and it is designed to be fast and small in size, with no external dependencies.
+This version implements a subset of the filtering expressions supported by the original 
+BPF, and it is designed to be fast and small in size, with no external dependencies.
 
-This library has been designed to be efficient, and easy to embed in applications (e.g. n2disk uses it to filter traffic). 
-Currently it is used by selected PF_RING modules to convert BPF
-filtering expressions onto hardware filters supported by popular network adapters such as Napatech, Intel FM10K, and Exablaze.
+This library has been designed to be efficient, and easy to embed in applications 
+(e.g. n2disk uses it to filter traffic). 
+Currently it is used by selected PF_RING modules to convert BPF filtering expressions 
+onto hardware filters supported by popular network adapters such as Napatech, Intel FM10K, 
+and Exablaze.
 
 ----
 ## BPF Expressions
