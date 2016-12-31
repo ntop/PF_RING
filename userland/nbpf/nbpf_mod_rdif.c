@@ -10,6 +10,8 @@
  *
  */
 
+#ifdef linux
+
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
@@ -1007,3 +1009,5 @@ void __nbpf_rdif_call_print_tree(nbpf_tree_t *tree) {
   __nbpf_rdif_print_tree(tree->root);
 }
 #endif
+
+#endif /* linux */
