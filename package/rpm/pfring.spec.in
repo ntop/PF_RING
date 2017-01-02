@@ -150,11 +150,11 @@ esac
 case "$1" in
   1)
     # install
-    #/etc/init.d/pf_ring start
+    /etc/init.d/pf_ring start
   ;;
   2)
     # upgrade
-    #/etc/init.d/pf_ring start
+    /etc/init.d/pf_ring start
   ;;
 esac
 
