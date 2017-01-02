@@ -124,6 +124,22 @@ rm -fr $RPM_BUILD_ROOT
 # itself.
 %defattr(-, root, root)
 
+# Execution order:
+# install:    pre -> (copy) -> post
+# upgrade:    pre -> (copy) -> post -> preun (old) -> (delete old) -> postun (old)
+# un-install:                          preun       -> (delete)     -> postun
+
+%pre
+case "$1" in
+  1)
+    # install
+  ;;
+  2)
+    # upgrade
+    /etc/init.d/pf_ring stop
+  ;;
+esac
+
 %post
 %if 0%{?centos_ver} == 7
 /bin/systemctl daemon-reload
@@ -138,7 +154,7 @@ case "$1" in
   ;;
   2)
     # upgrade
-    #/etc/init.d/pf_ring restart
+    #/etc/init.d/pf_ring start
   ;;
 esac
 
@@ -146,7 +162,7 @@ esac
 case "$1" in
   0)
     # un-install
-    #/etc/init.d/pf_ring stop
+    /etc/init.d/pf_ring stop
   ;;
   1)
     # upgrade
