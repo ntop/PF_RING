@@ -125,10 +125,34 @@ rm -fr $RPM_BUILD_ROOT
 %defattr(-, root, root)
 
 %post
+%if 0%{?centos_ver} == 7
+/bin/systemctl daemon-reload
+%endif
 /sbin/chkconfig pf_ring on > /dev/null 2>&1
 /sbin/chkconfig cluster on > /dev/null 2>&1
 /sbin/ldconfig > /dev/null 2>&1
- 
+case "$1" in
+  1)
+    # install
+    #/etc/init.d/pf_ring start
+  ;;
+  2)
+    # upgrade
+    #/etc/init.d/pf_ring restart
+  ;;
+esac
+
+%preun
+case "$1" in
+  0)
+    # un-install
+    #/etc/init.d/pf_ring stop
+  ;;
+  1)
+    # upgrade
+  ;;
+esac
+
 %changelog
 * Wed Dec  5 2012  <deri@centos.ntop.org> - @VERS@-%{buildrev}
 - 

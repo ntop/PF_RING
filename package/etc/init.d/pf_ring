@@ -9,7 +9,7 @@
 ### BEGIN INIT INFO
 # Provides:          pf_ring
 # Required-Start:    $local_fs $remote_fs $network $syslog
-# Required-Stop:     $n2disk $nprobe
+# Required-Stop:     $ntopng $n2disk $nprobe $cento
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Start/stop pf_ring
@@ -35,22 +35,21 @@ if [ "${MGMT_INTERFACE}" == "" ]; then
 fi
 
 MGMT_INTERFACE_DRIVER="$(/sbin/ethtool -i $MGMT_INTERFACE | grep driver | cut -d ' ' -f 2)"
-PFRING="pf_ring"
-DRIVERS_CONFIG_DIR="/etc/pf_ring"
+PF_RING="pf_ring"
+PF_RING_CONFIG_DIR="/etc/pf_ring"
 DRIVERS_FLAVOR=("zc")
 DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe' 'i40e' 'fm10k')
 ERROR=0
 DRIVER_INSTALLED=0
-OLD_HUGEPAGES_CONFIG="/etc/pf_ring/hugepages"
-HUGEPAGES_CONFIG="/etc/pf_ring/hugepages.conf"
+OLD_HUGEPAGES_CONFIG="${PF_RING_CONFIG_DIR}/hugepages"
+HUGEPAGES_CONFIG="${PF_RING_CONFIG_DIR}/hugepages.conf"
 HUGEPAGES_SIZE=`grep Hugepagesize /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'` # KB
 HUGEPAGES_MOUNTPOINT="/dev/hugepages"
-MTU_CONFIG="/etc/pf_ring/mtu.conf"
+MTU_CONFIG="${PF_RING_CONFIG_DIR}/mtu.conf"
 FORCESTART=0
-FORCESTART_FILE="/etc/pf_ring/forcestart"
+FORCESTART_FILE="${PF_RING_CONFIG_DIR}/forcestart" # touch to load zc even if it matches the management
 DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
 LOAD_HUGEPAGES=0
-PFRING_CONFIG="/etc/pf_ring/pf_ring.conf"
 
 function dkms_installed {
   if [ ${DISTRO} == "debian" ]; then
@@ -68,11 +67,11 @@ function dkms_installed {
 check_pf_ring() {
    # check the module status
    RETVAL=0
-   if [ $1 == "start" ] && [ `lsmod | grep ^${PFRING} | wc -l ` -gt 0 ]; then
+   if [ $1 == "start" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -gt 0 ]; then
        MSG="PF_RING already loaded. Exiting"
        ERROR=1
        RETVAL=1
-   elif [ $1 == "stop" ] && [ `lsmod | grep ^${PFRING} | wc -l ` -le 0 ]; then
+   elif [ $1 == "stop" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ]; then
        MSG="PF_RING already unloaded Exiting"
        ERROR=0 
        RETVAL=0
@@ -198,7 +197,7 @@ load_driver() {
 
 	if [ `/sbin/modinfo ${1}-${2} | wc -l` -gt 1 ]; then
 		# driver is available
-		DRV_PARAM=`cat ${DRIVERS_CONFIG_DIR}/${2}/${1}/${1}.conf`
+		DRV_PARAM=`cat ${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.conf`
 		if [ "${MGMT_INTERFACE_DRIVER}" == "${1}" ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
 			echo "Skipping driver ${1}: driver matches the management interface ${MGMT_INTERFACE}"
 			return
@@ -249,7 +248,7 @@ load_zc() {
 	# search for file under /etc/pf_ring/zc/{e1000e,igb,ixgbe,i40e,fm10k}/{e1000e,igb,ixgbe,i40e,fm10k}.conf
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
-			if [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
+			if [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
 				load_driver ${D} ${F}
 				if [ ${F} == "zc" ] && [ ${DO_NOT_LOAD_HUGEPAGES} -eq 0 ]; then
 					LOAD_HUGEPAGES=1
@@ -316,18 +315,14 @@ start_pf_ring() {
 
     KERNEL_VERSION=$(uname -r)
 
-    if [ ! -f $PFRING_CONFIG ]; then
-        touch $PFRING_CONFIG
-    fi
-
-    PARAM="$(cat $PFRING_CONFIG)"
+    PARAM="$(cat $PF_RING_CONFIG_DIR)/pf_ring.conf"
 
     PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
     PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
 
     check_pf_ring start
     
-    if [ ! -f "${DRIVERS_CONFIG_DIR}/pf_ring.start" ] && [ ! -f "${DRIVERS_CONFIG_DIR}/pfring.start" ] && [ ${FORCESTART} -eq 0 ]; then
+    if [ ! -f "${PF_RING_CONFIG_DIR}/pf_ring.start" ] && [ ! -f "${PF_RING_CONFIG_DIR}/pfring.start" ] && [ ${FORCESTART} -eq 0 ]; then
     	# remove pf_ring in any case
     	/sbin/modprobe -r pf_ring
     	#
@@ -337,26 +332,26 @@ start_pf_ring() {
 	    return
     fi
 
-	# Try loading pfring
-	/sbin/modprobe pf_ring $PARAM
+    # Try loading pfring
+    /sbin/modprobe pf_ring $PARAM
 
-	if [ `echo $?` -gt 0 ]; then
-		# try building dkms
-		rebuild_dkms pfring
-		/sbin/modprobe pf_ring $PARAM
+    if [ `echo $?` -gt 0 ]; then
+	# try building dkms
+	rebuild_dkms pfring
+	/sbin/modprobe pf_ring $PARAM
 		
-		# try with local copies in case of failure
-		if [ `echo $?` -gt 0 ]; then
-		    if [ -f $PF_RING_MOD ]; then
-    		    /sbin/insmod $PF_RING_MOD $PARAM
-		    elif [ -f $PF_RING_MOD_LOCAL ]; then
-    	    	/sbin/insmod $PF_RING_MOD_LOCAL $PARAM
-			fi
-		fi
-	fi
+	# try with local copies in case of failure
+	if [ `echo $?` -gt 0 ]; then
+	    if [ -f $PF_RING_MOD ]; then
+   	        /sbin/insmod $PF_RING_MOD $PARAM
+	    elif [ -f $PF_RING_MOD_LOCAL ]; then
+    	        /sbin/insmod $PF_RING_MOD_LOCAL $PARAM
+	    fi
+        fi
+    fi
    
-    if [ `lsmod | grep ^${PFRING} | wc -l ` -le 0 ] ; then
-	   # PFRING not loaded. Exiting
+    if [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ] ; then
+	   # PF_RING not loaded. Exiting
        MSG="Unable to load PF_RING. Exiting"
        ERROR=1
        RETVAL=1
@@ -443,7 +438,7 @@ check_driver_status() {
 	local UNLOADED_DRIVERS=()
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
-			if [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
+			if [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
 				NUM_CONFIGED_DRIVERS=$((NUM_CONFIGED_DRIVERS+1))
 				if [ `lsmod |grep -w ^${D}_${F} | wc -l` -eq 1 ]; then
 					NUM_LOADED_DRIVERS=$((NUM_LOADED_DRIVERS+1))
@@ -466,10 +461,10 @@ check_driver_status() {
 
 check_pf_ring_status() {
 	# check the module status
-	if [ -f ${DRIVERS_CONFIG_DIR}/${PFRING}.conf ] && [ -f ${DRIVERS_CONFIG_DIR}/${PFRING}.start ]; then
-		if [ `lsmod | grep ^${PFRING} | wc -l` -gt 0 ]; then
+	if [ -f ${PF_RING_CONFIG_DIR}/${PF_RING}.conf ] && [ -f ${PF_RING_CONFIG_DIR}/${PF_RING}.start ]; then
+		if [ `lsmod | grep ^${PF_RING} | wc -l` -gt 0 ]; then
 			echo "UP"
-		elif [ `lsmod | grep ^${PFRING} | wc -l` -le 0 ]; then
+		elif [ `lsmod | grep ^${PF_RING} | wc -l` -le 0 ]; then
 			local  MSG="pf_ring module not running"
 			echo "$MSG"
 		fi
@@ -500,10 +495,19 @@ get_status() {
 }
 
 init_config() {
+	if [ ! -d "${PF_RING_CONFIG_DIR}" ]; then
+		mkdir ${PF_RING_CONFIG_DIR}
+	fi
+	if [ ! -f "${PF_RING_CONFIG_DIR}/pf_ring.conf" ]; then
+		touch "${PF_RING_CONFIG_DIR}/pf_ring.conf"
+	fi
+	if [ ! -f "${PF_RING_CONFIG_DIR}/pf_ring.start" ]; then
+		touch "${PF_RING_CONFIG_DIR}/pf_ring.start"
+	fi
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
-			if [ ! -d ${DRIVERS_CONFIG_DIR}/${F}/${D} ]; then
-				mkdir -p ${DRIVERS_CONFIG_DIR}/${F}/${D}
+			if [ ! -d ${PF_RING_CONFIG_DIR}/${F}/${D} ]; then
+				mkdir -p ${PF_RING_CONFIG_DIR}/${F}/${D}
 			fi
 		done
 	done
