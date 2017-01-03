@@ -627,7 +627,10 @@ NDPI_LIB
 HAVE_HW_TIMESTAMP
 INSTALL_PREFIX
 SYSLIBS
+ZMQ_LIB
+HAVE_ZMQ
 REDIS_LIB
+HAVE_REDIS
 BPF_INCLUDE
 HAVE_BPF
 MLX_OBJS
@@ -724,6 +727,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_redis
+enable_zmq
 enable_bpf
 '
       ac_precious_vars='build_alias
@@ -1345,6 +1349,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-redis          Enable Redis support in PF_RING
+  --enable-zmq            Enable ZMQ support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
 
 Some influential environment variables:
@@ -3480,13 +3485,13 @@ fi
 
 fi
 
-REDIS_LIB=""
 # Check whether --enable-redis was given.
 if test "${enable_redis+set}" = set; then :
   enableval=$enable_redis;
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for redisCommand in -lhiredis" >&5
+if test "x$enable_redis" = xyes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for redisCommand in -lhiredis" >&5
 $as_echo_n "checking for redisCommand in -lhiredis... " >&6; }
 if ${ac_cv_lib_hiredis_redisCommand+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3531,14 +3536,69 @@ _ACEOF
 
 fi
 
-if test "x$ac_cv_lib_hiredis_redisCommand" = xyes; then :
-  if test "x$enable_redis" = "xyes"; then :
-  REDIS_LIB="-lhiredis";
-cat >>confdefs.h <<_ACEOF
-#define HAVE_REDIS 1
+  if test "x$ac_cv_lib_hiredis_redisCommand" = xyes; then
+    if test "x$enable_redis" = "xyes"; then :
+  REDIS_LIB="-lhiredis"; HAVE_REDIS="-D HAVE_REDIS"
+fi
+  fi
+fi
+
+# Check whether --enable-zmq was given.
+if test "${enable_zmq+set}" = set; then :
+  enableval=$enable_zmq;
+fi
+
+if test "x$enable_zmq" = xyes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for zmq_msg_send in -lzmq" >&5
+$as_echo_n "checking for zmq_msg_send in -lzmq... " >&6; }
+if ${ac_cv_lib_zmq_zmq_msg_send+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lzmq  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char zmq_msg_send ();
+int
+main ()
+{
+return zmq_msg_send ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_zmq_zmq_msg_send=yes
+else
+  ac_cv_lib_zmq_zmq_msg_send=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_zmq_zmq_msg_send" >&5
+$as_echo "$ac_cv_lib_zmq_zmq_msg_send" >&6; }
+if test "x$ac_cv_lib_zmq_zmq_msg_send" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBZMQ 1
 _ACEOF
 
+  LIBS="-lzmq $LIBS"
+
 fi
+
+  if test "x$ac_cv_lib_zmq_zmq_msg_send" = xyes; then
+    if test "x$enable_zmq" = "xyes"; then :
+  ZMQ_LIB="-lzmq"; HAVE_ZMQ="-D HAVE_ZMQ"
+fi
+  fi
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for clock_gettime in -lrt" >&5
@@ -3800,6 +3860,9 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
+
+
+
 
 
 
