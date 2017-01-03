@@ -1148,7 +1148,7 @@ void pfring_handle_vss_apcon_hw_timestamp(u_char* buffer, struct pfring_pkthdr *
 /**
  * Get interface speed.
  * @param ring
- * @return 0 if interface speed is unknown, the interface speed otherwise.
+ * @return 0 if interface speed is unknown, the interface speed (Mbit/s) otherwise.
  */
 
 u_int32_t pfring_get_interface_speed(pfring *ring);
