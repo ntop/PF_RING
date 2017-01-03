@@ -30,7 +30,8 @@ struct filtering_rule {
           src_ip:1 /* 1=src IP, 0=dst IP */, 
           bidirectional:1 /* 0=one-way rule, 1=bidirectional */, 
           action_accept:1 /* 1=accept, 0=drop*/,
-          pad:4;
+          remove:1 /* 1=remove rule, 0=add rule */,
+          pad:3;
   uint16_t duration; /* sec - 0 = forever */
   union {
     uint32_t v4; /* little endian */

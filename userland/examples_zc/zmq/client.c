@@ -53,7 +53,9 @@ int main(int argc, char* argv[]) {
   char *endpoint = (char*)DEFAULT_ENDPOINT;
   struct filtering_rules_request req;
   u_char *encryption_key = (u_char*)DEFAULT_ENCRYPTION_KEY;
-  
+  zmq_msg_t request;
+  int len;         
+
   memset(&req, 0, sizeof(req));
 
   req.header.magic = MAGIC_VALUE;
@@ -122,45 +124,41 @@ int main(int argc, char* argv[]) {
 
   ctx = zmq_ctx_new (); assert (ctx);
   client = getClientConnection(ctx, endpoint);
-  poll_items.socket = client, poll_items.fd = 0,
-    poll_items.events = ZMQ_POLLIN, poll_items.revents = 0;
+  poll_items.socket = client, poll_items.fd = 0;
+  poll_items.events = ZMQ_POLLIN, poll_items.revents = 0;
 
-  for(request_nbr = 0; request_nbr != 10; request_nbr++) {
-    zmq_msg_t request;
-    int len;         
+  request_nbr = 0;
 
-    len = sizeof(req.header) + req.header.num_rules*sizeof(struct filtering_rule);
+resend_msg:
 
-  resend_msg:
-    req.header.request_id = request_nbr;
-    printf("Sending message [ID=%u]...\n", req.header.request_id);
-    zmq_msg_init_size (&request, len);
-    xor_encdec((u_char*)&req, len, encryption_key); /* Encrypt */
-    memcpy(zmq_msg_data(&request), &req, len);
-    xor_encdec((u_char*)&req, len, encryption_key); /* Decrypt for next send */
-    zmq_msg_send(&request, client, 0);
-    zmq_msg_close(&request);
+  req.header.request_id = request_nbr;
+  printf("Sending message...\n");
+  len = sizeof(req.header) + req.header.num_rules*sizeof(struct filtering_rule);
+  zmq_msg_init_size (&request, len);
+  xor_encdec((u_char*)&req, len, encryption_key); /* Encrypt */
+  memcpy(zmq_msg_data(&request), &req, len);
+  xor_encdec((u_char*)&req, len, encryption_key); /* Decrypt for next send */
+  zmq_msg_send(&request, client, 0);
+  zmq_msg_close(&request);
 
-    zmq_poll(&poll_items, 1, timeout_msec);
-    if(poll_items.revents & ZMQ_POLLIN) {
-      zmq_msg_t reply;
-      char msg[256];
-      int len;
+  zmq_poll(&poll_items, 1, timeout_msec);
+  if (poll_items.revents & ZMQ_POLLIN) {
+    zmq_msg_t reply;
+    char msg[256];
       
-      zmq_msg_init(&reply);
-      zmq_msg_recv(&reply, client, 0);
-      len = zmq_msg_size(&reply);
-      if(len > sizeof(msg)-1) len = sizeof(msg) - 1;
-      snprintf(msg, sizeof(msg), "%s", (char *) zmq_msg_data(&reply));
-      msg[len] = '\0';
-      printf("Received response %s\n", msg);
-      zmq_msg_close(&reply);
-    } else {
-      printf("Timeout expired: retrying...\n");
-      zmq_close(client);
-      client = getClientConnection(ctx, endpoint);
-      goto resend_msg;
-    }
+    zmq_msg_init(&reply);
+    zmq_msg_recv(&reply, client, 0);
+    len = zmq_msg_size(&reply);
+    if (len > sizeof(msg)-1) len = sizeof(msg) - 1;
+    snprintf(msg, sizeof(msg), "%s", (char *) zmq_msg_data(&reply));
+    msg[len] = '\0';
+    printf("Received response %s\n", msg);
+    zmq_msg_close(&reply);
+  } else {
+    printf("Timeout expired: retrying...\n");
+    zmq_close(client);
+    client = getClientConnection(ctx, endpoint);
+    goto resend_msg;
   }
 
   zmq_close (client);

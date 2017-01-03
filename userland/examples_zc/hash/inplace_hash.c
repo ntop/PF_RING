@@ -11,13 +11,11 @@
 #define gcc_mb() __asm__ __volatile__("": : :"memory")
 
 #define VALUE_TYPE  u_int32_t
-#define EMPTY_VALUE 0
-#define DROP        1
-#define PASS        2
+#define NULL_VALUE 0
+#define DROP       1
+#define PASS       2
 
-static volatile u_int32_t now; /* epoch (sec) */
-
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 u_int32_t lookup_max_iterations = 0;
 u_int32_t insert_max_iterations = 0;
@@ -62,7 +60,7 @@ u_int32_t pow2(u_int32_t v) {
 
 /* *************************************** */
 
-int parse_ip(u_char *data, inplace_key_t *key, u_int8_t parse_dest_addr /* source otherwise */) {
+int extract_keys(u_char *data, inplace_key_t *src_key, inplace_key_t *dst_key) {
   struct ethhdr *eh = (struct ethhdr*) data;
   u_int16_t l3_offset = sizeof(struct ethhdr);
   u_int16_t eth_type = ntohs(eh->h_proto);
@@ -75,19 +73,15 @@ int parse_ip(u_char *data, inplace_key_t *key, u_int8_t parse_dest_addr /* sourc
 
   if (eth_type == 0x0800 /* IPv4 */) {
     struct iphdr *ip = (struct iphdr *) &data[l3_offset];
-    key->ip_version = 4;
-    if (parse_dest_addr)
-      key->ip_address.v4.s_addr = ntohl(ip->daddr);
-    else
-      key->ip_address.v4.s_addr = ntohl(ip->saddr);
+    src_key->ip_version = dst_key->ip_version = 4;
+    dst_key->ip_address.v4.s_addr = ip->daddr;
+    src_key->ip_address.v4.s_addr = ip->saddr;
     return 1;
   } else if (eth_type == 0x86DD /* IPv6 */) {
     struct kcompact_ipv6_hdr *ipv6 = (struct kcompact_ipv6_hdr *) &data[l3_offset];
-    key->ip_version = 6;
-    if (parse_dest_addr)
-      memcpy(&key->ip_address.v6, &ipv6->daddr, sizeof(ipv6->daddr));
-    else
-      memcpy(&key->ip_address.v6, &ipv6->saddr, sizeof(ipv6->saddr));
+    src_key->ip_version = dst_key->ip_version = 6;
+    memcpy(&dst_key->ip_address.v6, &ipv6->daddr, sizeof(ipv6->daddr));
+    memcpy(&src_key->ip_address.v6, &ipv6->saddr, sizeof(ipv6->saddr));
     return 1;
   }
 
@@ -125,7 +119,7 @@ void remove_range(inplace_hash_table_t *ht, u_int32_t first_index, u_int32_t las
   u_int32_t i = 0;
 
   while (i++ < ht->size) {
-    ht->table[first_index].value = EMPTY_VALUE;
+    ht->table[first_index].value = NULL_VALUE;
     if (first_index == last_index) break;
     first_index = (first_index + 1) & ht->mask;
   }
@@ -155,10 +149,10 @@ int inplace_insert(inplace_hash_table_t *ht, inplace_key_t *key, u_int32_t expir
   u_int32_t i = 0, index = hash, last_index;
   int32_t insert_index = -1, first_expired = -1;
 
-  //printf("#%d is %s\n", hash, ht->table[index].value != EMPTY_VALUE ? "USED" : "EMPTY");
+  //printf("#%d is %s\n", hash, ht->table[index].value != NULL_VALUE ? "USED" : "EMPTY");
 
   /* scan all the items until an empty bucket is found */
-  while (ht->table[index].value != EMPTY_VALUE && i++ < ht->size) {
+  while (ht->table[index].value != NULL_VALUE && i++ < ht->size) {
     if (match_key(key, &ht->table[index].key)) {
       if (insert_index == -1)
         insert_index = index; /* replace value */
@@ -166,7 +160,7 @@ int inplace_insert(inplace_hash_table_t *ht, inplace_key_t *key, u_int32_t expir
         ht->table[insert_index].expiration = 0; /* found another slot to replace before, set as expired */
     }
 
-    if (ht->table[index].expiration <= now) {
+    if (ht->table[index].expiration <= epoch) {
       if (insert_index == -1)
         insert_index = index; /* reuse expired */
       if (first_expired == -1 && insert_index != index)
@@ -210,14 +204,14 @@ void inplace_remove(inplace_hash_table_t *ht, inplace_key_t *key) {
   int32_t remove_index = -1, first_expired = -1;
 
   /* scan all the items until an empty bucket is found */
-  while (ht->table[index].value != EMPTY_VALUE && i++ < ht->size) {
+  while (ht->table[index].value != NULL_VALUE && i++ < ht->size) {
     if (remove_index == -1 && match_key(key, &ht->table[index].key)) {
       remove_index = index;
       ht->table[remove_index].expiration = 0; /* set as expired */
       /* do not break here to check for expired */
     }
 
-    if (ht->table[index].expiration <= now) {
+    if (ht->table[index].expiration <= epoch) {
       if (first_expired == -1)
         first_expired = index;
     } else {
@@ -244,11 +238,11 @@ void inplace_remove(inplace_hash_table_t *ht, inplace_key_t *key) {
 VALUE_TYPE inplace_lookup(inplace_hash_table_t *ht, inplace_key_t *key) {
   u_int32_t hash = compute_hash(key) & ht->mask;
   u_int32_t i = 0, index = hash;
-  VALUE_TYPE value = EMPTY_VALUE;
+  VALUE_TYPE value = NULL_VALUE;
 
-  while (ht->table[index].value != EMPTY_VALUE && i++ < ht->size) {
+  while (ht->table[index].value != NULL_VALUE && i++ < ht->size) {
     if (match_key(key, &ht->table[index].key)) {
-      if (ht->table[index].expiration > now) 
+      if (ht->table[index].expiration > epoch) 
         value = ht->table[index].value; 
       break; 
     }
