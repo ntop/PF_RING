@@ -26,8 +26,11 @@
 /* ********************************************** */
 
 struct filtering_rule {
-  uint8_t v4:1 /* IPv4=1, IPv6=0 */, src_ip:1 /* 1=src IP, 0=dst IP */, bidirectional:1 /* 0=one-way rule, 1=bidirectional */,
-    default_accept:1 /* 1=accept, 0=drop */, pad:4;
+  uint8_t v4:1 /* IPv4=1, IPv6=0 */, 
+          src_ip:1 /* 1=src IP, 0=dst IP */, 
+          bidirectional:1 /* 0=one-way rule, 1=bidirectional */, 
+          action_accept:1 /* 1=accept, 0=drop*/,
+          pad:4;
   uint16_t duration; /* sec - 0 = forever */
   union {
     uint32_t v4; /* little endian */

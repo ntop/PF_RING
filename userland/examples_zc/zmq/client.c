@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
        break;
 
     case 'a':
-       req.rules[0].default_accept = 1;
+       req.rules[0].action_accept = 1;
        break;
 
     case 'k':

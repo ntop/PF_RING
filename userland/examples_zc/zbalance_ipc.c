@@ -92,19 +92,35 @@ u_int32_t n2disk_threads;
 
 #ifdef HAVE_ZMQ
 u_int8_t zmq_server = 0;
+u_int8_t default_action = PASS; /* TODO */
+inplace_hash_table_t *src_ip_hash = NULL;
+inplace_hash_table_t *dst_ip_hash = NULL;
 
 int zmq_filtering_rule_handler(struct filtering_rule *rule) {
-  printf("New filtering rule (TODO)\n");
+  inplace_key_t key;
+  u_int32_t value;
+  int rc = 0;
 
-  /*
-  rule->v4 ? 4 : 6
-  rule->bidirectional
-  rule->src_ip  ? src : dst
-  rule->duration
-  rule->ip.v4 / rule->ip.v6
-  */
+  value = rule->action_accept ? PASS : DROP;
+  if (rule->v4) {
+    key.ip_version = 4;
+    key.v4.s_addr = rule->ip.v4 
+  } else {
+    key.ip_version = 6;
+    memcpy(key.v6.s6_addr, rule->ip.v6, sizeof(key.v6.s6_addr));
+  }
 
-  return 0;
+  if (rule->src_ip || rule->bidirectional) {
+    if (inplace_insert(src_ip_hash, &key, now+rule->duration, ) < 0)
+      rc = -1;
+  }
+  
+  if (rule->dst_ip || rule->bidirectional) {
+    if (inplace_insert(dst_ip_hash, &key, now+rule->duration, ) < 0) 
+      rc = -1;
+  }
+
+  return rc;
 }
 
 void *zmq_server_thread(void *data) {
@@ -517,6 +533,7 @@ int main(int argc, char* argv[]) {
 #ifdef HAVE_ZMQ
     case 'Z':
       zmq_server = 1;
+      time_pulse = 1; /* forcing time-pulse to handle rules expiration */
     break;
 #endif
     }
@@ -753,8 +770,11 @@ int main(int argc, char* argv[]) {
   }
 
 #ifdef HAVE_ZMQ
-  if (zmq_server)
+  if (zmq_server) {
+    src_ip_hash = inplace_alloc(32768);
+    dst_ip_hash = inplace_alloc(32768);
     pthread_create(&zmq_thread, NULL, zmq_server_thread, NULL);
+  }
 #endif
 
   trace(TRACE_NORMAL, "Starting balancer with %d consumer queues..\n", num_consumer_queues);
@@ -857,6 +877,8 @@ int main(int argc, char* argv[]) {
   if (zmq_server) {
     zmq_server_breakloop();
     pthread_join(zmq_thread, NULL);
+    inplace_free(src_ip_hash);
+    inplace_free(dst_ip_hash);
   }
 #endif
 

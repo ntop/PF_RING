@@ -12,8 +12,10 @@
 
 #define VALUE_TYPE  u_int32_t
 #define EMPTY_VALUE 0
+#define DROP        1
+#define PASS        2
 
-static volatile u_int64_t now;
+static volatile u_int32_t now; /* epoch (sec) */
 
 #define DEBUG
 #ifdef DEBUG
@@ -35,7 +37,7 @@ typedef struct {
 typedef struct {
   u_int32_t index;
   VALUE_TYPE value;
-  u_int64_t expiration;
+  u_int32_t expiration; /* epoch (sec) */
   inplace_key_t key;
 } inplace_item_t;
 
@@ -148,7 +150,7 @@ void inplace_free(inplace_hash_table_t *ht) {
 
 /* *************************************** */
 
-int inplace_insert(inplace_hash_table_t *ht, inplace_key_t *key, u_int64_t expiration, VALUE_TYPE value) {
+int inplace_insert(inplace_hash_table_t *ht, inplace_key_t *key, u_int32_t expiration, VALUE_TYPE value) {
   u_int32_t hash = compute_hash(key) & ht->mask;
   u_int32_t i = 0, index = hash, last_index;
   int32_t insert_index = -1, first_expired = -1;
