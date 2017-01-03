@@ -42,6 +42,11 @@
 
 #include "zutils.c"
 
+#ifdef HAVE_ZMQ
+#include "hash/zinplacehash.c"
+#include "zmq/server_core.c"
+#endif
+
 #define ALARM_SLEEP             1
 #define MAX_CARD_SLOTS      32768
 #define PREFETCH_BUFFERS        8
@@ -82,6 +87,31 @@ volatile u_int8_t do_shutdown = 0;
 
 u_int8_t n2disk_producer = 0;
 u_int32_t n2disk_threads;
+
+/* ******************************** */
+
+#ifdef HAVE_ZMQ
+u_int8_t zmq_server = 0;
+
+int zmq_filtering_rule_handler(struct filtering_rule *rule) {
+  printf("New filtering rule (TODO)\n");
+
+  /*
+  rule->v4 ? 4 : 6
+  rule->bidirectional
+  rule->src_ip  ? src : dst
+  rule->duration
+  rule->ip.v4 / rule->ip.v6
+  */
+
+  return 0;
+}
+
+void *zmq_server_thread(void *data) {
+  zmq_server_listen(DEFAULT_ENDPOINT, DEFAULT_ENCRYPTION_KEY, zmq_filtering_rule_handler);
+  return NULL;
+}
+#endif
 
 /* ******************************** */
 
@@ -291,6 +321,9 @@ void printHelp(void) {
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
+#ifdef HAVE_ZMQ
+  printf("-Z               Enable ZMQ support for dynamic IP-based filtering rules injection\n");
+#endif
   exit(-1);
 }
 
@@ -400,7 +433,10 @@ int main(int argc, char* argv[]) {
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
-  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:w";
+  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:wZ";
+#ifdef HAVE_ZMQ
+  pthread_t zmq_thread;
+#endif
 
   start_time.tv_sec = 0;
 
@@ -478,6 +514,11 @@ int main(int argc, char* argv[]) {
     case 'z':
       proc_stats_only = 1;
       break;
+#ifdef HAVE_ZMQ
+    case 'Z':
+      zmq_server = 1;
+    break;
+#endif
     }
   }
   
@@ -711,6 +752,11 @@ int main(int argc, char* argv[]) {
     while (!*pulse_timestamp_ns && !do_shutdown); /* wait for ts */
   }
 
+#ifdef HAVE_ZMQ
+  if (zmq_server)
+    pthread_create(&zmq_thread, NULL, zmq_server_thread, NULL);
+#endif
+
   trace(TRACE_NORMAL, "Starting balancer with %d consumer queues..\n", num_consumer_queues);
 
   off = 0;
@@ -806,6 +852,13 @@ int main(int argc, char* argv[]) {
     sleep(ALARM_SLEEP);
     print_stats();
   }
+
+#ifdef HAVE_ZMQ
+  if (zmq_server) {
+    zmq_server_breakloop();
+    pthread_join(zmq_thread, NULL);
+  }
+#endif
 
   if (time_pulse)
     pthread_join(time_thread, NULL);
