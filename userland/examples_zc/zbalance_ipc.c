@@ -43,7 +43,7 @@
 #include "zutils.c"
 
 #ifdef HAVE_ZMQ
-#include "hash/zinplacehash.c"
+#include "hash/inplace_hash.c"
 #include "zmq/server_core.c"
 #endif
 
@@ -104,19 +104,19 @@ int zmq_filtering_rule_handler(struct filtering_rule *rule) {
   value = rule->action_accept ? PASS : DROP;
   if (rule->v4) {
     key.ip_version = 4;
-    key.v4.s_addr = rule->ip.v4 
+    key.ip_address.v4.s_addr = rule->ip.v4;
   } else {
     key.ip_version = 6;
-    memcpy(key.v6.s6_addr, rule->ip.v6, sizeof(key.v6.s6_addr));
+    memcpy(key.ip_address.v6.s6_addr, rule->ip.v6, sizeof(key.ip_address.v6.s6_addr));
   }
 
   if (rule->src_ip || rule->bidirectional) {
-    if (inplace_insert(src_ip_hash, &key, now+rule->duration, ) < 0)
+    if (inplace_insert(src_ip_hash, &key, now+rule->duration, value) < 0)
       rc = -1;
   }
   
-  if (rule->dst_ip || rule->bidirectional) {
-    if (inplace_insert(dst_ip_hash, &key, now+rule->duration, ) < 0) 
+  if (!rule->src_ip || rule->bidirectional) {
+    if (inplace_insert(dst_ip_hash, &key, now+rule->duration, value) < 0) 
       rc = -1;
   }
 
