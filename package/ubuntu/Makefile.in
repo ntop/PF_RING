@@ -39,7 +39,7 @@ pre-build-core:
 	@echo "- Make sure you have updated the version in debian/changelog"
 	@echo "************************************************************"
 	rm -rf $(HERE)/debian/pfring
-	mkdir -p debian/lib debian/usr/local/include/linux debian/usr/local/bin
+	mkdir -p debian/lib debian/usr/local/include/linux debian/usr/bin
 	cd $(PF_RING_HOME)/userland; make
 	cd $(PF_RING_HOME)/userland/snort/pfring-daq-module; autoreconf -ivf; ./configure; make; mkdir -p $(HERE)/debian/usr/local/lib/daq; cp $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.la $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.so $(HERE)/debian/usr/local/lib/daq
 	cd $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc; autoreconf -ivf; ./configure; make; mkdir -p $(HERE)/debian/usr/local/lib/daq; cp $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.la $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.so $(HERE)/debian/usr/local/lib/daq
@@ -52,10 +52,10 @@ pre-build-core:
 	@find $(HERE)/debian -name "*~" -exec /bin/rm {} ';' 
 
 pre-build-examples:
-#	cd $(PF_RING_HOME)/userland/tcpdump/ ; ./configure; make; cp tcpdump $(HERE)/debian/usr/local/bin
-	cd $(PF_RING_HOME)/userland/examples; cp pfcount pfsend pfwrite $(HERE)/debian/usr/local/bin
-	cd $(PF_RING_HOME)/userland/examples_zc; cp zbalance_ipc zsend zcount zcount_ipc $(HERE)/debian/usr/local/bin
-	cd $(PF_RING_HOME)/tools; cp n2if $(HERE)/debian/usr/local/bin
+#	cd $(PF_RING_HOME)/userland/tcpdump/ ; ./configure; make; cp tcpdump $(HERE)/debian/usr/bin
+	cd $(PF_RING_HOME)/userland/examples; cp pfcount pfsend pfwrite $(HERE)/debian/usr/bin
+	cd $(PF_RING_HOME)/userland/examples_zc; cp zbalance_ipc zsend zcount zcount_ipc $(HERE)/debian/usr/bin
+	cd $(PF_RING_HOME)/tools; cp n2if $(HERE)/debian/usr/bin
 
 build-nodrivers: pre-kernel-nodrivers build
 

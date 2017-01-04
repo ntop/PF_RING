@@ -29,7 +29,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/local/pfring
 mkdir -p $RPM_BUILD_ROOT/usr/local/pfring/kernel
 mkdir -p $RPM_BUILD_ROOT/usr/local/include/linux
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib
-mkdir -p $RPM_BUILD_ROOT/usr/local/bin
+mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
 mkdir -p $RPM_BUILD_ROOT/etc/init
@@ -53,10 +53,10 @@ cp $HOME/PF_RING/userland/libpcap/libpcap.so.1.7.4	$RPM_BUILD_ROOT/usr/local/lib
 #
 mkdir -p $RPM_BUILD_ROOT/usr/lib64/wireshark/extcap
 cp $HOME/PF_RING/userland/wireshark/extcap/ntopdump $RPM_BUILD_ROOT/usr/lib64/wireshark/extcap
-#cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/local/bin
+#cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
@@ -72,10 +72,10 @@ cp $HOME/PF_RING/userland/snort/pfring-daq-module-zc/daq_pfring_zc.la $RPM_BUILD
 cp $HOME/PF_RING/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.so $RPM_BUILD_ROOT/usr/local/lib/daq
 cp -a $HOME/daq-2.?.?/sfbpf/.libs/libsfbpf.so.0 $HOME/daq-2.?.?/sfbpf/.libs/libsfbpf.so.0.0.1 $RPM_BUILD_ROOT/usr/local/lib
 %if %nozc == 0
-cp $HOME/PF_RING/userland/examples_zc/zbalance_ipc $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/userland/examples_zc/zsend $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/userland/examples_zc/zcount $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/userland/examples_zc/zcount_ipc $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/userland/examples_zc/zbalance_ipc $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples_zc/zsend $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples_zc/zcount $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples_zc/zcount_ipc $RPM_BUILD_ROOT/usr/bin
 %endif
 
 
@@ -100,15 +100,15 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/lib/libsfbpf.so.0.0.1
 /usr/lib64/wireshark/extcap
 %if %nozc == 0
-/usr/local/bin/zbalance_ipc
-/usr/local/bin/zsend
-/usr/local/bin/zcount
-/usr/local/bin/zcount_ipc
+/usr/bin/zbalance_ipc
+/usr/bin/zsend
+/usr/bin/zcount
+/usr/bin/zcount_ipc
 %endif
-#/usr/local/bin/tcpdump
-/usr/local/bin/pfcount
-/usr/local/bin/pfsend
-/usr/local/bin/n2if
+#/usr/bin/tcpdump
+/usr/bin/pfcount
+/usr/bin/pfsend
+/usr/bin/n2if
 /usr/local/pfring/README.FIRST
 /usr/local/pfring/README-DAQ.1st
 /etc/init.d/pf_ring
