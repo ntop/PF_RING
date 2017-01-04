@@ -371,7 +371,7 @@ start_pf_ring() {
     ## Load NTOP drivers ##
     sleep 1
     ## Load dummy interfaces associated to timelines or nic cards ##
-    local N2IF_SCRIPT="/usr/local/bin/n2if"
+    local N2IF_SCRIPT="/usr/bin/n2if"
     if [ -f "${N2IF_SCRIPT}" ]; then
 	${N2IF_SCRIPT} up-all
 	sleep 1
