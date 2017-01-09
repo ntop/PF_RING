@@ -209,6 +209,31 @@ char *msec2dhmsm(u_int64_t msec, char *buf, u_int buf_len) {
 
 /* *************************************** */
 
+int busid2node(int slot, int bus, int device, int function) {
+  char path[256];
+  FILE *fd;
+  int bus_id = -1;
+
+  if (!slot && !bus && !device && !function)
+    return bus_id;
+
+  snprintf(path, sizeof(path), "/sys/bus/pci/devices/%04X:%02X:%02X.%X/numa_node", 
+    slot, bus, device, function);
+
+  if ((fd = fopen(path, "r")) != NULL) {
+    char data[32] = { 0 };
+
+    if (fgets(data, sizeof(data), fd) != NULL)
+      bus_id = atoi(data);
+
+    fclose(fd);
+  }
+
+  return bus_id;
+}
+
+/* *************************************** */
+
 int bind2node(int core_id) {
 #ifdef HAVE_PF_RING_ZC
   if (core_id < 0)

@@ -328,7 +328,7 @@ void printHelp(void) {
 
     printf("\nAvailable devices (-i):\n");
     while(devpointer) {
-      printf(" %d. %s\n", i++, devpointer->name);
+      printf(" %d. %s [%s]\n", i++, devpointer->name, devpointer->description);
       devpointer = devpointer->next;
     }
   }

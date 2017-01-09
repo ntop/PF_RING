@@ -463,6 +463,38 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h,
 
 /* *************************************** */
 
+void printDevs() {
+  pfring_if_t *dev;
+  int i = 0;
+
+  dev = pfring_findalldevs();
+
+  if (verbose)
+    printf("Name\tSystemName\tModule\tMAC\tAdapter\tPort\tNumaNode\tBusID\tNUMANode\tStatus\n");
+  else
+    printf("Available devices (-i):\n");
+
+  while (dev != NULL) {
+    if (verbose) {
+      printf("%s\t%s\t%s"
+             "\t%02X:%02X:%02X:%02X:%02X:%02X"
+             "\t%04X:%02X:%02X.%X"
+             "\t%d\t%s\n",
+        dev->name, dev->system_name, dev->module,
+        dev->mac[0] & 0xFF, dev->mac[1] & 0xFF, dev->mac[2] & 0xFF, 
+        dev->mac[3] & 0xFF, dev->mac[4] & 0xFF, dev->mac[5] & 0xFF,
+        dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
+        busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
+        dev->status ? "Up" : "Down");
+    } else {
+      printf(" %d. %s\n", i++, dev->name);
+    }
+    dev = dev->next;
+  }
+}
+
+/* *************************************** */
+
 void printHelp(void) {
   printf("pfcount - (C) 2005-16 ntop.org\n\n");
   printf("-h              Print this help\n");
@@ -519,6 +551,7 @@ void printHelp(void) {
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
 	 "                ixia\tTimestamped packets by ixiacom.com hardware devices\n");
+  printf("-L              List all interafces and exit (use -v for more info)\n");
 }
 
 /* *************************************** */
@@ -734,7 +767,7 @@ int main(int argc, char* argv[]) {
   u_char mac_address[6] = { 0 };
   int promisc, snaplen = DEFAULT_SNAPLEN, rc;
   u_int clusterId = 0;
-  u_int8_t enable_ixia_timestamp = 0;
+  u_int8_t enable_ixia_timestamp = 0, list_interfaces = 0;
   u_int32_t flags = 0;
   int bind_core = -1;
   packet_direction direction = rx_and_tx_direction;
@@ -746,7 +779,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:H:l:v:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:M")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:H:l:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:M")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -789,6 +822,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'l':
       snaplen = atoi(optarg);
+      break;
+    case 'L':
+      list_interfaces = 1;
       break;
     case 'i':
       device = strdup(optarg);
@@ -872,6 +908,11 @@ int main(int argc, char* argv[]) {
 	printf("WARNING: unknown -z option, it has been ignored\n");
       break;      
     }
+  }
+
+  if (list_interfaces) {
+    printDevs();
+    exit(0);
   }
 
   if(verbose) watermark = 1;
