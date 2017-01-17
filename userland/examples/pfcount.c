@@ -470,7 +470,7 @@ void printDevs() {
   dev = pfring_findalldevs();
 
   if (verbose)
-    printf("Name\tSystemName\tModule\tMAC\tAdapter\tPort\tNumaNode\tBusID\tNUMANode\tStatus\n");
+    printf("Name\tSystemName\tModule\tMAC\tBusID\tNumaNode\tStatus\n");
   else
     printf("Available devices (-i):\n");
 
