@@ -671,7 +671,7 @@ void deallocateRing(void);
 
 /* *********************************** */
 
-#define PF_RING          27      /* Packet Ring */
+#define PF_RING          27      /* (0x1b) Packet Ring */
 #define SOCK_RING        PF_RING
 
 /* ioctl() */
