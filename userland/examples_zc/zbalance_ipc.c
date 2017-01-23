@@ -101,6 +101,15 @@ int zmq_filtering_rule_handler(struct filtering_rule *rule) {
   inplace_key_t key;
   u_int32_t value;
   int rc = 0;
+#if 1
+  char buf[64];
+
+  trace(TRACE_DEBUG, "[ZMQ] Adding rule for %s IPv%u %s [lifetime %us]\n",
+    rule->bidirectional ? "src/dst" : (rule->src_ip ? "src" : "dst"),
+    rule->v4 ? 4 : 6,
+    rule->v4 ? intoaV4(ntohl(rule->ip.v4), buf, sizeof(buf)) : intoaV6(&rule->ip.v6, buf, sizeof(buf)),
+    rule->duration);
+#endif
 
   if (rule->v4) {
     key.ip_version = 4;
@@ -349,6 +358,7 @@ void printHelp(void) {
   printf("-E <endpoint>    Set the ZMQ endpoint to be used with -Z (default: %s)\n", DEFAULT_ENDPOINT);
   printf("-A <policy>      Set default policy (0: drop, 1: accept) to be used with -Z (default: accept)\n");
 #endif
+  printf("-v               Verbose\n");
   exit(-1);
 }
 
@@ -360,6 +370,12 @@ int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
   inplace_key_t src_key, dst_key;
   int action = default_action;
   if (extract_keys(pfring_zc_pkt_buff_data(pkt_handle, in_queue), &src_key, &dst_key)) {
+#if 0 /* debug */
+    char sbuf[64], dbuf[64];
+    trace(TRACE_DEBUG, "Processing packet from %s to %s\n",
+      src_key.ip_version == 4 ? intoaV4(ntohl(src_key.ip_address.v4.s_addr), sbuf, sizeof(sbuf)) : intoaV6(&src_key.ip_address.v6, sbuf, sizeof(sbuf)),
+      dst_key.ip_version == 4 ? intoaV4(ntohl(dst_key.ip_address.v4.s_addr), dbuf, sizeof(dbuf)) : intoaV6(&dst_key.ip_address.v6, dbuf, sizeof(dbuf)));
+#endif
     int rule_action = inplace_lookup(src_ip_hash, &src_key);
     if (rule_action != NULL_VALUE && rule_action != action) action = rule_action;
     else { 
@@ -471,7 +487,7 @@ int main(int argc, char* argv[]) {
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
-  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:w"
+  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:wv"
 #ifdef HAVE_ZMQ 
     "A:E:Z"
 #endif
@@ -569,6 +585,9 @@ int main(int argc, char* argv[]) {
       time_pulse = 1; /* forcing time-pulse to handle rules expiration */
     break;
 #endif
+    case 'v':
+      trace_verbosity = 3;    
+    break;
     }
   }
   
