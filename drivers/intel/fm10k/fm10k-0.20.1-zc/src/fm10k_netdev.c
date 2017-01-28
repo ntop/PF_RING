@@ -1465,6 +1465,23 @@ static netdev_features_t fm10k_features_check(struct sk_buff *skb,
 #endif /* HAVE_NDO_FEATURES_CHECK */
 
 static const struct net_device_ops fm10k_netdev_ops = {
+#ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
+	.ndo_size		= sizeof(const struct net_device_ops),
+
+	/* All ops backported into RHEL7.x must go here. Do not place any ops
+	 * which haven't been backported here, as they will otherwise fail to
+	 * compile
+	 */
+	.extended = {
+#endif
+#ifdef NETIF_F_HW_L2FW_DOFFLOAD
+	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,
+	.ndo_dfwd_del_station	= fm10k_dfwd_del_station,
+#endif
+#ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
+	/* End of ops backported into RHEL7.x */
+	},
+#endif
 	.ndo_open		= fm10k_open,
 	.ndo_stop		= fm10k_close,
 	.ndo_validate_addr	= eth_validate_addr,
@@ -1513,10 +1530,6 @@ static const struct net_device_ops fm10k_netdev_ops = {
 #ifdef HAVE_VXLAN_CHECKS
 	.ndo_add_vxlan_port	= fm10k_add_vxlan_port,
 	.ndo_del_vxlan_port	= fm10k_del_vxlan_port,
-#endif
-#ifdef NETIF_F_HW_L2FW_DOFFLOAD
-	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,
-	.ndo_dfwd_del_station	= fm10k_dfwd_del_station,
 #endif
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= fm10k_netpoll,
