@@ -16,7 +16,10 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+
+#ifndef WIN32
 #include <pthread.h>
+#endif
 
 #include "nbpf.h"
 

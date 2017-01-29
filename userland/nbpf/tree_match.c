@@ -10,7 +10,9 @@
  *
  */
 
+#ifndef WIN32
 #include <arpa/inet.h>
+#endif
 #include <stdio.h>
 
 #include "nbpf.h"

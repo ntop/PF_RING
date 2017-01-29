@@ -22,6 +22,22 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #else
+#ifndef _NTOP_WIN32_H_
+#ifndef __GNUC__
+typedef unsigned char  u_char;
+typedef unsigned short u_short;
+typedef unsigned int   uint;
+typedef unsigned long  u_long;
+#endif
+
+typedef u_char  u_int8_t;
+typedef u_short u_int16_t;
+typedef uint   u_int32_t;
+typedef int   int32_t;
+typedef unsigned __int64 u_int64_t;
+typedef __int64 int64_t;
+#endif
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
