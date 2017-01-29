@@ -85,6 +85,64 @@ u_int32_t n2disk_threads;
 
 /* ******************************** */
 
+#ifdef HAVE_ZMQ
+volatile u_int32_t epoch = 0; /* (sec) */
+
+#include "hash/inplace_hash.c"
+#include "zmq/server_core.c"
+
+char *zmq_endpoint = DEFAULT_ENDPOINT;
+u_int8_t zmq_server = 0;
+u_int8_t default_action = PASS;
+inplace_hash_table_t *src_ip_hash = NULL;
+inplace_hash_table_t *dst_ip_hash = NULL;
+
+int zmq_filtering_rule_handler(struct filtering_rule *rule) {
+  inplace_key_t key;
+  u_int32_t value;
+  int rc = 0;
+#if 1
+  char buf[64];
+
+  trace(TRACE_DEBUG, "[ZMQ] Adding rule for %s IPv%u %s [lifetime %us]\n",
+    rule->bidirectional ? "src/dst" : (rule->src_ip ? "src" : "dst"),
+    rule->v4 ? 4 : 6,
+    rule->v4 ? intoaV4(ntohl(rule->ip.v4), buf, sizeof(buf)) : intoaV6(&rule->ip.v6, buf, sizeof(buf)),
+    rule->duration);
+#endif
+
+  if (rule->v4) {
+    key.ip_version = 4;
+    key.ip_address.v4.s_addr = rule->ip.v4;
+  } else {
+    key.ip_version = 6;
+    memcpy(key.ip_address.v6.s6_addr, rule->ip.v6, sizeof(key.ip_address.v6.s6_addr));
+  }
+
+  if (rule->remove) {
+    if ( rule->src_ip || rule->bidirectional) inplace_remove(src_ip_hash, &key);
+    if (!rule->src_ip || rule->bidirectional) inplace_remove(dst_ip_hash, &key);
+  } else {
+    value = rule->action_accept ? PASS : DROP;
+    if (rule->src_ip || rule->bidirectional)
+      if (inplace_insert(src_ip_hash, &key, epoch+rule->duration, value) < 0)
+        rc = -1;
+    if (!rule->src_ip || rule->bidirectional)
+      if (inplace_insert(dst_ip_hash, &key, epoch+rule->duration, value) < 0) 
+        rc = -1;
+  }
+
+  return rc;
+}
+
+void *zmq_server_thread(void *data) {
+  zmq_server_listen(zmq_endpoint, DEFAULT_ENCRYPTION_KEY, zmq_filtering_rule_handler);
+  return NULL;
+}
+#endif
+
+/* ******************************** */
+
 #define SET_TS_FROM_PULSE(p, t) { u_int64_t __pts = t; p->ts.tv_sec = __pts >> 32; p->ts.tv_nsec = __pts & 0xffffffff; }
 
 void *time_pulse_thread(void *data) {
@@ -102,6 +160,10 @@ void *time_pulse_thread(void *data) {
 
     if (ns >= pulse_clone + 100 /* nsec precision (avoid updating each cycle to reduce cache thrashing) */ ) {
       *pulse_timestamp_ns = ((u_int64_t) ((u_int64_t) tn.tv_sec << 32) | tn.tv_nsec);
+#ifdef HAVE_ZMQ
+      if (epoch != tn.tv_sec)
+        epoch = tn.tv_sec;
+#endif
       pulse_clone = ns;
     }
 
@@ -291,6 +353,12 @@ void printHelp(void) {
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
+#ifdef HAVE_ZMQ
+  printf("-Z               Enable IP-based filtering with ZMQ support for dynamic rules injection\n");
+  printf("-E <endpoint>    Set the ZMQ endpoint to be used with -Z (default: %s)\n", DEFAULT_ENDPOINT);
+  printf("-A <policy>      Set default policy (0: drop, 1: accept) to be used with -Z (default: accept)\n");
+#endif
+  printf("-v               Verbose\n");
   exit(-1);
 }
 
@@ -298,6 +366,25 @@ void printHelp(void) {
 
 int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
+#ifdef HAVE_ZMQ
+  inplace_key_t src_key, dst_key;
+  int action = default_action;
+  if (extract_keys(pfring_zc_pkt_buff_data(pkt_handle, in_queue), &src_key, &dst_key)) {
+#if 0 /* debug */
+    char sbuf[64], dbuf[64];
+    trace(TRACE_DEBUG, "Processing packet from %s to %s\n",
+      src_key.ip_version == 4 ? intoaV4(ntohl(src_key.ip_address.v4.s_addr), sbuf, sizeof(sbuf)) : intoaV6(&src_key.ip_address.v6, sbuf, sizeof(sbuf)),
+      dst_key.ip_version == 4 ? intoaV4(ntohl(dst_key.ip_address.v4.s_addr), dbuf, sizeof(dbuf)) : intoaV6(&dst_key.ip_address.v6, dbuf, sizeof(dbuf)));
+#endif
+    int rule_action = inplace_lookup(src_ip_hash, &src_key);
+    if (rule_action != NULL_VALUE && rule_action != action) action = rule_action;
+    else { 
+      rule_action = inplace_lookup(dst_ip_hash, &dst_key);
+      if (rule_action != NULL_VALUE && rule_action != action) action = rule_action;
+    }
+  }
+  if (action == DROP) return -1;
+#endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   return pfring_zc_builtin_ip_hash(pkt_handle, in_queue) % num_out_queues;
 }
@@ -400,7 +487,14 @@ int main(int argc, char* argv[]) {
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
-  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:w";
+  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:wv"
+#ifdef HAVE_ZMQ 
+    "A:E:Z"
+#endif
+  ;
+#ifdef HAVE_ZMQ
+  pthread_t zmq_thread;
+#endif
 
   start_time.tv_sec = 0;
 
@@ -478,6 +572,22 @@ int main(int argc, char* argv[]) {
     case 'z':
       proc_stats_only = 1;
       break;
+#ifdef HAVE_ZMQ
+    case 'A':
+      if (atoi(optarg) == 0) default_action = DROP;
+      else default_action = PASS;
+    break;
+    case 'E':
+      zmq_endpoint = strdup(optarg);
+    break;
+    case 'Z':
+      zmq_server = 1;
+      time_pulse = 1; /* forcing time-pulse to handle rules expiration */
+    break;
+#endif
+    case 'v':
+      trace_verbosity = 3;    
+    break;
     }
   }
   
@@ -711,6 +821,14 @@ int main(int argc, char* argv[]) {
     while (!*pulse_timestamp_ns && !do_shutdown); /* wait for ts */
   }
 
+#ifdef HAVE_ZMQ
+  if (zmq_server) {
+    src_ip_hash = inplace_alloc(32768);
+    dst_ip_hash = inplace_alloc(32768);
+    pthread_create(&zmq_thread, NULL, zmq_server_thread, NULL);
+  }
+#endif
+
   trace(TRACE_NORMAL, "Starting balancer with %d consumer queues..\n", num_consumer_queues);
 
   off = 0;
@@ -806,6 +924,15 @@ int main(int argc, char* argv[]) {
     sleep(ALARM_SLEEP);
     print_stats();
   }
+
+#ifdef HAVE_ZMQ
+  if (zmq_server) {
+    zmq_server_breakloop();
+    pthread_join(zmq_thread, NULL);
+    inplace_free(src_ip_hash);
+    inplace_free(dst_ip_hash);
+  }
+#endif
 
   if (time_pulse)
     pthread_join(time_thread, NULL);

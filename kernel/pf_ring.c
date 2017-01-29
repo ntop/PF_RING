@@ -367,6 +367,7 @@ static unsigned int enable_tx_capture = 1;
 static unsigned int enable_frag_coherence = 1;
 static unsigned int enable_ip_defrag = 0;
 static unsigned int quick_mode = 0;
+static unsigned int force_ring_lock = 0;
 static unsigned int enable_debug = 0;
 static unsigned int transparent_mode = 0;
 static atomic_t ring_id_serial = ATOMIC_INIT(0);
@@ -383,31 +384,30 @@ char *bypass_interfaces[MAX_NUM_DEVICES] = { 0 };
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,16)) || defined(REDHAT_PATCHED_KERNEL)
 module_param(min_num_slots, uint, 0644);
 module_param(perfect_rules_hash_size, uint, 0644);
-module_param(transparent_mode, uint, 0644);
-module_param(enable_debug, uint, 0644);
 module_param(enable_tx_capture, uint, 0644);
 module_param(enable_frag_coherence, uint, 0644);
 module_param(enable_ip_defrag, uint, 0644);
 module_param(quick_mode, uint, 0644);
+module_param(force_ring_lock, uint, 0644);
+module_param(enable_debug, uint, 0644);
+module_param(transparent_mode, uint, 0644);
 #ifdef REDBORDER_PATCH
 module_param_array(bypass_interfaces, charp, NULL, 0444);
 #endif
 #else
 MODULE_PARM(min_num_slots, "i");
 MODULE_PARM(perfect_rules_hash_size, "i");
-MODULE_PARM(transparent_mode, "i");
-MODULE_PARM(enable_debug, "i");
 MODULE_PARM(enable_tx_capture, "i");
 MODULE_PARM(enable_frag_coherence, "i");
 MODULE_PARM(enable_ip_defrag, "i");
 MODULE_PARM(quick_mode, "i");
+MODULE_PARM(force_ring_lock, "i");
+MODULE_PARM(enable_debug, "i");
+MODULE_PARM(transparent_mode, "i");
 #endif
 
 MODULE_PARM_DESC(min_num_slots, "Min number of ring slots");
 MODULE_PARM_DESC(perfect_rules_hash_size, "Perfect rules hash size");
-MODULE_PARM_DESC(transparent_mode,
-		 "(deprecated)");
-MODULE_PARM_DESC(enable_debug, "Set to 1 to enable PF_RING debug tracing into the syslog");
 MODULE_PARM_DESC(enable_tx_capture, "Set to 1 to capture outgoing packets");
 MODULE_PARM_DESC(enable_frag_coherence, "Set to 1 to handle fragments (flow coherence) in clusters");
 MODULE_PARM_DESC(enable_ip_defrag,
@@ -416,6 +416,10 @@ MODULE_PARM_DESC(enable_ip_defrag,
 MODULE_PARM_DESC(quick_mode,
 		 "Set to 1 to run at full speed but with up"
 		 "to one socket per interface");
+MODULE_PARM_DESC(force_ring_lock, "Set to 1 to force ring locking (automatically enable with rss)");
+MODULE_PARM_DESC(enable_debug, "Set to 1 to enable PF_RING debug tracing into the syslog");
+MODULE_PARM_DESC(transparent_mode,
+		 "(deprecated)");
 #ifdef REDBORDER_PATCH
 MODULE_PARM_DESC(bypass_interfaces,
                  "Comma separated list of interfaces where bypass"
@@ -2726,7 +2730,8 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
     (pfr->channel_id_mask == RING_ANY_CHANNEL && get_num_rx_queues(skb->dev) > 1) ||
     (pfr->rehash_rss != NULL && get_num_rx_queues(skb->dev) > 1) ||
     (pfr->num_bound_devices > 1) ||
-    (pfr->cluster_id != 0)
+    (pfr->cluster_id != 0) ||
+    (force_ring_lock)
   );
 
   if(pfr->ring_slots == NULL) return(0);
@@ -6509,10 +6514,8 @@ static int ring_setsockopt(struct socket *sock,
 
 #if (defined(UTS_UBUNTU_RELEASE_ABI) && ( \
        (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) && UTS_UBUNTU_RELEASE_ABI >= 28) || \
-       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22) || \
-       UBUNTU_VERSION_CODE > KERNEL_VERSION(4,4,0))) || \
-    (!defined(UTS_UBUNTU_RELEASE_ABI) && \
-     LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && \
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22))) || \
+    (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && \
      LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) 
       ret = __sk_attach_filter(&fprog, pfr->sk, sock_owned_by_user(pfr->sk));
 #else
@@ -6527,12 +6530,10 @@ static int ring_setsockopt(struct socket *sock,
   case SO_DETACH_FILTER:
     if (unlikely(enable_debug))
       printk("[PF_RING] Removing BPF filter\n");
-#if (defined(UTS_UBUNTU_RELEASE_ABI) && (\
+#if (defined(UTS_UBUNTU_RELEASE_ABI) && ( \
        (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) && UTS_UBUNTU_RELEASE_ABI >= 28) || \
-       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22) || \
-       UBUNTU_VERSION_CODE > KERNEL_VERSION(4,4,0))) || \
-    (!defined(UTS_UBUNTU_RELEASE_ABI) && \
-     LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && \
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22))) || \
+    (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && \
      LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) 
     ret = __sk_detach_filter(pfr->sk, sock_owned_by_user(pfr->sk));
 #else

@@ -175,6 +175,23 @@ struct pfring_bpf_program {
 
 /* ********************************* */
 
+typedef struct pfring_if {
+  char *name;
+  char *system_name;
+  char *module;
+  char mac[6];
+  struct { /* Bus ID: "%04X:%02X:%02X.%X", slot, bus, device, function */
+    int slot;
+    int bus;
+    int device;
+    int function;
+  } bus_id;
+  int status; /* 1: up, 0: down*/
+  struct pfring_if *next;
+} pfring_if_t;
+
+/* ********************************* */
+
 struct __pfring {
   u_int8_t initialized, enabled, long_header, force_timestamp;
   u_int8_t strip_hw_timestamp, disable_parsing, disable_timestamp, ixia_timestamp_enabled;
@@ -1148,10 +1165,21 @@ void pfring_handle_vss_apcon_hw_timestamp(u_char* buffer, struct pfring_pkthdr *
 /**
  * Get interface speed.
  * @param ring
- * @return 0 if interface speed is unknown, the interface speed otherwise.
+ * @return 0 if interface speed is unknown, the interface speed (Mbit/s) otherwise.
  */
-
 u_int32_t pfring_get_interface_speed(pfring *ring);
+
+/**
+ * List all interfaces.
+ * @return The interface list.
+ */
+pfring_if_t *pfring_findalldevs();
+
+/**
+ * Free an interface list returned by pfring_findalldevs().
+ * @param list The interface list.
+ */
+void pfring_freealldevs(pfring_if_t *list);
 
 /* ********************************* */
 
@@ -1179,14 +1207,17 @@ int32_t gmt_to_local(time_t t);
 /* ********************************* */
 
 typedef struct {
-  char   *name;
-  int   (*open)  (pfring *);
+  char *name;
+  int (*open) (pfring *);
+  pfring_if_t *(*findalldevs) ();
 } pfring_module_info;
   
 struct thirdparty_func {
-  const char *name;   /* Function name */
-  void  (*ptr)(void); /* Function pointer */
+  const char *name;  /* Function name */
+  void (*ptr)(void); /* Function pointer */
 };
+
+/* ********************************* */
   
 void pfring_thirdparty_lib_init(const char* thirdparty_lib_name,
 				struct thirdparty_func thirdparty_function_ptr[]);

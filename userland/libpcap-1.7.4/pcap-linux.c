@@ -1604,7 +1604,10 @@ pcap_activate_linux(pcap_t *handle)
 	 */
 #ifdef HAVE_PF_RING
 	if (handle->ring != NULL) {
-        	pfring_enable_ring(handle->ring);
+		/* Note: pfring_enable_ring() has been moved to pcap_read_packet()
+		 * to avoid receiving packets while the bpf filter has not been set yet.
+		 * Note this is not a problem for applications lieke tshark using select
+		 * because rings get automatically activated on poll too. */
 		handle->selectable_fd = pfring_get_selectable_fd(handle->ring);
 	} else
 #endif
@@ -1730,6 +1733,9 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 		char *packet;
 		int wait_for_incoming_packet = (pf_ring_active_poll || (handlep->timeout < 0)) ? 0 : 1;
 		int ret = 0;
+
+		if (!handle->ring->enabled)
+			pfring_enable_ring(handle->ring);
 
 		do {
 			if (handle->break_loop) {

@@ -43,6 +43,8 @@
 #include "pfring.h"
 #include "pfutils.c"
 
+#define MAX_PACKET_SIZE 9018
+
 struct packet {
   u_int16_t len;
   u_int64_t ticks_from_beginning;
@@ -418,7 +420,7 @@ int main(int argc, char* argv[]) {
   char *pcap_in = NULL, path[255] = { 0 };
   int c, i, j, n, verbose = 0, active_poll = 0;
   u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
-  u_char buffer[9000];
+  u_char buffer[MAX_PACKET_SIZE];
   u_int32_t num_to_send = 0;
   int bind_core = -1;
   u_int16_t cpu_percentage = 0;
@@ -481,6 +483,7 @@ int main(int argc, char* argv[]) {
       break;
     case 'l':
       send_len = atoi(optarg);
+      if (send_len > MAX_PACKET_SIZE) send_len = MAX_PACKET_SIZE;
       break;
     case 'x':
       if_index = atoi(optarg);

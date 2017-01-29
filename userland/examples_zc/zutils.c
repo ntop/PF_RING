@@ -120,6 +120,52 @@ int is_a_queue(char *device, int *cluster_id, int *queue_id) {
 
 /* *************************************** */
 
+char *intoaV4(unsigned int addr, char* buf, u_short bufLen) {
+  char *cp, *retStr;
+  int n;
+
+  cp = &buf[bufLen];
+  *--cp = '\0';
+
+  n = 4;
+  do {
+    u_int byte = addr & 0xff;
+
+    *--cp = byte % 10 + '0';
+    byte /= 10;
+    if(byte > 0) {
+      *--cp = byte % 10 + '0';
+      byte /= 10;
+      if(byte > 0)
+  *--cp = byte + '0';
+    }
+    *--cp = '.';
+    addr >>= 8;
+  } while (--n > 0);
+
+  /* Convert the string to lowercase */
+  retStr = (char*)(cp+1);
+
+  return(retStr);
+}
+
+/* ****************************************************** */
+
+char *intoaV6(const void *ipv6, char* buf, u_short bufLen) {
+  char *ret;
+
+  ret = (char*)inet_ntop(AF_INET6, ipv6, buf, bufLen);
+
+  if(ret == NULL) {
+    /* Internal error (buffer too short) */
+    buf[0] = '\0';
+    return(buf);
+  } else
+    return(ret);
+}
+
+/* *************************************** */
+
 static inline int64_t upper_power_of_2(int64_t x) {
   x--;
   x |= x >> 1;
@@ -297,12 +343,19 @@ int load_args_from_file(char *conffile, int *ret_argc, char **ret_argv[]) {
 #define TRACE_ERROR   0, __FILE__, __LINE__
 #define TRACE_WARNING 1, __FILE__, __LINE__
 #define TRACE_NORMAL  2, __FILE__, __LINE__
+#define TRACE_DEBUG   3, __FILE__, __LINE__
+static int trace_verbosity = 2;
 
 void trace(int trace_level, char *file, int line, char * format, ...) {
   va_list va_ap;
   char buf[2048], out_buf[640];
   char theDate[32], *extra_msg = "";
-  time_t theTime = time(NULL);
+  time_t theTime;
+
+  if (trace_level > trace_verbosity)
+    return;
+
+  theTime = time(NULL);
 
   va_start(va_ap, format);
 

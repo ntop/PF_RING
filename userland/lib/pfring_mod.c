@@ -14,11 +14,14 @@
 #define __USE_XOPEN2K
 #include <sys/types.h>
 #include <pthread.h>
+#include <libgen.h>
 
-/* ethtool */
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <linux/ethtool.h>
+
+#include <sys/socket.h>
+#include <ifaddrs.h>
 
 #ifdef ENABLE_BPF
 #include <pcap/pcap.h>
@@ -1038,5 +1041,66 @@ u_int32_t pfring_mod_get_interface_speed(pfring *ring) {
   return __ethtool_get_link_settings(ring->device_name);
 }
  
+/* *************************************** */
+
+static void __read_device_bus_id(char *device_name, pfring_if_t *dev) {
+  char device_path[256];
+  char busid_path[256];
+  char *busid_str;
+  ssize_t n;
+
+  snprintf(device_path, sizeof(device_path), "/sys/class/net/%s/device", device_name);
+
+  n = readlink(device_path, busid_path, sizeof(busid_path));
+
+  if (n != -1) {
+    busid_path[n] = '\0';
+    busid_str = basename(busid_path);
+    sscanf(busid_str, "%04X:%02X:%02X.%X", 
+      &dev->bus_id.slot, &dev->bus_id.bus, &dev->bus_id.device, &dev->bus_id.function);
+  }
+}
+
+/* *************************************** */
+
+pfring_if_t *pfring_mod_findalldevs() {
+  pfring_if_t *list = NULL, *last = NULL, *tmp;
+  struct ifaddrs *ifap, *ifa;
+
+  if (getifaddrs(&ifap) != 0)
+    return NULL;
+
+  for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+ 
+    tmp = list; /* check if it's already in the list */
+    while (tmp != NULL) {
+      if (strcmp(tmp->name, ifa->ifa_name) == 0)
+        break;
+      tmp = tmp->next;
+    }
+
+    if (tmp == NULL) { /* New item */
+      tmp = (pfring_if_t *) calloc(1, sizeof(pfring_if_t));
+      if (tmp == NULL) continue;
+
+      tmp->name = strdup(ifa->ifa_name);
+      tmp->system_name = strdup(ifa->ifa_name);
+      tmp->module = strdup("pf_ring");
+      tmp->status = !!(ifa->ifa_flags & IFF_UP);
+      __read_device_bus_id(tmp->name, tmp);
+
+      if (last == NULL) { last = tmp; list = tmp; }
+      else { last->next = tmp; last = last->next; }
+    }
+
+    if (ifa->ifa_addr->sa_family == AF_PACKET)
+      memcpy(tmp->mac, ((char *) ifa->ifa_addr)+12, sizeof(tmp->mac));
+  }
+
+  freeifaddrs(ifap);
+
+  return list;
+}
+
 /* *************************************** */
 

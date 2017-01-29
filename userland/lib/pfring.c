@@ -81,19 +81,23 @@ static pfring_module_info pfring_module_list[] = {
   { /* usually you don't need to specify this */
     .name = "default",
     .open = pfring_mod_open,
+    .findalldevs = pfring_mod_findalldevs
   },
   {
     .name = "stack",
     .open = pfring_mod_stack_open,
+    .findalldevs = NULL
   },
   {
     .name = "sysdig",
     .open = pfring_mod_sysdig_open,
+    .findalldevs = NULL
   },
 #ifdef HAVE_DAG
   {
     .name = "dag",
     .open = pfring_dag_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -101,6 +105,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "fbcard",
     .open = pfring_fb_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -108,6 +113,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "nt",
     .open = pfring_nt_open,
+    .findalldevs = pfring_nt_findalldevs
   },
 #endif
 
@@ -115,6 +121,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "mlx",
     .open = pfring_mlx_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -122,6 +129,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "anic",
     .open = pfring_anic_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -129,6 +137,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "myri",
     .open = pfring_myri_open,
+    .findalldevs = pfring_myri_findalldevs
   },
 #endif
 
@@ -136,6 +145,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "invea",
     .open = pfring_invea_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -143,6 +153,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "exanic",
     .open = pfring_exablaze_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -150,6 +161,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "zc",
     .open = pfring_zc_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -157,6 +169,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "timeline",
     .open = pfring_timeline_open,
+    .findalldevs = NULL
   },
 #endif
 
@@ -1301,6 +1314,39 @@ u_int32_t pfring_get_interface_speed(pfring *ring) {
     return ring->get_interface_speed(ring);
 
   return pfring_mod_get_interface_speed(ring);
+}
+
+/* **************************************************** */
+
+pfring_if_t *pfring_findalldevs() {
+  pfring_if_t *list = NULL, *last = NULL, *mod_list;
+  int i = -1;
+
+  while (pfring_module_list[++i].name) {
+    if (pfring_module_list[i].findalldevs == NULL) continue;
+    mod_list = pfring_module_list[i].findalldevs();
+    if (mod_list == NULL) continue;
+    if (last == NULL) { last = mod_list; list = mod_list; }
+    else last->next = mod_list;
+    while (last->next != NULL)
+      last = last->next;
+  }
+
+  return list; 
+}
+
+/* **************************************************** */
+
+void pfring_freealldevs(pfring_if_t *list) {
+  pfring_if_t *tmp = list;
+  while (tmp) {
+    list = list->next;
+    if (tmp->name)        free(tmp->name);
+    if (tmp->system_name) free(tmp->system_name);
+    if (tmp->module)      free(tmp->module);
+    free(tmp);
+    tmp = list;
+  }
 }
 
 /* **************************************************** */
