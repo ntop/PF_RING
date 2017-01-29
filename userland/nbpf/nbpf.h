@@ -26,6 +26,17 @@
 #include <ws2tcpip.h>
 #endif
 
+
+#ifndef PACKED_ON
+#ifdef _MSC_VER
+#  define PACKED_ON   __pragma(pack(push, 1))
+#  define PACKED_OFF  __pragma(pack(pop))
+#elif defined(__GNUC__)
+#  define PACKED_ON
+#  define PACKED_OFF  __attribute__((packed))
+#endif
+#endif
+
 struct nbpf_in6_addr {
   union {
     u_int8_t   u6_addr8[16];
@@ -34,10 +45,10 @@ struct nbpf_in6_addr {
   } u6_addr;  /* 128-bit IP6 address */
 };
 
-typedef union {
+PACKED_ON typedef union {
   struct nbpf_in6_addr v6;
   u_int32_t v4;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_ip_addr;
 
 /***************************************************************************/
@@ -83,17 +94,17 @@ nbpf_ip_addr;
 
 /***************************************************************************/
 
-typedef struct {
+PACKED_ON typedef struct {
   u_int8_t header;
   u_int8_t protocol;
   u_int8_t direction;
   u_int8_t address;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_qualifiers_t;
 
 struct nbpf_node;
 
-typedef struct nbpf_node {
+PACKED_ON typedef struct nbpf_node {
   int type;
   int level;
   nbpf_qualifiers_t qualifiers;
@@ -111,18 +122,18 @@ typedef struct nbpf_node {
 
   struct nbpf_node *l;
   struct nbpf_node *r;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_node_t;
 
-typedef struct {
+PACKED_ON typedef struct {
   nbpf_node_t *root;
   int compatibility_level; /* external use */
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_tree_t;
 
 /***************************************************************************/
 
-typedef int (*l7protocol_by_name_func)(const char *name);
+PACKED_ON typedef int (*l7protocol_by_name_func)(const char *name);
 
 /***************************************************************************/
 
@@ -135,22 +146,22 @@ void nbpf_free(nbpf_tree_t *t);
 
 /* nBPF Tree Match API */
 
-typedef struct nbpf_pkt_info_tuple {
+PACKED_ON typedef struct nbpf_pkt_info_tuple {
   u_int16_t eth_type;
   u_int8_t ip_version;
   u_int8_t l3_proto, ip_tos;
   nbpf_ip_addr ip_src, ip_dst;
   u_int16_t l4_src_port, l4_dst_port;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_pkt_info_tuple_t;
 
-typedef struct {
+PACKED_ON typedef struct {
   u_int8_t  dmac[6], smac[6];
   u_int16_t vlan_id, vlan_id_qinq;
   u_int16_t master_l7_proto, l7_proto;
   nbpf_pkt_info_tuple_t tuple;
   nbpf_pkt_info_tuple_t tunneled_tuple;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_pkt_info_t;
 
 void nbpf_toggle_mac_match(nbpf_tree_t *tree, u_int8_t enable);
@@ -165,7 +176,7 @@ int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h);
 
 /* nBPF Filtering Rules Generation API */
 
-typedef struct {
+PACKED_ON typedef struct {
   u_int8_t smac[6], dmac[6]; 
   u_int8_t proto; /* tcp, udp, sctp */
   u_int8_t ip_version;
@@ -177,24 +188,24 @@ typedef struct {
   nbpf_ip_addr shost_mask, dhost_mask;
   u_int16_t sport_low, sport_high;
   u_int16_t dport_low, dport_high;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_rule_core_fields_t;
 
 struct nbpf_rule_list_item;
 
-typedef struct nbpf_rule_list_item {
+PACKED_ON typedef struct nbpf_rule_list_item {
   nbpf_rule_core_fields_t fields;
   int bidirectional;
   struct nbpf_rule_list_item *next;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_rule_list_item_t;
 
 struct nbpf_rule_block_list_item;
 
-typedef struct nbpf_rule_block_list_item {
+PACKED_ON typedef struct nbpf_rule_block_list_item {
   nbpf_rule_list_item_t *rule_list_head;
   struct nbpf_rule_block_list_item *next;
-} __attribute__((packed))
+} PACKED_OFF
 nbpf_rule_block_list_item_t;
 
 int nbpf_check_rules_constraints(nbpf_tree_t *tree, int max_nesting_level);
