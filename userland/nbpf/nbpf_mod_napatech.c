@@ -13,18 +13,7 @@
 #include <stdio.h>
 
 #include "nbpf.h"
-
-/* *********************************************************** */
-
-int _is_emptyv6(struct nbpf_in6_addr *a) {
-  int i;
-
-  for(i=0; i<4; i++)
-    if(a->u6_addr.u6_addr32[i] != 0)
-      return(0);
-
-  return(1);
-}
+#include "parser.h"
 
 /* *********************************************************** */
 
@@ -52,14 +41,15 @@ void bpf_rule_to_napatech(u_int8_t stream_id, u_int8_t port_id, void *opt,
   cmd[0] = '\0';
   snprintf(buf, sizeof(buf), "Assign[StreamId = %u] = Port == %u AND ", stream_id, port_id);
 
-  bpf_append_str(cmd, cmd_len, 0, buf);
+  bpf_append_str(cmd, cmd_len, 0, 1, buf);
 
-  if(c->vlan_id) bpf_append_str(cmd, cmd_len, num_cmds++, "((Encapsulation == VLAN)");
+  if(c->vlan_id)
+    bpf_append_str(cmd, cmd_len, num_cmds++, 1, "((Encapsulation == VLAN)");
 
   switch(c->proto) {
-  case 1:  bpf_append_str(cmd, cmd_len, num_cmds++, "(Layer4Protocol == ICMP)"); break;
-  case 6:  bpf_append_str(cmd, cmd_len, num_cmds++, "(Layer4Protocol == TCP)"), proto = "Tcp";  break;
-  case 17: bpf_append_str(cmd, cmd_len, num_cmds++, "(Layer4Protocol == UDP)"), proto = "Udp";  break;
+  case 1:  bpf_append_str(cmd, cmd_len, num_cmds++, 1, "(Layer4Protocol == ICMP)"); break;
+  case 6:  bpf_append_str(cmd, cmd_len, num_cmds++, 1, "(Layer4Protocol == TCP)"), proto = "Tcp";  break;
+  case 17: bpf_append_str(cmd, cmd_len, num_cmds++, 1, "(Layer4Protocol == UDP)"), proto = "Udp";  break;
   }
 
   if(c->ip_version == 4) {
@@ -67,38 +57,38 @@ void bpf_rule_to_napatech(u_int8_t stream_id, u_int8_t port_id, void *opt,
 
     if(c->shost.v4) { 
       snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", "Src", bpf_intoaV4(ntohl(c->shost.v4), a, sizeof(a))); 
-      bpf_append_str(cmd, cmd_len, num_cmds++,  buf); 
+      bpf_append_str(cmd, cmd_len, num_cmds++, 1, buf); 
     }
     
     if(c->dhost.v4) { 
       snprintf(buf, sizeof(buf), "mIPv4%sAddr == [%s]", "Dest", bpf_intoaV4(ntohl(c->dhost.v4), a, sizeof(a))); 
-      bpf_append_str(cmd, cmd_len, num_cmds++,  buf); 
+      bpf_append_str(cmd, cmd_len, num_cmds++, 1, buf); 
     }
   } else if(c->ip_version == 6) {
     char a[64];
 
-    if(!_is_emptyv6(&c->shost.v6)) {    
+    if(!is_emptyv6(&c->shost.v6)) {    
       snprintf(buf, sizeof(buf), "mIPv6%sAddr == [%s]", "Src", bpf_intoaV6(&c->shost.v6, a, sizeof(a))); 
-      bpf_append_str(cmd, cmd_len, num_cmds++,  buf); 
+      bpf_append_str(cmd, cmd_len, num_cmds++, 1, buf); 
     }
     
-    if(!_is_emptyv6(&c->dhost.v6)) { 
+    if(!is_emptyv6(&c->dhost.v6)) { 
       snprintf(buf, sizeof(buf), "mIPv6%sAddr == [%s]", "Dest", bpf_intoaV6(&c->dhost.v6, a, sizeof(a))); 
-      bpf_append_str(cmd, cmd_len, num_cmds++,  buf); 
+      bpf_append_str(cmd, cmd_len, num_cmds++, 1, buf); 
     }
   }
 
   if(c->sport_low > 0) { 
     snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, "Src",  ntohs(c->sport_low)); 
-    bpf_append_str(cmd, cmd_len, num_cmds++,  buf); 
+    bpf_append_str(cmd, cmd_len, num_cmds++, 1, buf); 
   }
 
   if(c->dport_low > 0) { 
     snprintf(buf, sizeof(buf), "m%s%sPort == %u", proto, "Dest", ntohs(c->dport_low)); 
-    bpf_append_str(cmd, cmd_len, num_cmds++,  buf);
+    bpf_append_str(cmd, cmd_len, num_cmds++, 1, buf);
   }
 
-  if(c->vlan_id) bpf_append_str(cmd, cmd_len, num_cmds++, ")");
+  if(c->vlan_id) bpf_append_str(cmd, cmd_len, num_cmds++, 1, ")");
 
   if(execCmd) execCmd(opt, cmd);
 }

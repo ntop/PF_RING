@@ -23,6 +23,7 @@
 
 #include "nbpf.h"
 #include "nbpf_mod_napatech.h"
+#include "nbpf_mod_fiberblaze.h"
 
 /* ****************************************** */
 
@@ -301,8 +302,23 @@ void napatech_dump_rules(nbpf_rule_list_item_t *pun) {
 
 /* *********************************************************** */
 
+void fiberblaze_dump_rules(nbpf_rule_list_item_t *pun) {
+  char cmd[256];
+  
+  printf("\n"
+	 "Fiberblaze Rules\n"
+	 "---------------\n"
+	 "%s\n",
+	 bpf_rules_to_fiberblaze(pun, cmd, sizeof(cmd)));
+}
+
+/* *********************************************************** */
+
 void help() {
-  printf("nbpftest [-n] -f \"BPF filter\"\n");
+  printf("nbpftest [-n][-F] -f \"BPF filter\"\n"
+	 "\nUsage:\n"
+	 "-n             | Dump rules in Napatech format\n"
+	 "-F             | Dump rules in Fiberblaze format\n");
   exit(0);
 }
 
@@ -312,10 +328,10 @@ int main(int argc, char *argv[]) {
   nbpf_tree_t *tree;
   nbpf_pkt_info_t pkt;
   nbpf_rule_list_item_t *pun;
-  int dump_napatech = 0;
+  int dump_napatech = 0, dump_fiberblaze = 0;
   char *filter = NULL, c;
 
-  while((c = getopt(argc, argv, "hf:n")) != '?') {
+  while((c = getopt(argc, argv, "hFf:n")) != '?') {
     if(c == -1) break;
 
     switch(c) {
@@ -325,6 +341,10 @@ int main(int argc, char *argv[]) {
 
     case 'f':
       filter = optarg;
+      break;
+
+    case 'F':
+      dump_fiberblaze = 1;
       break;
 
     case 'n':
@@ -355,8 +375,8 @@ int main(int argc, char *argv[]) {
 
   dump_rules(pun);
 
-  if(dump_napatech)
-    napatech_dump_rules(pun);
+  if(dump_napatech)   napatech_dump_rules(pun);
+  if(dump_fiberblaze) fiberblaze_dump_rules(pun);
 
   nbpf_rule_list_free(pun);
 

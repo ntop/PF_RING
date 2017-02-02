@@ -435,12 +435,14 @@ char* bpf_intoaV4(unsigned int addr, char* buf, u_int bufLen) {
 
 /* *********************************************************** */
 
-void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds, char *str) {
+void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds,
+		    u_int8_t upper, char *str) {
   int l = strlen(cmd);
-
+  const char *and = upper ? " AND " : " and ";
+    
   if(cmd_len > l)
     snprintf(&cmd[l], cmd_len-l, "%s%s",
-	     (num_cmds > 0) ? " AND " : "", str);
+	     (num_cmds > 0) ? and : "", str);
 }
 
 /* ****************************************************** */

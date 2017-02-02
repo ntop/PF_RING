@@ -619,5 +619,17 @@ nbpf_node_t *nbpf_create_l7_node(u_int32_t id, const char *name) {
   return n;
 }
 
+/* *********************************************************** */
+
+int is_emptyv6(struct nbpf_in6_addr *a) {
+  int i;
+
+  for(i=0; i<4; i++)
+    if(a->u6_addr.u6_addr32[i] != 0)
+      return(0);
+
+  return(1);
+}
+
 /* ****************************************************** */
 

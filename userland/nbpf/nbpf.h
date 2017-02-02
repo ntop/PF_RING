@@ -232,7 +232,8 @@ void nbpf_rule_list_free(nbpf_rule_list_item_t *list);
 nbpf_rule_block_list_item_t *nbpf_generate_optimized_rules(nbpf_tree_t *tree);
 void nbpf_rule_block_list_free(nbpf_rule_block_list_item_t *blocks);
 
-void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds, char *str);
+void bpf_append_str(char *cmd, u_int cmd_len, int num_cmds,
+		    u_int8_t upper, char *str);
 char *bpf_ethtoa(const u_char *ep, char *buf);
 char *bpf_intoaV4(unsigned int addr, char* buf, u_int bufLen);
 char *bpf_intoaV6(struct nbpf_in6_addr *ipv6, char* buf, u_short bufLen);

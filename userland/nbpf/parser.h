@@ -51,4 +51,5 @@ void nbpf_set_tree_root(nbpf_node_t *n);
 int yylex(void);
 int yyparse(void);
 
+int is_emptyv6(struct nbpf_in6_addr *a);
 #endif /* BPF_PARSER_H */
