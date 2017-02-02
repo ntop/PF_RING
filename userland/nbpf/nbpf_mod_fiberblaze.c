@@ -23,11 +23,13 @@ static void bpf_rule_to_fiberblaze(char *cmd, u_int cmd_len,
   const char *proto = (c->proto == 6) ? "tcp" : "udp";
   int num_cmds = 0, l, multi = 0;
 
-  if(c->vlan_id)  multi++;
+  if(c->vlan_id) multi++;
   if(c->proto)  multi++;
   if((c->ip_version == 4) && (c->shost.v4 || c->dhost.v4)) multi++;
   if((c->ip_version == 6) && ((!is_emptyv6(&c->shost.v6)) || (!is_emptyv6(&c->dhost.v6)))) multi++;
-
+  if(c->sport_low > 0) multi++;
+  if(c->dport_low > 0) multi++;
+    
   if(multi > 1)
     cmd[0] = '(', cmd[1] = '\0';
 
