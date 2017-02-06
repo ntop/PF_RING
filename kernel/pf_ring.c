@@ -110,6 +110,22 @@
 #include <linux/pci.h>
 #include <asm/shmparam.h>
 
+#ifndef UTS_RELEASE
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33))
+#include <linux/utsrelease.h>
+#else
+#include <generated/utsrelease.h>
+#endif
+#endif
+
+#ifdef UTS_UBUNTU_RELEASE_ABI
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3,0,0))
+#undef UTS_UBUNTU_RELEASE_ABI
+#else
+#define UBUNTU_VERSION_CODE (LINUX_VERSION_CODE & ~0xFF)
+#endif
+#endif
+
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 #define I82599_HW_FILTERING_SUPPORT
 #endif
@@ -173,7 +189,7 @@ static rwlock_t virtual_filtering_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t)__RW_LOCK_UNLOCKED(virtual_filtering_lock)
+  __RW_LOCK_UNLOCKED(virtual_filtering_lock)
 #endif
 ;
 
@@ -183,7 +199,7 @@ static rwlock_t ring_cluster_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t)__RW_LOCK_UNLOCKED(virtual_filtering_lock)
+  __RW_LOCK_UNLOCKED(virtual_filtering_lock)
 #endif
 ;
 
@@ -211,7 +227,7 @@ static rwlock_t cluster_fragments_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t)__RW_LOCK_UNLOCKED(cluster_fragments_lock)
+  __RW_LOCK_UNLOCKED(cluster_fragments_lock)
 #endif
 ;
 
@@ -230,7 +246,7 @@ static rwlock_t dna_cluster_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t) __RW_LOCK_UNLOCKED(dna_cluster_lock)
+  __RW_LOCK_UNLOCKED(cluster_referee_lock)
 #endif
 ;
 
@@ -240,7 +256,7 @@ static rwlock_t cluster_referee_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
   RW_LOCK_UNLOCKED
 #else
-  (rwlock_t) __RW_LOCK_UNLOCKED(cluster_referee_lock)
+  __RW_LOCK_UNLOCKED(ring_proc_lock)
 #endif
 ;
 
@@ -278,7 +294,7 @@ static inline void init_ring_readers(void)      {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
     RW_LOCK_UNLOCKED
 #else
-    (rwlock_t) __RW_LOCK_UNLOCKED(ring_mgmt_lock)
+    __RW_LOCK_UNLOCKED(ring_mgmt_lock)
 #endif
     ;
 }
@@ -343,7 +359,11 @@ struct sk_buff *
 #else
 int
 #endif
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
 ip_defrag(struct sk_buff *skb, u32 user);
+#else
+ip_defrag(struct net *net, struct sk_buff *skb, u32 user);
+#endif
 
 /* ********************************** */
 
@@ -414,8 +434,7 @@ MODULE_PARM_DESC(bypass_interfaces,
 #define MIN_QUEUED_PKTS      64
 #define MAX_QUEUE_LOOPS      64
 
-#define ring_sk_datatype(__sk) ((struct pf_ring_socket *)__sk)
-#define ring_sk(__sk) ((__sk)->sk_protinfo)
+#define ring_sk(__sk) ((struct ring_sock *) __sk)->pf_ring_sk
 
 #define _rdtsc() ({ uint64_t x; asm volatile("rdtsc" : "=A" (x)); x; })
 
@@ -511,7 +530,7 @@ void init_lockless_list(lockless_list *l)
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
     RW_LOCK_UNLOCKED
 #else
-    (rwlock_t) __RW_LOCK_UNLOCKED(l->list_lock)
+    __RW_LOCK_UNLOCKED(l->list_lock)
 #endif
     ;
 }
@@ -904,7 +923,11 @@ static struct sk_buff *ring_gather_frags(struct sk_buff *skb)
 #else
   int status
 #endif
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
   = ip_defrag(skb, IP_DEFRAG_RING);
+#else
+  = ip_defrag(dev_net(skb->dev), skb, IP_DEFRAG_RING);
+#endif
 
   if(
 #if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,23))
@@ -3955,8 +3978,10 @@ int bpf_filter_skb(struct sk_buff *skb,
     res = sk_run_filter(skb, filter->insns, filter->len);
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
     res = sk_run_filter(skb, filter->insns);
-#else
+#elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
     res = SK_RUN_FILTER(filter, skb);
+#else
+    res = (sk_filter(pfr->sk, skb) == 0) ? 1 : 0;
 #endif
 
   rcu_read_unlock();
@@ -4852,14 +4877,14 @@ static int ring_create(
 
 #if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,11))
   sk = sk_alloc(PF_RING, GFP_KERNEL, 1, NULL);
-#else
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
+#elif(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
   // BD: API changed in 2.6.12, ref:
   // http://svn.clkao.org/svnweb/linux/revision/?rev=28201
   sk = sk_alloc(PF_RING, GFP_ATOMIC, &ring_proto, 1);
-#else
+#elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0))
   sk = sk_alloc(net, PF_INET, GFP_KERNEL, &ring_proto);
-#endif
+#else
+  sk = sk_alloc(net, PF_INET, GFP_KERNEL, &ring_proto, 1 /* FIXX kernel socket? */);
 #endif
 
   if(sk == NULL)
@@ -4871,7 +4896,7 @@ static int ring_create(
   sk_set_owner(sk, THIS_MODULE);
 #endif
 
-  ring_sk(sk) = ring_sk_datatype(kmalloc(sizeof(*pfr), GFP_KERNEL));
+  ring_sk(sk) = (struct pf_ring_socket *) kmalloc(sizeof(*pfr), GFP_KERNEL);
 
   if(!(pfr = ring_sk(sk)))
     goto free_sk;
@@ -6446,8 +6471,13 @@ static int ring_mmap(struct file *file,
 
 /* ************************************* */
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
 static int ring_recvmsg(struct kiocb *iocb, struct socket *sock,
 			struct msghdr *msg, size_t len, int flags)
+#else
+static int ring_recvmsg(struct socket *sock,
+			struct msghdr *msg, size_t len, int flags)
+#endif
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   u_int32_t queued_pkts, num_loops = 0;
@@ -6499,8 +6529,13 @@ static int pf_ring_inject_packet_to_stack(struct net_device *netdev, struct msgh
 /* ************************************* */
 
 /* This code is mostly coming from af_packet.c */
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0))
 static int ring_sendmsg(struct kiocb *iocb, struct socket *sock,
 			struct msghdr *msg, size_t len)
+#else
+static int ring_sendmsg(struct socket *sock,
+			struct msghdr *msg, size_t len)
+#endif
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   struct sockaddr_pkt *saddr;
@@ -6741,7 +6776,7 @@ int add_sock_to_cluster_list(ring_cluster_element * el, struct sock *sock)
   if(el->cluster.num_cluster_elements == CLUSTER_LEN)
     return(-1);	/* Cluster full */
 
-  ring_sk_datatype(ring_sk(sock))->cluster_id = el->cluster.cluster_id;
+  ring_sk(sock)->cluster_id = el->cluster.cluster_id;
   el->cluster.sk[el->cluster.num_cluster_elements] = sock;
   el->cluster.num_cluster_elements++;
   return(0);
@@ -7502,7 +7537,17 @@ static int ring_setsockopt(struct socket *sock,
       if (copy_from_user(&fprog, optval, sizeof(fprog)))
         break;
 
+#if (defined(UTS_UBUNTU_RELEASE_ABI) && ( \
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) && UTS_UBUNTU_RELEASE_ABI >= 28) || \
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22) || \
+       UBUNTU_VERSION_CODE > KERNEL_VERSION(4,4,0))) || \
+    (!defined(UTS_UBUNTU_RELEASE_ABI) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && \
+     LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) 
+      ret = __sk_attach_filter(&fprog, pfr->sk, sock_owned_by_user(pfr->sk));
+#else
       ret = sk_attach_filter(&fprog, pfr->sk);
+#endif
 
       if (ret == 0)
         pfr->bpfFilter = 1;
@@ -7512,7 +7557,17 @@ static int ring_setsockopt(struct socket *sock,
   case SO_DETACH_FILTER:
     if (unlikely(enable_debug))
       printk("[PF_RING] Removing BPF filter\n");
+#if (defined(UTS_UBUNTU_RELEASE_ABI) && (\
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) && UTS_UBUNTU_RELEASE_ABI >= 28) || \
+       (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22) || \
+       UBUNTU_VERSION_CODE > KERNEL_VERSION(4,4,0))) || \
+    (!defined(UTS_UBUNTU_RELEASE_ABI) && \
+     LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && \
+     LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) 
+    ret = __sk_detach_filter(pfr->sk, sock_owned_by_user(pfr->sk));
+#else
     ret = sk_detach_filter(pfr->sk);
+#endif
     pfr->bpfFilter = 0;
     break;
 
