@@ -3681,6 +3681,89 @@ if test "x$ac_cv_lib_nl_nl_handle_alloc" = xyes; then :
   SYSLIBS="$SYSLIBS -lnl"
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dlopen, dlsym in -ldl" >&5
+$as_echo_n "checking for dlopen, dlsym in -ldl... " >&6; }
+if ${ac_cv_lib_dl_dlopen__dlsym+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ldl  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dlopen, dlsym ();
+int
+main ()
+{
+return dlopen, dlsym ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_dl_dlopen__dlsym=yes
+else
+  ac_cv_lib_dl_dlopen__dlsym=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_dl_dlopen__dlsym" >&5
+$as_echo "$ac_cv_lib_dl_dlopen__dlsym" >&6; }
+if test "x$ac_cv_lib_dl_dlopen__dlsym" = xyes; then :
+  SYSLIBS="$SYSLIBS -ldl"
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for dlopen, dlsym in -lc" >&5
+$as_echo_n "checking for dlopen, dlsym in -lc... " >&6; }
+if ${ac_cv_lib_c_dlopen__dlsym+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lc  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dlopen, dlsym ();
+int
+main ()
+{
+return dlopen, dlsym ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_c_dlopen__dlsym=yes
+else
+  ac_cv_lib_c_dlopen__dlsym=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_c_dlopen__dlsym" >&5
+$as_echo "$ac_cv_lib_c_dlopen__dlsym" >&6; }
+if test "x$ac_cv_lib_c_dlopen__dlsym" = xyes; then :
+  SYSLIBS="$SYSLIBS -lc"
+else
+  as_fn_error $? "unable to find the dlopen(), dlsym() functions" "$LINENO" 5
+fi
+
+fi
+
 
 if test $MACHINE = "x86_64"; then
 DAG_LIB="-lm -ldl"
@@ -3860,6 +3943,7 @@ if test ".${prefix}" = ".NONE"; then
 else
    INSTALL_PREFIX=${prefix};
 fi
+
 
 
 

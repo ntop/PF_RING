@@ -118,6 +118,9 @@ fi
 
 AC_CHECK_LIB( [rt], [clock_gettime],   [SYSLIBS="$SYSLIBS -lrt"])
 AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
+AC_CHECK_LIB( [dl], [dlopen, dlsym],   [SYSLIBS="$SYSLIBS -ldl"],
+		   [AC_CHECK_LIB([c], [dlopen, dlsym], [SYSLIBS="$SYSLIBS -lc"],
+		   [AC_MSG_ERROR([unable to find the dlopen(), dlsym() functions]) ]) ])
 
 if test $MACHINE = "x86_64"; then
 dnl> DAG
@@ -244,6 +247,7 @@ AC_SUBST(MOD_FIBERBLAZE_LIB)
 AC_SUBST(HAVE_NT)
 AC_SUBST(NT_OBJS)
 AC_SUBST(NT_DEP)
+AC_SUBST(CC)
 AC_SUBST(MOD_NT_LIB)
 AC_SUBST(HAVE_ACCOLADE)
 AC_SUBST(ACCOLADE_OBJS)

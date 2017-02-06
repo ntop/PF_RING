@@ -10,7 +10,7 @@
 #
 
 include="@INVEATECH_INC@ @EXABLAZE_INC@"
-libs="@SYSLIBS@ @INVEATECH_LIB@ @EXABLAZE_LIB@ -ldl"
+libs="@SYSLIBS@ @INVEATECH_LIB@ @EXABLAZE_LIB@"
 
 
 usage () {

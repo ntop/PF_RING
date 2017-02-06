@@ -1,10 +1,4 @@
-/* config.h.in.  Generated from configure.in by autoheader.  */
-
-/* Accolade support is present */
-#undef HAVE_ACCOLADE
-
-/* Exablaze support is present */
-#undef HAVE_EXABLAZE
+/* lib/config.h.in.  Generated from configure.in by autoheader.  */
 
 /* Define to 1 if you have the <exanic/exanic.h> header file. */
 #undef HAVE_EXANIC_EXANIC_H
@@ -15,20 +9,14 @@
 /* Define to 1 if you have the `hiredis' library (-lhiredis). */
 #undef HAVE_LIBHIREDIS
 
-/* Define to 1 if you have the `ntapi' library (-lntapi). */
-#undef HAVE_LIBNTAPI
-
-/* Define to 1 if you have the `rdi' library (-lrdi). */
-#undef HAVE_LIBRDI
-
-/* Define to 1 if you have the `rdif' library (-lrdif). */
-#undef HAVE_LIBRDIF
-
 /* Define to 1 if you have the <librdi.h> header file. */
 #undef HAVE_LIBRDI_H
 
 /* Define to 1 if you have the `sze2' library (-lsze2). */
 #undef HAVE_LIBSZE2
+
+/* Define to 1 if you have the `zmq' library (-lzmq). */
+#undef HAVE_LIBZMQ
 
 /* Define to 1 if you have the <linux/net_tstamp.h> header file. */
 #undef HAVE_LINUX_NET_TSTAMP_H
@@ -39,14 +27,8 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
-/* Myricom support is present */
-#undef HAVE_MYRICOM
-
 /* libc has pthread_setaffinity_np */
 #undef HAVE_PTHREAD_SETAFFINITY_NP
-
-/* redis is present */
-#undef HAVE_REDIS
 
 /* pthread has rw locks */
 #undef HAVE_RW_LOCK
