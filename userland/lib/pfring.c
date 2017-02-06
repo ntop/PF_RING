@@ -685,38 +685,6 @@ int pfring_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet) {
 
 /* **************************************************** */
 
-int pfring_send_ifindex(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet, int if_index) {
-  int rc;
-
-  if(unlikely(pkt_len > ring->mtu_len))
-    errno = EMSGSIZE;
-    return(PF_RING_ERROR_INVALID_ARGUMENT); /* Packet too long */
-
-  if(likely(ring
-	    && ring->enabled
-	    && (!ring->is_shutting_down)
-	    && ring->send_ifindex
-	    && (ring->mode != recv_only_mode))) {
-
-    if(unlikely(ring->reentrant))
-      pthread_rwlock_wrlock(&ring->tx_lock);
-
-    rc =  ring->send_ifindex(ring, pkt, pkt_len, flush_packet, if_index);
-
-    if(unlikely(ring->reentrant))
-      pthread_rwlock_unlock(&ring->tx_lock);
-
-    return rc;
-  }
-
-  if(!ring->enabled)
-    return(PF_RING_ERROR_RING_NOT_ENABLED);
-
-  return(PF_RING_ERROR_NOT_SUPPORTED);
-}
-
-/* **************************************************** */
-
 int pfring_send_get_time(pfring *ring, char *pkt, u_int pkt_len, struct timespec *ts) {
   int rc;
 

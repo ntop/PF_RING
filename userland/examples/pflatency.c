@@ -88,7 +88,6 @@ int reforge_mac = 0;
 char mac_address[6];
 int send_len = 60;
 int packets_to_send = 1,packets_sent=0,packets_received=0;
-int if_index = -1;
 
 #define DEFAULT_DEVICE     "eth0"
 
@@ -113,7 +112,6 @@ void printHelp(void) {
   printf("-c <count>      Number of packets to send\n");
   printf("-g <core_id>    Bind this app to a core\n");
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
-  printf("-x <if index>   Send to the selected interface, if supported\n");
   printf("-h              Print this help\n");
   exit(0);
 }
@@ -246,7 +244,6 @@ int main(int argc, char* argv[]) {
   char buf1[64];
   struct packet packet_to_send = { 0 };
   char c;
-  int use_zero_copy_tx = 0;
   u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
   int bind_core = -1;
   ticks tick_start = 0, tick_delta = 0;
@@ -275,9 +272,6 @@ int main(int argc, char* argv[]) {
       break;
     case 'l':
       send_len = atoi(optarg);
-      break;
-    case 'x':
-      if_index = atoi(optarg);
       break;
     case 'm':
       if(sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &mac_a, &mac_b, &mac_c, &mac_d, &mac_e, &mac_f) != 6) {
@@ -320,12 +314,6 @@ int main(int argc, char* argv[]) {
     printf("Using PF_RING v.%d.%d.%d\n", (version & 0xFFFF0000) >> 16,
 	   (version & 0x0000FF00) >> 8, version & 0x000000FF);
   }
-
-  if (!pdo->send && pdo->send_ifindex && if_index == -1) {
-    printf("Please use -x <if index>\n");
-    close_pd();
-    return -1;
-  } 
 
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
@@ -402,21 +390,12 @@ int main(int argc, char* argv[]) {
     
     forge_udp_packet(packet_to_send.data, 1, &last_sent_tick);
   
-    use_zero_copy_tx = 0;
-  
   redo:
-    if (if_index != -1)
-      rc = pfring_send_ifindex(pdo, packet_to_send.data, packet_to_send.len, 1, if_index);
-    else if(use_zero_copy_tx)
-      /* We pre-filled the TX slots */
-      rc = pfring_send(pdo, NULL, packet_to_send.len, 1);
-    else
-      rc = pfring_send(pdo, packet_to_send.data, packet_to_send.len, 1);
+    rc = pfring_send(pdo, packet_to_send.data, packet_to_send.len, 1);
   
     if(rc == PF_RING_ERROR_INVALID_ARGUMENT) {
-      printf("Attempting to send invalid packet [len: %u][MTU: %u]%s\n",
-	     packet_to_send.len, pdo->mtu_len,
-      	     if_index != -1 ? " or using a wrong interface id" : "");
+      printf("Attempting to send invalid packet [len: %u][MTU: %u]\n",
+	     packet_to_send.len, pdo->mtu_len);
     } else if (rc < 0) {
       goto redo;
     }

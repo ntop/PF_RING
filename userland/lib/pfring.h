@@ -238,7 +238,6 @@ struct __pfring {
   char*     (*get_appl_stats_file_name)     (pfring *ring, char *path, u_int path_len);
   int       (*bind)                         (pfring *, char *);
   int       (*send)                         (pfring *, char *, u_int, u_int8_t);
-  int       (*send_ifindex)                 (pfring *, char *, u_int, u_int8_t, int);
   int       (*send_get_time)                (pfring *, char *, u_int, struct timespec *);
   u_int8_t  (*get_num_rx_channels)          (pfring *);
   int       (*get_card_settings)            (pfring *, pfring_card_settings *);
@@ -584,17 +583,6 @@ int pfring_bind(pfring *ring, char *device_name);
  * @return The number of bytes sent if success, a negative value otherwise.
  */
 int pfring_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet);
-
-/**
- * Same as pfring_send(), with the possibility to specify the outgoing interface index. 
- * @param ring
- * @param pkt
- * @param pkt_len
- * @param flush_packet
- * @param if_index     The interface index assigned to the outgoing device. 
- * @return The number of bytes sent if success, a negative value otherwise.
- */
-int pfring_send_ifindex(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet, int if_index);
 
 /**
  * Same as pfring_send(), but this function allows to send a raw packet returning the exact time (ns) it has been sent on the wire. 

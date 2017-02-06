@@ -111,7 +111,6 @@ int reforge_mac = 0, reforge_ip = 0, on_the_fly_reforging = 0;
 struct in_addr srcaddr, dstaddr;
 char mac_address[6];
 int send_len = 60;
-int if_index = -1;
 int daemon_mode = 0;
 
 #define DEFAULT_DEVICE     "eth0"
@@ -254,7 +253,6 @@ void printHelp(void) {
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
-  printf("-x <if index>   Send to the selected interface, if supported\n");
   printf("-d              Daemon mode\n");
   printf("-P <pid file>   Write pid to the specified file (daemon mode only)\n");
   printf("-v              Verbose\n");
@@ -446,7 +444,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0000000A /* 10.0.0.0 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:r:vm:p:P:S:w:x:V:z")) != -1) {
+  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:r:vm:p:P:S:w:V:z")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -484,9 +482,6 @@ int main(int argc, char* argv[]) {
     case 'l':
       send_len = atoi(optarg);
       if (send_len > MAX_PACKET_SIZE) send_len = MAX_PACKET_SIZE;
-      break;
-    case 'x':
-      if_index = atoi(optarg);
       break;
     case 'v':
       verbose = 1;
@@ -566,11 +561,6 @@ int main(int argc, char* argv[]) {
 
     printf("Using PF_RING v.%d.%d.%d\n", (version & 0xFFFF0000) >> 16,
 	   (version & 0x0000FF00) >> 8, version & 0x000000FF);
-  }
-
-  if (!pd->send && pd->send_ifindex && if_index == -1) {
-    printf("Please use -x <if index>\n");
-    return -1;
   }
 
   if(watermark > 0) {
@@ -830,19 +820,15 @@ int main(int argc, char* argv[]) {
         reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
     }
 
-    if (if_index != -1)
-      rc = pfring_send_ifindex(pd, (char *) tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */, if_index);
-    else
-      rc = pfring_send(pd, (char *) tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
+    rc = pfring_send(pd, (char *) tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
 
     if (unlikely(verbose))
       printf("[%d] pfring_send(%d) returned %d\n", i, tosend->len, rc);
 
     if (rc == PF_RING_ERROR_INVALID_ARGUMENT) {
       if (send_error_once) {
-        printf("Attempting to send invalid packet [len: %u][MTU: %u]%s\n",
-	       tosend->len, pd->mtu_len,
-      	       if_index != -1 ? " or using a wrong interface id" : "");
+        printf("Attempting to send invalid packet [len: %u][MTU: %u]\n",
+	       tosend->len, pd->mtu_len);
         send_error_once = 0;
       }
     } else if (rc < 0) {
