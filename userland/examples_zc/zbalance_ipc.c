@@ -125,10 +125,10 @@ int zmq_filtering_rule_handler(struct filtering_rule *rule) {
   } else {
     value = rule->action_accept ? PASS : DROP;
     if (rule->src_ip || rule->bidirectional)
-      if (inplace_insert(src_ip_hash, &key, epoch+rule->duration, value) < 0)
+      if (inplace_insert(src_ip_hash, &key, rule->duration ? epoch+rule->duration : 0x7FFFFFFF, value) < 0)
         rc = -1;
     if (!rule->src_ip || rule->bidirectional)
-      if (inplace_insert(dst_ip_hash, &key, epoch+rule->duration, value) < 0) 
+      if (inplace_insert(dst_ip_hash, &key, rule->duration ? epoch+rule->duration : 0x7FFFFFFF, value) < 0) 
         rc = -1;
   }
 
