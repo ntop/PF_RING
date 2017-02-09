@@ -10,4 +10,10 @@ install:
 
 script:
   - cd userland; make
- 
+
+notifications:
+  email:
+    recipients:
+      - packager@ntop.org
+    on_success: never
+    on_failure: always
