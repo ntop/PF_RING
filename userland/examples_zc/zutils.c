@@ -67,6 +67,7 @@ int bind2core(int core_id) {
 int max_packet_len(char *device) { 
   pfring *ring;
   pfring_card_settings settings;
+  int mtu;
 
   ring = pfring_open(device, 1536, PF_RING_ZC_NOT_REPROGRAM_RSS);
 
@@ -74,6 +75,11 @@ int max_packet_len(char *device) {
     return 1536;
 
   pfring_get_card_settings(ring, &settings);
+
+  mtu = pfring_get_mtu_size(ring);
+
+  if (settings.max_packet_size < mtu + 14 /* eth */)
+    settings.max_packet_size = mtu + 14 /* eth */ + 4 /* vlan */;
   
   pfring_close(ring);
 
