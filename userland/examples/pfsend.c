@@ -252,6 +252,7 @@ void printHelp(void) {
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
+  printf("-F              Force flush for each packet (to avoid bursts, expect low performance)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
   printf("-d              Daemon mode\n");
   printf("-P <pid file>   Write pid to the specified file (daemon mode only)\n");
@@ -438,13 +439,14 @@ int main(int argc, char* argv[]) {
   int reforging_idx;
   int stdin_packet_len = 0;
   u_int ip_v = 4;
+  int flush = 0;
 
   srandom(time(NULL));
 
   srcaddr.s_addr = 0x0000000A /* 10.0.0.0 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:r:vm:p:P:S:w:V:z")) != -1) {
+  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:Fr:vm:p:P:S:w:V:z")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -465,6 +467,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'f':
       pcap_in = strdup(optarg);
+      break;
+    case 'F':
+      flush = 1;
       break;
     case 'n':
       num_to_send = atoi(optarg);
@@ -804,6 +809,9 @@ int main(int argc, char* argv[]) {
     tick_start = getticks();
 #endif
 
+  if (pps < 0) /* flush for sending at the exact original pcap speed only, otherwise let pf_ring flush when needed) */
+    flush = 1;
+
   while((num_to_send == 0) 
 	|| (i < num_to_send)) {
     int rc;
@@ -820,7 +828,7 @@ int main(int argc, char* argv[]) {
         reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
     }
 
-    rc = pfring_send(pd, (char *) tosend->pkt, tosend->len, pps < 0 ? 1 : 0 /* Don't flush (it does PF_RING automatically) */);
+    rc = pfring_send(pd, (char *) tosend->pkt, tosend->len, flush);
 
     if (unlikely(verbose))
       printf("[%d] pfring_send(%d) returned %d\n", i, tosend->len, rc);
