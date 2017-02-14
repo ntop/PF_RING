@@ -62,6 +62,10 @@ unsigned long long rdtsc() {
 }
 #endif
 
+#ifndef DUPLEX_UNKNOWN
+#define DUPLEX_UNKNOWN          0xff
+#endif
+
 /* **************************************************** */
 
 #define pfring_there_is_pkt_available(ring) (ring->slots_info->tot_insert != ring->slots_info->tot_read)
