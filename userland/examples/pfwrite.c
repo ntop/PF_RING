@@ -1,5 +1,5 @@
 /*
- * (C) 2003-15 - ntop 
+ * (C) 2003-17 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -97,7 +97,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfwrite - (C) 2003-14 Deri Luca <deri@ntop.org>\n");
+  printf("pfwrite - (C) 2003-17 Deri Luca <deri@ntop.org>\n");
   printf("-h              [Print help]\n");
   printf("-i <device>     [Device name]\n");
   printf("-w <dump file>  [Dump file path]\n");

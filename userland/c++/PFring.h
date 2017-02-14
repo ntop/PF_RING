@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2007-12 - Luca Deri <deri@ntop.org>
+ * (C) 2007-17 - Luca Deri <deri@ntop.org>
  *
  *
  * This program is free software; you can redistribute it and/or modify
