@@ -184,11 +184,6 @@ start_interfaces() {
 				/sbin/ethtool -G $D rx $MAX_RX_SLOTS
 				/sbin/ethtool -G $D tx $MAX_TX_SLOTS
 			fi
-			F="$(/sbin/ethtool -i $D | grep driver | cut -f 2 -d ':' | tr -d ' ')"
-			if [ "$F" = "i40e" ]; then
-				# FIXX setting single-queue by default (RSS option is not supported)
-				/sbin/ethtool -L $D combined 1
-			fi
 
 			set_interface_mtu ${D}
 		fi
@@ -227,6 +222,11 @@ load_driver() {
 			echo "Error loading driver ${1}-${2}"
 			# last resort: try rebuilding dkms driver
 			rebuild_dkms ${1}-${2}
+			# attempt to load the driver now that it has been rebuilt
+			/sbin/modprobe ${1}_${2} ${DRV_PARAM}
+			if [ `echo $?` -eq 0 ]; then
+				DRIVER_INSTALLED=1
+			fi
 		else 
 			DRIVER_INSTALLED=1
 		fi
