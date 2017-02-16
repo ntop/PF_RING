@@ -4162,11 +4162,14 @@ static int i40e_get_rxfh_indir(struct net_device *netdev, u32 *indir)
 	int ret;
 	u16 i;
 
+#if defined(ETHTOOL_GRSSH) && !defined(HAVE_ETHTOOL_GSRSSH)
 #ifdef HAVE_RXFH_HASHFUNC
 	if (hfunc)
 		*hfunc = ETH_RSS_HASH_TOP;
 
 #endif
+#endif /* ETHTOOl_GRSSH */
+
 	if (!indir)
 		return 0;
 
@@ -4262,10 +4265,13 @@ static int i40e_set_rxfh_indir(struct net_device *netdev, const u32 *indir)
 	u8 *seed = NULL;
 	u16 i;
 
+#if defined(ETHTOOL_SRSSH) && !defined(HAVE_ETHTOOL_GSRSSH)
 #ifdef HAVE_RXFH_HASHFUNC
 	if (hfunc != ETH_RSS_HASH_NO_CHANGE && hfunc != ETH_RSS_HASH_TOP)
 		return -EOPNOTSUPP;
 #endif
+#endif /* ETHTOOl_SRSSH */
+
 	if (!indir)
 		return 0;
 

@@ -295,7 +295,11 @@ static void i40e_tx_timeout(struct net_device *netdev)
 		unsigned long trans_start;
 
 		q = netdev_get_tx_queue(netdev, i);
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
+		trans_start = q->trans_start ? : dev_trans_start(netdev);
+#else
 		trans_start = q->trans_start ? : netdev->trans_start;
+#endif
 		if (netif_xmit_stopped(q) && time_after(jiffies,
 			(trans_start + netdev->watchdog_timeo))) {
 			hung_queue = i;
@@ -3314,6 +3318,7 @@ static void i40e_fdir_filter_restore(struct i40e_vsi *vsi)
 }
 
 #ifdef HAVE_PF_RING
+
 /**
  * i40e_irq_dynamic_disable - Disable default interrupt generation settings
  * @vsi: pointer to a vsi
@@ -3526,13 +3531,19 @@ static int i40e_control_txq(struct i40e_vsi *vsi, int pf_q, bool enable)
 }
 #endif
 
+int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget);
+static void i40e_vsi_disable_irq(struct i40e_vsi *vsi);
+static int i40e_vsi_enable_irq(struct i40e_vsi *vsi);
+static void i40e_napi_disable_all(struct i40e_vsi *vsi);
+static void i40e_napi_enable_all(struct i40e_vsi *vsi);
+
 void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
 	struct i40e_ring  *rx_ring = (struct i40e_ring *) rx_data;
 	struct i40e_ring  *tx_ring = (struct i40e_ring *) tx_data;
 	struct i40e_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
 	struct i40e_pf    *adapter;
-	int i;
+	int i, n;
  
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s %s\n", __FUNCTION__, device_in_use ? "open" : "close");
@@ -3543,7 +3554,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 	if (device_in_use) { /* free all memory */
 
-		if (atomic_inc_return(&adapter->pfring_zc.usage_counter) == 1 /* first user */)
+		if ((n = atomic_inc_return(&adapter->pfring_zc.usage_counter)) == 1 /* first user */)
 			try_module_get(THIS_MODULE); /* ++ */
     
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
@@ -3553,22 +3564,31 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			if (unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
 
+			i40e_control_rxq(vsi, pf_q, false /* stop */);
+
 			/* disabling irqs, they will be enabled on-demand */
 			i40e_disable_irq(rx_ring->q_vector);
 
-			i40e_control_rxq(vsi, pf_q, false /* stop */);
-
 			/* FIXX this is causing system crashes on high traffic rates, TODO fix it as it causes some skbuff leak on every pfring_open!
-			i40e_clean_rx_ring(rx_ring); */
-
-			i40e_control_rxq(vsi, pf_q, true /* start */);
+			i40e_clean_rx_ring(rx_ring);
+			i40e_control_rxq(vsi, pf_q, true);
+			*/
 		}
+
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 			/* nothing to do besides increasing the counter */
 
 			if(unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
 		}
+
+		/* FIXX needed to disable IRQs */
+		//if (n >= vsi->num_queue_pairs) { /* last user */
+		if (n == 1) { /* first user */
+			i40e_vsi_disable_irq(xx_ring->vsi);
+			i40e_napi_disable_all(xx_ring->vsi);
+		}
+
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			struct i40e_vsi *vsi = rx_ring->vsi;
@@ -3588,7 +3608,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			writel(0, rx_ring->tail);
 			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
 			i40e_alloc_rx_buffers(rx_ring, I40E_DESC_UNUSED(rx_ring));
-    
+
 			//i40e_vsi_enable_irq(rx_ring->vsi);
 			i40e_control_rxq(vsi, pf_q, true /* start */);
 		}
@@ -3609,8 +3629,14 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			//i40e_configure_tx_ring(tx_ring);
 			rmb();
 		}
-		if (atomic_dec_return(&adapter->pfring_zc.usage_counter) == 0 /* last user */)
+		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */)
 			module_put(THIS_MODULE);  /* -- */
+
+		/* FIXX needed to disable IRQs */
+		if (n == 0) { /* last user */
+			i40e_napi_enable_all(xx_ring->vsi);
+			i40e_vsi_enable_irq(xx_ring->vsi);
+		}
 	}
 
 	if (unlikely(enable_debug))
@@ -4748,6 +4774,9 @@ static void i40e_napi_enable_all(struct i40e_vsi *vsi)
 		return;
 
 	for (q_idx = 0; q_idx < vsi->num_q_vectors; q_idx++)
+#ifdef HAVE_PF_RING
+		if (test_bit(NAPI_STATE_SCHED, &vsi->q_vectors[q_idx]->napi.state)) /* safety check */
+#endif
 		napi_enable(&vsi->q_vectors[q_idx]->napi);
 }
 
