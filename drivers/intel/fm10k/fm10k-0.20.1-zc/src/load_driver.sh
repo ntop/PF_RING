@@ -97,6 +97,7 @@ if [ "$IS_SILICOM" -eq 1 ]; then
 	# Note: 
 	# 1,2 are the external ports
 	# 3,4 are the internal interfaces
+	rdifctl clear
         rdifctl set_cfg 5
 	rdifctl set_port_mask 3 1
 	rdifctl set_port_mask 1 3
