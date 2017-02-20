@@ -102,5 +102,9 @@ if [ "$IS_SILICOM" -eq 1 ]; then
 	rdifctl set_port_mask 1 3
 	rdifctl set_port_mask 2 4
 	rdifctl set_port_mask 4 2
+	rdifctl dir port 3 redir_port 1
+	rdifctl dir port 1 redir_port 3
+	rdifctl dir port 2 redir_port 4
+	rdifctl dir port 4 redir_port 2
 fi
 
