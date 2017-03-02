@@ -2152,8 +2152,11 @@ pcap_inject_linux(pcap_t *handle, const void *buf, size_t size)
 #endif
 
 #ifdef HAVE_PF_RING
-	if (handle->ring != NULL)
+	if (handle->ring != NULL) {
+		if (!handle->ring->enabled)
+			pfring_enable_ring(handle->ring);
 		return pfring_send(handle->ring, (char*)buf, size, 1 /* FIX: set it to 1 */);
+	}
 #endif
 
 	ret = send(handle->fd, buf, size, 0);
