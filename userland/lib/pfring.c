@@ -15,6 +15,10 @@
 #include <sys/types.h>
 #include <pthread.h>
 
+#ifndef _NETINET_IF_ETHER_H
+#define _NETINET_IF_ETHER_H 1
+#endif
+
 #include "pfring.h"
 #include <net/ethernet.h>
 
