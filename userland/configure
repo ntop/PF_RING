@@ -3390,10 +3390,10 @@ fi
 if test "$IS_FREEBSD" != "1"; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if r/w locks are supported" >&5
 $as_echo_n "checking if r/w locks are supported... " >&6; }
-if test "$cross_compiling" = yes; then :
+if test "$cross_compiling" = yes -a "${target_alias:0:6}" != "x86_64"; then :
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
+as_fn_error $? "cannot run test program while cross compiling for ${target_alias} target
 See \`config.log' for more details" "$LINENO" 5; }
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext

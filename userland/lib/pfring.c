@@ -15,6 +15,10 @@
 #include <sys/types.h>
 #include <pthread.h>
 
+#ifndef _NETINET_IF_ETHER_H
+#define _NETINET_IF_ETHER_H /* fixes compilation with musl library */
+#endif
+
 #include "pfring.h"
 #include <net/ethernet.h>
 
@@ -1318,4 +1322,3 @@ void pfring_freealldevs(pfring_if_t *list) {
 }
 
 /* **************************************************** */
-
