@@ -2656,7 +2656,7 @@ static inline void set_skb_time(struct sk_buff *skb, struct pfring_pkthdr *hdr)
   hdr->ts.tv_sec = skb->tstamp.off_sec, hdr->ts.tv_usec = skb->tstamp.off_usec;
   hdr->extended_hdr.timestamp_ns = 0; /* No nsec for old kernels */
 #else /* 2.6.22 and above */
-  if(skb->tstamp.tv64 == 0)
+  if(ktime_to_ns(skb->tstamp) == 0)
     __net_timestamp(skb); /* If timestamp is missing add it */
 
   hdr->ts = ktime_to_timeval(skb->tstamp);
