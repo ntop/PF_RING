@@ -38,7 +38,7 @@ struct pcap_stat pcapStats;
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <time.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
