@@ -30,7 +30,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <sys/time.h>
 #include <time.h>
 #include <sys/socket.h>

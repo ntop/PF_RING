@@ -30,7 +30,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <errno.h>
-#include <sys/poll.h>
+#include <poll.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
