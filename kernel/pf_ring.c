@@ -4086,8 +4086,10 @@ static int buffer_ring_handler(struct net_device *dev, char *data, int len)
   skb.stamp.tv_sec = 0;
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22))
   skb.tstamp.off_sec = 0;
-#else
+#elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0))
   skb.tstamp.tv64 = 0;
+#else
+  skb.tstamp = 0;
 #endif
 
   return(skb_ring_handler(&skb, 1, 0 /* fake skb */,
