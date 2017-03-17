@@ -2779,8 +2779,8 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
         if(skb_copy_bits(skb, -displ + sizeof(struct ethhdr), 
              &ring_bucket[pfr->slot_header_len + offset + sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)], 
              (int) hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr))) < 0)
-          printk("[PF_RING] %s: vlan reinjection error [skb->len=%u][caplen=%lu]\n", __FUNCTION__,
-		 skb->len, hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)));
+          printk("[PF_RING] %s: vlan reinjection error [skb->len=%u][caplen=%u]\n", __FUNCTION__,
+		 skb->len, (unsigned int) (hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr))));
       } else {
         skb_copy_bits(skb, -displ, &ring_bucket[pfr->slot_header_len + offset], (int) hdr->caplen);
       }
@@ -3258,7 +3258,6 @@ static int reflect_packet(struct sk_buff *skb,
 
     debug_printk(2, "dev_queue_xmit(%s) returned %d\n", reflector_dev->name, ret);
 
-    /* yield(); */
     return(ret == NETDEV_TX_OK ? 0 : -ENETDOWN);
   } else
     pfr->slots_info->tot_fwd_notok++;
