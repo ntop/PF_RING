@@ -17,7 +17,7 @@ module and drivers loading. The init script acts as follows:
 3. loads the drivers whose corresponding {e1000e,igb,ixgbe,i40e,fm10k}.start file is present, 
    unloading the vanilla driver.
 2. configures hugepages if a ZC driver has been loaded, reading the configuration 
-   from /etc/pf_ring/hugepages. Each line (one per CPU) of the configuration file 
+   from /etc/pf_ring/hugepages.conf. Each line (one per CPU) of the configuration file 
    should contain:
 ```
 node=<NUMA node id> hugepagenumber=<number of pages>
