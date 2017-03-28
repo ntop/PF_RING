@@ -18,8 +18,8 @@
 #include <getopt.h>
 #include <signal.h>
 
-#define NTOPDUMP_INTERFACE "ntop-interface"
-#define NTOPDUMP_TIMELINE  "ntop-timeline"
+#define NTOPDUMP_INTERFACE "pfring-interface"
+#define NTOPDUMP_TIMELINE  "n2disk-timeline"
 #define NTOPDUMP_MAX_NBPF_LEN  8192
 #define NTOPDUMP_MAX_DATE_LEN  26
 #define NTOPDUMP_MAX_NAME_LEN  4096
@@ -76,8 +76,8 @@ typedef struct _extcap_interface {
 } extcap_interface;
 
 static extcap_interface extcap_interfaces[] = {
-  { NTOPDUMP_INTERFACE, "ntop interface capture", DLT_EN10MB, NULL, "The EN10MB Ethernet2 DLT" },
-  { NTOPDUMP_TIMELINE,  "ntop timeline capture" , DLT_EN10MB, NULL, "The EN10MB Ethernet2 DLT" }
+  { NTOPDUMP_INTERFACE, "PF_RING interface", DLT_EN10MB, NULL, "The EN10MB Ethernet2 DLT" },
+  { NTOPDUMP_TIMELINE,  "n2disk timeline" , DLT_EN10MB, NULL, "The EN10MB Ethernet2 DLT" }
 };
 static size_t extcap_interfaces_num = sizeof(extcap_interfaces) / sizeof(extcap_interface);
 
@@ -128,26 +128,29 @@ void extcap_config() {
   if(!extcap_selected_interface) return;
   if(!strncmp(extcap_selected_interface, NTOPDUMP_INTERFACE, strlen(NTOPDUMP_INTERFACE))) {
     printf("arg {number=%u}{call=--name}"
-	   "{display=The interface name}{type=string}"
-	   "{tooltip=The interface name as recognized by PF_FING (e.g., eth0 nt:0)}\n", argidx++);
+	   "{display=Interface Name}{type=string}"
+	   "{tooltip=The interface name as recognized by PF_FING (e.g. zc:eth1)}\n", argidx++);
   } else if (!strncmp(extcap_selected_interface, NTOPDUMP_TIMELINE, strlen(NTOPDUMP_TIMELINE))) {
     time_t timer;
-    char time_buffer[NTOPDUMP_MAX_DATE_LEN];
+    char time_buffer_start[NTOPDUMP_MAX_DATE_LEN], time_buffer_end[NTOPDUMP_MAX_DATE_LEN];
     struct tm* tm_info;
 
     time(&timer);
     tm_info = localtime(&timer);
+    strftime(time_buffer_end, NTOPDUMP_MAX_DATE_LEN, "%Y-%m-%d %H:%M:%S", tm_info);
+    timer -= 5 * 60;
+    tm_info = localtime(&timer);
+    strftime(time_buffer_start, NTOPDUMP_MAX_DATE_LEN, "%Y-%m-%d %H:%M:%S", tm_info);
 
-    strftime(time_buffer, NTOPDUMP_MAX_DATE_LEN, "%Y-%m-%d %H:%M:%S", tm_info);
     printf("arg {number=%u}{call=--name}"
-	   "{display=The n2disk timeline path}{type=string}"
+	   "{display=n2disk timeline path}{type=string}"
 	   "{tooltip=The n2disk timeline path (e.g., /storage/n2disk/eth1/timeline)}\n", argidx++);
     printf("arg {number=%u}{call=--start}"
-	   "{display=The start capture date and time}{type=string}{default=<1 hour ago>}"
-	   "{tooltip=The start capture date and time (e.g., %s)}\n", argidx++, time_buffer);
+	   "{display=Start date and time}{type=string}{default=%s}"
+	   "{tooltip=The start of the extraction interval (e.g., %s)}\n", argidx++, time_buffer_start, time_buffer_start);
     printf("arg {number=%u}{call=--end}"
-	   "{display=The end capture date and time}{type=string}{default=<now>}"
-	   "{tooltip=The end capture date and time (e.g., %s)}\n", argidx++, time_buffer);
+	   "{display=End date and time}{type=string}{default=%s}"
+	   "{tooltip=The end of the extraction interval (e.g., %s)}\n", argidx++, time_buffer_end, time_buffer_end);
   }
 }
 
