@@ -364,12 +364,11 @@ void printHelp(void) {
 
 /* *************************************** */
 
-int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
-  long num_out_queues = (long) user;
 #ifdef HAVE_ZMQ
+static inline int packet_filter(u_char *pkt) {
   inplace_key_t src_key, dst_key;
   int action = default_action;
-  if (extract_keys(pfring_zc_pkt_buff_data(pkt_handle, in_queue), &src_key, &dst_key)) {
+  if (extract_keys(pkt, &src_key, &dst_key)) {
 #if 0 /* debug */
     char sbuf[64], dbuf[64];
     trace(TRACE_DEBUG, "Processing packet from %s to %s\n",
@@ -383,7 +382,17 @@ int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
       if (rule_action != NULL_VALUE && rule_action != action) action = rule_action;
     }
   }
-  if (action == DROP) return -1;
+  return (action != DROP);
+}
+#endif
+
+/* *************************************** */
+
+int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  long num_out_queues = (long) user;
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return -1;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   return pfring_zc_builtin_ip_hash(pkt_handle, in_queue) % num_out_queues;
@@ -393,6 +402,10 @@ int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 int32_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return -1;
+#endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   return pfring_zc_builtin_gtp_hash(pkt_handle, in_queue) % num_out_queues;
 }
@@ -403,6 +416,10 @@ static int rr = -1;
 
 int32_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return -1;
+#endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   if (++rr == num_out_queues) rr = 0;
   return rr;
@@ -421,6 +438,10 @@ int32_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
 /* *************************************** */
 
 int32_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return 0x0;
+#endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   return 0xffffffff; 
 }
@@ -429,6 +450,10 @@ int32_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 int32_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return 0x0;
+#endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   if (++rr == (num_out_queues - 1)) rr = 0;
   return (1 << 0 /* full traffic on 1st slave */ ) | (1 << (1 + rr) /* round-robin on other slaves */ );
@@ -438,6 +463,11 @@ int32_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue 
 
 int32_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   int32_t i, offset = 0, app_instance, consumers_mask = 0, hash;
+
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return 0x0;
+#endif
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
@@ -456,6 +486,11 @@ int32_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_
 
 int32_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   int32_t i, offset = 0, app_instance, consumers_mask = 0, hash;
+
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return 0x0;
+#endif
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
