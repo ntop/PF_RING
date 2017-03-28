@@ -1070,6 +1070,10 @@ static void __read_device_bus_id(char *device_name, pfring_if_t *dev) {
 pfring_if_t *pfring_mod_findalldevs() {
   pfring_if_t *list = NULL, *last = NULL, *tmp;
   struct ifaddrs *ifap, *ifa;
+  FILE *proc_net_pfr;
+  const char *str_mode = "Polling Mode:";
+  char path[256], name[256];
+  int is_zc;
 
   if (getifaddrs(&ifap) != 0)
     return NULL;
@@ -1087,17 +1091,39 @@ pfring_if_t *pfring_mod_findalldevs() {
       tmp = (pfring_if_t *) calloc(1, sizeof(pfring_if_t));
       if (tmp == NULL) continue;
 
-      tmp->name = strdup(ifa->ifa_name);
+      is_zc = 0;
+      snprintf(path, sizeof(path), "/proc/net/pf_ring/dev/%s/info", ifa->ifa_name);
+      proc_net_pfr = fopen(path, "r");
+      if (proc_net_pfr != NULL) {
+        while(fgets(path, sizeof(path), proc_net_pfr) != NULL) {
+          char *p = &path[0];
+          if (!strncmp(p, str_mode, strlen(str_mode))) {
+            p += strlen(str_mode);
+            is_zc = (strstr(p, "ZC") != NULL);
+            break;
+	  }
+	}
+	fclose(proc_net_pfr);
+      }
+
+      if (!is_zc) {
+        tmp->name = strdup(ifa->ifa_name);
+        tmp->module = strdup("pf_ring");
+      } else {
+        snprintf(name, sizeof(name), "zc:%s", ifa->ifa_name);
+        tmp->name = strdup(name);
+        tmp->module = strdup("pf_ring-zc");
+      }
+
       tmp->system_name = strdup(ifa->ifa_name);
-      tmp->module = strdup("pf_ring");
       tmp->status = !!(ifa->ifa_flags & IFF_UP);
-      __read_device_bus_id(tmp->name, tmp);
+      __read_device_bus_id(ifa->ifa_name, tmp);
 
       if (last == NULL) { last = tmp; list = tmp; }
       else { last->next = tmp; last = last->next; }
     }
 
-    if (ifa->ifa_addr->sa_family == AF_PACKET)
+    if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_PACKET)
       memcpy(tmp->mac, ((char *) ifa->ifa_addr)+12, sizeof(tmp->mac));
   }
 
