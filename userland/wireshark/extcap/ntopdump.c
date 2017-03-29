@@ -42,7 +42,9 @@ enum {
   NTOPDUMP_OPT_NAME,
   NTOPDUMP_OPT_CUSTOM_NAME,
   NTOPDUMP_OPT_START_TIME,
-  NTOPDUMP_OPT_END_TIME
+  NTOPDUMP_OPT_END_TIME,
+  NTOPDUMP_OPT_START_TIME_EPOCH,
+  NTOPDUMP_OPT_END_TIME_EPOCH
 };
 
 static struct option longopts[] = {
@@ -64,6 +66,8 @@ static struct option longopts[] = {
   { "custom-name", required_argument, NULL, NTOPDUMP_OPT_CUSTOM_NAME},
   { "start", required_argument, NULL, NTOPDUMP_OPT_START_TIME},
   { "end", required_argument, NULL, NTOPDUMP_OPT_END_TIME},
+  { "start-epoch", required_argument, NULL, NTOPDUMP_OPT_START_TIME_EPOCH},
+  { "end-epoch", required_argument, NULL, NTOPDUMP_OPT_END_TIME_EPOCH},
 
   {0, 0, 0, 0}
 };
@@ -148,7 +152,7 @@ float wireshark_version() {
   float v = 0;
 
   if (exec_head("/usr/bin/wireshark -v", line, sizeof(line)) != 0 &&
-      exec_head("/usr/local/bin/wireshark-gtk -v", line, sizeof(line)) != 0)
+      exec_head("/usr/local/bin/wireshark -v", line, sizeof(line)) != 0)
       return 0;
 
   version = strchr(line, ' ');
@@ -204,17 +208,15 @@ void extcap_config() {
     printf("arg {number=%u}{call=--name}"
 	   "{display=n2disk timeline path}{type=string}"
 	   "{tooltip=The n2disk timeline path (e.g., /storage/n2disk/eth1/timeline)}\n", argidx++);
-#if 0
+
     if (wireshark_version() > 2.2) {
-      printf("arg {number=%u}{call=--start}"
+      printf("arg {number=%u}{call=--start-epoch}"
 	     "{display=Start date and time}{type=timestamp}"
 	     "{tooltip=The start of the extraction interval}\n", argidx++);
-      printf("arg {number=%u}{call=--end}"
+      printf("arg {number=%u}{call=--end-epoch}"
 	     "{display=End date and time}{type=timestamp}"
 	     "{tooltip=The end of the extraction interval}\n", argidx++);
-    } else 
-#endif
-    {
+    } else {
       printf("arg {number=%u}{call=--start}"
 	     "{display=Start date and time}{type=string}{default=%s}"
 	     "{tooltip=The start of the extraction interval (e.g., %s)}\n", argidx++, time_buffer_start, time_buffer_start);
@@ -231,7 +233,6 @@ void extcap_capture() {
   struct pfring_pkthdr hdr;
   char *nbpf;
   int rc;
-
 
   if ((nbpf = (char*)calloc(NTOPDUMP_MAX_NBPF_LEN + 3 * NTOPDUMP_MAX_DATE_LEN, sizeof(char))) == NULL) {
     fprintf(stderr, "Unable to allocate memory for the nbpf filter");
@@ -301,6 +302,9 @@ int extcap_print_help() {
 
 int main(int argc, char *argv[]) {
   int option_idx = 0, result;
+  time_t epoch;
+  char date_str[NTOPDUMP_MAX_DATE_LEN];
+  struct tm* tm_info;
 
   if (argc == 1) {
     extcap_print_help();
@@ -351,10 +355,26 @@ int main(int argc, char *argv[]) {
       ntopdump_name = strndup(optarg, NTOPDUMP_MAX_NAME_LEN);
       break;
     case NTOPDUMP_OPT_START_TIME:
-      ntopdump_start = strndup(optarg, NTOPDUMP_MAX_DATE_LEN);
+      if (ntopdump_start == NULL)
+        ntopdump_start = strndup(optarg, NTOPDUMP_MAX_DATE_LEN);
       break;
     case NTOPDUMP_OPT_END_TIME:
-      ntopdump_end = strndup(optarg, NTOPDUMP_MAX_DATE_LEN);
+      if (ntopdump_end == NULL)
+        ntopdump_end = strndup(optarg, NTOPDUMP_MAX_DATE_LEN);
+      break;
+    case NTOPDUMP_OPT_START_TIME_EPOCH:
+      if (ntopdump_start != NULL) free(ntopdump_start);
+      epoch = atoi(optarg);
+      tm_info = localtime(&epoch);
+      strftime(date_str, NTOPDUMP_MAX_DATE_LEN, "%Y-%m-%d %H:%M:%S", tm_info);
+      ntopdump_start = strndup(date_str, NTOPDUMP_MAX_DATE_LEN);
+      break;
+    case NTOPDUMP_OPT_END_TIME_EPOCH:
+      if (ntopdump_end != NULL) free(ntopdump_end);
+      epoch = atoi(optarg);
+      tm_info = localtime(&epoch);
+      strftime(date_str, NTOPDUMP_MAX_DATE_LEN, "%Y-%m-%d %H:%M:%S", tm_info);
+      ntopdump_end = strndup(date_str, NTOPDUMP_MAX_DATE_LEN);
       break;
     }
   }
