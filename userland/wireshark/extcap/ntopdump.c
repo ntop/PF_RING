@@ -8,7 +8,7 @@
  * the Free Software Foundation; either version 2.1 of the License, or
  * (at your option) any later version.
  *
-*/
+ */
 
 #include "pfring.h"
 #include <sys/types.h>
@@ -123,6 +123,36 @@ void extcap_dlts() {
   }
 }
 
+float wireshark_version() {
+  char *version, *rev;
+  float v = 0;
+  FILE *fp;
+  char line[1035];
+
+  fp = popen("/usr/bin/wireshark -v", "r");
+  if (fp == NULL)
+    return 0;
+
+  if (fgets(line, sizeof(line)-1, fp) == NULL)
+    return 0;
+
+  version = strchr(line, ' ');
+  if (version == NULL) goto close;
+  version++;
+  rev = strchr(version, '.');
+  if (rev == NULL) goto close;
+  rev++;
+  rev = strchr(rev, '.');
+  if (rev == NULL) goto close;
+  rev = '\0';
+
+  sscanf(version, "%f", &v);
+
+close:
+  pclose(fp);
+  return v;
+}
+
 void extcap_config() {
   u_int argidx = 0;
 
@@ -158,12 +188,24 @@ void extcap_config() {
     printf("arg {number=%u}{call=--name}"
 	   "{display=n2disk timeline path}{type=string}"
 	   "{tooltip=The n2disk timeline path (e.g., /storage/n2disk/eth1/timeline)}\n", argidx++);
-    printf("arg {number=%u}{call=--start}"
-	   "{display=Start date and time}{type=string}{default=%s}"
-	   "{tooltip=The start of the extraction interval (e.g., %s)}\n", argidx++, time_buffer_start, time_buffer_start);
-    printf("arg {number=%u}{call=--end}"
-	   "{display=End date and time}{type=string}{default=%s}"
-	   "{tooltip=The end of the extraction interval (e.g., %s)}\n", argidx++, time_buffer_end, time_buffer_end);
+#if 0
+    if (wireshark_version() > 2.2) {
+      printf("arg {number=%u}{call=--start}"
+	     "{display=Start date and time}{type=timestamp}"
+	     "{tooltip=The start of the extraction interval}\n", argidx++);
+      printf("arg {number=%u}{call=--end}"
+	     "{display=End date and time}{type=timestamp}"
+	     "{tooltip=The end of the extraction interval}\n", argidx++);
+    } else 
+#endif
+    {
+      printf("arg {number=%u}{call=--start}"
+	     "{display=Start date and time}{type=string}{default=%s}"
+	     "{tooltip=The start of the extraction interval (e.g., %s)}\n", argidx++, time_buffer_start, time_buffer_start);
+      printf("arg {number=%u}{call=--end}"
+	     "{display=End date and time}{type=string}{default=%s}"
+	     "{tooltip=The end of the extraction interval (e.g., %s)}\n", argidx++, time_buffer_end, time_buffer_end);
+    }
   }
 }
 
