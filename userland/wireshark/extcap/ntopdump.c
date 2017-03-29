@@ -125,11 +125,24 @@ void extcap_dlts() {
 
 void extcap_config() {
   u_int argidx = 0;
+
   if(!extcap_selected_interface) return;
+
   if(!strncmp(extcap_selected_interface, NTOPDUMP_INTERFACE, strlen(NTOPDUMP_INTERFACE))) {
+    pfring_if_t *dev;
+    u_int nameidx;
+
+    nameidx = argidx;
     printf("arg {number=%u}{call=--name}"
-	   "{display=Interface Name}{type=string}"
+	   "{display=Interface Name}{type=radio}"
 	   "{tooltip=The interface name as recognized by PF_FING (e.g. zc:eth1)}\n", argidx++);
+
+    dev = pfring_findalldevs();
+    while (dev != NULL) {
+      printf("value {arg=%u}{value=%s}{display=%s}\n", nameidx, dev->name, dev->name);
+      dev = dev->next;
+    }
+
   } else if (!strncmp(extcap_selected_interface, NTOPDUMP_TIMELINE, strlen(NTOPDUMP_TIMELINE))) {
     time_t timer;
     char time_buffer_start[NTOPDUMP_MAX_DATE_LEN], time_buffer_end[NTOPDUMP_MAX_DATE_LEN];
