@@ -40,6 +40,7 @@ enum {
   NTOPDUMP_OPT_VERSION,
   NTOPDUMP_OPT_HELP,
   NTOPDUMP_OPT_NAME,
+  NTOPDUMP_OPT_CUSTOM_NAME,
   NTOPDUMP_OPT_START_TIME,
   NTOPDUMP_OPT_END_TIME
 };
@@ -58,10 +59,11 @@ static struct option longopts[] = {
 
   /* custom extcap options */
   { "version", no_argument, NULL, NTOPDUMP_OPT_VERSION},
-  { "help",    no_argument, NULL, NTOPDUMP_OPT_VERSION},
-  { "name",    required_argument, NULL, NTOPDUMP_OPT_NAME},
-  { "start",   required_argument, NULL, NTOPDUMP_OPT_START_TIME},
-  { "end",     required_argument, NULL, NTOPDUMP_OPT_END_TIME},
+  { "help", no_argument, NULL, NTOPDUMP_OPT_VERSION},
+  { "name", required_argument, NULL, NTOPDUMP_OPT_NAME},
+  { "custom-name", required_argument, NULL, NTOPDUMP_OPT_CUSTOM_NAME},
+  { "start", required_argument, NULL, NTOPDUMP_OPT_START_TIME},
+  { "end", required_argument, NULL, NTOPDUMP_OPT_END_TIME},
 
   {0, 0, 0, 0}
 };
@@ -123,33 +125,44 @@ void extcap_dlts() {
   }
 }
 
+int exec_head(const char *bin, char *line, size_t line_len) {
+  FILE *fp;
+
+  fp = popen(bin, "r");
+
+  if (fp == NULL)
+    return -1;
+
+  if (fgets(line, line_len-1, fp) == NULL) {
+    pclose(fp);
+    return -1;
+  }
+
+  pclose(fp);
+  return 0;
+}
+
 float wireshark_version() {
+  char line[1035];
   char *version, *rev;
   float v = 0;
-  FILE *fp;
-  char line[1035];
 
-  fp = popen("/usr/bin/wireshark -v", "r");
-  if (fp == NULL)
-    return 0;
-
-  if (fgets(line, sizeof(line)-1, fp) == NULL)
-    return 0;
+  if (exec_head("/usr/bin/wireshark -v", line, sizeof(line)) != 0 &&
+      exec_head("/usr/local/bin/wireshark-gtk -v", line, sizeof(line)) != 0)
+      return 0;
 
   version = strchr(line, ' ');
-  if (version == NULL) goto close;
+  if (version == NULL) return 0;
   version++;
   rev = strchr(version, '.');
-  if (rev == NULL) goto close;
+  if (rev == NULL) return 0;
   rev++;
   rev = strchr(rev, '.');
-  if (rev == NULL) goto close;
+  if (rev == NULL) return 0;;
   rev = '\0';
 
   sscanf(version, "%f", &v);
 
-close:
-  pclose(fp);
   return v;
 }
 
@@ -165,7 +178,10 @@ void extcap_config() {
     nameidx = argidx;
     printf("arg {number=%u}{call=--name}"
 	   "{display=Interface Name}{type=radio}"
-	   "{tooltip=The interface name as recognized by PF_FING (e.g. zc:eth1)}\n", argidx++);
+	   "{tooltip=The interface name}\n", argidx++);
+    printf("arg {number=%u}{call=--custom-name}"
+	   "{display=Custom Interface Name}{type=string}"
+	   "{tooltip=A custom interface name recognized by PF_FING (e.g. zc:99@0)}\n", argidx++);
 
     dev = pfring_findalldevs();
     while (dev != NULL) {
@@ -293,6 +309,7 @@ int main(int argc, char *argv[]) {
 
   u_int defer_dlts = 0, defer_config = 0, defer_capture = 0;
   while ((result = getopt_long(argc, argv, ":", longopts, &option_idx)) != -1) {
+    //fprintf(stderr, "OPT: '--%s' VAL: '%s' \n", longopts[result].name, optarg != NULL ? optarg : "");
     switch (result) {
     /* mandatory extcap options */
     case EXTCAP_OPT_DEBUG:
@@ -326,6 +343,11 @@ int main(int argc, char *argv[]) {
 
     /* custom ntopdump options */
     case NTOPDUMP_OPT_NAME:
+      if (ntopdump_name == NULL)
+        ntopdump_name = strndup(optarg, NTOPDUMP_MAX_NAME_LEN);
+      break;
+    case NTOPDUMP_OPT_CUSTOM_NAME:
+      if (ntopdump_name != NULL) free(ntopdump_name);
       ntopdump_name = strndup(optarg, NTOPDUMP_MAX_NAME_LEN);
       break;
     case NTOPDUMP_OPT_START_TIME:

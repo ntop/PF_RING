@@ -15,7 +15,8 @@ make
 ``` 
 
 and copy the module to the extcap path when Wireshark will look for extcap plugins,
-in this example under /usr/lib/x86_64-linux-gnu/wireshark/extcap/
+in this example under /usr/lib/x86_64-linux-gnu/wireshark/extcap/ (if you install
+from sources it will probably be /usr/local/lib/wireshark/extcap/)
 
 ``` 
 cp ntopdump /usr/lib/x86_64-linux-gnu/wireshark/extcap/
