@@ -42,7 +42,7 @@ CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_BPF@ @HAVE_REDIS@ @HAVE_P
 #
 # User and System libraries
 #
-LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_config --libs` `../libpcap/pcap-config --libs --static` -lpthread @SYSLIBS@ @REDIS_LIB@ -lrt
+LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_config --libs` `../libpcap/pcap-config --additional-libs --static` -lpthread @SYSLIBS@ @REDIS_LIB@ -lrt
 
 # How to make an object file
 %.o: %.c pfutils.c
