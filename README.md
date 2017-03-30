@@ -16,7 +16,7 @@ Basically everyone who has to handle many packets per second. The term ‘many�
 ### Details
 For more information about PF_RING™, please visit [http://ntop.org](http://www.ntop.org/products/packet-capture/pf_ring/)
 
-If you want to know about PF_RING™ internals or for the User’s Manual visit the ntop.org  [Documentation](http://www.ntop.org/support/documentation/documentation/) section.
+If you want to know about PF_RING™ internals or for the User’s Manual visit the [Wiki] (https://github.com/ntop/PF_RING/wiki) or the ntop.org [Documentation](http://www.ntop.org/support/documentation/documentation/) section.
 
 ## License
 PF_RING™ kernel module and drivers are distributed under the GNU GPLv2 license, LGPLv2.1 for the user-space PF_RING library, and are available in source code format.
