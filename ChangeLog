@@ -1,5 +1,78 @@
 
 ---------------------------------------                                                                                                                                                                             
+2017-04-03 PF_RING 6.6
+
+* PF_RING Library
+ - New pfring_findalldevs/pfring_freealldevs API for listing all interfaces supported by pf_ring
+ - New timeline module based on libnpcap for seamlessly extracting traffic from a n2disk dumpset using the pf_ring API
+ - Dynamic capture modules loading with dlopen support
+ - Improved pfring_set_bpf_filter to set hw rules when supported by the network card thanks to the nBPF engine 
+
+* ZC Library
+ - New pfring_zc_set_bpf_filter/pfring_zc_remove_bpf_filter API for setting BPF filters to device queues
+ - Fixed pfring_zc_queue_is_full for device queues
+ - Flushing SPSC queues when a consumer attaches (RX only)
+
+* PF_RING-aware Libpcap/Tcpdump
+ - Support for extracting traffix from a n2disk dumpset using libpcap
+ - tcpdump upgrade to v.4.9.0
+
+* PF_RING kernel module
+ - Support for latest ubuntu and centos stable kernels
+ - Support for SCTP and ICMP packet parsing
+ - Packet hash improvements
+ - Added tunneled IP version to packet metadata
+ - Added IP version to sw filters
+ - New kernel cluster hash types for tunneled traffic
+ - QinQ VLAN parsing
+ - Removed deprecated kernel plugins support
+ - Promisc fix in case of multiple devices in a single socket
+
+* Drivers
+ - Support for latest ubuntu and centos stable kernels
+ - FPGA modules/libraries are now loaded at runtime using dlopen
+ - RSS support on Intel i211
+ - Jumbo frames support on i40e
+ - i40e tx optimisations
+ - i40e interrupts fixes in case of RSS
+ - Fiberblaze capture module with chunk mode support
+ - Exablaze capture module 
+ - Accolade improvements
+ - Endace DAG update and support for streams
+ - Myricom ports aggregation fixes, new syntax myri:<port>,<port>
+
+* nBPF
+ - New nBPF filtering engine supporting an extended subset of the BPF syntax (tunneled traffic and l7 protocols are supproted)
+ - nBPF support for hw filtering on Fiberblaze cards
+ - nBPF support for hw filtering on Intel FM10K cards (Silicom PE3100G2DQIR)
+ - nBPF support for hw filtering on Exablaze cards
+ - nBPF support for hw filtering on Napatech cards and NTPL generation
+ - Support for "start <time> and end <time> and <bpf>" when extracting from a n2disk timeline
+ - Support for vlan [id], mpls [label], gtp
+
+* Examples
+ - pfcount:
+   - ability to list interfaces with -L (-v 1 for more info)
+   - ability to dump traffic on PCAP file with -o
+ - psend:
+   - option to force flush per packet (-F)
+   - options to specify src/dst IP for packet forging (-S/-D)
+   - option to forge packets on the fly instead of at preprocessing time (-O)
+   - option to randomize generated ips sequence (-z)
+   - ability to generate IPv6 traffic (-V 6)
+   - ability to generate mixed v4 and v6 traffic (-V 0)
+   - TCP/UDP checksum when reforging
+ - zbalance_ipc
+   - option to use hw aggregation when supported by the card (-w)
+   - IP-based filtering with ZMQ support for rules injection
+
+* Wireshark
+ - New extcap module 'ntopdump' for Wireshark 2.x
+
+* Misc
+ - Improved systemd support (Ubuntu 16)
+
+---------------------------------------                                                                                                                                                                             
 2016-06-07 PF_RING 6.4
 
 * PF_RING Library
