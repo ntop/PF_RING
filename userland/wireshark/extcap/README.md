@@ -4,9 +4,9 @@ The extcap interface in Wireshark is a plugin-based mechanism to allow external
 executables to be used as traffic source in case the capture interface is not a 
 standard network interface directly recognised by Wireshark.
 
-This folder provides an extcap module, ntopdump, that can be used to open PF_RING
-interfaces (those that are not listed in ifconfig) or to extract traffic from a
-n2disk dumpset.
+The ntopdump extcap module under PF_RING/userland/wireshark/extcap can be used 
+to open PF_RING interfaces (those that are not listed in ifconfig) or to extract 
+traffic from a n2disk dumpset in Wireshark.
 
 In order to get started with the ntopdump module, you need to compile the module:
 
