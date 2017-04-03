@@ -97,10 +97,19 @@ nbpf_ip_addr;
 #define NBPF_Q_VLAN		8
 #define NBPF_Q_MPLS		9
 #define NBPF_Q_L7PROTO		10
+#define NBPF_Q_PROTO_REL	11
 
 /* Common qualifiers */
 #define NBPF_Q_DEFAULT		0
 #define NBPF_Q_UNDEF		255
+
+/* Rel Op */
+#define NBPF_R_EQ		0 // ==
+#define NBPF_R_NE		1 // !=
+#define NBPF_R_LT		2 // <
+#define NBPF_R_LE		4 // <=
+#define NBPF_R_GT		3 // >
+#define NBPF_R_GE		5 // >=
 
 /* Node types */
 #define N_EMPTY			0
@@ -118,13 +127,22 @@ PACKED_ON typedef struct {
 } PACKED_OFF
 nbpf_qualifiers_t;
 
+PACKED_ON typedef struct {
+  int protocol;
+  u_int16_t offset;
+  u_int8_t mask;
+} PACKED_OFF
+nbpf_arth_t;
+
 struct nbpf_node;
 
 PACKED_ON typedef struct nbpf_node {
   int type;
   int level;
   nbpf_qualifiers_t qualifiers;
+
   u_int8_t not_rule;
+
   u_int8_t vlan_id_defined, mpls_label_defined;
   u_int8_t __padding;
   u_int16_t vlan_id;
@@ -135,6 +153,13 @@ PACKED_ON typedef struct nbpf_node {
   u_int16_t port_from, port_to;
   u_int16_t protocol;
   u_int16_t l7protocol;
+
+  struct { /* e.g. udp[10] & 0x0f == 5 */
+    u_int16_t offset;
+    u_int8_t mask;
+    u_int8_t relop;
+    u_int8_t value;
+  } byte_match;
 
   struct nbpf_node *l;
   struct nbpf_node *r;

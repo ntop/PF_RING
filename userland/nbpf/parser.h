@@ -36,12 +36,14 @@ nbpf_node_t *nbpf_create_host_node(const char *s, nbpf_qualifiers_t q);
 nbpf_node_t *nbpf_create_portrange_node(const char *, nbpf_qualifiers_t);
 nbpf_node_t *nbpf_create_net_node(const char *, const char *, int, nbpf_qualifiers_t);
 nbpf_node_t *nbpf_create_net6_node(const char *, int, nbpf_qualifiers_t);
-nbpf_node_t *nbpf_create_proto_node(int);
+nbpf_node_t *nbpf_create_protocol_node(int);
 nbpf_node_t *nbpf_create_vlan_node(int);
 nbpf_node_t *nbpf_create_mpls_node(int);
 nbpf_node_t *nbpf_create_gtp_node();
 nbpf_node_t *nbpf_create_l7_node(u_int32_t, const char *);
 void nbpf_create_not(nbpf_node_t *);
+
+nbpf_node_t *nbpf_create_relation_node(int relation, nbpf_arth_t l, int r);
 
 void nbpf_lex_init(const char *);
 void nbpf_lex_cleanup(void);

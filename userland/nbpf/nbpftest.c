@@ -29,15 +29,11 @@
 
 static char *dir_to_string(int dirq) {
   switch(dirq) {
-    case NBPF_Q_SRC:
-      return "Src"; 
-    case NBPF_Q_DST:
-      return "Dst";
-    case NBPF_Q_AND: 
-      return "SrcAndDst";
+    case NBPF_Q_SRC: return "Src"; 
+    case NBPF_Q_DST: return "Dst";
+    case NBPF_Q_AND: return "SrcAndDst";
     case NBPF_Q_OR: 
-    default:
-      return "SrcOrDst";
+    default:         return "SrcOrDst";
   }
 }
 
@@ -47,22 +43,15 @@ static char __addr[8];
 
 static char *addr_to_string(int addrq) {
   switch(addrq) {
-    case NBPF_Q_NET:
-      return "Net";
-    case NBPF_Q_PORT: 
-      return "Port";
-    case NBPF_Q_PROTO: 
-      return "Proto";
-    case NBPF_Q_PORTRANGE: 
-      return "PortRange";
-    case NBPF_Q_VLAN: 
-      return "VLAN";
-    case NBPF_Q_MPLS: 
-      return "MPLS";
-    case NBPF_Q_L7PROTO: 
-      return "L7Proto";
-    case NBPF_Q_HOST:
-      return "Host";
+    case NBPF_Q_NET:       return "Net";
+    case NBPF_Q_PORT:      return "Port";
+    case NBPF_Q_PROTO:     return "Proto";
+    case NBPF_Q_PROTO_REL: return "ProtoRelByteMatch";
+    case NBPF_Q_PORTRANGE: return "PortRange";
+    case NBPF_Q_VLAN:      return "VLAN";
+    case NBPF_Q_MPLS:      return "MPLS";
+    case NBPF_Q_L7PROTO:   return "L7Proto";
+    case NBPF_Q_HOST:      return "Host";
     default:
       snprintf(__addr, sizeof(__addr), "(%d)", addrq);
       return __addr;
@@ -75,23 +64,30 @@ static char __proto[8];
 
 static char *proto_to_string(int protoq) {
   switch(protoq) {
-    case NBPF_Q_LINK:
-      return "Eth";
-    case NBPF_Q_IP:
-      return "IP";
-    case NBPF_Q_SCTP:
-      return "SCTP";
-    case NBPF_Q_TCP:
-      return "TCP";
-    case NBPF_Q_UDP:
-      return "UDP";
-    case NBPF_Q_IPV6:
-      return "IP6";
-    case NBPF_Q_GTP:
-      return "GTP";
+    case NBPF_Q_LINK: return "Eth";
+    case NBPF_Q_IP:   return "IP";
+    case NBPF_Q_SCTP: return "SCTP";
+    case NBPF_Q_TCP:  return "TCP";
+    case NBPF_Q_UDP:  return "UDP";
+    case NBPF_Q_IPV6: return "IP6";
+    case NBPF_Q_GTP:  return "GTP";
     default:
       snprintf(__proto, sizeof(__proto), "%d", protoq);
       return __proto;
+  }
+}
+
+/* ****************************************** */
+
+static char *relop_to_string(int relop) {
+  switch(relop) {
+    case NBPF_R_EQ: return "==";
+    case NBPF_R_NE: return "!=";
+    case NBPF_R_LT: return  "<";
+    case NBPF_R_LE: return "<=";
+    case NBPF_R_GT: return  ">";
+    case NBPF_R_GE: return ">=";
+    default:        return  "?";
   }
 }
 
@@ -166,6 +162,13 @@ static void dump_tree(nbpf_node_t *n, int level) {
 
       } else if(n->qualifiers.address == NBPF_Q_L7PROTO) {
         printf(" L7Proto:%d", n->l7protocol);
+
+      } else if(n->protocol) {
+        printf(" L4Proto:%d", n->protocol);
+
+        if(n->qualifiers.address == NBPF_Q_PROTO_REL)
+          printf(" %u[%u] & %u %s %u", n->protocol,  n->byte_match.offset, 
+            n->byte_match.mask, relop_to_string(n->byte_match.relop), n->byte_match.value);
       }
 
       break;

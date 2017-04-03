@@ -17,6 +17,8 @@
 
 #define QSET(q, h, p, d, a) (q).header = (h), (q).protocol = (p), (q).direction = (d), (q).address = (a)
 
+#define ARTHSET(a, p, o, m) (a).protocol = (p), (a).offset = (o), (a).mask = (m)
+
 static nbpf_qualifiers_t qerr = { NBPF_Q_UNDEF, NBPF_Q_UNDEF, NBPF_Q_UNDEF };
 
 static void yyerror(const char *msg) {
@@ -29,17 +31,19 @@ static void yyerror(const char *msg) {
   int i; /* NUM, net */
   u_char *e; /* EIX (mac) */
   char *s; /* HID (ip, subnetv6), HID6 (ipv6, subnetv6), ID (portrange, l7proto) */
+  nbpf_arth_t a;
   struct {
     nbpf_qualifiers_t q;
     nbpf_node_t *n;
   } block;
 }
 
-%type	<block>	 expr id nid pid term rterm qid
-%type	<block>	 head
-%type	<i>	 hqual pqual dqual aqual
-%type	<i>	 pname pnum
-%type	<block>	 and or paren not null prog
+%type	<block>	expr id nid pid term rterm qid
+%type	<block>	head
+%type	<i>	hqual pqual dqual aqual
+%type   <a>	narth
+%type	<i>	pname pnum relop irelop
+%type	<block>	and or paren not null prog
 %type	<block> other
 
 %token OUTER INNER
@@ -128,7 +132,9 @@ rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
 	| L7PROTO ID		{ $$.n = nbpf_create_l7_node(0, (char *)$2); }
 	| L7PROTO pnum		{ $$.n = nbpf_create_l7_node($2, NULL); }
 	| paren expr ')'	{ $$.n = $2.n; $$.q = $1.q; /* TODO check this */ }
-	| pname			{ $$.n = nbpf_create_proto_node($1); $$.q = qerr; }
+	| pname			{ $$.n = nbpf_create_protocol_node($1); $$.q = qerr; }
+	| narth relop pnum	{ $$.n = nbpf_create_relation_node($2, $1, $3); $$.q = qerr; }
+	| narth irelop pnum	{ $$.n = nbpf_create_relation_node($2, $1, $3); $$.q = qerr; }
 	| other			{ $$.n = $1.n; $$.q = qerr; }
 	;
 /* header level qualifiers */
@@ -166,6 +172,17 @@ other:	  VLAN pnum		{ $$.n = nbpf_create_vlan_node($2); }
 	| MPLS pnum		{ $$.n = nbpf_create_mpls_node($2); }
 	| MPLS			{ $$.n = nbpf_create_mpls_node(-1); }
 	| GTP			{ $$.n = nbpf_create_gtp_node(); }
+	;
+relop:    '>'                   { $$ = NBPF_R_GT; }
+        | GEQ                   { $$ = NBPF_R_GE; }
+        | '='                   { $$ = NBPF_R_EQ; }
+        ;
+irelop:   LEQ                   { $$ = NBPF_R_LE; }
+        | '<'                   { $$ = NBPF_R_LT; }
+        | NEQ                   { $$ = NBPF_R_NE; }
+        ;
+narth:	pname '[' pnum ']'		{ ARTHSET($$, $1, $3, 0xFF); }
+        | pname '[' pnum ']' '&' pnum	{ ARTHSET($$, $1, $3, $6); }
 	;
 pnum:	  NUM
 	| paren pnum ')'	{ $$ = $2; }
