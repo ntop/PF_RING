@@ -149,6 +149,14 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
       DEBUG_PRINTF("Unexpected protocol qualifier (%d)\n", __LINE__);
   }
 
+  if (n->qualifiers.address == NBPF_Q_PROTO_REL) {
+    f->fields.byte_match.protocol = n->byte_match.protocol;
+    f->fields.byte_match.offset   = n->byte_match.offset;
+    f->fields.byte_match.mask     = n->byte_match.mask;
+    f->fields.byte_match.relop    = n->byte_match.relop;
+    f->fields.byte_match.value    = n->byte_match.value;
+  }
+    
   switch(n->qualifiers.direction) {
     case NBPF_Q_SRC:
     case NBPF_Q_AND:
@@ -237,6 +245,17 @@ static int merge_wildcard_proto(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t 
       return -1;
     }
     f->fields.proto = f1->fields.proto;
+  }
+  return 0;
+}
+
+static int merge_wildcard_proto_rel(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1) {
+  if (f1->fields.byte_match.protocol) {
+    if (f->fields.byte_match.protocol) {
+      DEBUG_PRINTF("Conflict merging filters on protocol relative byte match\n");
+      return -1;
+    }
+    f->fields.byte_match = f1->fields.byte_match;
   }
   return 0;
 }
@@ -391,6 +410,9 @@ static nbpf_rule_list_item_t *merge_wildcard_filters_single(nbpf_rule_list_item_
 
   rc = merge_wildcard_proto(f, f1); if (rc != 0) goto exit;
   rc = merge_wildcard_proto(f, f2); if (rc != 0) goto exit;
+
+  rc = merge_wildcard_proto_rel(f, f1); if (rc != 0) goto exit;
+  rc = merge_wildcard_proto_rel(f, f2); if (rc != 0) goto exit;
 
   rc = merge_wildcard_smac(f, f1, swap1); if (rc != 0) goto exit;
   rc = merge_wildcard_smac(f, f2, swap2); if (rc != 0) goto exit;

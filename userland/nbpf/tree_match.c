@@ -317,6 +317,8 @@ static /* inline */ int packet_match_primitive(nbpf_node_t *n, nbpf_pkt_info_t *
       return packet_match_l4(n, h);
     case NBPF_Q_PROTO:
       return packet_match_proto(n, h);
+    case NBPF_Q_PROTO_REL:
+      return 0; /* TODO packet_match_proto_rel(n, h, pkt); note this requires packet data */
     case NBPF_Q_L7PROTO:
       return packet_match_l7_proto(n, h);
     case NBPF_Q_VLAN:

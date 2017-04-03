@@ -155,6 +155,7 @@ PACKED_ON typedef struct nbpf_node {
   u_int16_t l7protocol;
 
   struct { /* e.g. udp[10] & 0x0f == 5 */
+    u_int16_t protocol;
     u_int16_t offset;
     u_int8_t mask;
     u_int8_t relop;
@@ -229,6 +230,13 @@ PACKED_ON typedef struct {
   nbpf_ip_addr shost_mask, dhost_mask;
   u_int16_t sport_low, sport_high;
   u_int16_t dport_low, dport_high;
+  struct {
+    u_int16_t protocol;
+    u_int16_t offset;
+    u_int8_t mask;
+    u_int8_t relop;
+    u_int8_t value;
+  } byte_match;
 } PACKED_OFF
 nbpf_rule_core_fields_t;
 

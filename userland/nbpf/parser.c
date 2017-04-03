@@ -542,34 +542,11 @@ nbpf_node_t *nbpf_create_protocol_node(int proto) {
 /* ****************************************************** */
 
 nbpf_node_t *nbpf_create_relation_node(int relop, nbpf_arth_t l, int r) {
-  nbpf_node_t *n = alloc_node();
+  nbpf_node_t *n = nbpf_create_protocol_node(l.protocol);
 
-  n->type = N_PRIMITIVE;
   n->qualifiers.address = NBPF_Q_PROTO_REL;
 
-  switch (l.protocol) {
-    case NBPF_Q_IP:
-    case NBPF_Q_IPV6:
-      n->qualifiers.protocol = NBPF_Q_LINK;
-      break;
-    case NBPF_Q_TCP:
-    case NBPF_Q_UDP:
-    case NBPF_Q_SCTP:
-      n->qualifiers.protocol = NBPF_Q_IP;
-      break;
-    default:
-      nbpf_syntax_error("Unexpected protocol\n"); 
-  }
-
-  switch (l.protocol) {
-    case NBPF_Q_IP:   n->protocol = 0x800;  break;
-    case NBPF_Q_IPV6: n->protocol = 0x86DD; break;
-    case NBPF_Q_TCP:  n->protocol = 6;      break;
-    case NBPF_Q_UDP:  n->protocol = 17;     break;
-    case NBPF_Q_SCTP: n->protocol = 132;    break;
-    //default:     n->protocol = l.protocol;  break;
-  }
-
+  n->byte_match.protocol = l.protocol; /* NBPF_Q_IP, .. */
   n->byte_match.offset = l.offset;
   n->byte_match.mask = l.mask;
   n->byte_match.relop = relop;
