@@ -857,7 +857,7 @@ nbpf_rule_list_item_t *nbpf_generate_rules(nbpf_tree_t *tree) {
 nbpf_rule_block_list_item_t *nbpf_generate_optimized_rules(nbpf_tree_t *tree) {
   nbpf_rule_block_list_item_t *blocks;
 
-  if (!nbpf_check_rules_constraints(tree, 0 /* default */))
+  if (!nbpf_check_rules_constraints(tree, 1))
     return NULL;
 
   if ((blocks = generate_optimized_wildcard_filters(tree->root)) == NULL)
