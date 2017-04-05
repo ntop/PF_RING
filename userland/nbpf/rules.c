@@ -24,7 +24,8 @@
 
 //#define DEBUG
 #ifdef DEBUG
-#define DEBUG_PRINTF(fmt, ...) do {printf("[debug][%s:%d] " fmt, __file__, __line__, ## __va_args__); } while (0)
+#include <stdio.h>
+#define DEBUG_PRINTF(fmt, ...) do {printf("[debug][%s:%d] " fmt, __FILE__, __LINE__, ## __VA_ARGS__); } while (0)
 #else
 #define DEBUG_PRINTF(fmt, ...)
 #endif
