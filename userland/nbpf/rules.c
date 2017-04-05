@@ -258,14 +258,30 @@ static int merge_wildcard_proto(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t 
 
 static int merge_wildcard_proto_rel(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1) {
   if (f1->fields.byte_match != NULL) {
-    if (f->fields.byte_match == NULL) 
-      f->fields.byte_match = f1->fields.byte_match;
-    else {
-      nbpf_rule_core_fields_byte_match_t *b = f->fields.byte_match;
-      while (b->next != NULL) b = b->next;
-      b->next = f1->fields.byte_match;
+    nbpf_rule_core_fields_byte_match_t *o = f1->fields.byte_match, *list = NULL, *prev = NULL, *tmp;
+    while (o != NULL) {
+      tmp = (nbpf_rule_core_fields_byte_match_t *) calloc(1, sizeof(nbpf_rule_core_fields_byte_match_t));
+      if (tmp == NULL) {
+        DEBUG_PRINTF("Memory allocation error\n"); 
+        break;
+      }
+      memcpy(tmp, o, sizeof(nbpf_rule_core_fields_byte_match_t));
+      tmp->next = NULL;
+
+      if (list == NULL) list = tmp;
+      if (prev != NULL) prev->next = tmp;
+      prev = tmp;
+      
+      o = o->next;
     }
-    f1->fields.byte_match = NULL;
+
+    if (f->fields.byte_match == NULL) 
+      f->fields.byte_match = list;
+    else {
+      nbpf_rule_core_fields_byte_match_t *last = f->fields.byte_match;
+      while (last->next != NULL) last = last->next;
+      last->next = list;
+    }
   }
 
   return 0;
@@ -640,7 +656,7 @@ nbpf_rule_list_item_t *generate_pfring_wildcard_filters(nbpf_node_t *n) {
 
 /***************************************************************************/
 
-nbpf_rule_block_list_item_t *generate_optimized_wildcard_filters(nbpf_node_t *n) {
+nbpf_rule_block_list_item_t *generate_wildcard_filters_blocks(nbpf_node_t *n) {
   nbpf_rule_list_item_t *head = NULL;
   nbpf_rule_block_list_item_t *block, *blockl, *blockr, *tail_block;
 
@@ -665,8 +681,8 @@ nbpf_rule_block_list_item_t *generate_optimized_wildcard_filters(nbpf_node_t *n)
 
       break;
     case N_AND:
-      blockl = generate_optimized_wildcard_filters(n->l);
-      blockr = generate_optimized_wildcard_filters(n->r); 
+      blockl = generate_wildcard_filters_blocks(n->l);
+      blockr = generate_wildcard_filters_blocks(n->r); 
       
       if (blockl == NULL && blockr == NULL) {
         return NULL; /* error */
@@ -703,8 +719,8 @@ nbpf_rule_block_list_item_t *generate_optimized_wildcard_filters(nbpf_node_t *n)
 
       break;
     case N_OR:
-      blockl = generate_optimized_wildcard_filters(n->l);
-      blockr = generate_optimized_wildcard_filters(n->r);
+      blockl = generate_wildcard_filters_blocks(n->l);
+      blockr = generate_wildcard_filters_blocks(n->r);
   
       /* Note that according to the constraints it expects single blocks from each subtree */
 
@@ -736,7 +752,7 @@ nbpf_rule_block_list_item_t *generate_optimized_wildcard_filters(nbpf_node_t *n)
 
 /***************************************************************************/
 
-nbpf_rule_block_list_item_t *move_optimized_wildcard_filters_to_contiguous_memory(nbpf_rule_block_list_item_t *blocks) {
+nbpf_rule_block_list_item_t *move_wildcard_filters_blocks_to_contiguous_memory(nbpf_rule_block_list_item_t *blocks) {
   nbpf_rule_block_list_item_t *bitem, *new_bitem, *prev_bitem, *zombie_bitem;
   nbpf_rule_list_item_t *fitem, *new_fitem, *prev_fitem, *zombie_fitem;
   int bnum = 0, fnum = 0;
@@ -871,10 +887,10 @@ nbpf_rule_block_list_item_t *nbpf_generate_optimized_rules(nbpf_tree_t *tree) {
   if (!nbpf_check_rules_constraints(tree, 1))
     return NULL;
 
-  if ((blocks = generate_optimized_wildcard_filters(tree->root)) == NULL)
+  if ((blocks = generate_wildcard_filters_blocks(tree->root)) == NULL)
     return NULL;
   
-  blocks = move_optimized_wildcard_filters_to_contiguous_memory(blocks);
+  blocks = move_wildcard_filters_blocks_to_contiguous_memory(blocks);
 
   return blocks;
 }
