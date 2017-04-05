@@ -254,6 +254,14 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
     printf("] ");
   }
 
+  if (c->byte_match) {
+    nbpf_rule_core_fields_byte_match_t *b = c->byte_match;
+    while (b != NULL) {
+      printf("[Byte Match: %u[%u]] ", b->protocol, b->offset);
+      b = b->next;
+    }
+  }
+
   if(c->gtp) printf("[GTP] ");
 
   printf("\n");

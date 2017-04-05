@@ -218,6 +218,16 @@ int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h);
 
 /* nBPF Filtering Rules Generation API */
 
+PACKED_ON typedef struct nbpf_rule_core_fields_byte_match {
+    u_int16_t protocol;
+    u_int16_t offset;
+    u_int8_t mask;
+    u_int8_t relop;
+    u_int8_t value;
+    struct nbpf_rule_core_fields_byte_match *next;
+} PACKED_OFF
+nbpf_rule_core_fields_byte_match_t;
+
 PACKED_ON typedef struct {
   u_int8_t smac[6], dmac[6]; 
   u_int8_t proto; /* tcp, udp, sctp */
@@ -230,13 +240,7 @@ PACKED_ON typedef struct {
   nbpf_ip_addr shost_mask, dhost_mask;
   u_int16_t sport_low, sport_high;
   u_int16_t dport_low, dport_high;
-  struct {
-    u_int16_t protocol;
-    u_int16_t offset;
-    u_int8_t mask;
-    u_int8_t relop;
-    u_int8_t value;
-  } byte_match;
+  nbpf_rule_core_fields_byte_match_t *byte_match;
 } PACKED_OFF
 nbpf_rule_core_fields_t;
 

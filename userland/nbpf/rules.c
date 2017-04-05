@@ -23,7 +23,7 @@
  */
 
 //#define DEBUG
-#ifdef DEBUG_PRINTF
+#ifdef DEBUG
 #define DEBUG_PRINTF(fmt, ...) do {printf("[debug][%s:%d] " fmt, __file__, __line__, ## __va_args__); } while (0)
 #else
 #define DEBUG_PRINTF(fmt, ...)
@@ -150,11 +150,17 @@ static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *
   }
 
   if (n->qualifiers.address == NBPF_Q_PROTO_REL) {
-    f->fields.byte_match.protocol = n->byte_match.protocol;
-    f->fields.byte_match.offset   = n->byte_match.offset;
-    f->fields.byte_match.mask     = n->byte_match.mask;
-    f->fields.byte_match.relop    = n->byte_match.relop;
-    f->fields.byte_match.value    = n->byte_match.value;
+    f->fields.byte_match = (nbpf_rule_core_fields_byte_match_t *) calloc(1, sizeof(nbpf_rule_core_fields_byte_match_t));
+    if (f->fields.byte_match == NULL)
+      DEBUG_PRINTF("Memory allocation error (%d)\n", __LINE__);
+    else {
+      f->fields.byte_match->protocol = n->byte_match.protocol;
+      f->fields.byte_match->offset   = n->byte_match.offset;
+      f->fields.byte_match->mask     = n->byte_match.mask;
+      f->fields.byte_match->relop    = n->byte_match.relop;
+      f->fields.byte_match->value    = n->byte_match.value;
+      f->fields.byte_match->next     = NULL;
+    }
   }
     
   switch(n->qualifiers.direction) {
@@ -250,13 +256,17 @@ static int merge_wildcard_proto(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t 
 }
 
 static int merge_wildcard_proto_rel(nbpf_rule_list_item_t *f, nbpf_rule_list_item_t *f1) {
-  if (f1->fields.byte_match.protocol) {
-    if (f->fields.byte_match.protocol) {
-      DEBUG_PRINTF("Conflict merging filters on protocol relative byte match\n");
-      return -1;
+  if (f1->fields.byte_match != NULL) {
+    if (f->fields.byte_match == NULL) 
+      f->fields.byte_match = f1->fields.byte_match;
+    else {
+      nbpf_rule_core_fields_byte_match_t *b = f->fields.byte_match;
+      while (b->next != NULL) b = b->next;
+      b->next = f1->fields.byte_match;
     }
-    f->fields.byte_match = f1->fields.byte_match;
+    f1->fields.byte_match = NULL;
   }
+
   return 0;
 }
 
