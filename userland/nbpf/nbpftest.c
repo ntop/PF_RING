@@ -189,8 +189,7 @@ static void dump_tree(nbpf_node_t *n, int level) {
 
 /* *********************************************************** */
 
-void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
-  printf("[%u] ", id);
+void dump_rule(nbpf_rule_core_fields_t *c) {
 
   if(c->ip_version) printf("[IPv%d] ", c->ip_version);
 
@@ -227,7 +226,7 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
       if(c->dport_high && c->dport_high != c->dport_low) printf("-%u", ntohs(c->dport_high));
     } else printf("*");
 
-    printf("]");
+    printf("] ");
   } else if(c->ip_version == 6) {
     char a[64];
 
@@ -263,8 +262,6 @@ void dump_rule(u_int id, nbpf_rule_core_fields_t *c) {
   }
 
   if(c->gtp) printf("[GTP] ");
-
-  printf("\n");
 }
 
 /* *********************************************************** */
@@ -276,7 +273,12 @@ void dump_rules(nbpf_rule_list_item_t *pun) {
   while(pun != NULL) {
     nbpf_rule_core_fields_t *c = &pun->fields;
 
-    dump_rule(id++, c);
+    printf("[%u] ", id);
+
+    dump_rule(c);
+
+    if(pun->bidirectional) printf("[BIDIRECTIONAL] ");
+    printf("\n");
 
     pun = pun->next;
   }
