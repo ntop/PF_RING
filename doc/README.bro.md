@@ -21,6 +21,13 @@ make
 make install
 ```
 
+Please note that on some installations your should tune the LDFLAGS in order
+to fix linking issues. Example:
+
+```
+LDFLAGS="-lpfring -lpcap" ./configure --with-pcap=/usr/local/
+```
+
 4. Make sure Bro is correctly linked to pf_ring-aware libpcap:
 
 ```
