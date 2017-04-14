@@ -27,47 +27,43 @@
 #define NTOPDUMP_VERSION_MINOR "1"
 #define NTOPDUMP_VERSION_RELEASE "0"
 
-enum {
-  EXTCAP_OPT_LIST_INTERFACES,
-  EXTCAP_OPT_VERSION,
-  EXTCAP_OPT_LIST_DLTS,
-  EXTCAP_OPT_INTERFACE,
-  EXTCAP_OPT_CONFIG,
-  EXTCAP_OPT_CAPTURE,
-  EXTCAP_OPT_CAPTURE_FILTER,
-  EXTCAP_OPT_FIFO,
-  EXTCAP_OPT_DEBUG,
-  NTOPDUMP_OPT_VERSION,
-  NTOPDUMP_OPT_HELP,
-  NTOPDUMP_OPT_NAME,
-  NTOPDUMP_OPT_CUSTOM_NAME,
-  NTOPDUMP_OPT_START_TIME,
-  NTOPDUMP_OPT_END_TIME,
-  NTOPDUMP_OPT_START_TIME_EPOCH,
-  NTOPDUMP_OPT_END_TIME_EPOCH
-};
+#define EXTCAP_OPT_LIST_INTERFACES	'l'
+#define EXTCAP_OPT_VERSION		'v'
+#define EXTCAP_OPT_LIST_DLTS		'L'
+#define EXTCAP_OPT_INTERFACE		'i'
+#define EXTCAP_OPT_CONFIG		'c'
+#define EXTCAP_OPT_CAPTURE		'C'
+#define EXTCAP_OPT_CAPTURE_FILTER	'f'
+#define EXTCAP_OPT_FIFO			'F'
+#define EXTCAP_OPT_DEBUG		'D'
+#define NTOPDUMP_OPT_HELP		'h'
+#define NTOPDUMP_OPT_NAME		'n'
+#define NTOPDUMP_OPT_CUSTOM_NAME	'N'
+#define NTOPDUMP_OPT_START_TIME		's'
+#define NTOPDUMP_OPT_END_TIME		'e'
+#define NTOPDUMP_OPT_START_TIME_EPOCH	'S'
+#define NTOPDUMP_OPT_END_TIME_EPOCH	'E'
 
 static struct option longopts[] = {
   /* mandatory extcap options */
-  { "extcap-interfaces", no_argument, NULL, EXTCAP_OPT_LIST_INTERFACES},
-  { "extcap-version", optional_argument, NULL, EXTCAP_OPT_VERSION},
-  { "extcap-dlts", no_argument, NULL, EXTCAP_OPT_LIST_DLTS},
-  { "extcap-interface", required_argument, NULL, EXTCAP_OPT_INTERFACE},
-  { "extcap-config", no_argument, NULL, EXTCAP_OPT_CONFIG},
-  { "capture", no_argument, NULL, EXTCAP_OPT_CAPTURE},
-  { "extcap-capture-filter", required_argument,	NULL, EXTCAP_OPT_CAPTURE_FILTER},
-  { "fifo", required_argument, NULL, EXTCAP_OPT_FIFO},
-  { "debug", optional_argument, NULL, EXTCAP_OPT_DEBUG},
+  { "extcap-interfaces",	no_argument, 		NULL, EXTCAP_OPT_LIST_INTERFACES },
+  { "extcap-version", 		optional_argument, 	NULL, EXTCAP_OPT_VERSION },
+  { "extcap-dlts", 		no_argument, 		NULL, EXTCAP_OPT_LIST_DLTS },
+  { "extcap-interface", 	required_argument, 	NULL, EXTCAP_OPT_INTERFACE },
+  { "extcap-config", 		no_argument, 		NULL, EXTCAP_OPT_CONFIG },
+  { "capture", 			no_argument, 		NULL, EXTCAP_OPT_CAPTURE },
+  { "extcap-capture-filter", 	required_argument,	NULL, EXTCAP_OPT_CAPTURE_FILTER },
+  { "fifo", 			required_argument, 	NULL, EXTCAP_OPT_FIFO },
+  { "debug", 			optional_argument, 	NULL, EXTCAP_OPT_DEBUG },
 
   /* custom extcap options */
-  { "version", no_argument, NULL, NTOPDUMP_OPT_VERSION},
-  { "help", no_argument, NULL, NTOPDUMP_OPT_VERSION},
-  { "name", required_argument, NULL, NTOPDUMP_OPT_NAME},
-  { "custom-name", required_argument, NULL, NTOPDUMP_OPT_CUSTOM_NAME},
-  { "start", required_argument, NULL, NTOPDUMP_OPT_START_TIME},
-  { "end", required_argument, NULL, NTOPDUMP_OPT_END_TIME},
-  { "start-epoch", required_argument, NULL, NTOPDUMP_OPT_START_TIME_EPOCH},
-  { "end-epoch", required_argument, NULL, NTOPDUMP_OPT_END_TIME_EPOCH},
+  { "help", 			no_argument, 		NULL, NTOPDUMP_OPT_HELP },
+  { "name", 			required_argument,	NULL, NTOPDUMP_OPT_NAME },
+  { "custom-name", 		required_argument, 	NULL, NTOPDUMP_OPT_CUSTOM_NAME },
+  { "start", 			required_argument, 	NULL, NTOPDUMP_OPT_START_TIME },
+  { "end", 			required_argument, 	NULL, NTOPDUMP_OPT_END_TIME },
+  { "start-epoch", 		required_argument, 	NULL, NTOPDUMP_OPT_START_TIME_EPOCH },
+  { "end-epoch", 		required_argument, 	NULL, NTOPDUMP_OPT_END_TIME_EPOCH },
 
   {0, 0, 0, 0}
 };
@@ -109,8 +105,6 @@ void extcap_version() {
 void extcap_list_interfaces() {
   int i;
   
-  /* Print version */
-  extcap_version();
   for(i = 0; i < extcap_interfaces_num; i++) {
     printf("interface {value=%s}{display=%s}\n", extcap_interfaces[i].interface, extcap_interfaces[i].description);    
   }
@@ -296,9 +290,11 @@ void extcap_capture() {
 }
 
 int extcap_print_help() {
+  printf("Wireshark extcap plugin by ntop\n");
+  printf("Supported interfaces:\n");
+  extcap_list_interfaces();
   return 0;
 }
-
 
 int main(int argc, char *argv[]) {
   int option_idx = 0, result;
@@ -312,13 +308,14 @@ int main(int argc, char *argv[]) {
   }
 
   u_int defer_dlts = 0, defer_config = 0, defer_capture = 0;
-  while ((result = getopt_long(argc, argv, ":", longopts, &option_idx)) != -1) {
+  while ((result = getopt_long(argc, argv, "h", longopts, &option_idx)) != -1) {
     //fprintf(stderr, "OPT: '--%s' VAL: '%s' \n", longopts[result].name, optarg != NULL ? optarg : "");
     switch (result) {
     /* mandatory extcap options */
     case EXTCAP_OPT_DEBUG:
       break;
     case EXTCAP_OPT_LIST_INTERFACES:
+      extcap_version();
       extcap_list_interfaces();
       defer_dlts = defer_config = defer_capture = 0;
       break;
@@ -346,6 +343,10 @@ int main(int argc, char *argv[]) {
       break;
 
     /* custom ntopdump options */
+    case NTOPDUMP_OPT_HELP:
+        extcap_print_help();
+        return EXIT_SUCCESS;
+      break;
     case NTOPDUMP_OPT_NAME:
       if (ntopdump_name == NULL)
         ntopdump_name = strndup(optarg, NTOPDUMP_MAX_NAME_LEN);
