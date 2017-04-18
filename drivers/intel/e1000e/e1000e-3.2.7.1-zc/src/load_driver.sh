@@ -8,6 +8,8 @@ FAMILY=e1000e
 rmmod e1000e
 rmmod pf_ring
 
+modprobe ptp
+
 # We assume that you have compiled PF_RING
 insmod ../../../../../kernel/pf_ring.ko
 
