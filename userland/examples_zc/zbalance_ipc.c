@@ -139,6 +139,26 @@ void *zmq_server_thread(void *data) {
   zmq_server_listen(zmq_endpoint, DEFAULT_ENCRYPTION_KEY, zmq_filtering_rule_handler);
   return NULL;
 }
+
+void print_filter_handler(inplace_hash_table_t *ht, inplace_item_t *item) {
+  u_int32_t now = epoch;
+  char buf[64];
+
+  trace(TRACE_NORMAL, "[HT] %s IPv%u %s %s [lifetime %us]\n",
+    ht == src_ip_hash ? "src" : "dst", item->key.ip_version,
+    item->key.ip_version == 4 ? intoaV4(ntohl(item->key.ip_address.v4.s_addr), buf, sizeof(buf)) : 
+                                intoaV6(&item->key.ip_address.v6, buf, sizeof(buf)),
+    item->value == PASS ? "PASS" : "DROP",
+    item->expiration > now ? (item->expiration - now) : 0
+  );
+}
+
+void print_filter(int signo) {
+  trace(TRACE_NORMAL, "Received signal %d: printing active rules..", signo);
+
+  inplace_iterate(src_ip_hash, print_filter_handler);
+  inplace_iterate(dst_ip_hash, print_filter_handler);
+}
 #endif
 
 /* ******************************** */
@@ -849,6 +869,9 @@ int main(int argc, char* argv[]) {
   signal(SIGINT,  sigproc);
   signal(SIGTERM, sigproc);
   signal(SIGINT,  sigproc);
+#ifdef HAVE_ZMQ
+  signal(SIGHUP, print_filter);
+#endif
 
   if (time_pulse) {
     pulse_timestamp_ns = calloc(CACHE_LINE_LEN/sizeof(u_int64_t), sizeof(u_int64_t));

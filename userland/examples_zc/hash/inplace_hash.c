@@ -33,7 +33,7 @@ typedef struct {
 } inplace_key_t;
 
 typedef struct {
-  u_int32_t index;
+  /* Note: an entry is valid when value != NULL_VALUE and expiration > now */
   VALUE_TYPE value;
   u_int32_t expiration; /* epoch (sec) */
   inplace_key_t key;
@@ -187,7 +187,6 @@ int inplace_insert(inplace_hash_table_t *ht, inplace_key_t *key, u_int32_t expir
   if (insert_index == -1)
     insert_index = index; /* no items to replace: insert new item */ 
 
-  ht->table[insert_index].index = hash;
   ht->table[insert_index].expiration = expiration;
   memcpy(&ht->table[insert_index].key, key, sizeof(inplace_key_t));
   gcc_mb();
@@ -255,6 +254,23 @@ VALUE_TYPE inplace_lookup(inplace_hash_table_t *ht, inplace_key_t *key) {
 #endif
 
   return value;
+}
+
+/* *************************************** */
+
+typedef void (*inplace_iterator_handler) (inplace_hash_table_t *ht, inplace_item_t *item);
+
+void inplace_iterate(inplace_hash_table_t *ht, inplace_iterator_handler callback) {
+  inplace_item_t tmp;
+  u_int32_t i = 0;
+
+  while (i < ht->size) {
+    if (ht->table[i].value != NULL_VALUE && ht->table[i].expiration > epoch) {
+      memcpy(&tmp, &ht->table[i], sizeof(inplace_item_t));
+      callback(ht, &tmp);
+    }
+    i++;
+  }
 }
 
 /* *************************************** */
