@@ -1,6 +1,6 @@
 
 ---------------------------------------                                                                                                                                                                             
-2017-04-03 PF_RING 6.6
+2017-04-24 PF_RING 6.6
 
 * PF_RING Library
  - New pfring_findalldevs/pfring_freealldevs API for listing all interfaces supported by pf_ring
