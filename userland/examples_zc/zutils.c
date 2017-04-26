@@ -351,12 +351,14 @@ int load_args_from_file(char *conffile, int *ret_argc, char **ret_argv[]) {
 #define TRACE_NORMAL  2, __FILE__, __LINE__
 #define TRACE_DEBUG   3, __FILE__, __LINE__
 static int trace_verbosity = 2;
+static FILE *trace_file = NULL;
 
 void trace(int trace_level, char *file, int line, char * format, ...) {
   va_list va_ap;
   char buf[2048], out_buf[640];
   char theDate[32], *extra_msg = "";
   time_t theTime;
+  FILE *out_file;
 
   if (trace_level > trace_verbosity)
     return;
@@ -378,9 +380,14 @@ void trace(int trace_level, char *file, int line, char * format, ...) {
   while (buf[strlen(buf)-1] == '\n') buf[strlen(buf)-1] = '\0';
 
   snprintf(out_buf, sizeof(out_buf), "%s [%s:%d] %s%s", theDate, file, line, extra_msg, buf);
-  fprintf(trace_level == 0 ? stderr : stdout, "%s\n", out_buf);
 
-  fflush(stdout);
+  if (trace_file != NULL) out_file = trace_file;
+  else if (trace_level == 0) out_file = stderr;
+  else out_file = stdout;
+
+  fprintf(out_file, "%s\n", out_buf);
+  fflush(out_file);
+
   va_end(va_ap);
 }
 

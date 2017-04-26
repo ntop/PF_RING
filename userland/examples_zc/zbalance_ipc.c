@@ -370,6 +370,7 @@ void printHelp(void) {
   printf("-Q <sock list>   Enable VM support (comma-separated list of QEMU monitor sockets)\n");
   printf("-p               Print per-interface and per-queue absolute stats\n");
   printf("-d               Daemon mode\n");
+  printf("-l <path>        Dump log messages to the specified file\n");
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
@@ -389,17 +390,20 @@ static inline int packet_filter(u_char *pkt) {
   inplace_key_t src_key, dst_key;
   int action = default_action;
   if (extract_keys(pkt, &src_key, &dst_key)) {
+    int rule_action = NULL_VALUE;
 #if 0 /* debug */
     char sbuf[64], dbuf[64];
     trace(TRACE_DEBUG, "Processing packet from %s to %s\n",
       src_key.ip_version == 4 ? intoaV4(ntohl(src_key.ip_address.v4.s_addr), sbuf, sizeof(sbuf)) : intoaV6(&src_key.ip_address.v6, sbuf, sizeof(sbuf)),
       dst_key.ip_version == 4 ? intoaV4(ntohl(dst_key.ip_address.v4.s_addr), dbuf, sizeof(dbuf)) : intoaV6(&dst_key.ip_address.v6, dbuf, sizeof(dbuf)));
 #endif
-    int rule_action = inplace_lookup(src_ip_hash, &src_key);
-    if (rule_action != NULL_VALUE && rule_action != action) action = rule_action;
-    else { 
+    if (src_ip_hash != NULL) {
+      rule_action = inplace_lookup(src_ip_hash, &src_key);
+      if (rule_action != NULL_VALUE) action = rule_action;
+    }
+    if (dst_ip_hash != NULL && rule_action == NULL_VALUE) {
       rule_action = inplace_lookup(dst_ip_hash, &dst_key);
-      if (rule_action != NULL_VALUE && rule_action != action) action = rule_action;
+      if (rule_action != NULL_VALUE) action = rule_action;
     }
   }
   return (action != DROP);
@@ -542,7 +546,7 @@ int main(int argc, char* argv[]) {
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
-  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:wv"
+  const char *opt_string = "ab:c:dg:hi:l:m:n:pr:Q:q:N:P:R:S:zu:wv"
 #ifdef HAVE_ZMQ 
     "A:E:Z"
 #endif
@@ -590,6 +594,11 @@ int main(int argc, char* argv[]) {
       break;
     case 'g':
       bind_worker_core = atoi(optarg);
+      break;
+    case 'l':
+      trace_file = fopen(optarg, "w");
+      if (trace_file == NULL)
+        trace(TRACE_ERROR, "Unable to open log file %s", optarg);
       break;
     case 'p':
       print_interface_stats = 1;
