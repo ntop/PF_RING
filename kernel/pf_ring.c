@@ -133,7 +133,7 @@
 #define I82599_HW_FILTERING_SUPPORT
 #endif
 
-#include <linux/pf_ring.h>
+#include "linux/pf_ring.h"
 
 #ifndef GIT_REV
 #define GIT_REV "unknown"
