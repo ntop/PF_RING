@@ -130,6 +130,16 @@ ifeq (,$(CC))
   $(error Compiler not found)
 endif
 
+# Set no-pie for compilers that enable pie by default
+test_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - && echo 1)
+ifneq (,$(test_nopie))
+  EXTRA_CFLAGS += -no-pie
+endif
+test_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - && echo 1)
+ifneq (,$(test_fnopie))
+  EXTRA_CFLAGS += -fno-pie
+endif
+
 # check for ubuntu kernel 3.13.0-24 (HAVE_PF_RING)
 IS_UBUNTU_3_13_PRE := $(shell uname -a | grep 3.13.0-24 | wc -l)
 ifeq (1,$(IS_UBUNTU_3_13_PRE))
