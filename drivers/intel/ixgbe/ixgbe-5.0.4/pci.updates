@@ -1,0 +1,163 @@
+################################################################################
+#
+# Intel(R) 10GbE PCI Express Linux Network Driver
+# Copyright(c) 1999 - 2017 Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# The full GNU General Public License is included in this distribution in
+# the file called "COPYING".
+#
+# Contact Information:
+# Linux NICS <linux.nics@intel.com>
+# e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
+# Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+#
+################################################################################
+
+# updates for the system pci.ids file
+#
+# IMPORTANT!  Entries in this list must be sorted as they
+#             would appear in the system pci.ids file.  Entries
+#             are sorted by ven, dev, subven, subdev
+#             (numerical order).
+#
+8086  Intel(R)
+	10b6  82598 10GbE PCI-Express Ethernet Controller
+	10c6  82598EB 10-Gigabit AF Dual Port Network Connection
+		8086 a05f  10-Gigabit XF SR Dual Port Server Adapter
+		8086 a15f  10-Gigabit XF SR Dual Port Server Adapter
+	10c7  82598EB 10-Gigabit AF Network Connection
+		1014 037f  10-Gigabit XF SR Server Adapter
+		1014 0380  10-Gigabit XF LR Server Adapter
+		8086 a05f  10-Gigabit XF SR Server Adapter
+		8086 a15f  10-Gigabit XF SR Server Adapter
+		8086 a16f  10-Gigabit XF SR Server Adapter
+	10c8  82598EB 10-Gigabit AT Network Connection
+		8086 a10c  10-Gigabit AT Server Adapter
+		8086 a11c  10-Gigabit AT Server Adapter
+		8086 a12c  10-Gigabit AT Server Adapter
+	10db  82598EB 10-Gigabit Dual Port Network Connection
+	10dd  82598EB 10-Gigabit AT CX4 Network Connection
+	10e1  82598EB 10-Gigabit AF Dual Port Network Connection
+		8086 a15f  10-Gigabit SR Dual Port Express Module
+	10ec  82598EB 10-Gigabit AT CX4 Network Connection
+		8086 a01f  10-Gigabit CX4 Dual Port Server Adapter
+		8086 a11f  10-Gigabit CX4 Dual Port Server Adapter
+	10f1  82598EB 10-Gigabit AF Dual Port Network Connection
+		8086 a20f  10-Gigabit AF DA Dual Port Server Adapter
+		8086 a21f  10-Gigabit AF DA Dual Port Server Adapter
+	10f4  82598EB 10-Gigabit AF Network Connection
+		8086 106f  10-Gigabit XF LR Server Adapter
+		8086 a06f  10-Gigabit XF LR Server Adapter
+	10f7  10-Gigabit BR KX4 Dual Port Network Connection
+		108e 7b12  Sun Dual 10GbE PCIe 2.0 FEM
+		8086 000d  Ethernet Mezzanine Adapter X520-KX4-2
+	10f8  82599 10 Gigabit Dual Port Backplane Connection
+		1028 1f63  10GbE 2P X520k bNDC
+		103c 17d2  Ethernet 10Gb 2-port 560M Adapter
+		103c 18d0  HP Ethernet 10Gb 2-port 560FLB Adapter
+		8086 000c  Ethernet X520 10GbE Dual Port KX4-KR Mezz
+	10f9  82599 10 Gigabit CX4 Dual Port Network Connection
+	10fb  82599 10 Gigabit Dual Port Network Connection
+		1028 06ee  Ethernet 10G X520 LOM
+		1028 1f72  Ethernet 10G 4P X520/I350 rNDC
+		103c 17d0  HP Ethernet 10Gb 2-port 560FLR-SFP+ Adapter
+		103c 17d3  HP Ethernet 10Gb 2-port 560SFP+ Adapter
+		103c 211b  HP Ethernet 10Gb 1-port P560FLR-SFP+ Adapter
+		103c 2159  HP Ethernet 10Gb 2-port 562i Adapter
+		108e 7b11  Ethernet Server Adapter X520-2
+		17aa 1071  ThinkServer X520-2 AnyFabric
+		8086 0002  Ethernet Server Adapter X520-DA2
+		8086 0003  Ethernet Server Adapter X520-2
+		8086 0006  Ethernet Server Adapter X520-1
+		8086 0008  Ethernet OCP Server Adapter X520-2
+		8086 000a  Ethernet Server Adapter X520-1
+		8086 000c  Ethernet Server Adapter X520-2
+		8086 000d  Ethernet Server Adapter X520-1OCP
+		8086 0470  Ethernet 10GSFP+ DP Embedded CNA X520-2
+		8086 7a11  Ethernet Server Adapter X520-2
+		8086 7a12  Ethernet Server Adapter X520-2
+	10fc  82599 10 Gigabit Dual Port Network Connection
+	1507  Ethernet Express Module X520-P2
+		108e 7b10  Ethernet Express Module X520-P2
+	1508  82598EB Gigabit BX Network Connection
+	150b  10-Gigabit AT2 Server Adapter
+		8086 a10c  10-Gigabit AT2 Server Adapter
+		8086 a11c  10-Gigabit AT2 Server Adapter
+		8086 a12c  10-Gigabit AT2 Server Adapter
+	1514  Ethernet X520 10GbE Dual Port KX4 Mezz
+		8086 000b  Ethernet X520 10GbE Dual Port KX4 Mezz
+	1517  82599ES 10 Gigabit Network Connection
+		1137 006a  Cisco UCS CNA M61KR-I Intel Converged Network Adapter
+	151c  82599 10 Gigabit TN Network Connection
+		108e 7b13  Sun Dual 10GBASE-T LP
+		8086 a02c  Ethernet Server Adapter X520-T2
+		8086 a03c  Ethernet Server Adapter X520-T2
+		8086 a21c  Ethernet Server Adapter X520-T2
+	1528  Ethernet Controller X540-AT2
+		1028 1f61  Ethernet 10G 4P X540/I350 rNDC
+		103c 192d  HP Ethernet 10Gb 2-port 561FLR-T Adapter
+		103c 211a  HP Ethernet 10Gb 2-port 561T Adapter
+		108e 7b14  Sun Dual Port 10 GbE PCIe 2.0 ExpressModule, Base-T
+		108e 7b15  Sun Dual Port 10 GbE PCIe 2.0 Low Profile Adapter, Base-T
+		1137 00bf  Ethernet Converged Network Adapter X540-T2
+		17aa 1073  ThinkServer X540-T2 AnyFabric
+		8086 0001  Ethernet Converged Network Adapter X540-T2
+		8086 0002  Ethernet Converged Network Adapter X540-T1
+		8086 001a  Ethernet Converged Network Adapter X540-T2
+		8086 00a2  Ethernet Converged Network Adapter X540-T1
+		8086 0471  Ethernet 10GBT DP Embedded CNA X540-T2
+		8086 5003  Ethernet 10G 2P X540-t Adapter
+		8086 5004  Ethernet 10G 2P X540-t Adapter
+	1529  82599 10 Gigabit Dual Port Network Connection with FCoE
+	152a  82599 10 Gigabit Dual Port Backplane Connection with FCoE
+	154a  Ethernet Converged Network Adapter X520-4
+		8086 011a  Ethernet Converged Network Adapter X520-4
+		8086 011b  Ethernet Converged Network Adapter X520-4
+		8086 011c  Ethernet Converged Network Adapter X520-4
+	154d  Ethernet 10G 2P X520 Adapter
+		8086 7b11  Ethernet 10G 2P X520 Adapter
+	154f  82599 10 Gigabit Dual Port Network Connection
+	1557  82599 10 Gigabit Network Connection
+		8086 0001  Ethernet OCP Server Adapter X520-1
+	1558  Ethernet Converged Network Adapter X520-Q1
+		8086 011a  Ethernet Converged Network Adapter X520-Q1
+		8086 011b  Ethernet Converged Network Adapter X520-Q1
+	1560  Ethernet Controller X540
+	1563  Ethernet Controller 10G X550T
+		1028 1FA8  Intel(R) Ethernet 10G 4P X550/I350 rNDC
+		1028 1FA9  Intel(R) Ethernet 10G 4P X550 rNDC
+		1590 00D1  HPE Ethernet 10Gb 2-port 562T Adapter
+		1590 00D2  HPE Ethernet 10Gb 2-port 562FLR-T Adapter
+		8086 0001  Ethernet Converged Network Adapter X550-T2
+		8086 001A  Ethernet Converged Network Adapter X550-T2
+		8086 001D  Ethernet 10G 2P X550-t Adapter
+		8086 0022  Ethernet Converged Network Adapter X550-T2
+	15AA  Ethernet Connection X552 10 GbE Backplane
+	15AB  Ethernet Connection X552 10 GbE Backplane
+	15AC  Ethernet Connection X552 10 GbE SFP+
+	15AD  Ethernet Connection X552/X557-AT 10GBASE-T
+	15B0  Ethernet Connection X552 Backplane
+	15C2  Ethernet Connection X553 Backplane
+	15C3  Ethernet Connection X553 Backplane
+	15C4  Ethernet Connection X553 10 GbE SFP+
+	15C6  Ethernet Connection X553 1GbE
+	15C7  Ethernet Connection X553 1GbE
+	15C8  Ethernet Connection X553/X557-AT 10GBASE-T
+	15CA  Ethernet Connection X553 QSFP+
+	15CC  Ethernet Connection X553 QSFP+
+	15CE  Ethernet Connection X553 10 GbE SFP+
+	15D1  Ethernet Controller 10G X550T
+		8086 0002  Ethernet Converged Network Adapter X550-T1
+		8086 0021  Ethernet Converged Network Adapter X550-T1
+		8086 00A2  Ethernet Converged Network Adapter X550-T1
+	15E4  Ethernet Connection X553 1GbE
+	15E5  Ethernet Connection X553 1GbE
