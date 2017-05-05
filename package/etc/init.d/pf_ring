@@ -300,8 +300,6 @@ unload_zc() {
 
 start_pf_ring() {
 
-	# Update driver directory structure
-
 	init_config
 
 	[ ${DISTRO} == "debian" ] && log_daemon_msg "Starting PF_RING module"
@@ -494,6 +492,12 @@ get_status() {
 }
 
 init_config() {
+	if [ -f "${PF_RING_CONFIG_DIR}/pf_ring.conf" ]; then
+		return # PF_RING already configured, do not change the current conf
+	fi
+
+	# Create an initial configuration structure 
+
 	if [ ! -d "${PF_RING_CONFIG_DIR}" ]; then
 		mkdir ${PF_RING_CONFIG_DIR}
 	fi
