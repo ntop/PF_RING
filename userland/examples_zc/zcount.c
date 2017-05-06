@@ -344,7 +344,7 @@ int main(int argc, char* argv[]) {
         printf("License Ok\n");
       else /* print_maintenance */ {
         time_t exp = maintenance;
-        printf("%u %s\n", maintenance, ctime(&exp));
+        printf("%u %s\n", maintenance, maintenance > 0 ? ctime(&exp) : "No expiration");
       }
     } else {
       printf("Invalid license\n");
