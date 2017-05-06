@@ -181,6 +181,7 @@ void printHelp(void) {
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
   printf("-C              Check license\n");
+  printf("-M              Print maintenance\n");
   printf("-v              Verbose\n");
 }
 
@@ -261,7 +262,7 @@ void *packet_consumer_thread(void *user) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
-  int i, cluster_id = DEFAULT_CLUSTER_ID, rc = 0, print_maintenance = 0;
+  int i, cluster_id = DEFAULT_CLUSTER_ID, rc = 0, check_license = 0, print_maintenance = 0;
   pthread_t my_thread;
   struct timeval timeNow, lastTime;
   pthread_t time_thread;
@@ -269,7 +270,7 @@ int main(int argc, char* argv[]) {
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:g:hi:vCRHS:")) != '?') {
+  while((c = getopt(argc,argv,"ac:g:hi:vCMRHS:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -303,6 +304,9 @@ int main(int argc, char* argv[]) {
       verbose = 1;
       break;
     case 'C':
+      check_license = 1;
+      break;
+    case 'M':
       print_maintenance = 1;
       break;
     }
@@ -339,13 +343,14 @@ int main(int argc, char* argv[]) {
     goto cleanup;
   }
 
-  if (print_maintenance) {
+  if (check_license || print_maintenance) {
     u_int32_t maintenance;
     if (pfring_zc_check_device_license(zq, &maintenance)) {
-      printf("License Ok\n");
-      if (maintenance) {
+      if (check_license)
+        printf("License Ok\n");
+      else /* print_maintenance */ {
         time_t exp = maintenance;
-        printf("Maintenance will expire on %s\n", ctime(&exp));
+        printf("%u %s\n", maintenance, ctime(&exp));
       }
     } else {
       printf("Invalid license\n");
