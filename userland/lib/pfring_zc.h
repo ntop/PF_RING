@@ -736,6 +736,17 @@ pfring_zc_set_proc_stats(
   char *stats
 );
 
+/**
+ * Write application name under /proc/net/pf_ring/<socket>
+ * @param name  The application name.
+ * @return      0 on success, a negative value otherwise.
+ */
+int
+pfring_zc_set_app_name(
+  pfring_zc_cluster *cluster,
+  const char *name
+);
+
 /* **************************************************************************************** */
 
 /**
