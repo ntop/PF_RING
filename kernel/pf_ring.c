@@ -1487,14 +1487,16 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       seq_printf(m, "Socket Mode        : %s\n", sockmode2string(pfr->mode));
       if (pfr->mode != send_only_mode) {
         seq_printf(m, "Capture Direction  : %s\n", direction2string(pfr->direction));
-        seq_printf(m, "Sampling Rate      : %d\n", pfr->sample_rate);
-        seq_printf(m, "IP Defragment      : %s\n", enable_ip_defrag ? "Yes" : "No");
-        seq_printf(m, "BPF Filtering      : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
-        seq_printf(m, "Sw Filt Hash Rules : %d\n", pfr->num_sw_filtering_hash);
-        seq_printf(m, "Sw Filt WC Rules   : %d\n", pfr->num_sw_filtering_rules);
+        if (pfr->zc_device_entry == NULL) {
+          seq_printf(m, "Sampling Rate      : %d\n", pfr->sample_rate);
+          seq_printf(m, "IP Defragment      : %s\n", enable_ip_defrag ? "Yes" : "No");
+          seq_printf(m, "BPF Filtering      : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
+          seq_printf(m, "Sw Filt Hash Rules : %d\n", pfr->num_sw_filtering_hash);
+          seq_printf(m, "Sw Filt WC Rules   : %d\n", pfr->num_sw_filtering_rules);
+          seq_printf(m, "Sw Filt Hash Match : %llu\n", pfr->sw_filtering_hash_match);
+          seq_printf(m, "Sw Filt Hash Miss  : %llu\n", pfr->sw_filtering_hash_miss);
+        }
         seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
-        seq_printf(m, "Sw Filt Hash Match : %llu\n", pfr->sw_filtering_hash_match);
-        seq_printf(m, "Sw Filt Hash Miss  : %llu\n", pfr->sw_filtering_hash_miss);
         seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
         seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
       }
