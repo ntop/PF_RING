@@ -1082,7 +1082,7 @@ pfring_if_t *pfring_mod_findalldevs() {
  
     tmp = list; /* check if it's already in the list */
     while (tmp != NULL) {
-      if (strcmp(tmp->name, ifa->ifa_name) == 0)
+      if (strcmp(tmp->system_name, ifa->ifa_name) == 0)
         break;
       tmp = tmp->next;
     }
