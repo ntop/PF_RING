@@ -211,6 +211,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->direction           = rx_and_tx_direction;
   ring->mode                = send_and_recv_mode;
   ring->ft_mode             = software_only;
+  ring->flags               = flags;
 
   ring->promisc             = !!(flags & PF_RING_PROMISC);
   ring->reentrant           = !!(flags & PF_RING_REENTRANT);
