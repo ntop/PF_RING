@@ -69,3 +69,8 @@ cat /proc/net/pf_ring/dev/eth1/info | grep ZC
 Polling Mode:      ZC/NAPI
 ```
 
+Note: If you're trying to load an ZC driver to a card that you're currently using, you may need to enable `forcestart`. _(Warning: This may break network connectivity, do not attempt on a remote system with no recovery options.)_
+
+```
+sudo touch /etc/pf_ring/forcestart
+```
