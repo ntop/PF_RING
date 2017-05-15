@@ -5,9 +5,11 @@ how to enable them into your system.
 
 ## For the impatient
 ```
-echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages # 1024*2048kB = ~2.1 GB
 mount -t hugetlbfs nodev /dev/hugepages
 ```
+
+_Warning: If you accidentally exceed the amount of available RAM, the kernel will round down to the highest number of hugepages possible and grind your system to a halt._
 
 ## The whole story
 Linux typically use memory pages of 4 KBytes, but provides an explicit 
