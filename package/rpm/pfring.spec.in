@@ -30,10 +30,11 @@ mkdir -p $RPM_BUILD_ROOT/usr/local/pfring/kernel
 mkdir -p $RPM_BUILD_ROOT/usr/local/include/linux
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib
 mkdir -p $RPM_BUILD_ROOT/usr/bin
-mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
+mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/etc/init
-# Kernel module
+mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
+# Kernel module (DKMS will build and install it)
 #cp $HOME/PF_RING/kernel/pf_ring.ko $RPM_BUILD_ROOT/usr/local/pfring/kernel
 cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
 # Userland
@@ -57,10 +58,12 @@ cp $HOME/PF_RING/userland/wireshark/extcap/ntopdump $RPM_BUILD_ROOT/usr/lib64/wi
 cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d
 cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
-cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d/
+cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/etc/systemd/system
+cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/etc/systemd/system
 @ACCOLADE_LIB_COPY@
 @NAPATECH_LIB_COPY@
 @MYRICOM_LIB_COPY@
@@ -111,10 +114,12 @@ rm -fr $RPM_BUILD_ROOT
 /usr/bin/n2if
 /usr/local/pfring/README.FIRST
 /usr/local/pfring/README-DAQ.1st
+/etc/ld.so.conf.d/pf_ring.conf
 /etc/init.d/pf_ring
 /etc/init.d/cluster
 /etc/init/pf_ring.conf
-/etc/ld.so.conf.d/pf_ring.conf
+/etc/systemd/system/pf_ring.service
+/etc/systemd/system/cluster.service
 @ACCOLADE_LIBS@
 @NAPATECH_LIBS@
 @MYRICOM_LIBS@
