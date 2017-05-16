@@ -704,6 +704,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -777,6 +778,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1029,6 +1031,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1166,7 +1177,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1319,6 +1330,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -3279,6 +3291,7 @@ fi
 done
 
 
+MACHINE=`uname -m`
 CFLAGS=""
 SYS_LIBS=""
 
@@ -3288,202 +3301,6 @@ if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   LIBARCH="_$NATIVE"
 fi
 
-
-MACHINE=`uname -m`
-AR_X=
-if test $MACHINE = "x86_64"; then
-   AR_X="ar x"
-   PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
-   MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
-   MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-   MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-   MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
-   MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-   NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setaffinity_np in -lpthread" >&5
-$as_echo_n "checking for pthread_setaffinity_np in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_setaffinity_np+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_setaffinity_np ();
-int
-main ()
-{
-return pthread_setaffinity_np ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_setaffinity_np=yes
-else
-  ac_cv_lib_pthread_pthread_setaffinity_np=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_setaffinity_np" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_setaffinity_np" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then :
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_PTHREAD_SETAFFINITY_NP 1
-_ACEOF
-
-fi
-
-
-if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING ZC support" >&5
-$as_echo_n "checking PF_RING ZC support... " >&6; }
-if test -f lib/$PF_RING_ZC_LIB; then
-  HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
-  PF_RING_ZC_OBJS=`ar t lib/$PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
-  PF_RING_ZC_DEP="extract_pfring_zc_lib"
-  PF_RING_ZC_H="pfring_zc.h"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  PF_RING_ZC_LIB=""
-  HAVE_PF_RING_ZC=""
-  PF_RING_ZC_OBJS=""
-  PF_RING_ZC_DEP=""
-  PF_RING_ZC_H=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING NPCAP support" >&5
-$as_echo_n "checking PF_RING NPCAP support... " >&6; }
-if test -f lib/$NPCAP_LIB; then
-  HAVE_NPCAP="-D HAVE_NPCAP"
-  NPCAP_OBJS=`ar t lib/$NPCAP_LIB | grep -F .o | tr '\n' ' '`
-  NPCAP_DEP="extract_npcap_lib"
-  NPCAP_H="pfring_zc.h"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  NPCAP_LIB=""
-  HAVE_NPCAP=""
-  NPCAP_OBJS=""
-  NPCAP_DEP=""
-  NPCAP_H=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-if test "$IS_FREEBSD" != "1"; then
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if r/w locks are supported" >&5
-$as_echo_n "checking if r/w locks are supported... " >&6; }
-if test "$cross_compiling" = yes -a "${target_alias:0:6}" != "x86_64"; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling for ${target_alias} target
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#include <pthread.h>
-
-int main()
-{
-        pthread_rwlock_t t;
-        return 0;
-}
-
-
-
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-cat >>confdefs.h <<_ACEOF
-#define HAVE_RW_LOCK 1
-_ACEOF
-
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-
-fi
-
-for ac_header in exanic/exanic.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "exanic/exanic.h" "ac_cv_header_exanic_exanic_h" "$ac_includes_default"
-if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_EXANIC_EXANIC_H 1
-_ACEOF
-
-fi
-
-done
-
-if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for exanic_acquire_handle in -lexanic" >&5
-$as_echo_n "checking for exanic_acquire_handle in -lexanic... " >&6; }
-if ${ac_cv_lib_exanic_exanic_acquire_handle+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lexanic  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char exanic_acquire_handle ();
-int
-main ()
-{
-return exanic_acquire_handle ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_exanic_exanic_acquire_handle=yes
-else
-  ac_cv_lib_exanic_exanic_acquire_handle=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_exanic_exanic_acquire_handle" >&5
-$as_echo "$ac_cv_lib_exanic_exanic_acquire_handle" >&6; }
-if test "x$ac_cv_lib_exanic_exanic_acquire_handle" = xyes; then :
-   EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"
-fi
-
-fi
 
 # Check whether --enable-redis was given.
 if test "${enable_redis+set}" = set; then :
@@ -3765,7 +3582,199 @@ fi
 fi
 
 
+AR_X=
 if test $MACHINE = "x86_64"; then
+
+AR_X="ar x"
+PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
+MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
+MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
+MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
+MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
+NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setaffinity_np in -lpthread" >&5
+$as_echo_n "checking for pthread_setaffinity_np in -lpthread... " >&6; }
+if ${ac_cv_lib_pthread_pthread_setaffinity_np+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpthread  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char pthread_setaffinity_np ();
+int
+main ()
+{
+return pthread_setaffinity_np ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_pthread_pthread_setaffinity_np=yes
+else
+  ac_cv_lib_pthread_pthread_setaffinity_np=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_setaffinity_np" >&5
+$as_echo "$ac_cv_lib_pthread_pthread_setaffinity_np" >&6; }
+if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_PTHREAD_SETAFFINITY_NP 1
+_ACEOF
+
+fi
+
+
+if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING ZC support" >&5
+$as_echo_n "checking PF_RING ZC support... " >&6; }
+if test -f lib/$PF_RING_ZC_LIB; then
+  HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
+  PF_RING_ZC_OBJS=`ar t lib/$PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
+  PF_RING_ZC_DEP="extract_pfring_zc_lib"
+  PF_RING_ZC_H="pfring_zc.h"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  PF_RING_ZC_LIB=""
+  HAVE_PF_RING_ZC=""
+  PF_RING_ZC_OBJS=""
+  PF_RING_ZC_DEP=""
+  PF_RING_ZC_H=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING NPCAP support" >&5
+$as_echo_n "checking PF_RING NPCAP support... " >&6; }
+if test -f lib/$NPCAP_LIB; then
+  HAVE_NPCAP="-D HAVE_NPCAP"
+  NPCAP_OBJS=`ar t lib/$NPCAP_LIB | grep -F .o | tr '\n' ' '`
+  NPCAP_DEP="extract_npcap_lib"
+  NPCAP_H="pfring_zc.h"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  NPCAP_LIB=""
+  HAVE_NPCAP=""
+  NPCAP_OBJS=""
+  NPCAP_DEP=""
+  NPCAP_H=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+if test "$IS_FREEBSD" != "1"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if r/w locks are supported" >&5
+$as_echo_n "checking if r/w locks are supported... " >&6; }
+  if test "$cross_compiling" = yes; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "cannot run test program while cross compiling
+See \`config.log' for more details" "$LINENO" 5; }
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+  #include <pthread.h>
+  int main()
+  {
+    pthread_rwlock_t t;
+    return 0;
+  }
+
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+cat >>confdefs.h <<_ACEOF
+#define HAVE_RW_LOCK 1
+_ACEOF
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+
+fi
+
+for ac_header in exanic/exanic.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "exanic/exanic.h" "ac_cv_header_exanic_exanic_h" "$ac_includes_default"
+if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_EXANIC_EXANIC_H 1
+_ACEOF
+
+fi
+
+done
+
+if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for exanic_acquire_handle in -lexanic" >&5
+$as_echo_n "checking for exanic_acquire_handle in -lexanic... " >&6; }
+if ${ac_cv_lib_exanic_exanic_acquire_handle+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lexanic  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char exanic_acquire_handle ();
+int
+main ()
+{
+return exanic_acquire_handle ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_exanic_exanic_acquire_handle=yes
+else
+  ac_cv_lib_exanic_exanic_acquire_handle=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_exanic_exanic_acquire_handle" >&5
+$as_echo "$ac_cv_lib_exanic_exanic_acquire_handle" >&6; }
+if test "x$ac_cv_lib_exanic_exanic_acquire_handle" = xyes; then :
+   EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"
+fi
+
+fi
+
 DAG_LIB="-lm -ldl"
 HAVE_DAG="-D HAVE_DAG"
 DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
@@ -3917,6 +3926,7 @@ $as_echo "yes" >&6; }
 $as_echo "no" >&6; }
    fi
 fi
+
 fi
 
 
