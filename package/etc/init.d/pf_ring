@@ -28,12 +28,6 @@ if [ -f /etc/init.d/functions ]; then
 	. /etc/init.d/functions
 fi
 
-MGMT_INTERFACE="$(/sbin/route | grep default | head -n 1 | tr -s ' ' | cut -d ' ' -f 8)"
-if [ "${MGMT_INTERFACE}" == "" ]; then
-	MGMT_INTERFACE="eth0"
-fi
-MGMT_INTERFACE_DRIVER="$(/sbin/ethtool -i $MGMT_INTERFACE | grep driver | cut -d ' ' -f 2)"
-
 PF_RING="pf_ring"
 PF_RING_CONFIG_DIR="/etc/pf_ring"
 DRIVERS_FLAVOR=("zc")
@@ -49,18 +43,45 @@ FORCESTART=0
 FORCESTART_FILE="${PF_RING_CONFIG_DIR}/forcestart" # touch to load zc even if it matches the management
 DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
 LOAD_HUGEPAGES=0
+INTERFACES_CONFIG="${PF_RING_CONFIG_DIR}/interfaces.conf"
+
+# Including interfaces conf containing MANAGEMENT_INTERFACES, CAPTURE_INTERFACES
+[ -f ${INTERFACES_CONFIG} ] && . ${INTERFACES_CONFIG}
+
+if [ "${MANAGEMENT_INTERFACES}" != "" ]; then
+	MGMT_INTERFACES=($MANAGEMENT_INTERFACES)
+else
+	MGMT_INTERFACES=("$(/sbin/route | grep default | head -n 1 | tr -s ' ' | cut -d ' ' -f 8)")
+fi
+
+function is_management_interface {
+	local e
+	for e in "${MGMT_INTERFACES[@]}" ; do
+		[[ "$e" == "$1" ]] && return 0
+	done
+	return 1
+}
+
+function is_management_interface_driver {
+	local e
+	for e in "${MGMT_INTERFACES[@]}" ; do
+		DRIVER="$(/sbin/ethtool -i $e | grep driver | cut -d ' ' -f 2)"
+		[[ "$DRIVER" == "$1" ]] && return 0
+	done
+	return 1
+}
 
 function dkms_installed {
 	if [ ${DISTRO} == "debian" ]; then
-		if [ `dpkg -l |grep $1-zc-dkms |wc -l` -gt 0 ]; then
-			return 1
+		if [ `dpkg -l | grep $1-zc-dkms | wc -l` -gt 0 ]; then
+			return 0
 		fi
 	elif [ ${DISTRO} == "centos" ]; then
 		if [ `rpm -qa | grep $1-zc | wc -l` -gt 0 ]; then
-			return 1
+			return 0
 		fi
 	fi
-	return 0
+	return 1
 }
 
 check_pf_ring() {
@@ -164,9 +185,14 @@ set_interface_mtu() {
 start_interfaces() {
 	SETUP_FOR_PACKET_CAPTURE=$1
 
-	INTERFACES="$(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g')"
-	for D in $INTERFACES ; do
-		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && [ "$D" != "$MGMT_INTERFACE" ]; then
+	if [ "${CAPTURE_INTERFACES}" != "" ]; then
+		INTERFACES=($CAPTURE_INTERFACES)
+	else
+		INTERFACES=($(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g'))
+	fi
+
+	for D in ${INTERFACES[@]} ; do
+		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D ; then
 			# Disabling offloads
 			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
 
@@ -197,8 +223,8 @@ load_driver() {
 	if [ `/sbin/modinfo ${1}-${2} | wc -l` -gt 1 ]; then
 		# driver is available
 		DRV_PARAM=`cat ${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.conf`
-		if [ "${MGMT_INTERFACE_DRIVER}" == "${1}" ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
-			echo "Skipping driver ${1}: driver matches the management interface ${MGMT_INTERFACE}"
+		if [ is_management_interface_driver ${1} ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
+			echo "Skipping driver ${1}: driver matches the management interface"
 			return
 		fi
 		# unload old module if needed
@@ -507,6 +533,11 @@ init_config() {
 	if [ ! -f "${PF_RING_CONFIG_DIR}/pf_ring.start" ]; then
 		touch "${PF_RING_CONFIG_DIR}/pf_ring.start"
 	fi
+	if [ ! -f ${INTERFACES_CONFIG} ]; then
+		touch "${INTERFACES_CONFIG}"
+		echo "#MANAGEMENT_INTERFACES=\"eth0\"" >> ${INTERFACES_CONFIG}
+		echo "#CAPTURE_INTERFACES=\"eth1 eth2\"" >> ${INTERFACES_CONFIG}
+	fi 
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
 			if [ ! -d ${PF_RING_CONFIG_DIR}/${F}/${D} ]; then
