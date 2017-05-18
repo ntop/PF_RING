@@ -69,8 +69,16 @@ cat /proc/net/pf_ring/dev/eth1/info | grep ZC
 Polling Mode:      ZC/NAPI
 ```
 
-Note: If you're trying to load an ZC driver to a card that you're currently using, you may need to enable `forcestart`. _(Warning: This may break network connectivity, do not attempt on a remote system with no recovery options.)_
+Note: If you're trying to load a ZC driver on a card that you're currently using as management, you may need to enable `forcestart`. _(Warning: This may break network connectivity, do not attempt on a remote system with no recovery options.)_
 
 ```
 sudo touch /etc/pf_ring/forcestart
 ```
+
+Alternatively you can explicitly tell to the init script which are the interfaces you are using as management, and those that you want to use for packet capture, creating a configuration file /etc/pf_ring/interfaces.conf containing:
+
+```
+MANAGEMENT_INTERFACES="eth0 eth1"
+CAPTURE_INTERFACES="eth2 eth3 eth4 eth5"
+```
+
