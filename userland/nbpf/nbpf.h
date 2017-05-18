@@ -40,6 +40,10 @@ typedef __int64 int64_t;
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
+#if !defined(snprintf)
+#define snprintf _snprintf
+#endif
 #endif
 
 
