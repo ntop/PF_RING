@@ -8,8 +8,7 @@ needs to be installed (under /opt/accolade) in order to enable the
 Accolade module at runtime.
 
 ## Installation
-In order to get up and running with Accolade just run 
-the following commands:
+In order to get up and running with Accolade run the following commands:
 
 ```
 tar xvzf SDK_*.tgz
@@ -19,22 +18,33 @@ cd lib; make install; cd ..
 
 echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
-cd /opt/accolade/
-insmod driver/anic_mem.ko mbytes_per_device=64
-cd bin
-./anic_load
+insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
+/opt/accolade/bin/anic_load
+```
 
-cd PF_RING/kernel
-make
+If you are running an old firmware and you need to update it, you should
+run the following commands: 
+
+```
+cd SDK_*/tools/
+./anic_fwupdate --id 0 --script fpga_*.rbt.gz
+reboot
+```
+
+Now you are ready to compile and run PF_RING with Accolade support.
+Note that if you are installing pfring from packages, Accolade support
+is already enabled.
+
+```
+cd PF_RING/kernel; make
 sudo insmod pf_ring.ko
-cd ../userland/lib
-./configure
-make
-cd ../libpcap
-./configure
-make
-cd ../examples
-make
+cd ..
+cd userland; ./configure
+cd lib; make
+cd ..
+cd libpcap; ./configure; make
+cd ..
+cd examples; make
 sudo ./pfcount -i anic:0
 ```
 
