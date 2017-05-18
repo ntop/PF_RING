@@ -27,7 +27,8 @@ run the following commands:
 
 ```
 cd SDK_*/tools/
-./anic_fwupdate --id 0 --script fpga_*.rbt.gz
+gunzip fpga_*.rbt.gz
+./anic_fwupdate --id 0 --script fpga_*.rbt
 reboot
 ```
 
@@ -37,13 +38,10 @@ is already enabled.
 
 ```
 cd PF_RING/kernel; make
-sudo insmod pf_ring.ko
-cd ..
+sudo insmod pf_ring.ko; cd ..
 cd userland; ./configure
-cd lib; make
-cd ..
-cd libpcap; ./configure; make
-cd ..
+cd lib; make; cd ..
+cd libpcap; ./configure; make; cd ..
 cd examples; make
 sudo ./pfcount -i anic:0
 ```
