@@ -998,6 +998,10 @@ int pfring_mod_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
 
 /* *************************************** */
 
+#ifndef SPEED_UNKNOWN
+#define SPEED_UNKNOWN		-1
+#endif
+
 static u_int32_t __ethtool_get_link_settings(const char *ifname) {
   int sock, rc;
   struct ifreq ifr;
