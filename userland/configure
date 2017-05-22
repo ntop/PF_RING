@@ -3850,7 +3850,7 @@ if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
 $as_echo "yes" >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking Invea-Tech support" >&5
 $as_echo_n "checking Invea-Tech support... " >&6; }
-  if test -f pfring_mod_invea.c; then
+  if test -f lib/pfring_mod_invea.c; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     INVEATECH_INC=""
@@ -3866,7 +3866,7 @@ else
 $as_echo "no" >&6; }
 fi
 
-if test -f pfring_mod_mlx.c; then
+if test -f lib/pfring_mod_mlx.c; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ibv_open_device in -libverbs" >&5
 $as_echo_n "checking for ibv_open_device in -libverbs... " >&6; }
 if ${ac_cv_lib_ibverbs_ibv_open_device+:} false; then :

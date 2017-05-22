@@ -152,7 +152,7 @@ AC_MSG_CHECKING([if sze2 is present])
 if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
   AC_MSG_RESULT([yes])
   AC_MSG_CHECKING([Invea-Tech support])
-  if test -f pfring_mod_invea.c; then
+  if test -f lib/pfring_mod_invea.c; then
     AC_MSG_RESULT(yes)
     INVEATECH_INC=""
     INVEATECH_LIB="-lsze2"
@@ -165,7 +165,7 @@ else
   AC_MSG_RESULT(no)
 fi
 
-if test -f pfring_mod_mlx.c; then
+if test -f lib/pfring_mod_mlx.c; then
    AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
    AC_MSG_CHECKING([Mellanox support])
    if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
