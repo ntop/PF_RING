@@ -156,8 +156,8 @@ float wireshark_version() {
   if (rev == NULL) return 0;
   rev++;
   rev = strchr(rev, '.');
-  if (rev == NULL) return 0;;
-  rev = '\0';
+  if (rev == NULL) return 0;
+  *rev = '\0';
 
   sscanf(version, "%f", &v);
 
