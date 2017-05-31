@@ -296,6 +296,14 @@ load_zc() {
 	fi
 }
 
+load_nt() {
+	if [ $(lspci | grep Napatech | wc -l) -gt 0 ] && [ -d "/opt/napatech3" ]; then
+		if [ $(ps aux | grep ntservice | grep napatech | wc -l) -eq 0 ]; then
+			/opt/napatech3/bin/ntstart.sh
+		fi
+	fi
+}
+
 unload_driver() {
 	/sbin/modprobe -r ${1}_${2}
 	if [ `echo $?` -gt 0 ]; then
@@ -391,6 +399,10 @@ start_pf_ring() {
 
 	## Load NTOP drivers ##
 	load_zc
+	## Load Napatech drivers ##
+	load_nt
+	## Sleep a bit for changes to be applied
+	sleep 1
 	## Load NTOP drivers ##
 	sleep 1
 	## Load dummy interfaces associated to timelines or nic cards ##
