@@ -5088,7 +5088,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
     }
   }
 
-  if((dev == NULL) || (dev->dev->type != ARPHRD_ETHER))
+  if((dev == NULL) || (dev->dev->type != ARPHRD_ETHER && dev->dev->type != ARPHRD_LOOPBACK))
     return(-EINVAL);
 
   if(dev->dev->ifindex >= MAX_NUM_IFIDX)
@@ -7966,6 +7966,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     /* Skip non ethernet interfaces */
     if (
        (dev->type != ARPHRD_ETHER) /* Ethernet */
+       && (dev->type != ARPHRD_LOOPBACK) /* Loopback */
        /* Wifi */
        && (dev->type != ARPHRD_IEEE80211)
        && (dev->type != ARPHRD_IEEE80211_PRISM)
