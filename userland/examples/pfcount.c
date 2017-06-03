@@ -60,7 +60,7 @@
 #define NO_ZC_BUFFER_LEN     9000
 
 pfring  *pd;
-int verbose = 0, num_threads = 1;
+int verbose = 0, quiet = 0, num_threads = 1;
 pfring_stat pfringStats;
 void *automa = NULL;
 static struct timeval startTime;
@@ -212,7 +212,7 @@ void drop_packet_rule(const struct pfring_pkthdr *h) {
 
     if(pfring_handle_hash_filtering_rule(pd, &rule, 1 /* add_rule */) < 0)
       fprintf(stderr, "pfring_handle_hash_filtering_rule(1) failed\n");
-    else
+    else if (!quiet)
       printf("Added filtering rule %d\n", rule.rule_id);
   } else {
     filtering_rule rule;
@@ -231,7 +231,7 @@ void drop_packet_rule(const struct pfring_pkthdr *h) {
 
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
       fprintf(stderr, "pfring_add_filtering_rule(2) failed\n");
-    else
+    else if (!quiet)
       printf("Rule %d added successfully...\n", rule.rule_id);
   }
 }
@@ -241,11 +241,14 @@ void drop_packet_rule(const struct pfring_pkthdr *h) {
 void sigproc(int sig) {
   static int called = 0;
 
-  fprintf(stderr, "Leaving...\n");
+  if (!quiet)
+    fprintf(stderr, "Leaving...\n");
+
   if(called) return; else called = 1;
   stats->do_shutdown = 1;
 
-  print_stats();
+  if (!quiet)
+    print_stats();
 
   pfring_breakloop(pd);
 }
@@ -546,7 +549,7 @@ void printHelp(void) {
   printf("-M              Packet memcpy (to test memcpy speed)\n");
   printf("-C <mode>       Work with the adapter in chunk mode (1=chunk API, 2=packet API)\n");
   printf("-x <path>       File containing strings to search string (case sensitive) on payload.\n");
-  printf("-o <path>       Dump matching packets onto the specified pcap (need -x).\n");
+  printf("-o <path>       Dump packets on the specified pcap (in case of -x this dumps only matching packets)\n");
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
@@ -569,7 +572,8 @@ void* packet_consumer_thread(void* _id) {
 
   if((num_threads > 1) && (numCPU > 1)) {
     if(bind2core(core_id) == 0)
-      printf("Set thread %lu on core %lu/%u\n", thread_id, core_id, numCPU);
+      if (!quiet)
+        printf("Set thread %lu on core %lu/%u\n", thread_id, core_id, numCPU);
   }
 
   memset(&hdr, 0, sizeof(hdr));
@@ -604,9 +608,10 @@ void* packet_consumer_thread(void* _id) {
       if(rc < 0)
 	fprintf(stderr, "pfring_get_filtering_rule_stats() failed [rc=%d]\n", rc);
       else {
-	printf("[Pkts=%u][Bytes=%u]\n",
-	       (unsigned int)stats.num_pkts,
-	       (unsigned int)stats.num_bytes);
+        if (!quiet)
+	  printf("[Pkts=%u][Bytes=%u]\n",
+	         (unsigned int)stats.num_pkts,
+	         (unsigned int)stats.num_bytes);
       }
     }
   }
@@ -629,7 +634,8 @@ void* chunk_consumer_thread(void* _id) {
 
   if((num_threads > 1) && (numCPU > 1)) {
     if(bind2core(core_id) == 0)
-      printf("Set thread %lu on core %lu/%u\n", thread_id, core_id, numCPU);
+      if (!quiet)
+        printf("Set thread %lu on core %lu/%u\n", thread_id, core_id, numCPU);
   }
 
   memset(&hdr, 0, sizeof(hdr));
@@ -663,7 +669,8 @@ static int ac_match_handler(AC_MATCH_t *m, void *param) {
 static void add_string_to_automa(char *value) {
   AC_PATTERN_t ac_pattern;
 
-  printf("Adding string '%s' [id %u] to search list...\n", value, string_id);
+  if (!quiet)
+    printf("Adding string '%s' [id %u] to search list...\n", value, string_id);
 
   ac_pattern.astring = value, ac_pattern.rep.number = string_id++;
   ac_pattern.length = strlen(ac_pattern.astring);
@@ -677,7 +684,7 @@ static void load_strings(char *path) {
   char *s, buf[256] = { 0 };
 
   if(f == NULL) {
-    printf("Unable to open file %s\n", path);
+    fprintf(stderr, "Unable to open file %s\n", path);
     exit(-1);
   }
   automa = ac_automata_init(ac_match_handler);
@@ -713,7 +720,10 @@ void openDump() {
 
   dump_id++;
 
-  snprintf(path, sizeof(path), "%s.%u", out_pcap_file, dump_id);
+  if (strcmp(out_pcap_file, "-") != 0)
+    snprintf(path, sizeof(path), "%s.%u", out_pcap_file, dump_id);
+  else 
+    snprintf(path, sizeof(path), "-");
 
   if(dumper != NULL) {
     pcap_dump_close(dumper);
@@ -728,7 +738,7 @@ void openDump() {
   dumper = pcap_dump_open(pcap_open_dead(DLT_EN10MB, 16384 /* MTU */), path);
 
   if(dumper == NULL)
-    printf("Unable to create dump file %s\n", path);
+    fprintf(stderr, "Unable to create dump file %s\n", path);
   else {
     if(automa != NULL) {
       snprintf(path, sizeof(path), "%s.log.%u", out_pcap_file, dump_id);
@@ -736,7 +746,7 @@ void openDump() {
       match_dumper = fopen(path, "w");
 
       if(match_dumper == NULL)
-        printf("Unable to create dump log file %s\n", path);
+        fprintf(stderr, "Unable to create dump log file %s\n", path);
     }
   }
 
@@ -817,7 +827,7 @@ int main(int argc, char* argv[]) {
         case cluster_per_flow_tcp_5_tuple:
         case cluster_round_robin:
           cluster_hash_type = atoi(optarg); break;
-        default: printf("WARNING: Invalid hash type %u\n", atoi(optarg)); break;
+        default: fprintf(stderr, "WARNING: Invalid hash type %u\n", atoi(optarg)); break;
       }
       break;
     case 'l':
@@ -883,29 +893,30 @@ int main(int argc, char* argv[]) {
     case 'u':
       switch(add_drop_rule = atoi(optarg)) {
       case 1:
-	printf("Adding hash filtering rules\n");
+	fprintf(stderr, "Adding hash filtering rules\n");
 	break;
       default:
-	printf("Adding wildcard filtering rules\n");
+	fprintf(stderr, "Adding wildcard filtering rules\n");
 	add_drop_rule = 2;
 	break;
       }
       break;
     case 'x':
       load_strings(optarg);      
+      use_extended_pkt_header = 1;
       break;
     case 'N':
       num_packets = atoi(optarg);
       break;
     case 'o':
       out_pcap_file = optarg;
-      use_extended_pkt_header = 1;
+      if (strcmp(out_pcap_file, "-") == 0) quiet = 1; 
       break;
     case 'z':
       if(strcmp(optarg, "ixia") == 0)
 	enable_ixia_timestamp = 1;
       else
-	printf("WARNING: unknown -z option, it has been ignored\n");
+	fprintf(stderr, "WARNING: unknown -z option, it has been ignored\n");
       break;      
     }
   }
@@ -936,7 +947,7 @@ int main(int argc, char* argv[]) {
   if(automa || enable_ixia_timestamp) {
     if(snaplen < 1500) {
       snaplen = 1500;
-      printf("WARNING: Snaplen smaller than the MTU. Enlarging it (new snaplen %u)\n", snaplen);
+      fprintf(stderr, "WARNING: Snaplen smaller than the MTU. Enlarging it (new snaplen %u)\n", snaplen);
     }
   }
 
@@ -948,7 +959,7 @@ int main(int argc, char* argv[]) {
     (void)signal(SIGHUP, handleSigHup);
 
     if(num_threads > 1) {
-      printf("WARNING: Disabling threads when using -o\n");
+      fprintf(stderr, "WARNING: Disabling threads when using -o\n");
       num_threads = 1;
     }
   }
@@ -962,7 +973,6 @@ int main(int argc, char* argv[]) {
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
   flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
 
-  //printf("flags: %d\n", flags);
   pd = pfring_open(device, snaplen, flags);
 
   if(pd == NULL) {
@@ -975,25 +985,30 @@ int main(int argc, char* argv[]) {
     pfring_set_application_name(pd, "pfcount");
     pfring_version(pd, &version);
 
-    printf("Using PF_RING v.%d.%d.%d\n",
-	   (version & 0xFFFF0000) >> 16,
-	   (version & 0x0000FF00) >> 8,
-	   version & 0x000000FF);
+    if (!quiet)
+      printf("Using PF_RING v.%d.%d.%d\n",
+             (version & 0xFFFF0000) >> 16,
+             (version & 0x0000FF00) >> 8,
+             version & 0x000000FF);
   }
 
   if(is_sysdig) {
-    printf("Capturing from sysdig\n");
+    if (!quiet)
+      printf("Capturing from sysdig\n");
   } else {
     int ifindex = -1;
     rc = pfring_get_bound_device_address(pd, mac_address);
     pfring_get_bound_device_ifindex(pd, &ifindex);
-    printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
-	   device, rc == 0 ? etheraddr_string(mac_address, buf) : "unknown",
-	   ifindex, pfring_get_interface_speed(pd));
+    if (!quiet)
+      printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
+             device, rc == 0 ? etheraddr_string(mac_address, buf) : "unknown",
+             ifindex, pfring_get_interface_speed(pd));
   }
 
-  printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));
-  printf("# Polling threads:    %d\n", num_threads);
+  if (!quiet) {
+    printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));
+    printf("# Polling threads:    %d\n", num_threads);
+  }
 
   if (enable_hw_timestamp) {
     struct timespec ltime;
@@ -1012,14 +1027,14 @@ int main(int argc, char* argv[]) {
   if(bpfFilter != NULL) {
     rc = pfring_set_bpf_filter(pd, bpfFilter);
     if(rc != 0)
-      printf("pfring_set_bpf_filter(%s) returned %d\n", bpfFilter, rc);
-    else
+      fprintf(stderr, "pfring_set_bpf_filter(%s) returned %d\n", bpfFilter, rc);
+    else if (!quiet)
       printf("Successfully set BPF filter '%s'\n", bpfFilter);
   }
 
   if(clusterId > 0) {
     rc = pfring_set_cluster(pd, clusterId, cluster_hash_type);
-    printf("pfring_set_cluster returned %d\n", rc);
+    fprintf(stderr, "pfring_set_cluster returned %d\n", rc);
   }
 
   if(watermark > 0) {
@@ -1031,7 +1046,8 @@ int main(int argc, char* argv[]) {
     rc = pfring_set_reflector_device(pd, reflector_device);
 
     if(rc == 0) {
-      /* printf("pfring_set_reflector_device(%s) succeeded\n", reflector_device); */
+      /*if (!quiet)
+       * printf("pfring_set_reflector_device(%s) succeeded\n", reflector_device); */
     } else
       fprintf(stderr, "pfring_set_reflector_device(%s) failed [rc: %d]\n", reflector_device, rc);
   }
@@ -1045,7 +1061,7 @@ int main(int argc, char* argv[]) {
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
 
-  if(!verbose) {
+  if(!verbose && ! quiet) {
     signal(SIGALRM, my_sigalarm);
     alarm(ALARM_SLEEP);
   }
@@ -1064,7 +1080,7 @@ int main(int argc, char* argv[]) {
 
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
       fprintf(stderr, "pfring_add_filtering_rule(2) failed\n");
-    else
+    else if (!quiet)
       printf("Rule added successfully...\n");
   }
 
@@ -1088,7 +1104,7 @@ int main(int argc, char* argv[]) {
 
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
       fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else
+    else if (!quiet)
       printf("Rule %d added successfully...\n", rule.rule_id );
 
     /* ************************************* */
@@ -1105,7 +1121,7 @@ int main(int argc, char* argv[]) {
     rule.extended_fields.tunnel.tunnel_id = 0x776C0000;
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
       fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else
+    else if (!quiet)
       printf("Rule %d added successfully...\n", rule.rule_id );
 
     /* ************************************** */
@@ -1122,7 +1138,7 @@ int main(int argc, char* argv[]) {
 
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
       fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else
+    else if (!quiet)
       printf("Rule %d added successfully...\n", rule.rule_id );
 
     memset(&rule, 0, sizeof(rule));
@@ -1141,7 +1157,7 @@ int main(int argc, char* argv[]) {
 
     if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
       fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else
+    else if (!quiet)
       printf("Rule %d added successfully...\n", rule.rule_id );
 
     memset(&rule, 0, sizeof(rule));
@@ -1156,7 +1172,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Dumping statistics on %s\n", path);
 
   if (pfring_enable_ring(pd) != 0) {
-    printf("Unable to enable ring :-(\n");
+    fprintf(stderr, "Unable to enable ring :-(\n");
     pfring_close(pd);
     return(-1);
   }
