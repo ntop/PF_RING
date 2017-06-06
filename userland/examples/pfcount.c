@@ -54,7 +54,7 @@
 #include "third-party/ahocorasick.c"
 
 #define ALARM_SLEEP             1
-#define DEFAULT_SNAPLEN       128
+#define DEFAULT_SNAPLEN      1536
 #define MAX_NUM_THREADS        64
 #define DEFAULT_DEVICE     "eth0"
 #define NO_ZC_BUFFER_LEN     9000
@@ -945,8 +945,8 @@ int main(int argc, char* argv[]) {
   }
 
   if(automa || enable_ixia_timestamp) {
-    if(snaplen < 1500) {
-      snaplen = 1500;
+    if(snaplen < 1536) {
+      snaplen = 1536;
       fprintf(stderr, "WARNING: Snaplen smaller than the MTU. Enlarging it (new snaplen %u)\n", snaplen);
     }
   }
