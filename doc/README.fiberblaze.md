@@ -5,8 +5,9 @@ We expect you to have installed the Fiberblaze drivers and loaded them.
 Typical commands are:
 
 ```
-# echo 33547999880 > /proc/sys/kernel/shmmax
-# echo 33547999880 > /proc/sys/kernel/shmall
+# Raise the shared memory limits to 32GB
+# echo 34359738368 > /proc/sys/kernel/shmmax
+# echo 34359738368 > /proc/sys/kernel/shmall
 # echo 2048 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 # cd /opt/fiberblaze/driver
 # ./load_driver.sh hugepages='2G'
