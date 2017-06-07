@@ -315,6 +315,7 @@ static int search_string(char *string_to_match, u_int string_to_match_len) {
 }
 
 /* ****************************************************** */
+
 static int32_t thiszone;
 
 void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_match) {
@@ -324,7 +325,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
 
   memset((void *) &h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
   pfring_parse_pkt((u_char *) p, (struct pfring_pkthdr *) h, 5, 0, 1);
-  
+
   s = (h->ts.tv_sec + thiszone) % 86400;
   
   if(h->extended_hdr.timestamp_ns) {
@@ -440,10 +441,15 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h,
     }
   }
 
+  if(unlikely(add_drop_rule)) {
+    if(!h->ts.tv_sec) pfring_parse_pkt((u_char*)p, (struct pfring_pkthdr*)h, 4, 0, 1);
+    drop_packet_rule(h);
+  }
+
   if (dumper) {
     if(unlikely(do_close_dump)) openDump();
-
     if (dumper) {
+      if (!h->ts.tv_sec) gettimeofday(&((struct pfring_pkthdr *) h)->ts, NULL);
       pcap_dump((u_char*)dumper, (struct pcap_pkthdr*)h, p);
       pcap_dump_flush(dumper);
     }
@@ -451,13 +457,6 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h,
 
   if(unlikely(verbose || dump_match)) {
     print_packet(h, p, dump_match);
-  }
-
-  if(unlikely(add_drop_rule)) {
-    if(h->ts.tv_sec == 0)
-      pfring_parse_pkt((u_char*)p, (struct pfring_pkthdr*)h, 4, 0, 1);
-
-    drop_packet_rule(h);
   }
 
   if (unlikely(num_packets && num_packets == stats->numPkts[threadId]))
