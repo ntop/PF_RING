@@ -7946,21 +7946,46 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       char _what[32], *what = _what;
       
       switch(msg) {
-      case NETDEV_POST_INIT:   what = "NETDEV_POST_INIT"; break;
-      case NETDEV_PRE_UP:      what = "NETDEV_PRE_UP"; break;
-      case NETDEV_UP:          what = "NETDEV_UP"; break;
-      case NETDEV_DOWN:        what = "NETDEV_DOWN"; break;
-      case NETDEV_REGISTER:    what = "NETDEV_REGISTER"; break;
-      case NETDEV_UNREGISTER:  what = "NETDEV_UNREGISTER"; break;
-      case NETDEV_CHANGE:      what = "NETDEV_CHANGE"; break;
-      case NETDEV_CHANGEADDR:  what = "NETDEV_CHANGEADDR"; break;
-      case NETDEV_CHANGENAME:  what = "NETDEV_CHANGENAME"; break;
+      case NETDEV_UP:               what = "NETDEV_UP"; break;
+      case NETDEV_DOWN:             what = "NETDEV_DOWN"; break;
+      case NETDEV_REBOOT:           what = "NETDEV_REBOOT"; break;
+      case NETDEV_CHANGE:           what = "NETDEV_CHANGE"; break;
+      case NETDEV_REGISTER:         what = "NETDEV_REGISTER"; break;
+      case NETDEV_UNREGISTER:       what = "NETDEV_UNREGISTER"; break;
+      case NETDEV_CHANGEMTU:        what = "NETDEV_CHANGEMTU"; break;
+      case NETDEV_CHANGEADDR:       what = "NETDEV_CHANGEADDR"; break;
+      case NETDEV_GOING_DOWN:       what = "NETDEV_GOING_DOWN"; break;
+      case NETDEV_CHANGENAME:       what = "NETDEV_CHANGENAME"; break;
+      case NETDEV_FEAT_CHANGE:      what = "NETDEV_FEAT_CHANGE"; break;
+      case NETDEV_BONDING_FAILOVER: what = "NETDEV_BONDING_FAILOVER"; break;
+      case NETDEV_PRE_UP:           what = "NETDEV_PRE_UP"; break;
+      case NETDEV_PRE_TYPE_CHANGE:  what = "NETDEV_PRE_TYPE_CHANGE"; break;
+      case NETDEV_POST_TYPE_CHANGE: what = "NETDEV_POST_TYPE_CHANGE"; break;
+      case NETDEV_POST_INIT:        what = "NETDEV_POST_INIT"; break;
+#ifdef NETDEV_UNREGISTER_FINAL
+      case NETDEV_UNREGISTER_FINAL: what = "NETDEV_UNREGISTER_FINAL"; break;
+#else
+      case NETDEV_UNREGISTER_BATCH: what = "NETDEV_UNREGISTER_BATCH"; break;
+#endif
+      case NETDEV_RELEASE:          what = "NETDEV_RELEASE"; break;
+      case NETDEV_NOTIFY_PEERS:     what = "NETDEV_NOTIFY_PEERS"; break;
+      case NETDEV_JOIN:             what = "NETDEV_JOIN"; break;
+#ifdef NETDEV_CHANGEUPPER
+      case NETDEV_CHANGEUPPER:      what = "NETDEV_CHANGEUPPER"; break;
+      case NETDEV_RESEND_IGMP:      what = "NETDEV_RESEND_IGMP"; break;
+      case NETDEV_PRECHANGEMTU:     what = "NETDEV_PRECHANGEMTU"; break;
+      case NETDEV_CHANGEINFODATA:   what = "NETDEV_CHANGEINFODATA"; break;
+      case NETDEV_BONDING_INFO:     what = "NETDEV_BONDING_INFO"; break;
+#endif
+#ifdef NETDEV_PRECHANGEUPPER
+      case NETDEV_PRECHANGEUPPER:   what = "NETDEV_PRECHANGEUPPER"; break;
+#endif
       default:
 	snprintf(_what, sizeof(_what), "Unknown msg %lu", msg);
 	break;
       }
       
-      debug_printk(2, "%s: %s Type=%d IfIndex=%d Addr=%p\n", dev->name, what, dev->type, dev->ifindex, dev);
+      printk("%s: %s Type=%d IfIndex=%d Addr=%p\n", dev->name, what, dev->type, dev->ifindex, dev);
     }
 
     /* Skip non ethernet interfaces */
@@ -7989,19 +8014,19 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     case NETDEV_DOWN:
       break;
     case NETDEV_REGISTER:
-      debug_printk(2, "%s: [REGISTER][pfring_ptr=%p][hook=%p]\n", 
-	       dev->name, dev->pfring_ptr, &ring_hooks);
+      debug_printk(2, "%s: [REGISTER][ifindex: %u pfring_ptr=%p hook=%p]\n", dev->name, dev->ifindex, dev->pfring_ptr, &ring_hooks);
 
       /* safety check */
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
         if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0) {
-          printk("[PF_RING] WARNING: multiple devices with the same name\n");
-          dev->pfring_ptr = &ring_hooks;
+          printk("[PF_RING] WARNING: multiple devices with the same name (name: %s ifindex: %u already-registered-as: %u)\n", 
+            dev->name, dev->ifindex, dev_ptr->dev->ifindex);
+          if_name_clash = 1;
         }
       }
 
-      if(dev->pfring_ptr == NULL) {
+      if(!if_name_clash) {
 	dev->pfring_ptr = &ring_hooks;
 	if(add_device_to_ring_list(dev) != 0) {
 	  printk("[PF_RING] Error in add_device_to_ring_list(%s)\n", dev->name);
@@ -8010,7 +8035,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       break;
 
     case NETDEV_UNREGISTER:
-      debug_printk(2, "%s: [UNREGISTER][pfring_ptr=%p]\n", dev->name, dev->pfring_ptr);
+      debug_printk(2, "%s: [UNREGISTER][ifindex: %u pfring_ptr=%p]\n", dev->name, dev->ifindex, dev->pfring_ptr);
 
       hook = (struct pfring_hooks *) dev->pfring_ptr;
       if(hook && (hook->magic == PF_RING)) {
@@ -8033,7 +8058,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       break;
 
     case NETDEV_CHANGENAME: /* Rename interface ethX -> ethY */
-      debug_printk(2, "Device changed name to %s\n", dev->name);
+      debug_printk(2, "Device changed name to %s [ifindex: %u]\n", dev->name, dev->ifindex);
 
       write_lock(&ring_proc_lock); 
 
@@ -8041,8 +8066,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
         if (dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0) {
-          printk("[PF_RING] WARNING: multiple devices with the same name (name clash during name change %s -> %s)\n",
-                 dev_ptr->dev->name, dev->name);
+          printk("[PF_RING] WARNING: different devices (ifindex: %u - ifindex: %u) with the same name detected during name change %s -> %s\n",
+                 dev_ptr->dev->ifindex, dev->ifindex, dev_ptr->dev->name, dev->name);
           if_name_clash = 1;
         }
       }
