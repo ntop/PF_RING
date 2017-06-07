@@ -1,4 +1,4 @@
-# Fiberblaze support in PF_RING
+# Silicom/Fiberblaze support in PF_RING
 
 ## Prerequisites
 We expect you to have installed the Fiberblaze drivers and loaded them. 
@@ -16,7 +16,7 @@ Typical commands are:
 ```
 
 ## Usage
-PF_RING-enabled apps see Fiberblaze cards as fbcard:XXXX devices. However due to the Fiberblaze naming, you need to use different device names, depending if you send or receive traffic.
+PF_RING-enabled apps see Silicom/Fiberblaze cards as fbcard:XXXX devices. However due to the Fiberblaze naming, you need to use different device names, depending if you send or receive traffic.
 
 # RX
 The naming convention is fbcard:CARD_ID:GROUP_NAME:GROUP_RING_ID where CARD_ID is the id of the card we want to open, GROUP_NAME is the name of the group specified in fbcard.cfg used by configurecard, and RING_ID (in case of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs.
