@@ -7974,8 +7974,12 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       case NETDEV_CHANGEUPPER:      what = "NETDEV_CHANGEUPPER"; break;
       case NETDEV_RESEND_IGMP:      what = "NETDEV_RESEND_IGMP"; break;
       case NETDEV_PRECHANGEMTU:     what = "NETDEV_PRECHANGEMTU"; break;
+#ifdef NETDEV_CHANGEINFODATA
       case NETDEV_CHANGEINFODATA:   what = "NETDEV_CHANGEINFODATA"; break;
+#endif
+#ifdef NETDEV_BONDING_INFO
       case NETDEV_BONDING_INFO:     what = "NETDEV_BONDING_INFO"; break;
+#endif
 #endif
 #ifdef NETDEV_PRECHANGEUPPER
       case NETDEV_PRECHANGEUPPER:   what = "NETDEV_PRECHANGEUPPER"; break;
