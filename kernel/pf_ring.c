@@ -7941,11 +7941,10 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
   struct pfring_hooks *hook;
   int if_name_clash = 0;
 
-  if (dev != NULL) {
-    if (debug_on(2)) {
-      char _what[32], *what = _what;
+  if (debug_on(2)) {
+    char _what[32], *what = _what;
       
-      switch(msg) {
+    switch(msg) {
       case NETDEV_UP:               what = "NETDEV_UP"; break;
       case NETDEV_DOWN:             what = "NETDEV_DOWN"; break;
       case NETDEV_REBOOT:           what = "NETDEV_REBOOT"; break;
@@ -7989,31 +7988,43 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       default:
 	snprintf(_what, sizeof(_what), "Unknown msg %lu", msg);
 	break;
-      }
-      
-      printk("%s: %s Type=%d IfIndex=%d Addr=%p\n", dev->name, what, dev->type, dev->ifindex, dev);
     }
 
-    /* Skip non ethernet interfaces */
-    if (
-       (dev->type != ARPHRD_ETHER) /* Ethernet */
-       && (dev->type != ARPHRD_LOOPBACK) /* Loopback */
-       /* Wifi */
-       && (dev->type != ARPHRD_IEEE80211)
-       && (dev->type != ARPHRD_IEEE80211_PRISM)
-       && (dev->type != ARPHRD_IEEE80211_RADIOTAP)
-       && strncmp(dev->name, "bond", 4)) {
-      debug_printk(2, "%s: skipping non ethernet device\n", dev->name);
-      return NOTIFY_DONE;
+    if (dev != NULL) {
+      char addr[MAX_ADDR_LEN*2+1];
+      int i;
+      for (i = 0; i < MAX_ADDR_LEN; i++)
+        sprintf(&addr[i*2], "%02X", dev->perm_addr[i]);
+      addr[MAX_ADDR_LEN*2] = '\0';
+      printk("[PF_RING] %s: %s Type=%d IfIndex=%d Ptr=%p Addr=%s\n", dev->name, what, dev->type, dev->ifindex, dev, addr);
+    } else {
+      printk("[PF_RING] %s\n", what);
     }
+  }
 
-    if (dev->ifindex >= MAX_NUM_IFIDX) {
-      printk("[PF_RING] %s %s: interface index %d > max index %d\n", __FUNCTION__,
-	     dev->name, dev->ifindex, MAX_NUM_IFIDX);
-      return NOTIFY_DONE;
-    }
+  if (dev == NULL)
+    return NOTIFY_DONE;
 
-    switch (msg) {
+  /* Skip non ethernet interfaces */
+  if (
+      (dev->type != ARPHRD_ETHER) /* Ethernet */
+      && (dev->type != ARPHRD_LOOPBACK) /* Loopback */
+      /* Wifi */
+      && (dev->type != ARPHRD_IEEE80211)
+      && (dev->type != ARPHRD_IEEE80211_PRISM)
+      && (dev->type != ARPHRD_IEEE80211_RADIOTAP)
+      && strncmp(dev->name, "bond", 4)) {
+    debug_printk(2, "%s: skipping non ethernet device\n", dev->name);
+    return NOTIFY_DONE;
+  }
+
+  if (dev->ifindex >= MAX_NUM_IFIDX) {
+    printk("[PF_RING] %s %s: interface index %d > max index %d\n", __FUNCTION__,
+           dev->name, dev->ifindex, MAX_NUM_IFIDX);
+    return NOTIFY_DONE;
+  }
+
+  switch (msg) {
     case NETDEV_POST_INIT:
     case NETDEV_PRE_UP:
     case NETDEV_UP:
@@ -8026,8 +8037,9 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
         if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0) {
-          printk("[PF_RING] WARNING: multiple devices with the same name (name: %s ifindex: %u already-registered-as: %u)\n", 
-            dev->name, dev->ifindex, dev_ptr->dev->ifindex);
+          if (dev->ifindex != dev_ptr->dev->ifindex) /* print warning only if ifindex is not the same */
+            printk("[PF_RING] WARNING: multiple devices with the same name (name: %s ifindex: %u already-registered-as: %u)\n", 
+              dev->name, dev->ifindex, dev_ptr->dev->ifindex);
           if_name_clash = 1;
         }
       }
@@ -8082,8 +8094,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
         ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
 
         if (dev_ptr->dev == dev) {
-          debug_printk(2, "Updating device name %s to %s\n",
-                   dev_ptr->device_name, dev->name);
+          debug_printk(2, "Updating device name %s to %s\n", dev_ptr->device_name, dev->name);
 
 	  /* Remove old entry */
           if (dev_ptr->proc_entry != NULL) {
@@ -8131,7 +8142,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 
     default:
       break;
-    }
   }
 
   return NOTIFY_DONE;
@@ -8237,6 +8247,18 @@ static int __init ring_init(void)
 	 "(C) 2004-16 ntop.org\n",
 	 RING_VERSION, GIT_REV);
 
+  /* Sanity check */
+  if(transparent_mode != 0)
+    printk("[PF_RING] Warning: transparent_mode is deprecated!\n");
+
+  printk("[PF_RING] Min # ring slots %d\n", min_num_slots);
+  printk("[PF_RING] Slot version     %d\n",
+	 RING_FLOWSLOT_VERSION);
+  printk("[PF_RING] Capture TX       %s\n",
+	 enable_tx_capture ? "Yes [RX+TX]" : "No [RX only]");
+  printk("[PF_RING] IP Defragment    %s\n",
+	 enable_ip_defrag ? "Yes" : "No");
+
 #if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
   if((rc = proto_register(&ring_proto, 0)) != 0)
     return(rc);
@@ -8277,20 +8299,9 @@ static int __init ring_init(void)
   sock_register(&ring_family_ops);
   register_netdevice_notifier(&ring_netdev_notifier);
 
-  /* Sanity check */
-  if(transparent_mode != 0)
-    printk("[PF_RING] Warning: transparent_mode is deprecated!\n");
-
-  printk("[PF_RING] Min # ring slots %d\n", min_num_slots);
-  printk("[PF_RING] Slot version     %d\n",
-	 RING_FLOWSLOT_VERSION);
-  printk("[PF_RING] Capture TX       %s\n",
-	 enable_tx_capture ? "Yes [RX+TX]" : "No [RX only]");
-  printk("[PF_RING] IP Defragment    %s\n",
-	 enable_ip_defrag ? "Yes" : "No");
-  printk("[PF_RING] Initialized correctly\n");
-
   register_device_handler();
+
+  printk("[PF_RING] Initialized correctly\n");
 
   pfring_enabled = 1;
   return 0;
