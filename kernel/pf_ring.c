@@ -167,6 +167,8 @@
 
 /* ************************************************* */
 
+static struct net *default_net = NULL;
+
 const static ip_addr ip_zero = { IN6ADDR_ANY_INIT };
 
 static u_int8_t pfring_enabled = 1;
@@ -7937,6 +7939,7 @@ static const struct file_operations ring_proc_dev_rulefops = {
 static int ring_notifier(struct notifier_block *this, unsigned long msg, void *data)
 {
   struct net_device *dev = netdev_notifier_info_to_dev(data);
+  struct net *net;
   struct list_head *ptr, *tmp_ptr;
   struct pfring_hooks *hook;
   int if_name_clash = 0;
@@ -7993,10 +7996,11 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     if (dev != NULL) {
       char addr[MAX_ADDR_LEN*2+1];
       int i;
-      for (i = 0; i < MAX_ADDR_LEN; i++)
+      for (i = 0; i < dev->addr_len; i++)
         sprintf(&addr[i*2], "%02X", dev->perm_addr[i]);
-      addr[MAX_ADDR_LEN*2] = '\0';
-      printk("[PF_RING] %s: %s Type=%d IfIndex=%d Ptr=%p Addr=%s\n", dev->name, what, dev->type, dev->ifindex, dev, addr);
+      addr[dev->addr_len*2] = '\0';
+      net = dev_net(dev);
+      printk("[PF_RING] %s: %s Type=%d IfIndex=%d Ptr=%p Namespace=%p (%d) Addr=%s\n", dev->name, what, dev->type, dev->ifindex, dev, net, net ? net->ifindex : -1, addr);
     } else {
       printk("[PF_RING] %s\n", what);
     }
@@ -8004,6 +8008,16 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 
   if (dev == NULL)
     return NOTIFY_DONE;
+
+  net = dev_net(dev);
+
+  if (default_net == NULL)
+    default_net = net;
+
+  if (!net_eq(net, default_net)) { /* it's likely this is a container, skipping FIXX: handle namespaces */
+    debug_printk(2, "%s: skipping device (container)\n", dev->name);
+    return NOTIFY_DONE;
+  }
 
   /* Skip non ethernet interfaces */
   if (
@@ -8084,8 +8098,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         ring_device_element *dev_ptr = list_entry(ptr, ring_device_element, device_list);
         if (dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0) {
-          printk("[PF_RING] WARNING: different devices (ifindex: %u - ifindex: %u) with the same name detected during name change %s -> %s\n",
-                 dev_ptr->dev->ifindex, dev->ifindex, dev_ptr->dev->name, dev->name);
+          printk("[PF_RING] WARNING: different devices (ifindex: %u found-ifindex: %u) with the same name detected during name change to %s\n",
+                 dev->ifindex, dev_ptr->dev->ifindex, dev->name);
           if_name_clash = 1;
         }
       }
