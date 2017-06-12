@@ -7999,8 +7999,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       for (i = 0; i < dev->addr_len; i++)
         sprintf(&addr[i*2], "%02X", dev->perm_addr[i]);
       addr[dev->addr_len*2] = '\0';
-      net = dev_net(dev);
-      printk("[PF_RING] %s: %s Type=%d IfIndex=%d Ptr=%p Namespace=%p (%d) Addr=%s\n", dev->name, what, dev->type, dev->ifindex, dev, net, net ? net->ifindex : -1, addr);
+      printk("[PF_RING] %s: %s Type=%d IfIndex=%d Ptr=%p Namespace=%p Addr=%s\n", dev->name, what, dev->type, dev->ifindex, dev, dev_net(dev), addr);
     } else {
       printk("[PF_RING] %s\n", what);
     }
