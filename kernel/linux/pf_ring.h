@@ -928,16 +928,6 @@ typedef struct {
 
 /* ************************************************* */
 
-/*
- * Linked-list of ring sockets.
- */
-struct ring_element {
-  struct list_head  list;
-  struct sock      *sk;
-};
-
-/* ************************************************* */
-
 struct dma_memory_info {
   u_int32_t num_chunks, chunk_len;
   u_int32_t num_slots,  slot_len;
