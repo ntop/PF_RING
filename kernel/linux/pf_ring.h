@@ -1014,6 +1014,7 @@ struct pf_ring_socket {
   u_int8_t promisc_enabled;
 
   struct sock *sk;
+  struct net *net; /* namespace */
 
   /* /proc */
   char sock_proc_name[64];       /* /proc/net/pf_ring/<sock_proc_name>             */

@@ -70,14 +70,10 @@
 #error **********************************************************************
 #endif
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18))
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33))
 #include <generated/autoconf.h>
 #else
 #include <linux/autoconf.h>
-#endif
-#else
-#include <linux/config.h>
 #endif
 #include <linux/module.h>
 #include <linux/vmalloc.h>
@@ -129,9 +125,7 @@
 #endif
 #endif
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 #define I82599_HW_FILTERING_SUPPORT
-#endif
 
 #include "linux/pf_ring.h"
 
@@ -336,10 +330,7 @@ static inline void ring_read_unlock_inbh(void)  { read_unlock(&ring_mgmt_lock); 
 
 /* Forward */
 static struct proto_ops ring_ops;
-
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
 static struct proto ring_proto;
-#endif
 
 static int skb_ring_handler(struct sk_buff *skb, u_char recv_packet,
 			    u_int8_t real_skb, u_int8_t *skb_reference_in_use,
@@ -354,16 +345,10 @@ static int  get_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host
 static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host, u_int16_t fragment_id, u_int8_t app_id);
 
 /* Extern */
-extern
-#if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,23))
-struct sk_buff *
-#else
-int
-#endif
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
-ip_defrag(struct sk_buff *skb, u32 user);
+extern int ip_defrag(struct sk_buff *skb, u32 user);
 #else
-ip_defrag(struct net *net, struct sk_buff *skb, u32 user);
+extern int ip_defrag(struct net *net, struct sk_buff *skb, u32 user);
 #endif
 
 /* ********************************** */
@@ -389,7 +374,6 @@ char *bypass_interfaces[MAX_NUM_DEVICES] = { 0 };
 #endif
 #endif
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,16)) || defined(REDHAT_PATCHED_KERNEL)
 module_param(min_num_slots, uint, 0644);
 module_param(perfect_rules_hash_size, uint, 0644);
 module_param(enable_tx_capture, uint, 0644);
@@ -401,17 +385,6 @@ module_param(enable_debug, uint, 0644);
 module_param(transparent_mode, uint, 0644);
 #ifdef REDBORDER_PATCH
 module_param_array(bypass_interfaces, charp, NULL, 0444);
-#endif
-#else
-MODULE_PARM(min_num_slots, "i");
-MODULE_PARM(perfect_rules_hash_size, "i");
-MODULE_PARM(enable_tx_capture, "i");
-MODULE_PARM(enable_frag_coherence, "i");
-MODULE_PARM(enable_ip_defrag, "i");
-MODULE_PARM(quick_mode, "i");
-MODULE_PARM(force_ring_lock, "i");
-MODULE_PARM(enable_debug, "i");
-MODULE_PARM(transparent_mode, "i");
 #endif
 
 MODULE_PARM_DESC(min_num_slots, "Min number of ring slots");
@@ -447,12 +420,9 @@ MODULE_PARM_DESC(bypass_interfaces,
 
 u_int get_num_rx_queues(struct net_device *dev) 
 {
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-  return 1;
-#else
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
   return min_val(dev->real_num_rx_queues, dev->real_num_tx_queues);
-#elif (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
+#elif (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6)) && defined(CONFIG_RPS)
   if (netdev_extended(dev) != NULL)
     return netdev_extended(dev)->real_num_rx_queues;
   else
@@ -460,56 +430,7 @@ u_int get_num_rx_queues(struct net_device *dev)
 #else
   return dev->real_num_tx_queues;
 #endif
-#endif
 }
-
-#if defined(RHEL_MAJOR) && (RHEL_MAJOR == 5) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18))
-/* Redhat backports these functions to 2.6.18 so do nothing */
-#else
-
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23))
-static inline void skb_reset_network_header(struct sk_buff *skb)
-{
-  /* skb->network_header = skb->data - skb->head; */
-}
-
-static inline void skb_reset_transport_header(struct sk_buff *skb) 
-{
-  /* skb->transport_header = skb->data - skb->head; */
-}
-
-static inline void skb_set_network_header(struct sk_buff *skb, const int offset) 
-{
-  skb_reset_network_header(skb);
-  /* skb->network_header += offset; */
-}
-
-#endif /* KERNEL_VERSION */
-#endif /* RH_MAJOR */
-
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,16)) || (defined(RHEL_MAJOR) && (RHEL_MAJOR == 5) && (RHEL_MINOR < 2))
-static inline struct iphdr *ip_hdr(const struct sk_buff *skb)
-{
-  return(struct iphdr *)skb->nh.iph;
-}
-
-#if(!defined(REDHAT_PATCHED_KERNEL)) || ((RHEL_MAJOR == 5) && (RHEL_MINOR < 2))
-static inline void skb_set_network_header(struct sk_buff *skb, const int offset)
-{
-  skb->nh.iph = (struct iphdr *)skb->data + offset;
-}
-
-static inline void skb_reset_network_header(struct sk_buff *skb)
-{
-  ;
-}
-
-static inline void skb_reset_transport_header(struct sk_buff *skb)
-{
-  ;
-}
-#endif
-#endif
 
 /* ************************************************** */
 
@@ -786,11 +707,7 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 	  /* Reset all */
 	  pfr->tx.last_tx_dev = NULL, pfr->tx.last_tx_dev_idx = UNKNOWN_INTERFACE;
 
-	  pfr->tx.last_tx_dev = __dev_get_by_index(
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-						   &init_net,
-#endif
-						   hdr->extended_hdr.tx.bounce_interface);
+	  pfr->tx.last_tx_dev = __dev_get_by_index(&init_net, hdr->extended_hdr.tx.bounce_interface);
 
 	  if(pfr->tx.last_tx_dev != NULL) {
 	    /* We have found the device */
@@ -883,24 +800,13 @@ static inline int check_free_ring_slot(struct pf_ring_socket *pfr)
 /* Returns new sk_buff, or NULL  */
 static struct sk_buff *ring_gather_frags(struct sk_buff *skb)
 {
-#if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,23))
-  skb
-#else
-  int status
-#endif
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
-  = ip_defrag(skb, IP_DEFRAG_RING);
+  int status = ip_defrag(skb, IP_DEFRAG_RING);
 #else
-  = ip_defrag(dev_net(skb->dev), skb, IP_DEFRAG_RING);
+  int status = ip_defrag(dev_net(skb->dev), skb, IP_DEFRAG_RING);
 #endif
 
-  if(
-#if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,23))
-  skb == NULL
-#else
-  status
-#endif
-  )
+  if(status)
     skb = NULL;
   else
     ip_send_check(ip_hdr(skb));
@@ -1071,10 +977,7 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
       }
     }
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
     seq_printf(m, "TX Queues:    %d\n", dev->real_num_tx_queues);
-#endif
-
     seq_printf(m, "RX Queues:    %d\n",
 	       dev_ptr->is_zc_device ? dev_ptr->num_zc_dev_rx_queues : get_num_rx_queues(dev));
 
@@ -1241,7 +1144,7 @@ static int handle_hw_filtering_rule(struct pf_ring_socket *pfr,
 /* ***************************************** */
 
 #ifdef ENABLE_PROC_WRITE_RULE
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
+
 static int ring_proc_dev_rule_read(struct seq_file *m, void *data_not_used)
 {
   if(m->private != NULL) {
@@ -1260,11 +1163,9 @@ static int ring_proc_dev_rule_read(struct seq_file *m, void *data_not_used)
   
   return(0);
 }
-#endif
 
 /* ********************************** */
 
-#ifdef ENABLE_PROC_WRITE_RULE
 static void init_intel_82599_five_tuple_filter_hw_rule(u_int8_t queue_id, u_int8_t proto,
 						       u_int32_t s_addr, u_int32_t d_addr,
 						       u_int16_t s_port, u_int16_t d_port,
@@ -1308,11 +1209,8 @@ static void init_intel_82599_perfect_filter_hw_rule(u_int8_t queue_id,
   rule->s_port = s_port, rule->d_port = d_port;
 }
 
-#endif /* ENABLE_PROC_WRITE_RULE */
-
 /* ********************************** */
 
-#ifdef ENABLE_PROC_WRITE_RULE
 static int ring_proc_dev_rule_write(struct file *file,
 				    const char __user *buffer,
 				    unsigned long count, void *data)
@@ -1405,7 +1303,6 @@ static int ring_proc_dev_rule_write(struct file *file,
 
   return((int)count);
 }
-#endif
 
 #endif
 
@@ -1551,17 +1448,9 @@ static void ring_proc_init(void)
 {
   write_lock(&ring_proc_lock);
 
-  ring_proc_dir = proc_mkdir("pf_ring",
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-			     init_net.
-#endif
-			     proc_net);
+  ring_proc_dir = proc_mkdir("pf_ring", init_net.proc_net);
 
   if (ring_proc_dir != NULL) {
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-    ring_proc_dir->owner = THIS_MODULE;
-#endif
-
     ring_proc_dev_dir   = proc_mkdir(PROC_DEV, ring_proc_dir);
     ring_proc_stats_dir = proc_mkdir(PROC_STATS, ring_proc_dir);
 
@@ -1572,12 +1461,8 @@ static void ring_proc_init(void)
 
     if (!ring_proc)
       printk("[PF_RING] unable to register proc file\n");
-    else {
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30))
-      ring_proc->owner = THIS_MODULE;
-#endif
+    else
       printk("[PF_RING] registered /proc/net/pf_ring/\n");
-    }
   } else
     printk("[PF_RING] unable to create /proc/net/pf_ring\n");
 
@@ -1598,11 +1483,7 @@ static void ring_proc_term(void)
     remove_proc_entry(PROC_DEV, ring_proc_dir);
 
     if (ring_proc_dir != NULL) {
-      remove_proc_entry("pf_ring",
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-			init_net.
-#endif
-			proc_net);
+      remove_proc_entry("pf_ring", init_net.proc_net);
       debug_printk(2, "deregistered /proc/net/pf_ring\n");
     }
   }
@@ -2649,35 +2530,20 @@ success:
 static inline void set_skb_time(struct sk_buff *skb, struct pfring_pkthdr *hdr) 
 {
   /* BD - API changed for time keeping */
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14))
-  if(skb->stamp.tv_sec == 0)
-    do_gettimeofday(&skb->stamp);  /* If timestamp is missing add it */
-  hdr->ts.tv_sec = skb->stamp.tv_sec, hdr->ts.tv_usec = skb->stamp.tv_usec;
-  hdr->extended_hdr.timestamp_ns = 0; /* No nsec for old kernels */
-#elif(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22))
-  if(skb->tstamp.off_sec == 0)
-    __net_timestamp(skb); /* If timestamp is missing add it */
-  hdr->ts.tv_sec = skb->tstamp.off_sec, hdr->ts.tv_usec = skb->tstamp.off_usec;
-  hdr->extended_hdr.timestamp_ns = 0; /* No nsec for old kernels */
-#else /* 2.6.22 and above */
   if(ktime_to_ns(skb->tstamp) == 0)
     __net_timestamp(skb); /* If timestamp is missing add it */
 
   hdr->ts = ktime_to_timeval(skb->tstamp);
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
-  {
-    /* Use hardware timestamps when present. If not, just use software timestamps */
-    hdr->extended_hdr.timestamp_ns = ktime_to_ns(skb_hwtstamps(skb)->hwtstamp);
+  /* Use hardware timestamps when present. If not, just use software timestamps */
+  hdr->extended_hdr.timestamp_ns = ktime_to_ns(skb_hwtstamps(skb)->hwtstamp);
 
-    //debug_printk(2, "hwts=%llu/dev=%s\n",
-    //    hdr->extended_hdr.timestamp_ns,
-    //    skb->dev ? skb->dev->name : "???");
-  }
-#endif
+  //debug_printk(2, "hwts=%llu/dev=%s\n",
+  //    hdr->extended_hdr.timestamp_ns,
+  //    skb->dev ? skb->dev->name : "???");
+
   if(hdr->extended_hdr.timestamp_ns == 0)
     hdr->extended_hdr.timestamp_ns = ktime_to_ns(skb->tstamp);
-#endif
 }
 
 /* ********************************** */
@@ -2994,11 +2860,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
         return(-EFAULT);
       }
 
-      rule->rule.internals.reflector_dev = dev_get_by_name(
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-							   &init_net,
-#endif
-							   rule->rule.reflector_device_name);
+      rule->rule.internals.reflector_dev = dev_get_by_name(&init_net, rule->rule.reflector_device_name);
 
       if(rule->rule.internals.reflector_dev == NULL) {
         printk("[PF_RING] Unable to find device %s\n",
@@ -3124,11 +2986,7 @@ static int add_sw_filtering_rule_element(struct pf_ring_socket *pfr, sw_filterin
       return(-EFAULT);
     }
 
-    rule->rule.internals.reflector_dev = dev_get_by_name(
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-							 &init_net,
-#endif
-							 rule->rule.reflector_device_name);
+    rule->rule.internals.reflector_dev = dev_get_by_name(&init_net, rule->rule.reflector_device_name);
 
     if(rule->rule.internals.reflector_dev == NULL) {
       printk("[PF_RING] Unable to find device %s\n", rule->rule.reflector_device_name);
@@ -3850,10 +3708,8 @@ static int skb_ring_handler(struct sk_buff *skb,
   uint64_t rdt = _rdtsc(), rdt1, rdt2;
 #endif
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,30))
   if(channel_id == -1 /* unknown: any channel */)
     channel_id = skb_get_rx_queue(skb);
-#endif
 
   if(channel_id > MAX_NUM_RX_CHANNELS) channel_id = 0 /* MAX_NUM_RX_CHANNELS */;
 
@@ -4085,11 +3941,7 @@ static int buffer_ring_handler(struct net_device *dev, char *data, int len)
   skb.data_len = len;
 
   /* BD - API changed for time keeping */
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,14))
-  skb.stamp.tv_sec = 0;
-#elif(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22))
-  skb.tstamp.off_sec = 0;
-#elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0))
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0))
   skb.tstamp.tv64 = 0;
 #else
   skb.tstamp = 0;
@@ -4104,11 +3956,7 @@ static int buffer_ring_handler(struct net_device *dev, char *data, int len)
 /* ********************************** */
 
 static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
-		      struct packet_type *pt
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,16))
-		      , struct net_device *orig_dev
-#endif
-		      )
+		      struct packet_type *pt, struct net_device *orig_dev)
 {
   int rc = 0;
   u_int8_t skb_reference_in_use = 0;
@@ -4146,12 +3994,8 @@ void unregister_device_handler(void)
 
 /* ********************************** */
 
-static int ring_create(
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-		       struct net *net,
-#endif
-		       struct socket *sock, int protocol
-#if((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)) || ((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)) && defined(REDHAT_PATCHED_KERNEL)))
+static int ring_create(struct net *net, struct socket *sock, int protocol
+#if((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)) || ((LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)) && defined(REDHAT_PATCHED_KERNEL)))
 		       , int kern
 #endif
 		       )
@@ -4173,13 +4017,7 @@ static int ring_create(
   if(protocol != htons(ETH_P_ALL))
     return -EPROTONOSUPPORT;
 
-#if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,11))
-  sk = sk_alloc(PF_RING, GFP_KERNEL, 1, NULL);
-#elif(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24))
-  // BD: API changed in 2.6.12, ref:
-  // http://svn.clkao.org/svnweb/linux/revision/?rev=28201
-  sk = sk_alloc(PF_RING, GFP_ATOMIC, &ring_proto, 1);
-#elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0))
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0))
   sk = sk_alloc(net, PF_INET, GFP_KERNEL, &ring_proto);
 #else
   sk = sk_alloc(net, PF_INET, GFP_KERNEL, &ring_proto, 1 /* FIXX kernel socket? */);
@@ -4190,9 +4028,6 @@ static int ring_create(
 
   sock->ops = &ring_ops;
   sock_init_data(sock, sk);
-#if(LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,11))
-  sk_set_owner(sk, THIS_MODULE);
-#endif
 
   ring_sk(sk) = (struct pf_ring_socket *) kmalloc(sizeof(*pfr), GFP_KERNEL);
 
@@ -4201,6 +4036,7 @@ static int ring_create(
 
   memset(pfr, 0, sizeof(*pfr));
   pfr->sk = sk;
+  pfr->net = net;
   pfr->ring_shutdown = 0;
   pfr->ring_active = 0;	/* We activate as soon as somebody waits for packets */
   pfr->num_rx_channels = UNKNOWN_NUM_RX_CHANNELS;
@@ -4433,7 +4269,7 @@ static struct dma_memory_info *allocate_extra_dma_memory(struct device *hwdev,
   u_int i, num_slots_per_chunk, num_chunks;
   struct dma_memory_info *dma_memory;
   int numa_node =
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,26)) && defined(CONFIG_NUMA)
+#ifdef CONFIG_NUMA
     dev_to_node(hwdev)
 #else
     -1
@@ -4509,11 +4345,7 @@ static struct dma_memory_info *allocate_extra_dma_memory(struct device *hwdev,
                      dma_memory->slot_len,
                      PCI_DMA_BIDIRECTIONAL));
 
-    if(dma_mapping_error(
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,26))
-                         dma_memory->hwdev,
-#endif
-		         dma_memory->dma_addr[i])) {
+    if(dma_mapping_error(dma_memory->hwdev, dma_memory->dma_addr[i])) {
       printk("[PF_RING] %s: Error mapping DMA slot %d of %d \n", __FUNCTION__, i + 1, dma_memory->num_slots);
       dma_memory->dma_addr[i] = 0;
       dma_memory->num_slots = i;
@@ -5172,23 +5004,6 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 
 /* ************************************* */
 
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,11))
-/*
- * rvmalloc / rvfree / kvirt_to_pa copied from usbvideo.c
- */
-unsigned long kvirt_to_pa(unsigned long adr)
-{
-  unsigned long kva, ret;
-
-  kva = (unsigned long)page_address(vmalloc_to_page((void *)adr));
-  kva |= adr & (PAGE_SIZE - 1);	/* restore the offset */
-  ret = __pa(kva);
-  return ret;
-}
-#endif
-
-/* ************************************* */
-
 static int do_memory_mmap(struct vm_area_struct *vma, unsigned long start_off, unsigned long size,
                           char *ptr, u_int ptr_pg_off, u_int flags, int mode)
 {
@@ -5205,12 +5020,8 @@ static int do_memory_mmap(struct vm_area_struct *vma, unsigned long start_off, u
     int rc;
 
     if(mode == 0) {
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,11))
       rc = remap_vmalloc_range(vma, ptr, ptr_pg_off);
       break; /* Do not iterate */
-#else
-      rc = remap_pfn_range(vma, start, kvirt_to_pa((unsigned long)ptr), PAGE_SIZE, PAGE_SHARED);
-#endif
     } else if(mode == 1) {
       rc = remap_pfn_range(vma, start, __pa(ptr) >> PAGE_SHIFT, PAGE_SIZE, PAGE_SHARED);
     } else {
@@ -5493,26 +5304,12 @@ static int ring_sendmsg(struct socket *sock,
   skb_reset_network_header(skb);
 
   /* Try to align data part correctly */
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,23))
   if(pfr->ring_netdev->dev->header_ops) {
     skb->data -= pfr->ring_netdev->dev->hard_header_len;
     skb->tail -= pfr->ring_netdev->dev->hard_header_len;
     if(len < pfr->ring_netdev->dev->hard_header_len)
       skb_reset_network_header(skb);
   }
-#else
-  if(pfr->ring_netdev->dev->hard_header) {
-    skb->data -= pfr->ring_netdev->dev->hard_header_len;
-    skb->tail -= pfr->ring_netdev->dev->hard_header_len;
-    if(len < pfr->ring_netdev->dev->hard_header_len) {
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,18))
-      skb_reset_network_header(skb);
-#else
-      skb->nh.raw = skb->data;
-#endif
-    }
-  }
-#endif
 
   /* Returns -EFAULT on error */
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0))
@@ -6342,9 +6139,7 @@ int sk_detach_filter(struct sock *sk)
 static int ring_setsockopt(struct socket *sock,
 			   int level, int optname,
 			   char __user * optval,
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 			   unsigned
-#endif
 			   int optlen)
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
@@ -7564,7 +7359,7 @@ void zc_dev_handler(zc_dev_operation operation,
 	    dev_ptr->is_zc_device = 1;
             dev_ptr->zc_dev_model = device_model;
 	    dev_ptr->num_zc_dev_rx_queues = (rx_info != NULL) ? rx_info->num_queues : UNKNOWN_NUM_RX_CHANNELS;
-#if (defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
+#if (defined(RHEL_MAJOR) && (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
             netif_set_real_num_rx_queues(dev_ptr->dev, dev_ptr->num_zc_dev_rx_queues); /* This is a workround for Centos 6 reporting a wrong number of queues */
 #endif
             if (rx_info != NULL) dev_ptr->num_zc_rx_slots = rx_info->packet_memory_num_slots;
@@ -7721,15 +7516,11 @@ static struct net_proto_family ring_family_ops = {
   .owner = THIS_MODULE,
 };
 
-// BD: API changed in 2.6.12, ref:
-// http://svn.clkao.org/svnweb/linux/revision/?rev=28201
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
 static struct proto ring_proto = {
   .name = "PF_RING",
   .owner = THIS_MODULE,
   .obj_size = sizeof(struct ring_sock),
 };
-#endif
 
 /* ************************************ */
 
@@ -7794,7 +7585,7 @@ void remove_device_from_ring_list(struct net_device *dev)
 static int ring_proc_dev_open(struct inode *inode, struct file *file) 
 { 
   return single_open(file, ring_proc_dev_get_info, PDE_DATA(inode));
- }
+}
 
 static const struct file_operations ring_proc_dev_fops = {
   .owner = THIS_MODULE,
@@ -7828,7 +7619,6 @@ int add_device_to_ring_list(struct net_device *dev)
 		   &ring_proc_dev_fops /* read */,
 		   dev_ptr);
 
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
   /* Dirty trick to fix at some point used to discover Intel 82599 interfaces: FIXME */
   if((dev_ptr->dev->ethtool_ops != NULL) && (dev_ptr->dev->ethtool_ops->set_rxnfc != NULL)) {
     struct ethtool_rxnfc cmd;
@@ -7863,7 +7653,6 @@ int add_device_to_ring_list(struct net_device *dev)
   } else {
     debug_printk(2, "Device %s does NOT support hardware packet filtering (2)\n", dev->name);
   }
-#endif
 
   list_add(&dev_ptr->device_list, &ring_aware_device_list);
 
@@ -8131,7 +7920,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 			     dev_ptr);
 
 #ifdef ENABLE_PROC_WRITE_RULE
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 	    if (dev_ptr->device_type != standard_nic_family) {
 	      struct proc_dir_entry *entry;
 
@@ -8142,7 +7930,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 	      if (entry)
 	        entry->write_proc = ring_proc_dev_rule_write;
 	    }
-#endif
 #endif
           }
 	  break;
@@ -8234,9 +8021,7 @@ static void __exit ring_exit(void)
   }
 
   sock_unregister(PF_RING);
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
   proto_unregister(&ring_proto);
-#endif
   unregister_netdevice_notifier(&ring_netdev_notifier);
   ring_proc_term();
 
@@ -8252,9 +8037,7 @@ static int __init ring_init(void)
 {
   static struct net_device any_dev, none_dev;
   int i;
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
   int rc;
-#endif
 
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
 	 "(C) 2004-16 ntop.org\n",
@@ -8272,10 +8055,8 @@ static int __init ring_init(void)
   printk("[PF_RING] IP Defragment    %s\n",
 	 enable_ip_defrag ? "Yes" : "No");
 
-#if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,11))
   if((rc = proto_register(&ring_proto, 0)) != 0)
     return(rc);
-#endif
 
   init_lockless_list(&ring_table);
   init_lockless_list(&ring_cluster_list);
