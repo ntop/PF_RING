@@ -924,7 +924,7 @@ typedef struct {
   } hw_filters;
 
   struct list_head device_list;
-} ring_device_element;
+} pf_ring_device_element;
 
 /* ************************************************* */
 
@@ -1011,7 +1011,7 @@ struct hash_fragment_node {
  */
 struct pf_ring_socket {
   u_int8_t ring_active, ring_shutdown, num_rx_channels, num_bound_devices;
-  ring_device_element *ring_netdev;
+  pf_ring_device_element *ring_netdev;
 
   DECLARE_BITMAP(netdev_mask, MAX_NUM_DEVICES_ID /* bits */);
   int ring_pid;
