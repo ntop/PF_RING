@@ -161,8 +161,6 @@
 
 /* ************************************************* */
 
-static struct net *default_net = NULL;
-
 const static ip_addr ip_zero = { IN6ADDR_ANY_INIT };
 
 static u_int8_t pfring_enabled = 1;
@@ -7728,7 +7726,6 @@ static const struct file_operations ring_proc_dev_rulefops = {
 static int ring_notifier(struct notifier_block *this, unsigned long msg, void *data)
 {
   struct net_device *dev = netdev_notifier_info_to_dev(data);
-  struct net *net;
   struct list_head *ptr, *tmp_ptr;
   struct pfring_hooks *hook;
   int if_name_clash = 0;
@@ -7797,12 +7794,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
   if (dev == NULL)
     return NOTIFY_DONE;
 
-  net = dev_net(dev);
-
-  if (default_net == NULL)
-    default_net = net;
-
-  if (!net_eq(net, default_net)) { /* it's likely this is a container, skipping FIXX: handle namespaces */
+  if (!net_eq(dev_net(dev), &init_net)) { /* FIXX: handle namespaces */
     debug_printk(2, "%s: skipping device (container)\n", dev->name);
     return NOTIFY_DONE;
   }
