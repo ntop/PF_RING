@@ -795,7 +795,7 @@ typedef enum {
 } pfring_device_type;
 
 typedef struct {
-  char device_name[16];
+  char device_name[IFNAMSIZ];
   pfring_device_type device_type;
 
   /* Entry in the /proc filesystem */
@@ -893,29 +893,27 @@ typedef struct {
 
 
 typedef struct {
-  /* ZC */
-  u_int8_t is_zc_device;
-  zc_dev_model zc_dev_model;
-  u_int num_zc_dev_rx_queues; /* 0 for non ZC devices */
-  u_int32_t num_zc_rx_slots;
-  u_int32_t num_zc_tx_slots;
+  struct net_device *dev;
+
+  /* Note: we keep device_name here for a couple of reasons:
+   * 1. some device types might NOT have a net_device handler
+   * 2. when a device name changes we need to remember the old name */
+  char device_name[IFNAMSIZ];
 
   pfring_device_type device_type; /* Device Type */
 
   u_int8_t do_not_remove_promisc; /* promisc was set before any socket */
   atomic_t promisc_users; /* number of rings with promisc set bound to this device */
 
-  /*
-    NOTE
-
-    Some device types (e.g. redirector) might NOT
-    have a net_device handler but a dummy pointer
-  */
-  char device_name[IFNAMSIZ];
-  struct net_device *dev;
-
   /* Entry in the /proc filesystem */
   struct proc_dir_entry *proc_entry;
+
+  /* ZC */
+  u_int8_t is_zc_device;
+  zc_dev_model zc_dev_model;
+  u_int num_zc_dev_rx_queues; /* 0 for non ZC devices */
+  u_int32_t num_zc_rx_slots;
+  u_int32_t num_zc_tx_slots;
 
   /* Hardware Filters */
   struct {
@@ -1014,7 +1012,6 @@ struct pf_ring_socket {
   u_int8_t promisc_enabled;
 
   struct sock *sk;
-  struct net *net; /* namespace */
 
   /* /proc */
   char sock_proc_name[64];       /* /proc/net/pf_ring/<sock_proc_name>             */

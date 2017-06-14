@@ -4034,7 +4034,6 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
 
   memset(pfr, 0, sizeof(*pfr));
   pfr->sk = sk;
-  pfr->net = net;
   pfr->ring_shutdown = 0;
   pfr->ring_active = 0;	/* We activate as soon as somebody waits for packets */
   pfr->num_rx_channels = UNKNOWN_NUM_RX_CHANNELS;
@@ -4124,7 +4123,7 @@ add_virtual_filtering_device(struct sock *sock,
   virtual_filtering_device_element *elem;
   struct list_head *ptr, *tmp_ptr;
 
-  debug_printk(2, "--> add_virtual_filtering_device(%s)\n", info->device_name);
+  debug_printk(2, "add_virtual_filtering_device(%s)\n", info->device_name);
 
   if(info == NULL)
     return(NULL);
@@ -4172,7 +4171,7 @@ static int remove_virtual_filtering_device(struct sock *sock, char *device_name)
 {
   struct list_head *ptr, *tmp_ptr;
 
-  debug_printk(2, "--> remove_virtual_filtering_device(%s)\n", device_name);
+  debug_printk(2, "remove_virtual_filtering_device(%s)\n", device_name);
 
   write_lock(&virtual_filtering_lock);
   list_for_each_safe(ptr, tmp_ptr, &virtual_filtering_devices_list) {
@@ -4914,7 +4913,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device_element *dev_ptr = list_entry(ptr, pf_ring_device_element, device_list);
 
-    if(strcmp(dev_ptr->device_name, dev_name) == 0) {
+    if(strcmp(dev_ptr->device_name, dev_name) == 0 && net_eq(dev_net(dev_ptr->dev), sock_net(sk))) {
       dev = dev_ptr;
       break;
     }
@@ -7531,6 +7530,22 @@ static struct pfring_hooks ring_hooks = {
 
 /* ************************************ */
 
+void remove_device_from_proc(pf_ring_device_element *dev_ptr) {
+  if (dev_ptr->proc_entry == NULL) 
+    return;
+#ifdef ENABLE_PROC_WRITE_RULE
+  if (dev_ptr->device_type != standard_nic_family)
+    remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
+#endif
+
+  remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
+  /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
+  remove_proc_entry(/*dev_ptr->proc_entry->name*/ dev_ptr->device_name, ring_proc_dev_dir);
+  dev_ptr->proc_entry = NULL;
+}
+
+/* ************************************ */
+
 void remove_device_from_ring_list(struct net_device *dev) 
 {
   struct list_head *ptr, *tmp_ptr;
@@ -7543,17 +7558,8 @@ void remove_device_from_ring_list(struct net_device *dev)
     pf_ring_device_element *dev_ptr = list_entry(ptr, pf_ring_device_element, device_list);
 
     if (dev_ptr->dev == dev) {
-      if (dev_ptr->proc_entry != NULL) {
-#ifdef ENABLE_PROC_WRITE_RULE
-	if(dev_ptr->device_type != standard_nic_family)
-	  remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
-#endif
 
-	remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
-        /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
-        remove_proc_entry(/*dev_ptr->proc_entry->name*/ dev_ptr->device_name, ring_proc_dev_dir);
-        dev_ptr->proc_entry = NULL;
-      }
+      remove_device_from_proc(dev_ptr);
 
       /* We now have to "un-bind" existing sockets */
       sk = (struct sock*)lockless_list_get_first(&ring_table, &last_list_idx);
@@ -7595,6 +7601,17 @@ static const struct file_operations ring_proc_dev_fops = {
 
 /* ************************************ */
 
+void add_device_to_proc(pf_ring_device_element *dev_ptr) {
+  dev_ptr->proc_entry = proc_mkdir(dev_ptr->device_name, ring_proc_dev_dir);
+
+  proc_create_data(PROC_INFO, 0 /* read-only */,
+		   dev_ptr->proc_entry,
+		   &ring_proc_dev_fops /* read */,
+		   dev_ptr);
+}
+
+/* ************************************ */
+
 int add_device_to_ring_list(struct net_device *dev) 
 {
   pf_ring_device_element *dev_ptr;
@@ -7609,13 +7626,10 @@ int add_device_to_ring_list(struct net_device *dev)
   INIT_LIST_HEAD(&dev_ptr->device_list);
   dev_ptr->dev = dev;
   strcpy(dev_ptr->device_name, dev->name);
-  dev_ptr->proc_entry = proc_mkdir(dev_ptr->device_name, ring_proc_dev_dir);
   dev_ptr->device_type = standard_nic_family; /* Default */
 
-  proc_create_data(PROC_INFO, 0 /* read-only */,
-		   dev_ptr->proc_entry,
-		   &ring_proc_dev_fops /* read */,
-		   dev_ptr);
+  if (net_eq(dev_net(dev), &init_net)) /* in the init namespace (TODO add also other namespaces) */
+    add_device_to_proc(dev_ptr);
 
   /* Dirty trick to fix at some point used to discover Intel 82599 interfaces: FIXME */
   if((dev_ptr->dev->ethtool_ops != NULL) && (dev_ptr->dev->ethtool_ops->set_rxnfc != NULL)) {
@@ -7794,11 +7808,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
   if (dev == NULL)
     return NOTIFY_DONE;
 
-  if (!net_eq(dev_net(dev), &init_net)) { /* FIXX: handle namespaces */
-    debug_printk(2, "%s: skipping device (container)\n", dev->name);
-    return NOTIFY_DONE;
-  }
-
   /* Skip non ethernet interfaces */
   if (
       (dev->type != ARPHRD_ETHER) /* Ethernet */
@@ -7830,10 +7839,9 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       /* safety check */
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         pf_ring_device_element *dev_ptr = list_entry(ptr, pf_ring_device_element, device_list);
-        if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0) {
-          if (dev->ifindex != dev_ptr->dev->ifindex) /* print warning only if ifindex is not the same */
-            printk("[PF_RING] WARNING: multiple devices with the same name (name: %s ifindex: %u already-registered-as: %u)\n", 
-              dev->name, dev->ifindex, dev_ptr->dev->ifindex);
+        if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0 && net_eq(dev_net(dev_ptr->dev), dev_net(dev))) {
+          printk("[PF_RING] WARNING: multiple devices with the same name (name: %s ifindex: %u already-registered-as: %u)\n", 
+            dev->name, dev->ifindex, dev_ptr->dev->ifindex);
           if_name_clash = 1;
         }
       }
@@ -7891,26 +7899,14 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
           debug_printk(2, "Updating device name %s to %s\n", dev_ptr->device_name, dev->name);
 
 	  /* Remove old entry */
-          if (dev_ptr->proc_entry != NULL) {
-#ifdef ENABLE_PROC_WRITE_RULE
-            if (dev_ptr->device_type != standard_nic_family)
-              remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
-#endif
-
-	    remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
-	    remove_proc_entry(/*dev_ptr->proc_entry->name*/ dev_ptr->device_name, ring_proc_dev_dir);
-            dev_ptr->proc_entry = NULL;
-          }
+          remove_device_from_proc(dev_ptr);
 
           if (!if_name_clash) { /* do not add in case of name clash */
-	    /* Add new entry */
 	    strcpy(dev_ptr->device_name, dev_ptr->dev->name);
-	    dev_ptr->proc_entry = proc_mkdir(dev_ptr->dev->name, ring_proc_dev_dir);
-	    proc_create_data(PROC_INFO, 0 /* read-only */,
-			     dev_ptr->proc_entry,
-			     &ring_proc_dev_fops /* read */,
-			     dev_ptr);
 
+	    /* Add new entry */
+            add_device_to_proc(dev_ptr); 
+            
 #ifdef ENABLE_PROC_WRITE_RULE
 	    if (dev_ptr->device_type != standard_nic_family) {
 	      struct proc_dir_entry *entry;
@@ -8066,7 +8062,8 @@ static int __init ring_init(void)
 
   memset(&any_dev, 0, sizeof(any_dev));
   strcpy(any_dev.name, "any");
-  any_dev.ifindex = MAX_NUM_IFIDX-1, any_dev.type = ARPHRD_ETHER;
+  any_dev.ifindex = MAX_NUM_IFIDX-1;
+  any_dev.type = ARPHRD_ETHER;
   memset(&any_device_element, 0, sizeof(any_device_element));
   any_device_element.dev = &any_dev;
   any_device_element.device_type = standard_nic_family;
@@ -8077,9 +8074,11 @@ static int __init ring_init(void)
 
   memset(&none_dev, 0, sizeof(none_dev));
   strcpy(none_dev.name, "none");
-  none_dev.ifindex = MAX_NUM_IFIDX-2, none_dev.type = ARPHRD_ETHER;
+  none_dev.ifindex = MAX_NUM_IFIDX-2;
+  none_dev.type = ARPHRD_ETHER;
   memset(&none_device_element, 0, sizeof(none_device_element));
-  none_device_element.dev = &none_dev, none_device_element.device_type = standard_nic_family;
+  none_device_element.dev = &none_dev;
+  none_device_element.device_type = standard_nic_family;
 
   ring_proc_init();
   sock_register(&ring_family_ops);
