@@ -52,6 +52,10 @@ with pf_ring.
 sudo docker run --cap-add net_raw --cap-add net_admin ubuntu14 pfcount -i eth0
 ```
 
+An application running inside a docker container is able to capture traffic from the
+interfaces visible inside the container only. If you want to capture traffic from an 
+interface in the host system network namespace you should run socker with "--network=host".
+
 When working with PF_RING ZC, using for instance zbalance_ipc for forwarding traffic
 to consumer applications running inside Docker containers by means of ZC queues, we
 need to bind the hugetlb mountpoint inside the container using "run -v" and set the
