@@ -1418,11 +1418,11 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
       if(pfr->zc_device_entry != NULL) {
         /* ZC */
-        seq_printf(m, "Channel Id         : %d\n", pfr->zc_device_entry->dev.channel_id);
+        seq_printf(m, "Channel Id         : %d\n", pfr->zc_device_entry->zc_dev.channel_id);
         if (pfr->mode != send_only_mode)
-          seq_printf(m, "Num RX Slots       : %d\n", pfr->zc_device_entry->dev.mem_info.rx.packet_memory_num_slots);
+          seq_printf(m, "Num RX Slots       : %d\n", pfr->zc_device_entry->zc_dev.mem_info.rx.packet_memory_num_slots);
         if (pfr->mode != recv_only_mode)
-	  seq_printf(m, "Num TX Slots       : %d\n", pfr->zc_device_entry->dev.mem_info.tx.packet_memory_num_slots);
+	  seq_printf(m, "Num TX Slots       : %d\n", pfr->zc_device_entry->zc_dev.mem_info.tx.packet_memory_num_slots);
       } else if(fsi != NULL) {
         /* Standard PF_RING */
 	seq_printf(m, "Channel Id Mask    : 0x%016llX\n", pfr->channel_id_mask);
@@ -4871,8 +4871,8 @@ static int ring_release(struct socket *sock)
     remove_cluster_referee(pfr);
 
   if((pfr->zc_device_entry != NULL) 
-     && pfr->zc_device_entry->dev.netdev
-     && pfr->zc_device_entry->dev.netdev->name) {
+     && pfr->zc_device_entry->zc_dev.dev
+     && pfr->zc_device_entry->zc_dev.dev->name) {
     pfring_release_zc_dev(pfr);
   }
 
@@ -5628,8 +5628,8 @@ static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapp
   /* lookinf for ZC dev */
   list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
     entry = list_entry(ptr, zc_dev_list, list);
-    if (strcmp(entry->dev.netdev->name, mapping->device_name) == 0
-        && entry->dev.channel_id == mapping->channel_id) {
+    if (strcmp(entry->zc_dev.dev->name, mapping->device_name) == 0
+        && entry->zc_dev.channel_id == mapping->channel_id) {
       dev_found = 1;
       break;
     }
@@ -5674,8 +5674,8 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
 
   list_for_each_safe(ptr,tmp_ptr, &zc_devices_list) {
     entry = list_entry(ptr, zc_dev_list, list);
-    if (strcmp(entry->dev.netdev->name, pfr->zc_mapping.device_name) == 0
-        && entry->dev.channel_id == pfr->zc_mapping.channel_id) {
+    if (strcmp(entry->zc_dev.dev->name, pfr->zc_mapping.device_name) == 0
+        && entry->zc_dev.channel_id == pfr->zc_mapping.channel_id) {
       dev_found = 1;
       break;
     }
@@ -5690,7 +5690,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   ring_proc_remove(pfr);
 
   debug_printk(1, "%s@%d [num_bound_sockets=%d][%p]\n", 
-           entry->dev.netdev->name, pfr->zc_mapping.channel_id,
+           entry->zc_dev.dev->name, pfr->zc_mapping.channel_id,
            entry->num_bound_sockets, entry);
 
   write_lock(&entry->lock);
@@ -5699,7 +5699,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
     if (entry->bound_sockets[i] == NULL) {
       entry->bound_sockets[i] = pfr;
       entry->num_bound_sockets++;
-      active_zc_socket[entry->dev.netdev->ifindex] = 1;
+      active_zc_socket[entry->zc_dev.dev->ifindex] = 1;
       found = 1;
       break;
     }
@@ -5713,7 +5713,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   }
 
   pfr->zc_device_entry = entry;
-  pfr->zc_dev = &entry->dev;
+  pfr->zc_dev = &entry->zc_dev;
 
   debug_printk(1, "added mapping %s@%u [num_bound_sockets=%u]\n", 
            pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id, entry->num_bound_sockets);
@@ -5748,7 +5748,7 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
       entry->bound_sockets[i] = NULL;
       entry->num_bound_sockets--;
       if (entry->num_bound_sockets == 0)
-        active_zc_socket[entry->dev.netdev->ifindex] = 0;
+        active_zc_socket[entry->zc_dev.dev->ifindex] = 0;
       found = 1;
       break;
     }
@@ -5758,7 +5758,7 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
   if (!found) {
     printk("[PF_RING] %s:%d something got wrong removing socket bound to %s@%u\n", 
            __FUNCTION__, __LINE__, 
-           entry->dev.netdev->name != NULL ? entry->dev.netdev->name : "?", entry->dev.channel_id);
+           entry->zc_dev.dev->name != NULL ? entry->zc_dev.dev->name : "?", entry->zc_dev.channel_id);
     return -1; /* Something got wrong */
   }
 
@@ -7276,7 +7276,7 @@ void zc_dev_handler(zc_dev_operation operation,
 			void          *phys_card_memory,
 			u_int          phys_card_memory_len,
 			u_int channel_id,
-			struct net_device *netdev,
+			struct net_device *dev,
 			struct device *hwdev,
 			zc_dev_model device_model,
 			u_char *device_address,
@@ -7290,9 +7290,9 @@ void zc_dev_handler(zc_dev_operation operation,
 
   debug_printk(2, "%s ZC device %s@%u\n", 
 	   operation == add_device_mapping ? "registering" : "removing",
-	   netdev->name, channel_id);
+	   dev->name, channel_id);
 
-  if (strlen(netdev->name) == 0)
+  if (strlen(dev->name) == 0)
     printk("[PF_RING] %s:%d %s ZC device with empty name!", __FUNCTION__, __LINE__,
       operation == add_device_mapping ? "registering" : "removing");
 
@@ -7308,36 +7308,36 @@ void zc_dev_handler(zc_dev_operation operation,
 
       /* RX */
       if(rx_info != NULL)
-        memcpy(&next->dev.mem_info.rx, rx_info, sizeof(next->dev.mem_info.rx));
-      next->dev.rx_descr_packet_memory = rx_descr_packet_memory;
+        memcpy(&next->zc_dev.mem_info.rx, rx_info, sizeof(next->zc_dev.mem_info.rx));
+      next->zc_dev.rx_descr_packet_memory = rx_descr_packet_memory;
 
       /* TX */
       if(tx_info != NULL)
-        memcpy(&next->dev.mem_info.tx, tx_info, sizeof(next->dev.mem_info.tx));
-      next->dev.tx_descr_packet_memory = tx_descr_packet_memory;
+        memcpy(&next->zc_dev.mem_info.tx, tx_info, sizeof(next->zc_dev.mem_info.tx));
+      next->zc_dev.tx_descr_packet_memory = tx_descr_packet_memory;
 
       /* PHYS */
-      next->dev.phys_card_memory = phys_card_memory;
-      next->dev.mem_info.phys_card_memory_len = phys_card_memory_len;
+      next->zc_dev.phys_card_memory = phys_card_memory;
+      next->zc_dev.mem_info.phys_card_memory_len = phys_card_memory_len;
 
-      next->dev.channel_id = channel_id;
-      next->dev.netdev = netdev;
-      next->dev.hwdev = hwdev;
-      next->dev.mem_info.device_model = device_model;
-      memcpy(next->dev.device_address, device_address, 6);
-      next->dev.packet_waitqueue = packet_waitqueue;
-      next->dev.interrupt_received = interrupt_received;
-      next->dev.rx_adapter_ptr = rx_adapter_ptr;
-      next->dev.tx_adapter_ptr = tx_adapter_ptr;
-      next->dev.wait_packet_function_ptr = wait_packet_function_ptr;
-      next->dev.usage_notification = dev_notify_function_ptr;
+      next->zc_dev.channel_id = channel_id;
+      next->zc_dev.dev = dev;
+      next->zc_dev.hwdev = hwdev;
+      next->zc_dev.mem_info.device_model = device_model;
+      memcpy(next->zc_dev.device_address, device_address, 6);
+      next->zc_dev.packet_waitqueue = packet_waitqueue;
+      next->zc_dev.interrupt_received = interrupt_received;
+      next->zc_dev.rx_adapter_ptr = rx_adapter_ptr;
+      next->zc_dev.tx_adapter_ptr = tx_adapter_ptr;
+      next->zc_dev.wait_packet_function_ptr = wait_packet_function_ptr;
+      next->zc_dev.usage_notification = dev_notify_function_ptr;
       list_add(&next->list, &zc_devices_list);
       zc_devices_list_size++;
       /* Increment usage count - avoid unloading it while ZC drivers are in use */
       try_module_get(THIS_MODULE);
 
       /* We now have to update the device list */
-      dev_ptr = pf_ring_device_name_lookup(&init_net, netdev->name);
+      dev_ptr = pf_ring_device_name_lookup(&init_net, dev->name);
 
       if (dev_ptr != NULL) {
         dev_ptr->is_zc_device = 1;
@@ -7363,7 +7363,7 @@ void zc_dev_handler(zc_dev_operation operation,
     list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
       entry = list_entry(ptr, zc_dev_list, list);
 
-      if((entry->dev.netdev == netdev) && (entry->dev.channel_id == channel_id)) {
+      if((entry->zc_dev.dev == dev) && (entry->zc_dev.channel_id == channel_id)) {
 
         /* driver detach - checking if there is an application running */
         for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {

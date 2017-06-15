@@ -737,7 +737,7 @@ typedef struct {
   void *rx_descr_packet_memory; /* Invalid in userland */
   void *tx_descr_packet_memory; /* Invalid in userland */
   char *phys_card_memory;       /* Invalid in userland */
-  struct net_device *netdev;    /* Invalid in userland */
+  struct net_device *dev;       /* Invalid in userland */
   struct device *hwdev;         /* Invalid in userland */
   u_char device_address[6];
 #ifdef __KERNEL__
@@ -869,7 +869,7 @@ typedef struct {
 
 typedef struct {
   u8 num_bound_sockets;
-  zc_dev_info dev;
+  zc_dev_info zc_dev;
   struct list_head list;
   /*
     In the ZC world only one application can open and enable the 
@@ -1133,7 +1133,7 @@ typedef void  (*handle_pfring_zc_dev)(zc_dev_operation operation,
                                       void          *phys_card_memory,
                                       u_int          phys_card_memory_len,
                                       u_int channel_id,
-                                      struct net_device *netdev,
+                                      struct net_device *dev,
                                       struct device *hwdev,
                                       zc_dev_model device_model,
                                       u_char *device_address,
@@ -1155,7 +1155,7 @@ extern void do_ring_zc_dev_handler(zc_dev_operation operation,
 				       void          *phys_card_memory,
 				       u_int          phys_card_memory_len,
 				       u_int channel_id,
-				       struct net_device *netdev,
+				       struct net_device *dev,
 				       struct device *hwdev,
 				       zc_dev_model device_model,
 				       u_char *device_address,
