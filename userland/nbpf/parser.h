@@ -45,8 +45,12 @@ void nbpf_create_not(nbpf_node_t *);
 
 nbpf_node_t *nbpf_create_relation_node(int relation, nbpf_arth_t l, int r);
 
-void nbpf_lex_init(const char *);
-void nbpf_lex_cleanup(void);
+typedef struct { 
+  void *input_stream;
+} nbpf_lex_t;
+
+void nbpf_lex_init(nbpf_lex_t *, const char *);
+void nbpf_lex_cleanup(nbpf_lex_t *);
 void nbpf_syntax_error(char * format, ...);
 void nbpf_set_tree_root(nbpf_node_t *n);
 

@@ -148,6 +148,8 @@ void nbpf_free(nbpf_tree_t *t) {
 /* ****************************************** */
 
 static nbpf_node_t *tree_parse(const char *buffer) {
+  nbpf_lex_t lex;
+
 #ifdef HAVE_NDPI
   ndpi_struct = ndpi_init_detection_module();
 
@@ -157,12 +159,12 @@ static nbpf_node_t *tree_parse(const char *buffer) {
 
   memset(&tree_root, 0, sizeof(tree_root));
 
-  nbpf_lex_init(buffer);
+  nbpf_lex_init(&lex, buffer);
 
   errors = 0;
   yyparse();
 
-  nbpf_lex_cleanup();
+  nbpf_lex_cleanup(&lex);
 
   if (errors) {
     return NULL;
