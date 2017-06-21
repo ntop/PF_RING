@@ -9,10 +9,9 @@ Typical commands are:
 # echo 34359738368 > /proc/sys/kernel/shmmax
 # echo 34359738368 > /proc/sys/kernel/shmall
 # echo 2048 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-# cd /opt/fiberblaze/driver
-# ./load_driver.sh hugepages='2G'
-# cd /opt/fiberblaze/bin
-# ./configurecard --device fbcard0 --configuration ../fbcard.cfg
+# export PATH=/opt/fiberblaze/bin:$PATH
+# cd /opt/fiberblaze/driver; make; ./load_driver.sh hugepages='2G'
+# cd /opt/fiberblaze/bin; ./configurecard --device fbcard0 --configuration ../fbcard.cfg
 ```
 
 ## Usage
