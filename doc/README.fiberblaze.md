@@ -14,7 +14,7 @@ Typical commands are:
 # cd /opt/fiberblaze/bin; ./configurecard --device fbcard0 --configuration ../fbcard.cfg
 ```
 
-# RX
+# Receive Traffic
 The naming convention for RX is fbcard:CARD_ID:GROUP_NAME:GROUP_RING_ID where CARD_ID is the id of the card we want to open, GROUP_NAME is the name of the group specified in fbcard.cfg used by configurecard, and RING_ID (in case of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs.
 
 Example if you have set in fbcard.cfg
@@ -41,7 +41,7 @@ Example (receive packets from card 0, group "b, ring 0):
 pfcount -i fbcard:0:b:0
 ```
 
-# TX
+# Transmit Traffic
 The naming convention for TX is fbcard:CARD_ID:PORT_ID. If you have a 4 port NIC, the PORT_ID will be 0 to 3.
 
 Example (send packets from port 1 of cardId 0):
