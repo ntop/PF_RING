@@ -5,13 +5,12 @@ We expect you to have installed the Fiberblaze drivers and loaded them.
 Typical commands are:
 
 ```
-# Raise the shared memory limits to 32GB
-# echo 34359738368 > /proc/sys/kernel/shmmax
-# echo 34359738368 > /proc/sys/kernel/shmall
-# echo 2048 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-# export PATH=/opt/fiberblaze/bin:$PATH
-# cd /opt/fiberblaze/driver; make; ./load_driver.sh hugepages='2G'
-# cd /opt/fiberblaze/bin; ./configurecard --device fbcard0 --configuration ../fbcard.cfg
+echo 34359738368 > /proc/sys/kernel/shmmax
+echo 34359738368 > /proc/sys/kernel/shmall
+echo 2048 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+export PATH=/opt/fiberblaze/bin:$PATH
+cd /opt/fiberblaze/driver; make; ./load_driver.sh hugepages='2G'
+cd /opt/fiberblaze/bin; ./configurecard --device fbcard0 --configuration ../fbcard.cfg
 ```
 
 # Receive Traffic
