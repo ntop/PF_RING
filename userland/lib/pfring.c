@@ -109,7 +109,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "fbcard",
     .open = pfring_fb_open,
-    .findalldevs = NULL
+    .findalldevs = pfring_fb_findalldevs
   },
 #endif
 
