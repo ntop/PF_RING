@@ -553,7 +553,7 @@ void printHelp(void) {
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
 	 "                ixia\tTimestamped packets by ixiacom.com hardware devices\n");
-  printf("-L              List all interafces and exit (use -v for more info)\n");
+  printf("-L              List all interfaces and exit (use -v for more info)\n");
 }
 
 /* *************************************** */
