@@ -21,7 +21,7 @@ fi
 
 dnl> The step below is necessary to make sure the package will work on the
 dnl> target system without having to deal with ldconfig
-if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so         /lib64; ln -s /lib64/libsnf.so /lib64/libsnf.so.0; fi
+dnl> if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so         /lib64; ln -s /lib64/libsnf.so /lib64/libsnf.so.0; fi
 
 DATE=`date -R`
 KERNEL=`uname -r`
