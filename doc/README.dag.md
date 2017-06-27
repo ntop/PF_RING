@@ -18,17 +18,10 @@ dagload
 Compile/load pf_ring and sample applications:
 
 ```
-cd PF_RING/kernel
-make
-sudo insmod pf_ring.ko
-cd ../userland/lib
-./configure
-make
-cd ../libpcap
-./configure
-make
-cd ../examples
-make
+cd PF_RING/kernel; make; sudo insmod pf_ring.ko
+cd ../userland/lib; ./configure; make
+cd ../libpcap; ./configure; make
+cd ../examples; make
 ```
 
 Run the sample application to make sure everything is working:
