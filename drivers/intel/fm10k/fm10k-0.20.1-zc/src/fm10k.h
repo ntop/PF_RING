@@ -274,6 +274,12 @@ struct fm10k_iov_data {
 	struct fm10k_vf_info	vf_info[0];
 };
 
+struct fm10k_udp_port {
+	struct list_head	list;
+	sa_family_t		sa_family;
+	__be16			port;
+};
+
 #define fm10k_vxlan_port_for_each(vp, intfc) \
 	list_for_each_entry(vp, &(intfc)->vxlan_port, list)
 struct fm10k_vxlan_port {
@@ -384,6 +390,7 @@ struct fm10k_intfc {
 
 	/* VXLAN port tracking information */
 	struct list_head vxlan_port;
+	struct list_head geneve_port;
 
 	/* UIO device capabilities structure */
 	struct uio_info uio;
@@ -614,8 +621,13 @@ int fm10k_iov_configure(struct pci_dev *pdev, int num_vfs);
 s32 fm10k_iov_update_pvid(struct fm10k_intfc *interface, u16 glort, u16 pvid);
 #ifdef IFLA_VF_MAX
 int fm10k_ndo_set_vf_mac(struct net_device *netdev, int vf_idx, u8 *mac);
+#ifdef IFLA_VF_VLAN_INFO_MAX
+int fm10k_ndo_set_vf_vlan(struct net_device *netdev,
+			  int vf_idx, u16 vid, u8 qos, __be16 vlan_proto);
+#else
 int fm10k_ndo_set_vf_vlan(struct net_device *netdev,
 			  int vf_idx, u16 vid, u8 qos);
+#endif
 #ifdef HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 int fm10k_ndo_set_vf_bw(struct net_device *netdev, int vf_idx, int rate,
 			int unused);
