@@ -2504,8 +2504,13 @@ error_param:
  *
  * program VF vlan id and/or qos
  **/
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0) )
 int i40e_ndo_set_vf_port_vlan(struct net_device *netdev,
 			      int vf_id, u16 vlan_id, u8 qos)
+#else
+int i40e_ndo_set_vf_port_vlan(struct net_device *netdev,
+			      int vf_id, u16 vlan_id, u8 qos, __be16 proto)
+#endif
 {
 	u16 vlanprio = vlan_id | (qos << I40E_VLAN_PRIORITY_SHIFT);
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
