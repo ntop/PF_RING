@@ -445,8 +445,13 @@ int fm10k_ndo_set_vf_mac(struct net_device *netdev, int vf_idx, u8 *mac)
 	return 0;
 }
 
+#ifdef IFLA_VF_VLAN_INFO_MAX
+int fm10k_ndo_set_vf_vlan(struct net_device *netdev, int vf_idx, u16 vid,
+			  u8 qos, __be16 vlan_proto)
+#else
 int fm10k_ndo_set_vf_vlan(struct net_device *netdev, int vf_idx, u16 vid,
 			  u8 qos)
+#endif
 {
 	struct fm10k_intfc *interface = netdev_priv(netdev);
 	struct fm10k_iov_data *iov_data = interface->iov_data;

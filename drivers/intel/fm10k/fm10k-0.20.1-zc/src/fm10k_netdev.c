@@ -23,6 +23,12 @@
 #ifdef HAVE_VXLAN_CHECKS
 #include <net/vxlan.h>
 #endif /* HAVE_VXLAN_CHECKS */
+#ifdef HAVE_GENEVE_RX_OFFLOAD
+#include <net/geneve.h>
+#endif
+#ifdef HAVE_UDP_ENC_RX_OFFLOAD
+#include <net/udp_tunnel.h>
+#endif /* HAVE_UDP_ENC_RX_OFFLOAD */
 
 /**
  * fm10k_setup_tx_resources - allocate Tx resources (Descriptors)
@@ -389,6 +395,257 @@ static void fm10k_request_glort_range(struct fm10k_intfc *interface)
 }
 
 /**
+ * fm10k_free_udp_port_info
+ * @interface: board private structure
+ *
+ * This function frees both geneve_port and vxlan_port structures
+ **/
+static void fm10k_free_udp_port_info(struct fm10k_intfc *interface)
+{
+	struct fm10k_udp_port *port;
+
+	/* flush all entries from vxlan list */
+	port = list_first_entry_or_null(&interface->vxlan_port,
+					struct fm10k_udp_port, list);
+	while (port) {
+		list_del(&port->list);
+		kfree(port);
+		port = list_first_entry_or_null(&interface->vxlan_port,
+						struct fm10k_udp_port,
+						list);
+	}
+
+	/* flush all entries from geneve list */
+	port = list_first_entry_or_null(&interface->geneve_port,
+					struct fm10k_udp_port, list);
+	while (port) {
+		list_del(&port->list);
+		kfree(port);
+		port = list_first_entry_or_null(&interface->vxlan_port,
+						struct fm10k_udp_port,
+						list);
+	}
+}
+
+/**
+ * fm10k_restore_udp_port_info
+ * @interface: board private structure
+ *
+ * This function restores the value in the tunnel_cfg register(s) after reset
+ **/
+static void fm10k_restore_udp_port_info(struct fm10k_intfc *interface)
+{
+	struct fm10k_hw *hw = &interface->hw;
+	struct fm10k_udp_port *port;
+
+	/* only the PF supports configuring tunnels */
+	if (hw->mac.type != fm10k_mac_pf)
+		return;
+
+	port = list_first_entry_or_null(&interface->vxlan_port,
+					struct fm10k_udp_port, list);
+
+	/* restore tunnel configuration register */
+	fm10k_write_reg(hw, FM10K_TUNNEL_CFG,
+			(port ? ntohs(port->port) : 0) |
+			(ETH_P_TEB << FM10K_TUNNEL_CFG_NVGRE_SHIFT));
+
+	port = list_first_entry_or_null(&interface->geneve_port,
+					struct fm10k_udp_port, list);
+
+	/* restore Geneve tunnel configuration register */
+	fm10k_write_reg(hw, FM10K_TUNNEL_CFG_GENEVE,
+			(port ? ntohs(port->port) : 0));
+}
+
+static struct fm10k_udp_port *
+fm10k_remove_tunnel_port(struct list_head *ports,
+			 struct udp_tunnel_info *ti)
+{
+	struct fm10k_udp_port *port;
+
+	list_for_each_entry(port, ports, list) {
+		if ((port->port == ti->port) &&
+		    (port->sa_family == ti->sa_family)) {
+			list_del(&port->list);
+			return port;
+		}
+	}
+
+	return NULL;
+}
+
+static void fm10k_insert_tunnel_port(struct list_head *ports,
+				     struct udp_tunnel_info *ti)
+{
+	struct fm10k_udp_port *port;
+
+	/* remove existing port entry from the list so that the newest items
+	 * are always at the tail of the list.
+	 */
+	port = fm10k_remove_tunnel_port(ports, ti);
+	if (!port) {
+		port = kmalloc(sizeof(*port), GFP_ATOMIC);
+		if  (!port)
+			return;
+		port->port = ti->port;
+		port->sa_family = ti->sa_family;
+	}
+
+	list_add_tail(&port->list, ports);
+}
+
+/**
+ * fm10k_udp_tunnel_add
+ * @netdev: network interface device structure
+ * @ti: Tunnel endpoint information
+ *
+ * This function is called when a new UDP tunnel port has been added.
+ * Due to hardware restrictions, only one port per type can be offloaded at
+ * once.
+ **/
+__maybe_unused
+static void fm10k_udp_tunnel_add(struct net_device *dev,
+				 struct udp_tunnel_info *ti)
+{
+	struct fm10k_intfc *interface = netdev_priv(dev);
+
+	/* only the PF supports configuring tunnels */
+	if (interface->hw.mac.type != fm10k_mac_pf)
+		return;
+
+	switch (ti->type) {
+	case UDP_TUNNEL_TYPE_VXLAN:
+		fm10k_insert_tunnel_port(&interface->vxlan_port, ti);
+		break;
+	case UDP_TUNNEL_TYPE_GENEVE:
+		fm10k_insert_tunnel_port(&interface->geneve_port, ti);
+		break;
+	default:
+		return;
+	}
+
+	fm10k_restore_udp_port_info(interface);
+}
+
+/**
+ * fm10k_udp_tunnel_del
+ * @netdev: network interface device structure
+ * @ti: Tunnel end point information
+ *
+ * This function is called when a new UDP tunnel port is deleted. The freed
+ * port will be removed from the list, then we reprogram the offloaded port
+ * based on the head of the list.
+ **/
+__maybe_unused
+static void fm10k_udp_tunnel_del(struct net_device *dev,
+				 struct udp_tunnel_info *ti)
+{
+	struct fm10k_intfc *interface = netdev_priv(dev);
+	struct fm10k_udp_port *port = NULL;
+
+	if (interface->hw.mac.type != fm10k_mac_pf)
+		return;
+
+	switch (ti->type) {
+	case UDP_TUNNEL_TYPE_VXLAN:
+		port = fm10k_remove_tunnel_port(&interface->vxlan_port, ti);
+		break;
+	case UDP_TUNNEL_TYPE_GENEVE:
+		port = fm10k_remove_tunnel_port(&interface->geneve_port, ti);
+		break;
+	default:
+		return;
+	}
+
+	/* if we did remove a port we need to free its memory */
+	kfree(port);
+
+	fm10k_restore_udp_port_info(interface);
+}
+
+#ifdef HAVE_VXLAN_RX_OFFLOAD
+/**
+ * fm10k_add_vxlan_port
+ * @netdev: network interface device structure
+ * @sa_family: Address family of added port
+ * @port: Port number in use for VXLAN
+ *
+ **/
+static void fm10k_add_vxlan_port(struct net_device *dev,
+				 sa_family_t sa_family, __be16 port)
+{
+	struct udp_tunnel_info ti = {
+		.type = UDP_TUNNEL_TYPE_VXLAN,
+		.sa_family = sa_family,
+		.port = port,
+	};
+
+	fm10k_udp_tunnel_add(dev, &ti);
+}
+
+/**
+ * fm10k_del_vxlan_port
+ * @netdev: network interface device structure
+ * @sa_family: Address family of deleted port
+ * @port: Port number in use for VXLAN
+ *
+ **/
+static void fm10k_del_vxlan_port(struct net_device *dev,
+				 sa_family_t sa_family, __be16 port)
+{
+	struct udp_tunnel_info ti = {
+		.type = UDP_TUNNEL_TYPE_VXLAN,
+		.sa_family = sa_family,
+		.port = port,
+	};
+
+	fm10k_udp_tunnel_del(dev, &ti);
+}
+#endif /* HAVE_VXLAN_RX_OFFLOAD */
+
+#ifdef HAVE_GENEVE_RX_OFFLOAD
+/**
+ * fm10k_add_geneve_port
+ * @netdev: network interface device structure
+ * @sa_family: Address family of added port
+ * @port: Port number in use for GENEVE
+ *
+ **/
+static void fm10k_add_geneve_port(struct net_device *dev,
+				  sa_family_t sa_family, __be16 port)
+{
+	struct udp_tunnel_info ti = {
+		.type = UDP_TUNNEL_TYPE_GENEVE,
+		.sa_family = sa_family,
+		.port = port,
+	};
+
+	fm10k_udp_tunnel_add(dev, &ti);
+}
+
+/**
+ * fm10k_del_geneve_port
+ * @netdev: network interface device structure
+ * @sa_family: Address family of deleted port
+ * @port: Port number in use for GENEVE
+ *
+ **/
+static void fm10k_del_geneve_port(struct net_device *dev,
+				  sa_family_t sa_family, __be16 port)
+{
+	struct udp_tunnel_info ti = {
+		.type = UDP_TUNNEL_TYPE_GENEVE,
+		.sa_family = sa_family,
+		.port = port,
+	};
+
+	fm10k_udp_tunnel_del(dev, &ti);
+}
+#endif /* HAVE_GENEVE_RX_OFFLOAD */
+
+#if 0
+/**
  * fm10k_del_vxlan_port_all
  * @interface: board private structure
  *
@@ -409,6 +666,7 @@ static void fm10k_del_vxlan_port_all(struct fm10k_intfc *interface)
 						      list);
 	}
 }
+#endif
 
 /**
  * fm10k_restore_vxlan_port
@@ -435,6 +693,7 @@ static void fm10k_restore_vxlan_port(struct fm10k_intfc *interface)
 }
 
 #ifdef HAVE_VXLAN_CHECKS
+#if 0
 /**
  * fm10k_add_vxlan_port
  * @netdev: network interface device structure
@@ -511,6 +770,7 @@ static void fm10k_del_vxlan_port(struct net_device *dev,
 	fm10k_restore_vxlan_port(interface);
 }
 
+#endif
 #endif /* HAVE_VXLAN_CHECKS */
 /**
  * fm10k_open - Called when a network interface is made active
@@ -558,9 +818,15 @@ int fm10k_open(struct net_device *netdev)
 	if (err)
 		goto err_set_queues;
 
-#ifdef HAVE_VXLAN_CHECKS
+#if defined(HAVE_VXLAN_CHECKS) && !defined(HAVE_UDP_ENC_RX_OFFLOAD)
 	/* update VXLAN port configuration */
 	vxlan_get_rx_port(netdev);
+#endif
+#if defined(HAVE_GENEVE_RX_OFFLOAD) && !defined(HAVE_UDP_ENC_RX_OFFLOAD)
+	geneve_get_rx_port(netdev);
+#endif
+#ifdef HAVE_UDP_ENC_RX_OFFLOAD
+	udp_tunnel_get_rx_info(netdev);
 #endif
 
 	fm10k_up(interface);
@@ -596,7 +862,7 @@ int fm10k_close(struct net_device *netdev)
 
 	fm10k_qv_free_irq(interface);
 
-	fm10k_del_vxlan_port_all(interface);
+	fm10k_free_udp_port_info(interface);
 
 	fm10k_free_all_tx_resources(interface);
 	fm10k_free_all_rx_resources(interface);
