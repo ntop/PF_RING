@@ -135,8 +135,13 @@ void i40e_vc_notify_vf_reset(struct i40e_vf *vf);
 
 /* VF configuration related iplink handlers */
 int i40e_ndo_set_vf_mac(struct net_device *netdev, int vf_id, u8 *mac);
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0) )
 int i40e_ndo_set_vf_port_vlan(struct net_device *netdev,
 			      int vf_id, u16 vlan_id, u8 qos);
+#else
+int i40e_ndo_set_vf_port_vlan(struct net_device *netdev,
+			      int vf_id, u16 vlan_id, u8 qos, __be16 proto);
+#endif
 #ifdef HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 int i40e_ndo_set_vf_bw(struct net_device *netdev, int vf_id, int min_tx_rate,
 		       int max_tx_rate);
