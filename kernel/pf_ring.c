@@ -2219,10 +2219,10 @@ static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
 		       sizeof(ip_addr) == 0)))
 	   ||
 	   ((memcmp(&hash_bucket->rule.host6_peer_a,
-		    (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst),
+		    (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst),
 		    sizeof(ip_addr) == 0))
 	    && (memcmp(&hash_bucket->rule.host6_peer_b,
-		       (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
+		       (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
 		       sizeof(ip_addr) == 0)))) {
         return 1;
       }
