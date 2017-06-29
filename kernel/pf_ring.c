@@ -258,6 +258,10 @@ static rwlock_t ring_proc_lock =
 u_int32_t loobpack_test_buffer_len = 4*1024*1024;
 u_char *loobpack_test_buffer = NULL;
 
+/* Fake MAC address, to be passed to functions that don't use it but have it
+   in their signatures */
+u_int8_t zeromac[ETH_ALEN] = {'\0','\0','\0','\0','\0','\0'};
+
 /* ********************************** */
 
 /* /proc entry for ring module */
@@ -1690,19 +1694,28 @@ static inline void ring_remove(struct sock *sk_to_delete)
 
 /* ********************************** */
 
-static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t ip_version, u_int8_t l3_proto,
-			         ip_addr host_peer_a, ip_addr host_peer_b,
-			         u_int16_t port_peer_a, u_int16_t port_peer_b)
+static inline u_int32_t hash_pkt(u_int16_t vlan_id,
+                                 u_int8_t smac[ETH_ALEN], u_int8_t dmac[ETH_ALEN],
+                                 u_int8_t ip_version, u_int8_t l3_proto,
+                                 ip_addr host_peer_a, ip_addr host_peer_b,
+                                 u_int16_t port_peer_a, u_int16_t port_peer_b)
 {
+  u_char i;
   u_int32_t hash = vlan_id;
+
   if (ip_version == 4)
     hash += host_peer_a.v4 + host_peer_b.v4;
   else if (ip_version == 6)
-    hash +=
-      host_peer_a.v6.s6_addr32[0] + host_peer_a.v6.s6_addr32[1] +
-      host_peer_a.v6.s6_addr32[2] + host_peer_a.v6.s6_addr32[3] +
-      host_peer_b.v6.s6_addr32[0] + host_peer_b.v6.s6_addr32[1] +
-      host_peer_b.v6.s6_addr32[2] + host_peer_b.v6.s6_addr32[3];
+  {
+    for (i=0 ; i < 4 ; ++i)
+      hash += host_peer_a.v6.s6_addr32[i]
+            + host_peer_b.v6.s6_addr32[i];
+  }
+  else  /* non-IP protocols */
+  {
+    for (i=0 ; i < ETH_ALEN ; ++i)
+      hash += smac[i] + dmac[i];
+  }
   hash += l3_proto + port_peer_a + port_peer_b;
   return hash;
 }
@@ -1716,6 +1729,7 @@ static inline u_int32_t hash_pkt(u_int16_t vlan_id, u_int8_t ip_version, u_int8_
 #define HASH_PKT_HDR_MASK_PROTO  (1<<4)
 #define HASH_PKT_HDR_MASK_VLAN   (1<<5)
 #define HASH_PKT_HDR_MASK_TUNNEL (1<<6)
+#define HASH_PKT_HDR_MASK_MAC    (1<<7)
 
 static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t flags)
 {
@@ -1725,23 +1739,25 @@ static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t fla
 
     hdr->extended_hdr.pkt_hash = hash_pkt(
       (flags & HASH_PKT_HDR_MASK_VLAN)  ? 0 : hdr->extended_hdr.parsed_pkt.vlan_id,
+      (flags & HASH_PKT_HDR_MASK_MAC) ? zeromac : hdr->extended_hdr.parsed_pkt.smac,
+      (flags & HASH_PKT_HDR_MASK_DST) ? zeromac : hdr->extended_hdr.parsed_pkt.dmac,
       use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version
                    : hdr->extended_hdr.parsed_pkt.ip_version,
-      (flags & HASH_PKT_HDR_MASK_PROTO) ? 0 :
-        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto
-		      : hdr->extended_hdr.parsed_pkt.l3_proto),
-      (flags & HASH_PKT_HDR_MASK_SRC) ? ip_zero :
-        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src
-		      : hdr->extended_hdr.parsed_pkt.ip_src),
-      (flags & HASH_PKT_HDR_MASK_DST) ? ip_zero :
-        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst
-		      : hdr->extended_hdr.parsed_pkt.ip_dst),
-      (flags & (HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_PORT)) ? 0 :
-        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port
-		      : hdr->extended_hdr.parsed_pkt.l4_src_port),
-      (flags & (HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_PORT)) ? 0 :
-        (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port
-		      : hdr->extended_hdr.parsed_pkt.l4_dst_port));
+      (flags & HASH_PKT_HDR_MASK_PROTO)
+        ? 0 : (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto
+                            : hdr->extended_hdr.parsed_pkt.l3_proto),
+      (flags & HASH_PKT_HDR_MASK_SRC)
+        ? ip_zero : (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src
+                                  : hdr->extended_hdr.parsed_pkt.ip_src),
+      (flags & HASH_PKT_HDR_MASK_DST)
+        ? ip_zero : (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst
+                                  : hdr->extended_hdr.parsed_pkt.ip_dst),
+      (flags & (HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_PORT))
+        ? 0 : (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port
+                            : hdr->extended_hdr.parsed_pkt.l4_src_port),
+      (flags & (HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_PORT))
+        ? 0 : (use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port
+                            : hdr->extended_hdr.parsed_pkt.l4_dst_port));
   }
 
   return hdr->extended_hdr.pkt_hash;
@@ -2190,9 +2206,9 @@ static int parse_pkt(struct sk_buff *skb,
 
 /* ********************************** */
 
-static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
-			     struct pfring_pkthdr *hdr,
-			     u_char mask_src, u_char mask_dst)
+static int hash_bucket_match (sw_filtering_hash_bucket *hash_bucket,
+                              struct pfring_pkthdr *hdr,
+                              u_char mask_src, u_char mask_dst)
 {
   /*
     When protocol of host_peer is IPv4, s6_addr32[0] contains IPv4
@@ -2843,7 +2859,8 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 					   u_char add_rule)
 {
   int rc = -1;
-  u_int32_t hash_value = hash_pkt(rule->rule.vlan_id, rule->rule.ip_version, rule->rule.proto,
+  u_int32_t hash_value = hash_pkt(rule->rule.vlan_id, zeromac, zeromac,
+                                  rule->rule.ip_version, rule->rule.proto,
 				  rule->rule.host_peer_a, rule->rule.host_peer_b,
 				  rule->rule.port_peer_a, rule->rule.port_peer_b)
     % perfect_rules_hash_size;
@@ -3157,6 +3174,8 @@ int check_perfect_rules(struct sk_buff *skb,
 
   hash_idx = hash_pkt(
     hdr->extended_hdr.parsed_pkt.vlan_id,
+    hdr->extended_hdr.parsed_pkt.smac,
+    hdr->extended_hdr.parsed_pkt.dmac,
     hdr->extended_hdr.parsed_pkt.ip_version,
     hdr->extended_hdr.parsed_pkt.l3_proto,
     hdr->extended_hdr.parsed_pkt.ip_src,
@@ -6920,9 +6939,11 @@ static int ring_getsockopt(struct socket *sock,
 		 rule.host4_peer_b,
 		 rule.port_peer_b);
 
-	hash_idx = hash_pkt(rule.vlan_id, rule.ip_version, rule.proto,
-			    rule.host_peer_a, rule.host_peer_b,
-			    rule.port_peer_a, rule.port_peer_b) % perfect_rules_hash_size;
+	hash_idx = hash_pkt(rule.vlan_id, zeromac, zeromac,
+	                    rule.ip_version, rule.proto,
+	                    rule.host_peer_a, rule.host_peer_b,
+	                    rule.port_peer_a, rule.port_peer_b)
+	  % perfect_rules_hash_size;
 
 	if(pfr->sw_filtering_hash[hash_idx] != NULL) {
 	  sw_filtering_hash_bucket *bucket;
