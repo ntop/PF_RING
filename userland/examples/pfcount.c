@@ -482,7 +482,7 @@ void printDevs() {
              "\t%02X:%02X:%02X:%02X:%02X:%02X"
              "\t%04X:%02X:%02X.%X"
              "\t%d\t%s\n",
-        dev->name, dev->system_name, dev->module,
+        dev->name, dev->system_name ? dev->system_name : "unknown", dev->module,
         dev->mac[0] & 0xFF, dev->mac[1] & 0xFF, dev->mac[2] & 0xFF, 
         dev->mac[3] & 0xFF, dev->mac[4] & 0xFF, dev->mac[5] & 0xFF,
         dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
