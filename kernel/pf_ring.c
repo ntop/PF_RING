@@ -1711,7 +1711,7 @@ static inline u_int32_t hash_pkt(u_int16_t vlan_id,
       hash += host_peer_a.v6.s6_addr32[i]
             + host_peer_b.v6.s6_addr32[i];
   }
-  else  /* non-IP protocols */
+  else if (l3_proto == 0)    /* non-IP protocols */
   {
     for (i=0 ; i < ETH_ALEN ; ++i)
       hash += smac[i] + dmac[i];
@@ -1733,14 +1733,18 @@ static inline u_int32_t hash_pkt(u_int16_t vlan_id,
 
 static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t flags)
 {
-  if (hdr->extended_hdr.pkt_hash == 0 || flags & HASH_PKT_HDR_RECOMPUTE) {
+  if (hdr->extended_hdr.pkt_hash == 0 || (flags & HASH_PKT_HDR_RECOMPUTE))
+  {
     u_int8_t use_tunneled = hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id != NO_TUNNEL_ID && 
         !(flags & HASH_PKT_HDR_MASK_TUNNEL);
 
     hdr->extended_hdr.pkt_hash = hash_pkt(
-      (flags & HASH_PKT_HDR_MASK_VLAN)  ? 0 : hdr->extended_hdr.parsed_pkt.vlan_id,
-      (flags & HASH_PKT_HDR_MASK_MAC) ? zeromac : hdr->extended_hdr.parsed_pkt.smac,
-      (flags & HASH_PKT_HDR_MASK_DST) ? zeromac : hdr->extended_hdr.parsed_pkt.dmac,
+      (flags & HASH_PKT_HDR_MASK_VLAN)
+        ? 0 : hdr->extended_hdr.parsed_pkt.vlan_id,
+      (flags & HASH_PKT_HDR_MASK_MAC)
+        ? zeromac : hdr->extended_hdr.parsed_pkt.smac,
+      (flags & HASH_PKT_HDR_MASK_MAC)
+        ? zeromac : hdr->extended_hdr.parsed_pkt.dmac,
       use_tunneled ? hdr->extended_hdr.parsed_pkt.tunnel.tunneled_ip_version
                    : hdr->extended_hdr.parsed_pkt.ip_version,
       (flags & HASH_PKT_HDR_MASK_PROTO)
@@ -3515,60 +3519,74 @@ static int add_skb_to_ring(struct sk_buff *skb,
 static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
 			    struct pfring_pkthdr *hdr)
 {
-  int flags = 0;
+  /* Predefined masks */
+  static int mask_5_tuple = HASH_PKT_HDR_MASK_MAC,
+             mask_4_tuple = HASH_PKT_HDR_MASK_MAC | HASH_PKT_HDR_MASK_PROTO,
+             mask_2_tuple = HASH_PKT_HDR_MASK_MAC | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT;
 
-  if (cluster_ptr->cluster.hashing_mode == cluster_round_robin)
+  int flags = 0;
+  cluster_type cluster_mode = cluster_ptr->cluster.hashing_mode;
+  u_int8_t l3_proto = hdr->extended_hdr.parsed_pkt.l3_proto;
+
+  if (cluster_mode == cluster_round_robin)
     return cluster_ptr->cluster.hashing_id++;
 
-  switch (cluster_ptr->cluster.hashing_mode) {
-  case cluster_per_flow_5_tuple:
-  case cluster_per_flow_2_tuple:
-  case cluster_per_flow_4_tuple:   
-  case cluster_per_flow_tcp_5_tuple:
-  case cluster_per_flow:
+  if (cluster_mode < cluster_per_inner_flow)
     flags |= HASH_PKT_HDR_MASK_TUNNEL;
-    break;
-  default:
-    break;
+
+  /* For the rest, set at least these 2 flags */
+  flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN;
+
+  if (cluster_mode == cluster_per_flow_ip_5_tuple ||
+      cluster_mode == cluster_per_inner_flow_ip_5_tuple)
+  {
+    if (l3_proto == 0)
+    {
+      /* Non-IP packets: use only MAC addresses, mask all else */
+      flags |= ~(HASH_PKT_HDR_MASK_TUNNEL | HASH_PKT_HDR_MASK_MAC);
+      return hash_pkt_header(hdr, flags);
+    }
+    /* else, it's like 5-tuple for IP packets */
+    cluster_mode = (flags & HASH_PKT_HDR_MASK_TUNNEL)
+        ? cluster_per_inner_flow_5_tuple
+        : cluster_per_flow_5_tuple;
   }
 
-  switch (cluster_ptr->cluster.hashing_mode) {
-  case cluster_per_flow_2_tuple:
-  case cluster_per_inner_flow_2_tuple:
-    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_VLAN; 
-    break;
+  flags |= HASH_PKT_HDR_MASK_MAC;  /* Mask off the MAC addresses for IP packets */
 
-  case cluster_per_flow_4_tuple:
-  case cluster_per_inner_flow_4_tuple:
-    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_VLAN;
+  switch (cluster_mode)
+  {
+  case cluster_per_flow_5_tuple:
+  case cluster_per_inner_flow_5_tuple:
+    flags |= mask_5_tuple;
     break;
 
   case cluster_per_flow_tcp_5_tuple:
   case cluster_per_inner_flow_tcp_5_tuple:
-    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN;
-    if (cluster_ptr->cluster.hashing_mode == cluster_per_flow_5_tuple ||
-        (cluster_ptr->cluster.hashing_mode == cluster_per_inner_flow_tcp_5_tuple &&
-         hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id == NO_TUNNEL_ID)) {
-      if (hdr->extended_hdr.parsed_pkt.l3_proto != IPPROTO_TCP)
-        flags |= HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO; /* 2 tuple for non-TCP */
-    } else if (cluster_ptr->cluster.hashing_mode == cluster_per_inner_flow_tcp_5_tuple && 
-        hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id != NO_TUNNEL_ID) {
-      if (hdr->extended_hdr.parsed_pkt.tunnel.tunneled_proto != IPPROTO_TCP)
-        flags |= HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_MASK_PROTO; /* 2 tuple for non-TCP */
-    } 
+    if (l3_proto == IPPROTO_TCP)
+    {
+      flags |= mask_5_tuple;
+      break;
+    }
+    /* else, fall through, because it's like 2-tuple for non-TCP packets */
+
+  case cluster_per_flow_2_tuple:
+  case cluster_per_inner_flow_2_tuple:
+    flags |= mask_2_tuple;
     break;
 
-  case cluster_per_flow_5_tuple:
-  case cluster_per_inner_flow_5_tuple:
-    flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN;
+  case cluster_per_flow_4_tuple:
+  case cluster_per_inner_flow_4_tuple:
+    flags |= mask_4_tuple;
     break;
 
   case cluster_per_flow:
-  case cluster_per_inner_flow:
-  default:
+  case cluster_per_inner_flow:    /* No more flags for those 2 modes */
     break;
-  }
 
+  default:  /* this ought to be an error */
+    printk("[PF_RING] undefined clustering type.\n");
+  }
   return hash_pkt_header(hdr, flags);
 }
 
