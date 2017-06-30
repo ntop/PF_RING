@@ -1516,8 +1516,10 @@ static inline void i40e_rx_checksum(struct i40e_vsi *vsi,
 	 */
 
 	skb->ip_summed = CHECKSUM_UNNECESSARY;
+#ifdef I40E_TUNNEL_SUPPORT
 #ifdef HAVE_SKBUFF_CSUM_LEVEL
 	skb->csum_level = tunnel ? 1 : 0;
+#endif
 #endif
 
 	return;
