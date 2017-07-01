@@ -478,13 +478,17 @@ void printDevs() {
 
   while (dev != NULL) {
     if (verbose) {
-      printf("%s\t%s\t%s"
-             "\t%02X:%02X:%02X:%02X:%02X:%02X"
-             "\t%04X:%02X:%02X.%X"
-             "\t%d\t%s\n",
-        dev->name, dev->system_name ? dev->system_name : "unknown", dev->module,
-        dev->mac[0] & 0xFF, dev->mac[1] & 0xFF, dev->mac[2] & 0xFF, 
-        dev->mac[3] & 0xFF, dev->mac[4] & 0xFF, dev->mac[5] & 0xFF,
+      printf("%s\t%s\t%s\t", 
+        dev->name, dev->system_name ? dev->system_name : "unknown", dev->module);
+
+      if (dev->sn)
+        printf("%s", dev->sn);
+      else
+        printf("%02X:%02X:%02X:%02X:%02X:%02X", 
+          dev->mac[0] & 0xFF, dev->mac[1] & 0xFF, dev->mac[2] & 0xFF, 
+          dev->mac[3] & 0xFF, dev->mac[4] & 0xFF, dev->mac[5] & 0xFF);
+
+      printf("\t%04X:%02X:%02X.%X\t%d\t%s\n",
         dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
         busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
         dev->status ? "Up" : "Down");

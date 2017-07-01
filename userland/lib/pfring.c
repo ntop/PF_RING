@@ -1317,6 +1317,7 @@ void pfring_freealldevs(pfring_if_t *list) {
     if (tmp->name)        free(tmp->name);
     if (tmp->system_name) free(tmp->system_name);
     if (tmp->module)      free(tmp->module);
+    if (tmp->sn)          free(tmp->sn);
     free(tmp);
     tmp = list;
   }
