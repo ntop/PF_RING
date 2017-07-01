@@ -179,6 +179,7 @@ typedef struct pfring_if {
   char *name;
   char *system_name;
   char *module;
+  char *sn;
   char mac[6];
   struct { /* Bus ID: "%04X:%02X:%02X.%X", slot, bus, device, function */
     int slot;
