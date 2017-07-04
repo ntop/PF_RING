@@ -1,7 +1,6 @@
 #!/bin/bash
 
 FAMILY=fm10k
-IS_SILICOM=0
 
 #service udev start
 
@@ -75,20 +74,20 @@ if [ $HUGEPAGES_AVAIL -ne $HUGEPAGES_NUM ]; then
 	printf "Warning: %s hugepages available, %s requested\n" "$HUGEPAGES_AVAIL" "$HUGEPAGES_NUM"
 fi
 
-#if you have Silicom card (rdif and rdifctl installed),
-#configure the switch
 IS_RDIF_INSTALLED=`which rdif | wc -l`
 IS_RDIFCTL_INSTALLED=`which rdifctl | wc -l`
 
 if [ "$IS_RDIF_INSTALLED" -eq 1 ]; then
-        if [ "$IS_RDIFCTL_INSTALLED" -eq 1 ]; then
-                IS_SILICOM=1
-        fi
+	if [ "$IS_RDIFCTL_INSTALLED" -eq 1 ]; then
+		IS_SILICOM=1
+	fi
 fi
 
+# Comment the line below if you want to configure the switch (it requires rdif and rdifctl installed)
+IS_SILICOM=0
 
 if [ "$IS_SILICOM" -eq 1 ]; then
-        rdif stop
+	rdif stop
 	nohup rdif start &
 
 	sleep 4
