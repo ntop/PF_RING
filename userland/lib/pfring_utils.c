@@ -880,6 +880,16 @@ void pfring_free_bpf_filter(
 
 /* *************************************** */
 
+u_int32_t pfring_bpf_filter(void *bpf_insn, u_char *buffer, u_int32_t caplen, u_int32_t len) {
+#ifdef ENABLE_BPF
+  return bpf_filter(bpf_insn, buffer, caplen, len);
+#else
+  return 1;
+#endif
+}
+
+/* *************************************** */
+
 int32_t gmt_to_local(time_t t) {
   int dt, dir;
   struct tm *gmt, *loc;
