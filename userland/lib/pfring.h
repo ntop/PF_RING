@@ -1189,6 +1189,8 @@ void pfring_free_bpf_filter(
 #endif
                             *filter);
 
+u_int32_t pfring_bpf_filter(void *bpf_insn, u_char *buffer, u_int32_t caplen, u_int32_t len);
+
 /* ********************************* */
 
 /* pfring_utils.h */
