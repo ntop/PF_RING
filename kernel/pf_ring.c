@@ -3889,64 +3889,56 @@ static int skb_ring_handler(struct sk_buff *skb,
         cluster_element_idx = skb_hash % num_cluster_elements;
 
 	/*
-	  If the hashing value is negative, then this is a fragment that we are 
-	  not able to reassemble and thus we discard as the application has no
-	  idea to what do with it
+	  We try to add the packet to the right cluster
+	  element, but if we're working in round-robin and this
+	  element is full, we try to add this to the next available
+	  element. If none with at least a free slot can be found
+	  then we give up :-(
 	*/
-	if(cluster_element_idx >= 0) {
-	  /*
-	    We try to add the packet to the right cluster
-	    element, but if we're working in round-robin and this
-	    element is full, we try to add this to the next available
-	    element. If none with at least a free slot can be found
-	    then we give up :-(
-	  */
-	  for(num_iterations = 0;
-	      num_iterations < num_cluster_elements;
-	      num_iterations++) {
+	for(num_iterations = 0;
+	    num_iterations < num_cluster_elements;
+	    num_iterations++) {
 
 	    skElement = cluster_ptr->cluster.sk[cluster_element_idx];
 
 	    if(skElement != NULL) {
-	      pfr = ring_sk(skElement);
+		pfr = ring_sk(skElement);
 
-	      if(pfr != NULL
-                 && net_eq(dev_net(skb->dev), sock_net(skElement)) /* same namespace */
-		 && pfr->ring_slots != NULL
-		 && (test_bit(skb->dev->ifindex, pfr->netdev_mask)
+		if(pfr != NULL
+		   && net_eq(dev_net(skb->dev), sock_net(skElement)) /* same namespace */
+		   && pfr->ring_slots != NULL
+		   && (test_bit(skb->dev->ifindex, pfr->netdev_mask)
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
-		     || ((skb->dev->flags & IFF_SLAVE)
-			 && (pfr->ring_dev->dev == skb->dev->master))
+		       || ((skb->dev->flags & IFF_SLAVE)
+		           && (pfr->ring_dev->dev == skb->dev->master))
 #endif
-		 )
-		 && is_valid_skb_direction(pfr->direction, recv_packet)
+		       )
+		   && is_valid_skb_direction(pfr->direction, recv_packet)
 		 ) {
-		if(check_free_ring_slot(pfr) /* Not full */) {
-		  /* We've found the ring where the packet can be stored */
-	          int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
+		  if(check_free_ring_slot(pfr) /* Not full */) {
+		    /* We've found the ring where the packet can be stored */
+		    int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
 
-		  room_available |= add_skb_to_ring(skb, real_skb, pfr, &hdr, is_ip_pkt,
-						    displ, channel_id, num_rx_channels, &clone_id);
+		    room_available |= add_skb_to_ring(skb, real_skb, pfr, &hdr, is_ip_pkt,
+		                                      displ, channel_id, num_rx_channels, &clone_id);
 	
-		  hdr.len = old_len, hdr.caplen = old_caplen;
-		  rc = 1; /* Ring found: we've done our job */
-		  break;
+		    hdr.len = old_len, hdr.caplen = old_caplen;
+		    rc = 1; /* Ring found: we've done our job */
+		    break;
 
-		} else if((cluster_ptr->cluster.hashing_mode != cluster_round_robin)
-			  /* We're the last element of the cluster so no further cluster element to check */
-			  || ((num_iterations + 1) > num_cluster_elements)) {
-		  pfr->slots_info->tot_pkts++, pfr->slots_info->tot_lost++;
+		  } else if((cluster_ptr->cluster.hashing_mode != cluster_round_robin)
+		            /* We're the last element of the cluster so no further cluster element to check */
+		            || ((num_iterations + 1) > num_cluster_elements)) {
+		    pfr->slots_info->tot_pkts++, pfr->slots_info->tot_lost++;
+		  }
 		}
-	      }
 	    }
 
 	    if(cluster_ptr->cluster.hashing_mode != cluster_round_robin)
 	      break;
 	    else
 	      cluster_element_idx = (cluster_element_idx + 1) % num_cluster_elements;
-	  }
-	} else
-	  num_cluster_discarded_fragments++;
+	}
       }
 
       cluster_ptr = (ring_cluster_element*)lockless_list_get_next(&ring_cluster_list, &last_list_idx);
