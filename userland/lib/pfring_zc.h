@@ -805,6 +805,18 @@ pfring_zc_check_device_license(
   u_int32_t *expiration_epoch
 );
 
+/**
+ * Check if the license for a ZC device is valid and returns the license expiration epoch.
+ * @param device_name      The interface name.
+ * @param expiration_epoch The variable (ptr) that will contain the expiration epoch as return value.
+ * @return 1 if the license is valid, and set the expiration epoch accordingly, 0 otherwise.
+ */
+int
+pfring_zc_check_device_license_by_name(
+  char *device_name,
+  u_int32_t *expiration_epoch
+);
+
 /* **************************************************************************************** */
 
 /**
