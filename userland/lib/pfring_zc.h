@@ -284,8 +284,8 @@ pfring_zc_sync_queue(
  */
 int
 pfring_zc_set_bpf_filter(
-	pfring_zc_queue *queue,
-	char *filter
+  pfring_zc_queue *queue,
+  char *filter
 );
 
 /**
@@ -295,7 +295,7 @@ pfring_zc_set_bpf_filter(
  */
 int
 pfring_zc_remove_bpf_filter(
-	pfring_zc_queue *queue
+  pfring_zc_queue *queue
 );
 
 /* **************************************************************************************** */
@@ -308,8 +308,8 @@ pfring_zc_remove_bpf_filter(
  */
 int
 pfring_zc_add_hw_rule(
-	pfring_zc_queue *queue,
-	hw_filtering_rule *rule
+  pfring_zc_queue *queue,
+  hw_filtering_rule *rule
 );
 
 /**
@@ -320,16 +320,21 @@ pfring_zc_add_hw_rule(
  */
 int
 pfring_zc_remove_hw_rule(
-	pfring_zc_queue *queue,
-	u_int16_t rule_id
+  pfring_zc_queue *queue,
+  u_int16_t rule_id
 );
 
 /* **************************************************************************************** */
 
+/**
+ * Change the hw RSS indirection table (RETA) for Intel igb/ixgbe-based cards.
+ * @param queue       The queue handle.
+ * @param indir_table The indirection table (128 cells), with the destination queue for each hash value input.
+ */
 void 
 pfring_zc_set_rxfh_indir(
-	pfring_zc_queue *queue,
-	u_int8_t *indir_table
+  pfring_zc_queue *queue,
+  u_int8_t *indir_table
 );
 
 /* **************************************************************************************** */
@@ -802,6 +807,18 @@ pfring_zc_check_license();
 int
 pfring_zc_check_device_license(
   pfring_zc_queue *queue,
+  u_int32_t *expiration_epoch
+);
+
+/**
+ * Check if the license for a ZC device is valid and returns the license expiration epoch.
+ * @param device_name      The interface name.
+ * @param expiration_epoch The variable (ptr) that will contain the expiration epoch as return value.
+ * @return 1 if the license is valid, and set the expiration epoch accordingly, 0 otherwise.
+ */
+int
+pfring_zc_check_device_license_by_name(
+  char *device_name,
   u_int32_t *expiration_epoch
 );
 
