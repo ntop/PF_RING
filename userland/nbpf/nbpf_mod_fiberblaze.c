@@ -47,12 +47,16 @@ static void bpf_rule_to_fiberblaze(char *cmd, u_int cmd_len,
     char a[32];
 
     if(c->shost.v4) {
-      snprintf(buf, sizeof(buf), "(ip.src = %s)", bpf_intoaV4(ntohl(c->shost.v4), a, sizeof(a)));
+      snprintf(buf, sizeof(buf), "(ip.src = %s/%u)", 
+        bpf_intoaV4(ntohl(c->shost.v4 & c->shost_mask.v4), a, sizeof(a)), 
+        32 - __builtin_ctz(ntohl(c->shost_mask.v4)));
       bpf_append_str(cmd, cmd_len, num_cmds++, 0, buf);
     }
 
     if(c->dhost.v4) {
-      snprintf(buf, sizeof(buf), "(ip.dst = %s)", bpf_intoaV4(ntohl(c->dhost.v4), a, sizeof(a)));
+      snprintf(buf, sizeof(buf), "(ip.dst = %s/%u)", 
+        bpf_intoaV4(ntohl(c->dhost.v4 & c->dhost_mask.v4), a, sizeof(a)),
+        32 - __builtin_ctz(ntohl(c->dhost_mask.v4)));
       bpf_append_str(cmd, cmd_len, num_cmds++, 0,  buf);
     }
   } else if(c->ip_version == 6) {

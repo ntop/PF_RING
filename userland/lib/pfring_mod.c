@@ -35,6 +35,10 @@
 #include "pfring_hw_filtering.h"
 #include "pfring_mod.h"
 
+#ifdef HAVE_PF_RING_ZC
+#include "pfring_zc.h" /* pfring_zc_check_device_license_by_name() */
+#endif
+
 // #define RING_DEBUG
 
 #define MAX_NUM_LOOPS         1000
@@ -1114,9 +1118,13 @@ pfring_if_t *pfring_mod_findalldevs() {
         tmp->name = strdup(ifa->ifa_name);
         tmp->module = strdup("pf_ring");
       } else {
+        u_int32_t expiration_epoch;
         snprintf(name, sizeof(name), "zc:%s", ifa->ifa_name);
         tmp->name = strdup(name);
         tmp->module = strdup("pf_ring-zc");
+#ifdef HAVE_PF_RING_ZC
+        tmp->license = pfring_zc_check_device_license_by_name(name, &expiration_epoch);
+#endif
       }
 
       tmp->system_name = strdup(ifa->ifa_name);

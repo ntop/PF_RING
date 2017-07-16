@@ -188,6 +188,7 @@ typedef struct pfring_if {
     int function;
   } bus_id;
   int status; /* 1: up, 0: down*/
+  int license; /* 1: valid, 0: invalid or not installed */
   struct pfring_if *next;
 } pfring_if_t;
 
@@ -1190,6 +1191,8 @@ void pfring_free_bpf_filter(
                             struct pfring_bpf_program
 #endif
                             *filter);
+
+u_int32_t pfring_bpf_filter(void *bpf_insn, u_char *buffer, u_int32_t caplen, u_int32_t len);
 
 /* ********************************* */
 
