@@ -771,19 +771,20 @@ typedef struct {
 
 typedef enum {
   cluster_per_flow = 0,              /* 6-tuple: <src ip, src port, dst ip, dst port, proto, vlan>  */
+  cluster_round_robin,
   cluster_per_flow_2_tuple,          /* 2-tuple: <src ip,           dst ip                       >  */
   cluster_per_flow_4_tuple,          /* 4-tuple: <src ip, src port, dst ip, dst port             >  */
   cluster_per_flow_5_tuple,          /* 5-tuple: <src ip, src port, dst ip, dst port, proto      >  */
   cluster_per_flow_tcp_5_tuple,      /* 5-tuple only with TCP, 2 tuple with all other protos   */
-  cluster_per_flow_ip_5_tuple,       /* 5-tuple only with IP, 2 tuple with non-IP <src mac, dst mac>*/
   /* same as above, computing on tunnel content when present */
   cluster_per_inner_flow,            /* 6-tuple: <src ip, src port, dst ip, dst port, proto, vlan>  */
   cluster_per_inner_flow_2_tuple,    /* 2-tuple: <src ip,           dst ip                       >  */
   cluster_per_inner_flow_4_tuple,    /* 4-tuple: <src ip, src port, dst ip, dst port             >  */
   cluster_per_inner_flow_5_tuple,    /* 5-tuple: <src ip, src port, dst ip, dst port, proto      >  */
   cluster_per_inner_flow_tcp_5_tuple,/* 5-tuple only with TCP, 2 tuple with all other protos   */
+  /* new types, for L2-only protocols */
+  cluster_per_flow_ip_5_tuple,       /* 5-tuple only with IP, 2 tuple with non-IP <src mac, dst mac>*/
   cluster_per_inner_flow_ip_5_tuple, /* 5-tuple only with IP, 2 tuple with non-IP <src mac, dst mac>*/
-  cluster_round_robin
 } cluster_type;
 
 struct add_to_cluster {

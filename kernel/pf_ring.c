@@ -3531,7 +3531,7 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
   if (cluster_mode == cluster_round_robin)
     return cluster_ptr->cluster.hashing_id++;
 
-  if (cluster_mode < cluster_per_inner_flow)
+  if (cluster_mode < cluster_per_inner_flow || cluster_mode == cluster_per_flow_ip_5_tuple)
     flags |= HASH_PKT_HDR_MASK_TUNNEL;
 
   /* For the rest, set at least these 2 flags */
@@ -3547,9 +3547,7 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
       return hash_pkt_header(hdr, flags);
     }
     /* else, it's like 5-tuple for IP packets */
-    cluster_mode = (flags & HASH_PKT_HDR_MASK_TUNNEL)
-        ? cluster_per_inner_flow_5_tuple
-        : cluster_per_flow_5_tuple;
+    cluster_mode = cluster_per_flow_5_tuple;
   }
 
   flags |= HASH_PKT_HDR_MASK_MAC;  /* Mask off the MAC addresses for IP packets */
