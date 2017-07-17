@@ -3851,12 +3851,25 @@ static int skb_ring_handler(struct sk_buff *skb,
 
         cluster_element_idx = skb_hash % num_cluster_elements;
 
-	/*
-	  If the hashing value is negative, then this is a fragment that we are 
-	  not able to reassemble and thus we discard as the application has no
-	  idea to what do with it
-	*/
-	if(cluster_element_idx >= 0) {
+        if (cluster_element_idx < 0) {
+          /*
+	    If the hashing value is negative, then this is a fragment that we are
+	    not able to reassemble and thus we discard as the application has no
+	    idea to what do with it
+           */
+          /* In my understanding, cluster_element_idx can never be negative, because it is
+             *actively* made positive. Let's see: it would be negative only if skb_hash was,
+             too, because I rule out the possibility that num_cluster_elements be negative.
+             Then, I see that skb_hash can't ever be negative because, if it was, it is turned
+             into zero (line 3855) or into its absolute value (line 3863). Therefore, we would
+             never reach this "if" branch.
+                 "If the comment is inconsistent with the code, both are probably wrong"
+                 (quoting from memory)
+           */
+          num_cluster_discarded_fragments++;
+        }
+	else
+	{
 	  /*
 	    We try to add the packet to the right cluster
 	    element, but if we're working in round-robin and this
@@ -3908,8 +3921,7 @@ static int skb_ring_handler(struct sk_buff *skb,
 	    else
 	      cluster_element_idx = (cluster_element_idx + 1) % num_cluster_elements;
 	  }
-	} else
-	  num_cluster_discarded_fragments++;
+	}
       }
 
       cluster_ptr = (ring_cluster_element*)lockless_list_get_next(&ring_cluster_list, &last_list_idx);
