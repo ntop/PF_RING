@@ -284,8 +284,8 @@ pfring_zc_sync_queue(
  */
 int
 pfring_zc_set_bpf_filter(
-	pfring_zc_queue *queue,
-	char *filter
+  pfring_zc_queue *queue,
+  char *filter
 );
 
 /**
@@ -295,7 +295,7 @@ pfring_zc_set_bpf_filter(
  */
 int
 pfring_zc_remove_bpf_filter(
-	pfring_zc_queue *queue
+  pfring_zc_queue *queue
 );
 
 /* **************************************************************************************** */
@@ -308,8 +308,8 @@ pfring_zc_remove_bpf_filter(
  */
 int
 pfring_zc_add_hw_rule(
-	pfring_zc_queue *queue,
-	hw_filtering_rule *rule
+  pfring_zc_queue *queue,
+  hw_filtering_rule *rule
 );
 
 /**
@@ -320,16 +320,21 @@ pfring_zc_add_hw_rule(
  */
 int
 pfring_zc_remove_hw_rule(
-	pfring_zc_queue *queue,
-	u_int16_t rule_id
+  pfring_zc_queue *queue,
+  u_int16_t rule_id
 );
 
 /* **************************************************************************************** */
 
+/**
+ * Change the hw RSS indirection table (RETA) for Intel igb/ixgbe-based cards.
+ * @param queue       The queue handle.
+ * @param indir_table The indirection table (128 cells), with the destination queue for each hash value input.
+ */
 void 
 pfring_zc_set_rxfh_indir(
-	pfring_zc_queue *queue,
-	u_int8_t *indir_table
+  pfring_zc_queue *queue,
+  u_int8_t *indir_table
 );
 
 /* **************************************************************************************** */
