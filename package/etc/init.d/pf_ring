@@ -9,7 +9,7 @@
 ### BEGIN INIT INFO
 # Provides:       pf_ring
 # Required-Start: $local_fs $remote_fs $network $syslog
-# Required-Stop:  $ntopng $n2disk $nprobe $cento
+# Required-Stop:  ntopng n2disk nprobe cento cluster
 # Default-Start:  2 3 4 5
 # Default-Stop:   0 1 6
 # Short-Description: Start/stop pf_ring

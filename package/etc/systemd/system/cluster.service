@@ -1,6 +1,6 @@
 [Unit]
 Description=Start/stop cluster service
-After=network.target syslog.target
+After=network.target syslog.target pfring.service
 
 [Service]
 Type=forking
