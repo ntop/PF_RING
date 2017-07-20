@@ -1,17 +1,17 @@
 #!/bin/bash
 #
-# pf_ring          Load the pfring driver
+# pf_ring   Load the pfring driver
 #
 # chkconfig: 2345 30 60
 #
 # (C) 2003-13 - ntop.org
 #
 ### BEGIN INIT INFO
-# Provides:          pf_ring
-# Required-Start:    $local_fs $remote_fs $network $syslog
-# Required-Stop:     $ntopng $n2disk $nprobe $cento
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Provides:       pf_ring
+# Required-Start: $local_fs $remote_fs $network $syslog
+# Required-Stop:  ntopng n2disk nprobe cento cluster
+# Default-Start:  2 3 4 5
+# Default-Stop:   0 1 6
 # Short-Description: Start/stop pf_ring
 ### END INIT INFO
 
@@ -19,22 +19,15 @@
 _SYSTEMCTL_SKIP_REDIRECT=yes
 
 DISTRO="unknown"
-MGMT_INTERFACE="$(/sbin/route | grep default | head -n 1 | tr -s ' ' | cut -d ' ' -f 8)"
-
 if [ -f /lib/lsb/init-functions ]; then
-  DISTRO="debian"
-  . /lib/lsb/init-functions
+	DISTRO="debian"
+	. /lib/lsb/init-functions
 fi
 if [ -f /etc/init.d/functions ]; then
-  DISTRO="centos"
-  . /etc/init.d/functions
+	DISTRO="centos"
+	. /etc/init.d/functions
 fi
 
-if [ "${MGMT_INTERFACE}" == "" ]; then
-  MGMT_INTERFACE="eth0"
-fi
-
-MGMT_INTERFACE_DRIVER="$(/sbin/ethtool -i $MGMT_INTERFACE | grep driver | cut -d ' ' -f 2)"
 PF_RING="pf_ring"
 PF_RING_CONFIG_DIR="/etc/pf_ring"
 DRIVERS_FLAVOR=("zc")
@@ -50,47 +43,74 @@ FORCESTART=0
 FORCESTART_FILE="${PF_RING_CONFIG_DIR}/forcestart" # touch to load zc even if it matches the management
 DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
 LOAD_HUGEPAGES=0
+INTERFACES_CONFIG="${PF_RING_CONFIG_DIR}/interfaces.conf"
+
+# Including interfaces conf containing MANAGEMENT_INTERFACES, CAPTURE_INTERFACES
+[ -f ${INTERFACES_CONFIG} ] && . ${INTERFACES_CONFIG}
+
+if [ "${MANAGEMENT_INTERFACES}" != "" ]; then
+	MGMT_INTERFACES=($MANAGEMENT_INTERFACES)
+else
+	MGMT_INTERFACES=("$(/sbin/route | grep default | head -n 1 | tr -s ' ' | cut -d ' ' -f 8)")
+fi
+
+function is_management_interface {
+	local e
+	for e in "${MGMT_INTERFACES[@]}" ; do
+		[[ "$e" == "$1" ]] && return 0
+	done
+	return 1
+}
+
+function is_management_interface_driver {
+	local e
+	for e in "${MGMT_INTERFACES[@]}" ; do
+		DRIVER="$(/sbin/ethtool -i $e | grep driver | cut -d ' ' -f 2)"
+		[[ "$DRIVER" == "$1" ]] && return 0
+	done
+	return 1
+}
 
 function dkms_installed {
-  if [ ${DISTRO} == "debian" ]; then
-    if [ `dpkg -l |grep $1-zc-dkms |wc -l` -gt 0 ]; then
-      return 1
-    fi
-  elif [ ${DISTRO} == "centos" ]; then
-    if [ `rpm -qa | grep $1-zc | wc -l` -gt 0 ]; then
-      return 1
-    fi
-  fi
-  return 0
+	if [ ${DISTRO} == "debian" ]; then
+		if [ `dpkg -l | grep $1-zc-dkms | wc -l` -gt 0 ]; then
+			return 0
+		fi
+	elif [ ${DISTRO} == "centos" ]; then
+		if [ `rpm -qa | grep $1-zc | wc -l` -gt 0 ]; then
+			return 0
+		fi
+	fi
+	return 1
 }
 
 check_pf_ring() {
-   # check the module status
-   RETVAL=0
-   if [ $1 == "start" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -gt 0 ]; then
-       MSG="PF_RING already loaded. Exiting"
-       ERROR=1
-       RETVAL=1
-   elif [ $1 == "stop" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ]; then
-       MSG="PF_RING already unloaded Exiting"
-       ERROR=0 
-       RETVAL=0
-       [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-       [ ${DISTRO} == "centos" ] && echo_success && echo
-       exit 0
-   fi
+	# check the module status
+	RETVAL=0
+	if [ $1 == "start" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -gt 0 ]; then
+		MSG="PF_RING already loaded. Exiting"
+		ERROR=1
+		RETVAL=1
+	elif [ $1 == "stop" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ]; then
+		MSG="PF_RING already unloaded Exiting"
+		ERROR=0 
+		RETVAL=0
+		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+		[ ${DISTRO} == "centos" ] && echo_success && echo
+		exit 0
+	fi
 
-   if [ ${ERROR} -gt 0 ]; then
-      if [ ${DISTRO} == "debian" ]; then
-         log_failure_msg "${MSG}"
-         log_end_msg $ERROR
-         exit 99
-      elif [ ${DISTRO} == "centos" ]; then
-         echo -n ${MSG} 
-         echo_failure; echo
-         exit 99
-      fi
-   fi
+	if [ ${ERROR} -gt 0 ]; then
+		if [ ${DISTRO} == "debian" ]; then
+			log_failure_msg "${MSG}"
+			log_end_msg $ERROR
+			exit 99
+		elif [ ${DISTRO} == "centos" ]; then
+			echo -n ${MSG} 
+			echo_failure; echo
+			exit 99
+		fi
+	fi
 }
 
 rebuild_dkms() {
@@ -98,11 +118,11 @@ rebuild_dkms() {
 	MOD_VERSION=`ls -1d /usr/src/${1}* | tail -1 | cut -d '/' -f 4 | sed -e "s/${1}-//"`
 	echo "Uninstalling old ${1} version"
 	/usr/sbin/dkms uninstall -m ${1} -v ${MOD_VERSION} > /dev/null
-	/usr/sbin/dkms remove    -m ${1} -v ${MOD_VERSION} -k `uname -r` > /dev/null
+	/usr/sbin/dkms remove -m ${1} -v ${MOD_VERSION} -k `uname -r` > /dev/null
 	echo "Compiling new ${1} driver"
-	/usr/sbin/dkms build     -m ${1} -v ${MOD_VERSION} > /dev/null
+	/usr/sbin/dkms build -m ${1} -v ${MOD_VERSION} > /dev/null
 	echo "Installing new ${1} driver"
-	/usr/sbin/dkms install   -m ${1} -v ${MOD_VERSION} > /dev/null
+	/usr/sbin/dkms install -m ${1} -v ${MOD_VERSION} > /dev/null
 }
 
 check_hugepages() {
@@ -130,7 +150,7 @@ load_hugepages() {
 			HUGEPAGES_NODE=`echo ${node} | cut -d ' ' -f 1 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
 			HUGEPAGES_NUMBER=`echo ${node} | cut -d ' ' -f 2 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
 			if [ ${HUGEPAGES_NUMBER} -gt 0 ] && [ -f /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages ]; then
-				echo ${HUGEPAGES_NUMBER} >  /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
+				echo ${HUGEPAGES_NUMBER} > /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
 			fi
 			HUGEPAGES_NODE=""
 			HUGEPAGES_NUMBER=""
@@ -165,9 +185,14 @@ set_interface_mtu() {
 start_interfaces() {
 	SETUP_FOR_PACKET_CAPTURE=$1
 
-	INTERFACES="$(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g')"
-	for D in $INTERFACES ; do
-		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && [ "$D" != "$MGMT_INTERFACE" ]; then
+	if [ "${CAPTURE_INTERFACES}" != "" ]; then
+		INTERFACES=($CAPTURE_INTERFACES)
+	else
+		INTERFACES=($(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g'))
+	fi
+
+	for D in ${INTERFACES[@]} ; do
+		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D ; then
 			# Disabling offloads
 			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
 
@@ -198,8 +223,8 @@ load_driver() {
 	if [ `/sbin/modinfo ${1}-${2} | wc -l` -gt 1 ]; then
 		# driver is available
 		DRV_PARAM=`cat ${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.conf`
-		if [ "${MGMT_INTERFACE_DRIVER}" == "${1}" ] && [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ]; then
-			echo "Skipping driver ${1}: driver matches the management interface ${MGMT_INTERFACE}"
+		if [ ${FORCESTART} -eq 0 ] && [ ! -f ${FORCESTART_FILE} ] && is_management_interface_driver ${1} ; then
+			echo "Skipping driver ${1}: driver matches the management interface"
 			return
 		fi
 		# unload old module if needed
@@ -215,7 +240,7 @@ load_driver() {
 		if [ `lsmod |grep -w ^${1}_${2} | wc -l` -eq 1 ]; then
 			echo "Driver ${1}-${2} already installed"
 			DRIVER_INSTALLED=1
-			return				
+			return
 		fi
 			
 		/sbin/modprobe ${1}_${2} ${DRV_PARAM}
@@ -257,10 +282,10 @@ load_zc() {
 		done
 	done
 	
-        CLUSTER_HUGEPAGES=0
-        if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null |wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
-                LOAD_HUGEPAGES=1
-        fi
+		CLUSTER_HUGEPAGES=0
+		if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null |wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
+				LOAD_HUGEPAGES=1
+		fi
 
 	if [ -f ${HUGEPAGES_CONFIG} ] ; then
 		LOAD_HUGEPAGES=1
@@ -309,135 +334,137 @@ unload_zc() {
 
 start_pf_ring() {
 
-    init_config
+	init_config
 
-    [ ${DISTRO} == "debian" ] && log_daemon_msg "Starting PF_RING module"
-    [ ${DISTRO} == "centos" ] && echo -n "Starting PF_RING module: "
+	[ ${DISTRO} == "debian" ] && log_daemon_msg "Starting PF_RING module"
+	[ ${DISTRO} == "centos" ] && echo -n "Starting PF_RING module: "
 
-    # Set CPU freq to performance useful in particular
-    # on CPUs with aggressive scaling such as Intel E5
-    
-    find /sys/devices/system/cpu/ -name scaling_governor -exec sh -c 'echo performance > {}' \;
+	# Set CPU freq to performance useful in particular
+	# on CPUs with aggressive scaling such as Intel E5
+	
+	find /sys/devices/system/cpu/ -name scaling_governor -exec sh -c 'echo performance > {}' \;
 
-    KERNEL_VERSION=$(uname -r)
+	KERNEL_VERSION=$(uname -r)
 
-    PARAM="$(cat "$PF_RING_CONFIG_DIR/pf_ring.conf")"
+	PARAM="$(cat "$PF_RING_CONFIG_DIR/pf_ring.conf")"
 
-    PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
-    PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
+	PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
+	PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
 
-    check_pf_ring start
-    
-    if [ ! -f "${PF_RING_CONFIG_DIR}/pf_ring.start" ] && [ ! -f "${PF_RING_CONFIG_DIR}/pfring.start" ] && [ ${FORCESTART} -eq 0 ]; then
-    	# remove pf_ring in any case
-    	/sbin/modprobe -r pf_ring
-    	#
-        echo "PF_RING not enabled: please touch /etc/pf_ring/pf_ring.start"
-        [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-	    [ ${DISTRO} == "centos" ] && echo_success && echo
-	    return
-    fi
+	check_pf_ring start
+	
+	if [ ! -f "${PF_RING_CONFIG_DIR}/pf_ring.start" ] && [ ! -f "${PF_RING_CONFIG_DIR}/pfring.start" ] && [ ${FORCESTART} -eq 0 ]; then
+		# remove pf_ring in any case
+		/sbin/modprobe -r pf_ring
+		#
+		echo "PF_RING not enabled: please touch /etc/pf_ring/pf_ring.start"
+		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+		[ ${DISTRO} == "centos" ] && echo_success && echo
+		return
+	fi
 
-    # Try loading pfring
-    /sbin/modprobe pf_ring $PARAM
+	# Try loading pfring
+	/sbin/modprobe pf_ring $PARAM
 
-    if [ `echo $?` -gt 0 ]; then
+	if [ `echo $?` -gt 0 ]; then
 	# try building dkms
 	rebuild_dkms pfring
 	/sbin/modprobe pf_ring $PARAM
 		
 	# try with local copies in case of failure
 	if [ `echo $?` -gt 0 ]; then
-	    if [ -f $PF_RING_MOD ]; then
-   	        /sbin/insmod $PF_RING_MOD $PARAM
-	    elif [ -f $PF_RING_MOD_LOCAL ]; then
-    	        /sbin/insmod $PF_RING_MOD_LOCAL $PARAM
-	    fi
-        fi
-    fi
-   
-    if [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ] ; then
-	   # PF_RING not loaded. Exiting
-       MSG="Unable to load PF_RING. Exiting"
-       ERROR=1
-       RETVAL=1
-       if [ ${DISTRO} == "debian" ]; then
-           log_failure_msg "${MSG}"
-           log_end_msg $ERROR
-           exit 99
-       elif [ ${DISTRO} == "centos" ]; then
-           echo -n ${MSG} 
-           echo_failure; echo
-           exit 99
-      fi
-    fi
+		if [ -f $PF_RING_MOD ]; then
+				/sbin/insmod $PF_RING_MOD $PARAM
+		elif [ -f $PF_RING_MOD_LOCAL ]; then
+				/sbin/insmod $PF_RING_MOD_LOCAL $PARAM
+		fi
+		fi
+	fi
+	
+	if [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ] ; then
+		# PF_RING not loaded. Exiting
+		MSG="Unable to load PF_RING. Exiting"
+		ERROR=1
+		RETVAL=1
+		if [ ${DISTRO} == "debian" ]; then
+			log_failure_msg "${MSG}"
+			log_end_msg $ERROR
+			exit 99
+		elif [ ${DISTRO} == "centos" ]; then
+			echo -n ${MSG} 
+			echo_failure; echo
+			exit 99
+		fi
+	fi
 
-    ## Load NTOP drivers ##
-    load_zc
-    ## Load Napatech drivers ##
-    load_nt
-    ## Sleep a bit for changes to be applied
-    sleep 1
-    ## Load dummy interfaces associated to timelines or nic cards ##
-    local N2IF_SCRIPT="/usr/bin/n2if"
-    if [ -f "${N2IF_SCRIPT}" ]; then
+	## Load NTOP drivers ##
+	load_zc
+	## Load Napatech drivers ##
+	load_nt
+	## Sleep a bit for changes to be applied
+	sleep 1
+	## Load NTOP drivers ##
+	sleep 1
+	## Load dummy interfaces associated to timelines or nic cards ##
+	local N2IF_SCRIPT="/usr/bin/n2if"
+	if [ -f "${N2IF_SCRIPT}" ]; then
 	${N2IF_SCRIPT} up-all
 	sleep 1
-    fi
-    
-    start_interfaces 1
+	fi
+	
+	start_interfaces 1
 
-    [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-    [ ${DISTRO} == "centos" ] && echo_success && echo
+	[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+	[ ${DISTRO} == "centos" ] && echo_success && echo
 }
 
 
 stop_pf_ring() {
 
-    RETVAL=0
-    [ ${DISTRO} == "debian" ] && log_daemon_msg "Stopping PF_RING module"
-    [ ${DISTRO} == "centos" ] && echo -n "Stopping PF_RING module: "
+	RETVAL=0
+	[ ${DISTRO} == "debian" ] && log_daemon_msg "Stopping PF_RING module"
+	[ ${DISTRO} == "centos" ] && echo -n "Stopping PF_RING module: "
 
-    check_pf_ring stop
+	check_pf_ring stop
 
-    if [ -f /etc/init.d/nprobe ]; then
+	if [ -f /etc/init.d/nprobe ]; then
 		/etc/init.d/nprobe stop
 		sleep 1
-    fi
+	fi
 
-    if [ -f /etc/init.d/n2disk ]; then
+	if [ -f /etc/init.d/n2disk ]; then
 		/etc/init.d/n2disk stop
 		sleep 1
-    fi
+	fi
 
-    if [ -f /etc/init.d/ntop ]; then
+	if [ -f /etc/init.d/ntop ]; then
 		/etc/init.d/ntop stop
 		sleep 1
-    fi
+	fi
 
-    if [ -f /etc/init.d/ntopng ]; then
+	if [ -f /etc/init.d/ntopng ]; then
 		/etc/init.d/ntopng stop
 		sleep 1
-    fi
+	fi
 
-    ## Unload NTOP drivers ##
-    unload_zc
-    ## Unload NTOP drivers ##
+	## Unload NTOP drivers ##
+	unload_zc
+	## Unload NTOP drivers ##
 	
 
-    NUM="$(grep pf_ring /proc/modules|wc -l)"
-    if [ $NUM -gt 0 ]; then
+	NUM="$(grep pf_ring /proc/modules|wc -l)"
+	if [ $NUM -gt 0 ]; then
 	/sbin/modprobe -r pf_ring
-        NUM="$(grep pf_ring /proc/modules|wc -l)"
+		NUM="$(grep pf_ring /proc/modules|wc -l)"
 	if [ ${NUM} -gt 0 ]; then
-	   MSG="unable to unload PF_RING module"
-           [ ${DISTRO} == "debian" ] && log_failure_msg "$MSG"
-           [ ${DISTRO} == "centos" ] && echo_failure
-           ERROR=1
+		MSG="unable to unload PF_RING module"
+			[ ${DISTRO} == "debian" ] && log_failure_msg "$MSG"
+			[ ${DISTRO} == "centos" ] && echo_failure
+			ERROR=1
 	fi
-    fi
-    [ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-    [ ${DISTRO} == "centos" ] && echo_success && echo
+	fi
+	[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+	[ ${DISTRO} == "centos" ] && echo_success && echo
 }
 
 check_driver_status() {
@@ -473,7 +500,7 @@ check_pf_ring_status() {
 		if [ `lsmod | grep ^${PF_RING} | wc -l` -gt 0 ]; then
 			echo "UP"
 		elif [ `lsmod | grep ^${PF_RING} | wc -l` -le 0 ]; then
-			local  MSG="pf_ring module not running"
+			local MSG="pf_ring module not running"
 			echo "$MSG"
 		fi
 	fi
@@ -518,6 +545,11 @@ init_config() {
 	if [ ! -f "${PF_RING_CONFIG_DIR}/pf_ring.start" ]; then
 		touch "${PF_RING_CONFIG_DIR}/pf_ring.start"
 	fi
+	if [ ! -f ${INTERFACES_CONFIG} ]; then
+		touch "${INTERFACES_CONFIG}"
+		echo "#MANAGEMENT_INTERFACES=\"eth0\"" >> ${INTERFACES_CONFIG}
+		echo "#CAPTURE_INTERFACES=\"eth1 eth2\"" >> ${INTERFACES_CONFIG}
+	fi 
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
 			if [ ! -d ${PF_RING_CONFIG_DIR}/${F}/${D} ]; then

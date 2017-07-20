@@ -1,6 +1,7 @@
 [Unit]
 Description=Start/stop cluster service
-After=network.target syslog.target
+After=network.target syslog.target pf_ring.service
+Requires=pf_ring.service
 
 [Service]
 Type=forking
