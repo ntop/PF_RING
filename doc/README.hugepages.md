@@ -5,7 +5,8 @@ how to enable them into your system.
 
 ## For the impatient
 ```
-echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages # 1024*2048kB = ~2.1 GB
+# 1024 * 2048kB = 2 GB
+echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 mount -t hugetlbfs nodev /dev/hugepages
 ```
 
