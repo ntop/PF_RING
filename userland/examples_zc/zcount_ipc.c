@@ -149,6 +149,7 @@ void printHelp(void) {
   printf("-c <cluster id> Cluster id\n");
   printf("-g <core_id>    Bind this app to a core\n");
   printf("-a              Active packet wait\n");
+  printf("-f <bpf>        Set a BPF filter\n");
   printf("-v              Verbose: print packet data\n");
   printf("-s              In case of -v dump the buffer as sysdig event instead of packet bytes\n");
   printf("-u              Guest VM (master on the host)\n");
@@ -205,10 +206,11 @@ int main(int argc, char* argv[]) {
   int cluster_id = DEFAULT_CLUSTER_ID, queue_id = -1;
   pthread_t my_thread;
   int wait_for_packet = 1, verbose = 0, dump_as_sysdig_event = 0;
+  char *filter = NULL;
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:g:hi:svu")) != '?') {
+  while((c = getopt(argc,argv,"ac:f:g:hi:svu")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -220,6 +222,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'c':
       cluster_id = atoi(optarg);
+      break;
+    case 'f':
+      filter = strdup(optarg);
       break;
     case 'i':
       queue_id = atoi(optarg);
@@ -264,11 +269,20 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
+  if (filter != NULL) {
+    if (pfring_zc_set_bpf_filter(zq, filter) != 0) {
+      fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", filter);
+      pfring_zc_ipc_detach_queue(zq);
+      return -1;
+    }
+  }
+
   zp = pfring_zc_ipc_attach_buffer_pool(cluster_id, queue_id);
 
   if(zp == NULL) {
     fprintf(stderr, "pfring_zc_ipc_attach_buffer_pool error [%s] Please check that cluster %d is running\n",
 	    strerror(errno), cluster_id);
+    pfring_zc_ipc_detach_queue(zq);
     return -1;
   }
 
@@ -276,6 +290,8 @@ int main(int argc, char* argv[]) {
 
   if (buffer == NULL) {
     fprintf(stderr, "pfring_zc_get_packet_handle_from_pool error\n");
+    pfring_zc_ipc_detach_queue(zq);
+    pfring_zc_ipc_detach_buffer_pool(zp);
     return -1;
   }
 
