@@ -71,6 +71,34 @@ else
 	      [] )
 fi
 
+
+
+# Checks for nBroker
+AC_ARG_WITH(libnbroker_includes,
+	    [--with-libnbroker-includes=DIR libnbroker include directory],
+	    [with_nbroker_includes="$withval"], [with_nbroker_includes="no"])
+
+AC_ARG_WITH(libnbroker_libraries,
+	    [--with-libnbroker-libraries=DIR libnbroker library directory],
+	    [with_nbroker_libraries="$withval"], [with_nbroker_libraries="no"])
+
+if test "x$with_nbroker_includes" != "xno"; then
+	CPPFLAGS="${CPPFLAGS} -I${with_nbroker_includes}"
+fi
+
+if test "x$with_nbroker_libraries" != "xno"; then
+	LDFLAGS="${LDFLAGS} -L${with_nbroker_libraries}"
+fi
+
+# nBroker headers/library checks
+AC_CHECK_HEADER([nbroker_api.h],  [], [])
+
+AC_CHECK_LIB([nbroker],
+             [nbroker_init],
+	     [LDFLAGS="${LDFLAGS} -lnbroker"; CPPFLAGS="${CPPFLAGS} -DHAVE_NBROKER"],
+	     [],
+	     [])
+
 # Checks for header files.
 AC_CHECK_HEADERS([netinet/in.h stdint.h stdlib.h string.h])
 
