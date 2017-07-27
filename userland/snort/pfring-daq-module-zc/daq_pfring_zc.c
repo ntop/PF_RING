@@ -203,6 +203,7 @@ static char *pfringdevice_to_ifname(char *device, char *ifname, int ifname_len) 
   /* remove '@' */
   dev = strchr(ifname, '@');
   if (dev != NULL) dev[0] = '\0';
+  else dev = ifname;
 
   return dev;
 }
@@ -216,12 +217,12 @@ static void nbroker_prepare_flow_rule(u_char *buffer, int len, nbroker_match_t *
   phdr.len = phdr.caplen = len;
   pfring_parse_pkt(buffer, &phdr, 4, 0, 0);
 
-  rule->vlan_id = phdr.extended_hdr.parsed_pkt.vlan_id;
+  rule->vlan_id = htons(phdr.extended_hdr.parsed_pkt.vlan_id);
   rule->proto = phdr.extended_hdr.parsed_pkt.l3_proto;
   rule->shost.ip_version = rule->dhost.ip_version = phdr.extended_hdr.parsed_pkt.ip_version;
   if (phdr.extended_hdr.parsed_pkt.ip_version == 4) {
-    rule->shost.host.v4 = phdr.extended_hdr.parsed_pkt.ip_src.v4;
-    rule->dhost.host.v4 = phdr.extended_hdr.parsed_pkt.ip_dst.v4;
+    rule->shost.host.v4 = htonl(phdr.extended_hdr.parsed_pkt.ip_src.v4);
+    rule->dhost.host.v4 = htonl(phdr.extended_hdr.parsed_pkt.ip_dst.v4);
     rule->shost.mask.v4 = rule->dhost.mask.v4 = 0xFFFFFFFF;
   } else {
     memcpy(&rule->shost.host.v6, &phdr.extended_hdr.parsed_pkt.ip_src.v6, sizeof(nbroker_in6_addr_t));
@@ -229,8 +230,8 @@ static void nbroker_prepare_flow_rule(u_char *buffer, int len, nbroker_match_t *
     memset(&rule->shost.mask.v6, 0xFF, sizeof(nbroker_in6_addr_t));
     memset(&rule->dhost.mask.v6, 0xFF, sizeof(nbroker_in6_addr_t));
   }
-  rule->sport.low = phdr.extended_hdr.parsed_pkt.l4_src_port;
-  rule->dport.low = phdr.extended_hdr.parsed_pkt.l4_dst_port;
+  rule->sport.low = htons(phdr.extended_hdr.parsed_pkt.l4_src_port);
+  rule->dport.low = htons(phdr.extended_hdr.parsed_pkt.l4_dst_port);
 }
     
 static void nbroker_drop_flow(nbroker_t *broker, u_char *buffer, int len, char *port) {
@@ -701,17 +702,18 @@ static inline void pfring_zc_daq_process(Pfring_Context_t *context, pfring_zc_pk
   DAQ_PktHdr_t hdr;
   DAQ_Verdict verdict;
   u_char *pkt_buffer;
+  int rx_ring_idx = buffer->hash;
 
   hdr.pktlen = hdr.caplen = buffer->len;
   hdr.ts.tv_sec = buffer->ts.tv_sec;
   hdr.ts.tv_usec = buffer->ts.tv_nsec/1000;
 #if (DAQ_API_VERSION >= 0x00010002)
-  hdr.ingress_index = buffer->hash;
+  hdr.ingress_index = context->ifindexes[rx_ring_idx];
   hdr.egress_index = -1;
   hdr.ingress_group = -1;
   hdr.egress_group = -1;
 #else
-  hdr.device_index = buffer->hash;
+  hdr.device_index = context->ifindexes[rx_ring_idx]; 
 #endif
   hdr.flags = 0;
 
@@ -725,6 +727,10 @@ static inline void pfring_zc_daq_process(Pfring_Context_t *context, pfring_zc_pk
   switch(verdict) {
     case DAQ_VERDICT_BLACKLIST: /* Block the packet and block all future packets in the same flow systemwide. */
       /* TODO handle hw filters */
+#ifdef HAVE_NBROKER
+      if (context->broker) 
+        nbroker_drop_flow(context->broker, pkt_buffer, hdr.pktlen, context->broker_ports[rx_ring_idx]);
+#endif
       break;
     case DAQ_VERDICT_WHITELIST: /* Pass the packet and fastpath all future packets in the same flow systemwide. */
     case DAQ_VERDICT_IGNORE:    /* Pass the packet and fastpath all future packets in the same flow for this application. */
@@ -783,7 +789,7 @@ static int pfring_zc_daq_acquire_best_effort(void *handle, int cnt, DAQ_Analysis
 
       pfring_zc_recv_pkt(context->rx_queues[rx_ring_idx], &context->buffer, 0);
 
-      context->buffer->hash = context->ifindexes[rx_ring_idx];
+      context->buffer->hash = rx_ring_idx;
 
       pkt_buffer = pfring_zc_pkt_buff_data(context->buffer, context->rx_queues[rx_ring_idx]);
 
