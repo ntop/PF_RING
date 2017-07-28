@@ -394,9 +394,12 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
   }
 
 #ifdef HAVE_NBROKER
-  if (nbroker_init(&context->broker) != NBROKER_RC_OK) {
+  if (nbroker_init(&context->broker, NBROKER_FLAGS_FAST) != NBROKER_RC_OK) {
     printf("nbroker_init: couldn't initialise nBroker!");
     context->broker = NULL; /* disable nBroker support and keep running */
+  } else { /* nBroker up and running */
+    /* Set nBroker to automatically purge rules idle for more than 30 sec */
+    nbroker_set_auto_purge(context->broker, 30 /* sec */);
   }
 #endif
 
