@@ -130,12 +130,12 @@ stop_cluster() {
     fi
 
     if [ -z $CLUSTER_ID ]; then
-	NUM_TO_START="$(find /etc/cluster/ -name "*.start"|wc -l)"
-	if [ "$NUM_TO_START" -eq 0 ]; then
-	    # No instances to start
+	NUM_TO_STOP="$(find /etc/cluster/ -name "*.conf"|wc -l)"
+	if [ "$NUM_TO_STOP" -eq 0 ]; then
+	    # No instances to stop
 	    return 0
 	fi
-	IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+	IDS="$(/bin/ls /etc/cluster/*.conf | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
     else
  	IDS=$CLUSTER_ID
     fi
