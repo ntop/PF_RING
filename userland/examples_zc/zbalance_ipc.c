@@ -522,8 +522,8 @@ int main(int argc, char* argv[]) {
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
-  const char *opt_string = "ab:c:dD:g:hi:m:n:pr:Q:q:N:P:R:S:zu:wv"
   char *user = NULL;
+  const char *opt_string = "ab:c:dD:g:hi:m:n:pr:Q:q:N:P:R:S:zu:wv"
 #ifdef HAVE_ZMQ 
     "A:E:Z"
 #endif
