@@ -522,7 +522,8 @@ int main(int argc, char* argv[]) {
   char *hugepages_mountpoint = NULL;
   int opt_argc;
   char **opt_argv;
-  const char *opt_string = "ab:c:dg:hi:m:n:pr:Q:q:N:P:R:S:zu:wv"
+  const char *opt_string = "ab:c:dD:g:hi:m:n:pr:Q:q:N:P:R:S:zu:wv"
+  char *user = NULL;
 #ifdef HAVE_ZMQ 
     "A:E:Z"
 #endif
@@ -558,6 +559,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'd':
       daemon_mode = 1;
+      break;
+    case 'D':
+      user = strdup(optarg);
       break;
     case 'm':
       hash_mode = atoi(optarg);
@@ -950,11 +954,18 @@ int main(int argc, char* argv[]) {
   }
 
   if (zw == NULL) {
-    trace(TRACE_ERROR, "pfring_zc_run_balancer error [%s]\n", strerror(errno));
+    trace(TRACE_ERROR, "pfring_zc_run_balancer error [%s]", strerror(errno));
     pfring_zc_destroy_cluster(zc);
     return -1;
   }
   
+  if (user != NULL) {
+    if (drop_privileges(user) == 0)
+      trace(TRACE_NORMAL, "User changed to %s", user);
+    else
+      trace(TRACE_ERROR, "Unable to drop privileges");
+  }
+
   while (!do_shutdown) {
     sleep(ALARM_SLEEP);
     print_stats();

@@ -308,6 +308,7 @@ int main(int argc, char* argv[]) {
   int num_devices;
   char *bind_tworker_mask = NULL;
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
+  char *user = NULL;
 
   start_time.tv_sec = 0;
 
@@ -321,7 +322,7 @@ int main(int argc, char* argv[]) {
     opt_argv = argv;
   }
 
-  while((c = getopt(opt_argc, opt_argv,"ac:dg:hi:n:pQ:q:r:P:S:s:")) != '?') {
+  while((c = getopt(opt_argc, opt_argv,"ac:dD:g:hi:n:pQ:q:r:P:S:s:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -336,6 +337,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'd':
       daemon_mode = 1;
+      break;
+    case 'D':
+      user = strdup(optarg);
       break;
     case 'n':
       num_consumer_queues = atoi(optarg);
@@ -593,6 +597,13 @@ int main(int argc, char* argv[]) {
     }
   }
   
+  if (user != NULL) {
+    if (drop_privileges(user) == 0)
+      trace(TRACE_NORMAL, "User changed to %s", user);
+    else
+      trace(TRACE_ERROR, "Unable to drop privileges");
+  }
+
   while (!do_shutdown) {
     sleep(ALARM_SLEEP);
     print_stats();
