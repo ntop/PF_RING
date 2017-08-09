@@ -21,6 +21,8 @@
  */
 
 #include <ctype.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 /* *************************************** */
 
@@ -236,6 +238,26 @@ void daemonize() {
   close(STDIN_FILENO);
   close(STDOUT_FILENO);
   close(STDERR_FILENO);
+}
+
+/* *************************************** */
+
+int drop_privileges(char *username) {
+  struct passwd *pw = NULL;
+
+  if (getgid() && getuid())
+    return -1; /* non root? */
+
+  pw = getpwnam(username);
+
+  if (pw == NULL) 
+    return -1;
+
+  if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0)
+    return -1;
+
+  umask(0);
+  return 0;
 }
 
 /* *************************************** */
