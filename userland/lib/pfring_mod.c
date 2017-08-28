@@ -1118,7 +1118,10 @@ pfring_if_t *pfring_mod_findalldevs() {
         tmp->name = strdup(ifa->ifa_name);
         tmp->module = strdup("pf_ring");
       } else {
+#ifdef HAVE_PF_RING_ZC
         u_int32_t expiration_epoch;
+#endif
+	
         snprintf(name, sizeof(name), "zc:%s", ifa->ifa_name);
         tmp->name = strdup(name);
         tmp->module = strdup("pf_ring-zc");
