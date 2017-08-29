@@ -1,8 +1,13 @@
 # Silicom/Fiberblaze support in PF_RING
 
 ## Prerequisites
-We expect you to have installed the Fiberblaze drivers and loaded them. 
-Typical commands are:
+Install the Fiberblaze package:
+
+```
+mkdir /opt/fiberblaze && tar xvzf fbcapture_<OS>_release_<version>.tar.gz -C /opt/fiberblaze
+```
+
+Load the driver:
 
 ```
 echo 34359738368 > /proc/sys/kernel/shmmax
