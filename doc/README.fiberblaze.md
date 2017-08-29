@@ -48,6 +48,16 @@ Example receiving packets from card 0, group "b, ring 0:
 pfcount -i fbcard:0:b:0
 ```
 
+If you want to open a single port instead of all oprts on a card, you can specify input = PORT_ID in the filter section:
+
+```
+prbGroup "a"
+{
+    noPrbs 1
+    filter "input = 0"
+}
+```
+
 # Transmit Traffic
 The naming convention for TX is fbcard:CARD_ID:PORT_ID. If you have a 4 port NIC, the PORT_ID will be 0 to 3.
 
