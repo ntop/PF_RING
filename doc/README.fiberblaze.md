@@ -20,9 +20,9 @@ cd /opt/fiberblaze/bin; ./configurecard --device fbcard0 --configuration ../fbca
 ```
 
 # Receive Traffic
-The naming convention for RX is fbcard:CARD_ID:GROUP_NAME:GROUP_RING_ID where CARD_ID is the id of the card we want to open, GROUP_NAME is the name of the group specified in fbcard.cfg used by configurecard, and RING_ID (in case of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs.
+The naming convention for RX is fbcard:CARD_ID:GROUP_NAME:GROUP_RING_ID where CARD_ID is the id of the card we want to open, GROUP_NAME is the name of the group specified in the configuration file fbcard.cfg used by configurecard, and RING_ID (in case of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs.
 
-Example if you have set in fbcard.cfg
+For example, if you have the following configuration in /opt/fiberblaze/fbcard.cfg:
 
 ```
 prbGroup "b"
@@ -33,7 +33,8 @@ prbGroup "b"
 }
 ```
 
-the device names are
+the device names are:
+
 ```
 fbcard:0:b:0
 fbcard:0:b:1
@@ -41,7 +42,8 @@ fbcard:0:b:1
 fbcard:0:b:7
 ```
 
-Example (receive packets from card 0, group "b, ring 0): 
+Example receiving packets from card 0, group "b, ring 0: 
+
 ```
 pfcount -i fbcard:0:b:0
 ```
