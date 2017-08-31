@@ -19,6 +19,12 @@ modprobe vxlan
 # Load the driver
 insmod ./fm10k.ko
 
+# As many queues as the number of processors
+#insmod ./ixgbe.ko RSS=0,0,0,0
+
+# Single queue
+#insmod ./ixgbe.ko RSS=1,1,1,1
+
 sleep 1
 
 killall irqbalance 
@@ -29,7 +35,7 @@ for IF in $INTERFACES ; do
         if [ "$TOCONFIG" -eq 1 ]; then
 		printf "Configuring %s\n" "$IF"
 
-		# Set number of RSS queues
+		# Set number of RSS queues (equivalent to RSS=1,1,1,1)
 		ethtool -L $IF combined 1
 
 		# Max number of RX slots
