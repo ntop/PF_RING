@@ -7736,8 +7736,10 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       case NETDEV_FEAT_CHANGE:      what = "NETDEV_FEAT_CHANGE"; break;
       case NETDEV_BONDING_FAILOVER: what = "NETDEV_BONDING_FAILOVER"; break;
       case NETDEV_PRE_UP:           what = "NETDEV_PRE_UP"; break;
+#ifdef NETDEV_PRE_TYPE_CHANGE
       case NETDEV_PRE_TYPE_CHANGE:  what = "NETDEV_PRE_TYPE_CHANGE"; break;
       case NETDEV_POST_TYPE_CHANGE: what = "NETDEV_POST_TYPE_CHANGE"; break;
+#endif
       case NETDEV_POST_INIT:        what = "NETDEV_POST_INIT"; break;
 #ifdef NETDEV_UNREGISTER_FINAL
       case NETDEV_UNREGISTER_FINAL: what = "NETDEV_UNREGISTER_FINAL"; break;
