@@ -3751,6 +3751,11 @@ static int skb_ring_handler(struct sk_buff *skb,
   if (recv_packet && real_skb)
     displ = skb->dev->hard_header_len;
 
+#ifdef CONFIG_RASPBERRYPI_FIRMWARE
+  if (displ > 14) /* on RaspberryPi RX skbs have wrong hard_header_len value (26) */
+    displ = 14;
+#endif
+
   if (num_any_rings == 0 && 
       (skb->dev->ifindex < MAX_NUM_IFIDX &&
        num_rings_per_device[skb->dev->ifindex] == 0)) {
