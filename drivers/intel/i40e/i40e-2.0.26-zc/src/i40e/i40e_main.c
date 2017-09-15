@@ -10540,7 +10540,11 @@ static const struct net_device_ops i40e_netdev_ops = {
 #endif
 #ifdef IFLA_VF_MAX
 	.ndo_set_vf_mac		= i40e_ndo_set_vf_mac,
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN
+	.extended.ndo_set_vf_vlan = i40e_ndo_set_vf_port_vlan,
+#else
 	.ndo_set_vf_vlan	= i40e_ndo_set_vf_port_vlan,
+#endif
 #ifdef HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 	.ndo_set_vf_rate	= i40e_ndo_set_vf_bw,
 #else
@@ -10571,8 +10575,13 @@ static const struct net_device_ops i40e_netdev_ops = {
 #endif
 #endif /* HAVE_GENEVE_RX_OFFLOAD */
 #ifdef HAVE_UDP_ENC_RX_OFFLOAD
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_UDP_TUNNEL
+	.extended.ndo_udp_tunnel_add = i40e_udp_tunnel_add,
+	.extended.ndo_udp_tunnel_del = i40e_udp_tunnel_del,
+#else
 	.ndo_udp_tunnel_add	= i40e_udp_tunnel_add,
 	.ndo_udp_tunnel_del	= i40e_udp_tunnel_del,
+#endif
 #endif
 #ifdef HAVE_NDO_GET_PHYS_PORT_ID
 	.ndo_get_phys_port_id   = i40e_get_phys_port_id,
