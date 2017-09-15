@@ -26,7 +26,7 @@
 #include "kcompat.h"
 
 /*****************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,8) )
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,8) ) || defined __VMKLNX__
 /* From lib/vsprintf.c */
 #include <asm/div64.h>
 
@@ -271,15 +271,19 @@ int _kc_vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 				continue;
 
 			case 'p':
-				if (field_width == -1) {
-					field_width = 2*sizeof(void *);
-					flags |= _kc_ZEROPAD;
+				if ('M' == *(fmt+1)) {
+					str = get_mac(str, end, va_arg(args, unsigned char *));
+					fmt++;
+				} else	{
+					if (field_width == -1) {
+						field_width = 2*sizeof(void *);
+						flags |= _kc_ZEROPAD;
+					}
+					str = number(str, end,
+							(unsigned long) va_arg(args, void *),
+							16, field_width, precision, flags);
 				}
-				str = number(str, end,
-						(unsigned long) va_arg(args, void *),
-						16, field_width, precision, flags);
 				continue;
-
 
 			case 'n':
 				/* FIXME:
@@ -1605,7 +1609,7 @@ struct _kc_netdev_queue_attribute {
 #define to_kc_netdev_queue_attr(_attr) container_of(_attr,		\
     struct _kc_netdev_queue_attribute, attr)
 
-int __kc_netif_set_xps_queue(struct net_device *dev, struct cpumask *mask,
+int __kc_netif_set_xps_queue(struct net_device *dev, const struct cpumask *mask,
 			     u16 index)
 {
 	struct netdev_queue *txq = netdev_get_tx_queue(dev, index);
@@ -1962,6 +1966,23 @@ int __kc_pci_enable_msix_range(struct pci_dev *dev, struct msix_entry *entries,
 }
 #endif /* 3.14.0 */
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0))
+char *_kc_devm_kstrdup(struct device *dev, const char *s, gfp_t gfp)
+{
+	size_t size;
+	char *buf;
+
+	if (!s)
+		return NULL;
+
+	size = strlen(s) + 1;
+	buf = devm_kzalloc(dev, size, gfp);
+	if (buf)
+		memcpy(buf, s, size);
+	return buf;
+}
+#endif /* 3.15.0 */
+
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0) )
 #ifdef HAVE_SET_RX_MODE
 #ifdef NETDEV_HW_ADDR_T_UNICAST
@@ -2106,6 +2127,17 @@ void __kc_dev_addr_unsync_dev(struct dev_addr_list **list, int *count,
 }
 #endif /* NETDEV_HW_ADDR_T_MULTICAST  */
 #endif /* HAVE_SET_RX_MODE */
+void *__kc_devm_kmemdup(struct device *dev, const void *src, size_t len,
+			unsigned int gfp)
+{
+	void *p;
+
+	p = devm_kzalloc(dev, len, gfp);
+	if (p)
+		memcpy(p, src, len);
+
+	return p;
+}
 #endif /* 3.16.0 */
 
 /******************************************************************************/
@@ -2291,4 +2323,53 @@ void __kc_netdev_rss_key_fill(void *buffer, size_t len)
 	memcpy(buffer, __kc_netdev_rss_key, len);
 }
 #endif
+#endif
+
+/******************************************************************************/
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0) )
+#if (!(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)))
+#ifdef CONFIG_SPARC
+#include <asm/idprom.h>
+#include <asm/prom.h>
+#endif
+int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
+				     u8 *mac_addr __maybe_unused)
+{
+#if (((LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)) && defined(CONFIG_OF) && \
+      !defined(HAVE_STRUCT_DEVICE_OF_NODE) || !defined(CONFIG_OF)) && \
+     !defined(CONFIG_SPARC))
+	return -ENODEV;
+#else
+	const unsigned char *addr;
+	struct device_node *dp;
+
+	if (dev_is_pci(dev))
+		dp = pci_device_to_OF_node(to_pci_dev(dev));
+	else
+#if defined(HAVE_STRUCT_DEVICE_OF_NODE) && defined(CONFIG_OF)
+		dp = dev->of_node;
+#else
+		dp = NULL;
+#endif
+
+	addr = NULL;
+	if (dp)
+		addr = of_get_mac_address(dp);
+#ifdef CONFIG_SPARC
+	/* Kernel hasn't implemented arch_get_platform_mac_address, but we
+	 * should handle the SPARC case here since it was supported
+	 * originally. This is replaced by arch_get_platform_mac_address()
+	 * upstream.
+	 */
+	if (!addr)
+		addr = idprom->id_ethaddr;
+#endif
+	if (!addr)
+		return -ENODEV;
+
+	ether_addr_copy(mac_addr, addr);
+	return 0;
+#endif
+}
+#endif /* !(RHEL_RELEASE >= 7.3) */
 #endif
