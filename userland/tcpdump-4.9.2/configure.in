@@ -67,6 +67,9 @@ fi
 
 AC_HEADER_TIME
 
+dnl> PF_RING
+LIBS="$LIBS ../lib/libpfring.a -lpthread -lrt"
+
 case "$host_os" in
 
 darwin*)

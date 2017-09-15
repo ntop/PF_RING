@@ -44,7 +44,7 @@ MKDEP = @MKDEP@
 PROG = tcpdump
 CCOPT = @V_CCOPT@
 INCLS = -I. @V_INCLS@
-DEFS = @DEFS@ @CPPFLAGS@ @V_DEFS@
+DEFS = @DEFS@ @CPPFLAGS@ @V_DEFS@ -DHAVE_PF_RING
 
 # Standard CFLAGS
 CFLAGS = @CFLAGS@
@@ -53,8 +53,11 @@ FULL_CFLAGS = $(CCOPT) $(DEFS) $(INCLS) $(CFLAGS)
 # Standard LDFLAGS
 LDFLAGS = @LDFLAGS@
 
+# PF_RING
+PF_RING_LIBS=../lib/libpfring.a -lpthread -lrt -lm
+
 # Standard LIBS
-LIBS = @LIBS@
+LIBS = @LIBS@ $(PF_RING_LIBS) `../lib/pfring_config --libs`
 
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
