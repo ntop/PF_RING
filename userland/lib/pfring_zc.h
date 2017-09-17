@@ -34,12 +34,13 @@
 #define QUEUEID_TO_IFINDEX(i) (i >> 16) /**< pfring_zc_get_queue_id() return val: convert queue id to device index, if QUEUE_IS_DEVICE(id) */
 #define IFINDEX_TO_QUEUEID(i) (i << 16) /**< pfring_zc_get_queue_id() return val: convert back device index to queue id, if QUEUE_IS_DEVICE(id) */
 
-#define PF_RING_ZC_PKT_FLAGS_GOOD_IP_CS (1 << 0) /**< pfring_zc_pkt_buff.flags: valid IP checksum detected */
-#define PF_RING_ZC_PKT_FLAGS_BAD_IP_CS  (1 << 1) /**< pfring_zc_pkt_buff.flags: bad IP checksum detected */
-#define PF_RING_ZC_PKT_FLAGS_GOOD_L4_CS (1 << 2) /**< pfring_zc_pkt_buff.flags: valid TCP/UDP checksum detected */
-#define PF_RING_ZC_PKT_FLAGS_BAD_L4_CS  (1 << 3) /**< pfring_zc_pkt_buff.flags: bad TCP/UDP checksum detected (note: UDP checksum 0 is detected as bad on some cards!) */
+#define PF_RING_ZC_PKT_FLAGS_GOOD_IP_CS   (1 << 0) /**< pfring_zc_pkt_buff.flags: valid IP checksum detected */
+#define PF_RING_ZC_PKT_FLAGS_BAD_IP_CS    (1 << 1) /**< pfring_zc_pkt_buff.flags: bad IP checksum detected */
+#define PF_RING_ZC_PKT_FLAGS_GOOD_L4_CS   (1 << 2) /**< pfring_zc_pkt_buff.flags: valid TCP/UDP checksum detected */
+#define PF_RING_ZC_PKT_FLAGS_BAD_L4_CS    (1 << 3) /**< pfring_zc_pkt_buff.flags: bad TCP/UDP checksum detected (note: UDP checksum 0 is detected as bad on some cards!) */
 //#define PF_RING_ZC_PKT_FLAGS_TX_IP_CS   (1 << 4) /**< pfring_zc_pkt_buff.flags: compute IP checksum on transmission (when supported) */ 
 //#define PF_RING_ZC_PKT_FLAGS_TX_L4_CS   (1 << 5) /**< pfring_zc_pkt_buff.flags: compute TCP checksum on transmission (when supported) */ 
+#define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD (1 << 6) /**< pfring_zc_pkt_buff.flags: buffer contains flow metadata (and eventually the raw packet) */ 
 
 #ifdef __cplusplus
 extern "C" {
