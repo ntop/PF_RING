@@ -1711,6 +1711,8 @@ if test "xxx_only" = yes; then
 	enable_dbus=no
 fi
 
+enable_dbus=no
+
 if test "x$enable_dbus" != "xno"; then
 	if test "x$enable_dbus" = "xyes"; then
 		case "$host_os" in
