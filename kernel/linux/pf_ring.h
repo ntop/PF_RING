@@ -307,6 +307,7 @@ struct pfring_extended_pkthdr {
 #define PKT_FLAGS_IP_MORE_FRAG     1 << 2 /* IP More fragments flag set */
 #define PKT_FLAGS_IP_FRAG_OFFSET   1 << 3 /* IP fragment offset set (not 0) */
 #define PKT_FLAGS_VLAN_HWACCEL     1 << 4 /* VLAN stripped by hw */
+#define PKT_FLAGS_FLOW_OFFLOAD     1 << 6 /* Flow metadata (keep compatible with ZC) */
   u_int32_t flags;
 
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
