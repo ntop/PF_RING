@@ -54,6 +54,18 @@
 #include <linux/ethtool.h>
 #include <linux/if_vlan.h>
 
+#ifdef HAVE_PF_RING
+#ifdef CONFIG_DCB
+#undef CONFIG_DCB
+#ifdef CONFIG_FCOE
+#undef CONFIG_FCOE
+#endif
+#ifdef CONFIG_FCOE_MODULE
+#undef CONFIG_FCOE_MODULE
+#endif
+#endif
+#endif
+
 #ifndef NSEC_PER_MSEC
 #define NSEC_PER_MSEC 1000000L
 #endif
