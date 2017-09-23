@@ -1582,7 +1582,7 @@ struct _kc_netdev_queue_attribute {
 #define to_kc_netdev_queue_attr(_attr) container_of(_attr,		\
     struct _kc_netdev_queue_attribute, attr)
 
-int __kc_netif_set_xps_queue(struct net_device *dev, struct cpumask *mask,
+int __kc_netif_set_xps_queue(struct net_device *dev, const struct cpumask *mask,
 			     u16 index)
 {
 	struct netdev_queue *txq = netdev_get_tx_queue(dev, index);
