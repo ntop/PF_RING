@@ -192,7 +192,7 @@ int main(int argc, char* argv[]) {
 	rc = pfring_send(b_ring, (char *) buffer, hdr.caplen, 1);
 
 	if(rc < 0)
-	  printf("pfring_send(caplen=%u <= mtu=%u?) error %d\n", hdr.caplen, b_ring->mtu_len, rc);
+	  printf("pfring_send(caplen=%u <= l2+mtu(%u)?) error %d\n", hdr.caplen, b_ring->mtu, rc);
 	else if(verbose)
 	  printf("Forwarded %d bytes packet\n", hdr.len);	
       } else {

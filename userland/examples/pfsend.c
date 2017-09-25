@@ -321,7 +321,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     ip6->payload_len = htons(buffer_len - sizeof(struct ether_header) - ip_len);
     ip6->nexthdr = IPPROTO_UDP;
     ip6->hop_limit = 0xFF;
-    ip6->saddr[0] = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
+    ip6->saddr[0] = htonl((ntohl(srcaddr.s_addr) + idx) & 0xFFFFFFFF);
     ip6->daddr[0] = dstaddr.s_addr;
     addr = (u_char *) ip6->saddr;
     addr_len = sizeof(ip6->saddr);
@@ -338,7 +338,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     ip->frag_off = htons(0);
     ip->protocol = IPPROTO_UDP;
     ip->daddr = dstaddr.s_addr;
-    ip->saddr = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
+    ip->saddr = htonl((ntohl(srcaddr.s_addr) + idx) & 0xFFFFFFFF);
     ip->check = wrapsum(in_cksum((unsigned char *) ip, ip_len, 0));
     addr = (u_char *) &ip->saddr;
     addr_len = sizeof(ip->saddr);
@@ -836,7 +836,7 @@ int main(int argc, char* argv[]) {
     if (rc == PF_RING_ERROR_INVALID_ARGUMENT) {
       if (send_error_once) {
         printf("Attempting to send invalid packet [len: %u][MTU: %u]\n",
-	       tosend->len, pd->mtu_len);
+	       tosend->len, pd->mtu);
         send_error_once = 0;
       }
     } else if (rc < 0) {

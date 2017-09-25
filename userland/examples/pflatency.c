@@ -395,7 +395,7 @@ int main(int argc, char* argv[]) {
   
     if(rc == PF_RING_ERROR_INVALID_ARGUMENT) {
       printf("Attempting to send invalid packet [len: %u][MTU: %u]\n",
-	     packet_to_send.len, pdo->mtu_len);
+	     packet_to_send.len, pdo->mtu);
     } else if (rc < 0) {
       goto redo;
     }

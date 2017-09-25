@@ -304,7 +304,7 @@ struct __pfring {
   /* All devices */
   char *buffer, *slots, *device_name;
   u_int32_t caplen;
-  u_int16_t slot_header_len, mtu_len /* 0 = unknown */;
+  u_int16_t slot_header_len, mtu /* 0 = unknown */;
   u_int32_t sampling_rate, sampling_counter;
   packet_slicing_level slicing_level;
   u_int32_t slicing_additional_bytes;

@@ -288,9 +288,8 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 
   ring->rdi.device_id = ring->rdi.port_id = -1; /* Default */
 
-  ring->mtu_len = pfring_get_mtu_size(ring);
-  if(ring->mtu_len == 0) ring->mtu_len =  9000 /* Jumbo MTU */;
-  ring->mtu_len += sizeof(struct ether_header) + sizeof(struct eth_vlan_hdr);
+  ring->mtu = pfring_get_mtu_size(ring);
+  if(ring->mtu == 0) ring->mtu =  9000 /* Jumbo MTU */;
 
   pfring_get_bound_device_ifindex(ring, &ring->device_id);
   ring->initialized = 1;
@@ -660,7 +659,7 @@ int pfring_bind(pfring *ring, char *device_name) {
 int pfring_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet) {
   int rc;
 
-  if(unlikely(pkt_len > ring->mtu_len)) {
+  if(unlikely(pkt_len > ring->mtu + sizeof(struct ether_header) + sizeof(struct eth_vlan_hdr))) {
     errno = EMSGSIZE;
     return(PF_RING_ERROR_INVALID_ARGUMENT); /* Packet too long */
   }
@@ -731,7 +730,7 @@ int pfring_get_card_settings(pfring *ring, pfring_card_settings *settings) {
   if(ring && ring->get_card_settings)
     return ring->get_card_settings(ring, settings);
 
-  settings->max_packet_size = ring->mtu_len;
+  settings->max_packet_size = ring->mtu + sizeof(struct ether_header) + sizeof(struct eth_vlan_hdr);
   settings->rx_ring_slots = 0;
   settings->tx_ring_slots = 0;
 
