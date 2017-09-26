@@ -78,6 +78,7 @@
 #define SO_UNLOCK_CLUSTER_OBJECT         138
 #define SO_SET_CUSTOM_BOUND_DEV_NAME     139
 #define SO_SET_IFF_PROMISC               140
+#define SO_SET_VLAN_ID                   141
 
 /* Get */
 #define SO_GET_RING_VERSION              170
@@ -768,6 +769,9 @@ typedef struct {
 #define MAX_NUM_RX_CHANNELS       64 /* channel_id_mask is a 64 bit mask */
 #define UNKNOWN_NUM_RX_CHANNELS   1
 
+#define RING_ANY_VLAN             ((u_int16_t)0xFFFF)
+#define RING_NO_VLAN              ((u_int16_t)0)
+
 /* ************************************************* */
 
 typedef enum {
@@ -1069,6 +1073,9 @@ struct pf_ring_socket {
 
   /* Virtual Filtering Device */
   virtual_filtering_device_element *v_filtering_dev;
+
+  /* VLAN ID */
+  u_int16_t vlan_id; /* 0 = all VLANs are accepted */
 
   int bpfFilter; /* bool */
 

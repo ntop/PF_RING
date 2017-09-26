@@ -199,6 +199,7 @@ int pfring_mod_open(pfring *ring) {
   ring->set_channel_mask = pfring_mod_set_channel_mask;
   ring->set_application_name  = pfring_mod_set_application_name;
   ring->set_application_stats = pfring_mod_set_application_stats;
+  ring->set_vlan_id = pfring_mod_set_vlan_id;
   ring->get_appl_stats_file_name = pfring_mod_get_appl_stats_file_name;
   ring->bind = pfring_mod_bind;
   ring->send = pfring_mod_send;
@@ -288,6 +289,12 @@ char* pfring_mod_get_appl_stats_file_name(pfring *ring, char *path, u_int path_l
   return((rc == 0) ? path : NULL);
 }
 
+/* ******************************* */
+
+int pfring_mod_set_vlan_id(pfring *ring, u_int16_t vlan_id) {
+  return(setsockopt(ring->fd, 0, SO_SET_VLAN_ID, &vlan_id, sizeof(vlan_id)));
+}
+
 /* **************************************************** */
 
 int pfring_mod_bind(pfring *ring, char *device_name) {
@@ -299,7 +306,7 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
   if((device_name == NULL) || (strcmp(device_name, "none") == 0))
     return(-1);
 
-  /* FIX: in case of multiple interfaces the channel ID must be the same */
+  /* TODO/FIX: in case of multiple interfaces the channel ID must be the same */
   at = strchr(device_name, '@');
   if(at != NULL) {
     char *tok;
@@ -345,6 +352,14 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
   elem = strtok_r(name_copy, ";,", &pos);
 
   while(elem != NULL) {
+    char *vlan_dot = strchr(elem, '.');
+    u_int16_t vlan_id = 0;
+    
+    if(vlan_dot) {
+      vlan_dot[0] = '\0';
+      vlan_id = atoi(&vlan_dot[1]);
+    }
+    
     memset(&sa, 0, sizeof(sa));
     sa.sa_family = PF_RING;
     snprintf(sa.sa_data, sizeof(sa.sa_data), "%s", elem);
@@ -355,12 +370,23 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
       /* if(channel_mask != RING_ANY_CHANNEL) */ {
 	rc = pfring_set_channel_mask(ring, channel_mask);
 	
-	//if(rc != 0)
-	//  printf("pfring_set_channel_id() failed: %d\n", rc);
+	/*
+	  if(rc != 0)
+	    printf("pfring_set_channel_id() failed: %d\n", rc);
+	*/
+      }
+
+      if(vlan_id != 0) {
+	rc = pfring_set_vlan_id(ring, vlan_id);
+	/*
+	  if(rc != 0)
+	    printf("pfring_set_vlan_id() failed: %d\n", rc); 
+	*/
       }
     }
 
-    pfring_enable_hw_timestamp(ring, elem, ring->hw_ts.enable_hw_timestamp ? 1 : 0, 0 /* TX timestamp disabled by default */);
+    pfring_enable_hw_timestamp(ring, elem, ring->hw_ts.enable_hw_timestamp ? 1 : 0,
+			       0 /* TX timestamp disabled by default */);
 
     elem = strtok_r(NULL, ";,", &pos);
   }

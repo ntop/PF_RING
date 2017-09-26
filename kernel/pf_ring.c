@@ -2198,7 +2198,8 @@ static int parse_pkt(struct sk_buff *skb,
 
   rc = parse_raw_pkt(buffer, data_len, hdr, ip_id);
 
-  if (!hdr->extended_hdr.parsed_pkt.vlan_id) { /* check for stripped vlan id */
+  if (!hdr->extended_hdr.parsed_pkt.vlan_id) {
+    /* check for stripped vlan id */
     if (__vlan_hwaccel_get_tag(skb, &hdr->extended_hdr.parsed_pkt.vlan_id) == 0) {
       hdr->extended_hdr.parsed_pkt.vlan_id &= VLAN_VID_MASK;
       hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE); /* force hash recomputation */
@@ -2593,11 +2594,11 @@ static inline void set_skb_time(struct sk_buff *skb, struct pfring_pkthdr *hdr)
   - 1 = the packet was copied (i.e. there was room for it)
 */
 static inline int copy_data_to_ring(struct sk_buff *skb,
-			     struct pf_ring_socket *pfr,
-			     struct pfring_pkthdr *hdr,
-			     int displ, int offset,
-			     void *raw_data, uint raw_data_len,
-			     int *clone_id) 
+				    struct pf_ring_socket *pfr,
+				    struct pfring_pkthdr *hdr,
+				    int displ, int offset,
+				    void *raw_data, uint raw_data_len,
+				    int *clone_id) 
 {
   u_char *ring_bucket;
   u_int64_t off;
@@ -2758,12 +2759,12 @@ static inline int copy_raw_data_to_ring(struct pf_ring_socket *pfr,
 /* ********************************** */
 
 static inline int add_pkt_to_ring(struct sk_buff *skb,
-			   u_int8_t real_skb,
-			   struct pf_ring_socket *_pfr,
-			   struct pfring_pkthdr *hdr,
-			   int displ, int channel_id,
-			   int offset,
-			   int *clone_id)
+				  u_int8_t real_skb,
+				  struct pf_ring_socket *_pfr,
+				  struct pfring_pkthdr *hdr,
+				  int displ, int channel_id,
+				  int offset,
+				  int *clone_id)
 {
   struct pf_ring_socket *pfr = (_pfr->master_ring != NULL) ? _pfr->master_ring : _pfr;
   u_int64_t the_bit = 1 << channel_id;
@@ -3713,9 +3714,11 @@ static int skb_ring_handler(struct sk_buff *skb,
 			    u_int8_t recv_packet,
 			    u_int8_t real_skb /* 1=real skb, 0=faked skb */,
 			    u_int8_t *skb_reference_in_use, 
-			    /* This return value is set to 1 in case
-			       the input skb is in use by PF_RING and thus
-			       the caller should NOT free it */
+			    /*
+			      This return value is set to 1 in case
+			      the input skb is in use by PF_RING and thus
+			      the caller should NOT free it 
+			    */
 			    int32_t channel_id,
 			    u_int32_t num_rx_channels)
 {
@@ -3801,7 +3804,6 @@ static int skb_ring_handler(struct sk_buff *skb,
 					  displ, 0, NULL, 0, real_skb ? &clone_id : NULL);
     }
   } else {
-
     is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
 
     if(enable_ip_defrag) {
@@ -3839,6 +3841,13 @@ static int skb_ring_handler(struct sk_buff *skb,
 	 && (pfr->cluster_id == 0 /* No cluster */ )
 	 && (pfr->ring_slots != NULL)
 	 && is_valid_skb_direction(pfr->direction, recv_packet)
+	 && ((pfr->vlan_id == RING_ANY_VLAN) /* Accept all VLANs... */
+	     /* Accept untagged packets only... */
+	     || ((pfr->vlan_id == RING_NO_VLAN)
+		 && (hdr.extended_hdr.parsed_pkt.vlan_id == 0))
+	     /* ...or just the specified VLAN */
+	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.vlan_id)
+	     )
 	 ) {
 	/* We've found the ring where the packet can be stored */
 	int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
@@ -4105,7 +4114,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   sk->sk_family = PF_RING;
   sk->sk_destruct = ring_sock_destruct;
   pfr->ring_id = atomic_inc_return(&ring_id_serial);
-
+  pfr->vlan_id = RING_ANY_VLAN;  
   rwlock_init(&pfr->tx.consume_tx_packets_lock);
   pfr->tx.enable_tx_with_bounce = 0;
   pfr->tx.last_tx_dev_idx = UNKNOWN_INTERFACE, pfr->tx.last_tx_dev = NULL;
@@ -6188,7 +6197,7 @@ static int ring_setsockopt(struct socket *sock,
   struct add_to_cluster cluster;
   u_int64_t channel_id_mask;
   char name[32 + 1] = { 0 };
-  u_int16_t rule_id, rule_inactivity;
+  u_int16_t rule_id, rule_inactivity, vlan_id;
   packet_direction direction;
   socket_mode sockmode;
   hw_filtering_rule hw_rule;
@@ -6866,6 +6875,23 @@ static int ring_setsockopt(struct socket *sock,
           }
       }
     }
+    break;
+    
+  case SO_SET_VLAN_ID:
+    /*
+      Weak check as the direction is set via pfring_set_direction()
+      and not when a ring is open
+     */
+    if(pfr->direction == tx_only_direction)
+      return (-EINVAL);
+    
+    if(optlen != sizeof(vlan_id))
+      return(-EINVAL);
+    
+    if(copy_from_user(&vlan_id, optval, sizeof(vlan_id)))
+      return(-EFAULT);
+    
+    pfr->vlan_id = vlan_id;
     break;
 
   default:
@@ -8004,7 +8030,7 @@ static int __init ring_init(void)
   int rc;
 
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
-	 "(C) 2004-16 ntop.org\n",
+	 "(C) 2004-17 ntop.org\n",
 	 RING_VERSION, GIT_REV);
 
   /* Sanity check */

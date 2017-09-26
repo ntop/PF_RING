@@ -31,6 +31,7 @@ int pfring_mod_set_channel_mask(pfring *ring, u_int64_t channel_mask);
 int pfring_mod_set_application_name(pfring *ring, char *name);
 int pfring_mod_set_application_stats(pfring *ring, char *stats);
 char* pfring_mod_get_appl_stats_file_name(pfring *ring, char *path, u_int path_len);
+int pfring_mod_set_vlan_id(pfring *ring, u_int16_t vlan_id);
 int pfring_mod_bind(pfring *ring, char *device_name);
 int pfring_mod_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet);
 u_int8_t pfring_mod_get_num_rx_channels(pfring *ring);

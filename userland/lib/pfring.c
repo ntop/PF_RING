@@ -647,6 +647,15 @@ char* pfring_get_appl_stats_file_name(pfring *ring, char *path, u_int path_len) 
 
 /* **************************************************** */
 
+int pfring_set_vlan_id(pfring *ring, u_int16_t vlan_id) {
+  if(ring && ring->set_vlan_id)
+    return ring->set_vlan_id(ring, vlan_id & 0x0FFF);
+
+  return(PF_RING_ERROR_NOT_SUPPORTED);
+}
+
+/* **************************************************** */
+
 int pfring_bind(pfring *ring, char *device_name) {
   if(ring && ring->bind)
     return ring->bind(ring, device_name);

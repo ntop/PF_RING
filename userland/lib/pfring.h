@@ -238,6 +238,7 @@ struct __pfring {
   int       (*set_application_name)         (pfring *, char *);
   int       (*set_application_stats)        (pfring *, char *);
   char*     (*get_appl_stats_file_name)     (pfring *ring, char *path, u_int path_len);
+  int       (*set_vlan_id)                  (pfring *, u_int16_t);
   int       (*bind)                         (pfring *, char *);
   int       (*send)                         (pfring *, char *, u_int, u_int8_t);
   int       (*send_get_time)                (pfring *, char *, u_int, struct timespec *);
@@ -564,6 +565,14 @@ int pfring_set_application_stats(pfring *ring, char *stats);
  */
 char* pfring_get_appl_stats_file_name(pfring *ring, char *path, u_int path_len);
 
+ /**
+ * Set the VLAN Id of the packets that will be copied to this ring (RX only)
+ * @param ring       The PF_RING handle.
+ * @param vlan_id    The vlan id to filter or 0 to accept only untagged VLAN packets
+ * @return 0 on success, a negative value otherwise.
+ */
+int pfring_set_vlan_id(pfring *ring, u_int16_t vlan_id);
+  
 /**
  * Bind a socket to a device.
  * @param ring        The PF_RING handle.
