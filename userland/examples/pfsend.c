@@ -112,6 +112,7 @@ struct in_addr srcaddr, dstaddr;
 char mac_address[6];
 int send_len = 60;
 int daemon_mode = 0;
+int num_ip = 1, ip_offset = 0;
 int forge_vlan = 0, num_vlan = 1;
 
 #define DEFAULT_DEVICE     "eth0"
@@ -333,7 +334,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     ip6->payload_len = htons(buffer_len - l2_len - ip_len);
     ip6->nexthdr = IPPROTO_UDP;
     ip6->hop_limit = 0xFF;
-    ip6->saddr[0] = htonl((ntohl(srcaddr.s_addr) + idx) & 0xFFFFFFFF);
+    ip6->saddr[0] = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ip)) & 0xFFFFFFFF);
     ip6->daddr[0] = dstaddr.s_addr;
     addr = (u_char *) ip6->saddr;
     addr_len = sizeof(ip6->saddr);
@@ -350,7 +351,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     ip->frag_off = htons(0);
     ip->protocol = IPPROTO_UDP;
     ip->daddr = dstaddr.s_addr;
-    ip->saddr = htonl((ntohl(srcaddr.s_addr) + idx) & 0xFFFFFFFF);
+    ip->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ip)) & 0xFFFFFFFF);
     ip->check = wrapsum(in_cksum((unsigned char *) ip, ip_len, 0));
     addr = (u_char *) &ip->saddr;
     addr_len = sizeof(ip->saddr);
@@ -397,7 +398,7 @@ static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use
 
     ip_header = (struct ip_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l3_offset];
     ip_header->daddr = dstaddr.s_addr;
-    ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + idx) % 0xFFFFFFFF);
+    ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ip)) & 0xFFFFFFFF);
     ip_header->check = 0;
     ip_header->check = wrapsum(in_cksum((unsigned char *) ip_header, sizeof(struct ip_header), 0));
 
@@ -442,7 +443,7 @@ int main(int argc, char* argv[]) {
 #endif
   ticks hz = 0;
   struct packet *tosend;
-  int num_balanced_pkts = 1, pkts_offset = 0, watermark = 0;
+  int num_uniq_pkts = 1, watermark = 0;
   u_int num_pcap_pkts = 0;
   int send_full_pcap_once = 1;
   char *pidFileName = NULL;
@@ -461,11 +462,9 @@ int main(int argc, char* argv[]) {
   while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:p:P:S:w:V:z")) != -1) {
     switch(c) {
     case 'b':
-      num_balanced_pkts = atoi(optarg);
-      if(num_balanced_pkts > 1000000) {
-	printf("WARNING: The -b value is pretty big and this can exhaust the available memory.\n");
-	printf("WARNING: To avoid that consider using the -O option.\n");
-      }
+      num_ip = atoi(optarg);
+      if (num_uniq_pkts < num_ip)
+        num_uniq_pkts = num_ip;
       reforge_ip = 1;
       break;
     case 'D':
@@ -488,7 +487,7 @@ int main(int argc, char* argv[]) {
       send_full_pcap_once = 0;
       break;
     case 'o':
-      pkts_offset = atoi(optarg);
+      ip_offset = atoi(optarg);
       break;
     case 'O':
       on_the_fly_reforging = 1;
@@ -503,6 +502,8 @@ int main(int argc, char* argv[]) {
     case 'L':
       forge_vlan = 1;
       num_vlan = atoi(optarg);
+      if (num_uniq_pkts < num_vlan)
+        num_uniq_pkts = num_vlan;
       break;
     case 'v':
       verbose = 1;
@@ -552,11 +553,12 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if((device == NULL) || (num_balanced_pkts < 1)
-     || (optind < argc) /* Extra argument */)
+  if (device == NULL 
+      || num_uniq_pkts < 1
+      || optind < argc /* Extra argument */)
     printHelp();
 
-  if (num_balanced_pkts > 1000000 && !on_the_fly_reforging)
+  if (num_uniq_pkts > 1000000 && !on_the_fly_reforging)
     printf("Warning: please use -O to reduce memory preallocation when many IPs are configured with -b\n");
 
   bind2node(bind_core);
@@ -641,7 +643,7 @@ int main(int argc, char* argv[]) {
 	if(rc <= 0) break;
         
         num_orig_pcap_pkts++;
-        if ((num_orig_pcap_pkts-1) < pkts_offset) continue;
+        if ((num_orig_pcap_pkts-1) < ip_offset) continue;
 
 	if (num_pcap_pkts == 0) {
 	  beginning.tv_sec = h->ts.tv_sec;
@@ -667,7 +669,7 @@ int main(int argc, char* argv[]) {
 	      memcpy(p->pkt, pkt, p->len);
             }
 	    if(reforge_mac || reforge_ip)
-              reforge_packet((u_char *) p->pkt, p->len, pkts_offset + num_pcap_pkts, 0); 
+              reforge_packet((u_char *) p->pkt, p->len, ip_offset + num_pcap_pkts, 0); 
 	  }
 
 	  if(last) {
@@ -718,12 +720,12 @@ int main(int argc, char* argv[]) {
       send_len = stdin_packet_len;
     }
 
-    for (i = 0; i < num_balanced_pkts; i++) {
+    for (i = 0; i < num_uniq_pkts; i++) {
 
       if (stdin_packet_len <= 0) {
-        forge_udp_packet(buffer, send_len, pkts_offset + i, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
+        forge_udp_packet(buffer, send_len, i, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
       } else {
-        if (reforge_packet(buffer, send_len, pkts_offset + i, 0) != 0) { 
+        if (reforge_packet(buffer, send_len, i, 0) != 0) { 
           fprintf(stderr, "Unable to reforge the provided packet\n");
           return -1;
         }
@@ -814,7 +816,7 @@ int main(int argc, char* argv[]) {
 
   tosend = pkt_head;
   i = 0;
-  reforging_idx = pkts_offset;
+  reforging_idx = 0;
 
   pfring_set_application_stats(pd, "Statistics not yet computed: please try again...");
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
