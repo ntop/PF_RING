@@ -112,6 +112,7 @@ struct in_addr srcaddr, dstaddr;
 char mac_address[6];
 int send_len = 60;
 int daemon_mode = 0;
+int forge_vlan = 0, num_vlan = 1;
 
 #define DEFAULT_DEVICE     "eth0"
 
@@ -252,6 +253,7 @@ void printHelp(void) {
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
+  printf("-L <num>        Forge VLAN packets with <num> different ids\n");
   printf("-F              Force flush for each packet (to avoid bursts, expect low performance)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
   printf("-d              Daemon mode\n");
@@ -301,24 +303,34 @@ static u_int32_t wrapsum (u_int32_t sum) {
 /* ******************************************* */
 
 static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int ip_version) {
+  struct eth_vlan_hdr *vlan;
   struct ip_header *ip;
   struct ip6_header *ip6;
   struct udp_header *udp;
   u_char *addr;
-  int ip_len, addr_len, i;
+  int l2_len, ip_len, addr_len, i;
 
   /* Reset packet */
   memset(buffer, 0, buffer_len);
 
+  l2_len = sizeof(struct ether_header);
+
   for(i=0; i<12; i++) buffer[i] = i;
   if(reforge_mac) memcpy(buffer, mac_address, 6);
 
+  if (forge_vlan) { 
+    vlan = (struct eth_vlan_hdr *) &buffer[l2_len];
+    buffer[l2_len-2] = 0x81, buffer[l2_len-1] = 0x00;
+    vlan->h_vlan_id = htons((idx % num_vlan) + 1); 
+    l2_len += sizeof(struct eth_vlan_hdr);
+  }
+
   if (ip_version == 6) {
-    buffer[12] = 0x86, buffer[13] = 0xDD;
-    ip6 = (struct ip6_header*) &buffer[sizeof(struct ether_header)];
+    buffer[l2_len-2] = 0x86, buffer[l2_len-1] = 0xDD;
+    ip6 = (struct ip6_header*) &buffer[l2_len];
     ip_len = sizeof(*ip6);
     ip6->version = 6;
-    ip6->payload_len = htons(buffer_len - sizeof(struct ether_header) - ip_len);
+    ip6->payload_len = htons(buffer_len - l2_len - ip_len);
     ip6->nexthdr = IPPROTO_UDP;
     ip6->hop_limit = 0xFF;
     ip6->saddr[0] = htonl((ntohl(srcaddr.s_addr) + idx) & 0xFFFFFFFF);
@@ -326,13 +338,13 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     addr = (u_char *) ip6->saddr;
     addr_len = sizeof(ip6->saddr);
   } else {
-    buffer[12] = 0x08, buffer[13] = 0x00;
-    ip = (struct ip_header*) &buffer[sizeof(struct ether_header)];
+    buffer[l2_len-2] = 0x08, buffer[l2_len-1] = 0x00;
+    ip = (struct ip_header*) &buffer[l2_len];
     ip_len = sizeof(*ip);
     ip->ihl = 5;
     ip->version = 4;
     ip->tos = 0;
-    ip->tot_len = htons(buffer_len - sizeof(struct ether_header));
+    ip->tot_len = htons(buffer_len - l2_len);
     ip->id = htons(2012);
     ip->ttl = 64;
     ip->frag_off = htons(0);
@@ -344,10 +356,10 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     addr_len = sizeof(ip->saddr);
   }
 
-  udp = (struct udp_header*)(buffer + sizeof(struct ether_header) + ip_len);
+  udp = (struct udp_header*)(buffer + l2_len + ip_len);
   udp->source = htons(2012);
   udp->dest = htons(3000);
-  udp->len = htons(buffer_len - sizeof(struct ether_header) - ip_len);
+  udp->len = htons(buffer_len - l2_len - ip_len);
   udp->check = 0; /* It must be 0 to compute the checksum */
 
   /*
@@ -356,7 +368,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     http://www.ietf.org/rfc/rfc0768.txt
   */
 
-  i = sizeof(struct ether_header) + ip_len + sizeof(struct udp_header);
+  i = l2_len + ip_len + sizeof(struct udp_header);
   udp->check = wrapsum(in_cksum((unsigned char *) udp, sizeof(struct udp_header),
                                 in_cksum((unsigned char *) &buffer[i], buffer_len - i,
 				  in_cksum((unsigned char *) addr, 2 * addr_len,
@@ -446,7 +458,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0000000A /* 10.0.0.0 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:o:Oaf:Fr:vm:p:P:S:w:V:z")) != -1) {
+  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:p:P:S:w:V:z")) != -1) {
     switch(c) {
     case 'b':
       num_balanced_pkts = atoi(optarg);
@@ -487,6 +499,10 @@ int main(int argc, char* argv[]) {
     case 'l':
       send_len = atoi(optarg);
       if (send_len > MAX_PACKET_SIZE) send_len = MAX_PACKET_SIZE;
+      break;
+    case 'L':
+      forge_vlan = 1;
+      num_vlan = atoi(optarg);
       break;
     case 'v':
       verbose = 1;
