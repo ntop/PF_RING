@@ -1430,6 +1430,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       } else if(fsi != NULL) {
         /* Standard PF_RING */
 	seq_printf(m, "Channel Id Mask    : 0x%016llX\n", pfr->channel_id_mask);
+	seq_printf(m, "VLAN Id            : %d\n", pfr->vlan_id);
         if (pfr->cluster_id != 0)
           seq_printf(m, "Cluster Id         : %d\n", pfr->cluster_id);
 	seq_printf(m, "Slot Version       : %d [%s]\n", fsi->version, RING_VERSION);
