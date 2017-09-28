@@ -110,7 +110,7 @@ ${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG
 
 ${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
-	${CC} ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
+	${CC} -Wl,-soname,$@.1 ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
 
 extract_pfring_zc_lib:
 	@AR_X@ @PF_RING_ZC_LIB@
