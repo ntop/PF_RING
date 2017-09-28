@@ -10624,7 +10624,11 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 	.ndo_do_ioctl		= ixgbe_ioctl,
 #ifdef IFLA_VF_MAX
 	.ndo_set_vf_mac		= ixgbe_ndo_set_vf_mac,
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN
+	.extended.ndo_set_vf_vlan = ixgbe_ndo_set_vf_vlan,
+#else
 	.ndo_set_vf_vlan	= ixgbe_ndo_set_vf_vlan,
+#endif
 #ifdef HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 	.ndo_set_vf_rate	= ixgbe_ndo_set_vf_bw,
 #else
@@ -10637,7 +10641,11 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 	.ndo_set_vf_rss_query_en = ixgbe_ndo_set_vf_rss_query_en,
 #endif
 #ifdef HAVE_NDO_SET_VF_TRUST
+#ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
+	.extended.ndo_set_vf_trust = ixgbe_ndo_set_vf_trust,
+#else
 	.ndo_set_vf_trust	= ixgbe_ndo_set_vf_trust,
+#endif
 #endif
 	.ndo_get_vf_config	= ixgbe_ndo_get_vf_config,
 #endif
@@ -10690,8 +10698,14 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 #endif /* HAVE_BRIDGE_ATTRIBS */
 #endif
 #ifdef HAVE_UDP_ENC_RX_OFFLOAD
+
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_UDP_TUNNEL
+	.extended.ndo_udp_tunnel_add = ixgbe_add_udp_tunnel_port,
+	.extended.ndo_udp_tunnel_del = ixgbe_del_udp_tunnel_port,
+#else
 	.ndo_udp_tunnel_add	= ixgbe_add_udp_tunnel_port,
 	.ndo_udp_tunnel_del	= ixgbe_del_udp_tunnel_port,
+#endif
 #elif defined(HAVE_VXLAN_RX_OFFLOAD)
 	.ndo_add_vxlan_port	= ixgbe_add_vxlan_port,
 	.ndo_del_vxlan_port	= ixgbe_del_vxlan_port,

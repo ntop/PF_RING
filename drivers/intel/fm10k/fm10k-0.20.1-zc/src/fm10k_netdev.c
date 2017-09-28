@@ -1780,7 +1780,9 @@ static const struct net_device_ops fm10k_netdev_ops = {
 #endif
 #ifdef IFLA_VF_MAX
 	.ndo_set_vf_mac		= fm10k_ndo_set_vf_mac,
+#ifndef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN
 	.ndo_set_vf_vlan	= fm10k_ndo_set_vf_vlan,
+#endif
 #ifdef HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 	.ndo_set_vf_rate	= fm10k_ndo_set_vf_bw,
 #else
@@ -1803,9 +1805,29 @@ static const struct net_device_ops fm10k_netdev_ops = {
 	.ndo_add_geneve_port	= fm10k_add_geneve_port,
 	.ndo_del_geneve_port	= fm10k_del_geneve_port,
 #endif
+#ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
+	.ndo_size		= sizeof(const struct net_device_ops),
+
+	/* All ops backported into RHEL7.x must go here. Do not place any ops
+	 * which haven't been backported here, as they will otherwise fail to
+	 * compile
+	 */
+	.extended = {
+#endif
+#ifdef NETIF_F_HW_L2FW_DOFFLOAD
+	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,
+	.ndo_dfwd_del_station	= fm10k_dfwd_del_station,
+#endif
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN
+	.ndo_set_vf_vlan	= fm10k_ndo_set_vf_vlan,
+#endif /* HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN */
 #ifdef HAVE_UDP_ENC_RX_OFFLOAD
 	.ndo_udp_tunnel_add	= fm10k_udp_tunnel_add,
 	.ndo_udp_tunnel_del	= fm10k_udp_tunnel_del,
+#endif
+#ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
+	/* End of ops backported into RHEL7.x */
+	},
 #endif
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= fm10k_netpoll,

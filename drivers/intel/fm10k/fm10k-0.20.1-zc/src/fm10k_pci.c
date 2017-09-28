@@ -146,7 +146,7 @@ static void fm10k_reinit(struct fm10k_intfc *interface)
 	WARN_ON(in_interrupt());
 
 	/* put off any impending NetWatchDogTimeout */
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0))
+#ifdef HAVE_NETIF_TRANS_UPDATE
 	netif_trans_update(netdev);
 #else
 	netdev->trans_start = jiffies;

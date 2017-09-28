@@ -190,12 +190,11 @@ static void igb_restore_vf_multicasts(struct igb_adapter *adapter);
 static void igb_process_mdd_event(struct igb_adapter *);
 #ifdef IFLA_VF_MAX
 static int igb_ndo_set_vf_mac(struct net_device *netdev, int vf, u8 *mac);
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0) )
-static int igb_ndo_set_vf_vlan(struct net_device *netdev,
-				int vf, u16 vlan, u8 qos);
+#ifdef IFLA_VF_VLAN_INFO_MAX
+int igb_ndo_set_vf_vlan(struct net_device *netdev, int vf, u16 vlan,
+			  u8 qos, __be16 vlan_proto);
 #else
-static int igb_ndo_set_vf_vlan(struct net_device *netdev,
-				int vf, u16 vlan, u8 qos, __be16 proto);
+int igb_ndo_set_vf_vlan(struct net_device *netdev, int vf, u16 vlan, u8 qos);
 #endif
 #ifdef HAVE_VF_SPOOFCHK_CONFIGURE
 static int igb_ndo_set_vf_spoofchk(struct net_device *netdev, int vf,
@@ -2652,7 +2651,11 @@ static const struct net_device_ops igb_netdev_ops = {
 	.ndo_vlan_rx_kill_vid	= igb_vlan_rx_kill_vid,
 #ifdef IFLA_VF_MAX
 	.ndo_set_vf_mac		= igb_ndo_set_vf_mac,
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN
+	.extended.ndo_set_vf_vlan = igb_ndo_set_vf_vlan,
+#else
 	.ndo_set_vf_vlan	= igb_ndo_set_vf_vlan,
+#endif
 #ifdef HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 	.ndo_set_vf_rate	= igb_ndo_set_vf_bw,
 #else
@@ -6892,12 +6895,11 @@ static void igb_set_vmvir(struct igb_adapter *adapter, u32 vid, u32 vf)
 		E1000_WRITE_REG(hw, E1000_VMVIR(vf), 0);
 }
 
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0) )
-static int igb_ndo_set_vf_vlan(struct net_device *netdev,
-			       int vf, u16 vlan, u8 qos)
+#ifdef IFLA_VF_VLAN_INFO_MAX
+int igb_ndo_set_vf_vlan(struct net_device *netdev, int vf, u16 vlan,
+			  u8 qos, __be16 vlan_proto)
 #else
-static int igb_ndo_set_vf_vlan(struct net_device *netdev,
-				int vf, u16 vlan, u8 qos, __be16 proto)
+int igb_ndo_set_vf_vlan(struct net_device *netdev, int vf, u16 vlan, u8 qos)
 #endif
 {
 	int err = 0;
@@ -7066,7 +7068,7 @@ static inline void igb_vf_reset(struct igb_adapter *adapter, u32 vf)
 		igb_ndo_set_vf_vlan(adapter->netdev, vf,
 				    adapter->vf_data[vf].pf_vlan,
 				    adapter->vf_data[vf].pf_qos
-#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0) )
+#ifdef IFLA_VF_VLAN_INFO_MAX
 				    , 0
 #endif
 				    );
