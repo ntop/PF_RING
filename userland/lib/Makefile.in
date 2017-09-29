@@ -14,6 +14,11 @@ INSTDIR   = ${DESTDIR}/@INSTALL_PREFIX@
 INCLUDE   = -I../../kernel @BPF_INCLUDE@ @INVEATECH_INC@
 
 #
+# Library directory
+#
+LIBDIR   = ${DESTDIR}/@libdir@
+
+#
 # PF_RING ZC
 #
 PF_RING_ZC_OBJS  = @PF_RING_ZC_OBJS@
@@ -147,12 +152,12 @@ install-includes:
 	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ @NPCAP_H@ ${NBPF_HDR} ${INSTDIR}/include/
 
 install-static: ${STATICLIB} install-includes
-	mkdir -p ${INSTDIR}/lib
-	cp ${STATICLIB} ${INSTDIR}/lib/
+	mkdir -p ${LIBDIR}
+	cp ${STATICLIB} ${LIBDIR}/
 
 install-shared:	${DYNAMICLIB} install-includes
-	mkdir -p ${INSTDIR}/lib
-	cp ${DYNAMICLIB} ${INSTDIR}/lib/
+	mkdir -p ${LIBDIR}
+	cp ${DYNAMICLIB} ${LIBDIR}/
 	@if test "$(USER)" = "root"; then \
 		ldconfig; \
 	fi
