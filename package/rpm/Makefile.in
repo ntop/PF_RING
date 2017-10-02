@@ -17,7 +17,7 @@ all:
 
 dkms:
 	cd ../../kernel; ./configure; make dkms-rpm
-	cp /var/lib/dkms/pfring/@VERS@.@REVISION@/rpm/pfring-dkms-@VERS@.@REVISION@.noarch.rpm .
+	cp /var/lib/dkms/pfring/@VERS@.@REVISION@/rpm/pfring-dkms-@VERS@.@REVISION@-dkms.noarch.rpm .
 	cd ../../drivers/intel/; ./configure; make dkms-rpm
 	cp /var/lib/dkms/*-zc/*/rpm/*.noarch.rpm .
 	cp ../../drivers/intel/*.rpm .
