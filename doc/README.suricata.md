@@ -28,8 +28,6 @@ make
 sudo make install
 sudo ldconfig
 
-./configure
-make
 make install-conf
 make install-rules
 
