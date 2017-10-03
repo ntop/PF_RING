@@ -4,8 +4,8 @@
 APPL=pfring
 PLATFORM=@PLATFORM@
 REVISION=@REVISION@
-PACKAGE_VERSION=@VERS@-@REVISION@
-PACKAGE=$(APPL)-$(PACKAGE_VERSION).$(PLATFORM).rpm
+PACKAGE_VERSION=@VERS@
+PACKAGE=$(APPL)-$(PACKAGE_VERSION)-$(REVISION).$(PLATFORM).rpm
 PACKAGE_PATH=$(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
 
 
@@ -17,7 +17,7 @@ all:
 
 dkms:
 	cd ../../kernel; ./configure; make dkms-rpm
-	cp /var/lib/dkms/pfring/@VERS@-@REVISION@/rpm/pfring-dkms-@VERS@-@REVISION@-dkms.noarch.rpm .
+	cp /var/lib/dkms/pfring/@VERS@/rpm/pfring-dkms-@VERS@-@REVISION@.noarch.rpm .
 	cd ../../drivers/intel/; ./configure; make dkms-rpm
 	cp /var/lib/dkms/*-zc/*/rpm/*.noarch.rpm .
 	cp ../../drivers/intel/*.rpm .
@@ -28,11 +28,11 @@ build-rpm:
 #	mkdir -p $(HOME)/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 #	echo '%_topdir %(echo $HOME)/rpmbuild' > ~/.rpmmacros
 	@rpmbuild -bb ./$(APPL).spec --define "pfring_version $(PACKAGE_VERSION)" --define "buildrev $(REVISION)" --define "nozc 0"
-	@./rpm-sign.exp $(PACKAGE_PATH)
+	@./rpm-sign.exp $(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
 	@echo ""
 	@echo "Package contents:"
-	@rpm -qpl $(PACKAGE_PATH)
-	@echo "The package is now available in $(PACKAGE_PATH)"
+	@rpm -qpl $(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
+	@echo "The package is now available in $(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)"
 
 
 cleanup-rpm:

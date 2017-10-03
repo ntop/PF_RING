@@ -1697,8 +1697,6 @@ REVISION=`git rev-list --all |wc -l`
 
 
 
-ac_config_files="$ac_config_files zc-dkms.mkrpm.spec"
-
 ac_config_files="$ac_config_files Makefile.dkms.fm10k"
 
 ac_config_files="$ac_config_files Makefile.dkms.i40e"
@@ -2425,7 +2423,6 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "zc-dkms.mkrpm.spec") CONFIG_FILES="$CONFIG_FILES zc-dkms.mkrpm.spec" ;;
     "Makefile.dkms.fm10k") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.fm10k" ;;
     "Makefile.dkms.i40e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.i40e" ;;
     "Makefile.dkms.ixgbe") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbe" ;;
