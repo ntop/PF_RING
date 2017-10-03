@@ -24,6 +24,7 @@ AC_SUBST(E1000E)
 AC_SUBST(E1000E_VERSION)
 AC_SUBST(REVISION)
 
+AC_CONFIG_FILES(zc-dkms.mkrpm.spec)
 AC_CONFIG_FILES(Makefile.dkms.fm10k)
 AC_CONFIG_FILES(Makefile.dkms.i40e)
 AC_CONFIG_FILES(Makefile.dkms.ixgbe)
