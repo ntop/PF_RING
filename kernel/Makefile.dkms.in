@@ -12,33 +12,33 @@ endif
 all: install
 
 add: remove
-	\/bin/rm -rf /usr/src/pfring-@VERS@-@REVISION@
-	mkdir /usr/src/pfring-@VERS@-@REVISION@
-	cp -r Makefile dkms.conf pf_ring.c linux/ /usr/src/pfring-@VERS@-@REVISION@
-	cat Makefile | sed -e "s/GIT_REV:=$$/GIT_REV:=${GIT_REV}/" > /usr/src/pfring-@VERS@-@REVISION@/Makefile
-	dkms add -m pfring -v @VERS@-@REVISION@
+	\/bin/rm -rf /usr/src/pfring-@VERS@
+	mkdir /usr/src/pfring-@VERS@
+	cp -r Makefile dkms.conf pf_ring.c linux/ /usr/src/pfring-@VERS@
+	cat Makefile | sed -e "s/GIT_REV:=$$/GIT_REV:=${GIT_REV}/" > /usr/src/pfring-@VERS@/Makefile
+	dkms add -m pfring -v @VERS@
 
 build: add
-	dkms build -m pfring -v @VERS@-@REVISION@
+	dkms build -m pfring -v @VERS@
 
 install: build
-	dkms install --force -m pfring -v @VERS@-@REVISION@
+	dkms install --force -m pfring -v @VERS@
 
 deb: add add_deb install
-	dkms mkdeb -m pfring -v @VERS@-@REVISION@ --source-only
+	dkms mkdeb -m pfring -v @VERS@ --source-only
 
 rpm: add add_rpm install
-	dkms mkrpm -m pfring -v @VERS@-@REVISION@ --source-only
+	dkms mkrpm -m pfring -v @VERS@ --source-only
 
 add_rpm:
-	cp -r pfring-dkms-*.spec /usr/src/pfring-@VERS@-@REVISION@/
+	cp -r pfring-dkms-*.spec /usr/src/pfring-@VERS@/
 
 add_deb:
-	cp -r pfring-dkms-mkdeb /usr/src/pfring-@VERS@-@REVISION@/
+	cp -r pfring-dkms-mkdeb /usr/src/pfring-@VERS@/
 
 remove:
-	-dkms remove -m pfring -v @VERS@-@REVISION@ --all
+	-dkms remove -m pfring -v @VERS@ --all
 
 veryclean: remove
-	\/bin/rm -fr /usr/src/pfring-@VERS@-@REVISION@
+	\/bin/rm -fr /usr/src/pfring-@VERS@
 	
