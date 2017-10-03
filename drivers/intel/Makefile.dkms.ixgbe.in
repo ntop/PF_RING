@@ -1,41 +1,41 @@
 all: install
 
 add: veryclean
-	\/bin/rm -rf /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
-	mkdir /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
-	cd @IXGBE@/@IXGBE@-@IXGBE_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
-	cd @IXGBE@/@IXGBE@-@IXGBE_VERSION@-zc/src ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
-	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/*.c
-	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/*.h
-	#sed -i -e 's|DRIVER_NAME=@IXGBE@|DRIVER_NAME=@IXGBE@_zc|g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Makefile
-	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IXGBE@_zc' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Makefile
-	cp dkms.conf.@IXGBE@ /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/dkms.conf 
-	dkms add -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@
+	\/bin/rm -rf /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@
+	mkdir /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@
+	cd @IXGBE@/@IXGBE@-@IXGBE_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@
+	cd @IXGBE@/@IXGBE@-@IXGBE_VERSION@-zc/src ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@
+	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@/*.c
+	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@/*.h
+	#sed -i -e 's|DRIVER_NAME=@IXGBE@|DRIVER_NAME=@IXGBE@_zc|g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@/Makefile
+	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IXGBE@_zc' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@/Makefile
+	cp dkms.conf.@IXGBE@ /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@/dkms.conf 
+	dkms add -m @IXGBE@-zc -v @IXGBE_VERSION@-@REVISION@
 
 build: add
-	dkms build -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@
+	dkms build -m @IXGBE@-zc -v @IXGBE_VERSION@-@REVISION@
 
 install: build
-	dkms install --force -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@
+	dkms install --force -m @IXGBE@-zc -v @IXGBE_VERSION@-@REVISION@
 
 deb: add add_deb install
-	dkms mkdeb -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@ --source-only
+	dkms mkdeb -m @IXGBE@-zc -v @IXGBE_VERSION@-@REVISION@ --source-only
 
 rpm: add add_rpm install
-	dkms mkrpm -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@ --source-only
+	dkms mkrpm -m @IXGBE@-zc -v @IXGBE_VERSION@-@REVISION@ --source-only
 
 add_rpm:
-	cp -f zc.spec /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/@IXGBE@-zc-dkms-mkrpm.spec
+	cp -f zc.spec /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@/@IXGBE@-zc-dkms-mkrpm.spec
 
 add_deb:
-	cp -r zc-dkms-mkdeb /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/@IXGBE@-zc-dkms-mkdeb
+	cp -r zc-dkms-mkdeb /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@/@IXGBE@-zc-dkms-mkdeb
 
 remove:
-	-dkms remove -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@ --all
+	-dkms remove -m @IXGBE@-zc -v @IXGBE_VERSION@-@REVISION@ --all
 	\/bin/rm -f /lib/modules/*/weak-updates/ixgbe*ko
 	\/bin/rm -f /lib/modules/*/extra/ixgbe*ko
 	\/bin/rm -rf /var/lib/dkms/ixgbe-zc
 
 veryclean: remove
-	\/bin/rm -fr /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
+	\/bin/rm -fr /usr/src/@IXGBE@-zc-@IXGBE_VERSION@-@REVISION@
 	

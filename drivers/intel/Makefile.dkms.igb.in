@@ -1,41 +1,41 @@
 all: install
 
 add: remove
-	\/bin/rm -rf /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
-	mkdir /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
-	cd @IGB@/@IGB@-@IGB_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
-	cd @IGB@/@IGB@-@IGB_VERSION@-zc/src ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
-	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/*.c
-	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/*.h
-	#sed -i -e 's|DRIVER_NAME=@IGB@|DRIVER_NAME=@IGB@_zc|g' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
-	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IGB@_zc' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
-	cp dkms.conf.@IGB@ /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/dkms.conf
-	dkms add -m @IGB@-zc -v @IGB_VERSION@.@REVISION@
+	\/bin/rm -rf /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@
+	mkdir /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@
+	cd @IGB@/@IGB@-@IGB_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@
+	cd @IGB@/@IGB@-@IGB_VERSION@-zc/src ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@
+	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@/*.c
+	sed -i -e 's|../../../../../kernel/linux/pf_ring.h|pf_ring.h|g' /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@/*.h
+	#sed -i -e 's|DRIVER_NAME=@IGB@|DRIVER_NAME=@IGB@_zc|g' /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@/Makefile
+	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IGB@_zc' /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@/Makefile
+	cp dkms.conf.@IGB@ /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@/dkms.conf
+	dkms add -m @IGB@-zc -v @IGB_VERSION@-@REVISION@
 
 build: add
-	dkms build -m @IGB@-zc -v @IGB_VERSION@.@REVISION@
+	dkms build -m @IGB@-zc -v @IGB_VERSION@-@REVISION@
 
 install: build
-	dkms install --force -m @IGB@-zc -v @IGB_VERSION@.@REVISION@
+	dkms install --force -m @IGB@-zc -v @IGB_VERSION@-@REVISION@
 
 deb: add add_deb install
-	dkms mkdeb -m @IGB@-zc -v @IGB_VERSION@.@REVISION@ --source-only
+	dkms mkdeb -m @IGB@-zc -v @IGB_VERSION@-@REVISION@ --source-only
 
 rpm: add add_rpm install
-	dkms mkrpm -m @IGB@-zc -v @IGB_VERSION@.@REVISION@ --source-only
+	dkms mkrpm -m @IGB@-zc -v @IGB_VERSION@-@REVISION@ --source-only
 
 add_rpm:
-	cp -f zc.spec /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/@IGB@-zc-dkms-mkrpm.spec
+	cp -f zc.spec /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@/@IGB@-zc-dkms-mkrpm.spec
 
 add_deb:
-	cp -r zc-dkms-mkdeb /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/@IGB@-zc-dkms-mkdeb
+	cp -r zc-dkms-mkdeb /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@/@IGB@-zc-dkms-mkdeb
 
 remove:
-	-dkms remove -m @IGB@-zc -v @IGB_VERSION@.@REVISION@ --all
+	-dkms remove -m @IGB@-zc -v @IGB_VERSION@-@REVISION@ --all
 	\/bin/rm -f /lib/modules/*/weak-updates/igb*ko
 	\/bin/rm -f /lib/modules/*/extra/igb*ko
 	\/bin/rm -rf /var/lib/dkms/igb-zc
 
 veryclean: remove
-	\/bin/rm -fr /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
+	\/bin/rm -fr /usr/src/@IGB@-zc-@IGB_VERSION@-@REVISION@
 	
