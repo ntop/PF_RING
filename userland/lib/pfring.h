@@ -349,6 +349,7 @@ struct __pfring {
 #define PF_RING_VSS_APCON_TIMESTAMP  (1 << 15) /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
 #define PF_RING_ZC_IPONLY_RSS	     (1 << 16) /**< pfring_open() flag: Compute RSS on src/dst IP only (not 4-tuple) */ 
 #define PF_RING_FLOW_OFFLOAD	     (1 << 17) /**< pfring_open() flag: Enable hw flow table support when available */ 
+#define PF_RING_FLOW_OFFLOAD_NOUP    (1 << 18) /**< pfring_open() flag: Do not send flow updates with PF_RING_FLOW_OFFLOAD, enable support for flows shunting only */
 
 /* ********************************* */
 
