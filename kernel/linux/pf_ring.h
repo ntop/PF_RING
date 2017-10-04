@@ -507,9 +507,20 @@ typedef struct {
 } silicom_redirector_hw_rule;
 
 typedef enum {
+  flow_drop_rule
+} accolade_flow_rule_type;
+
+typedef struct { 
+  accolade_flow_rule_type rule_type;
+  u_int32_t flow_id; /* flow id from flow metadata */
+  u_int32_t thread; /* id of the thread setting the rule */
+} accolade_flow_hw_rule;
+
+typedef enum {
   intel_82599_five_tuple_rule,
   intel_82599_perfect_filter_rule,
-  silicom_redirector_rule
+  silicom_redirector_rule,
+  accolade_flow_filter_rule
 } hw_filtering_rule_type;
 
 typedef struct {
@@ -520,6 +531,7 @@ typedef struct {
     intel_82599_five_tuple_filter_hw_rule five_tuple_rule;
     intel_82599_perfect_filter_hw_rule perfect_rule;
     silicom_redirector_hw_rule redirector_rule;
+    accolade_flow_hw_rule flow_rule;
   } rule_family;
 } hw_filtering_rule;
 
