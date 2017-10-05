@@ -1125,6 +1125,7 @@ static int handle_hw_filtering_rule(struct pf_ring_socket *pfr,
     break;
 
   case silicom_redirector_rule:
+  case accolade_flow_filter_rule:
     return(-EINVAL); /* handled in userland */
     break;
   }
