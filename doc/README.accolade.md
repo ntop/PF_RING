@@ -8,16 +8,19 @@ needs to be installed (under /opt/accolade) in order to enable the
 Accolade module at runtime.
 
 ## Installation
-In order to get up and running with Accolade run the following commands:
+In order to install the Accolade driver run the following commands:
 
 ```
 tar xvzf SDK_*.tgz
 cd SDK_*
 cd drv; make install; cd ..
 cd lib; make install; cd ..
+```
 
+Then load the driver with:
+
+```
 echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-
 insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
 /opt/accolade/bin/anic_load
 ```
