@@ -55,6 +55,7 @@
 #include <linux/if_vlan.h>
 
 #ifdef HAVE_PF_RING
+#define I40E_32BYTE_RX
 #ifdef CONFIG_DCB
 #undef CONFIG_DCB
 #ifdef CONFIG_FCOE

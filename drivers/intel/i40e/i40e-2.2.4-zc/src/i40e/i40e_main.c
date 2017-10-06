@@ -6010,11 +6010,6 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 			cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
 			if (cache_line_size == 0) cache_line_size = 64;
 
-			//if (unlikely(enable_debug))  
-				printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u][MSIX %s]\n", __FUNCTION__,
-					vsi->netdev->name, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0),
-					cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
-
 			for (i = 0; i < vsi->num_queue_pairs; i++) {
 				struct i40e_ring *rx_ring = vsi->rx_rings[i];
 				struct i40e_ring *tx_ring = vsi->tx_rings[i];
@@ -6036,6 +6031,17 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 				tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 				tx_info.descr_packet_memory_tot_len = tx_ring->size;
 				tx_info.registers_index		    = tx_ring->reg_idx;
+
+				//if (unlikely(enable_debug))  
+					printk("[PF_RING-ZC] %s: attach %s "
+					       "[RX count=%u size=%u ptr=%p]"
+					       "[TX count=%u size=%u ptr=%p]"
+					       "[pf start=%llu len=%llu][cache_line_size=%u][MSIX %s]\n", 
+					       __FUNCTION__, vsi->netdev->name, 
+					       rx_ring->count, rx_ring->size, rx_ring->desc,
+					       tx_ring->count, tx_ring->size, tx_ring->desc,
+					       pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0),
+					       cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
 
 				hook->zc_dev_handler(add_device_mapping,
 					&rx_info,
