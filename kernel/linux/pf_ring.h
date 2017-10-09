@@ -309,6 +309,7 @@ struct pfring_extended_pkthdr {
 #define PKT_FLAGS_IP_FRAG_OFFSET   1 << 3 /* IP fragment offset set (not 0) */
 #define PKT_FLAGS_VLAN_HWACCEL     1 << 4 /* VLAN stripped by hw */
 #define PKT_FLAGS_FLOW_OFFLOAD     1 << 6 /* Flow metadata (keep compatible with ZC) */
+#define PKT_FLAGS_FLOW_MARKER      1 << 7 /* Packet belongs to a flow that has been marked (keep compatible with ZC) */
   u_int32_t flags;
 
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
@@ -507,7 +508,8 @@ typedef struct {
 } silicom_redirector_hw_rule;
 
 typedef enum {
-  flow_drop_rule
+  flow_drop_rule,
+  flow_mark_rule
 } accolade_flow_rule_type;
 
 typedef struct { 
