@@ -749,8 +749,10 @@ int main(int argc, char* argv[]) {
   );
 
   if (zc == NULL) {
-    trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",
-	    strerror(errno));
+    if (errno == 105)
+      trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Insufficient hugepage memory, please try increasing your hugepage count", strerror(errno));
+    else
+      trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n", strerror(errno));
     return -1;
   }
 
