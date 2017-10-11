@@ -6,7 +6,7 @@ In order to use Bro on top of pf_ring support please follow this guide.
 if you want to use ZC drivers) from http://packages.ntop.org as explained
 in README.apt_rpm_packages
 
-2. Download Bro from https://www.bro.org/download/
+2. Download Bro sources from https://www.bro.org/download/. Please note that installing Bro from package leads to failures when capturing from multiple PF_RING queues (as explained below).
 
 ```
 wget https://www.bro.org/downloads/release/bro-X.X.X.tar.gz
