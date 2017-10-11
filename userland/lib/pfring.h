@@ -131,7 +131,9 @@ typedef struct {
 /* ********************************* */
 
 typedef struct {
-  u_int64_t recv, drop;
+  u_int64_t recv;
+  u_int64_t drop;
+  u_int64_t shunt;
 } pfring_stat;
 
 /* ********************************* */
