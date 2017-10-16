@@ -67,6 +67,11 @@
 #include "pfring_mod_invea.h"
 #endif
 
+#ifdef HAVE_NETCOPE
+/* Netcope */
+#include "pfring_mod_netcope.h"
+#endif
+
 #ifdef HAVE_EXABLAZE
 /* Exablaze */
 #include "pfring_mod_exablaze.h"
@@ -149,6 +154,14 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "invea",
     .open = pfring_invea_open,
+    .findalldevs = NULL
+  },
+#endif
+
+#ifdef HAVE_NETCOPE
+  {
+    .name = "nsf",
+    .open = pfring_netcope_open,
     .findalldevs = NULL
   },
 #endif
