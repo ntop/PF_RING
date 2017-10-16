@@ -227,9 +227,9 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
   pfring_invea *invea = (pfring_invea *) ring->priv_data;
   unsigned char *data, *hw_data;
   unsigned int data_len, hw_data_len;
-  unsigned int segsize;
   uint32_t ts_s, ts_ns;
 #ifdef DEBUG
+  unsigned int segsize;
   unsigned int iface, dma, flags, label;
 #endif
 
@@ -238,7 +238,10 @@ int pfring_invea_recv(pfring *ring, u_char **buffer,
   if (invea->packet != NULL || 
       __pfring_invea_ready(ring, wait_for_incoming_packet ? ring->poll_duration : 0) > 0) {
 
-    segsize = szedata_decode_packet(invea->packet, &data, &hw_data, &data_len, &hw_data_len);
+#ifdef DEBUG
+    segsize = 
+#endif
+    szedata_decode_packet(invea->packet, &data, &hw_data, &data_len, &hw_data_len);
 
 #ifdef DEBUG
     printf("Hw data = %04u ", hw_data_len);
