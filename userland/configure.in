@@ -58,7 +58,7 @@ MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
 MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
 MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
 MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
+MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
 NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 
 dnl> Check for a modern pthread library
