@@ -519,10 +519,26 @@ typedef struct {
 } accolade_flow_hw_rule;
 
 typedef enum {
+  flow_tuple_drop_rule
+} netcope_flow_rule_type;
+
+typedef struct { 
+  netcope_flow_rule_type rule_type;
+  uint8_t  interface; /* from extended_hdr.if_index */
+  ip_addr src_ip;
+  ip_addr dst_ip;
+  uint16_t src_port;
+  uint16_t dst_port;
+  uint8_t  ip_version;
+  uint8_t  protocol;
+} netcope_flow_hw_rule;
+
+typedef enum {
   intel_82599_five_tuple_rule,
   intel_82599_perfect_filter_rule,
   silicom_redirector_rule,
-  accolade_flow_filter_rule
+  accolade_flow_filter_rule,
+  netcope_flow_filter_rule
 } hw_filtering_rule_type;
 
 typedef struct {
@@ -534,6 +550,7 @@ typedef struct {
     intel_82599_perfect_filter_hw_rule perfect_rule;
     silicom_redirector_hw_rule redirector_rule;
     accolade_flow_hw_rule flow_rule;
+    netcope_flow_hw_rule flow_tuple_rule;
   } rule_family;
 } hw_filtering_rule;
 
