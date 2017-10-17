@@ -9,12 +9,10 @@ https://redmine.openinfosecfoundation.org/projects/suricata/wiki/Installation_of
 ```
 git clone https://github.com/ntop/PF_RING.git
 cd PF_RING/kernel
-make
-sudo make install
+make && sudo make install
 
 cd PF_RING/userland/lib
-make
-sudo make install
+./configure && make && sudo make install
 
 sudo modprobe pf_ring
 
