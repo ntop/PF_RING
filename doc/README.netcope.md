@@ -16,7 +16,7 @@ Then load the firmware with:
 csboot -f100 /usr/share/mcs/nsf/1.3.5/nfb-100g2q/100g1/firmware.bit
 ```
 
-If the NSF firmware is already loaded in the card it's possible to reload it:
+If the NSF firmware is already loaded in the card it's possible to reload it
 with the following command:
 
 ```
@@ -49,4 +49,3 @@ Please note that:
    (nsf:CARD:PORT) or just "anic:0" (anic:PORT) if device is 0.
  - in order to open ring 0 from port 0 you should specify "anic:0@0"
    (nsf:CARD@RING).
-
