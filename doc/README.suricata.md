@@ -7,6 +7,7 @@ https://redmine.openinfosecfoundation.org/projects/suricata/wiki/Installation_of
 # Installation
 
 ```
+git clone https://github.com/ntop/PF_RING.git
 cd PF_RING/kernel
 make
 sudo make install
