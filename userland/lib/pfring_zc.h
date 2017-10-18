@@ -40,7 +40,9 @@
 #define PF_RING_ZC_PKT_FLAGS_BAD_L4_CS    (1 << 3) /**< pfring_zc_pkt_buff.flags: bad TCP/UDP checksum detected (note: UDP checksum 0 is detected as bad on some cards!) */
 //#define PF_RING_ZC_PKT_FLAGS_TX_IP_CS   (1 << 4) /**< pfring_zc_pkt_buff.flags: compute IP checksum on transmission (when supported) */ 
 //#define PF_RING_ZC_PKT_FLAGS_TX_L4_CS   (1 << 5) /**< pfring_zc_pkt_buff.flags: compute TCP checksum on transmission (when supported) */ 
-#define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD (1 << 6) /**< pfring_zc_pkt_buff.flags: buffer contains flow metadata (and eventually the raw packet) */ 
+#define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_UPDATE (1 << 6) /**< pfring_zc_pkt_buff.flags: buffer contains flow metadata */ 
+#define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_PACKET (1 << 7) /**< pfring_zc_pkt_buff.flags: buffer contains a raw packet */ 
+#define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_MARKER (1 << 8) /**< pfring_zc_pkt_buff.flags: buffer belongs to a flow that has been marked */ 
 
 #ifdef __cplusplus
 extern "C" {
