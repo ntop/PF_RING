@@ -510,35 +510,31 @@ typedef struct {
 typedef enum {
   flow_drop_rule,
   flow_mark_rule
-} accolade_flow_rule_type;
+} generic_flow_rule_action_type;
 
 typedef struct { 
-  accolade_flow_rule_type rule_type;
+  generic_flow_rule_action_type action;
   u_int32_t flow_id; /* flow id from flow metadata */
   u_int32_t thread; /* id of the thread setting the rule */
-} accolade_flow_hw_rule;
-
-typedef enum {
-  flow_tuple_drop_rule
-} netcope_flow_rule_type;
+} generic_flow_id_hw_rule;
 
 typedef struct { 
-  netcope_flow_rule_type rule_type;
-  uint8_t  interface; /* from extended_hdr.if_index */
+  generic_flow_rule_action_type action;
   ip_addr src_ip;
   ip_addr dst_ip;
-  uint16_t src_port;
-  uint16_t dst_port;
-  uint8_t  ip_version;
-  uint8_t  protocol;
-} netcope_flow_hw_rule;
+  u_int16_t src_port;
+  u_int16_t dst_port;
+  u_int8_t ip_version;
+  u_int8_t protocol;
+  u_int8_t interface; /* from extended_hdr.if_index */
+} generic_flow_tuple_hw_rule;
 
 typedef enum {
   intel_82599_five_tuple_rule,
   intel_82599_perfect_filter_rule,
   silicom_redirector_rule,
-  accolade_flow_filter_rule,
-  netcope_flow_filter_rule
+  generic_flow_id_rule,
+  generic_flow_tuple_rule
 } hw_filtering_rule_type;
 
 typedef struct {
@@ -549,8 +545,8 @@ typedef struct {
     intel_82599_five_tuple_filter_hw_rule five_tuple_rule;
     intel_82599_perfect_filter_hw_rule perfect_rule;
     silicom_redirector_hw_rule redirector_rule;
-    accolade_flow_hw_rule flow_rule;
-    netcope_flow_hw_rule flow_tuple_rule;
+    generic_flow_id_hw_rule flow_id_rule;
+    generic_flow_tuple_hw_rule flow_tuple_rule;
   } rule_family;
 } hw_filtering_rule;
 
@@ -592,6 +588,34 @@ typedef enum {
   add_hw_rule,
   remove_hw_rule
 } hw_filtering_rule_command;
+
+/* *********************************** */
+
+typedef struct { 
+  u_int32_t flow_id;
+
+  u_int8_t ip_version;
+  u_int8_t l4_protocol;
+
+  u_int8_t tos;
+  u_int8_t tcp_flags;
+
+  ip_addr src_ip;
+  ip_addr dst_ip;
+
+  u_int16_t src_port;
+  u_int16_t dst_port;
+
+  u_int32_t fwd_packets;
+  u_int32_t fwd_bytes;
+  u_int32_t rev_packets;
+  u_int32_t rev_bytes;
+  
+  uint64_t fwd_ts_first;
+  uint64_t fwd_ts_last;
+  uint64_t rev_ts_first;
+  uint64_t rev_ts_last;
+} generic_flow_update;
 
 /* *********************************** */
 
