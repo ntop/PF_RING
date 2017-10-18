@@ -617,6 +617,10 @@ typedef struct {
   uint64_t rev_ts_last;
 } generic_flow_update;
 
+typedef struct {
+  u_int32_t flowid;
+} generic_flow_feedback;
+
 /* *********************************** */
 
 extern struct pf_ring_socket *pfr; /* Forward */
