@@ -667,6 +667,7 @@ typedef struct {
 typedef struct {
   u_int64_t match;
   u_int64_t miss;
+  u_int32_t inactivity; /* sec */
 } hash_filtering_rule_stats;
 
 /* ************************************************* */
