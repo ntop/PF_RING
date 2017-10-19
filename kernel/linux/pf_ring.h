@@ -619,6 +619,7 @@ typedef struct {
 } generic_flow_update;
 
 typedef struct {
+  generic_flow_rule_action_type action;
   u_int32_t flowid;
 } generic_flow_feedback;
 
