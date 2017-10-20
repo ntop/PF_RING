@@ -4491,19 +4491,21 @@ static void i40e_map_vector_to_qp(struct i40e_vsi *vsi, int v_idx, int qp_idx)
 	struct i40e_ring *tx_ring = vsi->tx_rings[qp_idx];
 	struct i40e_ring *rx_ring = vsi->rx_rings[qp_idx];
 
+#ifdef HAVE_PF_RING
 	if (q_vector == NULL)
-		printk("[i40e-ZC] Vector #%d is NULL\n", v_idx);
-
+		netdev_info(vsi->netdev, "vector #%d is NULL\n", v_idx);
 	if (tx_ring == NULL)
-		printk("[i40e-ZC] TX ring #%d is NULL\n", qp_idx);
-
+		netdev_info(vsi->netdev, "TX ring #%d is NULL\n", qp_idx);
+#endif
 	tx_ring->q_vector = q_vector;
 	tx_ring->next = q_vector->tx.ring;
 	q_vector->tx.ring = tx_ring;
 	q_vector->tx.count++;
 
+#ifdef HAVE_PF_RING
 	if (rx_ring == NULL)
-		printk("[i40e-ZC] RX ring #%d is NULL\n", qp_idx);
+		netdev_info(vsi->netdev, "RX ring #%d is NULL\n", qp_idx);
+#endif
 
 	rx_ring->q_vector = q_vector;
 	rx_ring->next = q_vector->rx.ring;
@@ -8758,7 +8760,9 @@ static int i40e_alloc_rings(struct i40e_vsi *vsi)
 	struct i40e_pf *pf = vsi->back;
 	int i;
 
-	printk("[i40e-ZC] Allocating %d RX/TX rings\n", vsi->alloc_queue_pairs);
+#ifdef HAVE_PF_RING
+	netdev_info(vsi->netdev, "%d RX/TX rings requested\n", vsi->alloc_queue_pairs);
+#endif
 
 	/* Set basic values in the rings to be used later during open() */
 	for (i = 0; i < vsi->alloc_queue_pairs; i++) {
@@ -8777,8 +8781,6 @@ static int i40e_alloc_rings(struct i40e_vsi *vsi)
 		tx_ring->size = 0;
 		tx_ring->dcb_tc = 0;
 
-		printk("[i40e-ZC] TX ring #%d allocated\n", i);
-
 		if (vsi->back->hw_features & I40E_HW_WB_ON_ITR_CAPABLE)
 			tx_ring->flags = I40E_TXR_FLAGS_WB_ON_ITR;
 		tx_ring->tx_itr_setting = pf->tx_itr_default;
@@ -8796,9 +8798,11 @@ static int i40e_alloc_rings(struct i40e_vsi *vsi)
 		rx_ring->dcb_tc = 0;
 		rx_ring->rx_itr_setting = pf->rx_itr_default;
 		vsi->rx_rings[i] = rx_ring;
-
-		printk("[i40e-ZC] RX ring #%d allocated\n", i);
 	}
+
+#ifdef HAVE_PF_RING
+	netdev_info(vsi->netdev, "%d RX/TX rings allocated successfully\n", vsi->alloc_queue_pairs);
+#endif
 
 	return 0;
 
