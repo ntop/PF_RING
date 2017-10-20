@@ -1125,7 +1125,8 @@ static int handle_hw_filtering_rule(struct pf_ring_socket *pfr,
     break;
 
   case silicom_redirector_rule:
-  case accolade_flow_filter_rule:
+  case generic_flow_id_rule:
+  case generic_flow_tuple_rule:
     return(-EINVAL); /* handled in userland */
     break;
   }
@@ -2213,9 +2214,9 @@ static int parse_pkt(struct sk_buff *skb,
 
 /* ********************************** */
 
-static int hash_bucket_match (sw_filtering_hash_bucket *hash_bucket,
-                              struct pfring_pkthdr *hdr,
-                              u_char mask_src, u_char mask_dst)
+static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
+                             struct pfring_pkthdr *hdr,
+                             u_char mask_src, u_char mask_dst)
 {
   /*
     When protocol of host_peer is IPv4, s6_addr32[0] contains IPv4
@@ -2296,7 +2297,6 @@ static inline int hash_bucket_match_rule(sw_filtering_hash_bucket * hash_bucket,
 	     && (hash_bucket->rule.host4_peer_b == rule->host4_peer_a)
 	     && (hash_bucket->rule.port_peer_a == rule->port_peer_b)
 	     && (hash_bucket->rule.port_peer_b == rule->port_peer_a)))) {
-    hash_bucket->rule.internals.jiffies_last_match = jiffies;
     return(1);
   } else
     return(0);
@@ -3194,6 +3194,7 @@ int check_perfect_rules(struct sk_buff *skb,
 
   while(hash_bucket != NULL) {
     if(hash_bucket_match(hash_bucket, hdr, 0, 0)) {
+      hash_bucket->rule.internals.jiffies_last_match = jiffies;
       hash_bucket->match++;
       hash_found = 1;
       break;
@@ -7001,6 +7002,7 @@ static int ring_getsockopt(struct socket *sock,
               hash_filtering_rule_stats hfrs;
               hfrs.match = bucket->match;
               hfrs.miss = pfr->sw_filtering_hash_miss;
+              hfrs.inactivity = (u_int32_t) (jiffies_to_msecs(jiffies - bucket->rule.internals.jiffies_last_match) / 1000);
 	      rc = sizeof(hash_filtering_rule_stats);
               if(copy_to_user(optval, &hfrs, rc)) {
 		printk("[PF_RING] copy_to_user() failure\n");

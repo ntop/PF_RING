@@ -708,6 +708,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -781,6 +782,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1033,6 +1035,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1170,7 +1181,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1323,6 +1334,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -3834,135 +3846,7 @@ HAVE_MYRICOM="-DHAVE_MYRICOM"
 MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
 MYRICOM_DEP="extract_myricom_lib"
 
-LIBS="-lsze2 $LIBS"
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for szedata_open in -lsze2" >&5
-$as_echo_n "checking for szedata_open in -lsze2... " >&6; }
-if ${ac_cv_lib_sze2_szedata_open+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsze2  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char szedata_open ();
-int
-main ()
-{
-return szedata_open ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_sze2_szedata_open=yes
-else
-  ac_cv_lib_sze2_szedata_open=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sze2_szedata_open" >&5
-$as_echo "$ac_cv_lib_sze2_szedata_open" >&6; }
-if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBSZE2 1
-_ACEOF
-
-  LIBS="-lsze2 $LIBS"
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if sze2 is present" >&5
-$as_echo_n "checking if sze2 is present... " >&6; }
-if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking Invea-Tech support" >&5
-$as_echo_n "checking Invea-Tech support... " >&6; }
-  if test -f lib/pfring_mod_invea.c; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-    INVEATECH_INC=""
-    INVEATECH_LIB="-lsze2"
-    INVEATECH_OBJS="pfring_mod_invea.o"
-    HAVE_INVEATECH="-D HAVE_INVEATECH"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-  fi
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-if test -f lib/pfring_mod_mlx.c; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ibv_open_device in -libverbs" >&5
-$as_echo_n "checking for ibv_open_device in -libverbs... " >&6; }
-if ${ac_cv_lib_ibverbs_ibv_open_device+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-libverbs  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ibv_open_device ();
-int
-main ()
-{
-return ibv_open_device ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_ibverbs_ibv_open_device=yes
-else
-  ac_cv_lib_ibverbs_ibv_open_device=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ibverbs_ibv_open_device" >&5
-$as_echo "$ac_cv_lib_ibverbs_ibv_open_device" >&6; }
-if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then :
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_MELLANOX 1
-_ACEOF
-
-fi
-
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking Mellanox support" >&5
-$as_echo_n "checking Mellanox support... " >&6; }
-   if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then
-      MLX_OBJS="pfring_mod_mlx.o"
-      HAVE_MLX="-DHAVE_MELLANOX"
-      SYSLIBS="$SYSLIBS -libverbs"
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-   else
-     MLX_OBJS=""
-     HAVE_MLX=""
-     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-   fi
-fi
 
 fi
 

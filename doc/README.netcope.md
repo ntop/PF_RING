@@ -47,5 +47,5 @@ sudo ./pfcount -i nsf:0
 Please note that:
  - in order to open port 0 from adapter 0 you should specify "nsf:0:0" 
    (nsf:CARD:PORT) or just "anic:0" (anic:PORT) if device is 0.
- - in order to open ring 0 from port 0 you should specify "anic:0@0"
-   (nsf:CARD@RING).
+ - in order to open a single queue, for instance queue 0, from port 0 
+   you should specify "anic:0@0" (nsf:CARD@RING).

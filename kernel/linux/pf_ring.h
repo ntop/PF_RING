@@ -303,13 +303,14 @@ struct pkt_parsing_info {
 struct pfring_extended_pkthdr {
   u_int64_t timestamp_ns;  /* Packet timestamp at ns precision. Note that if your NIC supports
 			      hardware timestamp, this is the place to read timestamp from */
-#define PKT_FLAGS_CHECKSUM_OFFLOAD 1 << 0 /* IP/TCP checksum offload enabled */
-#define PKT_FLAGS_CHECKSUM_OK      1 << 1 /* Valid checksum (with IP/TCP checksum offload enabled) */
-#define PKT_FLAGS_IP_MORE_FRAG     1 << 2 /* IP More fragments flag set */
-#define PKT_FLAGS_IP_FRAG_OFFSET   1 << 3 /* IP fragment offset set (not 0) */
-#define PKT_FLAGS_VLAN_HWACCEL     1 << 4 /* VLAN stripped by hw */
-#define PKT_FLAGS_FLOW_OFFLOAD     1 << 6 /* Flow metadata (keep compatible with ZC) */
-#define PKT_FLAGS_FLOW_MARKER      1 << 7 /* Packet belongs to a flow that has been marked (keep compatible with ZC) */
+#define PKT_FLAGS_CHECKSUM_OFFLOAD    1 << 0 /* IP/TCP checksum offload enabled */
+#define PKT_FLAGS_CHECKSUM_OK         1 << 1 /* Valid checksum (with IP/TCP checksum offload enabled) */
+#define PKT_FLAGS_IP_MORE_FRAG        1 << 2 /* IP More fragments flag set */
+#define PKT_FLAGS_IP_FRAG_OFFSET      1 << 3 /* IP fragment offset set (not 0) */
+#define PKT_FLAGS_VLAN_HWACCEL        1 << 4 /* VLAN stripped by hw */
+#define PKT_FLAGS_FLOW_OFFLOAD_UPDATE 1 << 6 /* Flow update metadata, see generic_flow_update struct (keep flag compatible with ZC) */
+#define PKT_FLAGS_FLOW_OFFLOAD_PACKET 1 << 7 /* Flow raw packet, pkt_hash contains the flow_id (keep flag compatible with ZC) */
+#define PKT_FLAGS_FLOW_OFFLOAD_MARKER 1 << 8 /* Flow raw packet belongs to a flow that has been marked (keep flag compatible with ZC) */
   u_int32_t flags;
 
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
@@ -510,19 +511,31 @@ typedef struct {
 typedef enum {
   flow_drop_rule,
   flow_mark_rule
-} accolade_flow_rule_type;
+} generic_flow_rule_action_type;
 
 typedef struct { 
-  accolade_flow_rule_type rule_type;
+  generic_flow_rule_action_type action;
   u_int32_t flow_id; /* flow id from flow metadata */
   u_int32_t thread; /* id of the thread setting the rule */
-} accolade_flow_hw_rule;
+} generic_flow_id_hw_rule;
+
+typedef struct { 
+  generic_flow_rule_action_type action;
+  ip_addr src_ip;
+  ip_addr dst_ip;
+  u_int16_t src_port;
+  u_int16_t dst_port;
+  u_int8_t ip_version;
+  u_int8_t protocol;
+  u_int8_t interface; /* from extended_hdr.if_index */
+} generic_flow_tuple_hw_rule;
 
 typedef enum {
   intel_82599_five_tuple_rule,
   intel_82599_perfect_filter_rule,
   silicom_redirector_rule,
-  accolade_flow_filter_rule
+  generic_flow_id_rule,
+  generic_flow_tuple_rule
 } hw_filtering_rule_type;
 
 typedef struct {
@@ -533,7 +546,8 @@ typedef struct {
     intel_82599_five_tuple_filter_hw_rule five_tuple_rule;
     intel_82599_perfect_filter_hw_rule perfect_rule;
     silicom_redirector_hw_rule redirector_rule;
-    accolade_flow_hw_rule flow_rule;
+    generic_flow_id_hw_rule flow_id_rule;
+    generic_flow_tuple_hw_rule flow_tuple_rule;
   } rule_family;
 } hw_filtering_rule;
 
@@ -575,6 +589,39 @@ typedef enum {
   add_hw_rule,
   remove_hw_rule
 } hw_filtering_rule_command;
+
+/* *********************************** */
+
+typedef struct { 
+  u_int32_t flow_id;
+
+  u_int8_t ip_version;
+  u_int8_t l4_protocol;
+
+  u_int8_t tos;
+  u_int8_t tcp_flags;
+
+  ip_addr src_ip;
+  ip_addr dst_ip;
+
+  u_int16_t src_port;
+  u_int16_t dst_port;
+
+  u_int32_t fwd_packets;
+  u_int32_t fwd_bytes;
+  u_int32_t rev_packets;
+  u_int32_t rev_bytes;
+  
+  uint64_t fwd_ts_first;
+  uint64_t fwd_ts_last;
+  uint64_t rev_ts_first;
+  uint64_t rev_ts_last;
+} generic_flow_update;
+
+typedef struct {
+  generic_flow_rule_action_type action;
+  u_int32_t flow_id;
+} generic_flow_feedback;
 
 /* *********************************** */
 
@@ -620,6 +667,7 @@ typedef struct {
 typedef struct {
   u_int64_t match;
   u_int64_t miss;
+  u_int32_t inactivity; /* sec */
 } hash_filtering_rule_stats;
 
 /* ************************************************* */

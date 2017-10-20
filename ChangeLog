@@ -1,3 +1,67 @@
+---------------------------------------                                                                                                                                                                             
+2017-10-20 PF_RING 7.0
+
+* PF_RING Library
+ - Flow offload support
+   - New PF_RING_FLOW_OFFLOAD pfring_open() flag to enable hw flow offload on supported cards (received buffers are native metadata)
+   - New PF_RING_FLOW_OFFLOAD_NOUPDATES pfring_open() flag to disable flow updates with hw flow offload enabled: only standard raw packets with a flow id are received
+   - New PKT_FLAGS_FLOW_OFFLOAD_UPDATE packet flag to indicate flow metadata in the received buffer (generic_flow_update struct)
+   - New PKT_FLAGS_FLOW_OFFLOAD_PACKET packet flag to indicate raw packet with flow_id in pkt_hash
+   - New PKT_FLAGS_FLOW_OFFLOAD_MARKER packet flag to indicate marked raw packet
+ - Fixes for ARM systems
+
+* ZC Library
+ - New pfring_zc_set_app_name API
+ - PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD flag to enable hw flow offload
+ - Fixed BPF filters in SPSC queues
+ - Fixed hugepages cleanup in case of application dropping privileges
+ - Fixed sigbus error on hugepages allocation failure on numa systems
+ - Fixed multiple clusters allocation in a single process
+
+* PF_RING-aware Libpcap/Tcpdump
+ - Libpcap update v.1.8.1
+ - Tcpdump update v.4.9.2
+
+* PF_RING Kernel Module
+ - Docker/containers namespaces isolation support
+ - Fixed capture on Raspberry Pi
+ - Implemented support for VLAN filtering based on interface name (<device name>.<VLAN ID>, where ID = 0 accepts only untagged packets)
+ - New cluster types cluster_per_flow_ip_5_tuple/cluster_per_inner_flow_ip_5_tuple to balance 5 tuple with IP traffic, src/dst mac otherwise
+ - Fixed hash rule last match, new hash_filtering_rule_stats.inactivity stats
+
+* PF_RING Capture Modules
+ - Accolade flow offload support
+   - New hw_filtering_rule type accolade_flow_filter_rule to discard or mark a flow
+ - Netcope support
+   - New hw_filtering_rule type netcope_flow_filter_rule to discard a flow
+ - Improved Fiberblaze support
+   - pfring_get_device_clock support
+   - Ability to set native filters by setting as BPF string 'fbcard:<fb filter>'
+   - Fixed TX memory management
+   - Fixed subnet BPF filters
+   - Fixed drop counter
+   - Fixed capture mode
+   - Fixed sockets not enabled
+   - FPGA error detection
+ - Endace DAG update
+ - npcap/timeline module compressed pcap extraction fix
+
+* Drivers
+ - ixgbe-zc driver update v.5.0.4
+ - i40e-zc driver update v.2.2.4
+
+* nBPF
+ - Fixed nBPF parser memory leak
+
+* Examples
+ - New pfsend option -L <num> to forge <num> VLAN IDs
+ - zbalance_ipc improvements
+   - Ability to dump output to log file (-l)
+   - Fixed privileges drop (-D)
+
+* Misc
+ - Fixed systemd dependencies, renamed pfring.service to pf_ring.service
+ - New /etc/pf_ring/interfaces.conf configuration file for configuring management and capture interfaces
 
 ---------------------------------------                                                                                                                                                                             
 2017-04-24 PF_RING 6.6

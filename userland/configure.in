@@ -153,39 +153,39 @@ HAVE_MYRICOM="-DHAVE_MYRICOM"
 MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
 MYRICOM_DEP="extract_myricom_lib"
 
-LIBS="-lsze2 $LIBS"
-AC_CHECK_LIB([sze2], [szedata_open], )
-AC_MSG_CHECKING([if sze2 is present])
-if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
-  AC_MSG_RESULT([yes])
-  AC_MSG_CHECKING([Invea-Tech support])
-  if test -f lib/pfring_mod_invea.c; then
-    AC_MSG_RESULT(yes)
-    INVEATECH_INC=""
-    INVEATECH_LIB="-lsze2"
-    INVEATECH_OBJS="pfring_mod_invea.o"
-    HAVE_INVEATECH="-D HAVE_INVEATECH"
-  else
-    AC_MSG_RESULT(no) 
-  fi
-else
-  AC_MSG_RESULT(no)
-fi
+dnl> LIBS="-lsze2 $LIBS"
+dnl> AC_CHECK_LIB([sze2], [szedata_open], )
+dnl> AC_MSG_CHECKING([if sze2 is present])
+dnl> if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
+dnl>   AC_MSG_RESULT([yes])
+dnl>   AC_MSG_CHECKING([Invea-Tech support])
+dnl>   if test -f lib/pfring_mod_invea.c; then
+dnl>     AC_MSG_RESULT(yes)
+dnl>     INVEATECH_INC=""
+dnl>     INVEATECH_LIB="-lsze2"
+dnl>     INVEATECH_OBJS="pfring_mod_invea.o"
+dnl>     HAVE_INVEATECH="-D HAVE_INVEATECH"
+dnl>   else
+dnl>     AC_MSG_RESULT(no) 
+dnl>   fi
+dnl> else
+dnl>   AC_MSG_RESULT(no)
+dnl> fi
 
-if test -f lib/pfring_mod_mlx.c; then
-   AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
-   AC_MSG_CHECKING([Mellanox support])
-   if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
-      MLX_OBJS="pfring_mod_mlx.o"
-      HAVE_MLX="-DHAVE_MELLANOX"
-      SYSLIBS="$SYSLIBS -libverbs"   
-      AC_MSG_RESULT(yes)
-   else
-     MLX_OBJS=""
-     HAVE_MLX=""
-     AC_MSG_RESULT(no)
-   fi
-fi
+dnl> if test -f lib/pfring_mod_mlx.c; then
+dnl>    AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
+dnl>    AC_MSG_CHECKING([Mellanox support])
+dnl>    if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
+dnl>       MLX_OBJS="pfring_mod_mlx.o"
+dnl>       HAVE_MLX="-DHAVE_MELLANOX"
+dnl>       SYSLIBS="$SYSLIBS -libverbs"   
+dnl>       AC_MSG_RESULT(yes)
+dnl>    else
+dnl>      MLX_OBJS=""
+dnl>      HAVE_MLX=""
+dnl>      AC_MSG_RESULT(no)
+dnl>    fi
+dnl> fi
 
 dnl> end of x86_64 check
 fi
