@@ -24,10 +24,9 @@
 
 #define RING_MAGIC
 #define RING_MAGIC_VALUE             0x88
-#define RING_FLOWSLOT_VERSION          16 /*
-					    Increment whenever we change slot or packet header
-					    layout (e.g. we add/move a field)
-					  */
+
+/* Increment whenever we change slot or packet header layout (e.g. we add/move a field) */
+#define RING_FLOWSLOT_VERSION          16 
 
 #define DEFAULT_BUCKET_LEN            128
 #define MAX_NUM_DEVICES               256
@@ -41,8 +40,8 @@
 #define pfring_ptr ax25_ptr
 
 /* Versioning */
-#define RING_VERSION                "6.7.0"
-#define RING_VERSION_NUM           0x060700
+#define RING_VERSION                "7.1.0"
+#define RING_VERSION_NUM           0x070100
 
 /* Set */
 #define SO_ADD_TO_CLUSTER                 99
@@ -133,10 +132,10 @@
   please do not change them to unsigned
 */
 struct pkt_offset {
-  int16_t eth_offset; /* 
-			 This offset *must* be added to all offsets below 
-			 ONLY if you are inside the kernel. Ignore it in user-space.
-		       */
+  /* This 'eth_offset' offset *must* be added to all offsets below 
+   * ONLY if you are inside the kernel. Ignore it in user-space. */
+  int16_t eth_offset; 
+
   int16_t vlan_offset;
   int16_t l3_offset;
   int16_t l4_offset;
