@@ -21,8 +21,8 @@ cd suricata
 git clone https://github.com/OISF/libhtp
 ./autogen.sh
 LIBS="-lrt" ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
---enable-pfring --with-libpfring-includes=/usr/local/pfring/include \
---with-libpfring-libraries=/usr/local/pfring/lib
+--enable-pfring --with-libpfring-includes=/usr/local/include \
+--with-libpfring-libraries=/usr/local/lib
 make
 sudo make install
 sudo ldconfig
@@ -32,11 +32,16 @@ make install-rules
 
 suricata --build-info | grep PF_RING
 PF_RING support:                         yes
+```
 
+## Standard Mode
+
+```
 $ suricata --pfring-int=eth0 --pfring-cluster-id=99 --pfring-cluster-type=cluster_flow -c /etc/suricata/suricata.yaml
 ```
 
 ## ZC Mode
+
 ```
 cd PF_RING/drivers/ZC/intel/ixgbe/ixgbe-*-zc/src/
 make
