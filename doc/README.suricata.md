@@ -14,8 +14,6 @@ make && sudo make install
 cd PF_RING/userland/lib
 ./configure && make && sudo make install
 
-sudo modprobe pf_ring
-
 git clone https://github.com/inliniac/suricata.git
 cd suricata
 git clone https://github.com/OISF/libhtp
@@ -37,16 +35,17 @@ PF_RING support:                         yes
 ## Standard Mode
 
 ```
-$ suricata --pfring-int=eth0 --pfring-cluster-id=99 --pfring-cluster-type=cluster_flow -c /etc/suricata/suricata.yaml
+sudo modprobe pf_ring
+
+sudo suricata --pfring-int=eth0 --pfring-cluster-id=99 --pfring-cluster-type=cluster_flow -c /etc/suricata/suricata.yaml
 ```
 
 ## ZC Mode
 
 ```
 cd PF_RING/drivers/ZC/intel/ixgbe/ixgbe-*-zc/src/
-make
-./load_driver.sh
+make && sudo ./load_driver.sh
 
-suricata --pfring-int=zc:eth1 -c /etc/suricata/suricata.yaml
+sudo suricata --pfring-int=zc:eth1 -c /etc/suricata/suricata.yaml
 ```
 
