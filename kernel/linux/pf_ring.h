@@ -64,6 +64,7 @@
 #define SO_SET_POLL_WATERMARK            117
 #define SO_SET_VIRTUAL_FILTERING_DEVICE  118
 #define SO_REHASH_RSS_PACKET             119
+#define SO_SET_SW_FILTERING_SAMPLING_RATE 120
 #define SO_SHUTDOWN_RING                 124
 #define SO_PURGE_IDLE_RULES              125 /* inactivity (sec) */
 #define SO_SET_SOCKET_MODE               126
@@ -1147,6 +1148,7 @@ struct pf_ring_socket {
   sw_filtering_hash_bucket **sw_filtering_hash;
   u_int64_t sw_filtering_hash_match;
   u_int64_t sw_filtering_hash_miss;
+  u_int64_t sw_filtering_hash_filtered;
   u_int32_t num_sw_filtering_hash;
 
   /* Sw Filtering Rules - wildcard */
@@ -1156,6 +1158,8 @@ struct pf_ring_socket {
   /* Hw Filtering Rules */
   u_int16_t num_hw_filtering_rules;
   struct list_head hw_filtering_rules;
+  /* Sw Filtering - sampling rate */
+  u_int32_t sw_filtering_sampling_rate;
 
   /* Locks */
   atomic_t num_ring_users;

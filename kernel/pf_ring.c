@@ -365,6 +365,7 @@ static unsigned int quick_mode = 0;
 static unsigned int force_ring_lock = 0;
 static unsigned int enable_debug = 0;
 static unsigned int transparent_mode = 0;
+static unsigned int filtering_sampling_segment_size = 100;
 static atomic_t ring_id_serial = ATOMIC_INIT(0);
 
 #if defined(RHEL_RELEASE_CODE)
@@ -382,6 +383,7 @@ module_param(quick_mode, uint, 0644);
 module_param(force_ring_lock, uint, 0644);
 module_param(enable_debug, uint, 0644);
 module_param(transparent_mode, uint, 0644);
+module_param(filtering_sampling_segment_size, uint, 0644);
 
 MODULE_PARM_DESC(min_num_slots, "Min number of ring slots");
 MODULE_PARM_DESC(perfect_rules_hash_size, "Perfect rules hash size");
@@ -397,6 +399,7 @@ MODULE_PARM_DESC(force_ring_lock, "Set to 1 to force ring locking (automatically
 MODULE_PARM_DESC(enable_debug, "Set to 1 to enable PF_RING debug tracing into the syslog, 2 for more verbosity");
 MODULE_PARM_DESC(transparent_mode,
 		 "(deprecated)");
+MODULE_PARM_DESC(filtering_sampling_segment_size, "Size of filtered packets segment for sampling (currently, for sw hash filters only)");
 
 /* ********************************** */
 
@@ -1362,20 +1365,22 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
   if(m->private == NULL) {
     /* /proc/net/pf_ring/info */
-    seq_printf(m, "PF_RING Version          : %s (%s)\n", RING_VERSION, GIT_REV);
-    seq_printf(m, "Total rings              : %d\n", atomic_read(&ring_table_size));
+    seq_printf(m, "PF_RING Version                 : %s (%s)\n", RING_VERSION, GIT_REV);
+    seq_printf(m, "Total rings                     : %d\n", atomic_read(&ring_table_size));
     seq_printf(m, "\nStandard (non ZC) Options\n");
-    seq_printf(m, "Ring slots               : %d\n", min_num_slots);
-    seq_printf(m, "Slot version             : %d\n", RING_FLOWSLOT_VERSION);
-    seq_printf(m, "Capture TX               : %s\n", enable_tx_capture ? "Yes [RX+TX]" : "No [RX only]");
-    seq_printf(m, "IP Defragment            : %s\n", enable_ip_defrag ? "Yes" : "No");
-    seq_printf(m, "Socket Mode              : %s\n", quick_mode ? "Quick" : "Standard");
+    seq_printf(m, "Ring slots                      : %d\n", min_num_slots);
+    seq_printf(m, "Slot version                    : %d\n", RING_FLOWSLOT_VERSION);
+    seq_printf(m, "Capture TX                      : %s\n", enable_tx_capture ? "Yes [RX+TX]" : "No [RX only]");
+    seq_printf(m, "IP Defragment                   : %s\n", enable_ip_defrag ? "Yes" : "No");
+    seq_printf(m, "Socket Mode                     : %s\n", quick_mode ? "Quick" : "Standard");
 
     if(enable_frag_coherence) {
       purge_idle_fragment_cache();
-      seq_printf(m, "Cluster Fragment Queue   : %u\n", num_cluster_fragments);
-      seq_printf(m, "Cluster Fragment Discard : %u\n", num_cluster_discarded_fragments);
+      seq_printf(m, "Cluster Fragment Queue          : %u\n", num_cluster_fragments);
+      seq_printf(m, "Cluster Fragment Discard        : %u\n", num_cluster_discarded_fragments);
     }
+	
+	seq_printf(m, "Filtering sampling segment size : %d\n", filtering_sampling_segment_size);
   } else {
     /* Detailed statistics about a PF_RING */
     struct pf_ring_socket *pfr = (struct pf_ring_socket *)m->private;
@@ -1385,7 +1390,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       struct list_head *ptr, *tmp_ptr;
       fsi = pfr->slots_info;
 
-      seq_printf(m, "Bound Device(s)    : ");
+      seq_printf(m, "Bound Device(s)                 : ");
 
       if(pfr->custom_bound_device_name[0] != '\0') {
 	seq_printf(m, pfr->custom_bound_device_name);
@@ -1402,60 +1407,62 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
       seq_printf(m, "\n");
 
-      seq_printf(m, "Active             : %d\n", pfr->ring_active);
-      seq_printf(m, "Breed              : %s\n", (pfr->zc_device_entry != NULL) ? "ZC" : "Standard");
-      seq_printf(m, "Appl. Name         : %s\n", pfr->appl_name ? pfr->appl_name : "<unknown>");
-      seq_printf(m, "Socket Mode        : %s\n", sockmode2string(pfr->mode));
+      seq_printf(m, "Active                : %d\n", pfr->ring_active);
+      seq_printf(m, "Breed                 : %s\n", (pfr->zc_device_entry != NULL) ? "ZC" : "Standard");
+      seq_printf(m, "Appl. Name            : %s\n", pfr->appl_name ? pfr->appl_name : "<unknown>");
+      seq_printf(m, "Socket Mode           : %s\n", sockmode2string(pfr->mode));
       if (pfr->mode != send_only_mode) {
-        seq_printf(m, "Capture Direction  : %s\n", direction2string(pfr->direction));
+        seq_printf(m, "Capture Direction     : %s\n", direction2string(pfr->direction));
         if (pfr->zc_device_entry == NULL) {
-          seq_printf(m, "Sampling Rate      : %d\n", pfr->sample_rate);
-          seq_printf(m, "IP Defragment      : %s\n", enable_ip_defrag ? "Yes" : "No");
-          seq_printf(m, "BPF Filtering      : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
-          seq_printf(m, "Sw Filt Hash Rules : %d\n", pfr->num_sw_filtering_hash);
-          seq_printf(m, "Sw Filt WC Rules   : %d\n", pfr->num_sw_filtering_rules);
-          seq_printf(m, "Sw Filt Hash Match : %llu\n", pfr->sw_filtering_hash_match);
-          seq_printf(m, "Sw Filt Hash Miss  : %llu\n", pfr->sw_filtering_hash_miss);
+          seq_printf(m, "Sampling Rate         : %d\n", pfr->sample_rate);
+          seq_printf(m, "IP Defragment         : %s\n", enable_ip_defrag ? "Yes" : "No");
+          seq_printf(m, "BPF Filtering         : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
+          seq_printf(m, "Sw Filt Hash Rules    : %d\n", pfr->num_sw_filtering_hash);
+          seq_printf(m, "Sw Filt WC Rules      : %d\n", pfr->num_sw_filtering_rules);
+          seq_printf(m, "Sw Filt Hash Match    : %llu\n", pfr->sw_filtering_hash_match);
+          seq_printf(m, "Sw Filt Hash Miss     : %llu\n", pfr->sw_filtering_hash_miss);
+          seq_printf(m, "Sw Filt Hash Filtered : %llu\n", pfr->sw_filtering_hash_filtered);		
+          seq_printf(m, "Sw Filt Sampling Rate : %u\n", pfr->sw_filtering_sampling_rate);
         }
-        seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
-        seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
-        seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
+        seq_printf(m, "Hw Filt Rules         : %d\n", pfr->num_hw_filtering_rules);
+        seq_printf(m, "Poll Pkt Watermark    : %d\n", pfr->poll_num_pkts_watermark);
+        seq_printf(m, "Num Poll Calls        : %u\n", pfr->num_poll_calls);
       }
 
       if(pfr->zc_device_entry != NULL) {
         /* ZC */
-        seq_printf(m, "Channel Id         : %d\n", pfr->zc_device_entry->zc_dev.channel_id);
+        seq_printf(m, "Channel Id            : %d\n", pfr->zc_device_entry->zc_dev.channel_id);
         if (pfr->mode != send_only_mode)
-          seq_printf(m, "Num RX Slots       : %d\n", pfr->zc_device_entry->zc_dev.mem_info.rx.packet_memory_num_slots);
+          seq_printf(m, "Num RX Slots          : %d\n", pfr->zc_device_entry->zc_dev.mem_info.rx.packet_memory_num_slots);
         if (pfr->mode != recv_only_mode)
-	  seq_printf(m, "Num TX Slots       : %d\n", pfr->zc_device_entry->zc_dev.mem_info.tx.packet_memory_num_slots);
+	  seq_printf(m, "Num TX Slots          : %d\n", pfr->zc_device_entry->zc_dev.mem_info.tx.packet_memory_num_slots);
       } else if(fsi != NULL) {
         /* Standard PF_RING */
-	seq_printf(m, "Channel Id Mask    : 0x%016llX\n", pfr->channel_id_mask);
-	seq_printf(m, "VLAN Id            : %d\n", pfr->vlan_id);
+	seq_printf(m, "Channel Id Mask       : 0x%016llX\n", pfr->channel_id_mask);
+	seq_printf(m, "VLAN Id               : %d\n", pfr->vlan_id);
         if (pfr->cluster_id != 0)
-          seq_printf(m, "Cluster Id         : %d\n", pfr->cluster_id);
-	seq_printf(m, "Slot Version       : %d [%s]\n", fsi->version, RING_VERSION);
-	seq_printf(m, "Min Num Slots      : %d\n", fsi->min_num_slots);
-	seq_printf(m, "Bucket Len         : %d\n", fsi->data_len);
-	seq_printf(m, "Slot Len           : %d [bucket+header]\n", fsi->slot_len);
-	seq_printf(m, "Tot Memory         : %llu\n", fsi->tot_mem);
+          seq_printf(m, "Cluster Id            : %d\n", pfr->cluster_id);
+          seq_printf(m, "Slot Version          : %d [%s]\n", fsi->version, RING_VERSION);
+          seq_printf(m, "Min Num Slots         : %d\n", fsi->min_num_slots);
+          seq_printf(m, "Bucket Len            : %d\n", fsi->data_len);
+          seq_printf(m, "Slot Len              : %d [bucket+header]\n", fsi->slot_len);
+          seq_printf(m, "Tot Memory            : %llu\n", fsi->tot_mem);
         if (pfr->mode != send_only_mode) {
-	  seq_printf(m, "Tot Packets        : %lu\n", (unsigned long)fsi->tot_pkts);
-	  seq_printf(m, "Tot Pkt Lost       : %lu\n", (unsigned long)fsi->tot_lost);
-	  seq_printf(m, "Tot Insert         : %lu\n", (unsigned long)fsi->tot_insert);
-	  seq_printf(m, "Tot Read           : %lu\n", (unsigned long)fsi->tot_read);
-	  seq_printf(m, "Insert Offset      : %lu\n", (unsigned long)fsi->insert_off);
-	  seq_printf(m, "Remove Offset      : %lu\n", (unsigned long)fsi->remove_off);
-	  seq_printf(m, "Num Free Slots     : %lu\n",  (unsigned long)get_num_ring_free_slots(pfr));
+          seq_printf(m, "Tot Packets           : %lu\n", (unsigned long)fsi->tot_pkts);
+          seq_printf(m, "Tot Pkt Lost          : %lu\n", (unsigned long)fsi->tot_lost);
+          seq_printf(m, "Tot Insert            : %lu\n", (unsigned long)fsi->tot_insert);
+          seq_printf(m, "Tot Read              : %lu\n", (unsigned long)fsi->tot_read);
+          seq_printf(m, "Insert Offset         : %lu\n", (unsigned long)fsi->insert_off);
+          seq_printf(m, "Remove Offset         : %lu\n", (unsigned long)fsi->remove_off);
+          seq_printf(m, "Num Free Slots        : %lu\n",  (unsigned long)get_num_ring_free_slots(pfr));
         }
         if (pfr->mode != recv_only_mode) {
-	  seq_printf(m, "TX: Send Ok        : %lu\n", (unsigned long)fsi->good_pkt_sent);
-	  seq_printf(m, "TX: Send Errors    : %lu\n", (unsigned long)fsi->pkt_send_error);
+          seq_printf(m, "TX: Send Ok           : %lu\n", (unsigned long)fsi->good_pkt_sent);
+          seq_printf(m, "TX: Send Errors       : %lu\n", (unsigned long)fsi->pkt_send_error);
         }
         if (pfr->mode != send_only_mode) {
-	  seq_printf(m, "Reflect: Fwd Ok    : %lu\n", (unsigned long)fsi->tot_fwd_ok);
-	  seq_printf(m, "Reflect: Fwd Errors: %lu\n", (unsigned long)fsi->tot_fwd_notok);
+          seq_printf(m, "Reflect: Fwd Ok       : %lu\n", (unsigned long)fsi->tot_fwd_ok);
+          seq_printf(m, "Reflect: Fwd Errors   : %lu\n", (unsigned long)fsi->tot_fwd_notok);
         }
       }
     } else
@@ -3471,8 +3478,17 @@ static int add_skb_to_ring(struct sk_buff *skb,
   /* [2.1] Search the hash */
   if(pfr->sw_filtering_hash != NULL) {
     hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ);
-    if (hash_found)
+    if (hash_found) {
       pfr->sw_filtering_hash_match++;
+	  /* If there is a filter for the session, let the first 'sw_filtering_sampling_rate' (e.g. 10) packets
+	   * of every 'filtering_sampling_segment_size' (e.g. 100) filtered packets, to pass the filter
+	   */
+	  if ( pfr->sw_filtering_sampling_rate && fwd_pkt==0 && ((pfr->sw_filtering_hash_match % filtering_sampling_segment_size) < pfr->sw_filtering_sampling_rate) ) {
+		fwd_pkt=1;
+	  } else {
+	  	pfr->sw_filtering_hash_filtered++;
+	  }
+    }
     else
       pfr->sw_filtering_hash_miss++;
   }
@@ -4114,6 +4130,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->master_ring = NULL;
   pfr->ring_dev = &none_device_element; /* Unbound socket */
   pfr->sample_rate = 1;	/* No sampling */
+  pfr->sw_filtering_sampling_rate = 0; /* No filtering sampling */
   sk->sk_family = PF_RING;
   sk->sk_destruct = ring_sock_destruct;
   pfr->ring_id = atomic_inc_return(&ring_id_serial);
@@ -6526,6 +6543,13 @@ static int ring_setsockopt(struct socket *sock,
       return(-EFAULT);
     break;
 
+  case SO_SET_SW_FILTERING_SAMPLING_RATE:
+	  if(optlen != sizeof(pfr->sw_filtering_sampling_rate))
+		return(-EINVAL);
+	  if(copy_from_user(&pfr->sw_filtering_sampling_rate, optval, sizeof(pfr->sw_filtering_sampling_rate)))
+		return(-EFAULT);
+	  break;
+
   case SO_ACTIVATE_RING:
     debug_printk(2, "* SO_ACTIVATE_RING *\n");
 
@@ -8041,13 +8065,14 @@ static int __init ring_init(void)
   if(transparent_mode != 0)
     printk("[PF_RING] Warning: transparent_mode is deprecated!\n");
 
-  printk("[PF_RING] Min # ring slots %d\n", min_num_slots);
-  printk("[PF_RING] Slot version     %d\n",
+  printk("[PF_RING] Min # ring slots                 %d\n", min_num_slots);
+  printk("[PF_RING] Slot version                     %d\n",
 	 RING_FLOWSLOT_VERSION);
-  printk("[PF_RING] Capture TX       %s\n",
+  printk("[PF_RING] Capture TX                       %s\n",
 	 enable_tx_capture ? "Yes [RX+TX]" : "No [RX only]");
-  printk("[PF_RING] IP Defragment    %s\n",
+  printk("[PF_RING] IP Defragment                    %s\n",
 	 enable_ip_defrag ? "Yes" : "No");
+  printk("[PF_RING] Filtering sampling segment size  %d\n", filtering_sampling_segment_size);	 
 
   if((rc = proto_register(&ring_proto, 0)) != 0)
     return(rc);

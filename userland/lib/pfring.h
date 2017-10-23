@@ -247,6 +247,7 @@ struct __pfring {
   u_int8_t  (*get_num_rx_channels)          (pfring *);
   int       (*get_card_settings)            (pfring *, pfring_card_settings *);
   int       (*set_sampling_rate)            (pfring *, u_int32_t);
+  int       (*set_sw_filtering_sampling_rate)(pfring *, u_int32_t);
   int       (*set_packet_slicing)           (pfring *, packet_slicing_level, u_int32_t);
   int       (*get_selectable_fd)            (pfring *);
   int       (*set_direction)                (pfring *, packet_direction);
@@ -309,6 +310,7 @@ struct __pfring {
   u_int32_t caplen;
   u_int16_t slot_header_len, mtu /* 0 = unknown */;
   u_int32_t sampling_rate, sampling_counter;
+  u_int32_t sw_filtering_sampling_rate;
   packet_slicing_level slicing_level;
   u_int32_t slicing_additional_bytes;
   u_int8_t is_shutting_down, socket_default_accept_policy;
@@ -760,6 +762,15 @@ int pfring_add_filtering_rule(pfring *ring, filtering_rule* rule_to_add);
  * @return 0 on success, a negative value otherwise (e.g. the rule does not exist).
  */
 int pfring_remove_filtering_rule(pfring *ring, u_int16_t rule_id);
+
+/**
+ * Implement packet sampling during sw filtering directly into the kernel. Note that this solution is much more efficient than implementing it in user-space. 
+ * Sampled packets during filtering are only those that already has been filtered (if any).
+ * @param ring The PF_RING handle on which sampling is applied. 
+ * @param rate The sampling rate. Rate of X means that first X packets out of 'filtering_sampling_segment_size' are forwarded. This means that a sampling rate of 0 disables sampling.
+ * @return 0 on success, a negative value otherwise.
+ */
+int pfring_set_sw_filtering_sampling_rate(pfring *ring, u_int32_t rate /* 0 = no sampling */);
 
 /**
  * Remove hash filtering rules inactive for the specified number of seconds.
