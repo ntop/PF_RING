@@ -508,6 +508,22 @@ typedef struct {
 } silicom_redirector_hw_rule;
 
 typedef enum {
+  accolade_drop,
+  accolade_forward
+} accolade_rule_action_type;
+
+typedef struct {
+  accolade_rule_action_type action;
+  u_int32_t port_mask; /* ports on which the rule is defined (default 0xf) */
+  u_int8_t ip_version;
+  u_int8_t protocol; /* l4 */
+  ip_addr src_addr, dst_addr;
+  u_int32_t src_addr_bits, dst_addr_bits;
+  u_int16_t src_port_low, src_port_high;
+  u_int16_t dst_port_low, dst_port_high;
+} accolade_hw_rule;
+
+typedef enum {
   flow_drop_rule,
   flow_mark_rule
 } generic_flow_rule_action_type;
@@ -534,7 +550,9 @@ typedef enum {
   intel_82599_perfect_filter_rule,
   silicom_redirector_rule,
   generic_flow_id_rule,
-  generic_flow_tuple_rule
+  generic_flow_tuple_rule,
+  accolade_rule,
+  accolade_default
 } hw_filtering_rule_type;
 
 typedef struct {
@@ -547,6 +565,7 @@ typedef struct {
     silicom_redirector_hw_rule redirector_rule;
     generic_flow_id_hw_rule flow_id_rule;
     generic_flow_tuple_hw_rule flow_tuple_rule;
+    accolade_hw_rule accolade_rule;
   } rule_family;
 } hw_filtering_rule;
 
