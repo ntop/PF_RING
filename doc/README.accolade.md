@@ -68,3 +68,32 @@ Please note that:
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
 if you use PF_RING ZC API, a per-packet copy takes place, which is required to move
 payload data from Accolade-memory to ZC memory. Keep this in mind!
+
+## Hw Filtering
+Accolade adapters support packet filtering in hw. In order to set an
+hw filter there are two options:
+
+- Using the standard BPF filter: PF_RING thanks to the nBPF library 
+  automatically translates BPF filters into hw filters
+
+- Using the pfring_add_hw_rule() API.
+  Example of setting the default action to 'forward':
+```
+hw_filtering_rule r = {0};
+r.rule_family_type = accolade_default;
+r.rule_family.accolade_rule.action = accolade_forward;
+pfring_add_hw_rule(pd, &r);
+```
+  Example of setting a filtering rule with 'drop' action for an IPv4 packet we received:
+```
+hw_filtering_rule r = { 0 };
+r.rule_family_type = accolade_rule;
+r.rule_family.accolade_rule.action = accolade_drop;
+r.rule_family.accolade_rule.ip_version = h->extended_hdr.parsed_pkt.ip_version;
+r.rule_family.accolade_rule.src_addr_bits = 32;
+r.rule_family.accolade_rule.src_addr.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
+r.rule_family.accolade_rule.protocol = h->extended_hdr.parsed_pkt.l3_proto;
+r.rule_family.accolade_rule.src_port_low = h->extended_hdr.parsed_pkt.l4_src_port;
+pfring_add_hw_rule(pd, &r);
+```
+For a full list of supported fields please take a look at the hw_filtering_rule struct.
