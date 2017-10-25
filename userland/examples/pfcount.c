@@ -354,9 +354,11 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
     char bigbuf[4096];
     u_int len;
 
-    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d]",
+    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d][hash=%u]%s",
       h->extended_hdr.rx_direction ? "[RX]" : "[TX]",
-      h->extended_hdr.if_index);
+      h->extended_hdr.if_index,
+      h->extended_hdr.pkt_hash,
+      (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) ? "[MARKED]" : "");
 
     pfring_print_parsed_pkt(bigbuf, sizeof(bigbuf), p, h);
     len = strlen(bigbuf);
@@ -975,6 +977,7 @@ int main(int argc, char* argv[]) {
   if(chunk_mode)              flags |= PF_RING_CHUNK_MODE;
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
   flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
+  /* flags |= PF_RING_FLOW_OFFLOAD | PF_RING_FLOW_OFFLOAD_NOUPDATES;  to receive FlowID on supported adapters*/
 
   pd = pfring_open(device, snaplen, flags);
 

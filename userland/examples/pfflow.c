@@ -106,10 +106,16 @@ void processPacket(const u_char *p, int len, u_int32_t flow_id) {
   printf("Raw Packet with flowID = %u %s", flow_id, buffer);
 
   /* Discarding all future packets for this flow */
+
   r.rule_family_type = generic_flow_id_rule;
+
+  /* Note: you can also specify 'flow_mark_rule' here to mark all packets
+   * for this flow, you can check the marker with (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) */
   r.rule_family.flow_id_rule.action = flow_drop_rule;
+
   r.rule_family.flow_id_rule.thread = 0;
   r.rule_family.flow_id_rule.flow_id = flow_id;
+
   pfring_add_hw_rule(pd, &r);
 }
 
