@@ -109,8 +109,8 @@ void processPacket(const u_char *p, int len, u_int32_t flow_id) {
 
   r.rule_family_type = generic_flow_id_rule;
 
-  /* Note: you can also specify 'flow_mark_rule' here to mark all packets
-   * for this flow, you can check the marker with (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) */
+  /* Note: you can also specify 'flow_mark_rule' here to mark all packets for this flow, 
+   * you can check the marker with (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) */
   r.rule_family.flow_id_rule.action = flow_drop_rule;
 
   r.rule_family.flow_id_rule.thread = 0;
@@ -133,13 +133,13 @@ void processFlow(generic_flow_update *flow){
     ip2 = (char *) inet_ntop(AF_INET6, &flow->dst_ip.v6.s6_addr, buf2, sizeof(buf2));
   }
 
-  printf("Flow Update: flowID = %u fwdPackets = %u revPackets = %u srcIp = %s dstIp = %s srcPort = %u dstPort = %u protocol = %u tcpFlags = 0x%02X FirstTime = %ju/%ju - LastTime = %ju/%ju]\n",
-	 flow->flow_id,
-         flow->fwd_packets, flow->rev_packets,
-	 ip1, ip2,
-	 flow->src_port, flow->dst_port, flow->l4_protocol, flow->tcp_flags,
-	 flow->fwd_ts_first>>32, flow->rev_ts_first>>32,
-	 flow->rev_ts_last >>32,  flow->rev_ts_last>>32);
+  printf("Flow Update: flowID = %u "
+         "srcIp = %s dstIp = %s srcPort = %u dstPort = %u protocol = %u tcpFlags = 0x%02X "
+         "fwd: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju "
+         "rev: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju\n",
+	 flow->flow_id, ip1, ip2, flow->src_port, flow->dst_port, flow->l4_protocol, flow->tcp_flags,
+         flow->fwd_packets, flow->fwd_bytes, flow->fwd_ts_first>>32, flow->fwd_ts_last >>32, 
+         flow->rev_packets, flow->rev_bytes, flow->rev_ts_first>>32, flow->rev_ts_last>>32);
 }
 
 /* ******************************** */
