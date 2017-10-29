@@ -1125,6 +1125,8 @@ static int handle_hw_filtering_rule(struct pf_ring_socket *pfr,
     break;
 
   case silicom_redirector_rule:
+  case accolade_rule:
+  case accolade_default:
   case generic_flow_id_rule:
   case generic_flow_tuple_rule:
     return(-EINVAL); /* handled in userland */
