@@ -160,6 +160,7 @@ void printHelp(void) {
   printf("pfflow - (C) 2005-17 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
+  printf("-r              Disable raw packets (flow updates only)\n");
 }
 
 /* *************************************** */
@@ -171,7 +172,9 @@ int main(int argc, char* argv[]) {
   int bind_core = -1;
   packet_direction direction = rx_only_direction;
 
-  while ((c = getopt(argc,argv,"hi:ag:")) != '?') {
+  flags |= PF_RING_FLOW_OFFLOAD;
+
+  while ((c = getopt(argc,argv,"hi:ag:r")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -182,11 +185,14 @@ int main(int argc, char* argv[]) {
     case 'a':
       wait_for_packet = 0;
       break;
-   case 'i':
+    case 'i':
       device = strdup(optarg);
       break;
-   case 'g':
+    case 'g':
       bind_core = atoi(optarg);
+      break;
+    case 'r':
+      flags |= PF_RING_FLOW_OFFLOAD_NORAWDATA;
       break;
     }
   }
@@ -197,7 +203,6 @@ int main(int argc, char* argv[]) {
   promisc = 1;
 
   if (promisc) flags |= PF_RING_PROMISC;
-  flags |= PF_RING_FLOW_OFFLOAD;
 
   pd = pfring_open(device, snaplen, flags);
 
