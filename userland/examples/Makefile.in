@@ -123,5 +123,8 @@ pfwrite: pfwrite.o ${LIBPFRING}
 pfsystest: pfsystest.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfsystest.o ${LIBS} -o $@
 
+install: pfcount pfsend
+	cp pfcount pfsend /usr/bin/
+
 clean:
 	@rm -f ${TARGETS} *.o *~
