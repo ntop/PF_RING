@@ -50,9 +50,10 @@
 #define DEFAULT_DEVICE     "anic:0"
 #define NO_ZC_BUFFER_LEN   9000
 
-pfring *pd;
+pfring *pd = NULL;
+pcap_dumper_t *dumper = NULL;
 int verbose = 0, num_threads = 1;
-u_int8_t wait_for_packet = 1;
+u_int8_t wait_for_packet = 1, quiet = 0;
 
 /* ************************************ */
 
@@ -101,9 +102,11 @@ void processPacket(const u_char *p, int len, u_int32_t flow_id) {
   char buffer[256];
   hw_filtering_rule r;
 
-  buffer[0] = '\0';
-  pfring_print_pkt(buffer, sizeof(buffer), p, len, len);
-  printf("Raw Packet with flowID = %u %s", flow_id, buffer);
+  if (!quiet) {
+    buffer[0] = '\0';
+    pfring_print_pkt(buffer, sizeof(buffer), p, len, len);
+    printf("Raw Packet with flowID = %u %s", flow_id, buffer);
+  }
 
   /* Discarding all future packets for this flow */
 
@@ -133,13 +136,34 @@ void processFlow(generic_flow_update *flow){
     ip2 = (char *) inet_ntop(AF_INET6, &flow->dst_ip.v6.s6_addr, buf2, sizeof(buf2));
   }
 
-  printf("Flow Update: flowID = %u "
-         "srcIp = %s dstIp = %s srcPort = %u dstPort = %u protocol = %u tcpFlags = 0x%02X "
-         "fwd: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju "
-         "rev: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju\n",
-	 flow->flow_id, ip1, ip2, flow->src_port, flow->dst_port, flow->l4_protocol, flow->tcp_flags,
-         flow->fwd_packets, flow->fwd_bytes, flow->fwd_ts_first>>32, flow->fwd_ts_last >>32, 
-         flow->rev_packets, flow->rev_bytes, flow->rev_ts_first>>32, flow->rev_ts_last>>32);
+  if (!quiet) {
+    printf("Flow Update: flowID = %u "
+           "srcIp = %s dstIp = %s srcPort = %u dstPort = %u protocol = %u tcpFlags = 0x%02X "
+           "fwd: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju "
+           "rev: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju\n",
+	   flow->flow_id, ip1, ip2, flow->src_port, flow->dst_port, flow->l4_protocol, flow->tcp_flags,
+           flow->fwd_packets, flow->fwd_bytes, flow->fwd_ts_first>>32, flow->fwd_ts_last >>32, 
+           flow->rev_packets, flow->rev_bytes, flow->rev_ts_first>>32, flow->rev_ts_last>>32);
+  }
+}
+
+/* ******************************** */
+
+void flowDump(struct pcap_pkthdr *h, generic_flow_update *f) {
+  u_char data[sizeof(generic_flow_update) + sizeof(struct ether_header)];
+  struct ether_header *ehdr = (struct ether_header *) data;
+  
+
+  memset(data, 0, sizeof(generic_flow_update) + sizeof(struct ether_header));
+
+  ehdr->ether_type = 0xF0;
+  memcpy(&data[sizeof(struct ether_header)], f, sizeof(generic_flow_update));
+
+  h->len += sizeof(struct ether_header);
+  h->caplen += sizeof(struct ether_header);
+
+  pcap_dump((u_char *) dumper, (struct pcap_pkthdr *) h, data);
+  pcap_dump_flush(dumper);
 }
 
 /* ******************************** */
@@ -149,6 +173,7 @@ void processBuffer(const struct pfring_pkthdr *h,
 
   if (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_UPDATE) {
     processFlow((generic_flow_update *) p);
+    if (dumper != NULL) flowDump((struct pcap_pkthdr *) h, (generic_flow_update *) p);
   } else {
     processPacket(p, h->len, h->extended_hdr.pkt_hash);
   }
@@ -160,6 +185,7 @@ void printHelp(void) {
   printf("pfflow - (C) 2005-17 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
+  printf("-o <path>       Dump flows to pcap\n");
   printf("-r              Disable raw packets (flow updates only)\n");
 }
 
@@ -170,26 +196,31 @@ int main(int argc, char* argv[]) {
   int promisc, snaplen = 1518, rc;
   u_int32_t flags = 0;
   int bind_core = -1;
+  char *out_pcap_file = NULL;
   packet_direction direction = rx_only_direction;
 
   flags |= PF_RING_FLOW_OFFLOAD;
 
-  while ((c = getopt(argc,argv,"hi:ag:r")) != '?') {
+  while ((c = getopt(argc,argv,"ag:hi:o:r")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
+    case 'a':
+      wait_for_packet = 0;
+      break;
+    case 'g':
+      bind_core = atoi(optarg);
+      break;
     case 'h':
       printHelp();
       exit(0);
       break;
-    case 'a':
-      wait_for_packet = 0;
-      break;
     case 'i':
       device = strdup(optarg);
       break;
-    case 'g':
-      bind_core = atoi(optarg);
+    case 'o':
+      out_pcap_file = optarg;
+      if (strcmp(out_pcap_file, "-") == 0) quiet = 1; 
       break;
     case 'r':
       flags |= PF_RING_FLOW_OFFLOAD_NORAWDATA;
@@ -199,6 +230,9 @@ int main(int argc, char* argv[]) {
 
   if (device == NULL) device = DEFAULT_DEVICE;
   bind2node(bind_core);
+
+  if (out_pcap_file != NULL)
+    dumper = pcap_dump_open(pcap_open_dead(DLT_EN10MB, 16384 /* MTU */), out_pcap_file);
 
   promisc = 1;
 
@@ -216,10 +250,12 @@ int main(int argc, char* argv[]) {
     pfring_set_application_name(pd, "pfcount");
     pfring_version(pd, &version);
 
-    printf("Using PF_RING v.%d.%d.%d\n",
-     (version & 0xFFFF0000) >> 16,
-     (version & 0x0000FF00) >> 8,
-     version & 0x000000FF);
+    if (!quiet) {
+      printf("Using PF_RING v.%d.%d.%d\n",
+       (version & 0xFFFF0000) >> 16,
+       (version & 0x0000FF00) >> 8,
+       version & 0x000000FF); 
+    }
   }
 
   pfring_set_direction(pd, direction);
@@ -244,6 +280,9 @@ int main(int argc, char* argv[]) {
   sleep(1);
 
   pfring_close(pd);
+
+  if (dumper != NULL) 
+    pcap_dump_close(dumper);
 
   return 0;
 }

@@ -630,6 +630,7 @@ typedef struct {
   u_int32_t rev_packets;
   u_int32_t rev_bytes;
   
+  /* Timestamp format: (sec << 32) | (nsec) */
   uint64_t fwd_ts_first;
   uint64_t fwd_ts_last;
   uint64_t rev_ts_first;
