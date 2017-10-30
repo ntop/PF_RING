@@ -4504,7 +4504,7 @@ static void i40e_map_vector_to_qp(struct i40e_vsi *vsi, int v_idx, int qp_idx)
 
 #ifdef HAVE_PF_RING
 	if (rx_ring == NULL)
-		netdev_info(vsi->netdev, "RX ring #%d is NULL\n", qp_idx);
+		netdev_info(vsi->netdev, "i40e_map_vector_to_qp: RX ring #%d is NULL\n", qp_idx);
 #endif
 
 	rx_ring->q_vector = q_vector;
@@ -4529,6 +4529,8 @@ static void i40e_vsi_map_rings_to_vectors(struct i40e_vsi *vsi)
 	int num_ringpairs;
 	int v_start = 0;
 	int qp_idx = 0;
+
+	netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: mapping %d vectors\n", q_vectors);
 
 	/* If we don't have enough vectors for a 1-to-1 mapping, we'll have to
 	 * group them so there are multiple queues per vector.
@@ -5746,6 +5748,8 @@ static void i40e_dcb_reconfigure(struct i40e_pf *pf)
 			/* Will try to configure as many components */
 		}
 	}
+
+	netdev_info(vsi->netdev, "i40e_dcb_reconfigure: updating %d vsi\n", pf->num_alloc_vsi);
 
 	/* Update each VSI */
 	for (v = 0; v < pf->num_alloc_vsi; v++) {
@@ -9253,6 +9257,7 @@ static int i40e_restore_interrupt_scheme(struct i40e_pf *pf)
 	 */
 	for (i = 0; i < pf->num_alloc_vsi; i++) {
 		if (pf->vsi[i]) {
+			netdev_info(pf->vsi[i]->netdev, "i40e_restore_interrupt_scheme: updating vsi %d\n", i);
 			err = i40e_vsi_alloc_q_vectors(pf->vsi[i]);
 			if (err)
 				goto err_unwind;
@@ -11586,6 +11591,8 @@ static struct i40e_vsi *i40e_vsi_reinit_setup(struct i40e_vsi *vsi)
 	if (ret)
 		goto err_rings;
 
+	netdev_info(vsi->netdev, "i40e_vsi_reinit_setup: reallocating vsi %d\n", vsi->idx);
+
 	/* map all of the rings to the q_vectors */
 	i40e_vsi_map_rings_to_vectors(vsi);
 	return vsi;
@@ -11758,6 +11765,8 @@ struct i40e_vsi *i40e_vsi_setup(struct i40e_pf *pf, u8 type,
 		ret = i40e_alloc_rings(vsi);
 		if (ret)
 			goto err_rings;
+
+		netdev_info(vsi->netdev, "i40e_vsi_setup: I40E_VSI_FDIR vsi %d\n", vsi->idx);
 
 		/* map all of the rings to the q_vectors */
 		i40e_vsi_map_rings_to_vectors(vsi);
