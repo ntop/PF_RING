@@ -207,8 +207,8 @@ start_interfaces() {
 			MAX_RX_SLOTS=$(/sbin/ethtool -g $D 2>/dev/null | grep "RX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
 			MAX_TX_SLOTS=$(/sbin/ethtool -g $D 2>/dev/null | grep "TX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
 			if [ ! -z $MAX_RX_SLOTS ]; then
-				/sbin/ethtool -G $D rx $MAX_RX_SLOTS
-				/sbin/ethtool -G $D tx $MAX_TX_SLOTS
+				/sbin/ethtool -G $D rx $MAX_RX_SLOTS 2>/dev/null
+				/sbin/ethtool -G $D tx $MAX_TX_SLOTS 2>/dev/null
 			fi
 
 			set_interface_mtu ${D}
