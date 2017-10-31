@@ -4530,7 +4530,12 @@ static void i40e_vsi_map_rings_to_vectors(struct i40e_vsi *vsi)
 	int v_start = 0;
 	int qp_idx = 0;
 
-	netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: mapping %d vectors\n", q_vectors);
+	netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: mapping %d vectors to %d queue pairs\n", q_vectors, vsi->num_queue_pairs);
+
+	if (vsi->num_queue_pairs > vsi->alloc_queue_pairs) {
+		netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: num_queue_pairs > alloc_queue_pairs!\n");
+		qp_remaining = vsi->alloc_queue_pairs;
+	}
 
 	/* If we don't have enough vectors for a 1-to-1 mapping, we'll have to
 	 * group them so there are multiple queues per vector.
@@ -4541,6 +4546,9 @@ static void i40e_vsi_map_rings_to_vectors(struct i40e_vsi *vsi)
 	 */
 	for (; v_start < q_vectors; v_start++) {
 		struct i40e_q_vector *q_vector = vsi->q_vectors[v_start];
+
+		if (q_vector == NULL)
+			netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: q_vector #%d is NULL\n", v_start);
 
 		num_ringpairs = DIV_ROUND_UP(qp_remaining, q_vectors - v_start);
 
