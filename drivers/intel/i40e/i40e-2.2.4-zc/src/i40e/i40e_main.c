@@ -4530,10 +4530,7 @@ static void i40e_vsi_map_rings_to_vectors(struct i40e_vsi *vsi)
 	int v_start = 0;
 	int qp_idx = 0;
 
-	netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: mapping %d vectors to %d queue pairs\n", q_vectors, vsi->num_queue_pairs);
-
 	if (vsi->num_queue_pairs > vsi->alloc_queue_pairs) {
-		netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: num_queue_pairs > alloc_queue_pairs!\n");
 		qp_remaining = vsi->alloc_queue_pairs;
 	}
 
@@ -4546,9 +4543,6 @@ static void i40e_vsi_map_rings_to_vectors(struct i40e_vsi *vsi)
 	 */
 	for (; v_start < q_vectors; v_start++) {
 		struct i40e_q_vector *q_vector = vsi->q_vectors[v_start];
-
-		if (q_vector == NULL)
-			netdev_info(vsi->netdev, "i40e_vsi_map_rings_to_vectors: q_vector #%d is NULL\n", v_start);
 
 		num_ringpairs = DIV_ROUND_UP(qp_remaining, q_vectors - v_start);
 
@@ -8772,10 +8766,6 @@ static int i40e_alloc_rings(struct i40e_vsi *vsi)
 	struct i40e_pf *pf = vsi->back;
 	int i;
 
-#ifdef HAVE_PF_RING
-	netdev_info(vsi->netdev, "%d RX/TX rings requested\n", vsi->alloc_queue_pairs);
-#endif
-
 	/* Set basic values in the rings to be used later during open() */
 	for (i = 0; i < vsi->alloc_queue_pairs; i++) {
 		/* allocate space for both Tx and Rx in one shot */
@@ -8811,10 +8801,6 @@ static int i40e_alloc_rings(struct i40e_vsi *vsi)
 		rx_ring->rx_itr_setting = pf->rx_itr_default;
 		vsi->rx_rings[i] = rx_ring;
 	}
-
-#ifdef HAVE_PF_RING
-	netdev_info(vsi->netdev, "%d RX/TX rings allocated successfully\n", vsi->alloc_queue_pairs);
-#endif
 
 	return 0;
 
@@ -11599,8 +11585,6 @@ static struct i40e_vsi *i40e_vsi_reinit_setup(struct i40e_vsi *vsi)
 	if (ret)
 		goto err_rings;
 
-	netdev_info(vsi->netdev, "i40e_vsi_reinit_setup: reallocating vsi %d\n", vsi->idx);
-
 	/* map all of the rings to the q_vectors */
 	i40e_vsi_map_rings_to_vectors(vsi);
 	return vsi;
@@ -11773,8 +11757,6 @@ struct i40e_vsi *i40e_vsi_setup(struct i40e_pf *pf, u8 type,
 		ret = i40e_alloc_rings(vsi);
 		if (ret)
 			goto err_rings;
-
-		netdev_info(vsi->netdev, "i40e_vsi_setup: I40E_VSI_FDIR vsi %d\n", vsi->idx);
 
 		/* map all of the rings to the q_vectors */
 		i40e_vsi_map_rings_to_vectors(vsi);
