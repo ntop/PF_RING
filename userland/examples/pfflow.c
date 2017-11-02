@@ -139,28 +139,26 @@ void processFlow(generic_flow_update *flow){
   if (!quiet) {
     printf("Flow Update: flowID = %u "
            "srcIp = %s dstIp = %s srcPort = %u dstPort = %u protocol = %u tcpFlags = 0x%02X "
-           "fwd: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju "
-           "rev: Packets = %u Bytes = %u FirstTime = %ju LastTime = %ju\n",
+           "fwd: Packets = %u Bytes = %u FirstTime = %u.%u LastTime = %u.%u "
+           "rev: Packets = %u Bytes = %u FirstTime = %u.%u LastTime = %u.%u\n",
 	   flow->flow_id, ip1, ip2, flow->src_port, flow->dst_port, flow->l4_protocol, flow->tcp_flags,
-           flow->fwd_packets, flow->fwd_bytes, flow->fwd_ts_first>>32, flow->fwd_ts_last >>32, 
-           flow->rev_packets, flow->rev_bytes, flow->rev_ts_first>>32, flow->rev_ts_last>>32);
+           flow->fwd_packets, flow->fwd_bytes, flow->fwd_ts_first.tv_sec, flow->fwd_ts_first.tv_nsec, flow->fwd_ts_last.tv_sec, flow->fwd_ts_last.tv_nsec,
+           flow->rev_packets, flow->rev_bytes, flow->rev_ts_first.tv_sec, flow->rev_ts_first.tv_nsec, flow->rev_ts_last.tv_sec, flow->rev_ts_last.tv_nsec);
   }
 }
 
 /* ******************************** */
 
 void flowDump(struct pcap_pkthdr *h, generic_flow_update *f) {
-  u_char data[sizeof(generic_flow_update) + sizeof(struct ether_header)];
+  u_char data[sizeof(struct ether_header) + sizeof(generic_flow_update)];
   struct ether_header *ehdr = (struct ether_header *) data;
   
-
-  memset(data, 0, sizeof(generic_flow_update) + sizeof(struct ether_header));
+  memset(data, 0, sizeof(data));
 
   ehdr->ether_type = 0xF0;
   memcpy(&data[sizeof(struct ether_header)], f, sizeof(generic_flow_update));
 
-  h->len += sizeof(struct ether_header);
-  h->caplen += sizeof(struct ether_header);
+  h->len = h->caplen = sizeof(struct ether_header) + sizeof(generic_flow_update);
 
   pcap_dump((u_char *) dumper, (struct pcap_pkthdr *) h, data);
   pcap_dump_flush(dumper);
