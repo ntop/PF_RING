@@ -9,31 +9,31 @@
 
 
 -- create myproto protocol and its fields
-p_accolade = Proto("Accolade", "Accolade Flow Offload Protocol")
+p_pfringflow = Proto("PFRingFlow", "PF_RING Flow Offload Record")
 
-local f_flow_id = ProtoField.uint32("accolade.flow_id", "Flow Id", base.DEC)
-local f_ip_version = ProtoField.uint8("accolade.ip_version", "IP Version", base.DEC)
-local f_l4_protocol = ProtoField.uint8("accolade.l4_protocol", "L4 Protocol", base.DEC)
-local f_tos = ProtoField.uint8("accolade.tos", "TOS", base.DEC)
-local f_tcp_flags = ProtoField.uint8("accolade.tcp_flags", "TCP Flags", base.DEC)
-local f_src_ipv4 = ProtoField.ipv4("accolade.src_ipv4", "IPv4 Src Address")
-local f_src_ipv6 = ProtoField.ipv6("accolade.src_ipv6", "IPv6 Src Address")
-local f_dst_ipv4 = ProtoField.ipv4("accolade.dst_ipv4", "IPv4 Dst Address")
-local f_dst_ipv6 = ProtoField.ipv6("accolade.dst_ipv6", "IPv6 Dst Address")
-local f_src_port = ProtoField.uint16("accolade.src_port", "Source Port", base.DEC)
-local f_dst_port = ProtoField.uint16("accolade.dst_port", "Destination Port", base.DEC)
-local f_fwd_packets = ProtoField.uint32("accolade.fwd_packets", "Forward Packets", base.DEC)
-local f_fwd_bytes = ProtoField.uint32("accolade.fwd_bytes", "Forward Bytes", base.DEC)
-local f_rev_packets = ProtoField.uint32("accolade.rev_packets", "Reverse Packets", base.DEC)
-local f_rev_bytes = ProtoField.uint32("accolade.rev_bytes", "Reverse Bytes", base.DEC)
+local f_flow_id = ProtoField.uint32("pfringflow.flow_id", "Flow Id", base.DEC)
+local f_ip_version = ProtoField.uint8("pfringflow.ip_version", "IP Version", base.DEC)
+local f_l4_protocol = ProtoField.uint8("pfringflow.l4_protocol", "L4 Protocol", base.DEC)
+local f_tos = ProtoField.uint8("pfringflow.tos", "TOS", base.DEC)
+local f_tcp_flags = ProtoField.uint8("pfringflow.tcp_flags", "TCP Flags", base.DEC)
+local f_src_ipv4 = ProtoField.ipv4("pfringflow.src_ipv4", "IPv4 Src Address")
+local f_src_ipv6 = ProtoField.ipv6("pfringflow.src_ipv6", "IPv6 Src Address")
+local f_dst_ipv4 = ProtoField.ipv4("pfringflow.dst_ipv4", "IPv4 Dst Address")
+local f_dst_ipv6 = ProtoField.ipv6("pfringflow.dst_ipv6", "IPv6 Dst Address")
+local f_src_port = ProtoField.uint16("pfringflow.src_port", "Source Port", base.DEC)
+local f_dst_port = ProtoField.uint16("pfringflow.dst_port", "Destination Port", base.DEC)
+local f_fwd_packets = ProtoField.uint32("pfringflow.fwd_packets", "Forward Packets", base.DEC)
+local f_fwd_bytes = ProtoField.uint32("pfringflow.fwd_bytes", "Forward Bytes", base.DEC)
+local f_rev_packets = ProtoField.uint32("pfringflow.rev_packets", "Reverse Packets", base.DEC)
+local f_rev_bytes = ProtoField.uint32("pfringflow.rev_bytes", "Reverse Bytes", base.DEC)
   -- Timestamp format: (sec << 32) | (nsec)
-local f_fwd_ts_first = ProtoField.string("accolade.fwd_ts_first", "Forward First Seen")
-local f_fwd_ts_last = ProtoField.string("accolade.fwd_ts_last", "Forward Last Seen")
-local f_rev_ts_first = ProtoField.string("accolade.rev_ts_first", "Reverse First Seen")
-local f_rev_ts_last = ProtoField.string("accolade.rev_ts_last", "Reverse Last Seen")
+local f_fwd_ts_first = ProtoField.string("pfringflow.fwd_ts_first", "Forward First Seen")
+local f_fwd_ts_last = ProtoField.string("pfringflow.fwd_ts_last", "Forward Last Seen")
+local f_rev_ts_first = ProtoField.string("pfringflow.rev_ts_first", "Reverse First Seen")
+local f_rev_ts_last = ProtoField.string("pfringflow.rev_ts_last", "Reverse Last Seen")
 
 
-p_accolade.fields = { f_flow_id, f_ip_version, f_l4_protocol, f_tos, f_tcp_flags,
+p_pfringflow.fields = { f_flow_id, f_ip_version, f_l4_protocol, f_tos, f_tcp_flags,
 		      f_src_ipv4, f_src_ipv6, f_dst_ipv4, f_dst_ipv6,
 		      f_src_port, f_dst_port, f_fwd_packets, f_fwd_bytes, f_rev_packets, f_rev_bytes,
 		      f_fwd_ts_first, f_fwd_ts_last, f_rev_ts_first, f_rev_ts_last
@@ -42,7 +42,7 @@ p_accolade.fields = { f_flow_id, f_ip_version, f_l4_protocol, f_tos, f_tcp_flags
 
 
 -- Accolade dissector function
-function p_accolade.dissector (buf, pkt, root)
+function p_pfringflow.dissector (buf, pkt, root)
    local sec, nsec, sec_offset
    -- NOTE:
    -- buf(A, B) => A = offset,  b = lenght
@@ -51,10 +51,10 @@ function p_accolade.dissector (buf, pkt, root)
 
    -- validate packet length is adequate, otherwise quit
    if buf:len() == 0 then return end
-   pkt.cols.protocol = p_accolade.name
+   pkt.cols.protocol = p_pfringflow.name
 
-   -- create subtree for accolade
-   subtree = root:add(p_accolade, buf(0))
+   -- create subtree for pfringflow
+   subtree = root:add(p_pfringflow, buf(0))
    offset = 0
 
    -- add protocol fields to subtree
@@ -144,12 +144,12 @@ function p_accolade.dissector (buf, pkt, root)
 end
 
 -- Initialization routine
-function p_accolade.init()
+function p_pfringflow.init()
 end
 
 -- 0x0F00 = 61440
 local eth_dissector_table = DissectorTable.get("ethertype")
 dissector = eth_dissector_table:get_dissector(61440)
--- you can call dissector from function p_accolade.dissector above
+-- you can call dissector from function p_pfringflow.dissector above
 -- so that the previous dissector gets called
-eth_dissector_table:add(61440, p_accolade)
+eth_dissector_table:add(61440, p_pfringflow)
