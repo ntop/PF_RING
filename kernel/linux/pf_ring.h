@@ -610,6 +610,11 @@ typedef enum {
 
 /* *********************************** */
 
+struct pfring_timespec {
+  u_int32_t tv_sec;
+  u_int32_t tv_nsec;
+} __attribute__((packed));
+
 typedef struct { 
   u_int32_t flow_id;
 
@@ -630,17 +635,18 @@ typedef struct {
   u_int32_t rev_packets;
   u_int32_t rev_bytes;
   
-  /* Timestamp format: (sec << 32) | (nsec) */
-  uint64_t fwd_ts_first;
-  uint64_t fwd_ts_last;
-  uint64_t rev_ts_first;
-  uint64_t rev_ts_last;
-} generic_flow_update;
+  struct pfring_timespec fwd_ts_first;
+  struct pfring_timespec fwd_ts_last;
+  struct pfring_timespec rev_ts_first;
+  struct pfring_timespec rev_ts_last;
+} __attribute__((packed))
+generic_flow_update;
 
 typedef struct {
   generic_flow_rule_action_type action;
   u_int32_t flow_id;
-} generic_flow_feedback;
+} __attribute__((packed))
+generic_flow_feedback;
 
 /* *********************************** */
 
