@@ -7841,6 +7841,13 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     return NOTIFY_DONE;
   }
 
+  hook = (struct pfring_hooks *) dev->pfring_ptr;
+  if (hook && (hook->magic != PF_RING)) {
+    printk("[PF_RING] %s %s: interface already in use by another socket not compatible with PF_RING\n", 
+           __FUNCTION__, dev->name);
+    return NOTIFY_DONE;
+  }
+
   switch (msg) {
     case NETDEV_POST_INIT:
     case NETDEV_PRE_UP:
