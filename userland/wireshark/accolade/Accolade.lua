@@ -79,9 +79,9 @@ function p_accolade.dissector (buf, pkt, root)
       subtree:add_le(f_dst_ipv4, buf(offset, 4))
       offset = offset + 16
    else
-      subtree:add_le(f_src_ipv4, buf(offset, 16))
+      subtree:add_le(f_src_ipv6, buf(offset, 16))
       offset = offset + 16
-      subtree:add_le(f_dst_ipv4, buf(offset, 16))
+      subtree:add_le(f_dst_ipv6, buf(offset, 16))
       offset = offset + 16
    end
 
@@ -105,38 +105,38 @@ function p_accolade.dissector (buf, pkt, root)
 
    -- Fwd
    sec_offset = offset
-   sec = buf(offset, 4):uint()
+   sec = buf(offset, 4):le_uint()
    offset = offset + 4
 
-   nsec = buf(offset, 4):uint()
+   nsec = buf(offset, 4):le_uint()
    offset = offset + 4
 
    subtree:add(f_fwd_ts_first, buf(sec_offset, 8), sec.."."..nsec)
 
    sec_offset = offset
-   sec = buf(offset, 4):uint()
+   sec = buf(offset, 4):le_uint()
    offset = offset + 4
 
-   nsec = buf(offset, 4):uint()
+   nsec = buf(offset, 4):le_uint()
    offset = offset + 4
 
    subtree:add(f_fwd_ts_last, buf(sec_offset, 8), sec.."."..nsec)
 
    -- Rev
    sec_offset = offset
-   sec = buf(offset, 4):uint()
+   sec = buf(offset, 4):le_uint()
    offset = offset + 4
 
-   nsec = buf(offset, 4):uint()
+   nsec = buf(offset, 4):le_uint()
    offset = offset + 4
 
    subtree:add(f_rev_ts_first, buf(sec_offset, 8), sec.."."..nsec)
 
    sec_offset = offset
-   sec = buf(offset, 4):uint()
+   sec = buf(offset, 4):le_uint()
    offset = offset + 4
 
-   nsec = buf(offset, 4):uint()
+   nsec = buf(offset, 4):le_uint()
    offset = offset + 4
 
    subtree:add(f_rev_ts_last, buf(sec_offset, 8), sec.."."..nsec)
