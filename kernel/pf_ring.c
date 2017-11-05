@@ -3852,6 +3852,7 @@ static int skb_ring_handler(struct sk_buff *skb,
 		 && (hdr.extended_hdr.parsed_pkt.vlan_id == 0))
 	     /* ...or just the specified VLAN */
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.vlan_id)
+	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.qinq_vlan_id)
 	     )
 	 ) {
 	/* We've found the ring where the packet can be stored */
