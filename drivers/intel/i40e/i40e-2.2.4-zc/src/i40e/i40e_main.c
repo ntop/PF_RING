@@ -535,12 +535,26 @@ void i40e_vsi_reset_stats(struct i40e_vsi *vsi)
 		return;
 
 	ns = i40e_get_vsi_stats_struct(vsi);
+
+#ifdef HAVE_PF_RING
+	if (ns == NULL) {
+		dev_info(&vsi->back->pdev->dev, "Stats struct for VSI %d is NULL\n", vsi->seid);
+		return;
+	}
+#endif
+
 	memset(ns, 0, sizeof(*ns));
 	memset(&vsi->net_stats_offsets, 0, sizeof(vsi->net_stats_offsets));
 	memset(&vsi->eth_stats, 0, sizeof(vsi->eth_stats));
 	memset(&vsi->eth_stats_offsets, 0, sizeof(vsi->eth_stats_offsets));
 	if (vsi->rx_rings && vsi->rx_rings[0]) {
 		for (i = 0; i < vsi->num_queue_pairs; i++) {
+#ifdef HAVE_PF_RING
+			if (vsi->rx_rings[i] == NULL || vsi->tx_rings[i] == NULL) {
+				dev_info(&vsi->back->pdev->dev, "Ring %d for VSI %d is NULL\n", i, vsi->seid);
+				break;
+			}
+#endif
 			memset(&vsi->rx_rings[i]->stats, 0,
 			       sizeof(vsi->rx_rings[i]->stats));
 			memset(&vsi->rx_rings[i]->rx_stats, 0,
