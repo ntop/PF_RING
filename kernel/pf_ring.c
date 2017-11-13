@@ -3835,25 +3835,24 @@ static int skb_ring_handler(struct sk_buff *skb,
 
       if(pfr != NULL
          && net_eq(dev_net(skb->dev), sock_net(sk)) /* same namespace */
+	 && (pfr->ring_slots != NULL)
 	 && (
 	     test_bit(skb->dev->ifindex, pfr->netdev_mask)
 	     || (pfr->ring_dev == &any_device_element /* any */)
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
 	     || ((skb->dev->flags & IFF_SLAVE) && (pfr->ring_dev->dev == skb->dev->master))
 #endif
-	     )
+	    )
 	 && (pfr->ring_dev != &none_device_element) /* Not a dummy socket bound to "none" */
 	 && (pfr->cluster_id == 0 /* No cluster */ )
-	 && (pfr->ring_slots != NULL)
 	 && is_valid_skb_direction(pfr->direction, recv_packet)
 	 && ((pfr->vlan_id == RING_ANY_VLAN) /* Accept all VLANs... */
 	     /* Accept untagged packets only... */
-	     || ((pfr->vlan_id == RING_NO_VLAN)
-		 && (hdr.extended_hdr.parsed_pkt.vlan_id == 0))
+	     || ((pfr->vlan_id == RING_NO_VLAN) && (hdr.extended_hdr.parsed_pkt.vlan_id == 0))
 	     /* ...or just the specified VLAN */
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.vlan_id)
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.qinq_vlan_id)
-	     )
+            )
 	 ) {
 	/* We've found the ring where the packet can be stored */
 	int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
@@ -3927,11 +3926,17 @@ static int skb_ring_handler(struct sk_buff *skb,
 		   && pfr->ring_slots != NULL
 		   && (test_bit(skb->dev->ifindex, pfr->netdev_mask)
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
-		       || ((skb->dev->flags & IFF_SLAVE)
-		           && (pfr->ring_dev->dev == skb->dev->master))
+		       || ((skb->dev->flags & IFF_SLAVE) && (pfr->ring_dev->dev == skb->dev->master))
 #endif
-		       )
+		      )
 		   && is_valid_skb_direction(pfr->direction, recv_packet)
+		   && ((pfr->vlan_id == RING_ANY_VLAN) /* Accept all VLANs... */
+		       /* Accept untagged packets only... */
+		       || ((pfr->vlan_id == RING_NO_VLAN) && (hdr.extended_hdr.parsed_pkt.vlan_id == 0))
+		       /* ...or just the specified VLAN */
+		       || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.vlan_id)
+		       || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.qinq_vlan_id)
+		      )
 		 ) {
 		  if(check_free_ring_slot(pfr) /* Not full */) {
 		    /* We've found the ring where the packet can be stored */
