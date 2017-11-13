@@ -667,6 +667,7 @@ typedef struct {
 typedef struct {
   u_int64_t match;
   u_int64_t miss;
+  u_int64_t filtered;
   u_int32_t inactivity; /* sec */
 } hash_filtering_rule_stats;
 
@@ -675,6 +676,7 @@ typedef struct {
 typedef struct _sw_filtering_hash_bucket {
   hash_filtering_rule           rule;
   u_int64_t                     match; /* number of packets matching the rule */
+  u_int64_t                     filtered; /* number of packets filtered by the rule */  
   struct _sw_filtering_hash_bucket *next;
 } sw_filtering_hash_bucket;
 
@@ -1148,7 +1150,7 @@ struct pf_ring_socket {
   sw_filtering_hash_bucket **sw_filtering_hash;
   u_int64_t sw_filtering_hash_match;
   u_int64_t sw_filtering_hash_miss;
-  u_int64_t sw_filtering_hash_filtered;
+  atomic64_t sw_filtering_hash_filtered;
   u_int32_t num_sw_filtering_hash;
 
   /* Sw Filtering Rules - wildcard */
