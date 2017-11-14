@@ -8951,6 +8951,10 @@ static int i40e_init_msix(struct i40e_pf *pf)
 	 * zero.
 	 */
 	extra_vectors = min_t(int, cpus - pf->num_lan_msix, vectors_left);
+#ifdef HAVE_PF_RING
+	if (RSS[pf->instance] != 0)
+		extra_vectors = min_t(int, extra_vectors, RSS[pf->instance] - pf->num_lan_msix);
+#endif
 	pf->num_lan_msix += extra_vectors;
 	vectors_left -= extra_vectors;
 
