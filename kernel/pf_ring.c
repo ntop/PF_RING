@@ -2213,12 +2213,13 @@ static int parse_pkt(struct sk_buff *skb,
 
     if(__vlan_hwaccel_get_tag(skb, &vlan_id) == 0) {
       vlan_id &= VLAN_VID_MASK;
-      hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE); /* force hash recomputation */
 
       if(hdr->extended_hdr.parsed_pkt.vlan_id != 0)
 	hdr->extended_hdr.parsed_pkt.qinq_vlan_id = hdr->extended_hdr.parsed_pkt.vlan_id;
 
       hdr->extended_hdr.parsed_pkt.vlan_id = vlan_id;
+
+      hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE); /* force hash recomputation */
     }
   }
 
