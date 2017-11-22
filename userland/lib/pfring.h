@@ -74,13 +74,20 @@
 #define POLL_SLEEP_MAX          1000 /* ns */
 #define POLL_QUEUE_MIN_LEN       500 /* # packets */
 
-#ifndef HAVE_RW_LOCK
-#define pthread_rwlock_t       pthread_mutex_t
-#define pthread_rwlock_init    pthread_mutex_init
-#define pthread_rwlock_rdlock  pthread_mutex_lock
-#define pthread_rwlock_wrlock  pthread_mutex_lock
-#define pthread_rwlock_unlock  pthread_mutex_unlock
-#define pthread_rwlock_destroy pthread_mutex_destroy
+#ifdef HAVE_RW_LOCK
+#define pfring_rwlock_t       pthread_rwlock_t       
+#define pfring_rwlock_init    pthread_rwlock_init    
+#define pfring_rwlock_rdlock  pthread_rwlock_rdlock  
+#define pfring_rwlock_wrlock  pthread_rwlock_wrlock  
+#define pfring_rwlock_unlock  pthread_rwlock_unlock  
+#define pfring_rwlock_destroy pthread_rwlock_destroy 
+#else
+#define pfring_rwlock_t       pthread_mutex_t
+#define pfring_rwlock_init    pthread_mutex_init
+#define pfring_rwlock_rdlock  pthread_mutex_lock
+#define pfring_rwlock_wrlock  pthread_mutex_lock
+#define pfring_rwlock_unlock  pthread_mutex_unlock
+#define pfring_rwlock_destroy pthread_mutex_destroy
 #endif
 
 #define timespec_is_before(a, b) \
@@ -318,7 +325,7 @@ struct __pfring {
   u_int16_t poll_duration;
   u_int8_t promisc, __padding, reentrant, break_recv_loop;
   u_long num_poll_calls;
-  pthread_rwlock_t rx_lock, tx_lock;
+  pfring_rwlock_t rx_lock, tx_lock;
 
   u_int32_t flags;
 
