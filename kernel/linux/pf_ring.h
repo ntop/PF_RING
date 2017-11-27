@@ -289,7 +289,7 @@ struct pkt_parsing_info {
     u_int32_t seq_num, ack_num; /* TCP sequence number */
   } tcp;
   tunnel_info tunnel;
-  int last_matched_rule_id; /* If > 0 identifies a rule that matched the packet */
+  int32_t last_matched_rule_id; /* If > 0 identifies a rule that matched the packet */
   struct pkt_offset offset; /* Offsets of L3/L4/payload elements */
 };
 
@@ -320,7 +320,7 @@ struct pfring_extended_pkthdr {
   /* --- short header ends here --- */
 
   struct {
-    int bounce_interface; /* Interface Id where this packet will bounce after processing
+    int32_t bounce_interface; /* Interface Id where this packet will bounce after processing
 			     if its values is other than UNKNOWN_INTERFACE */
     struct sk_buff *reserved; /* Kernel only pointer */
   } tx;
@@ -1126,7 +1126,7 @@ struct pf_ring_socket {
   struct {
     u_int8_t enable_tx_with_bounce;
     rwlock_t consume_tx_packets_lock;
-    int last_tx_dev_idx;
+    int32_t last_tx_dev_idx;
     struct net_device *last_tx_dev;
   } tx;
 
@@ -1164,7 +1164,7 @@ struct pf_ring_socket {
   /* VLAN ID */
   u_int16_t vlan_id; /* 0 = all VLANs are accepted */
 
-  int bpfFilter; /* bool */
+  int32_t bpfFilter; /* bool */
 
   /* Sw Filtering Rules - default policy */
   u_int8_t sw_filtering_rules_default_accept_policy; /* 1=default policy is accept, drop otherwise */
@@ -1189,7 +1189,7 @@ struct pf_ring_socket {
   rwlock_t ring_index_lock, ring_rules_lock;
 
   /* Indexes (Internal) */
-  u_int insert_page_id, insert_slot_id;
+  u_int32_t insert_page_id, insert_slot_id;
 
   /* Function pointer */
   do_add_packet_to_ring add_packet_to_ring;
