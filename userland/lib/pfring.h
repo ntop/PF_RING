@@ -74,21 +74,12 @@
 #define POLL_SLEEP_MAX          1000 /* ns */
 #define POLL_QUEUE_MIN_LEN       500 /* # packets */
 
-#ifdef HAVE_RW_LOCK
 #define pfring_rwlock_t       pthread_rwlock_t       
 #define pfring_rwlock_init    pthread_rwlock_init    
 #define pfring_rwlock_rdlock  pthread_rwlock_rdlock  
 #define pfring_rwlock_wrlock  pthread_rwlock_wrlock  
 #define pfring_rwlock_unlock  pthread_rwlock_unlock  
 #define pfring_rwlock_destroy pthread_rwlock_destroy 
-#else
-#define pfring_rwlock_t       pthread_mutex_t
-#define pfring_rwlock_init    pthread_mutex_init
-#define pfring_rwlock_rdlock  pthread_mutex_lock
-#define pfring_rwlock_wrlock  pthread_mutex_lock
-#define pfring_rwlock_unlock  pthread_mutex_unlock
-#define pfring_rwlock_destroy pthread_mutex_destroy
-#endif
 
 #define timespec_is_before(a, b) \
   ((((a)->tv_sec<(b)->tv_sec)||(((a)->tv_sec==(b)->tv_sec)&&((a)->tv_nsec<(b)->tv_nsec)))?1:0)
@@ -105,10 +96,8 @@
 
 /* ********************************* */
 
-/*
-  See also __builtin_prefetch
-  http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
-*/
+/* See also __builtin_prefetch
+ * http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html */
 #define prefetch(x) __asm volatile("prefetcht0 %0" :: "m" (*(const unsigned long *)x));
 
 /* ********************************* */
@@ -226,15 +215,12 @@ struct __pfring {
 
   struct {
     u_int8_t enabled_rx_packet_send;
-    struct pfring_pkthdr *last_received_hdr; /*
-					       Header of the past packet
-					       that has been received on this socket
-					     */
+    struct pfring_pkthdr *last_received_hdr; /* Header of the past packet that has been received on this socket */
   } tx;
 
   u_int8_t zc_device;
 
-  void   *priv_data; /* module private data */
+  void *priv_data; /* module private data */
 
   void      (*close)                        (pfring *);
   int       (*stats)                        (pfring *, pfring_stat *);
