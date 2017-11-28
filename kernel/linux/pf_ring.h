@@ -344,7 +344,6 @@ struct pfring_pkthdr {
 #define MAX_NUM_LIST_ELEMENTS MAX_NUM_RING_SOCKETS /* sizeof(bits_set) [see below] */
 
 #ifdef __KERNEL__
-
 typedef struct {
   u_int32_t num_elements, top_element_id;
   rwlock_t list_lock;
@@ -747,15 +746,10 @@ typedef struct flowSlotInfo {
 /* **************************************** */
 
 #ifdef __KERNEL__
-
 FlowSlotInfo *getRingPtr(void);
-int allocateRing(char *deviceName, u_int numSlots,
-		 u_int bucketLen, u_int sampleRate);
+int allocateRing(char *deviceName, u_int numSlots, u_int bucketLen, u_int sampleRate);
 unsigned int pollRing(struct file *fp, struct poll_table_struct * wait);
 void deallocateRing(void);
-
-/* ************************* */
-
 #endif /* __KERNEL__ */
 
 /* *********************************** */
@@ -986,7 +980,6 @@ typedef struct {
   struct list_head list;
 } virtual_filtering_device_element;
 
-
 typedef struct {
   struct net_device *dev;
 
@@ -1106,6 +1099,7 @@ struct pf_ring_socket {
   u_int8_t stack_injection_mode;
   u_int8_t promisc_enabled;
 
+  struct net *net;
   struct sock *sk;
 
   /* /proc */
@@ -1202,6 +1196,20 @@ struct pf_ring_socket {
   struct cluster_referee *cluster_referee;
   cluster_client_type cluster_role;
 };
+
+/* **************************************** */
+
+typedef struct {
+  struct net *net;
+
+  /* /proc entry for ring module */
+  struct proc_dir_entry *proc;
+  struct proc_dir_entry *proc_dir;
+  struct proc_dir_entry *proc_dev_dir; 
+  struct proc_dir_entry *proc_stats_dir;
+
+  struct list_head list;
+} pf_ring_net;
 
 /* **************************************** */
 
