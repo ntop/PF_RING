@@ -910,8 +910,8 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
   netns = netns_lookup(pfr->net);
 
   if (netns != NULL && 
-     netns->proc_dir != NULL &&
-     pfr->sock_proc_name[0] == '\0') {
+      netns->proc_dir != NULL &&
+      pfr->sock_proc_name[0] == '\0') {
     snprintf(pfr->sock_proc_name, sizeof(pfr->sock_proc_name),
 	     "%d-%s.%d", pfr->ring_pid, pfr->ring_dev->dev->name, pfr->ring_id);
 
@@ -7502,7 +7502,7 @@ void zc_dev_handler(zc_dev_operation operation,
       try_module_get(THIS_MODULE);
 
       /* We now have to update the device list */
-      dev_ptr = pf_ring_device_name_lookup(pfr->net, dev->name);
+      dev_ptr = pf_ring_device_name_lookup(dev_net(dev), dev->name);
 
       if(dev_ptr != NULL) {
         dev_ptr->is_zc_device = 1;
