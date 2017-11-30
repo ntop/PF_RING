@@ -98,6 +98,7 @@ r.rule_family.accolade_rule.src_port_low = h->extended_hdr.parsed_pkt.l4_src_por
 pfring_add_hw_rule(pd, &r);
 ```
   For a full list of supported fields please take a look at the hw_filtering_rule struct.
+  Please note that the number of rule IDs on most adapters is limited to 32.
   Example of removing a filtering rule by id:
 ```
 pfring_remove_hw_rule(pd, rule_id);
