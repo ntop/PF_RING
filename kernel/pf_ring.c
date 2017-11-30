@@ -4148,8 +4148,8 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
 
   debug_printk(2, "[pid=%d]\n", pid);
 
-  /* Are you root, superuser or so ? */
-  if(!capable(CAP_NET_ADMIN))
+  /* Are you root or with capabilities? */
+  if(!ns_capable(net->user_ns, CAP_NET_RAW))
     return -EPERM;
 
   if(sock->type != SOCK_RAW)
