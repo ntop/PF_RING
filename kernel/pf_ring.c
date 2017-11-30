@@ -4149,7 +4149,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   debug_printk(2, "[pid=%d]\n", pid);
 
   /* Are you root or with capabilities? */
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
   if(!capable(CAP_NET_ADMIN))
 #else
   if(!ns_capable(net->user_ns, CAP_NET_RAW))
