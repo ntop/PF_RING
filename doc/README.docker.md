@@ -52,10 +52,14 @@ with pf_ring.
 sudo docker run ubuntu14 pfcount -i eth0
 ```
 
+Note: since PF_RING 7.1 and kernel 3.8 "--cap-add net_admin" is no longer needed.
 An application running inside a docker container is able to capture traffic from the
 interfaces visible inside the container only. If you want to capture traffic from an 
 interface in the host network namespace you should run docker with "--network=host".
-Note: since PF_RING 7.1 "--cap-add net_admin" is no longer needed.
+
+```
+sudo docker run --network=host ubuntu14 pfcount -i eth0
+```
 
 When working with PF_RING ZC, using for instance zbalance_ipc for forwarding traffic
 to consumer applications running inside Docker containers by means of ZC queues, we
