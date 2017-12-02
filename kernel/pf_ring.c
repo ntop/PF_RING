@@ -758,7 +758,7 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 	  /* Reset all */
 	  pfr->tx.last_tx_dev = NULL, pfr->tx.last_tx_dev_idx = UNKNOWN_INTERFACE;
 
-	  pfr->tx.last_tx_dev = __dev_get_by_index(pfr->net, hdr->extended_hdr.tx.bounce_interface);
+	  pfr->tx.last_tx_dev = __dev_get_by_index(sock_net(pfr->sk), hdr->extended_hdr.tx.bounce_interface);
 
 	  if(pfr->tx.last_tx_dev != NULL) {
 	    /* We have found the device */
@@ -907,7 +907,7 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
 
   write_lock(&netns_lock);
 
-  netns = netns_lookup(pfr->net);
+  netns = netns_lookup(sock_net(pfr->sk));
 
   if (netns != NULL && 
       netns->proc_dir != NULL &&
@@ -931,7 +931,7 @@ static void ring_proc_remove(struct pf_ring_socket *pfr)
 
   write_lock(&netns_lock);
 
-  netns = netns_lookup(pfr->net);
+  netns = netns_lookup(sock_net(pfr->sk));
 
   if (netns != NULL &&
       netns->proc_dir != NULL &&
@@ -2975,7 +2975,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
         return(-EFAULT);
       }
 
-      rule->rule.internals.reflector_dev = dev_get_by_name(pfr->net, rule->rule.reflector_device_name);
+      rule->rule.internals.reflector_dev = dev_get_by_name(sock_net(pfr->sk), rule->rule.reflector_device_name);
 
       if(rule->rule.internals.reflector_dev == NULL) {
         printk("[PF_RING] Unable to find device %s\n",
@@ -3101,7 +3101,7 @@ static int add_sw_filtering_rule_element(struct pf_ring_socket *pfr, sw_filterin
       return(-EFAULT);
     }
 
-    rule->rule.internals.reflector_dev = dev_get_by_name(pfr->net, rule->rule.reflector_device_name);
+    rule->rule.internals.reflector_dev = dev_get_by_name(sock_net(pfr->sk), rule->rule.reflector_device_name);
 
     if(rule->rule.internals.reflector_dev == NULL) {
       printk("[PF_RING] Unable to find device %s\n", rule->rule.reflector_device_name);
@@ -4180,7 +4180,6 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
     goto free_sk;
 
   memset(pfr, 0, sizeof(*pfr));
-  pfr->net = net;
   pfr->sk = sk;
   pfr->ring_shutdown = 0;
   pfr->ring_active = 0;	/* We activate as soon as somebody waits for packets */
@@ -4303,7 +4302,7 @@ add_virtual_filtering_device(struct pf_ring_socket *pfr, virtual_filtering_devic
 
   /* Add /proc entry */
   write_lock(&netns_lock);
-  netns = netns_lookup(pfr->net);
+  netns = netns_lookup(sock_net(pfr->sk));
   if (netns != NULL) {
     elem->info.proc_entry = proc_mkdir(elem->info.device_name, netns->proc_dev_dir);
     proc_create_data(PROC_INFO, 0 /* read-only */,
@@ -4334,7 +4333,7 @@ static int remove_virtual_filtering_device(struct pf_ring_socket *pfr, char *dev
     if(strcmp(filtering_ptr->info.device_name, device_name) == 0) {
       /* Remove /proc entry */
       write_lock(&netns_lock);
-      netns = netns_lookup(pfr->net);
+      netns = netns_lookup(sock_net(pfr->sk));
       if (netns != NULL) {
         remove_proc_entry(PROC_INFO, filtering_ptr->info.proc_entry);
         remove_proc_entry(filtering_ptr->info.device_name, netns->proc_dev_dir);
@@ -6185,7 +6184,7 @@ int setSocketStats(struct pf_ring_socket *pfr)
 
   write_lock(&netns_lock);
 
-  netns = netns_lookup(pfr->net);
+  netns = netns_lookup(sock_net(pfr->sk));
 
   if (netns != NULL) {
     /* 1 - Check if the /proc entry exists otherwise create it */

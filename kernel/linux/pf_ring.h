@@ -1099,7 +1099,6 @@ struct pf_ring_socket {
   u_int8_t stack_injection_mode;
   u_int8_t promisc_enabled;
 
-  struct net *net;
   struct sock *sk;
 
   /* /proc */
