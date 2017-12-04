@@ -26,7 +26,7 @@
 #define RING_MAGIC_VALUE             0x88
 
 /* Increment whenever we change slot or packet header layout (e.g. we add/move a field) */
-#define RING_FLOWSLOT_VERSION          16 
+#define RING_FLOWSLOT_VERSION          17
 
 #define DEFAULT_BUCKET_LEN            128
 #define MAX_NUM_DEVICES               256
@@ -140,7 +140,7 @@ struct pkt_offset {
   int16_t l3_offset;
   int16_t l4_offset;
   int16_t payload_offset;
-};
+} __attribute__((packed));
 
 #ifndef ETH_ALEN
 #define ETH_ALEN  6
@@ -171,7 +171,7 @@ typedef union {
 struct eth_vlan_hdr {
   u_int16_t h_vlan_id; /* Tag Control Information (QoS, VLAN ID) */
   u_int16_t h_proto;   /* packet type ID field */
-};
+} __attribute__((packed));
 
 #define NEXTHDR_HOP     	  0
 #define NEXTHDR_IPV6    	 41
@@ -192,7 +192,7 @@ struct kcompact_ipv6_hdr {
   u_int8_t          hop_limit;
   struct in6_addr saddr;
   struct in6_addr daddr;
-};
+} __attribute__((packed));
 
 struct kcompact_ipv6_opt_hdr {
   u_int8_t          nexthdr;
@@ -210,7 +210,7 @@ struct gre_header {
   u_int16_t flags_and_version;
   u_int16_t proto;
   /* Optional fields */
-};
+} __attribute__((packed));
 
 #define GTP_SIGNALING_PORT      2123
 #define GTP_U_DATA_PORT         2152
@@ -259,14 +259,15 @@ typedef struct {
   u_int8_t tunneled_proto; /* Layer 4 protocol */
   ip_addr tunneled_ip_src, tunneled_ip_dst;  
   u_int16_t tunneled_l4_src_port, tunneled_l4_dst_port;
-} tunnel_info;
+} __attribute__((packed))
+ tunnel_info;
 
 #define MOBILE_IP_PORT           434
 
 struct mobile_ip_hdr {
   u_int8_t message_type, next_header;
   u_int16_t reserved;
-};
+} __attribute__((packed));
 
 typedef enum {
   long_pkt_header = 0, /* it includes PF_RING-extensions over the original pcap header */
@@ -291,7 +292,7 @@ struct pkt_parsing_info {
   tunnel_info tunnel;
   int32_t last_matched_rule_id; /* If > 0 identifies a rule that matched the packet */
   struct pkt_offset offset; /* Offsets of L3/L4/payload elements */
-};
+} __attribute__((packed));
 
 #define UNKNOWN_INTERFACE          -1
 #define FAKE_PACKET                -2 /* It indicates that the returned packet
@@ -327,7 +328,7 @@ struct pfring_extended_pkthdr {
 
   /* NOTE: leave it as last field of the memset on parse_pkt() will fail */
   struct pkt_parsing_info parsed_pkt; /* packet parsing info */
-};
+} __attribute__((packed));
 
 /* NOTE: Keep 'struct pfring_pkthdr' in sync with 'struct pcap_pkthdr' */
 
@@ -337,7 +338,7 @@ struct pfring_pkthdr {
   u_int32_t caplen;     /* length of portion present */
   u_int32_t len;        /* length of whole packet (off wire) */
   struct pfring_extended_pkthdr extended_hdr; /* PF_RING extended header */
-};
+} __attribute__((packed));
 
 /* *********************************** */
 
@@ -375,7 +376,8 @@ typedef struct {
   struct {
     u_int8_t flags;             /* TCP flags (0 if not available) */
   } tcp;
-} filtering_rule_core_fields;
+} __attribute__((packed))
+filtering_rule_core_fields;
 
 /* ************************************************* */
 
@@ -392,7 +394,8 @@ typedef struct {
 
   char payload_pattern[32];         /* If strlen(payload_pattern) > 0, the packet payload
 				       must match the specified pattern */
-} filtering_rule_extended_fields;
+} __attribute__((packed))
+filtering_rule_extended_fields;
 
 /* ************************************************* */
 
@@ -428,7 +431,8 @@ typedef enum {
 typedef struct {
   unsigned long jiffies_last_match;  /* Jiffies of the last rule match (updated by pf_ring) */
   struct net_device *reflector_dev;  /* Reflector device */
-} filtering_internals;
+} __attribute__((packed))
+filtering_internals;
 
 typedef struct {
   u_int16_t rule_id;                 /* Rules are processed in order from lowest to higest id */
@@ -442,7 +446,8 @@ typedef struct {
   char reflector_device_name[REFLECTOR_NAME_LEN];
 
   filtering_internals internals;   /* PF_RING internal fields */
-} filtering_rule;
+} __attribute__((packed))
+filtering_rule;
 
 /* *********************************** */
 
@@ -453,7 +458,8 @@ typedef struct {
   u_int32_t s_addr, d_addr;
   u_int16_t s_port, d_port;
   u_int16_t queue_id;
-} intel_82599_five_tuple_filter_hw_rule;
+} __attribute__((packed))
+intel_82599_five_tuple_filter_hw_rule;
 
 typedef struct {
   u_int16_t vlan_id;
@@ -461,7 +467,8 @@ typedef struct {
   u_int32_t s_addr, d_addr;
   u_int16_t s_port, d_port;
   u_int16_t queue_id;
-} intel_82599_perfect_filter_hw_rule;
+} __attribute__((packed))
+intel_82599_perfect_filter_hw_rule;
 
 /*
   Rules are defined per port. Each redirector device
@@ -504,7 +511,8 @@ typedef struct {
   u_int32_t src_mask, dst_mask;
   u_int16_t src_port_low, src_port_high;
   u_int16_t dst_port_low, dst_port_high;
-} silicom_redirector_hw_rule;
+} __attribute__((packed))
+silicom_redirector_hw_rule;
 
 typedef enum {
   accolade_drop,
@@ -520,7 +528,8 @@ typedef struct {
   u_int32_t src_addr_bits, dst_addr_bits;
   u_int16_t src_port_low, src_port_high;
   u_int16_t dst_port_low, dst_port_high;
-} accolade_hw_rule;
+} __attribute__((packed))
+accolade_hw_rule;
 
 typedef enum {
   flow_drop_rule,
@@ -531,7 +540,8 @@ typedef struct {
   generic_flow_rule_action_type action;
   u_int32_t flow_id; /* flow id from flow metadata */
   u_int32_t thread; /* id of the thread setting the rule */
-} generic_flow_id_hw_rule;
+} __attribute__((packed))
+generic_flow_id_hw_rule;
 
 typedef struct { 
   generic_flow_rule_action_type action;
@@ -542,7 +552,8 @@ typedef struct {
   u_int8_t ip_version;
   u_int8_t protocol;
   u_int8_t interface; /* from extended_hdr.if_index */
-} generic_flow_tuple_hw_rule;
+} __attribute__((packed))
+generic_flow_tuple_hw_rule;
 
 typedef enum {
   intel_82599_five_tuple_rule,
@@ -566,7 +577,8 @@ typedef struct {
     generic_flow_tuple_hw_rule flow_tuple_rule;
     accolade_hw_rule accolade_rule;
   } rule_family;
-} hw_filtering_rule;
+} __attribute__((packed))
+hw_filtering_rule;
 
 #define MAGIC_HW_FILTERING_RULE_REQUEST  0x29010020 /* deprecated? */
 
@@ -663,7 +675,8 @@ typedef int (*perfect_filter_hw_rule_handler)(struct pf_ring_socket *pfr,
 typedef struct {
   five_tuple_rule_handler five_tuple_handler;
   perfect_filter_hw_rule_handler perfect_filter_handler;
-} hw_filtering_device_handler;
+} __attribute__((packed))
+hw_filtering_device_handler;
 
 /* *********************************** */
 
@@ -686,13 +699,15 @@ typedef struct {
   char reflector_device_name[REFLECTOR_NAME_LEN];
 
   filtering_internals internals;   /* PF_RING internal fields */
-} hash_filtering_rule;
+} __attribute__((packed))
+hash_filtering_rule;
 
 typedef struct {
   u_int64_t match;
   u_int64_t miss;
   u_int32_t inactivity; /* sec */
-} hash_filtering_rule_stats;
+} __attribute__((packed))
+hash_filtering_rule_stats;
 
 /* ************************************************* */
 
@@ -700,7 +715,8 @@ typedef struct _sw_filtering_hash_bucket {
   hash_filtering_rule           rule;
   u_int64_t                     match; /* number of packets matching the rule */
   struct _sw_filtering_hash_bucket *next;
-} sw_filtering_hash_bucket;
+} __attribute__((packed))
+sw_filtering_hash_bucket;
 
 /* *********************************** */
 
@@ -741,7 +757,8 @@ typedef struct flowSlotInfo {
   volatile u_int64_t remove_off /* managed by userland */;
   char u_padding[4096-16];
   /* <-- 8192 bytes here, to get a page aligned block writable by userland only */
-} FlowSlotInfo;
+} __attribute__((packed))
+FlowSlotInfo;
 
 /* **************************************** */
 
@@ -805,14 +822,16 @@ typedef struct {
   u_int16_t stats_index;
   u_int32_t vector;
   u_int32_t num_queues;
-} mem_ring_info;
+} __attribute__((packed))
+mem_ring_info;
 
 typedef struct {
   mem_ring_info rx;
   mem_ring_info tx;
   u_int32_t phys_card_memory_len;
   zc_dev_model device_model;
-} zc_memory_info;
+} __attribute__((packed))
+zc_memory_info;
 
 typedef struct {
   zc_memory_info mem_info;
@@ -832,7 +851,8 @@ typedef struct {
   void *rx_adapter_ptr, *tx_adapter_ptr;
   zc_dev_wait_packet wait_packet_function_ptr;
   zc_dev_notify usage_notification;
-} zc_dev_info;
+} __attribute__((packed))
+zc_dev_info;
 
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
@@ -842,7 +862,8 @@ typedef struct {
   zc_dev_operation operation;
   char device_name[IFNAMSIZ];
   int32_t channel_id;
-} zc_dev_mapping;
+} __attribute__((packed))
+zc_dev_mapping;
 
 /* ************************************************* */
 
@@ -876,7 +897,7 @@ typedef enum {
 struct add_to_cluster {
   u_int clusterId;
   cluster_type the_type;
-};
+} __attribute__((packed));
 
 typedef enum {
   standard_nic_family = 0, /* No Hw Filtering */
@@ -889,20 +910,21 @@ typedef struct {
 
   /* Entry in the /proc filesystem */
   struct proc_dir_entry *proc_entry;
-} virtual_filtering_device_info;
+} __attribute__((packed))
+virtual_filtering_device_info;
 
 /* ************************************************* */
 
 struct create_cluster_referee_info {
   u_int32_t cluster_id;
   u_int32_t recovered; /* fresh or recovered */
-};
+} __attribute__((packed));
 
 struct public_cluster_object_info {
   u_int32_t cluster_id;
   u_int32_t object_type;
   u_int32_t object_id;
-};
+} __attribute__((packed));
 
 struct lock_cluster_object_info {
   u_int32_t cluster_id;
@@ -910,7 +932,7 @@ struct lock_cluster_object_info {
   u_int32_t object_id;
   u_int32_t lock_mask;
   u_int32_t reserved;
-};
+} __attribute__((packed));
 
 /* ************************************************* */
 
