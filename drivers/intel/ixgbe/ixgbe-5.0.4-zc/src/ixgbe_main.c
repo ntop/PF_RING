@@ -6054,9 +6054,9 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*)adapter->netdev->pfring_ptr;
+	struct pfring_hooks *hook = (struct pfring_hooks *) adapter->netdev->pfring_ptr;
 
-	if(hook != NULL) {
+	if (hook != NULL) {
 		int i;
 		u16 cache_line_size;
 
@@ -6088,7 +6088,7 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			  &tx_info,
 			  rx_ring->desc, /* Packet descriptors */
 			  tx_ring->desc, /* Packet descriptors */
-			  (void*)rx_ring->netdev->mem_start,
+			  (void *) rx_ring->netdev->mem_start,
 			  rx_ring->netdev->mem_end - rx_ring->netdev->mem_start,
 			  rx_ring->queue_index, /* Channel Id */
 			  rx_ring->netdev,
@@ -6097,8 +6097,8 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			  rx_ring->netdev->dev_addr,
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
-			  (void*)rx_ring,
-			  (void*)tx_ring,
+			  (void *) rx_ring,
+			  (void *) tx_ring,
 			  wait_packet_function_ptr,
 			  notify_function_ptr
 			);
@@ -6711,14 +6711,11 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 	if (hw->mac.ops.disable_tx_laser)
 		hw->mac.ops.disable_tx_laser(hw);
 
-	ixgbe_clean_all_tx_rings(adapter);
-	ixgbe_clean_all_rx_rings(adapter);
-
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*)adapter->netdev->pfring_ptr;
+	struct pfring_hooks *hook = (struct pfring_hooks *) adapter->netdev->pfring_ptr;
 
-	if(hook != NULL) {
+	if (hook != NULL) {
 		int i;
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
@@ -6727,8 +6724,8 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 			  NULL, // tx_info,
 			  NULL, /* Packet descriptors */
 			  NULL, /* Packet descriptors */
-			  (void*)adapter->rx_ring[i]->netdev->mem_start,
-			  adapter->rx_ring[i]->netdev->mem_end - adapter->rx_ring[i]->netdev->mem_start,
+			  NULL, /* mem_start */
+			  0, /* mem_end - mem_start, */
 			  adapter->rx_ring[i]->queue_index, /* Channel Id */
 			  adapter->rx_ring[i]->netdev,
 			  adapter->rx_ring[i]->dev, /* for DMA mapping */
@@ -6736,7 +6733,8 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 			  adapter->rx_ring[i]->netdev->dev_addr,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
-			  (void*)adapter->rx_ring[i], (void*)adapter->tx_ring[i],
+			  (void *) adapter->rx_ring[i],
+			  (void *) adapter->tx_ring[i],
 			  NULL, // wait_packet_function_ptr
 			  NULL // notify_function_ptr
 			);
@@ -6745,6 +6743,9 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 
 	}
 #endif
+
+	ixgbe_clean_all_tx_rings(adapter);
+	ixgbe_clean_all_rx_rings(adapter);
 }
 
 /**
