@@ -3563,15 +3563,14 @@ static int add_skb_to_ring(struct sk_buff *skb,
     /* [3] Packet sampling */
     if(pfr->sample_rate > 1) {
       write_lock(&pfr->ring_index_lock);
-      pfr->slots_info->tot_pkts++;
 
       if(pfr->pktToSample <= 1) {
 	pfr->pktToSample = pfr->sample_rate;
       } else {
+        pfr->slots_info->tot_pkts++;
 	pfr->pktToSample--;
 
 	write_unlock(&pfr->ring_index_lock);
-
 	atomic_dec(&pfr->num_ring_users);
 	return(-1);
       }
@@ -3870,16 +3869,32 @@ static int skb_ring_handler(struct sk_buff *skb,
   if(quick_mode) {
     pfr = device_rings[skb->dev->ifindex][channel_id];
 
-    if(pfr && pfr->rehash_rss != NULL) {
-      parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
-      channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
-      pfr = device_rings[skb->dev->ifindex][channel_id];
-    }
+    if (pfr != NULL) {
+      if (pfr->rehash_rss != NULL) {
+        parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
+        channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
+        pfr = device_rings[skb->dev->ifindex][channel_id];
+      }
 
-    if((pfr != NULL) && is_valid_skb_direction(pfr->direction, recv_packet)) {
-      rc = 1;
-      room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
-					  displ, 0, NULL, 0, real_skb ? &clone_id : NULL);
+      if (is_valid_skb_direction(pfr->direction, recv_packet)) {
+        rc = 1;
+        
+        if (pfr->sample_rate > 1) {
+          write_lock(&pfr->ring_index_lock);
+          if (pfr->pktToSample <= 1) {
+            pfr->pktToSample = pfr->sample_rate;
+          } else {
+            pfr->slots_info->tot_pkts++;
+            pfr->pktToSample--;
+            rc = 0;
+          }
+          write_unlock(&pfr->ring_index_lock);
+        }
+
+        if (rc == 1) 
+          room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
+					      displ, 0, NULL, 0, real_skb ? &clone_id : NULL);
+      }
     }
   } else {
     is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
