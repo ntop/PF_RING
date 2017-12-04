@@ -7661,6 +7661,7 @@ static struct pfring_hooks ring_hooks = {
 void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   if(dev_ptr->proc_entry == NULL)
     return;
+
 #ifdef ENABLE_PROC_WRITE_RULE
   if(dev_ptr->device_type != standard_nic_family)
     remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
@@ -7669,9 +7670,11 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   printk("[PF_RING] Removing %s/%s from /proc\n", dev_ptr->device_name, PROC_INFO);
   remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
 
-  printk("[PF_RING] Removing %s from /proc\n", dev_ptr->device_name);
-  /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
-  remove_proc_entry(dev_ptr->device_name, netns->proc_dev_dir);
+  if (netns->proc_dev_dir != NULL) {
+    printk("[PF_RING] Removing %s from /proc\n", dev_ptr->device_name);
+    /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
+    remove_proc_entry(dev_ptr->device_name, netns->proc_dev_dir);
+  }
 
   dev_ptr->proc_entry = NULL;
 }
@@ -8136,10 +8139,9 @@ static void __exit ring_exit(void)
 
   list_del(&any_device_element.device_list);
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-    pf_ring_device *dev_ptr;
+    pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
 
-    dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    hook = (struct pfring_hooks*)dev_ptr->dev->pfring_ptr;
+    hook = (struct pfring_hooks *) dev_ptr->dev->pfring_ptr;
 
     write_lock(&netns_lock);
 
@@ -8150,9 +8152,13 @@ static void __exit ring_exit(void)
 
     write_unlock(&netns_lock);
 
-    if(hook->magic == PF_RING) {
-      debug_printk(2, "Unregister hook for %s\n", dev_ptr->device_name);
-      dev_ptr->dev->pfring_ptr = NULL; /* Unhook PF_RING */
+    if (hook != NULL) {
+      if(hook->magic == PF_RING) {
+        debug_printk(2, "Unregister hook for %s\n", dev_ptr->device_name);
+        dev_ptr->dev->pfring_ptr = NULL; /* Unhook PF_RING */
+      }
+    } else {
+      printk("[PF_RING] PF_RING hook was not set for %s\n", dev_ptr->device_name);
     }
 
     list_del(ptr);
