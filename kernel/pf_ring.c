@@ -7666,9 +7666,13 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
+  printk("[PF_RING] Removing %s/%s from /proc\n", dev_ptr->device_name, PROC_INFO);
   remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
+
+  printk("[PF_RING] Removing %s from /proc\n", dev_ptr->device_name);
   /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
-  remove_proc_entry(/*dev_ptr->proc_entry->name*/ dev_ptr->device_name, netns->proc_dev_dir);
+  remove_proc_entry(dev_ptr->device_name, netns->proc_dev_dir);
+
   dev_ptr->proc_entry = NULL;
 }
 
@@ -8141,16 +8145,8 @@ static void __exit ring_exit(void)
 
     netns = netns_lookup(dev_net(dev_ptr->dev));
 
-    if (netns != NULL && dev_ptr->proc_entry) {
-#ifdef ENABLE_PROC_WRITE_RULE
-      /* Remove /proc entry for the selected device */
-      if(dev_ptr->device_type != standard_nic_family)
-        remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
-#endif
-
-      remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
-      remove_proc_entry(dev_ptr->dev->name, netns->proc_dev_dir);
-    }
+    if (netns != NULL)
+      remove_device_from_proc(netns, dev_ptr);
 
     write_unlock(&netns_lock);
 
