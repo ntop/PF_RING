@@ -3878,8 +3878,19 @@ static int skb_ring_handler(struct sk_buff *skb,
 
     if((pfr != NULL) && is_valid_skb_direction(pfr->direction, recv_packet)) {
       rc = 1;
-      room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
-					  displ, 0, NULL, 0, real_skb ? &clone_id : NULL);
+      write_lock(&pfr->ring_index_lock);
+      if(pfr->pktToSample <= 1) {
+        pfr->pktToSample = pfr->sample_rate;
+      } else {
+        pfr->pktToSample--;
+        rc = 0;
+      }
+      write_unlock(&pfr->ring_index_lock);
+
+	  if (rc == 1){
+        room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
+                      displ, 0, NULL, 0, real_skb ? &clone_id : NULL);
+	  }
     }
   } else {
     is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
