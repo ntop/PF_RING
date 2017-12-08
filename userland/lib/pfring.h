@@ -1172,7 +1172,7 @@ u_int32_t pfring_get_interface_speed(pfring *ring);
  * List all interfaces.
  * @return The interface list.
  */
-pfring_if_t *pfring_findalldevs();
+pfring_if_t *pfring_findalldevs(void);
 
 /**
  * Free an interface list returned by pfring_findalldevs().
@@ -1210,7 +1210,7 @@ int32_t gmt_to_local(time_t t);
 typedef struct {
   char *name;
   int (*open) (pfring *);
-  pfring_if_t *(*findalldevs) ();
+  pfring_if_t *(*findalldevs) (void);
 } pfring_module_info;
   
 struct thirdparty_func {
