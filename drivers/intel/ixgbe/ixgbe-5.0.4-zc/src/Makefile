@@ -133,11 +133,18 @@ endif
 # Set no-pie for compilers that enable pie by default
 test_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>/dev/null && echo 1)
 ifneq (,$(test_nopie))
-  EXTRA_CFLAGS += -no-pie
+  # safety check for gcc version returning success on failure
+  test_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
+  ifneq (,$(test_nopie))
+    EXTRA_CFLAGS += -no-pie
+  endif
 endif
 test_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>/dev/null && echo 1)
 ifneq (,$(test_fnopie))
-  EXTRA_CFLAGS += -fno-pie
+  test_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
+  ifneq (,$(test_fnopie))
+    EXTRA_CFLAGS += -fno-pie
+  endif
 endif
 
 # check for ubuntu kernel 3.13.0-24 (HAVE_PF_RING)
