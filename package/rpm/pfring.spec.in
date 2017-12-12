@@ -33,9 +33,8 @@ mkdir -p $RPM_BUILD_ROOT/usr/local/include/linux
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
-mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/etc/init
-mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
+mkdir -p $RPM_BUILD_ROOT/usr/local/bin
 # Kernel module (DKMS will build and install it)
 #cp $HOME/PF_RING/kernel/pf_ring.ko $RPM_BUILD_ROOT/usr/local/pfring/kernel
 cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
@@ -61,11 +60,17 @@ cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d
-cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
+mkdir -p $RPM_BUILD_ROOT/etc/init.d
+%if 0%{?centos_ver} == 7
+  mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
+  cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/etc/systemd/system
+  cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/etc/systemd/system
+%else
+  cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
+%endif
 cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
-cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/etc/systemd/system
-cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/etc/systemd/system
+cp $HOME/PF_RING/package/usr/local/bin/pf_ringctl $RPM_BUILD_ROOT/usr/local/bin
 # DAQ
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
 cp $HOME/PF_RING/userland/snort/pfring-daq-module/daq_pfring.la $RPM_BUILD_ROOT/usr/local/lib/daq
@@ -114,11 +119,16 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/pfring/README.FIRST
 /usr/local/pfring/README-DAQ.1st
 /etc/ld.so.conf.d/pf_ring.conf
-/etc/init.d/pf_ring
-/etc/init.d/cluster
-/etc/init/pf_ring.conf
+%if 0%{?centos_ver} == 7
 /etc/systemd/system/pf_ring.service
 /etc/systemd/system/cluster.service
+%else
+/etc/init.d/pf_ring
+%endif
+/etc/init.d/cluster
+/src/local/bin/pf_ringctl
+
+%config(noreplace) /etc/init/pf_ring.conf
 
 # Set the default attributes of all of the files specified to have an
 # owner and group of root and to inherit the permissions of the file
@@ -137,33 +147,42 @@ case "$1" in
   ;;
   2)
     # upgrade
-    /etc/init.d/pf_ring stop
   ;;
 esac
 
 %post
-%if 0%{?centos_ver} == 7
-/bin/systemctl daemon-reload
-%endif
-/sbin/chkconfig pf_ring on > /dev/null 2>&1
-/sbin/chkconfig cluster on > /dev/null 2>&1
-/sbin/ldconfig > /dev/null 2>&1
 case "$1" in
   1)
     # install
-    /etc/init.d/pf_ring start
+    %if 0%{?centos_ver} == 7
+      /bin/systemctl daemon-reload
+      /bin/systemctl enable pf_ring
+    %else
+      /sbin/chkconfig --add pf_ring
+    %endif
   ;;
   2)
     # upgrade
-    /etc/init.d/pf_ring start
   ;;
 esac
+/sbin/ldconfig > /dev/null 2>&1
+%if 0%{?centos_ver} == 7
+  /bin/systemctl restart pf_ring
+%else
+  /etc/init.d/pf_ring restart
+%endif
 
 %preun
 case "$1" in
   0)
     # un-install
-    /etc/init.d/pf_ring stop
+    %if 0%{?centos_ver} == 7
+      /bin/systemctl disable pf_ring
+      /bin/systemctl stop pf_ring
+    %else
+      /etc/init.d/pf_ring stop
+      /sbin/chkconfig --del pf_ring
+    %endif
   ;;
   1)
     # upgrade
@@ -173,8 +192,4 @@ esac
 %changelog
 * Wed Dec  5 2012  <deri@centos.ntop.org> - @VERS@-%{buildrev}
 - 
-
-* Sat Mar 10 2012 Luca Deri <deri@ntop.org>
-- Original upstream version
-
 

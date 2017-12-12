@@ -1,10 +1,21 @@
 #! /bin/sh
 
-/etc/init.d/pf_ring stop
-
-if [ -f /bin/systemctl ] ; then
-  systemctl disable pf_ring.service > /dev/null
-  systemctl disable cluster.service > /dev/null
-fi
+case "$1" in
+  upgrade)
+    #
+  ;;
+  *)
+    echo "Stopping pf_ring.."
+    if grep -q systemd /proc/1/comm; then
+      /bin/systemctl stop pf_ring
+      /bin/systemctl stop cluster
+      /bin/systemctl disable pf_ring
+      /bin/systemctl disable cluster
+    else
+      /etc/init.d/pf_ring stop
+      /etc/init.d/cluster stop
+    fi
+  ;;
+esac
 
 exit 0

@@ -3,12 +3,11 @@ Description=Start/stop pfring service
 After=network.target syslog.target
 
 [Service]
-Type=forking
+Type=oneshot
 RemainAfterExit=yes
-ExecStart=/etc/init.d/pf_ring start
-ExecStop=/etc/init.d/pf_ring stop
-Restart=on-abnormal
-RestartSec=5
+
+ExecStart=/usr/local/bin/pf_ringctl start
+ExecStop=/usr/local/bin/pf_ringctl stop
 
 [Install]
 WantedBy=multi-user.target
