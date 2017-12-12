@@ -3,7 +3,7 @@
 /sbin/depmod
 
 echo "Adding the pf_ring startup script"
-if [ -f /bin/systemctl ] ; then
+if [ -h /sbin/init ]; then
   systemctl enable pf_ring.service > /dev/null
   systemctl enable cluster.service > /dev/null
 else
