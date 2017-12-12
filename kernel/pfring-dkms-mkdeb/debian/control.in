@@ -2,7 +2,7 @@ Source: DEBIAN_PACKAGE-dkms
 Section: free
 Priority: optional
 Maintainer: Luca Deri <deri@ntop.org>
-Build-Depends: debhelper (>= 7), dkms
+Build-Depends: debhelper (>= 7), dkms, kmod
 Standards-Version: 3.8.1
 
 Package: DEBIAN_PACKAGE-dkms
