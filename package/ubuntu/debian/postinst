@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "Adding the pf_ring startup script"
-if [ -h /sbin/init ]; then
+if hash systemctl 2>/dev/null; then    
   systemctl enable pf_ring.service > /dev/null
   systemctl enable cluster.service > /dev/null
 else
