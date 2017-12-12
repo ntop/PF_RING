@@ -83,7 +83,7 @@ check_pf_ring() {
 		RETVAL=0
 		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
 		[ ${DISTRO} == "centos" ] && echo_success && echo
-		exit 0
+		return 1
 	fi
 
 	if [ ${ERROR} -gt 0 ]; then
@@ -97,6 +97,8 @@ check_pf_ring() {
 			exit 99
 		fi
 	fi
+
+	return 0
 }
 
 rebuild_dkms() {
@@ -412,6 +414,10 @@ stop_pf_ring() {
 	[ ${DISTRO} == "centos" ] && echo -n "Stopping PF_RING module: "
 
 	check_pf_ring stop
+
+	if [ $? -ne 0 ]; then
+		return
+	fi
 
 	if [ -f /etc/init.d/nprobe ]; then
 		/etc/init.d/nprobe stop
