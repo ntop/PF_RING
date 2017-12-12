@@ -1,7 +1,5 @@
 #!/bin/sh
 
-/sbin/depmod
-
 echo "Adding the pf_ring startup script"
 if [ -h /sbin/init ]; then
   systemctl enable pf_ring.service > /dev/null
