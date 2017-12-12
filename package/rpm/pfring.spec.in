@@ -126,7 +126,7 @@ rm -fr $RPM_BUILD_ROOT
 /etc/init.d/pf_ring
 %endif
 /etc/init.d/cluster
-/src/local/bin/pf_ringctl
+/usr/local/bin/pf_ringctl
 
 %config(noreplace) /etc/init/pf_ring.conf
 
