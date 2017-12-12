@@ -15,6 +15,7 @@ case "$1" in
   ;;
 esac
 
+if [ ! -f /.dockerenv ]; then
 echo "Adding the pf_ring startup script"
 if hash systemctl 2>/dev/null; then    
   /bin/systemctl enable pf_ring.service > /dev/null
@@ -32,6 +33,7 @@ else
   update-rc.d cluster defaults 40 >/dev/null
 
   /etc/init.d/pf_ring restart
+fi
 fi
 
 /sbin/ldconfig > /dev/null 2>&1
