@@ -180,7 +180,14 @@ start_interfaces() {
 	fi
 
 	for D in ${INTERFACES[@]} ; do
-		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D ; then
+		# Check if this is a VLAN interface
+		D_PHYSIF=$(eval "cat /proc/net/vlan/config | awk '/^${D} / {print \$5}'")
+
+		if [ -z $D_PHYSIF ]; then
+			D_PHYSIF=$D
+		fi
+
+		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D_PHYSIF ; then
 			# Disabling offloads
 			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
 
