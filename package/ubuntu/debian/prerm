@@ -5,6 +5,7 @@ case "$1" in
     #
   ;;
   *)
+    if [ -f /.dockerenv ]; then exit 0; fi
     echo "Stopping pf_ring.."
     if grep -q systemd /proc/1/comm; then
       /bin/systemctl stop pf_ring
