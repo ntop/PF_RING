@@ -426,33 +426,37 @@ stop_pf_ring() {
 		return
 	fi
 
-	if [ -f /etc/init.d/nprobe ]; then
-		/etc/init.d/nprobe stop
-		sleep 1
-	elif [ -f /etc/systemd/system/nprobe@.service ]; then
+	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/nprobe@.service ]; then
 		/bin/systemctl stop "nprobe@*"
+	elif [ -f /etc/init.d/nprobe ]; then
+		/etc/init.d/nprobe stop
 	fi
 
-	if [ -f /etc/init.d/n2disk ]; then
-		/etc/init.d/n2disk stop
-	elif [ -f /etc/systemd/system/n2disk@.service ]; then
+	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/n2disk@.service ]; then
 		/bin/systemctl stop "n2disk@*"
-		sleep 1
+	elif [ -f /etc/init.d/n2disk ]; then
+		/etc/init.d/n2disk stop
 	fi
 
-	if [ -f /etc/init.d/ntopng ]; then
-		/etc/init.d/ntopng stop
-	elif [ -f /etc/systemd/system/ntopng.service ]; then
+	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/ntopng.service ]; then
 		/bin/systemctl stop "ntopng"
-		sleep 1
+	elif [ -f /etc/init.d/ntopng ]; then
+		/etc/init.d/ntopng stop
 	fi
 
-	if [ -f /etc/init.d/cento ]; then
-		/etc/init.d/cento stop
-	elif [ -f /etc/systemd/system/cento.service ]; then
+	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/cento.service ]; then
 		/bin/systemctl stop "cento"
-		sleep 1
+	elif [ -f /etc/init.d/cento ]; then
+		/etc/init.d/cento stop
 	fi
+
+	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/cluster@.service ]; then
+		/bin/systemctl stop "cluster@*"
+	elif [ -f /etc/init.d/cluster ]; then
+		/etc/init.d/cluster stop
+	fi
+
+	sleep 1
 
 	## Unload drivers ##
 	unload_zc

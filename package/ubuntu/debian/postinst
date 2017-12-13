@@ -22,7 +22,6 @@ if [ -f /.dockerenv ]; then exit 0; fi
 echo "Adding the pf_ring startup script"
 if hash systemctl 2>/dev/null; then    
   /bin/systemctl enable pf_ring.service > /dev/null
-  /bin/systemctl enable cluster.service > /dev/null
 
   # Migration from old-style .start
   if ls /etc/pf_ring/pf_ring.start 1> /dev/null 2>&1;

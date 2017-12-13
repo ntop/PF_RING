@@ -60,17 +60,18 @@ cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d
-mkdir -p $RPM_BUILD_ROOT/etc/init.d
 %if 0%{?centos_ver} == 7
   mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
   cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/etc/systemd/system
-  cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/etc/systemd/system
+  cp $HOME/PF_RING/package/etc/systemd/system/cluster@.service $RPM_BUILD_ROOT/etc/systemd/system
 %else
+  mkdir -p $RPM_BUILD_ROOT/etc/init.d
   cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
+  cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 %endif
-cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
 cp $HOME/PF_RING/package/usr/local/bin/pf_ringctl $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/package/usr/local/bin/clusterctl $RPM_BUILD_ROOT/usr/local/bin
 # DAQ
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
 cp $HOME/PF_RING/userland/snort/pfring-daq-module/daq_pfring.la $RPM_BUILD_ROOT/usr/local/lib/daq
@@ -121,12 +122,13 @@ rm -fr $RPM_BUILD_ROOT
 /etc/ld.so.conf.d/pf_ring.conf
 %if 0%{?centos_ver} == 7
 /etc/systemd/system/pf_ring.service
-/etc/systemd/system/cluster.service
+/etc/systemd/system/cluster@.service
 %else
 /etc/init.d/pf_ring
-%endif
 /etc/init.d/cluster
+%endif
 /usr/local/bin/pf_ringctl
+/usr/local/bin/clusterctl
 
 %config(noreplace) /etc/init/pf_ring.conf
 
@@ -159,6 +161,7 @@ case "$1" in
       /bin/systemctl enable pf_ring
     %else
       /sbin/chkconfig --add pf_ring
+      /sbin/chkconfig --add cluster
     %endif
   ;;
   2)
@@ -168,8 +171,10 @@ esac
 /sbin/ldconfig > /dev/null 2>&1
 %if 0%{?centos_ver} == 7
   /bin/systemctl restart pf_ring
+  /bin/systemctl restart "cluster@*"
 %else
   /etc/init.d/pf_ring restart
+  /etc/init.d/cluster restart
 %endif
 
 %preun
@@ -177,10 +182,14 @@ case "$1" in
   0)
     # un-install
     %if 0%{?centos_ver} == 7
+      /bin/systemctl disable "cluster@*"
       /bin/systemctl disable pf_ring
+      /bin/systemctl stop "cluster@*"
       /bin/systemctl stop pf_ring
     %else
+      /etc/init.d/cluster stop
       /etc/init.d/pf_ring stop
+      /sbin/chkconfig --del cluster
       /sbin/chkconfig --del pf_ring
     %endif
   ;;

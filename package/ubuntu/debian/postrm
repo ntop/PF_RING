@@ -2,7 +2,7 @@
 
 if hash systemctl 2>/dev/null; then
   /bin/systemctl disable pf_ring.service > /dev/null
-  /bin/systemctl disable cluster.service > /dev/null
+  /bin/systemctl disable "cluster@*" > /dev/null
 else
   update-rc.d pf_ring remove > /dev/null
   update-rc.d cluster remove > /dev/null
