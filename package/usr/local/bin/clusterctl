@@ -39,7 +39,7 @@ start_cluster_id() {
 stop_cluster_id_deps() {
 	CLUSTER_ID=$1
 
-	STOP_NPROBE_INSTANCES="$(/bin/ls /etc/nprobe/nprobe-cluster_$CLUSTER_ID-*.conf)"
+	STOP_NPROBE_INSTANCES="$(/bin/ls /etc/nprobe/nprobe-cluster_${CLUSTER_ID}-*.conf 2>/dev/null)"
 	for NPROBE_ELEM in $STOP_NPROBE_INSTANCES
 	do
 		NPROBE_ELEM=${NPROBE_ELEM#/etc/nprobe/nprobe-}
@@ -51,7 +51,7 @@ stop_cluster_id_deps() {
 		fi
 	done
 
-	STOP_N2DISK_INSTANCES="$(/bin/ls /etc/n2disk/n2disk-cluster_$CLUSTER_ID_*.conf)"
+	STOP_N2DISK_INSTANCES="$(/bin/ls /etc/n2disk/n2disk-cluster_${CLUSTER_ID}_*.conf 2>/dev/null)"
 	for N2DISK_ELEM in $STOP_N2DISK_INSTANCES
 	do
 		N2DISK_ELEM=${N2DISK_ELEM#/etc/n2disk/n2disk-}
