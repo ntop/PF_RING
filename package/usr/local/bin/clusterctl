@@ -15,7 +15,20 @@ start_cluster_id() {
 		exit 1
 	fi
 
-	if [ -f /etc/cluster/cluster-${CLUSTER_ID}.start ] || [ $FORCESTART -eq 1 ]; then
+	START=$FORCESTART
+	if [ $START -eq 0 ]; then
+		if hash systemctl 2>/dev/null; then
+			if systemctl -q is-enabled cluster@${CLUSTER_ID}; then
+				START=1
+			fi
+		else
+			if [ -f /etc/cluster/cluster-${CLUSTER_ID}.start ]; then
+				START=1
+			fi
+		fi
+	fi
+
+	if [ $START -eq 1 ]; then
 		echo "Starting cluster $CLUSTER_ID"
 
 		PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
@@ -31,7 +44,7 @@ start_cluster_id() {
 		fi
 		$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf >> /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
 	else
-		echo "cluster $CLUSTER_ID not started: missing /etc/cluster/cluster-${CLUSTER_ID}.start"
+		echo "cluster $CLUSTER_ID not enabled"
 	fi
 	return 1
 }
@@ -107,14 +120,22 @@ start_cluster() {
 		mkdir -p /var/log/cluster
 	fi
 
-	NUM_TO_START="$(find /etc/cluster/ -name "*.start"|wc -l)"
+	if hash systemctl 2>/dev/null; then
+		NUM_TO_START="$(find /etc/systemd/system/multi-user.target.wants/ -name "cluster@*.service" | wc -l)"
+	else
+		NUM_TO_START="$(find /etc/cluster/ -name "*.start" | wc -l)"
+	fi
 	if [ "$NUM_TO_START" -eq 0 ] && [ $FORCESTART -eq 0 ]; then
 		# No instances to start
 		return 0
 	fi
 
 	if [ -z $CLUSTER_ID ]; then
-		IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		if hash systemctl 2>/dev/null; then
+			IDS="$(ls /etc/systemd/system/multi-user.target.wants/cluster@*.service | /usr/bin/cut -d '@' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		else
+			IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		fi
 	else
  		IDS=$CLUSTER_ID
 	fi
@@ -151,12 +172,16 @@ stop_cluster() {
 }
 
 check_cluster_status() {
-	INTERFACE_NAME=$1
+	ID=$1
 
-	if [ -z $INTERFACE_NAME ]; then
-		NETDEVICES="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+	if [ -z $ID ]; then
+		if hash systemctl 2>/dev/null; then
+			IDS="$(ls /etc/systemd/system/multi-user.target.wants/cluster@*.service | /usr/bin/cut -d '@' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		else
+			IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		fi
 	else
-		NETDEVICES=$INTERFACE_NAME
+		IDS=$ID
 	fi
 
 	local NUM_CONFIGED_INSTANCES=0
@@ -164,10 +189,16 @@ check_cluster_status() {
 	local RUNNING_INSTANCES=()
 	local NOT_RUNNING_INSTANCES=()
 
-	for E in $NETDEVICES ; do
-		if [ -f /etc/cluster/cluster-${E}.start ] ; then
-			NUM_CONFIGED_INSTANCES=$((NUM_CONFIGED_INSTANCES+1))
-
+	for E in $IDS ; do
+		NUM_CONFIGED_INSTANCES=$((NUM_CONFIGED_INSTANCES+1))
+		if hash systemctl 2>/dev/null; then
+			if systemctl -q is-active cluster@${E}; then
+				NUM_RUNNING_INSTANCES=$((NUM_RUNNING_INSTANCES+1));
+				RUNNING_INSTANCES+=($E);
+			else
+				NOT_RUNNING_INSTANCES+=($E);
+			fi
+		else
 			PID_FILE=$(cat /etc/cluster/cluster-${E}.conf | grep '\-P='|cut -d '=' -f 2)
 			if [ -f $PID_FILE ]; then
 				PID=$(cat "${PID_FILE}")

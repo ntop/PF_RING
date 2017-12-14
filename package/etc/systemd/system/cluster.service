@@ -1,0 +1,15 @@
+[Unit]
+Description=Start/stop all enabled cluster services
+After=network.target syslog.target pf_ring.service
+Requires=pf_ring.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStart=/usr/local/bin/clusterctl start-if-enabled
+ExecStop=/usr/local/bin/clusterctl stop
+
+[Install]
+WantedBy=multi-user.target
+

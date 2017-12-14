@@ -9,8 +9,10 @@ case "$1" in
     echo "Stopping pf_ring.."
     if grep -q systemd /proc/1/comm; then
       /bin/systemctl stop pf_ring
+      /bin/systemctl stop "cluster"
       /bin/systemctl stop "cluster@*"
       /bin/systemctl disable pf_ring
+      /bin/systemctl disable "cluster"
       /bin/systemctl disable "cluster@*"
     else
       /etc/init.d/pf_ring stop

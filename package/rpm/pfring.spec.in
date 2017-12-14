@@ -63,6 +63,7 @@ cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so
 %if 0%{?centos_ver} == 7
   mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
   cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/etc/systemd/system
+  cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/etc/systemd/system
   cp $HOME/PF_RING/package/etc/systemd/system/cluster@.service $RPM_BUILD_ROOT/etc/systemd/system
 %else
   mkdir -p $RPM_BUILD_ROOT/etc/init.d
@@ -122,6 +123,7 @@ rm -fr $RPM_BUILD_ROOT
 /etc/ld.so.conf.d/pf_ring.conf
 %if 0%{?centos_ver} == 7
 /etc/systemd/system/pf_ring.service
+/etc/systemd/system/cluster.service
 /etc/systemd/system/cluster@.service
 %else
 /etc/init.d/pf_ring
@@ -185,8 +187,10 @@ case "$1" in
   0)
     # un-install
     %if 0%{?centos_ver} == 7
+      /bin/systemctl disable "cluster"
       /bin/systemctl disable "cluster@*"
       /bin/systemctl disable pf_ring
+      /bin/systemctl stop "cluster"
       /bin/systemctl stop "cluster@*"
       /bin/systemctl stop pf_ring
     %else
