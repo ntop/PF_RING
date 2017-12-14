@@ -430,6 +430,7 @@ stop_pf_ring() {
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/nprobe@.service ]; then
+		/bin/systemctl stop "nprobe"
 		/bin/systemctl stop "nprobe@*"
 	elif [ -f /etc/init.d/nprobe ]; then
 		/etc/init.d/nprobe stop
@@ -449,6 +450,9 @@ stop_pf_ring() {
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/cento.service ]; then
 		/bin/systemctl stop "cento"
+		/bin/systemctl stop "cento@*"
+		/bin/systemctl stop "cento-ids"
+		/bin/systemctl stop "cento-bridge"
 	elif [ -f /etc/init.d/cento ]; then
 		/etc/init.d/cento stop
 	fi
