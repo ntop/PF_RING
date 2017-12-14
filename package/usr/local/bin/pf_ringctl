@@ -180,11 +180,14 @@ start_interfaces() {
 	fi
 
 	for D in ${INTERFACES[@]} ; do
-		# Check if this is a VLAN interface
-		D_PHYSIF=$(eval "cat /proc/net/vlan/config | awk '/^${D} / {print \$5}'")
+		D_PHYSIF=$D
 
-		if [ -z $D_PHYSIF ]; then
-			D_PHYSIF=$D
+		# Check if this is a VLAN interface
+		if [ -f /proc/net/vlan/config ]; then
+			D_PHYSIF=$(eval "cat /proc/net/vlan/config | awk '/^${D} / {print \$5}'")
+			if [ -z $D_PHYSIF ]; then
+				D_PHYSIF=$D
+			fi
 		fi
 
 		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D_PHYSIF ; then
