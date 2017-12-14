@@ -166,6 +166,9 @@ case "$1" in
   ;;
   2)
     # upgrade
+    %if 0%{?centos_ver} == 7
+      /bin/systemctl daemon-reload
+    %endif
   ;;
 esac
 /sbin/ldconfig > /dev/null 2>&1
