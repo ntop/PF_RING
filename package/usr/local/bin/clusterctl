@@ -10,8 +10,8 @@ start_cluster_id() {
 
 	CLUSTER_MASTER_BINARY=/usr/bin/zbalance_ipc
 
-	if [ ! -f /etc/cluster/cluster-$PARAM_CLUSTER_ID.conf ]; then
-		echo "ERROR: No configuration file found for cluster $PARAM_CLUSTER_ID"
+	if [ ! -f /etc/cluster/cluster-$CLUSTER_ID.conf ]; then
+		echo "ERROR: No configuration file found for cluster $CLUSTER_ID"
 		exit 1
 	fi
 
