@@ -106,7 +106,8 @@ rebuild_dkms() {
 	MOD_VERSION=`ls -1d /usr/src/${1}* | tail -1 | cut -d '/' -f 4 | sed -e "s/${1}-//"`
 	echo "Uninstalling old ${1} version"
 	/usr/sbin/dkms uninstall -m ${1} -v ${MOD_VERSION} > /dev/null
-	/usr/sbin/dkms remove -m ${1} -v ${MOD_VERSION} -k `uname -r` > /dev/null
+	#/usr/sbin/dkms remove -m ${1} -v ${MOD_VERSION} -k `uname -r` > /dev/null
+	/usr/sbin/dkms remove -m ${1} -v ${MOD_VERSION} --all > /dev/null
 	echo "Compiling new ${1} driver"
 	/usr/sbin/dkms build -m ${1} -v ${MOD_VERSION} > /dev/null
 	echo "Installing new ${1} driver"
