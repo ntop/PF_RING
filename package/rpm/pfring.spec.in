@@ -161,6 +161,7 @@ case "$1" in
     %if 0%{?centos_ver} == 7
       /bin/systemctl daemon-reload
       /bin/systemctl enable pf_ring
+      /bin/systemctl enable cluster
     %else
       /sbin/chkconfig --add pf_ring
       /sbin/chkconfig --add cluster
