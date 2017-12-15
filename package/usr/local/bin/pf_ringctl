@@ -335,6 +335,12 @@ start_pf_ring() {
 
 	init_config
 
+	if [ ! -d /var/lib/dkms/pfring ]; then
+		[ ${DISTRO} == "debian" ] && log_daemon_msg "PF_RING kernel module not installed, please install pfring-dkms"
+		[ ${DISTRO} == "centos" ] && echo "PF_RING kernel module not installed, please install pfring-dkms"
+		return
+	fi
+
 	[ ${DISTRO} == "debian" ] && log_daemon_msg "Starting PF_RING module"
 	[ ${DISTRO} == "centos" ] && echo -n "Starting PF_RING module: "
 
