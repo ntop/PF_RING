@@ -25,7 +25,13 @@ dnl> if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so        
 
 DATE=`date -R`
 KERNEL=`uname -r`
+CENTOS_RELEASE=`cat /etc/centos-release | cut -d ' ' -f 3|cut -d '.' -f 1`
 
+if test "$CENTOS_RELEASE" -eq 6; then
+  EXTRA_REQUIRES=""
+else
+  EXTRA_REQUIRES=", kmod"
+fi
 
 AC_SUBST(VERS)
 AC_SUBST(EXTN)
@@ -35,6 +41,7 @@ AC_SUBST(PLATFORM)
 AC_SUBST(REVISION)
 AC_SUBST(GIT_BRANCH)
 AC_SUBST(GIT_HASH)
+AC_SUBST(EXTRA_REQUIRES)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(pfring.spec)
