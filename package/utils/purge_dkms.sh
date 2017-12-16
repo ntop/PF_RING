@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/sh
 
 #
 # Remove all installed ZC and pfring dkms modules
@@ -12,7 +12,9 @@ if [ "$(id -u)" != "0" ]; then
    exit 1
 fi
 
-dkms status | grep -e "-zc" -e "pfring" | sed -e "s/:/,/g" | sed -e "s/ //g" | awk '{split($0,a,","); print "/sbin/dkms remove", a[1]"/"a[2], "--all"}' > /tmp/purge_dkms_todo.sh
+dkms status | grep -e "-zc" -e "pfring" | sed -e "s/:/,/g" | sed -e "s/ //g" | awk '{split($0,a,","); print "dkms remove", a[1]"/"a[2], "--all"}' > /tmp/purge_dkms_todo.sh
+
+#cat /tmp/purge_dkms_todo.sh
 
 bash -x /tmp/purge_dkms_todo.sh
 
