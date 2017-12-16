@@ -122,19 +122,11 @@ ifeq (,$(CC))
 endif
 
 # Set no-pie for compilers that enable pie by default
-test_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>/dev/null && echo 1)
-ifeq (,$(test_nopie))
-  # safety check for gcc version returning success on failure
-  test_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
-endif
+test_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
 ifneq (,$(test_nopie))
   EXTRA_CFLAGS += -no-pie
 endif
-test_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>/dev/null && echo 1)
-ifeq (,$(test_fnopie))
-  # safety check for gcc version returning success on failure
-  test_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
-endif
+test_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
 ifneq (,$(test_fnopie))
   EXTRA_CFLAGS += -fno-pie
 endif
