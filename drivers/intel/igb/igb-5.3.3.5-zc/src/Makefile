@@ -124,12 +124,12 @@ ifeq (,$(CC))
 endif
 
 # Set no-pie for compilers that enable pie by default
-test_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
-ifneq (,$(test_nopie))
+test_no_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>&1 | grep unrecognized && echo 1)
+ifneq (1,$(test_no_nopie))
   EXTRA_CFLAGS += -no-pie
 endif
-test_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>&1 | grep -v unrecognized && echo 1)
-ifneq (,$(test_fnopie))
+test_no_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>&1 | grep unrecognized && echo 1)
+ifneq (1,$(test_no_fnopie))
   EXTRA_CFLAGS += -fno-pie
 endif
 
