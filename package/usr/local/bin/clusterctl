@@ -8,8 +8,6 @@ FORCESTART=0
 start_cluster_id() {
 	CLUSTER_ID=$1
 
-	CLUSTER_MASTER_BINARY=/usr/bin/zbalance_ipc
-
 	if [ ! -f /etc/cluster/cluster-$CLUSTER_ID.conf ]; then
 		echo "ERROR: No configuration file found for cluster $CLUSTER_ID"
 		exit 1
@@ -31,18 +29,23 @@ start_cluster_id() {
 	if [ $START -eq 1 ]; then
 		echo "Starting cluster $CLUSTER_ID"
 
-		PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
-		if [ -f $PID_FILE ]; then
-			PID=$(cat $PID_FILE)
-			if [ $PID -gt 0 ]; then
-				IS_EXISTING=$(ps auxw | grep -v grep| grep $PID|wc -l)
-				if [ $IS_EXISTING -gt 0 ]; then
-					echo "cluster $CLUSTER_ID is already running [pid $PID]: not started"
-					return 0
+		if hash systemctl 2>/dev/null; then
+			systemctl start cluster@${CLUSTER_ID}
+		else
+			PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
+			if [ -f $PID_FILE ]; then
+				PID=$(cat $PID_FILE)
+				if [ $PID -gt 0 ]; then
+					IS_EXISTING=$(ps auxw | grep -v grep| grep $PID|wc -l)
+					if [ $IS_EXISTING -gt 0 ]; then
+						echo "cluster $CLUSTER_ID is already running [pid $PID]: not started"
+						return 0
+					fi
 				fi
 			fi
+			CLUSTER_MASTER_BINARY=/usr/bin/zbalance_ipc
+			$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf >> /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
 		fi
-		$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf >> /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
 	else
 		echo "cluster $CLUSTER_ID not enabled"
 	fi
@@ -88,18 +91,22 @@ stop_cluster_id() {
 	stop_cluster_id_deps $CLUSTER_ID
 
 	if [ -f /etc/cluster/cluster-${CLUSTER_ID}.conf ]; then
-		PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
-		if [ -f $PID_FILE ]; then
-			PID=$(cat $PID_FILE)
-			if [ $PID -gt 0 ]; then
-				echo "Stopping cluster $CLUSTER_ID"
-				kill -15 $PID > /dev/null
-				/bin/rm $PID_FILE
-			else
-				echo "Unable to stop cluster $CLUSTER_ID: invalid pid [$PID][$PID_FILE]"
+		if hash systemctl 2>/dev/null; then
+			systemctl stop cluster@${CLUSTER_ID}
+		else
+			PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
+			if [ -f $PID_FILE ]; then
+				PID=$(cat $PID_FILE)
+				if [ $PID -gt 0 ]; then
+					echo "Stopping cluster $CLUSTER_ID"
+					kill -15 $PID > /dev/null
+					/bin/rm $PID_FILE
+				else
+					echo "Unable to stop cluster $CLUSTER_ID: invalid pid [$PID][$PID_FILE]"
+				fi
+			#else
+			#	echo "Unable to stop cluster $CLUSTER_ID: missing pid $PID_FILE"
 			fi
-		#else
-		#	echo "Unable to stop cluster $CLUSTER_ID: missing pid $PID_FILE"
 		fi
 	else
 		echo "cluster $CLUSTER_ID can't be stopped: missing /etc/cluster/cluster-${CLUSTER_ID}.conf"
@@ -118,6 +125,18 @@ start_cluster() {
 
 	if [ ! -d "/var/log/cluster" ]; then
 		mkdir -p /var/log/cluster
+	fi
+
+	# Migrate .start to systemd 
+	if hash systemctl 2>/dev/null; then
+		for CONF_FILE in /etc/cluster/cluster-*.start
+		do
+			if [ -e "$CONF_FILE" ] ; then
+				ID=$(echo $CONF_FILE | sed 's/.*cluster-\([^\.]*\)\.start$/\1/')
+				systemctl enable cluster@${ID}
+				mv /etc/cluster/cluster-${ID}.start /etc/cluster/cluster-${ID}.start.migrated
+			fi
+		done
 	fi
 
 	if hash systemctl 2>/dev/null; then
