@@ -9,7 +9,7 @@ Packager: Luca Deri <deri@ntop.org>
 # Temporary location where the RPM will be built
 BuildRoot:  %{_tmppath}/%{name}-%{version}-root
 # Requires: pfring-dkms = @VERS@, net-tools
-Requires: net-tools
+Requires: net-tools, dkms, ethtool @EXTRA_REQUIRES@
 
 # Disable shared libs dependency check (needed by FPGA libs)
 AutoReq: no
@@ -155,6 +155,7 @@ case "$1" in
 esac
 
 %post
+if [ ! -f /.dockerenv ]; then
 case "$1" in
   1)
     # install
@@ -174,7 +175,11 @@ case "$1" in
     %endif
   ;;
 esac
+fi
+
 /sbin/ldconfig > /dev/null 2>&1
+
+if [ ! -f /.dockerenv ]; then
 %if 0%{?centos_ver} == 7
   /bin/systemctl restart pf_ring
   /bin/systemctl restart "cluster@*"
@@ -182,8 +187,10 @@ esac
   /etc/init.d/pf_ring restart
   /etc/init.d/cluster restart
 %endif
+fi
 
 %preun
+if [ ! -f /.dockerenv ]; then
 case "$1" in
   0)
     # un-install
@@ -205,6 +212,7 @@ case "$1" in
     # upgrade
   ;;
 esac
+fi
 
 %changelog
 * Wed Dec  5 2012  <deri@centos.ntop.org> - @VERS@-%{buildrev}
