@@ -6,7 +6,8 @@ Standards-Version: @PFRING_VERS@-@REVISION@
 Build-Depends: 
 Build-Conflicts:
 
+Depends: net-tools, dkms, ethtool
 Package: pfring
 Architecture: @EXTN@
-Depends: pfring-dkms (=@PFRING_VERS@)
+Recommends: pfring-dkms (=@PFRING_VERS@)
 Description: PF_RING (http://www.ntop.org/pf_ring/) [@GIT_BRANCH@:@GIT_HASH@]

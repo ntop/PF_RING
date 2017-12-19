@@ -48,9 +48,15 @@ binary-arch: build install
 # Install sources
 	mkdir -p ./debian/pfring/
 	cp -r ./debian/usr  ../etc ./debian/pfring/
+	cp -r ./debian/usr  ../usr ./debian/pfring/
 	-find ./debian/pfring -name "\.svn" -type d -exec /bin/rm -rf {} ';'
 	-find ./debian/pfring -name "*~" -type d -exec /bin/rm -rf {} ';'
 	rm -rf ./debian/pfring/etc/init
+	if grep -q init /proc/1/comm; then \
+		\rm -rf ./debian/pfring/etc/systemd; \
+	else \
+		\rm -rf ./debian/pfring/etc/init.d; \
+	fi
 	#rm -rf ./debian/pfring/etc/init.d/pf_ring
 #	dh_shlibdeps
 	dh_gencontrol
