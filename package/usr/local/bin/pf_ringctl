@@ -73,11 +73,16 @@ function dkms_installed {
 check_pf_ring() {
 	# check the module status
 	ERROR=0
+	WARNING=0
+	RETVAL=0
 	if [ $1 == "start" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -gt 0 ]; then
 		MSG="PF_RING already loaded. Exiting"
-		#ERROR=1
+		WARNING=1
+		RETVAL=1
 	elif [ $1 == "stop" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ]; then
 		MSG="PF_RING already unloaded Exiting"
+		WARNING=1
+		RETVAL=1
 	fi
 
 	if [ ${ERROR} -gt 0 ]; then
@@ -90,15 +95,14 @@ check_pf_ring() {
 			echo_failure; echo
 			exit 99
 		fi
-	else
+	elif [ ${WARNING} -gt 0 ]; then
 		[ ${DISTRO} == "debian" ] && log_daemon_msg "${MSG}"
 		[ ${DISTRO} == "centos" ] && echo -n "${MSG}"
 		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
 		[ ${DISTRO} == "centos" ] && echo_success && echo
-		return 1
 	fi
 
-	return 0
+	return $RETVAL
 }
 
 rebuild_dkms() {
