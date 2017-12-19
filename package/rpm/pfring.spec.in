@@ -9,7 +9,7 @@ Packager: Luca Deri <deri@ntop.org>
 # Temporary location where the RPM will be built
 BuildRoot:  %{_tmppath}/%{name}-%{version}-root
 # Requires: pfring-dkms = @VERS@, net-tools
-Requires: net-tools, dkms, ethtool @EXTRA_REQUIRES@
+Requires: net-tools, ethtool @EXTRA_REQUIRES@
 
 # Disable shared libs dependency check (needed by FPGA libs)
 AutoReq: no
