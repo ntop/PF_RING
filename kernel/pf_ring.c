@@ -2747,10 +2747,15 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
 	if(!(hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL)) {
           hdr->extended_hdr.parsed_pkt.vlan_id = vlan_tci & VLAN_VID_MASK;
-          hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+          if (hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0)
+            hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+          else /* QinQ */
+            hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
           hdr->extended_hdr.parsed_pkt.offset.l3_offset += sizeof(struct eth_vlan_hdr);
-          if(hdr->extended_hdr.parsed_pkt.offset.l4_offset) hdr->extended_hdr.parsed_pkt.offset.l4_offset += sizeof(struct eth_vlan_hdr);
-          if(hdr->extended_hdr.parsed_pkt.offset.payload_offset) hdr->extended_hdr.parsed_pkt.offset.payload_offset += sizeof(struct eth_vlan_hdr);
+          if(hdr->extended_hdr.parsed_pkt.offset.l4_offset) 
+            hdr->extended_hdr.parsed_pkt.offset.l4_offset += sizeof(struct eth_vlan_hdr);
+          if(hdr->extended_hdr.parsed_pkt.offset.payload_offset) 
+            hdr->extended_hdr.parsed_pkt.offset.payload_offset += sizeof(struct eth_vlan_hdr);
           hdr->extended_hdr.flags |= PKT_FLAGS_VLAN_HWACCEL;
         }
         /* len/caplen reset outside, we can increment all the time */
