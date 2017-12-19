@@ -72,18 +72,12 @@ function dkms_installed {
 
 check_pf_ring() {
 	# check the module status
-	RETVAL=0
+	ERROR=0
 	if [ $1 == "start" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -gt 0 ]; then
 		MSG="PF_RING already loaded. Exiting"
-		ERROR=1
-		RETVAL=1
+		#ERROR=1
 	elif [ $1 == "stop" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ]; then
 		MSG="PF_RING already unloaded Exiting"
-		ERROR=0 
-		RETVAL=0
-		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-		[ ${DISTRO} == "centos" ] && echo_success && echo
-		return 1
 	fi
 
 	if [ ${ERROR} -gt 0 ]; then
@@ -96,6 +90,12 @@ check_pf_ring() {
 			echo_failure; echo
 			exit 99
 		fi
+	else
+		[ ${DISTRO} == "debian" ] && log_daemon_msg "${MSG}"
+		[ ${DISTRO} == "centos" ] && echo -n "${MSG}"
+		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+		[ ${DISTRO} == "centos" ] && echo_success && echo
+		return 1
 	fi
 
 	return 0
@@ -357,6 +357,10 @@ start_pf_ring() {
 	PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
 
 	check_pf_ring start
+
+	if [ $? -ne 0 ]; then
+		return
+	fi
 	
 	if [ ! -f "${FORCESTART_FILE}" ] && [ ${FORCESTART} -eq 0 ]; then
 		# remove pf_ring in any case
@@ -390,7 +394,6 @@ start_pf_ring() {
 		# PF_RING not loaded. Exiting
 		MSG="Unable to load PF_RING. Exiting"
 		ERROR=1
-		RETVAL=1
 		if [ ${DISTRO} == "debian" ]; then
 			log_failure_msg "${MSG}"
 			log_end_msg $ERROR
@@ -426,7 +429,6 @@ start_pf_ring() {
 
 stop_pf_ring() {
 
-	RETVAL=0
 	[ ${DISTRO} == "debian" ] && log_daemon_msg "Stopping PF_RING module"
 	[ ${DISTRO} == "centos" ] && echo -n "Stopping PF_RING module: "
 
