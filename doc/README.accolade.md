@@ -1,7 +1,7 @@
 # Accolade support in PF_RING
 
 ## Prerequisite
-Accolade SDK v.1.2.17.20150903 or later installed.
+Accolade SDK v.1.2.26 or later installed.
 
 PF_RING has native support for Accolade adapters, the Accolade library
 needs to be installed (under /opt/accolade) in order to enable the 
