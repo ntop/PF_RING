@@ -61,7 +61,7 @@ cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d
 %if 0%{?centos_ver} == 7
-  mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
+  mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/system/
   cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/usr/lib/systemd/system/
   cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/usr/lib/systemd/system/
   cp $HOME/PF_RING/package/etc/systemd/system/cluster@.service $RPM_BUILD_ROOT/usr/lib/systemd/system/
