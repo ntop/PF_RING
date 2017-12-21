@@ -62,9 +62,9 @@ cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d
 %if 0%{?centos_ver} == 7
   mkdir -p $RPM_BUILD_ROOT/etc/systemd/system
-  cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/etc/systemd/system
-  cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/etc/systemd/system
-  cp $HOME/PF_RING/package/etc/systemd/system/cluster@.service $RPM_BUILD_ROOT/etc/systemd/system
+  cp $HOME/PF_RING/package/usr/lib/systemd/system/pf_ring.service $RPM_BUILD_ROOT/etc/systemd/system
+  cp $HOME/PF_RING/package/usr/lib/systemd/system/cluster.service $RPM_BUILD_ROOT/etc/systemd/system
+  cp $HOME/PF_RING/package/usr/lib/systemd/system/cluster@.service $RPM_BUILD_ROOT/etc/systemd/system
 %else
   mkdir -p $RPM_BUILD_ROOT/etc/init.d
   cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
@@ -122,9 +122,9 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/pfring/README-DAQ.1st
 /etc/ld.so.conf.d/pf_ring.conf
 %if 0%{?centos_ver} == 7
-/etc/systemd/system/pf_ring.service
-/etc/systemd/system/cluster.service
-/etc/systemd/system/cluster@.service
+/usr/lib/systemd/system/pf_ring.service
+/usr/lib/systemd/system/cluster.service
+/usr/lib/systemd/system/cluster@.service
 %else
 /etc/init.d/pf_ring
 /etc/init.d/cluster
