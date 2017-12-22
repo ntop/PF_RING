@@ -476,6 +476,12 @@ stop_pf_ring() {
 		/etc/init.d/cluster stop
 	fi
 
+	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/nscrub.service ]; then
+		/bin/systemctl stop "nscrub"
+	elif [ -f /etc/init.d/nscrub ]; then
+		/etc/init.d/nscrub stop
+	fi
+
 	sleep 1
 
 	## Unload drivers ##
