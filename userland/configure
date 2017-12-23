@@ -3295,7 +3295,9 @@ fi
 done
 
 
-MACHINE=`uname -m`
+if test -z "$MACHINE"; then
+  MACHINE=`uname -m`
+fi
 CFLAGS=""
 SYS_LIBS=""
 
