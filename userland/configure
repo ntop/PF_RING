@@ -3295,11 +3295,13 @@ fi
 done
 
 
-MACHINE=`uname -m`
+if test -z "$MACHINE"; then
+  MACHINE=`uname -m`
+fi
 CFLAGS=""
 SYS_LIBS=""
 
-NATIVE=`$CC -c -Q -march=native --help=target| grep "march" | xargs | cut -d ' ' -f 2`
+NATIVE=`$CC -c -Q --help=target| grep "march" | xargs | cut -d ' ' -f 2`
 if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   CFLAGS="-march=native -mtune=native $CFLAGS"
   LIBARCH="_$NATIVE"
