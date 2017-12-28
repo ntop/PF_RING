@@ -214,7 +214,7 @@ void* consumer_thread(void* _id) {
 
 static int rr = -1;
  
-int32_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
   if (++rr == num_out_queues) rr = 0;
   return rr;
@@ -222,7 +222,7 @@ int32_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 /* *************************************** */
 
-int32_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   /* NOTE: pkt_handle->hash contains the CPU id */
   struct sysdig_event_header *ev = (struct sysdig_event_header*)pfring_zc_pkt_buff_data(pkt_handle, in_queue); 
   long num_out_queues = (long) user;

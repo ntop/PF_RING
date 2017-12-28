@@ -285,7 +285,7 @@ void printHelp(void) {
 
 /* *************************************** */
 
-int32_t filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   if (1 /* TODO filter*/ ) return 0;
   return -1;

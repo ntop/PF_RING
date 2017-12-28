@@ -198,7 +198,7 @@ void printHelp(void) {
 
 /* *************************************** */
 
-int32_t processing_func(pfring_zc_pkt_buff *b, pfring_zc_queue *in_queue, void *user) {
+int64_t processing_func(pfring_zc_pkt_buff *b, pfring_zc_queue *in_queue, void *user) {
 #if 0
   int i;
 

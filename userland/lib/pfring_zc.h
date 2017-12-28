@@ -448,7 +448,7 @@ int
 pfring_zc_send_pkt_multi(
   pfring_zc_multi_queue *multi_queue, 
   pfring_zc_pkt_buff **pkt_handle, 
-  u_int32_t queues_mask,
+  u_int64_t queues_mask,
   u_int8_t flush_packet
 );
 
@@ -469,7 +469,7 @@ typedef enum {
  * @param user       The pointer to the user data.
  * @return           The egress queue index (or a negative value to drop the packet) in case of balancing, the egress queues bit-mask in case of fan-out.
  */
-typedef int32_t
+typedef int64_t
 (*pfring_zc_distribution_func) (
   pfring_zc_pkt_buff *pkt_handle,
   pfring_zc_queue *in_queue,
