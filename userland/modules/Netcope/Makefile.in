@@ -56,8 +56,8 @@ SYSLIBS   = -lpthread
 #
 # Main targets
 #
-STATICLIB  = lib/libpfring_netcope_$(MACHINE)$(strip $(LIBARCH)).a
-DYNAMICLIB = lib/libpfring_netcope_$(MACHINE).so
+STATICLIB  = ../../lib/libs/libpfring_netcope_$(MACHINE)$(strip $(LIBARCH)).a
+DYNAMICLIB = ../../lib/libs/libpfring_netcope_$(MACHINE).so
 TARGETS    = ${STATICLIB} ${DYNAMICLIB}
 
 default: ${TARGETS}
@@ -67,12 +67,10 @@ ${STATICLIB}: ${OBJS}
 	@mkdir -p lib
 	ar rs $@ ${OBJS} pfring_mod_netcope.h
 	ranlib $@
-	cp $@ ../../lib/libs/
 
 ${DYNAMICLIB}: ${OBJS}
 	@echo "=*= making library $@ =*="
 	${CC} ${LDFLAGS} ${OBJS} ${SYSLIBS} -o $@
-	cp $@ ../../lib/libs/
 
 all: install
 
