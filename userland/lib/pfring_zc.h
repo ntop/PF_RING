@@ -1,7 +1,7 @@
 /*
  * PF_RING ZC API
  *
- * (C) 2013-17 - ntop.org
+ * (C) 2013-2018 - ntop.org
  *
  */
 

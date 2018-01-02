@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -355,7 +355,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zsend - (C) 2014-17 ntop.org\n");
+  printf("zsend - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A traffic generator able to replay synthetic udp packets or hex from standard input.\n"); 
   printf("Usage:    zsend -i <device> -c <cluster id>\n"

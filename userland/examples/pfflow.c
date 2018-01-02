@@ -1,5 +1,5 @@
 /*
- * (C) 2017 - ntop
+ * (C) 2017-2018 - ntop
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -180,7 +180,7 @@ void processBuffer(const struct pfring_pkthdr *h,
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow - (C) 2005-17 ntop.org\n\n");
+  printf("pfflow - (C) 2005-2018 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
   printf("-o <path>       Dump flows to pcap\n");

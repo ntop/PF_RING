@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -504,7 +504,7 @@ void printDevs() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount - (C) 2005-17 ntop.org\n\n");
+  printf("pfcount - (C) 2005-2018 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"
