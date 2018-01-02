@@ -1,0 +1,63 @@
+AC_INIT([Makefile.in], 1.0)
+
+AC_PROG_CC
+
+MACHINE=`uname -m`
+
+if test $MACHINE = "x86_64"; then
+   EXTN="amd64"
+else
+   EXTN="i386"
+fi
+
+DATE=`date -R`
+KERNEL=`uname -r`
+
+ARCH=`uname -m`
+
+ARCHFLAGS=""
+ARCHEXT=""
+
+GCC_VERSION=`$CC --version |grep ^gcc |sed 's/^.* //g'`
+if test -n "$GCC_VERSION"; then
+  if test "$ARCH" = "x86_64"; then
+    GCCMAJOR=`echo $GCC_VERSION |cut -d'.' -f1`
+    GCCMINOR=`echo $GCC_VERSION |cut -d'.' -f2`
+    if test "$GCCMAJOR" -eq 4 && test "$GCCMINOR" -ge 6; then
+      CPUSSE42=`grep -m 1 flags /proc/cpuinfo | grep -o sse4_2 | uniq`
+      if test "$CPUSSE42" = "sse4_2"; then
+        CPUAVX=`grep -m 1 flags /proc/cpuinfo | grep -o avx | uniq`
+        if test "$CPUAVX" = "avx"; then
+          ARCHFLAGS="-march=corei7-avx -mtune=corei7-avx"
+          ARCHEXT="_corei7-avx"
+	else
+          ARCHFLAGS="-march=corei7 -mtune=corei7"
+          ARCHEXT="_corei7"
+        fi
+      fi
+    fi
+  fi
+fi
+
+AC_CHECK_LIB( [dag], [dag_get_stream_erf_types], )
+AC_MSG_CHECKING([if dag is present])
+if test "x$ac_cv_lib_dag_dag_get_stream_erf_types" = xyes; then :
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT(no)
+  echo "Please install the DAG driver/library"
+  exit
+fi
+
+LIBEXT="$ARCH$ARCHEXT"
+
+AC_SUBST(LIBEXT)
+AC_SUBST(ARCHFLAGS)
+AC_SUBST(MACHINE)
+AC_SUBST(EXTN)
+AC_SUBST(DATE)
+AC_SUBST(KERNEL)
+
+AC_CONFIG_FILES(Makefile)
+
+AC_OUTPUT
