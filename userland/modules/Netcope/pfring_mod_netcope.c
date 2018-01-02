@@ -262,7 +262,7 @@ int pfring_netcope_enable_ring(pfring *ring) {
   //TODO select the port_id (it will be possible with nsf 2.x)
 
   err = nsf_action(netcope->nsf, &netcope->action, NSF_RECEIVE_FULL, 0xFFFF, NSF_DISTRIBUTE_HASH /* NSF_DISTRIBUTE_ROUND_ROBIN */, 
-    nsf_core_receive_queue_min(netcope->nsf), 
+    nsf_core_receive_queue_min(netcope->nsf),
     (netcope->queue_id == -1) ? nsf_core_receive_queue_min(netcope->nsf) : nsf_core_receive_queue_max(netcope->nsf),
     false /* send */, 0);
 
@@ -438,7 +438,8 @@ int pfring_netcope_add_hw_rule(pfring *ring, hw_filtering_rule *rule) {
   if (rule->rule_family.flow_tuple_rule.action != flow_drop_rule) return -1;
 
   err = nsf_action(netcope->nsf, &action, NSF_RECEIVE_DROP, 0xFFFF, 
-    NSF_DISTRIBUTE_ROUND_ROBIN /* ignored here */, 
+    NSF_DISTRIBUTE_ROUND_ROBIN /* ignored here */,
+    nsf_core_receive_queue_min(netcope->nsf),
     (netcope->queue_id == -1) ? nsf_core_receive_queue_min(netcope->nsf) : nsf_core_receive_queue_max(netcope->nsf),
     false, 0);
 
