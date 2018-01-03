@@ -1,0 +1,22 @@
+AC_INIT([Makefile.in], 1.0)
+
+AC_PROG_CC
+
+AC_CHECK_HEADERS(exanic/exanic.h)
+if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
+  AC_CHECK_LIB(
+    [exanic], 
+    [exanic_acquire_handle], 
+    [ ],
+    [
+      echo "Please install the Exablaze library"
+      exit 
+    ])
+else
+  echo "Please install the Exablaze library"
+  exit
+fi
+
+AC_CONFIG_FILES(Makefile)
+
+AC_OUTPUT

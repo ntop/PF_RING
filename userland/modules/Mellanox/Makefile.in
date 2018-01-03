@@ -1,7 +1,6 @@
 #
-# Makefile for PF_RING MOD DAG
+# Makefile for PF_RING MOD MELLANOX
 #
-ARCH := $(shell uname -m | sed 's/i.86/i386/')
 
 #
 # GCC march/mtune
@@ -17,54 +16,48 @@ endif
 #
 INSTDIR   = /usr/local
 
-# DAG lib
-INCLUDEDAG=
-LIBDAG=-lm # -L/usr/local/lib -ldag -ldagconf -lm
-
 #
 # Search directories
 #
-INCLUDE  = -I../../../kernel -I../../nbpf -I../../lib ${INCLUDEDAG}
+INCLUDE  = -I../../../kernel -I../../nbpf -I../../lib
 
 #
 # Object files
 #
-SRCS      = pfring_mod_dag.c 
-OBJS      = pfring_mod_dag.o
+SRCS      = pfring_mod_mlx.c 
+OBJS      = pfring_mod_mlx.o
 MACHINE   = $(shell uname -m)
 
 #
 # C compiler and flags
 #
-#
-# CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
-#
 CC        = ${CROSS_COMPILE}gcc $(ARCHFLAGS) -O2 #-g
-# Note: since glibc >= 2.15 there is a new __fdelt_chk function that prevents the library from compiling on 
-# systems with an older glibc (CentOS). __fdelt_chk is related to the FORTIFY_SOURCE feature that enables 
-# buffer overflows checks. In order to disable this feature add -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 
 CFLAGS    = -Wall -fPIC ${INCLUDE} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 LDFLAGS   = -shared
 
 SYSLIBS   = -lpthread
 
+#SYSLIBS="$SYSLIBS -libverbs"
+
+#
 # How to make an object file
+#
 %.o: %.c %.h Makefile ../../../kernel/linux/pf_ring.h ../../lib/pfring.h
-#	@echo "=*= making object $@ =*="
 	${CC} ${CFLAGS} -c $< -o $@
 
 #
 # Main targets
 #
-STATICLIB  = ../../lib/libs/libpfring_dag_$(MACHINE)$(strip $(LIBARCH)).a
-DYNAMICLIB = ../../lib/libs/libpfring_dag_$(MACHINE).so
+STATICLIB  = ../../lib/libs/libpfring_mlx_$(MACHINE)$(strip $(LIBARCH)).a
+DYNAMICLIB = ../../lib/libs/libpfring_mlx_$(MACHINE).so
 TARGETS    = ${STATICLIB} ${DYNAMICLIB}
 
 default: ${TARGETS}
 
 ${STATICLIB}: ${OBJS}
 	@echo "=*= making library $@ =*="
-	ar rs $@ ${OBJS} pfring_mod_dag.h
+	@mkdir -p lib
+	ar rs $@ ${OBJS} pfring_mod_mlx.h
 	ranlib $@
 
 ${DYNAMICLIB}: ${OBJS}
