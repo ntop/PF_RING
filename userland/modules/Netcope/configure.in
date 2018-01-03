@@ -1,46 +1,6 @@
 AC_INIT([Makefile.in], 1.0)
 
-TODAY=`date +%y%m%d`
-
 AC_PROG_CC
-
-PFRING_VERS=`cat $HOME/PF_RING/kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
-MACHINE=`uname -m`
-
-if test $MACHINE = "x86_64"; then
-   EXTN="amd64"
-else
-   EXTN="i386"
-fi
-
-DATE=`date -R`
-KERNEL=`uname -r`
-
-ARCH=`uname -m`
-
-ARCHFLAGS=""
-ARCHEXT=""
-
-GCC_VERSION=`$CC --version |grep ^gcc |sed 's/^.* //g'`
-if test -n "$GCC_VERSION"; then
-  if test "$ARCH" = "x86_64"; then
-    GCCMAJOR=`echo $GCC_VERSION |cut -d'.' -f1`
-    GCCMINOR=`echo $GCC_VERSION |cut -d'.' -f2`
-    if test "$GCCMAJOR" -eq 4 && test "$GCCMINOR" -ge 6; then
-      CPUSSE42=`grep -m 1 flags /proc/cpuinfo | grep -o sse4_2 | uniq`
-      if test "$CPUSSE42" = "sse4_2"; then
-        CPUAVX=`grep -m 1 flags /proc/cpuinfo | grep -o avx | uniq`
-        if test "$CPUAVX" = "avx"; then
-          ARCHFLAGS="-march=corei7-avx -mtune=corei7-avx"
-          ARCHEXT="_corei7-avx"
-	else
-          ARCHFLAGS="-march=corei7 -mtune=corei7"
-          ARCHEXT="_corei7"
-        fi
-      fi
-    fi
-  fi
-fi
 
 NETCOPE_HOME="/usr/share/netcope"
 AC_MSG_CHECKING([Netcope support])
@@ -57,16 +17,6 @@ else
   echo "Please install the Netcope driver/library"
   exit
 fi
-
-LIBEXT="$ARCH$ARCHEXT"
-
-AC_SUBST(LIBEXT)
-AC_SUBST(ARCHFLAGS)
-AC_SUBST(PFRING_VERS)
-AC_SUBST(MACHINE)
-AC_SUBST(EXTN)
-AC_SUBST(DATE)
-AC_SUBST(KERNEL)
 
 AC_CONFIG_FILES(Makefile)
 

@@ -583,13 +583,6 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-KERNEL
-DATE
-EXTN
-MACHINE
-PFRING_VERS
-ARCHFLAGS
-LIBEXT
 OBJEXT
 EXEEXT
 ac_ct_CC
@@ -1731,8 +1724,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-TODAY=`date +%y%m%d`
-
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -2523,44 +2514,6 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-PFRING_VERS=`cat $HOME/PF_RING/kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
-MACHINE=`uname -m`
-
-if test $MACHINE = "x86_64"; then
-   EXTN="amd64"
-else
-   EXTN="i386"
-fi
-
-DATE=`date -R`
-KERNEL=`uname -r`
-
-ARCH=`uname -m`
-
-ARCHFLAGS=""
-ARCHEXT=""
-
-GCC_VERSION=`$CC --version |grep ^gcc |sed 's/^.* //g'`
-if test -n "$GCC_VERSION"; then
-  if test "$ARCH" = "x86_64"; then
-    GCCMAJOR=`echo $GCC_VERSION |cut -d'.' -f1`
-    GCCMINOR=`echo $GCC_VERSION |cut -d'.' -f2`
-    if test "$GCCMAJOR" -eq 4 && test "$GCCMINOR" -ge 6; then
-      CPUSSE42=`grep -m 1 flags /proc/cpuinfo | grep -o sse4_2 | uniq`
-      if test "$CPUSSE42" = "sse4_2"; then
-        CPUAVX=`grep -m 1 flags /proc/cpuinfo | grep -o avx | uniq`
-        if test "$CPUAVX" = "avx"; then
-          ARCHFLAGS="-march=corei7-avx -mtune=corei7-avx"
-          ARCHEXT="_corei7-avx"
-	else
-          ARCHFLAGS="-march=corei7 -mtune=corei7"
-          ARCHEXT="_corei7"
-        fi
-      fi
-    fi
-  fi
-fi
-
 NETCOPE_HOME="/usr/share/netcope"
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking Netcope support" >&5
 $as_echo_n "checking Netcope support... " >&6; }
@@ -2580,16 +2533,6 @@ $as_echo "no" >&6; }
   echo "Please install the Netcope driver/library"
   exit
 fi
-
-LIBEXT="$ARCH$ARCHEXT"
-
-
-
-
-
-
-
-
 
 ac_config_files="$ac_config_files Makefile"
 
