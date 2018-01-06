@@ -1,15 +1,14 @@
 # Napatech support in PF_RING
 
-## Prerequisite
-Napatech drivers and SDK installed.
-
-As of PF_RING 6.2 you need ntanl v.4.0.1 and 
-with ntanl 3.2 being what normal support provides this version of
-PF_RING may not work for you 
-
 PF_RING has native support for Napatech adapters, the Napatech library
 needs to be installed (under /opt/napatech3) in order to enable the 
 Napatech module at runtime.
+
+## Prerequisite
+Napatech drivers and SDK installed.
+
+Note: as of PF_RING 6.6 dynamic linking is used and you are able to use
+any ntanl driver version. 
 
 ## Installation
 For the impatient, in order to get up and running with Napatech just run 
