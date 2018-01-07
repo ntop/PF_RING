@@ -1574,26 +1574,27 @@ static int ring_alloc_mem(struct sock *sk)
   the_slot_len = pfr->slot_header_len + pfr->bucket_len;
   the_slot_len = ALIGN(the_slot_len + sizeof(u_int16_t) /* RING_MAGIC_VALUE */, sizeof(u_int64_t));
 
-  if(unlikely((UINT_MAX - sizeof(FlowSlotInfo)) / the_slot_len < min_num_slots)) {
-    printk("[PF_RING] ERROR: min_num_slots (%u, slot len = %u) causes memory size to wrap\n", min_num_slots, the_slot_len);
-    return(-1);
-  }
+  tot_mem = (u_int64_t) sizeof(FlowSlotInfo) + ((u_int64_t) min_num_slots * the_slot_len);
 
-  tot_mem = sizeof(FlowSlotInfo) + (min_num_slots * the_slot_len);
+  if(unlikely(tot_mem > UINT_MAX)) {
+    printk("[PF_RING] Warning: ring size (min_num_slots = %u x slot_len = %u) exceeds max, resizing..\n", 
+      min_num_slots, the_slot_len);
+    tot_mem = UINT_MAX;
+  }
 
   /* Memory is already zeroed */
   pfr->ring_memory = allocate_shared_memory(&tot_mem);
 
   if(pfr->ring_memory != NULL) {
     debug_printk(2, "successfully allocated %lu bytes at 0x%08lx\n",
-	     (unsigned long)tot_mem, (unsigned long)pfr->ring_memory);
+	     (unsigned long) tot_mem, (unsigned long) pfr->ring_memory);
   } else {
     printk("[PF_RING] ERROR: not enough memory for ring\n");
     return(-1);
   }
 
   pfr->slots_info = (FlowSlotInfo *) pfr->ring_memory;
-  pfr->ring_slots = (u_char *)(pfr->ring_memory + sizeof(FlowSlotInfo));
+  pfr->ring_slots = (u_char *) (pfr->ring_memory + sizeof(FlowSlotInfo));
 
   pfr->slots_info->version = RING_FLOWSLOT_VERSION;
   pfr->slots_info->slot_len = the_slot_len;

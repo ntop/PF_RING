@@ -78,7 +78,7 @@ unsigned long long rdtsc() {
 
 int pfring_mod_open_setup(pfring *ring) {
   int rc;
-  u_int memSlotsLen;
+  u_int64_t memSlotsLen;
 
   ring->fd = socket(PF_RING, SOCK_RAW, htons(ETH_P_ALL));
 
@@ -141,7 +141,7 @@ int pfring_mod_open_setup(pfring *ring) {
             ring->buffer, PAGE_SIZE);
   }
 
-  ring->buffer = (char *)mmap(NULL, memSlotsLen,
+  ring->buffer = (char *) mmap(NULL, memSlotsLen,
 			      PROT_READ|PROT_WRITE,
 			      MAP_SHARED, ring->fd, 0);
 
