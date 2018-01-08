@@ -25,31 +25,22 @@ Myricom SNF library installation:
 tar xvf myri_snf-*.x86_64.tar
 mv myri_snf-*.x86_64 /opt/snf
 
-cd /opt/snf
-./sbin/rebuild.sh
+/opt/snf/sbin/rebuild.sh
 ```
 
 Myricom service start:
 
 ```
-./sbin/myri_start_stop start
+/opt/snf/sbin/myri_start_stop start
 ```
 
 If you are compiling PF_RING from sources:
 
 ```
-
-cd PF_RING/kernel
-make
-sudo insmod pf_ring.ko
-cd ../userland/lib
-./configure
-make
-cd ../libpcap
-./configure
-make
-cd ../examples
-make
+cd PF_RING/kernel && make && sudo insmod pf_ring.ko
+cd ../userland/lib && ./configure && make
+cd ../libpcap && ./configure && make
+cd ../examples && make
 
 sudo ./pfcount -i myri:0
 ```
