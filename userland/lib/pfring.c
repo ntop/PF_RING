@@ -1152,7 +1152,7 @@ int pfring_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
   if (!ring->force_userspace_bpf && ring->set_bpf_filter) {
     rc = ring->set_bpf_filter(ring, filter_buffer);
-    if (rc == 0 || rc == -2 /* special error code to force returning error */)
+    if (rc == 0 || rc < -1 /* force returning error if != -1 */)
       return rc;
   }
 

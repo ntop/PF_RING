@@ -219,19 +219,20 @@ int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
   pfring_exablaze *exablaze = (pfring_exablaze *)ring->priv_data;
   nbpf_tree_t *tree;
   nbpf_rule_list_item_t *pun;
+  int rc = 0;
 
   /* Parses the bpf filters and builds the rules tree */
   if((tree = nbpf_parse(bpf, NULL)) == NULL) {
 #ifdef DEBUG
     printf("Error on parsing the bpf filter.");
 #endif
-    return(-1);
+    return -1; /* not supported, falling back to standard bpf */
   }
 
   /* check the general rules of the nbpf */
   if(!nbpf_check_rules_constraints(tree, 0)) {
     nbpf_free(tree);
-    return(-2);
+    return -1; /* not supported, falling back to standard bpf */
   }
 
   /* Generates rules list */
@@ -239,9 +240,8 @@ int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
 #ifdef DEBUG
     printf("Error generating rules.");
 #endif
-
     nbpf_free(tree);
-    return(-3);
+    return -3; /* error generating rules */
   }
 
   /* Check if the BPF can be supported by the NIC */
@@ -252,14 +252,13 @@ int pfring_exablaze_set_bpf_filter(pfring *ring, char *bpf) {
     printf("Error on creating and setting the rules list on the NIC card: using software BPF");
 #endif
 
-    nbpf_rule_list_free(pun);
-    nbpf_free(tree);
-    return(-4);
+    rc = -4; /* error setting rules */
   }
 
   nbpf_rule_list_free(pun);
   nbpf_free(tree);
-  return(0);
+
+  return rc;
 }
 
 
