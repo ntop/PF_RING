@@ -154,7 +154,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zpipeline_ipc - (C) 2014 ntop.org\n");
+  printf("zpipeline_ipc - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process sending packets from a source interface to a sw queue and from a sw queue to a destination interface (first and last stage of a pipeline)\n\n");
   printf("Usage: zpipeline_ipc -i <device>;<queue> -o <device>;<queue> -n <num queues>\n"

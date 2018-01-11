@@ -163,7 +163,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zreplicator - (C) 2014 ntop.org\n");
+  printf("zreplicator - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("Read packets from multiple ingress devices and replicate it on multipe egress devices.\n\n");
   printf("Usage: zreplicator -i <device> -o <device> -c <cluster id> [-h] [-g <core id>] [-a]\n\n");

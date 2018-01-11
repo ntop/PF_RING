@@ -134,7 +134,7 @@ void my_sigalarm(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbounce_ipc - (C) 2014 ntop.org\n");
+  printf("zbounce_ipc - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A packet forwarder application between sw queues.\n\n");
   printf("Usage: zbounce_ipc -i <queue id> -o <queue id> -c <cluster id>\n"

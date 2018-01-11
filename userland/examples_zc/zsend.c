@@ -193,7 +193,7 @@ static void forge_udp_packet(u_char *buffer, u_int idx) {
   struct udp_header *udp_header;
   u_int32_t src_ip = 0x0A000000; /* 10.0.0.0 */ 
   u_int32_t dst_ip =  0xC0A80001; /* 192.168.0.1 */
-  u_int16_t src_port = 2014, dst_port = 3000;
+  u_int16_t src_port = 2014-2018, dst_port = 3000;
 
   if (num_ips == 0) {
     src_ip |= idx & 0xFFFFFF;
@@ -355,7 +355,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zsend - (C) 2014-2018 ntop.org\n");
+  printf("zsend - (C) 2014-2018-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A traffic generator able to replay synthetic udp packets or hex from standard input.\n"); 
   printf("Usage:    zsend -i <device> -c <cluster id>\n"

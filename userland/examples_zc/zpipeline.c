@@ -129,7 +129,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zpipeline - (C) 2014 ntop.org\n");
+  printf("zpipeline - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A pipeline of threads sending ingress packets to the next thread.\n\n");
   printf("Usage: zpipeline -i <device> -c <cluster id> -g <id:id...>\n"

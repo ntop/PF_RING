@@ -179,7 +179,7 @@ void sigproc(int sig) {
 /* ******************************** */
 
 void printHelp(void) {
-  printf("zfifo - (C) 2014 ntop.org\n");
+  printf("zfifo - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master thread reordering packets from multiple interfaces with\n"
          "hw timestamps support, and delivering them to a consumer thread. (experimental)\n\n");
