@@ -940,6 +940,7 @@ static netdev_tx_t fm10k_xmit_frame(struct sk_buff *skb, struct net_device *dev)
 	return err;
 }
 
+#ifndef HAVE_NETDEVICE_MIN_MAX_MTU
 static int fm10k_change_mtu(struct net_device *dev, int new_mtu)
 {
 	if (new_mtu < 68 || new_mtu > FM10K_MAX_JUMBO_FRAME_SIZE)
@@ -949,6 +950,7 @@ static int fm10k_change_mtu(struct net_device *dev, int new_mtu)
 
 	return 0;
 }
+#endif
 
 /**
  * fm10k_tx_timeout - Respond to a Tx Hang
@@ -1427,8 +1429,13 @@ void fm10k_reset_rx_state(struct fm10k_intfc *interface)
  * Returns 64bit statistics, for use in the ndo_get_stats64 callback. This
  * function replaces fm10k_get_stats for kernels which support it.
  */
-static struct rtnl_link_stats64 *fm10k_get_stats64(struct net_device *netdev,
-						   struct rtnl_link_stats64 *stats)
+#ifdef HAVE_VOID_NDO_GET_STATS64
+static void fm10k_get_stats64(struct net_device *netdev,
+			      struct rtnl_link_stats64 *stats)
+#else
+static struct rtnl_link_stats64 *
+fm10k_get_stats64(struct net_device *netdev, struct rtnl_link_stats64 *stats)
+#endif /* HAVE_VOID_NDO_GET_STATS64 */
 {
 	struct fm10k_intfc *interface = netdev_priv(netdev);
 	struct fm10k_ring *ring;
@@ -1474,7 +1481,9 @@ static struct rtnl_link_stats64 *fm10k_get_stats64(struct net_device *netdev,
 	/* following stats updated by fm10k_service_task() */
 	stats->rx_missed_errors	= netdev->stats.rx_missed_errors;
 
+#ifndef HAVE_VOID_NDO_GET_STATS64
 	return stats;
+#endif
 }
 #else
 /**
@@ -1558,13 +1567,24 @@ err_queueing_scheme:
 }
 
 #ifdef NETIF_F_HW_TC
+#ifdef HAVE_NDO_SETUP_TC_CHAIN_INDEX
+static int __fm10k_setup_tc(struct net_device *dev, u32 handle, u32 chain_index,
+			    __be16 proto, struct tc_to_netdev *tc)
+#else
 static int __fm10k_setup_tc(struct net_device *dev, u32 handle, __be16 proto,
 			    struct tc_to_netdev *tc)
+#endif
 {
 	if (tc->type != TC_SETUP_MQPRIO)
 		return -EINVAL;
 
+#ifdef TC_MQPRIO_HW_OFFLOAD_MAX
+	tc->mqprio->hw = TC_MQPRIO_HW_OFFLOAD_TCS;
+
+	return fm10k_setup_tc(dev, tc->mqprio->num_tc);
+#else
 	return fm10k_setup_tc(dev, tc->tc);
+#endif
 }
 #endif
 
