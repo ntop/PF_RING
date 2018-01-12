@@ -1084,8 +1084,10 @@ static void igb_set_interrupt_capability(struct igb_adapter *adapter, bool msix)
 			for (i = 0; i < numvecs; i++)
 				adapter->msix_entries[i].entry = i;
 
-			err = pci_enable_msix(pdev,
-					      adapter->msix_entries, numvecs);
+			err = pci_enable_msix_range(pdev,
+						    adapter->msix_entries, 
+						    numvecs,
+						    numvecs);
 			if (err == 0)
 				break;
 		}
