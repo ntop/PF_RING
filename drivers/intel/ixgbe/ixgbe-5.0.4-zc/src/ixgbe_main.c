@@ -2524,7 +2524,7 @@ static int ixgbe_clean_rx_irq(struct ixgbe_q_vector *q_vector,
 
 #endif /* CONFIG_IXGBE_DISABLE_PACKET_SPLIT */
 
-#ifdef CONFIG_NET_RX_BUSY_POLL
+#ifdef HAVE_NDO_BUSY_POLL
 /* must be called with local_bh_disable()d */
 static int ixgbe_busy_poll_recv(struct napi_struct *napi)
 {
@@ -7765,8 +7765,13 @@ static void ixgbe_shutdown(struct pci_dev *pdev)
  * Returns 64bit statistics, for use in the ndo_get_stats64 callback. This
  * function replaces ixgbe_get_stats for kernels which support it.
  */
+#ifdef HAVE_VOID_NDO_GET_STATS64
+static void ixgbe_get_stats64(struct net_device *netdev,
+			      struct rtnl_link_stats64 *stats)
+#else
 static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 						   struct rtnl_link_stats64 *stats)
+#endif
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	int i;
@@ -7828,7 +7833,9 @@ static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 	stats->rx_length_errors	= netdev->stats.rx_length_errors;
 	stats->rx_crc_errors	= netdev->stats.rx_crc_errors;
 	stats->rx_missed_errors	= netdev->stats.rx_missed_errors;
+#ifndef HAVE_VOID_NDO_GET_STATS64
 	return stats;
+#endif
 }
 #else
 /**
@@ -10052,12 +10059,53 @@ static void ixgbe_set_prio_tc_map(struct ixgbe_adapter __maybe_unused *adapter)
 }
 
 #ifdef NETIF_F_HW_TC
+#ifdef TC_MQPRIO_HW_OFFLOAD_MAX
+static int ixgbe_setup_tc_mqprio(struct net_device *dev,
+				 struct tc_mqprio_qopt *mqprio)
+{
+	mqprio->hw = TC_MQPRIO_HW_OFFLOAD_TCS;
+	return ixgbe_setup_tc(dev, mqprio->num_tc);
+}
+
+#endif
+#if defined(HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV)
+static int
+__ixgbe_setup_tc(struct net_device *dev, enum tc_setup_type type,
+		 void *type_data)
+#elif defined(HAVE_NDO_SETUP_TC_CHAIN_INDEX)
+static int
+__ixgbe_setup_tc(struct net_device *dev, __always_unused u32 handle,
+		 u32 chain_index, __always_unused __be16 proto,
+		 struct tc_to_netdev *tc)
+#else
 static int
 __ixgbe_setup_tc(struct net_device *dev, __always_unused u32 handle,
 		 __always_unused __be16 proto, struct tc_to_netdev *tc)
+#endif
 {
-	return ixgbe_setup_tc(dev, tc->tc);
+#ifndef HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
+	unsigned int type = tc->type;
+
+#ifdef HAVE_NDO_SETUP_TC_CHAIN_INDEX
+	if (chain_index)
+		return -EOPNOTSUPP;
+
+#endif
+#endif
+	switch (type) {
+	case TC_SETUP_MQPRIO:
+#if defined(HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV)
+		return ixgbe_setup_tc_mqprio(dev, type_data);
+#elif defined(TC_MQPRIO_HW_OFFLOAD_MAX)
+		return ixgbe_setup_tc_mqprio(dev, tc->mqprio);
+#else
+		return ixgbe_setup_tc(dev, tc->tc);
+#endif
+	default:
+		return -EOPNOTSUPP;
+	}
 }
+
 #endif /* NETIF_F_HW_TC */
 
 /**
@@ -10666,7 +10714,7 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 	.ndo_poll_controller	= ixgbe_netpoll,
 #endif
 #ifndef HAVE_RHEL6_NET_DEVICE_EXTENDED
-#ifdef CONFIG_NET_RX_BUSY_POLL
+#ifdef HAVE_NDO_BUSY_POLL
 	.ndo_busy_poll		= ixgbe_busy_poll_recv,
 #endif /* CONFIG_NET_RX_BUSY_POLL */
 #endif /* !HAVE_RHEL6_NET_DEVICE_EXTENDED */
@@ -10771,9 +10819,9 @@ void ixgbe_assign_netdev_ops(struct net_device *dev)
 #endif /* HAVE_NET_DEVICE_OPS */
 
 #ifdef HAVE_RHEL6_NET_DEVICE_EXTENDED
-#ifdef CONFIG_NET_RX_BUSY_POLL
+#ifdef HAVE_NDO_BUSY_POLL
 	netdev_extended(dev)->ndo_busy_poll		= ixgbe_busy_poll_recv;
-#endif /* CONFIG_NET_RX_BUSY_POLL */
+#endif /* HAVE_NDO_BUSY_POLL */
 #endif /* HAVE_RHEL6_NET_DEVICE_EXTENDED */
 
 	ixgbe_set_ethtool_ops(dev);
