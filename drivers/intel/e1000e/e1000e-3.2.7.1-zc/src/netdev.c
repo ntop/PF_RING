@@ -5244,13 +5244,13 @@ void e1000e_reinit_locked(struct e1000_adapter *adapter)
  * e1000e_cyclecounter_read - read raw cycle counter (used by time counter)
  * @cc: cyclecounter structure
  **/
-static cycle_t e1000e_cyclecounter_read(const struct cyclecounter *cc)
+static u64 e1000e_cyclecounter_read(const struct cyclecounter *cc)
 {
 	struct e1000_adapter *adapter = container_of(cc, struct e1000_adapter,
 						     cc);
 	struct e1000_hw *hw = &adapter->hw;
 	u32 systimel_1, systimel_2, systimeh;
-	cycle_t systim, systim_next;
+	u64 systim, systim_next;
 	/* SYSTIMH latching upon SYSTIML read does not work well.
 	 * This means that if SYSTIML overflows after we read it but before
 	 * we read SYSTIMH, the value of SYSTIMH has been incremented and we
@@ -5262,13 +5262,13 @@ static cycle_t e1000e_cyclecounter_read(const struct cyclecounter *cc)
 	systimel_2 = er32(SYSTIML);
 	/* Check for overflow. If there was no overflow, use the values */
 	if (systimel_1 < systimel_2) {
-		systim = (cycle_t)systimel_1;
-		systim |= (cycle_t)systimeh << 32;
+		systim = (u64)systimel_1;
+		systim |= (u64)systimeh << 32;
 	} else {
 		/* There was an overflow, read again SYSTIMH, and use systimel_2 */
 		systimeh = er32(SYSTIMH);
-		systim = (cycle_t)systimel_2;
-		systim |= (cycle_t)systimeh << 32;
+		systim = (u64)systimel_2;
+		systim |= (u64)systimeh << 32;
 	}
 
 	if ((hw->mac.type == e1000_82574) || (hw->mac.type == e1000_82583)) {
@@ -5282,8 +5282,8 @@ static cycle_t e1000e_cyclecounter_read(const struct cyclecounter *cc)
 		incvalue = er32(TIMINCA) & E1000_TIMINCA_INCVALUE_MASK;
 		for (i = 0; i < E1000_MAX_82574_SYSTIM_REREADS; i++) {
 			/* latch SYSTIMH on read of SYSTIML */
-			systim_next = (cycle_t)er32(SYSTIML);
-			systim_next |= (cycle_t)er32(SYSTIMH) << 32;
+			systim_next = (u64)er32(SYSTIML);
+			systim_next |= (u64)er32(SYSTIMH) << 32;
 
 			time_delta = systim_next - systim;
 			temp = time_delta;
@@ -7050,8 +7050,13 @@ static void e1000_reset_task(struct work_struct *work)
  *
  * Returns the address of the device statistics structure.
  **/
+#ifdef HAVE_VOID_NDO_GET_STATS64
+void e1000e_get_stats64(struct net_device *netdev,
+			struct rtnl_link_stats64 *stats)
+#else
 struct rtnl_link_stats64 *e1000e_get_stats64(struct net_device *netdev,
 					     struct rtnl_link_stats64 *stats)
+#endif				/* HAVE_VOID_NDO_GET_STATS64 */
 {
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 
@@ -7088,7 +7093,9 @@ struct rtnl_link_stats64 *e1000e_get_stats64(struct net_device *netdev,
 	/* Tx Dropped needs to be maintained elsewhere */
 
 	spin_unlock(&adapter->stats64_lock);
+#ifndef HAVE_VOID_NDO_GET_STATS64
 	return stats;
+#endif /* HAVE_VOID_NDO_GET_STATS64 */
 }
 #else /* HAVE_NDO_GET_STATS64 */
 /**
