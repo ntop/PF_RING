@@ -2093,7 +2093,7 @@ s32 ixgbe_ftqf_add_filter(struct ixgbe_hw *hw, u8 proto, u32 saddr, u16 sport, u
   int debug = 0;
 
   if (debug)
-    printk("ixgbe_ftqf_add_filter(proto=%u, %u:%u->%u:%u, queue=%u, filter_id=%u)\n",
+    printk("[PF_RING-ZC] FTQF proto = %u %u:%u -> %u:%u queue = %u filter_id = %u\n",
 	   proto, saddr, sport, daddr, dport, rx_queue, filter_id);
   
   if (filter_id >= 128) /* Filter Id 0..127 */
