@@ -1111,8 +1111,8 @@ static int i82599_generic_handler(struct pf_ring_socket *pfr,
       }
 
       if(perfect_rule->vlan_id) {
-        fsp->h_ext.vlan_tci = perfect_rule->vlan_id;
-	fsp->m_ext.vlan_tci = 0xFFF; // VLANID meaningful, VLAN priority ignored
+        fsp->h_ext.vlan_tci = htons(perfect_rule->vlan_id);
+	fsp->m_ext.vlan_tci = htons(0xFFF); // VLANID meaningful, VLAN priority ignored
 	/* fsp->h_ext.vlan_etype
 	 * fsp->m_ext.vlan_etype */
 	fsp->flow_type |= FLOW_EXT;
