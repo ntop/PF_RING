@@ -7340,11 +7340,13 @@ static void ixgbe_free_all_rx_resources(struct ixgbe_adapter *adapter)
 static int ixgbe_change_mtu(struct net_device *netdev, int new_mtu)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
+#ifndef HAVE_NETDEVICE_MIN_MAX_MTU
 	int max_frame = new_mtu + ETH_HLEN + ETH_FCS_LEN;
 
 	/* MTU < 68 is an error and causes problems on some kernels */
 	if ((new_mtu < 68) || (max_frame > IXGBE_MAX_JUMBO_FRAME_SIZE))
 		return -EINVAL;
+#endif
 
 	/*
 	 * For 82599EB we cannot allow legacy VFs to enable their receive
@@ -7353,7 +7355,11 @@ static int ixgbe_change_mtu(struct net_device *netdev, int new_mtu)
 	 */
 	if ((adapter->flags & IXGBE_FLAG_SRIOV_ENABLED) &&
 	    (adapter->hw.mac.type == ixgbe_mac_82599EB) &&
+#ifndef HAVE_NETDEVICE_MIN_MAX_MTU
 	    (max_frame > (ETH_FRAME_LEN + ETH_FCS_LEN)))
+#else
+	    (new_mtu > ETH_DATA_LEN))
+#endif
 		e_warn(probe, "Setting MTU > 1500 will disable legacy VFs\n");
 
 	e_info(probe, "changing MTU from %d to %d\n", netdev->mtu, new_mtu);
@@ -11232,6 +11238,11 @@ static int __devinit ixgbe_probe(struct pci_dev *pdev,
 #endif
 #ifdef IFF_SUPP_NOFCS
 	netdev->priv_flags |= IFF_SUPP_NOFCS;
+#endif
+#ifdef HAVE_NETDEVICE_MIN_MAX_MTU
+	/* MTU range: 68 - 9710 */
+	netdev->min_mtu = ETH_MIN_MTU;
+	netdev->max_mtu = IXGBE_MAX_JUMBO_FRAME_SIZE - (ETH_HLEN + ETH_FCS_LEN);
 #endif
 #if IS_ENABLED(CONFIG_DCB)
 	if (adapter->flags & IXGBE_FLAG_DCB_CAPABLE)
