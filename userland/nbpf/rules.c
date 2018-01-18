@@ -873,7 +873,8 @@ int nbpf_check_rules_constraints(nbpf_tree_t *tree, int max_nesting_level) {
 /* ********************************************************************** */
 
 nbpf_rule_list_item_t *nbpf_generate_rules(nbpf_tree_t *tree) {
-  if (!nbpf_check_rules_constraints(tree, 0 /* default */))
+  /* Note: nesting level = 1 is what is supported by hw filters generation */
+  if (!nbpf_check_rules_constraints(tree, 1))
     return NULL;
 
   return generate_pfring_wildcard_filters(tree->root);
