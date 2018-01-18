@@ -6254,7 +6254,8 @@ static int ring_setsockopt(struct socket *sock,
        (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) && UTS_UBUNTU_RELEASE_ABI >= 28) || \
        (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22))) || \
     (LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,8) && LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)) || \
-    (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) 
+    (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) || \
+    (LINUX_VERSION_CODE == KERNEL_VERSION(3,16,51) /* Debian 3.16.0-5 */ )
       ret = __sk_attach_filter(&fprog, pfr->sk, sock_owned_by_user(pfr->sk));
 #else
       ret = sk_attach_filter(&fprog, pfr->sk);
@@ -6271,7 +6272,8 @@ static int ring_setsockopt(struct socket *sock,
        (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,2,0) && UTS_UBUNTU_RELEASE_ABI >= 28) || \
        (UBUNTU_VERSION_CODE == KERNEL_VERSION(4,4,0) && UTS_UBUNTU_RELEASE_ABI >= 22))) || \
     (LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,8) && LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0)) || \
-    (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) 
+    (LINUX_VERSION_CODE >= KERNEL_VERSION(4,6,0) && LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)) || \
+    (LINUX_VERSION_CODE == KERNEL_VERSION(3,16,51) /* Debian 3.16.0-5 */)
     ret = __sk_detach_filter(pfr->sk, sock_owned_by_user(pfr->sk));
 #else
     ret = sk_detach_filter(pfr->sk);
@@ -8052,6 +8054,8 @@ static int __init ring_init(void)
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
 	 "(C) 2004-17 ntop.org\n",
 	 RING_VERSION, GIT_REV);
+
+  printk("LINUX_VERSION_CODE %08X\n", LINUX_VERSION_CODE);
 
   /* Sanity check */
   if(transparent_mode != 0)
