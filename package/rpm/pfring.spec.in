@@ -33,7 +33,6 @@ mkdir -p $RPM_BUILD_ROOT/usr/local/include/linux
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
-mkdir -p $RPM_BUILD_ROOT/etc/init
 mkdir -p $RPM_BUILD_ROOT/usr/local/bin
 # Kernel module (DKMS will build and install it)
 #cp $HOME/PF_RING/kernel/pf_ring.ko $RPM_BUILD_ROOT/usr/local/pfring/kernel
@@ -70,7 +69,6 @@ cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so
   cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
   cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 %endif
-cp $HOME/PF_RING/package/etc/init/pf_ring.conf $RPM_BUILD_ROOT/etc/init
 cp $HOME/PF_RING/package/usr/local/bin/pf_ringctl $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/package/usr/local/bin/clusterctl $RPM_BUILD_ROOT/usr/local/bin
 # DAQ
@@ -131,8 +129,6 @@ rm -fr $RPM_BUILD_ROOT
 %endif
 /usr/local/bin/pf_ringctl
 /usr/local/bin/clusterctl
-
-%config(noreplace) /etc/init/pf_ring.conf
 
 # Set the default attributes of all of the files specified to have an
 # owner and group of root and to inherit the permissions of the file
