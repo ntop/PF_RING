@@ -9,11 +9,13 @@ GIT_REV:=
 
 ifndef GIT_REV
  ifneq (, $(shell which git))
-  ifeq (, $(shell echo ${SUBDIRS}))
-   GIT_BRANCH=$(shell git branch --no-color|cut -d ' ' -f 2)
-   GIT_HASH=$(shell git rev-parse HEAD)
-   ifneq ($(strip $(GIT_BRANCH)),)
-    GIT_REV:=${GIT_BRANCH}:${GIT_HASH}
+  ifneq (, $(shell git rev-parse --is-inside-work-tree 2> /dev/null | grep true))
+   ifeq (, $(shell echo ${SUBDIRS}))
+    GIT_BRANCH=$(shell git branch --no-color|cut -d ' ' -f 2)
+    GIT_HASH=$(shell git rev-parse HEAD)
+    ifneq ($(strip $(GIT_BRANCH)),)
+     GIT_REV:=${GIT_BRANCH}:${GIT_HASH}
+    endif
    endif
   endif
  endif
