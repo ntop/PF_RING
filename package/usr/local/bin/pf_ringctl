@@ -154,7 +154,7 @@ load_hugepages() {
 		#MEM_AVAIL=$(( MEM_AVAIL - 524288 ))
 		MEM_AVAIL=1048576 # 1GB Hugepages (this avoids consuming all memory at boot time, causing kernel panic)
 		HUGEPAGES_NUMBER=$(( MEM_AVAIL / HUGEPAGES_SIZE ))
-		if [ ${HUGEPAGES_NUMBER} -gt 0 ]; then
+		if [[ ${HUGEPAGES_NUMBER} -gt 0 ]]; then
 			echo ${HUGEPAGES_NUMBER} > /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
 		fi
 	fi
