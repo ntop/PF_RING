@@ -2,8 +2,14 @@ Installing from GIT
 ===================
 
 PF_RING can be downloaded in source format from GIT at https://github.com/ntop/PF_RING/ 
-or installed from packages using Ubuntu/CentOS repositories at http://packages.ntop.org 
-as explained in README.apt_rpm_packages.
+or installed from packages using our repositories at http://packages.ntop.org
+In this chapter we cover the installation from source code.
+
+In order to download PF_RING from GIT please clone our repository:
+
+.. code-block:: console
+
+   git clone https://github.com/ntop/PF_RING.git
 
 When you download PF_RING you fetch the following components:
 
