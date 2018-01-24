@@ -60,20 +60,20 @@ Please note that:
 
 .. code-block:: console
 
-pfcount -i anic:0:0
+   pfcount -i anic:0:0
 
 or just anic:PORT when using the default adapter 0, example:
 
 .. code-block:: console
 
-pfcount -i anic:0
+   pfcount -i anic:0
 
 Opening a port this way, the full card is initialised, causing issues when opening other ports later (previous ports stop working), this can be avoided using the port-to-ring binding as explained later on.
 - in order to open ring 0 from adapter 0 you should specify anic:DEV@RING, example:
 
 .. code-block:: console
 
-pfcount -i anic:0@0
+   pfcount -i anic:0@0
 
 This is usually used in combination with anic_rx_block_mfl which is used to setup the card for multi-process applications. 
 
