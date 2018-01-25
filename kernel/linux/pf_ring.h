@@ -616,10 +616,10 @@ typedef struct {
   u_int32_t rev_packets;
   u_int32_t rev_bytes;
   
-  uint64_t fwd_ts_first;
-  uint64_t fwd_ts_last;
-  uint64_t rev_ts_first;
-  uint64_t rev_ts_last;
+  struct pfring_timespec fwd_ts_first;
+  struct pfring_timespec fwd_ts_last;
+  struct pfring_timespec rev_ts_first;
+  struct pfring_timespec rev_ts_last;
 } generic_flow_update;
 
 typedef struct {
