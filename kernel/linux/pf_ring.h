@@ -591,6 +591,11 @@ typedef enum {
 
 /* *********************************** */
 
+struct pfring_timespec {
+  u_int32_t tv_sec;
+  u_int32_t tv_nsec;
+} __attribute__((packed));
+
 typedef struct { 
   u_int32_t flow_id;
 
