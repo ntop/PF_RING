@@ -2,7 +2,7 @@ Napatech Support
 ================
 
 PF_RING has native support for Napatech adapters, the Napatech library
-needs to be installed (under /opt/napatech3) in order to enable the 
+needs to be installed under /opt/napatech3 in order to enable the 
 Napatech module at runtime.
 
 Prerequisite
@@ -11,36 +11,44 @@ Prerequisite
 Napatech drivers and SDK installed.
 
 Note: as of PF_RING 6.6 dynamic linking is used and you are able to use
-any ntanl driver version. 
+any ntanl driver version.
+
+After installing the Napatech SDK, please make sure the driver is loaded with:
+
+.. code-block:: console
+
+   /opt/napatech3/bin/ntload.sh 
+   /opt/napatech3/bin/ntstart.sh 
 
 Installation
 ------------
 
-For the impatient, in order to get up and running with Napatech just run 
-the following commands:
+In order to get up and running with Napatech when installing from source code,
+run the following commands:
 
 .. code-block:: console
 
-   cd /opt/napatech3/bin
-   ./ntload.sh 
-   ./ntstart.sh 
-   
-   cd PF_RING/kernel
-   make
-   sudo insmod pf_ring.ko
-   cd ../userland/lib
-   ./configure
-   make
-   cd ../libpcap
-   ./configure
-   make
-   cd ../examples
-   make
+   cd PF_RING/kernel && make && sudo insmod pf_ring.ko
+   cd ../userland/lib && ./configure && make
+   cd ../libpcap && ./configure && make
+   cd ../examples && make
    sudo ./pfcount -i nt:0
 
 Please note that:
 
-- in order to open port 0 from the Napatech adapter you should specify "nt:0", in order to open stream 0 you should specify "nt:stream0"
+- installing from repository, all applications are already compiled with Napatech support
+
+- in order to open a port from the Napatech adapter you should specify nt:<PORT>, example:
+
+.. code-block:: console
+
+   pfcount -i nt:0
+
+- in order to open a stream you should specify nt:stream<ID>, example:
+
+.. code-block:: console
+
+   pfcount -i nt:stream0
 
 - streams are logical port aggregations or packet spread (similar to RSS) can be created using the ntpl tool (ntpl -e "<command>")
 
