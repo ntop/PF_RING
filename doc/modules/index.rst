@@ -1,5 +1,5 @@
-PF_RING Drivers and Modules
-===========================
+Drivers and Modules
+===================
 
 This section contains a description for all the modules and drivers currently available in PF_RING.
 Below you can find a comparison of NIC features supported by PF_RING. 
