@@ -625,7 +625,6 @@ HAVE_NDPI
 NDPI_INC
 NDPI_LIB
 HAVE_HW_TIMESTAMP
-INSTALL_PREFIX
 SYSLIBS
 ZMQ_LIB
 HAVE_ZMQ
@@ -3867,12 +3866,6 @@ HAVE_NDPI=
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
-fi
-
-if test ".${prefix}" = ".NONE"; then
-   INSTALL_PREFIX=${ac_default_prefix};
-else
-   INSTALL_PREFIX=${prefix};
 fi
 
 

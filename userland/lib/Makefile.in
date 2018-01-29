@@ -4,19 +4,19 @@
 #
 
 #
-# Installation directory
-#
-INSTDIR   = ${DESTDIR}/@INSTALL_PREFIX@
-
-#
 # Search directories
 #
-INCLUDE   = -I../../kernel @BPF_INCLUDE@ @INVEATECH_INC@
+INCLUDE   = -I../../kernel @BPF_INCLUDE@
 
 #
-# Library directory
+# Installation include directory
 #
-LIBDIR   = ${DESTDIR}/@libdir@
+INCLUDEDIR   = ${DESTDIR}@includedir@
+
+#
+# Installation library directory
+#
+LIBDIR   = ${DESTDIR}@libdir@
 
 #
 # PF_RING ZC
@@ -156,8 +156,8 @@ ${NBPF_LIB}:
 install: install-static install-shared
 
 install-includes:
-	mkdir -p ${INSTDIR}/include
-	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ @NPCAP_H@ ${NBPF_HDR} ${INSTDIR}/include/
+	mkdir -p ${INCLUDEDIR}
+	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ @NPCAP_H@ ${NBPF_HDR} ${INCLUDEDIR}/
 
 install-static: ${STATICLIB} install-includes
 	mkdir -p ${LIBDIR}
