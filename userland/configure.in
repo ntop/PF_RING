@@ -161,12 +161,6 @@ if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
 
-if test ".${prefix}" = ".NONE"; then
-   INSTALL_PREFIX=${ac_default_prefix};
-else
-   INSTALL_PREFIX=${prefix};
-fi
-
 AC_SUBST(CC)
 AC_SUBST(CFLAGS)
 
@@ -233,7 +227,6 @@ AC_SUBST(HAVE_ZMQ)
 AC_SUBST(ZMQ_LIB)
 
 AC_SUBST(SYSLIBS)
-AC_SUBST(INSTALL_PREFIX)
 AC_SUBST(HAVE_HW_TIMESTAMP)
 AC_SUBST(AR_X)
 
