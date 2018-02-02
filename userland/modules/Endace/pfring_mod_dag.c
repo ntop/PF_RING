@@ -558,3 +558,40 @@ u_int32_t pfring_dag_get_interface_speed(pfring *ring) {
 }
 
 /* **************************************************** */
+
+pfring_if_t *pfring_dag_findalldevs(void) {
+  pfring_if_t *list = NULL, *last = NULL, *tmp;
+  tmp = list;
+  int index, stream;
+  char path[256], dagstr[256];
+  FILE *file_h;
+  
+  for(index = 0; index < 128; index++) {
+    snprintf(path, 256, "/sys/class/dag/dag%d/info", index);
+
+    if ((file_h = fopen(path, "r")) == NULL)
+      continue;
+
+    while (fscanf(file_h, "Stream%d:", &stream) != EOF) {
+      
+      if (tmp == NULL) { /* New item */
+	tmp = (pfring_if_t *) calloc(1, sizeof(pfring_if_t));
+	if (tmp == NULL) continue;
+	snprintf(dagstr, 256, "dag:%d@%d", index, stream);
+	tmp->name = strdup(dagstr);
+	tmp->module = strdup("dag");
+	snprintf(dagstr, 256, "dag%d:%d", index, stream);
+	tmp->system_name = strdup(dagstr);
+	tmp->status = 1;
+	
+	if (last == NULL) { last = tmp; list = tmp; }
+	else { last->next = tmp; last = last->next; }
+
+      }
+    }
+    fclose(file_h);
+  }
+  return list;
+}
+
+/* **************************************************** */

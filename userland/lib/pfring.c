@@ -106,7 +106,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "dag",
     .open = pfring_dag_open,
-    .findalldevs = NULL
+    .findalldevs = pfring_dag_findalldevs
   },
 #endif
 

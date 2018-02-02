@@ -27,5 +27,6 @@ int  pfring_dag_set_direction(pfring *ring, packet_direction direction);
 int  pfring_dag_set_socket_mode(pfring *ring, socket_mode mode);
 int  pfring_dag_enable_ring(pfring *ring);
 u_int32_t pfring_dag_get_interface_speed(pfring *ring);
+pfring_if_t *pfring_dag_findalldevs(void);
 
 #endif /* _PFRING_MOD_DAG_H_ */
