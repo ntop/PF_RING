@@ -562,7 +562,7 @@ u_int32_t pfring_dag_get_interface_speed(pfring *ring) {
 pfring_if_t *pfring_dag_findalldevs(void) {
   pfring_if_t *list = NULL, *last = NULL, *tmp;
   tmp = list;
-  int index, stream;
+  int index, stream, count;
   char path[256], dagstr[256];
   FILE *file_h;
   
@@ -572,9 +572,9 @@ pfring_if_t *pfring_dag_findalldevs(void) {
     if ((file_h = fopen(path, "r")) == NULL)
       continue;
 
-    while (fscanf(file_h, "Stream%d:", &stream) != EOF) {
+    while ((count = fscanf(file_h, "Stream%d:", &stream)) != EOF) {
       
-      if (tmp == NULL) { /* New item */
+      if (count == 1) {
 	tmp = (pfring_if_t *) calloc(1, sizeof(pfring_if_t));
 	if (tmp == NULL) continue;
 	snprintf(dagstr, 256, "dag:%d@%d", index, stream);
