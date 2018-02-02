@@ -563,18 +563,19 @@ pfring_if_t *pfring_dag_findalldevs(void) {
   pfring_if_t *list = NULL, *last = NULL, *tmp;
   tmp = list;
   int index, stream, count;
-  char path[256], dagstr[256];
+  char path[256], dagstr[256], line[256];
   FILE *file_h;
   
-  for(index = 0; index < 128; index++) {
+  for(index = 0; index < 64; index++) {
     snprintf(path, 256, "/sys/class/dag/dag%d/info", index);
 
     if ((file_h = fopen(path, "r")) == NULL)
       continue;
 
-    while ((count = fscanf(file_h, "Stream%d:", &stream)) != EOF) {
+    while (fgets(line, 256, file_h) != NULL) {
+      count = sscanf(line, "Stream%d:\n", &stream);
       
-      if (count == 1) {
+      if ((count == 1) && !(stream%2)) {
 	tmp = (pfring_if_t *) calloc(1, sizeof(pfring_if_t));
 	if (tmp == NULL) continue;
 	snprintf(dagstr, 256, "dag:%d@%d", index, stream);
