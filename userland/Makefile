@@ -66,6 +66,8 @@ nbpf_clean:
 extcap_clean:
 	cd wireshark/extcap; make clean
 
-install: libpfring pcap
+install: libpfring pcap examples examples_zc
 	cd lib; make install
 	cd libpcap; make install
+	cd examples; make install
+	cd examples_zc; make install
