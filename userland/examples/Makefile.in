@@ -123,9 +123,9 @@ pfwrite: pfwrite.o ${LIBPFRING}
 pfsystest: pfsystest.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfsystest.o ${LIBS} -o $@
 
-install: pfcount pfsend
+install:
 	mkdir -p $(DESTDIR)/usr/bin
-	cp pfcount pfsend $(DESTDIR)/usr/bin/
+	cp $(TARGETS) $(DESTDIR)/usr/bin/
 
 clean:
 	@rm -f ${TARGETS} *.o *~
