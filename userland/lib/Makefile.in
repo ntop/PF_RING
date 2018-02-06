@@ -9,14 +9,23 @@
 INCLUDE   = -I../../kernel @BPF_INCLUDE@
 
 #
+# Installation prefix
+#
+ifneq ($(strip $(DESTDIR)), )
+  PREFIX = $(DESTDIR)
+else
+  PREFIX = @PREFIX@
+endif
+
+#
 # Installation include directory
 #
-INCLUDEDIR   = ${DESTDIR}@includedir@
+INCLUDEDIR = ${PREFIX}@includedir@
 
 #
 # Installation library directory
 #
-LIBDIR   = ${DESTDIR}@libdir@
+LIBDIR = ${PREFIX}@libdir@
 
 #
 # PF_RING ZC
