@@ -58,7 +58,14 @@ Please note that in this configuration RSS is disabled (RSS=1 means single queue
 For learning more about RSS and enable multiple queues for hw traffic distribution 
 please read the RSS guide.
 
-In order to run the init script, after all the files have been configured:
+In order to run the init script, after all the files have been configured,
+if you are using systemd please run:
+
+.. code-block:: console
+
+   systemctl start pf_ring
+   
+Otherwise please use the init.d script:
 
 .. code-block:: console
 
