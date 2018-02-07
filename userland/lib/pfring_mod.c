@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2005-17 - ntop.org
+ * (C) 2005-2018 - ntop.org
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -78,7 +78,7 @@ unsigned long long rdtsc() {
 
 int pfring_mod_open_setup(pfring *ring) {
   int rc;
-  u_int memSlotsLen;
+  u_int64_t memSlotsLen;
 
   ring->fd = socket(PF_RING, SOCK_RAW, htons(ETH_P_ALL));
 
@@ -141,7 +141,7 @@ int pfring_mod_open_setup(pfring *ring) {
             ring->buffer, PAGE_SIZE);
   }
 
-  ring->buffer = (char *)mmap(NULL, memSlotsLen,
+  ring->buffer = (char *) mmap(NULL, memSlotsLen,
 			      PROT_READ|PROT_WRITE,
 			      MAP_SHARED, ring->fd, 0);
 
@@ -509,7 +509,7 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
       return(0);
 
     if(unlikely(ring->reentrant))
-      pthread_rwlock_wrlock(&ring->rx_lock);
+      pfring_rwlock_wrlock(&ring->rx_lock);
 
     //rmb();
 
@@ -558,7 +558,7 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
       ring->slots_info->tot_read++;
       ring->slots_info->remove_off = next_off;
 
-      if(unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
+      if(unlikely(ring->reentrant)) pfring_rwlock_unlock(&ring->rx_lock);
 
       hdr->caplen = min_val(hdr->caplen, ring->caplen);
 
@@ -566,7 +566,7 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
     }
 
     /* Nothing to do: we need to wait */
-    if(unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
+    if(unlikely(ring->reentrant)) pfring_rwlock_unlock(&ring->rx_lock);
 
     if(wait_for_incoming_packet) {
       rc = pfring_poll(ring, ring->poll_duration);
@@ -945,7 +945,7 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
     return -1;
 
   if (unlikely(ring->reentrant))
-    pthread_rwlock_wrlock(&ring->rx_lock);
+    pfring_rwlock_wrlock(&ring->rx_lock);
 
   if (pcap_compile_nopcap(ring->caplen,  /* snaplen_arg */
                          DLT_EN10MB,    /* linktype_arg */
@@ -980,7 +980,7 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
  pfring_mod_set_bpf_filter_exit:
   if (unlikely(ring->reentrant))
-    pthread_rwlock_unlock(&ring->rx_lock);
+    pfring_rwlock_unlock(&ring->rx_lock);
 
 #endif
 
@@ -994,12 +994,12 @@ int pfring_mod_remove_bpf_filter(pfring *ring) {
 
 #ifdef ENABLE_BPF 
   if(unlikely(ring->reentrant))
-    pthread_rwlock_wrlock(&ring->rx_lock);
+    pfring_rwlock_wrlock(&ring->rx_lock);
 
   rc = __pfring_mod_remove_bpf_filter(ring);
 
   if(unlikely(ring->reentrant))
-    pthread_rwlock_unlock(&ring->rx_lock);
+    pfring_rwlock_unlock(&ring->rx_lock);
 #endif
 
   return rc;

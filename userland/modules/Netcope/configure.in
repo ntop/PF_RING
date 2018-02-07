@@ -1,0 +1,23 @@
+AC_INIT([Makefile.in], 1.0)
+
+AC_PROG_CC
+
+NETCOPE_HOME="/usr/share/netcope"
+AC_MSG_CHECKING([Netcope support])
+if test -d "$NETCOPE_HOME"; then
+   if test -f pfring_mod_netcope.c; then
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+      echo "Please install the Netcope driver/library"
+      exit
+    fi
+else
+  AC_MSG_RESULT(no)
+  echo "Please install the Netcope driver/library"
+  exit
+fi
+
+AC_CONFIG_FILES(Makefile)
+
+AC_OUTPUT

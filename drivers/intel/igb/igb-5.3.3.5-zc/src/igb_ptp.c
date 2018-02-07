@@ -93,7 +93,7 @@
  * SYSTIM read access for the 82576
  */
 
-static cycle_t igb_ptp_read_82576(const struct cyclecounter *cc)
+static u64 igb_ptp_read_82576(const struct cyclecounter *cc)
 {
 	struct igb_adapter *igb = container_of(cc, struct igb_adapter, cc);
 	struct e1000_hw *hw = &igb->hw;
@@ -113,7 +113,7 @@ static cycle_t igb_ptp_read_82576(const struct cyclecounter *cc)
  * SYSTIM read access for the 82580
  */
 
-static cycle_t igb_ptp_read_82580(const struct cyclecounter *cc)
+static u64 igb_ptp_read_82580(const struct cyclecounter *cc)
 {
 	struct igb_adapter *igb = container_of(cc, struct igb_adapter, cc);
 	struct e1000_hw *hw = &igb->hw;

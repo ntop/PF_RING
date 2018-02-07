@@ -1,0 +1,3 @@
+pfring_mod_invea.o: pfring_mod_invea.c pfring_mod_invea.h \
+ ../../lib/pfring.h ../../../kernel/linux/pf_ring.h \
+ ../../lib/pfring_mod.h

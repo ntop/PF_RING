@@ -1,7 +1,7 @@
 /*
  * PF_RING ZC API
  *
- * (C) 2013-17 - ntop.org
+ * (C) 2013-2018 - ntop.org
  *
  */
 
@@ -448,7 +448,7 @@ int
 pfring_zc_send_pkt_multi(
   pfring_zc_multi_queue *multi_queue, 
   pfring_zc_pkt_buff **pkt_handle, 
-  u_int32_t queues_mask,
+  u_int64_t queues_mask,
   u_int8_t flush_packet
 );
 
@@ -469,7 +469,7 @@ typedef enum {
  * @param user       The pointer to the user data.
  * @return           The egress queue index (or a negative value to drop the packet) in case of balancing, the egress queues bit-mask in case of fan-out.
  */
-typedef int32_t
+typedef int64_t
 (*pfring_zc_distribution_func) (
   pfring_zc_pkt_buff *pkt_handle,
   pfring_zc_queue *in_queue,
@@ -726,6 +726,18 @@ pfring_zc_builtin_ip_hash(
  */
 u_int32_t
 pfring_zc_builtin_gtp_hash(
+  pfring_zc_pkt_buff *pkt_handle,
+  pfring_zc_queue *queue
+);
+
+/**
+ * Computes a Inner-IP-based packet hash on GRE packets, Outer-IP/Port-based packet hash otherwise.
+ * @param pkt_handle The pointer to the buffer handle.
+ * @param queue      The queue from which the packet is arrived or destined.
+ * @return           The packet hash.
+ */
+u_int32_t
+pfring_zc_builtin_gre_hash(
   pfring_zc_pkt_buff *pkt_handle,
   pfring_zc_queue *queue
 );

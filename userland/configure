@@ -621,54 +621,47 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
 AR_X
-HAVE_NDPI
-NDPI_INC
-NDPI_LIB
 HAVE_HW_TIMESTAMP
-INSTALL_PREFIX
 SYSLIBS
 ZMQ_LIB
 HAVE_ZMQ
 REDIS_LIB
 HAVE_REDIS
+HAVE_NDPI
+NDPI_INC
+NDPI_LIB
 BPF_INCLUDE
 HAVE_BPF
-MLX_OBJS
-HAVE_MLX
-HAVE_EXABLAZE
-EXABLAZE_OBJS
-EXABLAZE_LIB
-EXABLAZE_INC
-HAVE_INVEATECH
-INVEATECH_OBJS
-INVEATECH_LIB
-INVEATECH_INC
-MYRICOM_DEP
-MOD_MYRICOM_LIB
-HAVE_MYRICOM
-MYRICOM_OBJS
 MOD_NETCOPE_LIB
 NETCOPE_DEP
 NETCOPE_OBJS
 HAVE_NETCOPE
-MOD_ACCOLADE_LIB
-ACCOLADE_DEP
-ACCOLADE_OBJS
-HAVE_ACCOLADE
 MOD_NT_LIB
 NT_DEP
 NT_OBJS
 HAVE_NT
+MYRICOM_DEP
+MOD_MYRICOM_LIB
+HAVE_MYRICOM
+MYRICOM_OBJS
 MOD_FIBERBLAZE_LIB
 FIBERBLAZE_DEP
 FIBERBLAZE_LIB
 FIBERBLAZE_OBJS
 HAVE_FIBERBLAZE
+HAVE_EXABLAZE
+EXABLAZE_DEP
+EXABLAZE_OBJS
+EXABLAZE_LIB
 MOD_DAG_LIB
 DAG_DEP
 DAG_LIB
 DAG_OBJS
 HAVE_DAG
+MOD_ACCOLADE_LIB
+ACCOLADE_DEP
+ACCOLADE_OBJS
+HAVE_ACCOLADE
 NPCAP_H
 NPCAP_DEP
 NPCAP_OBJS
@@ -679,6 +672,7 @@ PF_RING_ZC_DEP
 PF_RING_ZC_OBJS
 PF_RING_ZC_LIB
 HAVE_PF_RING_ZC
+PREFIX
 EGREP
 GREP
 CPP
@@ -3305,7 +3299,6 @@ if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   LIBARCH="_$NATIVE"
 fi
 
-
 # Check whether --enable-redis was given.
 if test "${enable_redis+set}" = set; then :
   enableval=$enable_redis;
@@ -3627,17 +3620,10 @@ fi
  #libnl-3.0
 
 AR_X=
+
 if test $MACHINE = "x86_64"; then
 
 AR_X="ar x"
-PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
-MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
-MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
-MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
-NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setaffinity_np in -lpthread" >&5
 $as_echo_n "checking for pthread_setaffinity_np in -lpthread... " >&6; }
@@ -3688,6 +3674,7 @@ if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING ZC support" >&5
 $as_echo_n "checking PF_RING ZC support... " >&6; }
+PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 if test -f lib/$PF_RING_ZC_LIB; then
   HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
   PF_RING_ZC_OBJS=`ar t lib/$PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
@@ -3696,17 +3683,13 @@ if test -f lib/$PF_RING_ZC_LIB; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 else
-  PF_RING_ZC_LIB=""
-  HAVE_PF_RING_ZC=""
-  PF_RING_ZC_OBJS=""
-  PF_RING_ZC_DEP=""
-  PF_RING_ZC_H=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING NPCAP support" >&5
 $as_echo_n "checking PF_RING NPCAP support... " >&6; }
+NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 if test -f lib/$NPCAP_LIB; then
   HAVE_NPCAP="-D HAVE_NPCAP"
   NPCAP_OBJS=`ar t lib/$NPCAP_LIB | grep -F .o | tr '\n' ' '`
@@ -3715,11 +3698,6 @@ if test -f lib/$NPCAP_LIB; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 else
-  NPCAP_LIB=""
-  HAVE_NPCAP=""
-  NPCAP_OBJS=""
-  NPCAP_DEP=""
-  NPCAP_H=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
@@ -3765,91 +3743,40 @@ fi
 
 fi
 
-for ac_header in exanic/exanic.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "exanic/exanic.h" "ac_cv_header_exanic_exanic_h" "$ac_includes_default"
-if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_EXANIC_EXANIC_H 1
-_ACEOF
+MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
+HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
+ACCOLADE_DEP="extract_accolade_lib"
 
-fi
-
-done
-
-if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for exanic_acquire_handle in -lexanic" >&5
-$as_echo_n "checking for exanic_acquire_handle in -lexanic... " >&6; }
-if ${ac_cv_lib_exanic_exanic_acquire_handle+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lexanic  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char exanic_acquire_handle ();
-int
-main ()
-{
-return exanic_acquire_handle ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_exanic_exanic_acquire_handle=yes
-else
-  ac_cv_lib_exanic_exanic_acquire_handle=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_exanic_exanic_acquire_handle" >&5
-$as_echo "$ac_cv_lib_exanic_exanic_acquire_handle" >&6; }
-if test "x$ac_cv_lib_exanic_exanic_acquire_handle" = xyes; then :
-   EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"
-fi
-
-fi
-
+MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
 DAG_LIB="-lm -ldl"
 HAVE_DAG="-D HAVE_DAG"
 DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
 DAG_DEP="extract_dag_lib"
 
+
+MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
 FIBERBLAZE_LIB="-lm -ldl"
 HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
 FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
 FIBERBLAZE_DEP="extract_fiberblaze_lib"
 
+MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+HAVE_MYRICOM="-D HAVE_MYRICOM"
+MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+MYRICOM_DEP="extract_myricom_lib"
+
+MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 HAVE_NT="-D HAVE_NT"
 NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
 NT_DEP="extract_nt_lib"
 
-HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
-ACCOLADE_DEP="extract_accolade_lib"
-
+MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
 HAVE_NETCOPE="-D HAVE_NETCOPE"
 NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
 NETCOPE_DEP="extract_netcope_lib"
 
-HAVE_MYRICOM="-DHAVE_MYRICOM"
-MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-MYRICOM_DEP="extract_myricom_lib"
-
-
-
 fi
-
 
 # Check whether --enable-bpf was given.
 if test "${enable_bpf+set}" = set; then :
@@ -3861,19 +3788,23 @@ if test "x$enable_bpf" != "xno"; then :
 fi
 
 
-NDPI_LIB=
-NDPI_INC=
-HAVE_NDPI=
-
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
 
 if test ".${prefix}" = ".NONE"; then
-   INSTALL_PREFIX=${ac_default_prefix};
+  PREFIX=""
 else
-   INSTALL_PREFIX=${prefix};
+  PREFIX=${prefix}
 fi
+
+
+
+
+
+
+
+
 
 
 

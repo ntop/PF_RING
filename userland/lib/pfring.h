@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2005-17 - ntop.org
+ * (C) 2005-2018 - ntop.org
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -74,14 +74,12 @@
 #define POLL_SLEEP_MAX          1000 /* ns */
 #define POLL_QUEUE_MIN_LEN       500 /* # packets */
 
-#ifndef HAVE_RW_LOCK
-#define pthread_rwlock_t       pthread_mutex_t
-#define pthread_rwlock_init    pthread_mutex_init
-#define pthread_rwlock_rdlock  pthread_mutex_lock
-#define pthread_rwlock_wrlock  pthread_mutex_lock
-#define pthread_rwlock_unlock  pthread_mutex_unlock
-#define pthread_rwlock_destroy pthread_mutex_destroy
-#endif
+#define pfring_rwlock_t       pthread_rwlock_t       
+#define pfring_rwlock_init    pthread_rwlock_init    
+#define pfring_rwlock_rdlock  pthread_rwlock_rdlock  
+#define pfring_rwlock_wrlock  pthread_rwlock_wrlock  
+#define pfring_rwlock_unlock  pthread_rwlock_unlock  
+#define pfring_rwlock_destroy pthread_rwlock_destroy 
 
 #define timespec_is_before(a, b) \
   ((((a)->tv_sec<(b)->tv_sec)||(((a)->tv_sec==(b)->tv_sec)&&((a)->tv_nsec<(b)->tv_nsec)))?1:0)
@@ -98,10 +96,8 @@
 
 /* ********************************* */
 
-/*
-  See also __builtin_prefetch
-  http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
-*/
+/* See also __builtin_prefetch
+ * http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html */
 #define prefetch(x) __asm volatile("prefetcht0 %0" :: "m" (*(const unsigned long *)x));
 
 /* ********************************* */
@@ -219,15 +215,12 @@ struct __pfring {
 
   struct {
     u_int8_t enabled_rx_packet_send;
-    struct pfring_pkthdr *last_received_hdr; /*
-					       Header of the past packet
-					       that has been received on this socket
-					     */
+    struct pfring_pkthdr *last_received_hdr; /* Header of the past packet that has been received on this socket */
   } tx;
 
   u_int8_t zc_device;
 
-  void   *priv_data; /* module private data */
+  void *priv_data; /* module private data */
 
   void      (*close)                        (pfring *);
   int       (*stats)                        (pfring *, pfring_stat *);
@@ -320,7 +313,7 @@ struct __pfring {
   u_int16_t poll_duration;
   u_int8_t promisc, __padding, reentrant, break_recv_loop;
   u_long num_poll_calls;
-  pthread_rwlock_t rx_lock, tx_lock;
+  pfring_rwlock_t rx_lock, tx_lock;
 
   u_int32_t flags;
 
@@ -353,7 +346,8 @@ struct __pfring {
 #define PF_RING_VSS_APCON_TIMESTAMP    (1 << 15) /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
 #define PF_RING_ZC_IPONLY_RSS	       (1 << 16) /**< pfring_open() flag: Compute RSS on src/dst IP only (not 4-tuple) */ 
 #define PF_RING_FLOW_OFFLOAD	       (1 << 17) /**< pfring_open() flag: Enable hw flow table support when available */ 
-#define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Do not send flow updates with PF_RING_FLOW_OFFLOAD, enable support for flows shunting only */
+#define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Do not send flow updates with PF_RING_FLOW_OFFLOAD (enable support for flows shunting only) */
+#define PF_RING_FLOW_OFFLOAD_NORAWDATA (1 << 19) /**< pfring_open() flag: Do not send raw packets with PF_RING_FLOW_OFFLOAD */
 
 /* ********************************* */
 
@@ -1189,7 +1183,7 @@ u_int32_t pfring_get_interface_speed(pfring *ring);
  * List all interfaces.
  * @return The interface list.
  */
-pfring_if_t *pfring_findalldevs();
+pfring_if_t *pfring_findalldevs(void);
 
 /**
  * Free an interface list returned by pfring_findalldevs().
@@ -1227,7 +1221,7 @@ int32_t gmt_to_local(time_t t);
 typedef struct {
   char *name;
   int (*open) (pfring *);
-  pfring_if_t *(*findalldevs) ();
+  pfring_if_t *(*findalldevs) (void);
 } pfring_module_info;
   
 struct thirdparty_func {

@@ -14,9 +14,10 @@ License:	%license
 Release:	@GIT_COMMIT_COUNT@
 BuildArch:	noarch
 Group:		System/Kernel
-Requires: 	dkms >= 1.95
+Requires: 	dkms >= 1.95, pfring = @VERS@
 AutoReqProv: 	no
 BuildRequires: 	dkms, kernel-devel
+Requires:       kernel-devel
 BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-root/
 
 %description
@@ -28,6 +29,25 @@ if [ "%mktarball_line" != "none" ]; then
         /usr/sbin/dkms mktarball -m %module_name -v %version %mktarball_line --archive `basename %{module_name}-%{version}.dkms.tar.gz`
         cp -af %{_dkmsdir}/%{module_name}/%{version}/tarball/`basename %{module_name}-%{version}.dkms.tar.gz` %{module_name}-%{version}.dkms.tar.gz
 fi
+
+# Execution order:
+# install:    pre -> (copy) -> post
+# upgrade:    pre -> (copy) -> post -> preun (old) -> (delete old) -> postun (old)
+# un-install:                          preun       -> (delete)     -> postun
+
+%pre
+case "$1" in
+	1)
+	# install
+	;;
+	2)
+	# upgrade
+	dkms remove -m %{module_name} -v %{version} --all --rpm_safe_upgrade
+	\/bin/rm -f /lib/modules/$kernel/weak-updates/pf_ring.ko
+	\/bin/rm -f /lib/modules/$kernel/extra/pf_ring.ko
+	\/bin/rm -fr /var/lib/dkms/%{module_name}
+	;;
+esac
 
 %install
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
@@ -48,12 +68,17 @@ if [ -f %{_sourcedir}/common.postinst ]; then
         install -m 755 %{_sourcedir}/common.postinst $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}/postinst
 fi
 
-%clean
-if [ "$RPM_BUILD_ROOT" != "/" ]; then
-        rm -rf $RPM_BUILD_ROOT
-fi
-
 %post
+case "$1" in
+	1)
+	# install
+	;;
+
+	2)
+	# upgrade
+	;;
+esac
+
 for POSTINST in %{_libdir}/dkms/common.postinst %{_datarootdir}/%{module_name}/postinst; do
         if [ -f $POSTINST ]; then
                 $POSTINST %{module_name} %{version} %{_datarootdir}/%{module_name}
@@ -70,11 +95,35 @@ exit 1
 %preun
 echo -e
 echo -e "Uninstall of %{module_name} module (version %{version}) beginning:"
-dkms remove -m %{module_name} -v %{version} --all --rpm_safe_upgrade
-\/bin/rm -f /lib/modules/$kernel/weak-updates/pf_ring.ko
-\/bin/rm -f /lib/modules/$kernel/extra/pf_ring.ko
-\/bin/rm -fr /var/lib/dkms/%{module_name}
+
+case "$1" in
+	0)
+	# un-install
+	dkms remove -m %{module_name} -v %{version} --all --rpm_safe_upgrade
+	\/bin/rm -f /lib/modules/$kernel/weak-updates/pf_ring.ko
+	\/bin/rm -f /lib/modules/$kernel/extra/pf_ring.ko
+	\/bin/rm -fr /var/lib/dkms/%{module_name}
+	;;
+	1)
+	# upgrade
+	;;
+esac
 exit 0
+
+%postun
+case "$1" in
+	0)
+	# un-install
+	;;
+	1)
+	# upgrade
+	;;
+esac
+
+%clean
+if [ "$RPM_BUILD_ROOT" != "/" ]; then
+        rm -rf $RPM_BUILD_ROOT
+fi
 
 %files
 %defattr(-,root,root)

@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2014-17 - ntop.org
+ * (C) 2014-2018 - ntop.org
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -354,7 +354,7 @@ int pfring_mod_sysdig_recv(pfring *ring, u_char** buffer, u_int buffer_len,
   sysdig = (pfring_sysdig *)ring->priv_data;
 
   if(ring->reentrant)
-    pthread_rwlock_wrlock(&ring->rx_lock);
+    pfring_rwlock_wrlock(&ring->rx_lock);
 
  check_and_poll:
   if(ring->break_recv_loop)
@@ -420,7 +420,7 @@ int pfring_mod_sysdig_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 
  exit:
   if(ring->reentrant)
-    pthread_rwlock_unlock(&ring->rx_lock);
+    pfring_rwlock_unlock(&ring->rx_lock);
 
   return(ret_event ? 1 : 0);
 }

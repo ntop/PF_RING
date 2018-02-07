@@ -16,13 +16,6 @@ if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   LIBARCH="_$NATIVE"
 fi
 
-dnl> Double-check gcc supports the detected march flags
-dnl> save_CFLAGS="$CFLAGS"
-dnl> CFLAGS="-march=$NATIVE -mtune=$NATIVE"
-dnl> AC_MSG_CHECKING([if native march is supported])
-dnl> AC_TRY_RUN([ int main() { return 0; } ], [ AC_MSG_RESULT(yes) ], [AC_MSG_RESULT(no)])
-dnl> CFLAGS="$save_CFLAGS"
-
 dnl> Redis - disabled by default
 AC_ARG_ENABLE([redis], AS_HELP_STRING([--enable-redis], [Enable Redis support in PF_RING]))
 if test "x$enable_redis" = xyes; then
@@ -49,17 +42,10 @@ AC_CHECK_LIB( [dl], [dlopen, dlsym],   [SYSLIBS="$SYSLIBS -ldl"],
 AC_CHECK_LIB(nl-3, nl_socket_alloc,    [SYSLIBS="$SYSLIBS -lnl-genl-3 -lnl-3"]) #libnl-3.0
 
 AR_X=
+
 if test $MACHINE = "x86_64"; then
 
 AR_X="ar x"
-PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
-MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
-MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
-MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
-NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 
 dnl> Check for a modern pthread library
 AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
@@ -67,6 +53,7 @@ AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SE
 if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
 AC_MSG_CHECKING([PF_RING ZC support])
+PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
 if test -f lib/$PF_RING_ZC_LIB; then
   HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
   PF_RING_ZC_OBJS=`ar t lib/$PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
@@ -74,15 +61,11 @@ if test -f lib/$PF_RING_ZC_LIB; then
   PF_RING_ZC_H="pfring_zc.h"
   AC_MSG_RESULT(yes)
 else
-  PF_RING_ZC_LIB=""
-  HAVE_PF_RING_ZC=""
-  PF_RING_ZC_OBJS=""
-  PF_RING_ZC_DEP=""
-  PF_RING_ZC_H=""
   AC_MSG_RESULT(no)
 fi
 
 AC_MSG_CHECKING([PF_RING NPCAP support])
+NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
 if test -f lib/$NPCAP_LIB; then
   HAVE_NPCAP="-D HAVE_NPCAP"
   NPCAP_OBJS=`ar t lib/$NPCAP_LIB | grep -F .o | tr '\n' ' '`
@@ -90,11 +73,6 @@ if test -f lib/$NPCAP_LIB; then
   NPCAP_H="pfring_zc.h"
   AC_MSG_RESULT(yes)
 else
-  NPCAP_LIB=""
-  HAVE_NPCAP=""
-  NPCAP_OBJS=""
-  NPCAP_DEP=""
-  NPCAP_H=""
   AC_MSG_RESULT(no)
 fi
 
@@ -116,97 +94,57 @@ fi
 dnl> end of pthread_setaffinity_np check
 fi
 
-dnl> Exablaze - http://exablaze.com
-AC_CHECK_HEADERS(exanic/exanic.h)
-if test "x$ac_cv_header_exanic_exanic_h" = xyes; then :
-  AC_CHECK_LIB([exanic], [exanic_acquire_handle], [ EXABLAZE_INC=""; EXABLAZE_LIB="-lexanic"; EXABLAZE_OBJS="pfring_mod_exablaze.o"; HAVE_EXABLAZE="-D HAVE_EXABLAZE"])
-fi
+dnl> Accolade
+MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
+HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
+ACCOLADE_DEP="extract_accolade_lib"
 
 dnl> DAG
+MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
 DAG_LIB="-lm -ldl" 
 HAVE_DAG="-D HAVE_DAG"
 DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
 DAG_DEP="extract_dag_lib"
 
+dnl> Exablaze
+dnl> HAVE_EXABLAZE="-D HAVE_EXABLAZE"
+dnl> EXABLAZE_OBJS=`ar t lib/$MOD_EXABLAZE_LIB | grep .o\$ | tr '\n' ' '`
+dnl> EXABLAZE_DEP="extract_exablaze_lib"
+dnl> EXABLAZE_LIB="-lexanic"
+
 dnl> Fiberblaze
+MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
 FIBERBLAZE_LIB="-lm -ldl" 
 HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
 FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
 FIBERBLAZE_DEP="extract_fiberblaze_lib"
 
+dnl> Myricom
+MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+HAVE_MYRICOM="-D HAVE_MYRICOM"
+MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+MYRICOM_DEP="extract_myricom_lib"
+
 dnl> Napatech
+MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
 HAVE_NT="-D HAVE_NT"
 NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
 NT_DEP="extract_nt_lib"
 
-dnl> Accolade
-HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
-ACCOLADE_DEP="extract_accolade_lib"
-
 dnl> Netcope
+MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
 HAVE_NETCOPE="-D HAVE_NETCOPE"
 NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
 NETCOPE_DEP="extract_netcope_lib"
 
-HAVE_MYRICOM="-DHAVE_MYRICOM"
-MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-MYRICOM_DEP="extract_myricom_lib"
-
-dnl> LIBS="-lsze2 $LIBS"
-dnl> AC_CHECK_LIB([sze2], [szedata_open], )
-dnl> AC_MSG_CHECKING([if sze2 is present])
-dnl> if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
-dnl>   AC_MSG_RESULT([yes])
-dnl>   AC_MSG_CHECKING([Invea-Tech support])
-dnl>   if test -f lib/pfring_mod_invea.c; then
-dnl>     AC_MSG_RESULT(yes)
-dnl>     INVEATECH_INC=""
-dnl>     INVEATECH_LIB="-lsze2"
-dnl>     INVEATECH_OBJS="pfring_mod_invea.o"
-dnl>     HAVE_INVEATECH="-D HAVE_INVEATECH"
-dnl>   else
-dnl>     AC_MSG_RESULT(no) 
-dnl>   fi
-dnl> else
-dnl>   AC_MSG_RESULT(no)
-dnl> fi
-
-dnl> if test -f lib/pfring_mod_mlx.c; then
-dnl>    AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
-dnl>    AC_MSG_CHECKING([Mellanox support])
-dnl>    if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
-dnl>       MLX_OBJS="pfring_mod_mlx.o"
-dnl>       HAVE_MLX="-DHAVE_MELLANOX"
-dnl>       SYSLIBS="$SYSLIBS -libverbs"   
-dnl>       AC_MSG_RESULT(yes)
-dnl>    else
-dnl>      MLX_OBJS=""
-dnl>      HAVE_MLX=""
-dnl>      AC_MSG_RESULT(no)
-dnl>    fi
-dnl> fi
-
 dnl> end of x86_64 check
 fi
-
-dnl> BPF - Default disabled
-dnl> AC_ARG_ENABLE([bpf], AS_HELP_STRING([--enable-bpf], [Enable BPF support in PF_RING]))
-dnl> AS_IF([test "x$enable_bpf" = "xyes"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
 
 dnl> BPF - Default enabled
 AC_ARG_ENABLE([bpf], AS_HELP_STRING([--disable-bpf], [Disable BPF support in PF_RING]))
 AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
 
-dnl> BPF - Dynamic
-dnl> AC_CHECK_LIB( [pcap], 
-dnl>               [pcap_compile_nopcap], 
-dnl>               [HAVE_BPF="-D ENABLE_BPF"], 
-dnl>               [], [] )
-
-NDPI_LIB=
-NDPI_INC=
-HAVE_NDPI=
 dnl> AC_MSG_CHECKING([nDPI support])
 dnl> NDPI_HOME="../../nDPI"
 dnl> if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
@@ -214,7 +152,7 @@ dnl>   NDPI_LIB="$NDPI_HOME/src/lib/.libs/libndpi.a"
 dnl>   NDPI_INC="-I$NDPI_HOME/src/include"
 dnl>   HAVE_NDPI="-DHAVE_NDPI"
 dnl>   AC_MSG_RESULT(yes)
-dnl>   AC_DEFINE_UNQUOTED(HAVE_MYRICOM, 1, [nDPI support is present])
+dnl>   AC_DEFINE_UNQUOTED(HAVE_NDPI, 1, [nDPI support is present])
 dnl> else
 dnl>   AC_MSG_RESULT(no)
 dnl> fi
@@ -224,72 +162,79 @@ if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
 fi
 
 if test ".${prefix}" = ".NONE"; then
-   INSTALL_PREFIX=${ac_default_prefix};
+  PREFIX=""
 else
-   INSTALL_PREFIX=${prefix};
+  PREFIX=${prefix}
 fi
 
+AC_SUBST(CC)
 AC_SUBST(CFLAGS)
+AC_SUBST(PREFIX)
+
 AC_SUBST(HAVE_PF_RING_ZC)
 AC_SUBST(PF_RING_ZC_LIB)
 AC_SUBST(PF_RING_ZC_OBJS)
 AC_SUBST(PF_RING_ZC_DEP)
 AC_SUBST(PF_RING_ZC_H)
+
 AC_SUBST(HAVE_NPCAP)
 AC_SUBST(NPCAP_LIB)
 AC_SUBST(NPCAP_OBJS)
 AC_SUBST(NPCAP_DEP)
 AC_SUBST(NPCAP_H)
+
+AC_SUBST(HAVE_ACCOLADE)
+AC_SUBST(ACCOLADE_OBJS)
+AC_SUBST(ACCOLADE_DEP)
+AC_SUBST(MOD_ACCOLADE_LIB)
+
 AC_SUBST(HAVE_DAG)
 AC_SUBST(DAG_OBJS)
 AC_SUBST(DAG_LIB)
 AC_SUBST(DAG_DEP)
 AC_SUBST(MOD_DAG_LIB)
+
+AC_SUBST(EXABLAZE_LIB)
+AC_SUBST(EXABLAZE_OBJS)
+AC_SUBST(EXABLAZE_DEP)
+AC_SUBST(HAVE_EXABLAZE)
+
 AC_SUBST(HAVE_FIBERBLAZE)
 AC_SUBST(FIBERBLAZE_OBJS)
 AC_SUBST(FIBERBLAZE_LIB)
 AC_SUBST(FIBERBLAZE_DEP)
 AC_SUBST(MOD_FIBERBLAZE_LIB)
-AC_SUBST(HAVE_NT)
-AC_SUBST(NT_OBJS)
-AC_SUBST(NT_DEP)
-AC_SUBST(CC)
-AC_SUBST(MOD_NT_LIB)
-AC_SUBST(HAVE_ACCOLADE)
-AC_SUBST(ACCOLADE_OBJS)
-AC_SUBST(ACCOLADE_DEP)
-AC_SUBST(MOD_ACCOLADE_LIB)
-AC_SUBST(HAVE_NETCOPE)
-AC_SUBST(NETCOPE_OBJS)
-AC_SUBST(NETCOPE_DEP)
-AC_SUBST(MOD_NETCOPE_LIB)
+
 AC_SUBST(MYRICOM_OBJS)
 AC_SUBST(HAVE_MYRICOM)
 AC_SUBST(MOD_MYRICOM_LIB)
 AC_SUBST(MYRICOM_DEP)
-AC_SUBST(INVEATECH_INC)
-AC_SUBST(INVEATECH_LIB)
-AC_SUBST(INVEATECH_OBJS)
-AC_SUBST(HAVE_INVEATECH)
-AC_SUBST(EXABLAZE_INC)
-AC_SUBST(EXABLAZE_LIB)
-AC_SUBST(EXABLAZE_OBJS)
-AC_SUBST(HAVE_EXABLAZE)
-AC_SUBST(HAVE_MLX)
-AC_SUBST(MLX_OBJS)
+
+AC_SUBST(HAVE_NT)
+AC_SUBST(NT_OBJS)
+AC_SUBST(NT_DEP)
+AC_SUBST(MOD_NT_LIB)
+
+AC_SUBST(HAVE_NETCOPE)
+AC_SUBST(NETCOPE_OBJS)
+AC_SUBST(NETCOPE_DEP)
+AC_SUBST(MOD_NETCOPE_LIB)
+
 AC_SUBST(HAVE_BPF)
 AC_SUBST(BPF_INCLUDE)
-dnl> AC_SUBST(BPF_LIB)
-AC_SUBST(HAVE_REDIS)
-AC_SUBST(REDIS_LIB)
-AC_SUBST(HAVE_ZMQ)
-AC_SUBST(ZMQ_LIB)
-AC_SUBST(SYSLIBS)
-AC_SUBST(INSTALL_PREFIX)
-AC_SUBST(HAVE_HW_TIMESTAMP)
+
 AC_SUBST(NDPI_LIB)
 AC_SUBST(NDPI_INC)
 AC_SUBST(HAVE_NDPI)
+
+AC_SUBST(HAVE_REDIS)
+AC_SUBST(REDIS_LIB)
+
+AC_SUBST(HAVE_ZMQ)
+AC_SUBST(ZMQ_LIB)
+
+AC_SUBST(SYSLIBS)
+AC_SUBST(HAVE_HW_TIMESTAMP)
 AC_SUBST(AR_X)
 
 dnl> AC_CONFIG_FILES([lib/Makefile])

@@ -1,0 +1,20 @@
+[Unit]
+Description=Start/stop cluster service with ID %I
+After=network.target syslog.target pf_ring.service
+Requires=pf_ring.service
+
+[Service]
+Type=simple
+
+ExecStartPre=/bin/sh -c '/bin/sed "/-d$\\|-P=.*/s/^/#/" /etc/cluster/cluster-%i.conf > /run/cluster-%i.conf'
+ExecStart=/usr/bin/zbalance_ipc /run/cluster-%i.conf
+
+ExecStopPost=/usr/local/bin/clusterctl stop-deps %i
+ExecStopPost=-/bin/rm -rf /run/cluster-%i.conf
+ 
+Restart=on-abnormal
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

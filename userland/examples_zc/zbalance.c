@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -160,7 +160,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance - (C) 2014 ntop.org\n");
+  printf("zbalance - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master thread balancing packets to multiple consumer threads counting packets.\n\n");
   printf("Usage: zbalance -i <device> -c <cluster id> -g <id:id...>\n"
@@ -214,7 +214,7 @@ void* consumer_thread(void* _id) {
 
 static int rr = -1;
  
-int32_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
   if (++rr == num_out_queues) rr = 0;
   return rr;
@@ -222,7 +222,7 @@ int32_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 /* *************************************** */
 
-int32_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   /* NOTE: pkt_handle->hash contains the CPU id */
   struct sysdig_event_header *ev = (struct sysdig_event_header*)pfring_zc_pkt_buff_data(pkt_handle, in_queue); 
   long num_out_queues = (long) user;

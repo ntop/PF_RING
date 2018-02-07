@@ -1542,6 +1542,7 @@ pcap_activate_linux(pcap_t *handle)
 		if (getenv("PCAP_PF_RING_ZC_RSS"))  flags |= PF_RING_ZC_SYMMETRIC_RSS;
 		if (getenv("PCAP_PF_RING_STRIP_HW_TIMESTAMP")) flags |= PF_RING_STRIP_HW_TIMESTAMP;
 		if (getenv("PCAP_PF_RING_HW_TIMESTAMP") || handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) flags |= PF_RING_HW_TIMESTAMP;
+		if (getenv("PCAP_PF_RING_USERSPACE_BPF")) flags |= PF_RING_USERSPACE_BPF;
 
 		if (active) pf_ring_active_poll = atoi(active);
 
@@ -2946,8 +2947,10 @@ pcap_setfilter_linux_common(pcap_t *handle, struct bpf_program *filter,
 	if (can_filter_in_kernel && handle->ring != NULL) {
 		int if_index;
 		if (handle->ring->zc_device /* ZC: we need to filter in userland as kernel is bypassed */
-		    || pfring_get_bound_device_ifindex(handle->ring, &if_index) != 0 /* not a physical device */)
+		    || pfring_get_bound_device_ifindex(handle->ring, &if_index) != 0 /* not a physical device */
+		    || getenv("PCAP_PF_RING_USERSPACE_BPF")) {
 			can_filter_in_kernel = 0;
+		}
 	}
 #endif
 

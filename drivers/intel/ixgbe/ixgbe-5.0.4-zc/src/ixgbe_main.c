@@ -2524,7 +2524,7 @@ static int ixgbe_clean_rx_irq(struct ixgbe_q_vector *q_vector,
 
 #endif /* CONFIG_IXGBE_DISABLE_PACKET_SPLIT */
 
-#ifdef CONFIG_NET_RX_BUSY_POLL
+#ifdef HAVE_NDO_BUSY_POLL
 /* must be called with local_bh_disable()d */
 static int ixgbe_busy_poll_recv(struct napi_struct *napi)
 {
@@ -6054,9 +6054,9 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*)adapter->netdev->pfring_ptr;
+	struct pfring_hooks *hook = (struct pfring_hooks *) adapter->netdev->pfring_ptr;
 
-	if(hook != NULL) {
+	if (hook != NULL) {
 		int i;
 		u16 cache_line_size;
 
@@ -6088,7 +6088,7 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			  &tx_info,
 			  rx_ring->desc, /* Packet descriptors */
 			  tx_ring->desc, /* Packet descriptors */
-			  (void*)rx_ring->netdev->mem_start,
+			  (void *) rx_ring->netdev->mem_start,
 			  rx_ring->netdev->mem_end - rx_ring->netdev->mem_start,
 			  rx_ring->queue_index, /* Channel Id */
 			  rx_ring->netdev,
@@ -6097,8 +6097,8 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			  rx_ring->netdev->dev_addr,
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
-			  (void*)rx_ring,
-			  (void*)tx_ring,
+			  (void *) rx_ring,
+			  (void *) tx_ring,
 			  wait_packet_function_ptr,
 			  notify_function_ptr
 			);
@@ -6711,14 +6711,11 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 	if (hw->mac.ops.disable_tx_laser)
 		hw->mac.ops.disable_tx_laser(hw);
 
-	ixgbe_clean_all_tx_rings(adapter);
-	ixgbe_clean_all_rx_rings(adapter);
-
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*)adapter->netdev->pfring_ptr;
+	struct pfring_hooks *hook = (struct pfring_hooks *) adapter->netdev->pfring_ptr;
 
-	if(hook != NULL) {
+	if (hook != NULL) {
 		int i;
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
@@ -6727,8 +6724,8 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 			  NULL, // tx_info,
 			  NULL, /* Packet descriptors */
 			  NULL, /* Packet descriptors */
-			  (void*)adapter->rx_ring[i]->netdev->mem_start,
-			  adapter->rx_ring[i]->netdev->mem_end - adapter->rx_ring[i]->netdev->mem_start,
+			  NULL, /* mem_start */
+			  0, /* mem_end - mem_start, */
 			  adapter->rx_ring[i]->queue_index, /* Channel Id */
 			  adapter->rx_ring[i]->netdev,
 			  adapter->rx_ring[i]->dev, /* for DMA mapping */
@@ -6736,7 +6733,8 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 			  adapter->rx_ring[i]->netdev->dev_addr,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
-			  (void*)adapter->rx_ring[i], (void*)adapter->tx_ring[i],
+			  (void *) adapter->rx_ring[i],
+			  (void *) adapter->tx_ring[i],
 			  NULL, // wait_packet_function_ptr
 			  NULL // notify_function_ptr
 			);
@@ -6745,6 +6743,9 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 
 	}
 #endif
+
+	ixgbe_clean_all_tx_rings(adapter);
+	ixgbe_clean_all_rx_rings(adapter);
 }
 
 /**
@@ -7339,11 +7340,13 @@ static void ixgbe_free_all_rx_resources(struct ixgbe_adapter *adapter)
 static int ixgbe_change_mtu(struct net_device *netdev, int new_mtu)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
+#ifndef HAVE_NETDEVICE_MIN_MAX_MTU
 	int max_frame = new_mtu + ETH_HLEN + ETH_FCS_LEN;
 
 	/* MTU < 68 is an error and causes problems on some kernels */
 	if ((new_mtu < 68) || (max_frame > IXGBE_MAX_JUMBO_FRAME_SIZE))
 		return -EINVAL;
+#endif
 
 	/*
 	 * For 82599EB we cannot allow legacy VFs to enable their receive
@@ -7352,7 +7355,11 @@ static int ixgbe_change_mtu(struct net_device *netdev, int new_mtu)
 	 */
 	if ((adapter->flags & IXGBE_FLAG_SRIOV_ENABLED) &&
 	    (adapter->hw.mac.type == ixgbe_mac_82599EB) &&
+#ifndef HAVE_NETDEVICE_MIN_MAX_MTU
 	    (max_frame > (ETH_FRAME_LEN + ETH_FCS_LEN)))
+#else
+	    (new_mtu > ETH_DATA_LEN))
+#endif
 		e_warn(probe, "Setting MTU > 1500 will disable legacy VFs\n");
 
 	e_info(probe, "changing MTU from %d to %d\n", netdev->mtu, new_mtu);
@@ -7764,8 +7771,13 @@ static void ixgbe_shutdown(struct pci_dev *pdev)
  * Returns 64bit statistics, for use in the ndo_get_stats64 callback. This
  * function replaces ixgbe_get_stats for kernels which support it.
  */
+#ifdef HAVE_VOID_NDO_GET_STATS64
+static void ixgbe_get_stats64(struct net_device *netdev,
+			      struct rtnl_link_stats64 *stats)
+#else
 static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 						   struct rtnl_link_stats64 *stats)
+#endif
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	int i;
@@ -7827,7 +7839,9 @@ static struct rtnl_link_stats64 *ixgbe_get_stats64(struct net_device *netdev,
 	stats->rx_length_errors	= netdev->stats.rx_length_errors;
 	stats->rx_crc_errors	= netdev->stats.rx_crc_errors;
 	stats->rx_missed_errors	= netdev->stats.rx_missed_errors;
+#ifndef HAVE_VOID_NDO_GET_STATS64
 	return stats;
+#endif
 }
 #else
 /**
@@ -10051,12 +10065,53 @@ static void ixgbe_set_prio_tc_map(struct ixgbe_adapter __maybe_unused *adapter)
 }
 
 #ifdef NETIF_F_HW_TC
+#ifdef TC_MQPRIO_HW_OFFLOAD_MAX
+static int ixgbe_setup_tc_mqprio(struct net_device *dev,
+				 struct tc_mqprio_qopt *mqprio)
+{
+	mqprio->hw = TC_MQPRIO_HW_OFFLOAD_TCS;
+	return ixgbe_setup_tc(dev, mqprio->num_tc);
+}
+
+#endif
+#if defined(HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV)
+static int
+__ixgbe_setup_tc(struct net_device *dev, enum tc_setup_type type,
+		 void *type_data)
+#elif defined(HAVE_NDO_SETUP_TC_CHAIN_INDEX)
+static int
+__ixgbe_setup_tc(struct net_device *dev, __always_unused u32 handle,
+		 u32 chain_index, __always_unused __be16 proto,
+		 struct tc_to_netdev *tc)
+#else
 static int
 __ixgbe_setup_tc(struct net_device *dev, __always_unused u32 handle,
 		 __always_unused __be16 proto, struct tc_to_netdev *tc)
+#endif
 {
-	return ixgbe_setup_tc(dev, tc->tc);
+#ifndef HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
+	unsigned int type = tc->type;
+
+#ifdef HAVE_NDO_SETUP_TC_CHAIN_INDEX
+	if (chain_index)
+		return -EOPNOTSUPP;
+
+#endif
+#endif
+	switch (type) {
+	case TC_SETUP_MQPRIO:
+#if defined(HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV)
+		return ixgbe_setup_tc_mqprio(dev, type_data);
+#elif defined(TC_MQPRIO_HW_OFFLOAD_MAX)
+		return ixgbe_setup_tc_mqprio(dev, tc->mqprio);
+#else
+		return ixgbe_setup_tc(dev, tc->tc);
+#endif
+	default:
+		return -EOPNOTSUPP;
+	}
 }
+
 #endif /* NETIF_F_HW_TC */
 
 /**
@@ -10665,7 +10720,7 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 	.ndo_poll_controller	= ixgbe_netpoll,
 #endif
 #ifndef HAVE_RHEL6_NET_DEVICE_EXTENDED
-#ifdef CONFIG_NET_RX_BUSY_POLL
+#ifdef HAVE_NDO_BUSY_POLL
 	.ndo_busy_poll		= ixgbe_busy_poll_recv,
 #endif /* CONFIG_NET_RX_BUSY_POLL */
 #endif /* !HAVE_RHEL6_NET_DEVICE_EXTENDED */
@@ -10770,9 +10825,9 @@ void ixgbe_assign_netdev_ops(struct net_device *dev)
 #endif /* HAVE_NET_DEVICE_OPS */
 
 #ifdef HAVE_RHEL6_NET_DEVICE_EXTENDED
-#ifdef CONFIG_NET_RX_BUSY_POLL
+#ifdef HAVE_NDO_BUSY_POLL
 	netdev_extended(dev)->ndo_busy_poll		= ixgbe_busy_poll_recv;
-#endif /* CONFIG_NET_RX_BUSY_POLL */
+#endif /* HAVE_NDO_BUSY_POLL */
 #endif /* HAVE_RHEL6_NET_DEVICE_EXTENDED */
 
 	ixgbe_set_ethtool_ops(dev);
@@ -11183,6 +11238,11 @@ static int __devinit ixgbe_probe(struct pci_dev *pdev,
 #endif
 #ifdef IFF_SUPP_NOFCS
 	netdev->priv_flags |= IFF_SUPP_NOFCS;
+#endif
+#ifdef HAVE_NETDEVICE_MIN_MAX_MTU
+	/* MTU range: 68 - 9710 */
+	netdev->min_mtu = ETH_MIN_MTU;
+	netdev->max_mtu = IXGBE_MAX_JUMBO_FRAME_SIZE - (ETH_HLEN + ETH_FCS_LEN);
 #endif
 #if IS_ENABLED(CONFIG_DCB)
 	if (adapter->flags & IXGBE_FLAG_DCB_CAPABLE)

@@ -1,0 +1,2 @@
+pfring_mod_dag.o: pfring_mod_dag.c pfring_mod_dag.h ../../lib/pfring.h \
+ ../../../kernel/linux/pf_ring.h

@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -338,7 +338,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance_ipc - (C) 2014 ntop.org\n");
+  printf("zbalance_ipc - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process balancing packets to multiple consumer processes.\n\n");
   printf("Usage: zbalance_ipc -i <device> -c <cluster id> -n <num inst>\n"
@@ -353,10 +353,11 @@ void printHelp(void) {
          "                 instances of multiple applications, using a comma-separated list\n");
   printf("-m <hash mode>   Hashing modes:\n"
          "                 0 - No hash: Round-Robin (default)\n"
-         "                 1 - IP hash, or TID (thread id) in case of '-i sysdig'\n"
+         "                 1 - IP hash (or Thread-ID in case of sysdig)\n"
          "                 2 - Fan-out\n"
          "                 3 - Fan-out (1st) + Round-Robin (2nd, 3rd, ..)\n"
-         "                 4 - GTP hash (Inner IP/Port or Seq-Num)\n");
+         "                 4 - GTP hash (Inner IP/Port or Seq-Num or Outer IP/Port)\n"
+         "                 5 - GRE hash (Inner or Outer IP)\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
   printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
   printf("-R <nsec>        Time resolution (nsec) when using Time Pulse thread\n"
@@ -412,7 +413,7 @@ static inline int packet_filter(u_char *pkt) {
 
 /* *************************************** */
 
-int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
 #ifdef HAVE_ZMQ
   if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
@@ -424,7 +425,7 @@ int32_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 /* *************************************** */
 
-int32_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
 #ifdef HAVE_ZMQ
   if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
@@ -436,9 +437,21 @@ int32_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
 
 /* *************************************** */
 
+int64_t gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  long num_out_queues = (long) user;
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return -1;
+#endif
+  if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
+  return pfring_zc_builtin_gre_hash(pkt_handle, in_queue) % num_out_queues;
+}
+
+/* *************************************** */
+
 static int rr = -1;
 
-int32_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
 #ifdef HAVE_ZMQ
   if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
@@ -451,7 +464,7 @@ int32_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 /* *************************************** */
 
-int32_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   /* NOTE: pkt_handle->hash contains the CPU id */
   struct sysdig_event_header *ev = (struct sysdig_event_header*)pfring_zc_pkt_buff_data(pkt_handle, in_queue); 
   long num_out_queues = (long) user;
@@ -461,18 +474,18 @@ int32_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
 
 /* *************************************** */
 
-int32_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
 #ifdef HAVE_ZMQ
   if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
     return 0x0;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
-  return 0xffffffff; 
+  return 0xffffffffffffffff; 
 }
 
 /* *************************************** */
 
-int32_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
 #ifdef HAVE_ZMQ
   if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
@@ -485,8 +498,9 @@ int32_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue 
 
 /* *************************************** */
 
-int32_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
-  int32_t i, offset = 0, app_instance, consumers_mask = 0, hash;
+int64_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  int32_t i, offset = 0, app_instance, hash;
+  int64_t consumers_mask = 0; 
 
 #ifdef HAVE_ZMQ
   if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
@@ -508,8 +522,9 @@ int32_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_
 
 /* *************************************** */
 
-int32_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
-  int32_t i, offset = 0, app_instance, consumers_mask = 0, hash;
+int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  int32_t i, offset = 0, app_instance, hash;
+  int64_t consumers_mask = 0;
 
 #ifdef HAVE_ZMQ
   if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
@@ -519,6 +534,30 @@ int32_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
   hash = pfring_zc_builtin_gtp_hash(pkt_handle, in_queue);
+
+  for (i = 0; i < num_apps; i++) {
+    app_instance = hash % instances_per_app[i];
+    consumers_mask |= (1 << (offset + app_instance));
+    offset += instances_per_app[i];
+  }
+
+  return consumers_mask;
+}
+
+/* *************************************** */
+
+int64_t fo_multiapp_gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  int32_t i, offset = 0, app_instance, hash;
+  int64_t consumers_mask = 0;
+
+#ifdef HAVE_ZMQ
+  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+    return 0x0;
+#endif
+
+  if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
+
+  hash = pfring_zc_builtin_gre_hash(pkt_handle, in_queue);
 
   for (i = 0; i < num_apps; i++) {
     app_instance = hash % instances_per_app[i];
@@ -693,13 +732,13 @@ int main(int argc, char* argv[]) {
   }
 
   if (num_apps == 0) printHelp();
-  if (num_apps != 1 && hash_mode != 1 && hash_mode != 4) printHelp();
+  if (num_apps != 1 && hash_mode != 1 && hash_mode != 4 && hash_mode != 5) printHelp();
 
-  if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4) && num_apps == 1)) { /* balancer */
+  if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4 || hash_mode == 5) && num_apps == 1)) { /* balancer */
     /* no constraints on number of queues */
   } else { /* fan-out */ 
-    if (num_consumer_queues > 32 /* egress mask is 32 bit */) { 
-      trace(TRACE_ERROR, "Misconfiguration detected: you cannot use more than 32 egress queues in fan-out or multi-app mode\n");
+    if (num_consumer_queues > 64 /* egress mask is 32 bit */) { 
+      trace(TRACE_ERROR, "Misconfiguration detected: you cannot use more than 64 egress queues in fan-out or multi-app mode\n");
       return -1;
     }
   }
@@ -924,7 +963,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4) && num_apps == 1)) { /* balancer */
+  if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4 || hash_mode == 5) && num_apps == 1)) { /* balancer */
     pfring_zc_distribution_func func = NULL;
 
     switch (hash_mode) {
@@ -933,6 +972,8 @@ int main(int argc, char* argv[]) {
     case 1: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else if (time_pulse) func = ip_distribution_func; /* else built-in IP-based */
       break;
     case 4: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func =  gtp_distribution_func;
+      break;
+    case 5: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func =  gre_distribution_func;
       break;
     }
 
@@ -969,6 +1010,8 @@ int main(int argc, char* argv[]) {
     case 3: func = fo_rr_distribution_func;
       break;
     case 4: func = fo_multiapp_gtp_distribution_func;
+      break;
+    case 5: func = fo_multiapp_gre_distribution_func;
       break;
     }
 

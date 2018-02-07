@@ -1,0 +1,91 @@
+#
+# Makefile for PF_RING MOD NETCOPE
+#
+CUR_DIR = $(shell pwd)
+ARCH := $(shell uname -m | sed 's/i.86/i386/')
+
+#
+# GCC march/mtune
+#
+GCCARCH = #corei7 corei7-avx core-avx2
+ifneq ($(strip $(GCCARCH)), )
+  ARCHFLAGS = -march=$(GCCARCH) -mtune=$(GCCARCH)
+  LIBARCH = _$(GCCARCH)
+endif
+
+#
+# Installation directory
+#
+INSTDIR   = /usr/local
+
+# NETCOPE lib
+INCLUDENETCOPE = 
+
+#
+# Search directories
+#
+INCLUDE  = -I../../../kernel -I../../nbpf -I../../lib ${INCLUDENETCOPE}
+
+#
+# Object files
+#
+SRCS      = pfring_mod_netcope.c 
+OBJS      = pfring_mod_netcope.o
+MACHINE   = $(shell uname -m)
+
+#
+# C compiler and flags
+#
+#
+# CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
+#
+CC        = ${CROSS_COMPILE}gcc $(ARCHFLAGS) -O2 #-g
+# Note: since glibc >= 2.15 there is a new __fdelt_chk function that prevents the library from compiling on 
+# systems with an older glibc (CentOS). __fdelt_chk is related to the FORTIFY_SOURCE feature that enables 
+# buffer overflows checks. In order to disable this feature add -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 
+CFLAGS    = -Wall -fPIC ${INCLUDE} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
+LDFLAGS   = -shared
+
+SYSLIBS   = -lpthread
+
+# How to make an object file
+%.o: %.c %.h Makefile ../../../kernel/linux/pf_ring.h ../../lib/pfring.h
+#	@echo "=*= making object $@ =*="
+	${CC} ${CFLAGS} -c $< -o $@
+
+#
+# Main targets
+#
+STATICLIB  = ../../lib/libs/libpfring_netcope_$(MACHINE)$(strip $(LIBARCH)).a
+DYNAMICLIB = ../../lib/libs/libpfring_netcope_$(MACHINE).so
+TARGETS    = ${STATICLIB} ${DYNAMICLIB}
+
+default: ${TARGETS}
+
+${STATICLIB}: ${OBJS}
+	@echo "=*= making library $@ =*="
+	ar rs $@ ${OBJS} pfring_mod_netcope.h
+	ranlib $@
+
+${DYNAMICLIB}: ${OBJS}
+	@echo "=*= making library $@ =*="
+	${CC} ${LDFLAGS} ${OBJS} ${SYSLIBS} -o $@
+
+all: install
+
+install:
+	make clean; make GCCARCH="corei7"
+	make clean; make GCCARCH="corei7-avx"
+	make clean; make GCCARCH="core-avx2"
+	make clean; make GCCARCH=""
+
+clean:
+	@rm -f *.o *~ *.so *.a
+
+depend: .depend
+
+.depend: $(SRCS)
+	rm -f ./.depend
+	$(CC) $(CFLAGS) -MM $^>>./.depend;
+
+include .depend

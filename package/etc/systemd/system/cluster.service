@@ -1,15 +1,14 @@
 [Unit]
-Description=Start/stop cluster service
+Description=Start/stop all enabled cluster services
 After=network.target syslog.target pf_ring.service
 Requires=pf_ring.service
 
 [Service]
-Type=forking
+Type=oneshot
 RemainAfterExit=yes
-ExecStart=/etc/init.d/cluster start
-ExecStop=/etc/init.d/cluster stop
-Restart=on-abnormal
-RestartSec=5
+
+ExecStart=/usr/local/bin/clusterctl start-if-enabled
+ExecStop=/usr/local/bin/clusterctl stop
 
 [Install]
 WantedBy=multi-user.target

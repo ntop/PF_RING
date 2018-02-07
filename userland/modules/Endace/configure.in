@@ -1,0 +1,17 @@
+AC_INIT([Makefile.in], 1.0)
+
+AC_PROG_CC
+
+AC_CHECK_LIB( [dag], [dag_get_stream_erf_types], )
+AC_MSG_CHECKING([if dag is present])
+if test "x$ac_cv_lib_dag_dag_get_stream_erf_types" = xyes; then :
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT(no)
+  echo "Please install the DAG driver/library"
+  exit
+fi
+
+AC_CONFIG_FILES(Makefile)
+
+AC_OUTPUT

@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2005-17 - ntop.org
+ * (C) 2005-2018 - ntop.org
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -106,7 +106,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "dag",
     .open = pfring_dag_open,
-    .findalldevs = NULL
+    .findalldevs = pfring_dag_findalldevs
   },
 #endif
 
@@ -290,8 +290,8 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   }
 
   if(unlikely(ring->reentrant)) {
-    if (pthread_rwlock_init(&ring->rx_lock, PTHREAD_PROCESS_PRIVATE) != 0 || 
-        pthread_rwlock_init(&ring->tx_lock, PTHREAD_PROCESS_PRIVATE) != 0) {
+    if (pfring_rwlock_init(&ring->rx_lock, PTHREAD_PROCESS_PRIVATE) != 0 || 
+        pfring_rwlock_init(&ring->tx_lock, PTHREAD_PROCESS_PRIVATE) != 0) {
       free(ring);
       return NULL;
     }
@@ -374,8 +374,8 @@ void pfring_close(pfring *ring) {
     ring->close(ring);
 
   if(unlikely(ring->reentrant)) {
-    pthread_rwlock_destroy(&ring->rx_lock);
-    pthread_rwlock_destroy(&ring->tx_lock);
+    pfring_rwlock_destroy(&ring->rx_lock);
+    pfring_rwlock_destroy(&ring->tx_lock);
   }
 
   free(ring->device_name);
@@ -693,12 +693,12 @@ int pfring_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet) {
 	    && (ring->mode != recv_only_mode))) {
 
     if(unlikely(ring->reentrant))
-      pthread_rwlock_wrlock(&ring->tx_lock);
+      pfring_rwlock_wrlock(&ring->tx_lock);
 
     rc =  ring->send(ring, pkt, pkt_len, flush_packet);
 
     if(unlikely(ring->reentrant))
-      pthread_rwlock_unlock(&ring->tx_lock);
+      pfring_rwlock_unlock(&ring->tx_lock);
 
     return rc;
   }
@@ -721,12 +721,12 @@ int pfring_send_get_time(pfring *ring, char *pkt, u_int pkt_len, struct timespec
 	    && (ring->mode != recv_only_mode))) {
 
     if(unlikely(ring->reentrant))
-      pthread_rwlock_wrlock(&ring->tx_lock);
+      pfring_rwlock_wrlock(&ring->tx_lock);
 
     rc =  ring->send_get_time(ring, pkt, pkt_len, ts);
 
     if(unlikely(ring->reentrant))
-      pthread_rwlock_unlock(&ring->tx_lock);
+      pfring_rwlock_unlock(&ring->tx_lock);
 
     return rc;
   }
@@ -1169,14 +1169,14 @@ int pfring_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
   if (!ring->force_userspace_bpf && ring->set_bpf_filter) {
     rc = ring->set_bpf_filter(ring, filter_buffer);
-    if (rc == 0 || rc == -2 /* special error code to force returning error */)
+    if (rc == 0 || rc < -1 /* force returning error if != -1 */)
       return rc;
   }
 
   /* no in-kernel or module-dependent bpf support, setting up userspace bpf */
 
   if (unlikely(ring->reentrant))
-    pthread_rwlock_wrlock(&ring->rx_lock);
+    pfring_rwlock_wrlock(&ring->rx_lock);
 
   rc = pfring_parse_bpf_filter(filter_buffer, ring->caplen, &ring->userspace_bpf_filter);
 
@@ -1188,7 +1188,7 @@ int pfring_set_bpf_filter(pfring *ring, char *filter_buffer) {
 #endif
 
   if(unlikely(ring->reentrant))
-    pthread_rwlock_unlock(&ring->rx_lock);
+    pfring_rwlock_unlock(&ring->rx_lock);
 
   if (rc == 0)
     ring->userspace_bpf = 1;

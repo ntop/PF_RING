@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -179,7 +179,7 @@ void sigproc(int sig) {
 /* ******************************** */
 
 void printHelp(void) {
-  printf("zfifo - (C) 2014 ntop.org\n");
+  printf("zfifo - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master thread reordering packets from multiple interfaces with\n"
          "hw timestamps support, and delivering them to a consumer thread. (experimental)\n\n");
@@ -198,7 +198,7 @@ void printHelp(void) {
 
 /* *************************************** */
 
-int32_t processing_func(pfring_zc_pkt_buff *b, pfring_zc_queue *in_queue, void *user) {
+int64_t processing_func(pfring_zc_pkt_buff *b, pfring_zc_queue *in_queue, void *user) {
 #if 0
   int i;
 

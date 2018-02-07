@@ -1,0 +1,17 @@
+AC_INIT([Makefile.in], 1.0)
+
+AC_PROG_CC
+
+AC_CHECK_LIB(ibverbs, ibv_open_device, AC_DEFINE_UNQUOTED(HAVE_MELLANOX, 1, [Mellanox support is present]))
+AC_MSG_CHECKING([Mellanox support])
+if test "x$ac_cv_lib_ibverbs_ibv_open_device" = xyes; then 
+  AC_MSG_RESULT(yes)
+else
+  AC_MSG_RESULT(no)
+  echo "Please install the iverbs library"
+  exit
+fi
+
+AC_CONFIG_FILES(Makefile)
+
+AC_OUTPUT

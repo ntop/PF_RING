@@ -937,6 +937,19 @@ static inline int _kc_test_and_set_bit(int nr, volatile unsigned long *addr)
 #define dev_dbg(dev, format, arg...) dev_printk(KERN_DEBUG, dev, format, ##arg)
 #endif /* CONFIG_DYNAMIC_DEBUG */
 
+#undef list_for_each_entry_safe
+#define list_for_each_entry_safe(pos, n, head, member)			   \
+	for (n = NULL, pos = list_first_entry(head, typeof(*pos), member); \
+	     &pos->member != (head);					   \
+	     pos = list_next_entry(pos, member))
+
+#undef hlist_for_each_entry_safe
+#define hlist_for_each_entry_safe(pos, n, head, member)			     \
+	for (n = NULL, pos = hlist_entry_safe((head)->first, typeof(*(pos)), \
+					      member);			     \
+	     pos;							     \
+	     pos = hlist_entry_safe((pos)->member.next, typeof(*(pos)), member))
+
 #endif /* __KLOCWORK__ */
 
 /*****************************************************************************/
@@ -2211,6 +2224,18 @@ static inline int _kc_request_irq(unsigned int irq, new_handler_t handler,
 #define request_irq(irq, handler, flags, devname, dev_id) _kc_request_irq((irq), (handler), (flags), (devname), (dev_id))
 
 #define irq_handler_t new_handler_t
+
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,11) )
+#ifndef skb_checksum_help
+static inline int __kc_skb_checksum_help(struct sk_buff *skb)
+{
+	return skb_checksum_help(skb, 0);
+}
+
+#define skb_checksum_help(skb) __kc_skb_checksum_help((skb))
+#endif
+#endif /* < 2.6.19 && >= 2.6.11 */
+
 /* pci_restore_state and pci_save_state handles MSI/PCIE from 2.6.19 */
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(5,4)))
 #define PCIE_CONFIG_SPACE_LEN 256
@@ -4747,6 +4772,7 @@ extern int __kc_pcie_get_minimum_link(struct pci_dev *dev,
 #endif
 #endif /* < 4.8.0 */
 #define HAVE_NDO_GET_PHYS_PORT_ID
+#define HAVE_NETIF_SET_XPS_QUEUE_CONST_MASK
 #endif /* >= 3.12.0 */
 
 /*****************************************************************************/
@@ -4849,6 +4875,11 @@ static inline void __kc_skb_set_hash(struct sk_buff __maybe_unused * skb,
 #define HAVE_VXLAN_CHECKS
 #endif /* HAVE_VXLAN_CHECKS */
 #endif /* !(RHEL_RELEASE_CODE >= 7.0 && SLE_VERSION_CODE >= 12.0) */
+
+#if ((RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)) ||\
+     (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(12,0,0)))
+#define HAVE_NDO_DFWD_OPS
+#endif
 
 #ifndef pci_enable_msix_range
 extern int __kc_pci_enable_msix_range(struct pci_dev *dev,
@@ -5030,11 +5061,13 @@ static inline void __kc_dev_mc_unsync(struct net_device __maybe_unused * dev,
 #define SKB_GSO_UDP_TUNNEL_CSUM 0
 #endif
 extern void *__kc_devm_kmemdup(struct device *dev, const void *src, size_t len,
-			       unsigned int gfp);
+			       gfp_t gfp);
 #define devm_kmemdup __kc_devm_kmemdup
 
 #else
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,13,0) )
 #define HAVE_PCI_ERROR_HANDLER_RESET_NOTIFY
+#endif /* >= 3.16.0 && < 4.13.0 */
 #define HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 #endif /* 3.16.0 */
 
@@ -5101,6 +5134,11 @@ extern unsigned int __kc_eth_get_headlen(unsigned char *data,
 #if RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,1))
 #define HAVE_SKBUFF_CSUM_LEVEL
 #endif /* >= RH 7.1 */
+
+/* RHEL 7.3 backported xmit_more */
+#if (RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3))
+#define HAVE_SKB_XMIT_MORE
+#endif /* >= RH 7.3 */
 
 #undef GENMASK
 #define GENMASK(h, l) \
@@ -5427,6 +5465,17 @@ extern int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+#if !(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7,3))
+static inline unsigned char *skb_checksum_start(const struct sk_buff *skb)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22))
+	return skb->head + skb->csum_start;
+#else /* < 2.6.22 */
+	return skb_transport_header(skb);
+#endif
+}
+#endif
+
 #if !(UBUNTU_VERSION_CODE && \
 		UBUNTU_VERSION_CODE >= UBUNTU_VERSION(4,4,0,21)) && \
 	!(RHEL_RELEASE_CODE && \
@@ -5536,13 +5585,21 @@ static inline void pci_release_mem_regions(struct pci_dev *pdev)
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0))
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4)))
+#define HAVE_ETHTOOL_NEW_10G_BITS
+#endif /* RHEL */
 #else
+#define HAVE_ETHTOOL_NEW_10G_BITS
 #endif /* 4.9.0 */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0))
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4)))
+#define HAVE_DEV_WALK_API
+#endif
 #if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,3,0)))
 #define HAVE_STRUCT_DMA_ATTRS
+#define HAVE_NETDEVICE_MIN_MAX_MTU
 #endif
 
 #if !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,3,0)))
@@ -5590,10 +5647,12 @@ static inline void __page_frag_cache_drain(struct page *page,
 #ifndef ETH_MIN_MTU
 #define ETH_MIN_MTU 68
 #endif /* ETH_MIN_MTU */
-#else
+#else /* >= 4.10 */
 #define HAVE_NETDEVICE_MIN_MAX_MTU
 #define HAVE_SWIOTLB_SKIP_CPU_SYNC
 #define HAVE_NETDEV_TC_RESETS_XPS
+#define HAVE_XPS_QOS_SUPPORT
+#define HAVE_DEV_WALK_API
 #endif /* 4.10.0 */
 
 /*****************************************************************************/
@@ -5606,6 +5665,7 @@ static inline void __page_frag_cache_drain(struct page *page,
 #endif
 #else /* > 4.11 */
 #define HAVE_VOID_NDO_GET_STATS64
+#define HAVE_VM_OPS_FAULT_NO_VMA
 #endif /* 4.11.0 */
 
 /*****************************************************************************/
@@ -5613,6 +5673,27 @@ static inline void __page_frag_cache_drain(struct page *page,
 #else /* > 4.13 */
 #define HAVE_HWTSTAMP_FILTER_NTP_ALL
 #define HAVE_NDO_SETUP_TC_CHAIN_INDEX
+#define HAVE_PCI_ERROR_HANDLER_RESET_PREPARE
+#define HAVE_PTP_CLOCK_DO_AUX_WORK
 #endif /* 4.13.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0))
+#ifndef ethtool_link_ksettings_del_link_mode
+#define ethtool_link_ksettings_del_link_mode(ptr, name, mode)		\
+	__clear_bit(ETHTOOL_LINK_MODE_ ## mode ## _BIT, (ptr)->link_modes.name)
+#endif
+#else /* > 4.14 */
+#define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
+#endif /* 4.14.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
+#ifdef ETHTOOL_GLINKSETTINGS
+void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
+				      struct ethtool_link_ksettings *src);
+#define ethtool_intersect_link_masks _kc_ethtool_intersect_link_masks
+#endif /* ETHTOOL_GLINKSETTINGS */
+#endif /* 4.15.0 */
 
 #endif /* _KCOMPAT_H_ */

@@ -867,9 +867,13 @@ struct _kc_ethtool_pauseparam {
 #elif (LINUX_VERSION_CODE == KERNEL_VERSION(4,4,21))
 /* SLES12 SP2 GA is 4.4.21-69 */
 #define SLE_VERSION_CODE SLE_VERSION(12,2,0)
-/* SLES12 SP3 Beta3 is 4.4.68-2 */
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,68))
+/* SLES12 SP3 GM is 4.4.73-5 and update kernel is 4.4.82-6.3 */
+#elif ((LINUX_VERSION_CODE == KERNEL_VERSION(4,4,73)) || \
+       (LINUX_VERSION_CODE == KERNEL_VERSION(4,4,82)))
 #define SLE_VERSION_CODE SLE_VERSION(12,3,0)
+/* SLES15 Beta1 is 4.12.14-2 */
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,14))
+#define SLE_VERSION_CODE SLE_VERSION(15,0,0)
 /* new SLES kernels must be added here with >= based on kernel
  * the idea is to order from newest to oldest and just catch all
  * of them using the >=
@@ -2201,6 +2205,17 @@ static inline int _kc_request_irq(unsigned int irq, new_handler_t handler, unsig
 #define request_irq(irq, handler, flags, devname, dev_id) _kc_request_irq((irq), (handler), (flags), (devname), (dev_id))
 
 #define irq_handler_t new_handler_t
+
+#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,11) )
+#ifndef skb_checksum_help
+static inline int __kc_skb_checksum_help(struct sk_buff *skb)
+{
+	return skb_checksum_help(skb, 0);
+}
+#define skb_checksum_help(skb) __kc_skb_checksum_help((skb))
+#endif
+#endif /* < 2.6.19 && >= 2.6.11 */
+
 /* pci_restore_state and pci_save_state handles MSI/PCIE from 2.6.19 */
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(5,4)))
 #define PCIE_CONFIG_SPACE_LEN 256
@@ -4391,6 +4406,12 @@ static inline void hash_del(struct hlist_node *node)
 }
 #endif /* RHEL >= 6.6 */
 
+/* We don't have @flags support prior to 3.7, so we'll simply ignore the flags
+ * parameter on these older kernels.
+ */
+#define __setup_timer(_timer, _fn, _data, _flags)	\
+	setup_timer((_timer), (_fn), (_data))		\
+
 #else /* >= 3.7.0 */
 #include <linux/hashtable.h>
 #define HAVE_CONST_STRUCT_PCI_ERROR_HANDLERS
@@ -4431,9 +4452,6 @@ static inline bool __kc_is_link_local_ether_addr(const u8 *addr)
 }
 #define is_link_local_ether_addr(addr) __kc_is_link_local_ether_addr(addr)
 #endif /* is_link_local_ether_addr */
-int __kc_ipv6_find_hdr(const struct sk_buff *skb, unsigned int *offset,
-		       int target, unsigned short *fragoff, int *flags);
-#define ipv6_find_hdr(a, b, c, d, e) __kc_ipv6_find_hdr((a), (b), (c), (d), (e))
 
 #ifndef FLOW_MAC_EXT
 #define FLOW_MAC_EXT	0x40000000
@@ -4856,6 +4874,11 @@ static inline void __kc_skb_set_hash(struct sk_buff __maybe_unused *skb,
 #endif /* HAVE_VXLAN_CHECKS */
 #endif /* !(RHEL_RELEASE_CODE >= 7.0 && SLE_VERSION_CODE >= 12.0) */
 
+#if ((RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3)) ||\
+     (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(12,0,0)))
+#define HAVE_NDO_DFWD_OPS
+#endif
+
 #ifndef pci_enable_msix_range
 extern int __kc_pci_enable_msix_range(struct pci_dev *dev,
 				      struct msix_entry *entries,
@@ -4880,7 +4903,9 @@ static inline void __kc_ether_addr_copy(u8 *dst, const u8 *src)
 #endif
 }
 #endif /* ether_addr_copy */
-
+int __kc_ipv6_find_hdr(const struct sk_buff *skb, unsigned int *offset,
+		       int target, unsigned short *fragoff, int *flags);
+#define ipv6_find_hdr(a, b, c, d, e) __kc_ipv6_find_hdr((a), (b), (c), (d), (e))
 #else /* >= 3.14.0 */
 
 /* for ndo_dfwd_ ops add_station, del_station and _start_xmit */
@@ -5006,12 +5031,16 @@ static inline void __kc_dev_mc_unsync(struct net_device __maybe_unused *dev,
 #define SKB_GSO_UDP_TUNNEL_CSUM 0
 #endif
 extern void *__kc_devm_kmemdup(struct device *dev, const void *src, size_t len,
-			       unsigned int gfp);
+			       gfp_t gfp);
 #define devm_kmemdup __kc_devm_kmemdup
 
 #else
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,13,0) )
 #define HAVE_PCI_ERROR_HANDLER_RESET_NOTIFY
+#if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,0,0)))
+#undef HAVE_PCI_ERROR_HANDLER_RESET_NOTIFY
+#define HAVE_PCI_ERROR_HANDLER_RESET_PREPARE
+#endif /* SLES15 */
 #endif /* >= 3.16.0 && < 4.13.0 */
 #define HAVE_NDO_SET_VF_MIN_MAX_TX_RATE
 #endif /* 3.16.0 */
@@ -5394,6 +5423,17 @@ extern int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+#if !(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7,3))
+static inline unsigned char *skb_checksum_start(const struct sk_buff *skb)
+{
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22))
+	return skb->head + skb->csum_start;
+#else /* < 2.6.22 */
+	return skb_transport_header(skb);
+#endif
+}
+#endif
+
 #if !(UBUNTU_VERSION_CODE && \
 		UBUNTU_VERSION_CODE >= UBUNTU_VERSION(4,4,0,21)) && \
 	!(RHEL_RELEASE_CODE && \
@@ -5577,6 +5617,7 @@ static inline void __page_frag_cache_drain(struct page *page,
 #endif
 #else /* > 4.11 */
 #define HAVE_VOID_NDO_GET_STATS64
+#define HAVE_VM_OPS_FAULT_NO_VMA
 #endif /* 4.11.0 */
 
 /*****************************************************************************/
@@ -5585,12 +5626,45 @@ static inline void __page_frag_cache_drain(struct page *page,
 #define HAVE_HWTSTAMP_FILTER_NTP_ALL
 #define HAVE_NDO_SETUP_TC_CHAIN_INDEX
 #define HAVE_PCI_ERROR_HANDLER_RESET_PREPARE
+#define HAVE_PTP_CLOCK_DO_AUX_WORK
 #endif /* 4.13.0 */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0))
+#ifndef ethtool_link_ksettings_del_link_mode
+#define ethtool_link_ksettings_del_link_mode(ptr, name, mode)		\
+	__clear_bit(ETHTOOL_LINK_MODE_ ## mode ## _BIT, (ptr)->link_modes.name)
+#endif
+#if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,0,0)))
+#define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
+#endif
+
+#define TIMER_DATA_TYPE		unsigned long
+#define TIMER_FUNC_TYPE		void (*)(TIMER_DATA_TYPE)
+
+static inline void timer_setup(struct timer_list *timer,
+			       void (*callback)(struct timer_list *),
+			       unsigned int flags)
+{
+	__setup_timer(timer, (TIMER_FUNC_TYPE)callback,
+		      (TIMER_DATA_TYPE)timer, flags);
+}
+
+#define from_timer(var, callback_timer, timer_fieldname) \
+	container_of(callback_timer, typeof(*var), timer_fieldname)
+
 #else /* > 4.14 */
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #endif /* 4.14.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
+#define TC_SETUP_QDISC_MQPRIO TC_SETUP_MQPRIO
+#ifdef ETHTOOL_GLINKSETTINGS
+void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
+				      struct ethtool_link_ksettings *src);
+#define ethtool_intersect_link_masks _kc_ethtool_intersect_link_masks
+#endif /* ETHTOOL_GLINKSETTINGS */
+#endif /* 4.15.0 */
 
 #endif /* _KCOMPAT_H_ */

@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ u_int clusterId = 0;
 pfring  *pd;
 pcap_dumper_t *dumper = NULL;
 pfring_stat pfringStats;
-pthread_rwlock_t statsLock;
+pfring_rwlock_t statsLock;
 
 static struct timeval startTime;
 unsigned long long numPkts = 0, numBytes = 0;
@@ -258,7 +258,7 @@ int main(int argc, char* argv[]) {
   /* hardcode: promisc=1, to_ms=500 */
   promisc = 1;
 
-  pthread_rwlock_init(&statsLock, NULL);
+  pfring_rwlock_init(&statsLock, NULL);
 
   if (1)                      flags |= PF_RING_REENTRANT; // 2 threads
   if(promisc)                 flags |= PF_RING_PROMISC;

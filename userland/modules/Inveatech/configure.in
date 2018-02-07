@@ -1,0 +1,18 @@
+AC_INIT([Makefile.in], 1.0)
+
+AC_PROG_CC
+
+LIBS="-lsze2 $LIBS"
+AC_CHECK_LIB([sze2], [szedata_open], )
+AC_MSG_CHECKING([if sze2 is present])
+if test "x$ac_cv_lib_sze2_szedata_open" = xyes; then :
+  AC_MSG_RESULT(yes) 
+else
+  AC_MSG_RESULT(no)
+  echo "Please install the SZE2 library"
+  exit
+fi
+
+AC_CONFIG_FILES(Makefile)
+
+AC_OUTPUT

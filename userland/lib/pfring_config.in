@@ -9,8 +9,8 @@
 #
 #
 
-include="@INVEATECH_INC@ @EXABLAZE_INC@"
-libs="@SYSLIBS@ @INVEATECH_LIB@ @EXABLAZE_LIB@"
+include=""
+libs="@SYSLIBS@"
 
 
 usage () {

@@ -1,0 +1,308 @@
+#! /bin/bash
+#
+# Manage pfring clustering (ZC)
+#
+
+FORCESTART=0
+
+start_cluster_id() {
+	CLUSTER_ID=$1
+
+	if [ ! -f /etc/cluster/cluster-$CLUSTER_ID.conf ]; then
+		echo "ERROR: No configuration file found for cluster $CLUSTER_ID"
+		exit 1
+	fi
+
+	START=$FORCESTART
+	if [ $START -eq 0 ]; then
+		if hash systemctl 2>/dev/null; then
+			if systemctl -q is-enabled cluster@${CLUSTER_ID}; then
+				START=1
+			fi
+		else
+			if [ -f /etc/cluster/cluster-${CLUSTER_ID}.start ]; then
+				START=1
+			fi
+		fi
+	fi
+
+	if [ $START -eq 1 ]; then
+		echo "Starting cluster $CLUSTER_ID"
+
+		if hash systemctl 2>/dev/null; then
+			systemctl start cluster@${CLUSTER_ID}
+		else
+			PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
+			if [ -f $PID_FILE ]; then
+				PID=$(cat $PID_FILE)
+				if [ $PID -gt 0 ]; then
+					IS_EXISTING=$(ps auxw | grep -v grep| grep $PID|wc -l)
+					if [ $IS_EXISTING -gt 0 ]; then
+						echo "cluster $CLUSTER_ID is already running [pid $PID]: not started"
+						return 0
+					fi
+				fi
+			fi
+			CLUSTER_MASTER_BINARY=/usr/bin/zbalance_ipc
+			$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf >> /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
+		fi
+	else
+		echo "cluster $CLUSTER_ID not enabled"
+	fi
+	return 1
+}
+
+stop_cluster_id_deps() {
+	CLUSTER_ID=$1
+
+	STOP_NPROBE_INSTANCES="$(/bin/ls /etc/nprobe/nprobe-cluster_${CLUSTER_ID}-*.conf 2>/dev/null)"
+	for NPROBE_ELEM in $STOP_NPROBE_INSTANCES
+	do
+		NPROBE_ELEM=${NPROBE_ELEM#/etc/nprobe/nprobe-}
+		NPROBE_ELEM=${NPROBE_ELEM%.conf}
+		if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/nprobe@.service ]; then
+			/bin/systemctl stop "nprobe@$NPROBE_ELEM"
+		elif [ -f /etc/init.d/nprobe ]; then
+			/etc/init.d/nprobe stop $NPROBE_ELEM
+		fi
+	done
+
+	STOP_N2DISK_INSTANCES="$(/bin/ls /etc/n2disk/n2disk-cluster_${CLUSTER_ID}_*.conf 2>/dev/null)"
+	for N2DISK_ELEM in $STOP_N2DISK_INSTANCES
+	do
+		N2DISK_ELEM=${N2DISK_ELEM#/etc/n2disk/n2disk-}
+		N2DISK_ELEM=${N2DISK_ELEM%.conf}
+		if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/n2disk@.service ]; then
+			/bin/systemctl stop "n2disk@$N2DISK_ELEM"
+		elif [ -f /etc/init.d/n2disk ]; then
+			/etc/init.d/n2disk stop $N2DISK_ELEM
+		fi
+	done
+}
+
+stop_cluster_id() {
+	CLUSTER_ID=$1
+
+	if [ ! -d "/etc/cluster" ]; then
+		echo "Configuration directory /etc/cluster does not exist: quitting..."
+		return 0
+	fi
+
+	stop_cluster_id_deps $CLUSTER_ID
+
+	if [ -f /etc/cluster/cluster-${CLUSTER_ID}.conf ]; then
+		if hash systemctl 2>/dev/null; then
+			systemctl stop cluster@${CLUSTER_ID}
+		else
+			PID_FILE=$(cat /etc/cluster/cluster-${CLUSTER_ID}.conf | grep '\-P='|cut -d '=' -f 2)
+			if [ -f $PID_FILE ]; then
+				PID=$(cat $PID_FILE)
+				if [ $PID -gt 0 ]; then
+					echo "Stopping cluster $CLUSTER_ID"
+					kill -15 $PID > /dev/null
+					/bin/rm $PID_FILE
+				else
+					echo "Unable to stop cluster $CLUSTER_ID: invalid pid [$PID][$PID_FILE]"
+				fi
+			#else
+			#	echo "Unable to stop cluster $CLUSTER_ID: missing pid $PID_FILE"
+			fi
+		fi
+	else
+		echo "cluster $CLUSTER_ID can't be stopped: missing /etc/cluster/cluster-${CLUSTER_ID}.conf"
+	fi
+
+	return 0
+}
+
+start_cluster() {
+	CLUSTER_ID=$1
+
+	if [ ! -d "/etc/cluster" ]; then
+		echo "Configuration directory /etc/cluster does not exist: quitting..."
+		return 0
+	fi
+
+	if [ ! -d "/var/log/cluster" ]; then
+		mkdir -p /var/log/cluster
+	fi
+
+	# Migrate .start to systemd 
+	if hash systemctl 2>/dev/null; then
+		for CONF_FILE in /etc/cluster/cluster-*.start
+		do
+			if [ -e "$CONF_FILE" ] ; then
+				ID=$(echo $CONF_FILE | sed 's/.*cluster-\([^\.]*\)\.start$/\1/')
+				systemctl enable cluster@${ID}
+				mv /etc/cluster/cluster-${ID}.start /etc/cluster/cluster-${ID}.start.migrated
+			fi
+		done
+	fi
+
+	if hash systemctl 2>/dev/null; then
+		NUM_TO_START="$(find /etc/systemd/system/multi-user.target.wants/ -name "cluster@*.service" | wc -l)"
+	else
+		NUM_TO_START="$(find /etc/cluster/ -name "*.start" | wc -l)"
+	fi
+	if [ "$NUM_TO_START" -eq 0 ] && [ $FORCESTART -eq 0 ]; then
+		# No instances to start
+		return 0
+	fi
+
+	if [ -z $CLUSTER_ID ]; then
+		if hash systemctl 2>/dev/null; then
+			IDS="$(ls /etc/systemd/system/multi-user.target.wants/cluster@*.service | /usr/bin/cut -d '@' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		else
+			IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		fi
+	else
+ 		IDS=$CLUSTER_ID
+	fi
+
+	for E in $IDS ; do
+		start_cluster_id $E
+	done
+
+	sleep 5
+}
+
+stop_cluster() {
+	CLUSTER_ID=$1
+
+	if [ ! -d "/etc/cluster" ]; then
+		echo "Configuration directory /etc/cluster does not exist: quitting..."
+		return 0
+	fi
+
+	if [ -z $CLUSTER_ID ]; then
+		NUM_TO_STOP="$(find /etc/cluster/ -name "*.conf"|wc -l)"
+		if [ "$NUM_TO_STOP" -eq 0 ]; then
+			# No instances to stop
+			return 0
+		fi
+		IDS="$(/bin/ls /etc/cluster/*.conf | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+	else
+ 		IDS=$CLUSTER_ID
+	fi
+
+	for E in $IDS ; do
+		stop_cluster_id $E
+	done
+}
+
+check_cluster_status() {
+	ID=$1
+
+	if [ -z $ID ]; then
+		if hash systemctl 2>/dev/null; then
+			IDS="$(ls /etc/systemd/system/multi-user.target.wants/cluster@*.service | /usr/bin/cut -d '@' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		else
+			IDS="$(/bin/ls /etc/cluster/*.start | /usr/bin/cut -d '-' -f 2 | /usr/bin/cut -d '.' -f 1)"
+		fi
+	else
+		IDS=$ID
+	fi
+
+	local NUM_CONFIGED_INSTANCES=0
+	local NUM_RUNNING_INSTANCES=0
+	local RUNNING_INSTANCES=()
+	local NOT_RUNNING_INSTANCES=()
+
+	for E in $IDS ; do
+		NUM_CONFIGED_INSTANCES=$((NUM_CONFIGED_INSTANCES+1))
+		if hash systemctl 2>/dev/null; then
+			if systemctl -q is-active cluster@${E}; then
+				NUM_RUNNING_INSTANCES=$((NUM_RUNNING_INSTANCES+1));
+				RUNNING_INSTANCES+=($E);
+			else
+				NOT_RUNNING_INSTANCES+=($E);
+			fi
+		else
+			PID_FILE=$(cat /etc/cluster/cluster-${E}.conf | grep '\-P='|cut -d '=' -f 2)
+			if [ -f $PID_FILE ]; then
+				PID=$(cat "${PID_FILE}")
+				if [ $PID -gt 0 ]; then
+					IS_EXISTING=$(ps auxw | grep -v grep| grep $PID|wc -l)
+					if [ $IS_EXISTING -gt 0 ]; then
+						NUM_RUNNING_INSTANCES=$((NUM_RUNNING_INSTANCES+1));
+						RUNNING_INSTANCES+=($E);
+					fi
+				fi
+			else #no pid
+				NOT_RUNNING_INSTANCES+=($E);
+			fi
+		fi
+	done
+
+	if [ $NUM_RUNNING_INSTANCES -eq $NUM_CONFIGED_INSTANCES  ]; then
+		echo "UP"
+	else
+		local MSG="The following instances are not running: "
+		for INSTANCE in ${NOT_RUNNING_INSTANCES[@]}; do
+			MSG+="$INSTANCE "
+		done
+		echo "$MSG"
+	fi
+}
+
+get_status() {
+	EXIT_CODE=0
+	cluster_result=$(check_cluster_status $1);
+
+	if [[ $cluster_result == UP* ]]; then
+		echo "cluster running"
+	else
+		echo "$cluster_result"
+		EXIT_CODE=3
+	fi
+
+	exit "$EXIT_CODE"
+}
+
+########
+
+PARAM_CLUSTER_ID=$2
+
+logger "cluster $1 $2"
+
+case "$1" in
+  start)
+	FORCESTART=1
+	start_cluster "$PARAM_CLUSTER_ID";
+	;;
+
+  start-if-enabled)
+	start_cluster "$PARAM_CLUSTER_ID";
+	;;
+
+  stop)
+	stop_cluster "$PARAM_CLUSTER_ID";
+	;;
+
+  stop-deps)
+	stop_cluster_id_deps "$PARAM_CLUSTER_ID";
+	;;
+
+  restart)
+	FORCESTART=1
+	stop_cluster "$PARAM_CLUSTER_ID";
+	sleep 5
+	start_cluster "$PARAM_CLUSTER_ID";
+	;;
+
+  restart-if-enabled)
+	stop_cluster "$PARAM_CLUSTER_ID";
+	sleep 5
+	start_cluster "$PARAM_CLUSTER_ID";
+	;;
+
+  status)
+	get_status "$PARAM_CLUSTER_ID";
+	;;
+
+  *)
+	echo "Usage: /etc/init.d/cluster {start|stop|restart|status} [cluster id(s)]"
+	exit 1
+esac
+
+exit 0

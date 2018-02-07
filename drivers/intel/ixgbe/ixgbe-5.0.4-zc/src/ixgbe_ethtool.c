@@ -3170,6 +3170,9 @@ static int ixgbe_add_ethtool_fdir_entry(struct ixgbe_adapter *adapter,
 	struct ixgbe_fdir_filter *input;
 	union ixgbe_atr_input mask;
 	int err;
+#ifdef HAVE_PF_RING
+	int debug = 0;
+#endif
 
 	if (!(adapter->flags & IXGBE_FLAG_FDIR_PERFECT_CAPABLE))
 		return -EOPNOTSUPP;
@@ -3209,6 +3212,27 @@ static int ixgbe_add_ethtool_fdir_entry(struct ixgbe_adapter *adapter,
 
 	if (input->filter.formatted.flow_type == IXGBE_ATR_FLOW_TYPE_IPV4)
 		mask.formatted.flow_type &= IXGBE_ATR_L4TYPE_IPV6_MASK;
+
+#ifdef HAVE_PF_RING
+	if (debug)
+	  printk("[PF_RING-ZC] FSP type = %u "
+	       "src_ip = %08X/%08X dst_ip = %08X/%08X "
+	       "src_port = %u/%u dst_port = %u/%u "
+	       "vlan_tci = %u/%u vlan_etype = %u/%u\n",
+	       fsp->flow_type,
+	       fsp->h_u.tcp_ip4_spec.ip4src,
+	       fsp->m_u.tcp_ip4_spec.ip4src,
+	       fsp->h_u.tcp_ip4_spec.ip4dst,
+	       fsp->m_u.tcp_ip4_spec.ip4dst,
+	       fsp->h_u.tcp_ip4_spec.psrc,
+	       fsp->m_u.tcp_ip4_spec.psrc,
+	       fsp->h_u.tcp_ip4_spec.pdst,
+	       fsp->m_u.tcp_ip4_spec.pdst,
+	       fsp->h_ext.vlan_tci,
+	       fsp->m_ext.vlan_tci,
+	       fsp->h_ext.vlan_etype,
+	       fsp->m_ext.vlan_etype);
+#endif
 
 	/* Copy input into formatted structures */
 	input->filter.formatted.src_ip[0] = fsp->h_u.tcp_ip4_spec.ip4src;

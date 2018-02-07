@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@
 pfring  *pd;
 int verbose = 0, num_threads = 1;
 pfring_stat pfringStats;
-pthread_rwlock_t statsLock;
+pfring_rwlock_t statsLock;
 
 static struct timeval startTime;
 unsigned long long numPkts[MAX_NUM_THREADS] = { 0 }, numBytes[MAX_NUM_THREADS] = { 0 };
@@ -579,7 +579,7 @@ int main(int argc, char* argv[]) {
   printf("Capturing from %s\n", device);
 
   if(num_threads > 0)
-    pthread_rwlock_init(&statsLock, NULL);
+    pfring_rwlock_init(&statsLock, NULL);
 
   if(num_threads > 1) flags |= PF_RING_REENTRANT;
   if(use_extended_pkt_header) flags |= PF_RING_LONG_HEADER;

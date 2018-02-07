@@ -1,5 +1,5 @@
 /*
- * (C) 2003-17 - ntop 
+ * (C) 2003-2018 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -76,10 +76,12 @@ void print_stats() {
   static u_int8_t print_all;
   static u_int64_t lastPkts = 0;
   static u_int64_t lastBytes = 0;
-  double diff, bytesDiff;
+  static u_int64_t lastDrops = 0;
+  double diff, dropsDiff, bytesDiff;
   static struct timeval lastTime;
   char buf1[64], buf2[64], buf3[64];
-  unsigned long long nBytes = 0, nPkts = 0;
+  unsigned long long nBytes = 0, nPkts = 0, nDrops = 0;
+  pfring_zc_stat stats;
   int i;
 
   if(startTime.tv_sec == 0) {
@@ -92,13 +94,16 @@ void print_stats() {
   deltaMillisec = delta_time(&endTime, &startTime);
 
   for (i = 0; i < 1 + bidirectional; i++) {
-    nBytes = dir[i].numBytes;
-    nPkts = dir[i].numPkts;
+    nBytes += dir[i].numBytes;
+    nPkts += dir[i].numPkts;
+    if (pfring_zc_stats(dir[i].inzq, &stats) == 0)
+      nDrops += stats.drop;
   }
 
   fprintf(stderr, "=========================\n"
-	  "Absolute Stats: %s pkts - %s bytes\n", 
+	  "Absolute Stats: %s pkts (%s drops) - %s bytes\n", 
 	  pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
+	  pfring_format_numbers((double)nDrops, buf3, sizeof(buf3), 0),
 	  pfring_format_numbers((double)nBytes, buf2, sizeof(buf2), 0));
 
   if(print_all && (lastTime.tv_sec > 0)) {
@@ -106,19 +111,23 @@ void print_stats() {
 
     deltaMillisec = delta_time(&endTime, &lastTime);
     diff = nPkts-lastPkts;
+    dropsDiff = nDrops-lastDrops;
     bytesDiff = nBytes - lastBytes;
     bytesDiff /= (1000*1000*1000)/8;
 
     snprintf(buf, sizeof(buf),
-	     "Actual Stats: %s pps - %s Gbps",
+	     "Actual Stats: %s pps (%s drops) - %s Gbps",
 	     pfring_format_numbers(((double)diff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1),
+	     pfring_format_numbers(((double)dropsDiff/(double)(deltaMillisec/1000)),  buf1, sizeof(buf1), 1),
 	     pfring_format_numbers(((double)bytesDiff/(double)(deltaMillisec/1000)),  buf3, sizeof(buf3), 1));
     fprintf(stderr, "%s\n", buf);
   }
     
   fprintf(stderr, "=========================\n\n");
-
-  lastPkts = nPkts, lastBytes = nBytes;
+  
+  lastPkts = nPkts;
+  lastDrops = nDrops;
+  lastBytes = nBytes;
 
   lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
 }
@@ -141,7 +150,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbounce - (C) 2014 ntop.org\n");
+  printf("zbounce - (C) 2014-2018 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A packet forwarder application between interfaces.\n\n");
   printf("Usage:  zbounce -i <device> -o <device> -c <cluster id> [-b]\n"
