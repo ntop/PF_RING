@@ -2313,17 +2313,17 @@ static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
     if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
       if(((memcmp(&hash_bucket->rule.host6_peer_a,
 		    (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
-		    sizeof(ip_addr) == 0))
+		    sizeof(ip_addr)) == 0)
 	    && (memcmp(&hash_bucket->rule.host6_peer_b,
 		       (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst),
-		       sizeof(ip_addr) == 0)))
+		       sizeof(ip_addr)) == 0))
 	   ||
 	   ((memcmp(&hash_bucket->rule.host6_peer_a,
 		    (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst),
-		    sizeof(ip_addr) == 0))
+		    sizeof(ip_addr)) == 0)
 	    && (memcmp(&hash_bucket->rule.host6_peer_b,
 		       (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
-		       sizeof(ip_addr) == 0)))) {
+		       sizeof(ip_addr)) == 0))) {
         return 1;
       }
     } else { /* ip_version == 4 */
@@ -2947,7 +2947,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 					   u_char add_rule)
 {
   int rc = -1;
-  u_int32_t hash_value = hash_pkt(rule->rule.vlan_id, zeromac, zeromac,
+  u_int32_t hash_idx = hash_pkt(rule->rule.vlan_id, zeromac, zeromac,
                                   rule->rule.ip_version, rule->rule.proto,
 				  rule->rule.host_peer_a, rule->rule.host_peer_b,
 				  rule->rule.port_peer_a, rule->rule.port_peer_b)
@@ -2955,7 +2955,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 
   debug_printk(2, "(vlan=%u, proto=%u, "
 	   "sip=%d.%d.%d.%d, sport=%u, dip=%d.%d.%d.%d, dport=%u, "
-	   "hash_value=%u, add_rule=%d)\n",
+	   "hash_idx=%u, add_rule=%d)\n",
 	   rule->rule.vlan_id,
 	   rule->rule.proto, ((rule->rule.host4_peer_a >> 24) & 0xff),
 	   ((rule->rule.host4_peer_a >> 16) & 0xff),
@@ -2966,7 +2966,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 	   ((rule->rule.host4_peer_b >> 16) & 0xff),
 	   ((rule->rule.host4_peer_b >> 8) & 0xff),
 	   ((rule->rule.host4_peer_b >> 0) & 0xff),
-	   rule->rule.port_peer_b, hash_value, add_rule);
+	   rule->rule.port_peer_b, hash_idx, add_rule);
 
   if(add_rule) {
 
@@ -3010,17 +3010,17 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
     return(-EFAULT);
   }
 
-  if(pfr->sw_filtering_hash[hash_value] == NULL) {
+  if(pfr->sw_filtering_hash[hash_idx] == NULL) {
     if(add_rule) {
       rule->next = NULL;
-      pfr->sw_filtering_hash[hash_value] = rule;
+      pfr->sw_filtering_hash[hash_idx] = rule;
       rc = 0;
     } else {
       debug_printk(2, "returned %d [1]\n", -1);
       return(-1);	/* Unable to find the specified rule */
     }
   } else {
-    sw_filtering_hash_bucket *prev = NULL, *bucket = pfr->sw_filtering_hash[hash_value];
+    sw_filtering_hash_bucket *prev = NULL, *bucket = pfr->sw_filtering_hash[hash_idx];
 
     while(bucket != NULL) {
       if(hash_filtering_rule_match(&bucket->rule, &rule->rule)) {
@@ -3032,7 +3032,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 
 	  debug_printk(2, "found a bucket to delete: removing it\n");
 	  if(prev == NULL)
-	    pfr->sw_filtering_hash[hash_value] = bucket->next;
+	    pfr->sw_filtering_hash[hash_idx] = bucket->next;
 	  else
 	    prev->next = bucket->next;
 
@@ -3052,8 +3052,8 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
       /* If the flow arrived until here, then this rule is unique */
       debug_printk(2, "no duplicate rule found: adding the rule\n");
 
-      rule->next = pfr->sw_filtering_hash[hash_value];
-      pfr->sw_filtering_hash[hash_value] = rule;
+      rule->next = pfr->sw_filtering_hash[hash_idx];
+      pfr->sw_filtering_hash[hash_idx] = rule;
       rc = 0;
     } else {
       /* The rule we searched for has not been found */
@@ -3256,7 +3256,7 @@ int check_perfect_rules(struct sk_buff *skb,
 			int *fwd_pkt,
 			int displ)
 {
-  u_int hash_idx;
+  u_int32_t hash_idx;
   sw_filtering_hash_bucket *hash_bucket;
   u_int8_t hash_found = 0;
 
@@ -7089,7 +7089,7 @@ static int ring_getsockopt(struct socket *sock,
 
       if(len >= sizeof(hash_filtering_rule)) {
 	hash_filtering_rule rule;
-	u_int hash_idx;
+	u_int32_t hash_idx;
 
 	if(pfr->sw_filtering_hash == NULL) {
 	  printk("[PF_RING] so_get_hash_filtering_rule_stats(): no hash failure\n");
@@ -7145,7 +7145,7 @@ static int ring_getsockopt(struct socket *sock,
 	  read_unlock_bh(&pfr->ring_rules_lock);
 
 	} else {
-	  debug_printk(2, "so_get_hash_filtering_rule_stats(): entry not found [hash_idx=%d]\n",
+	  debug_printk(2, "so_get_hash_filtering_rule_stats(): entry not found [hash_idx=%u]\n",
 		   hash_idx);
 	}
       }
