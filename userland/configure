@@ -680,7 +680,6 @@ PF_RING_ZC_LIB
 HAVE_PF_RING_ZC
 VER
 MAJOR_VER
-PREFIX
 EGREP
 GREP
 CPP
@@ -3873,13 +3872,6 @@ HAVE_NDPI=
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
-
-if test ".${prefix}" = ".NONE"; then
-  PREFIX=""
-else
-  PREFIX=${prefix}
-fi
-
 
 
 
