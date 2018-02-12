@@ -9,23 +9,12 @@
 INCLUDE   = -I../../kernel @BPF_INCLUDE@
 
 #
-# Installation prefix
+# Installation directories
 #
-ifneq ($(strip $(DESTDIR)), )
-  PREFIX = $(DESTDIR)
-else
-  PREFIX = @PREFIX@
-endif
-
-#
-# Installation include directory
-#
-INCLUDEDIR = ${PREFIX}@includedir@
-
-#
-# Installation library directory
-#
-LIBDIR = ${PREFIX}@libdir@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+libdir =  @libdir@
+includedir = @includedir@
 
 #
 # PF_RING ZC
@@ -158,16 +147,16 @@ ${NBPF_LIB}:
 install: install-static install-shared
 
 install-includes:
-	mkdir -p ${INCLUDEDIR}
-	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ @NPCAP_H@ ${NBPF_HDR} ${INCLUDEDIR}/
+	mkdir -p $(DESTDIR)$(includedir)
+	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ @NPCAP_H@ ${NBPF_HDR} $(DESTDIR)$(includedir)/
 
 install-static: ${STATICLIB} install-includes
-	mkdir -p ${LIBDIR}
-	cp ${STATICLIB} ${LIBDIR}/
+	mkdir -p $(DESTDIR)$(libdir)
+	cp ${STATICLIB} $(DESTDIR)$(libdir)/
 
 install-shared:	${DYNAMICLIB} install-includes
-	mkdir -p ${LIBDIR}
-	cp ${DYNAMICLIB} ${LIBDIR}/
+	mkdir -p $(DESTDIR)$(libdir)
+	cp ${DYNAMICLIB} $(DESTDIR)$(libdir)/
 	@if test "$(USER)" = "root"; then \
 		ldconfig; \
 	fi
