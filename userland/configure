@@ -672,6 +672,8 @@ PF_RING_ZC_DEP
 PF_RING_ZC_OBJS
 PF_RING_ZC_LIB
 HAVE_PF_RING_ZC
+VER
+MAJOR_VER
 EGREP
 GREP
 CPP
@@ -3292,6 +3294,9 @@ MACHINE=`uname -m`
 CFLAGS=""
 SYS_LIBS=""
 
+VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
+MAJOR_VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1`
+
 NATIVE=`$CC -c -Q -march=native --help=target| grep "march" | xargs | cut -d ' ' -f 2`
 if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   CFLAGS="-march=native -mtune=native $CFLAGS"
@@ -3790,6 +3795,9 @@ fi
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
+
+
+
 
 
 
