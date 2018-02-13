@@ -157,8 +157,8 @@ install-static: ${STATICLIB} install-includes
 install-shared:	${DYNAMICLIB} install-includes
 	mkdir -p $(DESTDIR)$(libdir)
 	cp ${DYNAMICLIB} $(DESTDIR)$(libdir)/
-	ln -sf $(DESTDIR)$(libdir)/${DYNAMICLIB} $(DESTDIR)$(libdir)/${DYNAMICLIB}.@VER@
-	ln -sf $(DESTDIR)$(libdir)/${DYNAMICLIB} $(DESTDIR)$(libdir)/${DYNAMICLIB}.@MAJOR_VER@
+	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB} ${DYNAMICLIB}.@VER@
+	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB} ${DYNAMICLIB}.@MAJOR_VER@
 	@if test "$(USER)" = "root"; then \
 		ldconfig; \
 	fi

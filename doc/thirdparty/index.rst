@@ -7,4 +7,6 @@
 
     bro
     suricata
+    snort-daq
+    snort-daq-zc
     
