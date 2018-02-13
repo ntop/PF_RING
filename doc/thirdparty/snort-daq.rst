@@ -76,6 +76,7 @@ PF_RING DAQ Specific Options
 ----------------------------
 
 1. Kernel Filters
+
 By default, PF_RING kernel filtering rules are added whenever snort's verdict requests to drop specific flows. If you want instead snort (and not PF_RING) drop packets (i.e. don't add automatically PF_RING kernel filtering rules) add:
 
 .. code-block:: console
@@ -89,6 +90,7 @@ Kernel filtering rules idle for more than 5 minutes are automatically removed. I
    --daq-var kernel-filters-idle-timeout=<seconds>
 
 2. Socket clustering
+
 PF_RING allows you to distribute packets across multiple processes by using socket clusters. For instance two snort instances bound to the same clusterId receive each a subset of packets so that both can cooperatively share the load. In order to enable this feature do:
 
 .. code-block:: console
@@ -109,6 +111,7 @@ where valid mode values are:
    - 6 for 6-tuple flow
 
 3. Bind an instance to a core
+
 Proper core insulation, grants snort instances not to step on each other's feet. In order to bind an instance to a specific core do:
 
 .. code-block:: console
@@ -116,6 +119,7 @@ Proper core insulation, grants snort instances not to step on each other's feet.
    --daq-var bindcpu=<core id> 
 
 4. Kernel-level forwarding in IDS mode
+
 If you want to forward incoming packets at kernel level while snort is running in IDS mode, you can specify a destination interface for each ingress interface with:
 
 .. code-block:: console
@@ -123,6 +127,7 @@ If you want to forward incoming packets at kernel level while snort is running i
    --daq-var lowlevelbridge=<comma-separated interface list>
 
 5. Fast TX in IPS mode
+
 Since forwarding packets from userspace requires additional copies (thus affecting performances), it is possible to forward at kernel level the packets for which snort gives a positive verdict:
 
 .. code-block:: console
@@ -130,6 +135,7 @@ Since forwarding packets from userspace requires additional copies (thus affecti
    --daq-var fast-tx
 
 6. Packet capture tuning
+
 It is possible to tune the packet capture activity specifying the poll() timeout:
 
 .. code-block:: console
