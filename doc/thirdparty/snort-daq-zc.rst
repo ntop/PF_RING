@@ -65,6 +65,7 @@ PF_RING ZC DAQ Specific Options
 -------------------------------
 
 1. Cluster ID
+
 Each snort instance creates an internal ZC Cluster, each cluster needs a unique Cluster ID that can be specified with:
 
 .. code-block:: console
@@ -72,6 +73,7 @@ Each snort instance creates an internal ZC Cluster, each cluster needs a unique 
    --daq-var clusterid=<cluster id>
 
 2. Bind an instance to a core
+
 Proper core insulation, grants snort instances not to step on each other's feet.
 In order to bind an instance to a specific core do:
    
@@ -80,6 +82,7 @@ In order to bind an instance to a specific core do:
    --daq-var bindcpu=<core id> 
 
 3. IDS forwarding
+
 If you want to forward incoming packets while snort is running in IDS mode, you can specify the ids bridge mode with:
    
 .. code-block:: console
