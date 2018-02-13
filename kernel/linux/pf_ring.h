@@ -520,14 +520,18 @@ typedef enum {
 } accolade_rule_action_type;
 
 typedef struct {
-  accolade_rule_action_type action;
-  u_int32_t port_mask; /* ports on which the rule is defined (default 0xf) */
+  accolade_rule_action_type action; /* ignored with mode 2 */
+  u_int32_t port_mask; /* ports on which the rule is defined (default 0xf), ignored with mode 2 */
   u_int8_t ip_version;
   u_int8_t protocol; /* l4 */
+  u_int16_t vlan_id; /* ignored with mode 1 */
+  u_int32_t mpls_label; /* ignored with mode 1 */
   ip_addr src_addr, dst_addr;
   u_int32_t src_addr_bits, dst_addr_bits;
-  u_int16_t src_port_low, src_port_high;
-  u_int16_t dst_port_low, dst_port_high;
+  u_int16_t src_port_low;
+  u_int16_t src_port_high; /* ignored with mode 2 */
+  u_int16_t dst_port_low;
+  u_int16_t dst_port_high; /* ignored with mode 2 */
 } __attribute__((packed))
 accolade_hw_rule;
 
