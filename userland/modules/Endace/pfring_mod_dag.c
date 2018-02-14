@@ -21,6 +21,14 @@
 //#define DAG_DEBUG
 //#define PFRING_DAG_PARSE_PKT
 
+#ifndef ERF_TYPE_MASK
+#define ERF_TYPE_MASK 0x7F
+#endif
+
+#ifndef ERF_TYPE_MORE_EXT
+#define ERF_TYPE_MORE_EXT 0x80
+#endif
+
 #define MAX_CARD_ERF_TYPES 255
 #define AVG_PACKET_SIZE    512
 
@@ -350,13 +358,23 @@ int pfring_dag_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfri
   /* computing extension headers size */
   ext_hdr_type = &erf_hdr->type;
   ext_hdr_num  = 0;
-  while ((*ext_hdr_type & 0x80) && (rlen > (16 + ext_hdr_num * 8)) ) {
+  while ((*ext_hdr_type & ERF_TYPE_MORE_EXT) && (rlen > (16 + ext_hdr_num * 8)) ) {
+    switch (*payload & ERF_TYPE_MASK) {
+    case EXT_HDR_TYPE_SIGNATURE:
+      hdr->extended_hdr.pkt_hash /* 32bit */ = ntohl(*(uint32_t*)(payload+4)) & 0x00ffffff /* 24bit */;
+      break;
+    case EXT_HDR_TYPE_FLOW_ID:
+      hdr->extended_hdr.pkt_hash /* 32bit */ = ntohl(*(uint32_t*)(payload+4)) /* 32bit */;
+      break;
+    default:
+      break;
+    }
     ext_hdr_type += 8;
     ext_hdr_num++;
+    payload += 8;
   }
-  payload += 8 * ext_hdr_num;
 
-  switch((erf_hdr->type & 0x7f)) {
+  switch((erf_hdr->type & ERF_TYPE_MASK)) {
   case TYPE_COLOR_HASH_ETH:
   case TYPE_DSM_COLOR_ETH:
   case TYPE_COLOR_ETH:
@@ -365,8 +383,10 @@ int pfring_dag_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfri
      * In TYPE_COLOR_HASH_ETH, TYPE_DSM_COLOR_ETH, TYPE_COLOR_ETH
      * the color value overwrites the lctr
      */
-    hdr->extended_hdr.pkt_hash /* 32bit */ =  erf_hdr->lctr /* 16bit */;
+    if (!hdr->extended_hdr.pkt_hash)
+      hdr->extended_hdr.pkt_hash /* 32bit */ =  erf_hdr->lctr /* 16bit */;
 
+    /* Fall through*/
   case TYPE_ETH:
 
     len = ntohs(erf_hdr->wlen);
