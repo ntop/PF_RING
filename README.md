@@ -11,7 +11,7 @@ you to process packets at high-rates while providing you a consistent
 API for packet processing applications.
 
 ### Who needs PF_RING™?
-Basically everyone who has to handle many packets per second. The term ‘many’ changes according to the hardware you use for traffic analysis. It can range from 80k pkt/sec on a 1,2GHz ARM to 14M pkt/sec and above on a low-end 2,5GHz Xeon. PF_RING™ not only enables you to capture packets faster, it also captures packets more efficiently preserving CPU cycles.
+Basically everyone who has to handle many packets per second. The term ‘many’ changes according to the hardware you use for traffic analysis. It can range from 80k pkt/sec on a 1,2GHz ARM to 15M pkt/sec and above per core on a low-end 2,5GHz Xeon. PF_RING™ not only enables you to capture packets faster, it also captures packets more efficiently preserving CPU cycles.
 
 ### Details
 For more information about PF_RING™, please visit [http://ntop.org](http://www.ntop.org/products/packet-capture/pf_ring/)
