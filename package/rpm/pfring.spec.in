@@ -39,7 +39,6 @@ mkdir -p $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
 # Userland
 cp $HOME/PF_RING/README.FIRST                  $RPM_BUILD_ROOT/usr/local/pfring/
-cp $HOME/PF_RING/userland/snort/pfring-daq-module/README.1st $RPM_BUILD_ROOT/usr/local/pfring/README-DAQ.1st
 cp $HOME/PF_RING/userland/lib/libpfring.a      $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/lib/libpfring.so     $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/local/include
@@ -117,7 +116,6 @@ rm -fr $RPM_BUILD_ROOT
 /usr/bin/pfsend
 /usr/bin/n2if
 /usr/local/pfring/README.FIRST
-/usr/local/pfring/README-DAQ.1st
 /etc/ld.so.conf.d/pf_ring.conf
 %if 0%{?centos_ver} == 7
 /usr/lib/systemd/system/pf_ring.service

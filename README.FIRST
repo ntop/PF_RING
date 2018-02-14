@@ -6,7 +6,7 @@ drivers                         PF_RING optimized drivers
 drivers/                        PF_RING-aware/ZC drivers (suggested option)
 userland/			User space code
 userland/lib/			User space library
-userland/libpcap-XXX-ring/	Libpcap enhanced with PF_RING support
+userland/libpcap/		Libpcap enhanced with PF_RING support
 userland/examples/		PF_RING sample applications
 userland/examples_zc/		PF_RING ZC sample applications
 userland/snort/			Snort DAQ module for using snort over PF_RING
@@ -38,6 +38,7 @@ expect to discontinue thes drivers.
 
 PF_RING from Virtual Machines (KVM)
 -----------------------------------
+
 With the introduction of PF_RING ZC, you can finally exploit acceleration
 even from withing a KVM virtual machine without using techniques such as
 PCIe bypass. This means that a VM can dynamically open network interfaces
@@ -50,21 +51,25 @@ but at the moment we target only KVM.
 
 Compilation
 -----------
+
 You need to have installed the basic compilation tools and libraries.
 On Ubuntu you can do
 # apt-get install build-essential bison flex linux-headers-$(uname -r) libnuma-dev
 
 At this point you can compile the module
+
 # make
 
 Installation
 ------------
+
 # sudo su
 # cd kernel; make install
 # cd ../userland/lib; make install
 
 Testing PF_RING
 ---------------
+
 In PF_RING/userland/examples we have coded several applications you can use
 for testing PF_RING. In particular
 - pfcount allows you to capture packets
@@ -80,14 +85,13 @@ kernel modules:
 
 Documentation
 -------------
-If you need an extensive documentation, you can refer to the manual that
-is stored in the doc/ directory. In such directory you will also find
-individual README files for the various network adapters supported by
-PF_RING.
 
-The API documentation is available via doxygen, running
+If you need an extensive documentation, you can refer to the manual that
+is stored in the doc/ directory or at http://ntop.org/guides/pf_ring/
+
+The API documentation is available via doxygen, running:
+
 # make documentation
-it will be generated in doc/html.
 
 -------------------------------------
-(C) 2004-15 - ntop.org
+(C) 2004-18 - ntop.org
