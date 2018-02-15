@@ -120,14 +120,17 @@ Example of setting a filtering rule with 'drop' action for an IPv4 packet we rec
 .. code-block:: c
 
    hw_filtering_rule r = { 0 };
-   r.rule_id = rule_id;
+   r.rule_id = rule_id++;
    r.rule_family_type = accolade_rule;
    r.rule_family.accolade_rule.action = accolade_drop;
    r.rule_family.accolade_rule.ip_version = h->extended_hdr.parsed_pkt.ip_version;
    r.rule_family.accolade_rule.src_addr_bits = 32;
    r.rule_family.accolade_rule.src_addr.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
+   r.rule_family.accolade_rule.dst_addr_bits = 32;
+   r.rule_family.accolade_rule.dst_addr.v4 = h->extended_hdr.parsed_pkt.ipv4_dst;
    r.rule_family.accolade_rule.protocol = h->extended_hdr.parsed_pkt.l3_proto;
    r.rule_family.accolade_rule.src_port_low = h->extended_hdr.parsed_pkt.l4_src_port;
+   r.rule_family.accolade_rule.dst_port_low = h->extended_hdr.parsed_pkt.l4_dst_port;
    pfring_add_hw_rule(pd, &r);
 
 For a full list of supported fields please take a look at the hw_filtering_rule struct.
