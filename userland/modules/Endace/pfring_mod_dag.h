@@ -25,6 +25,7 @@ int  pfring_dag_set_poll_duration(pfring *ring, u_int duration);
 int  pfring_dag_poll(pfring *ring, u_int wait_duration);
 int  pfring_dag_set_direction(pfring *ring, packet_direction direction);
 int  pfring_dag_set_socket_mode(pfring *ring, socket_mode mode);
+int  pfring_dag_set_application_name(pfring *ring, char *name);
 int  pfring_dag_enable_ring(pfring *ring);
 u_int32_t pfring_dag_get_interface_speed(pfring *ring);
 pfring_if_t *pfring_dag_findalldevs(void);
