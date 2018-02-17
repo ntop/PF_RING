@@ -194,6 +194,112 @@ void print_stats() {
 
 /* ******************************** */
 
+void sample_filtering_rules(){
+  int rc;
+
+  if (0) {
+    filtering_rule rule;
+
+#define DUMMY_PLUGIN_ID   1
+
+    memset(&rule, 0, sizeof(rule));
+
+    rule.rule_id = 5;
+    rule.rule_action = forward_packet_and_stop_rule_evaluation;
+    rule.core_fields.proto = 6 /* tcp */;
+
+    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
+      fprintf(stderr, "pfring_add_filtering_rule(2) failed\n");
+    else if (!quiet)
+      printf("Rule added successfully...\n");
+  }
+
+  if (0) {
+    filtering_rule rule;
+
+    char *sgsn = "1.2.3.4";
+    char *ggsn = "1.2.3.5";
+
+    /* ************************************* */
+
+    memset(&rule, 0, sizeof(rule));
+    rule.rule_id = 1;
+    rule.rule_action = forward_packet_and_stop_rule_evaluation;
+    rule.core_fields.proto = 17 /* UDP */;
+
+    rule.core_fields.shost.v4 = ntohl(inet_addr(sgsn)),rule.core_fields.shost_mask.v4 = 0xFFFFFFFF;
+    rule.core_fields.dhost.v4 = ntohl(inet_addr(ggsn)), rule.core_fields.dhost_mask.v4 = 0xFFFFFFFF;
+
+    rule.extended_fields.tunnel.tunnel_id = 0x0000a2b6;
+
+    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
+      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
+    else if (!quiet)
+      printf("Rule %d added successfully...\n", rule.rule_id );
+
+    /* ************************************* */
+
+    memset(&rule, 0, sizeof(rule));
+
+    rule.rule_id = 2;
+    rule.rule_action = forward_packet_and_stop_rule_evaluation;
+    rule.core_fields.proto = 17 /* UDP */;
+
+    rule.core_fields.shost.v4 = ntohl(inet_addr(ggsn)), rule.core_fields.dhost_mask.v4 = 0xFFFFFFFF;
+    rule.core_fields.dhost.v4 = ntohl(inet_addr(sgsn)), rule.core_fields.shost_mask.v4 = 0xFFFFFFFF;
+
+    rule.extended_fields.tunnel.tunnel_id = 0x776C0000;
+    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
+      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
+    else if (!quiet)
+      printf("Rule %d added successfully...\n", rule.rule_id );
+
+    /* ************************************** */
+
+    /* Signaling (Up) */
+
+    memset(&rule, 0, sizeof(rule));
+
+    rule.rule_id = 3;
+    rule.rule_action = forward_packet_and_stop_rule_evaluation;
+    rule.core_fields.proto = 17 /* UDP */;
+    rule.core_fields.sport_low = rule.core_fields.sport_high = 2123;
+    rule.extended_fields.tunnel.tunnel_id = NO_TUNNEL_ID; /* Ignore the tunnel */
+
+    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
+      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
+    else if (!quiet)
+      printf("Rule %d added successfully...\n", rule.rule_id );
+
+    memset(&rule, 0, sizeof(rule));
+
+    /* ************************************** */
+
+    /* Signaling (Down) */
+
+    memset(&rule, 0, sizeof(rule));
+
+    rule.rule_id = 4;
+    rule.rule_action = forward_packet_and_stop_rule_evaluation;
+    rule.core_fields.proto = 17 /* UDP */;
+    rule.core_fields.dport_low = rule.core_fields.dport_high = 2123;
+    rule.extended_fields.tunnel.tunnel_id = NO_TUNNEL_ID; /* Ignore the tunnel */
+
+    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
+      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
+    else if (!quiet)
+      printf("Rule %d added successfully...\n", rule.rule_id );
+
+    memset(&rule, 0, sizeof(rule));
+
+    /* ************************************** */
+
+    pfring_toggle_filtering_policy(pd, 0); /* Default to drop */
+  }
+}
+
+/* ******************************** */
+
 void drop_packet_rule(const struct pfring_pkthdr *h) {
   const struct pkt_parsing_info *hdr = &h->extended_hdr.parsed_pkt;
   static int rule_id=0;
@@ -1072,106 +1178,7 @@ int main(int argc, char* argv[]) {
     alarm(ALARM_SLEEP);
   }
 
-  if(0) {
-    filtering_rule rule;
-    int rc;
-
-#define DUMMY_PLUGIN_ID   1
-
-    memset(&rule, 0, sizeof(rule));
-
-    rule.rule_id = 5;
-    rule.rule_action = forward_packet_and_stop_rule_evaluation;
-    rule.core_fields.proto = 6 /* tcp */;
-
-    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
-      fprintf(stderr, "pfring_add_filtering_rule(2) failed\n");
-    else if (!quiet)
-      printf("Rule added successfully...\n");
-  }
-
-  if(0) {
-    filtering_rule rule;
-
-    char *sgsn = "1.2.3.4";
-    char *ggsn = "1.2.3.5";
-
-    /* ************************************* */
-
-    memset(&rule, 0, sizeof(rule));
-    rule.rule_id = 1;
-    rule.rule_action = forward_packet_and_stop_rule_evaluation;
-    rule.core_fields.proto = 17 /* UDP */;
-
-    rule.core_fields.shost.v4 = ntohl(inet_addr(sgsn)),rule.core_fields.shost_mask.v4 = 0xFFFFFFFF;
-    rule.core_fields.dhost.v4 = ntohl(inet_addr(ggsn)), rule.core_fields.dhost_mask.v4 = 0xFFFFFFFF;
-
-    rule.extended_fields.tunnel.tunnel_id = 0x0000a2b6;
-
-    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
-      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else if (!quiet)
-      printf("Rule %d added successfully...\n", rule.rule_id );
-
-    /* ************************************* */
-
-    memset(&rule, 0, sizeof(rule));
-
-    rule.rule_id = 2;
-    rule.rule_action = forward_packet_and_stop_rule_evaluation;
-    rule.core_fields.proto = 17 /* UDP */;
-
-    rule.core_fields.shost.v4 = ntohl(inet_addr(ggsn)), rule.core_fields.dhost_mask.v4 = 0xFFFFFFFF;
-    rule.core_fields.dhost.v4 = ntohl(inet_addr(sgsn)), rule.core_fields.shost_mask.v4 = 0xFFFFFFFF;
-
-    rule.extended_fields.tunnel.tunnel_id = 0x776C0000;
-    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
-      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else if (!quiet)
-      printf("Rule %d added successfully...\n", rule.rule_id );
-
-    /* ************************************** */
-
-    /* Signaling (Up) */
-
-    memset(&rule, 0, sizeof(rule));
-
-    rule.rule_id = 3;
-    rule.rule_action = forward_packet_and_stop_rule_evaluation;
-    rule.core_fields.proto = 17 /* UDP */;
-    rule.core_fields.sport_low = rule.core_fields.sport_high = 2123;
-    rule.extended_fields.tunnel.tunnel_id = NO_TUNNEL_ID; /* Ignore the tunnel */
-
-    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
-      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else if (!quiet)
-      printf("Rule %d added successfully...\n", rule.rule_id );
-
-    memset(&rule, 0, sizeof(rule));
-
-    /* ************************************** */
-
-    /* Signaling (Down) */
-
-    memset(&rule, 0, sizeof(rule));
-
-    rule.rule_id = 4;
-    rule.rule_action = forward_packet_and_stop_rule_evaluation;
-    rule.core_fields.proto = 17 /* UDP */;
-    rule.core_fields.dport_low = rule.core_fields.dport_high = 2123;
-    rule.extended_fields.tunnel.tunnel_id = NO_TUNNEL_ID; /* Ignore the tunnel */
-
-    if((rc = pfring_add_filtering_rule(pd, &rule)) < 0)
-      fprintf(stderr, "pfring_add_filtering_rule(id=%d) failed: rc=%d\n", rule.rule_id, rc);
-    else if (!quiet)
-      printf("Rule %d added successfully...\n", rule.rule_id );
-
-    memset(&rule, 0, sizeof(rule));
-
-    /* ************************************** */
-
-    pfring_toggle_filtering_policy(pd, 0); /* Default to drop */
-  }
+  sample_filtering_rules();
 
   pfring_set_application_stats(pd, "Statistics not yet computed: please try again...");
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
