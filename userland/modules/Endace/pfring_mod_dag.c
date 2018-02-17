@@ -62,6 +62,7 @@ static struct thirdparty_func dag_function_ptr[] = {
   { "dag_set_stream_poll", NULL },
   { "dag_start_stream",    NULL },
   { "dag_stop_stream",     NULL },
+  { "dagutil_set_progname", NULL },
   { NULL,                  NULL }
 };
 
@@ -80,6 +81,7 @@ static struct thirdparty_func dag_function_ptr[] = {
 #define DAG_set_stream_poll (* (int (*)(int dagfd, int stream_num, uint32_t mindata, struct timeval * maxwait, struct timeval * poll)) dag_function_ptr[12].ptr)
 #define DAG_start_stream (* (int (*)(int dagfd, int stream_num)) dag_function_ptr[13].ptr)
 #define DAG_stop_stream (* (int (*)(int dagfd, int stream_num)) dag_function_ptr[14].ptr)
+#define DAG_util_set_progname (* (void (*)(char * name)) dag_function_ptr[15].ptr)
 
 /* **************************************************** */
 
@@ -141,6 +143,8 @@ int pfring_dag_open(pfring *ring) {
   ring->set_socket_mode    = pfring_dag_set_socket_mode;
   ring->enable_ring        = pfring_dag_enable_ring;
   ring->get_interface_speed = pfring_dag_get_interface_speed;
+
+  ring->set_application_name = pfring_dag_set_application_name;
 
   ring->priv_data = malloc(sizeof(pfring_dag));
 
@@ -541,6 +545,15 @@ int pfring_dag_set_socket_mode(pfring *ring, socket_mode mode) {
   /* TODO send mode */
 
   return -1;
+}
+
+/* **************************************************** */
+
+int pfring_dag_set_application_name(pfring *ring, char *name)
+{
+  DAG_util_set_progname(name);
+
+  return 0;
 }
 
 /* **************************************************** */
