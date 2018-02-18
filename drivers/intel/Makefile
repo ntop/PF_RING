@@ -5,6 +5,8 @@ IXGBE=ixgbe/ixgbe-5.0.4-zc
 I40E=i40e/i40e-2.3.6-zc
 FM10K=fm10k/fm10k-0.20.1-zc
 
+export C_INCLUDE_PATH := $(shell cd ../../kernel/linux; pwd)
+
 all:
 #	cd $(E1000)/src; make
 	cd $(E1000E)/src; make

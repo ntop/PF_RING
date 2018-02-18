@@ -31,7 +31,7 @@
 #include <linux/uio_driver.h>
 
 #ifdef HAVE_PF_RING
-#include "../../../../../kernel/linux/pf_ring.h"
+#include "pf_ring.h"
 #endif
 
 #include "fm10k_pf.h"

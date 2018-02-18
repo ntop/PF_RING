@@ -64,7 +64,7 @@ struct igb_adapter;
 #include "e1000_mbx.h"
 
 #ifdef HAVE_PF_RING
-#include "../../../../../kernel/linux/pf_ring.h"
+#include "pf_ring.h"
 #endif
 
 #define IGB_ERR(args...) pr_err(KERN_ERR "igb: " args)
