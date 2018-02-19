@@ -7,9 +7,9 @@ install:
 	cd userland; make install
 
 clean:
-	cd kernel; make clean
-	cd userland; make clean
-	cd drivers; make clean
+	-cd kernel; make clean
+	-cd userland; make clean
+	-cd drivers; make clean
 	-cd userland/snort/pfring-daq-module; make clean
 
 snort:
