@@ -36,7 +36,7 @@
 #define IXGBE_82599_RX_PB_SIZE	  512
 
 #ifdef HAVE_PF_RING
-#include "../../../../../kernel/linux/pf_ring.h"
+#include "pf_ring.h"
 
 static unsigned int allow_tap_1g = 0;
 module_param(allow_tap_1g, uint, 0644);

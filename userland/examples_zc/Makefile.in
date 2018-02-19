@@ -85,5 +85,9 @@ zbalance_DC_ipc: zbalance_DC_ipc.o ${LIBPFRING} Makefile
 zsanitycheck: zsanitycheck.o ${LIBPFRING} Makefile
 	${CC} ${CFLAGS} zsanitycheck.o ${LIBS} -o $@
 
+install:
+	mkdir -p $(DESTDIR)/usr/bin
+	cp $(TARGETS) $(DESTDIR)/usr/bin/
+
 clean:
 	@rm -f ${TARGETS} *.o *~ config.*

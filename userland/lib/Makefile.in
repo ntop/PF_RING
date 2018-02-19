@@ -159,7 +159,7 @@ install-shared:	${DYNAMICLIB} install-includes
 	cp ${DYNAMICLIB} $(DESTDIR)$(libdir)/
 	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB} ${DYNAMICLIB}.@VER@
 	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB} ${DYNAMICLIB}.@MAJOR_VER@
-	@if test "$(USER)" = "root"; then \
+	-@if test "$(USER)" = "root"; then \
 		ldconfig; \
 	fi
 

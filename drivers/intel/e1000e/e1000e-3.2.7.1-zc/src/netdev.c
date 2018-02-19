@@ -59,7 +59,7 @@ const char e1000e_driver_version[] = DRV_VERSION;
 
 #ifdef HAVE_PF_RING
 //#define ENABLE_RX_ZC
-#include "../../../../../kernel/linux/pf_ring.h"
+#include "pf_ring.h"
 
 static unsigned int enable_debug = 0;
 module_param(enable_debug, uint, 0644);

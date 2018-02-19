@@ -49,7 +49,7 @@
 #include "i40e_trace.h"
 
 #ifdef HAVE_PF_RING
-#include "../../../../../../kernel/linux/pf_ring.h"
+#include "pf_ring.h"
 
 #define I40E_PCI_DEVICE_CACHE_LINE_SIZE      0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES        8
