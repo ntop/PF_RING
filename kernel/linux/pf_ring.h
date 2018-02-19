@@ -281,8 +281,8 @@ struct pkt_parsing_info {
   u_int16_t vlan_id;          /* VLAN Id or NO_VLAN */
   u_int16_t qinq_vlan_id;     /* VLAN Id or NO_VLAN */
   u_int8_t  ip_version;
-  u_int8_t  l3_proto, ip_tos; /* Layer 4 protocol, TOS */
-  ip_addr   ip_src, ip_dst;   /* IPv4 src/dst IP addresses */
+  u_int8_t  l3_proto, ip_tos; /* Layer 3 protocol, TOS */
+  ip_addr   ip_src, ip_dst;   /* IPv4/6 src/dst IP addresses */
   u_int16_t l4_src_port, l4_dst_port;/* Layer 4 src/dst ports */
   u_int8_t  icmp_type, icmp_code;    /* Variables for ICMP packets */
   struct {
@@ -695,7 +695,7 @@ typedef struct {
   u_int16_t rule_id; /* Future use */
   u_int16_t vlan_id;
   u_int8_t ip_version;
-  u_int8_t proto; /* Layer 4 protocol */
+  u_int8_t proto; /* Layer 3 protocol */
   ip_addr host_peer_a, host_peer_b;
   u_int16_t port_peer_a, port_peer_b;
 
