@@ -139,9 +139,62 @@
 
 /* ************************************************* */
 
+static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t port)
+{
+  if (!addr) {
+    printk("NULL addr");
+    return;
+  }
+  if (ip_version==4) {
+    printk("%d.%d.%d.%d:%u",
+        ((addr->v4 >> 24) & 0xff),
+        ((addr->v4 >> 16) & 0xff),
+        ((addr->v4 >> 8) & 0xff),
+        ((addr->v4 >> 0) & 0xff),
+        port);
+  } else if (ip_version==6) {
+    printk("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x:%u",
+        addr->v6.s6_addr[0],addr->v6.s6_addr[1], addr->v6.s6_addr[2],addr->v6.s6_addr[3],
+        addr->v6.s6_addr[4],addr->v6.s6_addr[5], addr->v6.s6_addr[6],addr->v6.s6_addr[7],
+        addr->v6.s6_addr[8],addr->v6.s6_addr[9], addr->v6.s6_addr[10],addr->v6.s6_addr[11],
+        addr->v6.s6_addr[12],addr->v6.s6_addr[13], addr->v6.s6_addr[14],addr->v6.s6_addr[15],
+        port);
+  } else {
+    printk("Unknown IPv=%d", ip_version);
+  }
+  return;
+}
+
+/* ************************************************* */
+
 #define debug_on(debug_level) (unlikely(enable_debug >= debug_level))
-#define debug_printk(debug_level, fmt, ...) { if(debug_on(debug_level)) \
+#define debug_printk(debug_level, fmt, ...) { if (debug_on(debug_level)) \
   printk("[PF_RING][DEBUG] %s:%d " fmt,  __FUNCTION__, __LINE__, ## __VA_ARGS__); }
+
+#define debug_printk_rule_session(rule) \
+  printk("[vlan=%u,proto=%d,", (rule)->vlan_id, (rule)->proto); \
+  printk("("); printk_addr((rule)->ip_version,&(rule)->host_peer_a, (rule)->port_peer_a); printk(")"); \
+  printk(","); \
+  printk("("); printk_addr((rule)->ip_version,&(rule)->host_peer_b, (rule)->port_peer_b); printk(")"); \
+  printk("]");
+
+#define debug_printk_rules_comparison(debug_level, rule_a, rule_b) { \
+  if (debug_on(debug_level)) { \
+    printk("[PF_RING][DEBUG] %s:%d Comparing ", __FUNCTION__, __LINE__); \
+    debug_printk_rule_session(rule_a); \
+    printk(" <-> "); \
+    debug_printk_rule_session(rule_b); \
+    printk("\n"); \
+  } \
+}	
+
+#define debug_printk_rule_info(debug_level, rule, fmt, ...) { \
+  if (debug_on(debug_level)) { \
+    printk("[PF_RING][DEBUG] %s:%d ", __FUNCTION__, __LINE__); \
+    debug_printk_rule_session(rule); \
+    printk(fmt, ## __VA_ARGS__); \
+  } \
+}	
 
 /* ************************************************* */
 
@@ -2336,46 +2389,44 @@ static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
 
 /* ********************************** */
 
+static inline int compare_hash_filtering_rules(hash_filtering_rule * a,
+				     hash_filtering_rule * b)
+{
+  if((a->ip_version == b->ip_version)
+      &&(a->proto == b->proto)
+      && (a->vlan_id == b->vlan_id)
+      && (((a->host4_peer_a == b->host4_peer_a)
+      && (a->host4_peer_b == b->host4_peer_b)
+      && (a->port_peer_a == b->port_peer_a)
+      && (a->port_peer_b == b->port_peer_b))
+    ||
+     ((a->host4_peer_a == b->host4_peer_b)
+      && (a->host4_peer_b == b->host4_peer_a)
+      && (a->port_peer_a == b->port_peer_b)
+      && (a->port_peer_b == b->port_peer_a)))) {
+      if (a->ip_version == 6) {
+        if (((memcmp(&a->host6_peer_a, &b->host6_peer_a, sizeof(ip_addr)) == 0)
+             && (memcmp(&a->host6_peer_b, &b->host6_peer_b, sizeof(ip_addr)) == 0))
+           ||
+             ((memcmp(&a->host6_peer_a, &b->host6_peer_b, sizeof(ip_addr)) == 0) 
+             && (memcmp(&a->host6_peer_b, &b->host6_peer_a, sizeof(ip_addr)) == 0))) {
+           return 1;
+        }
+      } else { /* ip_version == 4 */
+        return 1;
+      }
+  }
+
+  return 0;
+}
+
+/* ********************************** */
+
 static inline int hash_bucket_match_rule(sw_filtering_hash_bucket * hash_bucket,
 				  hash_filtering_rule * rule)
 {
-  debug_printk(2, "(%u,%d,%d.%d.%d.%d:%u,%d.%d.%d.%d:%u) "
-	   "(%u,%d,%d.%d.%d.%d:%u,%d.%d.%d.%d:%u)\n",
-	   hash_bucket->rule.vlan_id, hash_bucket->rule.proto,
-	   ((hash_bucket->rule.host4_peer_a >> 24) & 0xff),
-	   ((hash_bucket->rule.host4_peer_a >> 16) & 0xff),
-	   ((hash_bucket->rule.host4_peer_a >> 8) & 0xff),
-	   ((hash_bucket->rule.host4_peer_a >> 0) & 0xff),
-	   hash_bucket->rule.port_peer_a,
-	   ((hash_bucket->rule.host4_peer_b >> 24) & 0xff),
-	   ((hash_bucket->rule.host4_peer_b >> 16) & 0xff),
-	   ((hash_bucket->rule.host4_peer_b >> 8) & 0xff),
-	   ((hash_bucket->rule.host4_peer_b >> 0) & 0xff),
-	   hash_bucket->rule.port_peer_b,
-	   rule->vlan_id, rule->proto,
-	   ((rule->host4_peer_a >> 24) & 0xff),
-	   ((rule->host4_peer_a >> 16) & 0xff),
-	   ((rule->host4_peer_a >> 8) & 0xff),
-	   ((rule->host4_peer_a >> 0) & 0xff),
-	   rule->port_peer_a,
-	   ((rule->host4_peer_b >> 24) & 0xff),
-	   ((rule->host4_peer_b >> 16) & 0xff),
-	   ((rule->host4_peer_b >> 8) & 0xff),
-	   ((rule->host4_peer_b >> 0) & 0xff), rule->port_peer_b);
-
-  if((hash_bucket->rule.proto == rule->proto)
-     && (hash_bucket->rule.vlan_id == rule->vlan_id)
-     && (((hash_bucket->rule.host4_peer_a == rule->host4_peer_a)
-	  && (hash_bucket->rule.host4_peer_b == rule->host4_peer_b)
-	  && (hash_bucket->rule.port_peer_a == rule->port_peer_a)
-	  && (hash_bucket->rule.port_peer_b == rule->port_peer_b))
-	 || ((hash_bucket->rule.host4_peer_a == rule->host4_peer_b)
-	     && (hash_bucket->rule.host4_peer_b == rule->host4_peer_a)
-	     && (hash_bucket->rule.port_peer_a == rule->port_peer_b)
-	     && (hash_bucket->rule.port_peer_b == rule->port_peer_a)))) {
-    return(1);
-  } else
-    return(0);
+  debug_printk_rules_comparison(2, &hash_bucket->rule, rule);
+  return compare_hash_filtering_rules(&hash_bucket->rule, rule);
 }
 
 /* ********************************** */
@@ -2383,43 +2434,8 @@ static inline int hash_bucket_match_rule(sw_filtering_hash_bucket * hash_bucket,
 static inline int hash_filtering_rule_match(hash_filtering_rule * a,
 				     hash_filtering_rule * b)
 {
-  debug_printk(2, "(%u,%d,%d.%d.%d.%d:%u,%d.%d.%d.%d:%u) "
-	   "(%u,%d,%d.%d.%d.%d:%u,%d.%d.%d.%d:%u)\n",
-	   a->vlan_id, a->proto,
-	   ((a->host4_peer_a >> 24) & 0xff),
-	   ((a->host4_peer_a >> 16) & 0xff),
-	   ((a->host4_peer_a >> 8) & 0xff),
-	   ((a->host4_peer_a >> 0) & 0xff),
-	   a->port_peer_a,
-	   ((a->host4_peer_b >> 24) & 0xff),
-	   ((a->host4_peer_b >> 16) & 0xff),
-	   ((a->host4_peer_b >> 8) & 0xff),
-	   ((a->host4_peer_b >> 0) & 0xff),
-	   a->port_peer_b,
-	   b->vlan_id, b->proto,
-	   ((b->host4_peer_a >> 24) & 0xff),
-	   ((b->host4_peer_a >> 16) & 0xff),
-	   ((b->host4_peer_a >> 8) & 0xff),
-	   ((b->host4_peer_a >> 0) & 0xff),
-	   b->port_peer_a,
-	   ((b->host4_peer_b >> 24) & 0xff),
-	   ((b->host4_peer_b >> 16) & 0xff),
-	   ((b->host4_peer_b >> 8) & 0xff),
-	   ((b->host4_peer_b >> 0) & 0xff), b->port_peer_b);
-
-  if((a->proto == b->proto)
-     && (a->vlan_id == b->vlan_id)
-     && (((a->host4_peer_a == b->host4_peer_a)
-	  && (a->host4_peer_b == b->host4_peer_b)
-	  && (a->port_peer_a == b->port_peer_a)
-	  && (a->port_peer_b == b->port_peer_b))
-	 || ((a->host4_peer_a == b->host4_peer_b)
-	     && (a->host4_peer_b == b->host4_peer_a)
-	     && (a->port_peer_a == b->port_peer_b)
-	     && (a->port_peer_b == b->port_peer_a)))) {
-    return(1);
-  } else
-    return(0);
+  debug_printk_rules_comparison(2, a, b);
+  return compare_hash_filtering_rules(a,b);
 }
 
 /* ********************************** */
@@ -2953,20 +2969,8 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 				  rule->rule.port_peer_a, rule->rule.port_peer_b)
     % perfect_rules_hash_size;
 
-  debug_printk(2, "(vlan=%u, proto=%u, "
-	   "sip=%d.%d.%d.%d, sport=%u, dip=%d.%d.%d.%d, dport=%u, "
-	   "hash_idx=%u, add_rule=%d)\n",
-	   rule->rule.vlan_id,
-	   rule->rule.proto, ((rule->rule.host4_peer_a >> 24) & 0xff),
-	   ((rule->rule.host4_peer_a >> 16) & 0xff),
-	   ((rule->rule.host4_peer_a >> 8) & 0xff),
-	   ((rule->rule.host4_peer_a >> 0) & 0xff),
-	   rule->rule.port_peer_a,
-	   ((rule->rule.host4_peer_b >> 24) & 0xff),
-	   ((rule->rule.host4_peer_b >> 16) & 0xff),
-	   ((rule->rule.host4_peer_b >> 8) & 0xff),
-	   ((rule->rule.host4_peer_b >> 0) & 0xff),
-	   rule->rule.port_peer_b, hash_idx, add_rule);
+  debug_printk_rule_info(2, &rule->rule, ", hash_idx=%u, rule_id=%u, add_rule=%d\n",
+    hash_idx, rule->rule.rule_id, add_rule);
 
   if(add_rule) {
 
@@ -3025,7 +3029,8 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
     while(bucket != NULL) {
       if(hash_filtering_rule_match(&bucket->rule, &rule->rule)) {
 	if(add_rule) {
-	  debug_printk(2, "Duplicate found while adding rule: discarded\n");
+	  printk("[PF_RING] %s:%d Duplicate found (rule_id=%u) while adding rule (rule_id=%u): discarded\n",
+	  	__FUNCTION__, __LINE__, bucket->rule.rule_id, rule->rule.rule_id);
 	  return(-EEXIST);
 	} else {
 	  /* We've found the bucket to delete */
@@ -3087,8 +3092,10 @@ static int add_sw_filtering_rule_element(struct pf_ring_socket *pfr, sw_filterin
   list_for_each_prev(ptr, &pfr->sw_filtering_rules) {
     entry = list_entry(ptr, sw_filtering_rule_element, list);
 
-    if(entry->rule.rule_id == rule->rule.rule_id)
+    if(entry->rule.rule_id == rule->rule.rule_id) {
+      printk("[PF_RING] %s:%d Rule already exists (rule_id=%u)\n", __FUNCTION__, __LINE__, rule->rule.rule_id);
       return(-EEXIST);
+    }
 
     if(entry->rule.rule_id < rule->rule.rule_id)
       break;
@@ -5780,7 +5787,7 @@ static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapp
   debug_printk(1, "%s@%d\n", mapping->device_name, mapping->channel_id);
 
   if(strlen(mapping->device_name) == 0)
-    printk("[PF_RING] %s:%d ZC socket with empty device name!", __FUNCTION__, __LINE__);
+    printk("[PF_RING] %s:%d ZC socket with empty device name!\n", __FUNCTION__, __LINE__);
 
   /* lookinf for ZC dev */
   list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
@@ -5826,7 +5833,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   debug_printk(1, "%s@%d\n", pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
 
   if(strlen(pfr->zc_mapping.device_name) == 0)
-    printk("[PF_RING] %s:%d %s ZC socket with empty device name!", __FUNCTION__, __LINE__,
+    printk("[PF_RING] %s:%d %s ZC socket with empty device name!\n", __FUNCTION__, __LINE__,
       pfr->zc_mapping.operation == add_device_mapping ? "opening" : "closing");
 
   list_for_each_safe(ptr,tmp_ptr, &zc_devices_list) {
@@ -7092,21 +7099,16 @@ static int ring_getsockopt(struct socket *sock,
 	u_int32_t hash_idx;
 
 	if(pfr->sw_filtering_hash == NULL) {
-	  printk("[PF_RING] so_get_hash_filtering_rule_stats(): no hash failure\n");
+	  printk("[PF_RING] SO_GET_HASH_FILTERING_RULE_STATS: no hash failure\n");
 	  return(-EFAULT);
 	}
 
 	if(copy_from_user(&rule, optval, sizeof(rule))) {
-	  printk("[PF_RING] so_get_hash_filtering_rule_stats: copy_from_user() failure\n");
+	  printk("[PF_RING] SO_GET_HASH_FILTERING_RULE_STATS: copy_from_user() failure\n");
 	  return(-EFAULT);
 	}
 
-	debug_printk(2, "so_get_hash_filtering_rule_stats"
-		 "(vlan=%u, proto=%u, sip=%u, sport=%u, dip=%u, dport=%u)\n",
-		 rule.vlan_id, rule.proto,
-		 rule.host4_peer_a, rule.port_peer_a,
-		 rule.host4_peer_b,
-		 rule.port_peer_b);
+	debug_printk_rule_info(2, &rule, " SO_GET_HASH_FILTERING_RULE_STATS: rule_id=%u\n", rule.rule_id);
 
 	hash_idx = hash_pkt(rule.vlan_id, zeromac, zeromac,
 	                    rule.ip_version, rule.proto,
@@ -7120,7 +7122,7 @@ static int ring_getsockopt(struct socket *sock,
 	  read_lock_bh(&pfr->ring_rules_lock);
 	  bucket = pfr->sw_filtering_hash[hash_idx];
 
-	  debug_printk(2, "so_get_hash_filtering_rule_stats(): bucket=%p\n",
+	  debug_printk(2, "SO_GET_HASH_FILTERING_RULE_STATS: bucket=%p\n",
 		   bucket);
 
 	  while(bucket != NULL) {
@@ -7132,7 +7134,7 @@ static int ring_getsockopt(struct socket *sock,
               hfrs.inactivity = (u_int32_t) (jiffies_to_msecs(jiffies - bucket->rule.internals.jiffies_last_match) / 1000);
 	      rc = sizeof(hash_filtering_rule_stats);
               if(copy_to_user(optval, &hfrs, rc)) {
-		printk("[PF_RING] copy_to_user() failure\n");
+              	printk("[PF_RING] SO_GET_HASH_FILTERING_RULE_STATS: copy_to_user() failure\n");
 		rc = -EFAULT;
 	      }
 
@@ -7145,7 +7147,7 @@ static int ring_getsockopt(struct socket *sock,
 	  read_unlock_bh(&pfr->ring_rules_lock);
 
 	} else {
-	  debug_printk(2, "so_get_hash_filtering_rule_stats(): entry not found [hash_idx=%u]\n",
+	  debug_printk(2, "SO_GET_HASH_FILTERING_RULE_STATS: entry not found [hash_idx=%u]\n",
 		   hash_idx);
 	}
       }
@@ -7484,7 +7486,7 @@ void zc_dev_handler(zc_dev_operation operation,
 	   dev->name, channel_id);
 
   if(strlen(dev->name) == 0)
-    printk("[PF_RING] %s:%d %s ZC device with empty name!", __FUNCTION__, __LINE__,
+    printk("[PF_RING] %s:%d %s ZC device with empty name!\n", __FUNCTION__, __LINE__,
       operation == add_device_mapping ? "registering" : "removing");
 
   if(operation == add_device_mapping) {
