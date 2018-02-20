@@ -21,6 +21,9 @@
 #
 ################################################################################
 
+# PF_RING
+export C_INCLUDE_PATH := $(shell cd ../../../../../kernel/linux; pwd)
+
 ifneq ($(KERNELRELEASE),)
 # kbuild part of makefile
 #
