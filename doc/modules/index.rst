@@ -17,6 +17,7 @@ Below you can find a comparison of NIC features supported by PF_RING.
     netcope
     stack
     timeline
+    sysdig
 
 Supported NICs Comparison
 -------------------------
