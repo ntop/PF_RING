@@ -615,7 +615,7 @@ void printHelp(void) {
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"
 	 "                - zc:ethX for ZC devices\n"
-	 "                - sysdig for capturing sysdig events\n"
+	 "                - sysdig: for capturing sysdig events\n"
 #ifdef HAVE_DAG
 	 "                - dag:dagX:Y for Endace DAG cards\n"
 #endif
@@ -949,7 +949,7 @@ int main(int argc, char* argv[]) {
       break;
     case 'i':
       device = strdup(optarg);
-      if(strcmp(device, "sysdig") == 0) is_sysdig = 1;
+      if(strcmp(device, "sysdig:") == 0) is_sysdig = 1;
       break;
     case 'n':
       num_threads = atoi(optarg);
