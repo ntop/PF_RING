@@ -462,14 +462,32 @@ MODULE_PARM_DESC(transparent_mode,
 u_int get_num_rx_queues(struct net_device *dev)
 {
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
+  /* FIXX now sure why we are taking the min here, it may depend on the way old kernels 
+   * managed rss queues, setting real_num_tx_queues, not sure if it's still needed */
   return min_val(dev->real_num_rx_queues, dev->real_num_tx_queues);
-#elif(defined(RHEL_MAJOR) && /* FIXX check previous versions: */ (RHEL_MAJOR == 6)) && defined(CONFIG_RPS)
+#elif(defined(RHEL_MAJOR) && (RHEL_MAJOR == 6)) && defined(CONFIG_RPS)
   if(netdev_extended(dev) != NULL)
     return netdev_extended(dev)->real_num_rx_queues;
   else
     return 1;
 #else
   return dev->real_num_tx_queues;
+#endif
+}
+
+/* ************************************************** */
+
+u_int lock_rss_queues(struct net_device *dev)
+{
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
+  return (dev->real_num_rx_queues > 1) || (dev->real_num_tx_queues > 1);
+#elif(defined(RHEL_MAJOR) && (RHEL_MAJOR == 6)) && defined(CONFIG_RPS)
+  if(netdev_extended(dev) != NULL)
+    return (netdev_extended(dev)->real_num_rx_queues > 1);
+  else
+    return 1; /* unknown */
+#else
+  return (dev->real_num_tx_queues > 1);
 #endif
 }
 
@@ -2699,7 +2717,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
   u_short do_lock = (
     (enable_tx_capture && pfr->direction != rx_only_direction) ||
     (pfr->num_channels_per_ring > 1) ||
-    (pfr->channel_id_mask == RING_ANY_CHANNEL && get_num_rx_queues(skb->dev) > 1) ||
+    (pfr->channel_id_mask == RING_ANY_CHANNEL && lock_rss_queues(skb->dev)) ||
     (pfr->rehash_rss != NULL && get_num_rx_queues(skb->dev) > 1) ||
     (pfr->num_bound_devices > 1) ||
     (pfr->cluster_id != 0) ||
