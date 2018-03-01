@@ -335,15 +335,14 @@ static void purge_idle_fragment_cache(void);
 
 static rwlock_t ring_mgmt_lock;
 
-static inline void init_ring_readers(void)      {
-  ring_mgmt_lock =
+static inline void init_ring_readers(void) {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-    RW_LOCK_UNLOCKED
+  ring_mgmt_lock = RW_LOCK_UNLOCKED;
 #else
-    __RW_LOCK_UNLOCKED(ring_mgmt_lock)
+  rwlock_init(&ring_mgmt_lock);
 #endif
-    ;
 }
+
 static inline void ring_write_lock(void)        { write_lock_bh(&ring_mgmt_lock);    }
 static inline void ring_write_unlock(void)      { write_unlock_bh(&ring_mgmt_lock);  }
 /* use ring_read_lock/ring_read_unlock in process context (a bottom half may use write_lock) */
@@ -513,13 +512,11 @@ void init_lockless_list(lockless_list *l)
 {
   memset(l, 0, sizeof(lockless_list));
 
-  l->list_lock =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-    RW_LOCK_UNLOCKED
+  l->list_lock = RW_LOCK_UNLOCKED;
 #else
-    __RW_LOCK_UNLOCKED(l->list_lock)
+  rwlock_init(&l->list_lock);
 #endif
-    ;
 }
 
 /* ************************************************** */
