@@ -788,10 +788,18 @@ int main(int argc, char* argv[]) {
   );
 
   if (zc == NULL) {
-    if (errno == 105)
-      trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Insufficient hugepage memory, please try increasing your hugepage count", strerror(errno));
-    else
-      trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n", strerror(errno));
+    trace(TRACE_ERROR, "pfring_zc_create_cluster error [%s]", strerror(errno));
+    switch (errno) {
+      case ENOBUFS:
+        trace(TRACE_ERROR, "Insufficient hugepage memory, please try increasing your hugepage count");
+      break;
+      case EAFNOSUPPORT:
+        trace(TRACE_ERROR, "PF_RING kernel module not loaded, please start the pfring service");
+      break;
+      default:
+        trace(TRACE_ERROR, "Failure can be related to the hugetlb configuration");
+      break;
+    }
     return -1;
   }
 
