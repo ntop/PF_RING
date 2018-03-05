@@ -3988,7 +3988,12 @@ static int skb_ring_handler(struct sk_buff *skb,
     /* [2] Check socket clusters */
     while(cluster_ptr != NULL) {
       struct pf_ring_socket *pfr;
-      u_short num_cluster_elements = ACCESS_ONCE(cluster_ptr->cluster.num_cluster_elements);
+      u_short num_cluster_elements = 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
+        ACCESS_ONCE(cluster_ptr->cluster.num_cluster_elements);
+#else
+        READ_ONCE(cluster_ptr->cluster.num_cluster_elements);
+#endif
 
       if(num_cluster_elements > 0) {
 	u_short num_iterations;
