@@ -167,9 +167,9 @@ load_hugepages() {
 set_interface_mtu() {
 	MTU=""
 	if [ -f ${MTU_CONFIG} ]; then 
-		HWADDR=`ifconfig ${1} |grep -w HWaddr |awk '{print $5}'`
+		HWADDR=`ip link show ${1} | grep -w link/ether | awk '{print $2}'`
 		MTU=`grep -w "${HWADDR}" ${MTU_CONFIG} | cut -d ' ' -f 2`
-		if [ ! -z ${MTU} ] && [ ${MTU} != "" ]; then
+		if [ $((MTU)) -ne 0 ]; then
 			/sbin/ifconfig ${1} mtu ${MTU} > /dev/null 2>&1
 		fi
 	fi
