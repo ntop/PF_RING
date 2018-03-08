@@ -80,6 +80,7 @@ if [ $HUGEPAGES_AVAIL -ne $HUGEPAGES_NUM ]; then
 	printf "Warning: %s hugepages available, %s requested\n" "$HUGEPAGES_AVAIL" "$HUGEPAGES_NUM"
 fi
 
+# In order to initialize the internal switch you need rdif/rdifctl installed
 IS_RDIF_INSTALLED=`which rdif | wc -l`
 IS_RDIFCTL_INSTALLED=`which rdifctl | wc -l`
 
@@ -89,8 +90,8 @@ if [ "$IS_RDIF_INSTALLED" -eq 1 ]; then
 	fi
 fi
 
-# Comment the line below if you want to configure the switch (it requires rdif and rdifctl installed)
-IS_SILICOM=0
+# Uncomment the line below if you do not want to configure the switch with rdif/rdifctl
+#IS_SILICOM=0
 
 if [ "$IS_SILICOM" -eq 1 ]; then
 	rdif stop
