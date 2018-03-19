@@ -102,7 +102,7 @@ void sigproc(int sig) {
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
-  char buf1[30], buf2[30];
+  char buf1[32], buf2[32], buf3[32];
   char *ip1, *ip2;
 
   k = pfring_ft_flow_get_key(flow);
@@ -116,13 +116,13 @@ void processFlow(pfring_ft_flow *flow, void *user){
     ip2 = (char *) inet_ntop(AF_INET6, &k->daddr.v6, buf2, sizeof(buf2));
   }
 
-  printf("Flow: "
-         "srcIp = %s dstIp = %s srcPort = %u dstPort = %u protocol = %u tcpFlags = 0x%02X "
-         "l7 = %u.%u "
-         "fwd: Packets = %ju Bytes = %ju FirstTime = %u.%u LastTime = %u.%u "
-         "rev: Packets = %ju Bytes = %ju FirstTime = %u.%u LastTime = %u.%u\n",
+  printf("[Flow] "
+         "srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
+         "l7: %s, "
+         "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
+         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
          ip1, ip2, k->sport, k->dport, k->protocol, v->tcp_flags[s2d_direction] | v->tcp_flags[d2s_direction],
-         v->l7_protocol.master_protocol, v->l7_protocol.app_protocol,
+         pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)),
          v->pkts[s2d_direction], v->bytes[s2d_direction], 
          (u_int) v->first[s2d_direction].tv_sec, (u_int) v->first[s2d_direction].tv_usec, 
          (u_int) v->last[s2d_direction].tv_sec,  (u_int) v->last[s2d_direction].tv_usec,
@@ -142,7 +142,7 @@ void processPacket(const struct pfring_pkthdr *h,
   if (verbose) {
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->caplen);
-    printf("Raw Packet: %s", buffer);
+    printf("[Packet] %s", buffer);
   }
 }
 
@@ -181,9 +181,7 @@ int main(int argc, char* argv[]) {
   char *device = NULL, c;
   int promisc, snaplen = 1518, rc;
   u_int32_t flags = 0;
-  packet_direction direction = rx_only_direction;
-
-  flags |= PF_RING_FLOW_OFFLOAD;
+  packet_direction direction = rx_and_tx_direction;
 
   while ((c = getopt(argc,argv,"g:hi:qv")) != '?') {
     if ((c == 255) || (c == -1)) break;
