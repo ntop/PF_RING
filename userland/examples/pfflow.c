@@ -48,7 +48,6 @@
 #include "pfutils.c"
 
 #define DEFAULT_DEVICE     "anic:0"
-#define NO_ZC_BUFFER_LEN   9000
 
 pfring *pd = NULL;
 pcap_dumper_t *dumper = NULL;

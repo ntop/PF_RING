@@ -19,13 +19,13 @@ INCLUDE    = -I${PFRINGDIR} -I${PFRING_KERNEL} -I${PCAPDIR} `../lib/pfring_confi
 #
 # User and System libraries
 #
-LIBS       = ${LIBPFRING} `../lib/pfring_config --libs` ../libpcap/libpcap.a `../libpcap/pcap-config --additional-libs --static` -lpthread @ZMQ_LIB@ @SYSLIBS@
+LIBS       = ${LIBPFRING} `../lib/pfring_config --libs` ../libpcap/libpcap.a `../libpcap/pcap-config --additional-libs --static` -lpthread @ZMQ_LIB@ @SYSLIBS@ @NDPI_LIB@
 
 #
 # C compiler and flags
 #
 CC         = ${CROSS_COMPILE}gcc
-CFLAGS     = -O2 -Wall @CFLAGS@ ${INCLUDE} @HAVE_ZMQ@
+CFLAGS     = -O2 -Wall @CFLAGS@ ${INCLUDE} @NDPI_INC@ @HAVE_ZMQ@ @HAVE_NDPI@
 
 %.o: %.c zutils.c
 	${CC} ${CFLAGS} -c $< -o $@

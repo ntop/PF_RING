@@ -667,6 +667,11 @@ NPCAP_DEP
 NPCAP_OBJS
 NPCAP_LIB
 HAVE_NPCAP
+PF_RING_FT_H
+PF_RING_FT_DEP
+PF_RING_FT_OBJS
+PF_RING_FT_LIB
+HAVE_PF_RING_FT
 PF_RING_ZC_H
 PF_RING_ZC_DEP
 PF_RING_ZC_OBJS
@@ -3691,6 +3696,21 @@ else
 $as_echo "no" >&6; }
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING FT support" >&5
+$as_echo_n "checking PF_RING FT support... " >&6; }
+PF_RING_FT_LIB="libs/libpfring_ft_$MACHINE$LIBARCH.a"
+if test -f lib/$PF_RING_FT_LIB; then
+  HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
+  PF_RING_FT_OBJS=`ar t lib/$PF_RING_FT_LIB | grep -F .o | tr '\n' ' '`
+  PF_RING_FT_DEP="extract_pfring_ft_lib"
+  PF_RING_FT_H="pfring_ft.h"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING NPCAP support" >&5
 $as_echo_n "checking PF_RING NPCAP support... " >&6; }
 NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
@@ -3698,7 +3718,7 @@ if test -f lib/$NPCAP_LIB; then
   HAVE_NPCAP="-D HAVE_NPCAP"
   NPCAP_OBJS=`ar t lib/$NPCAP_LIB | grep -F .o | tr '\n' ' '`
   NPCAP_DEP="extract_npcap_lib"
-  NPCAP_H="pfring_zc.h"
+  NPCAP_H="npcap.h"
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 else
@@ -3791,10 +3811,34 @@ if test "x$enable_bpf" != "xno"; then :
   HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support" >&5
+$as_echo_n "checking nDPI support... " >&6; }
+NDPI_HOME="../../nDPI"
+if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
+  NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
+  NDPI_INC="-I../$NDPI_HOME/src/include"
+  HAVE_NDPI="-D HAVE_NDPI"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_NDPI 1
+_ACEOF
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
+
+
+
+
+
+
 
 
 
