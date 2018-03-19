@@ -179,7 +179,7 @@ void processBuffer(const struct pfring_pkthdr *h,
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow - (C) 2005-2018 ntop.org\n\n");
+  printf("pfflow - (C) 2017-2018 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
   printf("-o <path>       Dump flows to pcap\n");
@@ -244,7 +244,7 @@ int main(int argc, char* argv[]) {
   } else {
     u_int32_t version;
 
-    pfring_set_application_name(pd, "pfcount");
+    pfring_set_application_name(pd, "pfflow");
     pfring_version(pd, &version);
 
     if (!quiet) {

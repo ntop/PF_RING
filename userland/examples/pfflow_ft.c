@@ -168,7 +168,7 @@ void packet_consumer() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow - (C) 2005-2018 ntop.org\n\n");
+  printf("pfflow_ft - (C) 2018 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
   printf("-q              Quiet mode\n");
@@ -234,7 +234,7 @@ int main(int argc, char* argv[]) {
   } else {
     u_int32_t version;
 
-    pfring_set_application_name(pd, "pfcount");
+    pfring_set_application_name(pd, "pfflow_ft");
     pfring_version(pd, &version);
 
     if (!quiet) {
