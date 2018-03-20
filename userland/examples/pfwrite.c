@@ -74,7 +74,9 @@ pcap_dumper_t *dumper = NULL;
 FILE *dumper_fd = NULL;
 int verbose = 0;
 u_int32_t num_pkts=0;
+#ifdef HAVE_REDIS
 char *imsi = NULL;
+#endif
 
 /* ******************************** */
 
@@ -243,8 +245,8 @@ void deleteImsi() {
 
 /* *************************************** */
 
-static void* imsi_publisher_thread(void* _id) {
 #ifdef HAVE_REDIS
+static void* imsi_publisher_thread(void* _id) {
   redisContext *redis = redisConnect("127.0.0.1", 6379);
   redisReply* r;
 
@@ -296,10 +298,10 @@ static void* imsi_publisher_thread(void* _id) {
       redisFree(redis);
     } /* while */
   }
-#endif
 
   return(NULL);
 }
+#endif
 
 /* *************************************** */
 
@@ -311,7 +313,9 @@ int main(int argc, char* argv[]) {
   char *bpfFilter = NULL;
   struct pfring_pkthdr hdr;
   u_int8_t be_a_daemon = 0;
+#ifdef HAVE_REDIS
   pthread_t my_thread;
+#endif
 
   while((c = getopt(argc,argv,"hi:w:Sdg:f:c:b"
 #ifdef HAVE_REDIS
@@ -340,10 +344,12 @@ int main(int argc, char* argv[]) {
       out_dump = strdup(optarg);
       break;
 
+#ifdef HAVE_REDIS
     case 'm':
       imsi = strdup(optarg);
       pthread_create(&my_thread, NULL, imsi_publisher_thread, (void*)NULL);
       break;
+#endif
 
     case 'g':
       if(num_gtp_tunnels < MAX_NUM_GTP_TUNNELS) {
@@ -439,6 +445,7 @@ int main(int argc, char* argv[]) {
       if(dumper) {
 	u_int8_t to_dump = 0;
 
+#ifdef HAVE_REDIS
 	if(imsi != NULL) {
 	  if(num_gtp_tunnels > 0) {
 	    memset(&hdr.extended_hdr, 0, sizeof(hdr.extended_hdr));
@@ -548,6 +555,7 @@ int main(int argc, char* argv[]) {
 	      continue;
 	  }
 	} else
+#endif
 	  to_dump = 1;
 
 #ifdef DEBUG

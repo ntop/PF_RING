@@ -217,7 +217,11 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  /* Example of L7 packet filtering 
+  /* Example of L7 packet filtering/shunting loading from configuration file
+  pfring_ft_load_configuration(ft, "rules.conf");
+  */
+
+  /* Example of L7 packet filtering rules
   pfring_ft_set_filter_protocol_by_name(ft, "MDNS", PFRING_FT_ACTION_DISCARD);
   pfring_ft_set_filter_protocol_by_name(ft, "UPnP", PFRING_FT_ACTION_DISCARD);
   */
