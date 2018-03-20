@@ -136,13 +136,14 @@ void processFlow(pfring_ft_flow *flow, void *user){
 void processPacket(const struct pfring_pkthdr *h,
 		   const u_char *p, const u_char *user_bytes) {
   char buffer[256];
+  pfring_ft_action action;
 
-  pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
+  action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
 
   if (verbose) {
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->caplen);
-    printf("[Packet] %s", buffer);
+    printf("[Packet]%s %s", action == PFRING_FT_ACTION_DISCARD ? " [discard]" : "", buffer);
   }
 }
 
@@ -215,6 +216,11 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "pfring_ft_create_table error\n");
     return -1;
   }
+
+  /* Example of L7 packet filtering 
+  pfring_ft_set_filter_protocol_by_name(ft, "MDNS", PFRING_FT_ACTION_DISCARD);
+  pfring_ft_set_filter_protocol_by_name(ft, "UPnP", PFRING_FT_ACTION_DISCARD);
+  */
 
   pfring_ft_set_export_callback_flow(ft, processFlow, NULL);
 
