@@ -48,41 +48,66 @@
 
 #include "pfutils.c"
 
-#define DEFAULT_DEVICE     "eth0"
+#define ALARM_SLEEP 1
+#define DEFAULT_DEVICE "eth0"
 
 pfring *pd = NULL;
 pfring_ft_table *ft = NULL;
 int bind_core = -1;
 u_int8_t quiet = 0, verbose = 0, do_shutdown = 0;
+u_int64_t num_pkts = 0;
+u_int64_t num_bytes = 0;
 
 /* ************************************ */
 
-static char *_intoa(unsigned int addr, char* buf, u_short bufLen) {
-  char *cp, *retStr;
-  u_int byte;
-  int n;
+void print_stats() {
+  pfring_stat stat;
+  static struct timeval start_time = { 0 };
+  static struct timeval last_time = { 0 };
+  struct timeval end_time;
+  unsigned long long n_bytes, n_pkts;
+  static u_int64_t last_pkts = 0;
+  static u_int64_t last_bytes = 0;
+  double diff, bytes_diff;
+  u_int64_t delta_start;
+  double delta_last;
+  char buf[256], buf1[64], buf2[64], timebuf[128];
 
-  cp = &buf[bufLen];
-  *--cp = '\0';
+  if (start_time.tv_sec == 0)
+    gettimeofday(&start_time, NULL);
+  gettimeofday(&end_time, NULL);
 
-  n = 4;
-  do {
-    byte = addr & 0xff;
-    *--cp = byte % 10 + '0';
-    byte /= 10;
-    if (byte > 0) {
-      *--cp = byte % 10 + '0';
-      byte /= 10;
-      if (byte > 0)
-	*--cp = byte + '0';
+  n_bytes = num_bytes;
+  n_pkts = num_pkts;
+
+  if (pfring_stats(pd, &stat) >= 0) {
+    if (last_time.tv_sec > 0) {
+      delta_start = delta_time(&end_time, &start_time);
+      delta_last = delta_time(&end_time, &last_time);
+      diff = n_pkts - last_pkts;
+      bytes_diff = n_bytes - last_bytes;
+      bytes_diff /= (1000*1000*1000)/8;
+
+      snprintf(buf, sizeof(buf),
+             "Duration:   %s\n"
+             "Packets:    %lu\n"
+             "Dropped:    %lu\n"
+             "Bytes:      %lu\n"
+             "Throughput: %s pps (%s Gbps)",
+             msec2dhmsm(delta_start, timebuf, sizeof(timebuf)),
+             (long unsigned int) n_pkts,
+             (long unsigned int) stat.drop,
+             (long unsigned int) n_bytes,
+	     pfring_format_numbers(((double) diff/(double)(delta_last/1000)),  buf1, sizeof(buf1), 1),
+	     pfring_format_numbers(((double) bytes_diff/(double)(delta_last/1000)),  buf2, sizeof(buf2), 1));
+
+      pfring_set_application_stats(pd, buf);
     }
-    *--cp = '.';
-    addr >>= 8;
-  } while (--n > 0);
+  }
 
-  retStr = (char*)(cp+1);
-
-  return (retStr);
+  last_pkts = n_pkts;
+  last_bytes = n_bytes;
+  memcpy(&last_time, &end_time, sizeof(last_time));
 }
 
 /* ************************************ */
@@ -94,7 +119,22 @@ void sigproc(int sig) {
   if (called) return; else called = 1;
 
   do_shutdown = 1;
+
+  if (!quiet)
+    print_stats();
+
   pfring_breakloop(pd);
+}
+
+/* ************************************ */
+
+void my_sigalarm(int sig) {
+  if(do_shutdown)
+    return;
+
+  print_stats();
+  alarm(ALARM_SLEEP);
+  signal(SIGALRM, my_sigalarm);
 }
 
 /* ******************************** */
@@ -135,12 +175,15 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 void processPacket(const struct pfring_pkthdr *h,
 		   const u_char *p, const u_char *user_bytes) {
-  char buffer[256];
   pfring_ft_action action;
 
   action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
 
+  num_pkts++;
+  num_bytes += h->len + 24;
+
   if (verbose) {
+    char buffer[256];
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->caplen);
     printf("[Packet]%s %s", action == PFRING_FT_ACTION_DISCARD ? " [discard]" : "", buffer);
@@ -261,7 +304,12 @@ int main(int argc, char* argv[]) {
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
 
- if (pfring_enable_ring(pd) != 0) {
+  if (!verbose && !quiet) {
+    signal(SIGALRM, my_sigalarm);
+    alarm(ALARM_SLEEP);
+  }
+
+  if (pfring_enable_ring(pd) != 0) {
     printf("Unable to enable ring :-(\n");
     pfring_close(pd);
     return -1;

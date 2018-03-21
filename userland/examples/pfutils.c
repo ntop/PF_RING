@@ -209,6 +209,36 @@ char *msec2dhmsm(u_int64_t msec, char *buf, u_int buf_len) {
 
 /* *************************************** */
 
+char *_intoa(unsigned int addr, char* buf, u_short bufLen) {
+  char *cp, *retStr;
+  u_int byte;
+  int n;
+
+  cp = &buf[bufLen];
+  *--cp = '\0';
+
+  n = 4;
+  do {
+    byte = addr & 0xff;
+    *--cp = byte % 10 + '0';
+    byte /= 10;
+    if (byte > 0) {
+      *--cp = byte % 10 + '0';
+      byte /= 10;
+      if (byte > 0)
+	*--cp = byte + '0';
+    }
+    *--cp = '.';
+    addr >>= 8;
+  } while (--n > 0);
+
+  retStr = (char*)(cp+1);
+
+  return (retStr);
+}
+
+/* *************************************** */
+
 int busid2node(int slot, int bus, int device, int function) {
   char path[256];
   FILE *fd;

@@ -56,36 +56,6 @@ u_int8_t wait_for_packet = 1, quiet = 0;
 
 /* ************************************ */
 
-static char *_intoa(unsigned int addr, char* buf, u_short bufLen) {
-  char *cp, *retStr;
-  u_int byte;
-  int n;
-
-  cp = &buf[bufLen];
-  *--cp = '\0';
-
-  n = 4;
-  do {
-    byte = addr & 0xff;
-    *--cp = byte % 10 + '0';
-    byte /= 10;
-    if (byte > 0) {
-      *--cp = byte % 10 + '0';
-      byte /= 10;
-      if (byte > 0)
-	*--cp = byte + '0';
-    }
-    *--cp = '.';
-    addr >>= 8;
-  } while (--n > 0);
-
-  retStr = (char*)(cp+1);
-
-  return (retStr);
-}
-
-/* ************************************ */
-
 void sigproc(int sig) {
   static int called = 0;
 
