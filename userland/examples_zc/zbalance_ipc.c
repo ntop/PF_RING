@@ -42,6 +42,10 @@
 
 #include "zutils.c"
 
+#if defined(HAVE_PF_RING_FT) || defined(HAVE_ZMQ)
+#define HAVE_PACKET_FILTER
+#endif
+
 #define ALARM_SLEEP             1
 #define MAX_CARD_SLOTS      32768
 #define PREFETCH_BUFFERS        8
@@ -82,6 +86,33 @@ volatile u_int8_t do_shutdown = 0;
 
 u_int8_t n2disk_producer = 0;
 u_int32_t n2disk_threads;
+
+/* ******************************** */
+
+#ifdef HAVE_PF_RING_FT
+#include "pfring_ft.h"
+
+u_int8_t flow_table = 0;
+pfring_ft_table *ft = NULL;
+
+void flow_init(pfring_ft_flow *flow, void *user) {
+  // Here you can initialise user data in value->user
+  // pfring_ft_flow_value *value = pfring_ft_flow_get_value(flow);
+  // value->user = ..
+}
+
+void flow_packet_process(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
+  // Here you can process the packet and set the action to discard of forward packets for this flow:
+  // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
+}
+
+void flow_free(pfring_ft_flow *flow, void *user) {
+  // Here you can free user data stored in value->user
+  // pfring_ft_flow_value *value = pfring_ft_flow_get_value(flow);
+  // free(value->user);
+}
+
+#endif
 
 /* ******************************** */
 
@@ -164,6 +195,7 @@ void print_filter(int signo) {
 /* ******************************** */
 
 #define SET_TS_FROM_PULSE(p, t) { u_int64_t __pts = t; p->ts.tv_sec = __pts >> 32; p->ts.tv_nsec = __pts & 0xffffffff; }
+#define SET_TIMEVAL_FROM_PULSE(tv, t) { u_int64_t __pts = t; tv.tv_sec = __pts >> 32; tv.tv_usec = (__pts & 0xffffffff)/1000; }
 
 void *time_pulse_thread(void *data) {
   u_int64_t ns;
@@ -375,6 +407,9 @@ void printHelp(void) {
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
+#ifdef HAVE_PF_RING_FT
+  printf("-T               Enable Flow Table support for flow filtering\n");
+#endif
 #ifdef HAVE_ZMQ
   printf("-Z               Enable IP-based filtering with ZMQ support for dynamic rules injection\n");
   printf("-E <endpoint>    Set the ZMQ endpoint to be used with -Z (default: %s)\n", DEFAULT_ENDPOINT);
@@ -386,28 +421,48 @@ void printHelp(void) {
 
 /* *************************************** */
 
-#ifdef HAVE_ZMQ
-static inline int packet_filter(u_char *pkt) {
-  inplace_key_t src_key, dst_key;
-  int action = default_action;
-  if (extract_keys(pkt, &src_key, &dst_key)) {
-    int rule_action = NULL_VALUE;
-#if 0 /* debug */
-    char sbuf[64], dbuf[64];
-    trace(TRACE_DEBUG, "Processing packet from %s to %s\n",
-      src_key.ip_version == 4 ? intoaV4(ntohl(src_key.ip_address.v4.s_addr), sbuf, sizeof(sbuf)) : intoaV6(&src_key.ip_address.v6, sbuf, sizeof(sbuf)),
-      dst_key.ip_version == 4 ? intoaV4(ntohl(dst_key.ip_address.v4.s_addr), dbuf, sizeof(dbuf)) : intoaV6(&dst_key.ip_address.v6, dbuf, sizeof(dbuf)));
-#endif
-    if (src_ip_hash != NULL) {
-      rule_action = inplace_lookup(src_ip_hash, &src_key);
-      if (rule_action != NULL_VALUE) action = rule_action;
-    }
-    if (dst_ip_hash != NULL && rule_action == NULL_VALUE) {
-      rule_action = inplace_lookup(dst_ip_hash, &dst_key);
-      if (rule_action != NULL_VALUE) action = rule_action;
-    }
+#ifdef HAVE_PACKET_FILTER
+static inline int packet_filter(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue) {
+#ifdef HAVE_PF_RING_FT
+  if (flow_table) {
+    pfring_ft_pcap_pkthdr hdr;
+    pfring_ft_action action;
+
+    hdr.len = hdr.caplen = pkt_handle->len;
+    SET_TIMEVAL_FROM_PULSE(hdr.ts, *pulse_timestamp_ns);
+
+    action = pfring_ft_process(ft, pfring_zc_pkt_buff_data(pkt_handle, in_queue), &hdr);
+
+    if (action == PFRING_FT_ACTION_DISCARD)
+      return 0; /* drop */
   }
-  return (action != DROP);
+#endif
+#ifdef HAVE_ZMQ
+  if (zmq_server) {
+    inplace_key_t src_key, dst_key;
+    int action = default_action;
+    if (extract_keys(pfring_zc_pkt_buff_data(pkt_handle, in_queue), &src_key, &dst_key)) {
+      int rule_action = NULL_VALUE;
+#if 0 /* debug */
+      char sbuf[64], dbuf[64];
+      trace(TRACE_DEBUG, "Processing packet from %s to %s\n",
+        src_key.ip_version == 4 ? intoaV4(ntohl(src_key.ip_address.v4.s_addr), sbuf, sizeof(sbuf)) : intoaV6(&src_key.ip_address.v6, sbuf, sizeof(sbuf)),
+        dst_key.ip_version == 4 ? intoaV4(ntohl(dst_key.ip_address.v4.s_addr), dbuf, sizeof(dbuf)) : intoaV6(&dst_key.ip_address.v6, dbuf, sizeof(dbuf)));
+#endif
+      if (src_ip_hash != NULL) {
+        rule_action = inplace_lookup(src_ip_hash, &src_key);
+        if (rule_action != NULL_VALUE) action = rule_action;
+      }
+      if (dst_ip_hash != NULL && rule_action == NULL_VALUE) {
+        rule_action = inplace_lookup(dst_ip_hash, &dst_key);
+        if (rule_action != NULL_VALUE) action = rule_action;
+      }
+    }
+    if (action == DROP)
+      return 0; /* drop */
+  }
+#endif
+  return 1; /* pass */
 }
 #endif
 
@@ -415,8 +470,8 @@ static inline int packet_filter(u_char *pkt) {
 
 int64_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return -1;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
@@ -427,8 +482,8 @@ int64_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 int64_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return -1;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
@@ -439,8 +494,8 @@ int64_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
 
 int64_t gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return -1;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
@@ -453,8 +508,8 @@ static int rr = -1;
 
 int64_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return -1;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
@@ -475,8 +530,8 @@ int64_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
 /* *************************************** */
 
 int64_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return 0x0;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
@@ -487,8 +542,8 @@ int64_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 int64_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return 0x0;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
@@ -502,8 +557,8 @@ int64_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_
   int32_t i, offset = 0, app_instance, hash;
   int64_t consumers_mask = 0; 
 
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return 0x0;
 #endif
 
@@ -526,8 +581,8 @@ int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
   int32_t i, offset = 0, app_instance, hash;
   int64_t consumers_mask = 0;
 
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return 0x0;
 #endif
 
@@ -550,8 +605,8 @@ int64_t fo_multiapp_gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
   int32_t i, offset = 0, app_instance, hash;
   int64_t consumers_mask = 0;
 
-#ifdef HAVE_ZMQ
-  if (!packet_filter(pfring_zc_pkt_buff_data(pkt_handle, in_queue))) 
+#ifdef HAVE_PACKET_FILTER
+  if (!packet_filter(pkt_handle, in_queue))
     return 0x0;
 #endif
 
@@ -587,6 +642,9 @@ int main(int argc, char* argv[]) {
   char **opt_argv;
   char *user = NULL;
   const char *opt_string = "ab:c:dD:g:hi:l:m:n:pr:Q:q:N:P:R:S:zu:wv"
+#ifdef HAVE_PF_RING_FT
+    "T"
+#endif
 #ifdef HAVE_ZMQ 
     "A:E:Z"
 #endif
@@ -679,6 +737,12 @@ int main(int argc, char* argv[]) {
     case 'z':
       proc_stats_only = 1;
       break;
+#ifdef HAVE_PF_RING_FT
+    case 'T':
+      flow_table = 1;
+      time_pulse = 1; /* forcing time-pulse to handle flows expiration */
+    break;
+#endif
 #ifdef HAVE_ZMQ
     case 'A':
       if (atoi(optarg) == 0) default_action = DROP;
@@ -941,6 +1005,22 @@ int main(int argc, char* argv[]) {
     while (!*pulse_timestamp_ns && !do_shutdown); /* wait for ts */
   }
 
+#ifdef HAVE_PF_RING_FT
+  if (flow_table) {
+    ft = pfring_ft_create_table(0);
+
+    if (ft == NULL) {
+      trace(TRACE_ERROR, "pfring_ft_create_table error");
+      return -1;
+    }
+
+    pfring_ft_set_new_flow_callback(ft, flow_init, NULL);
+    pfring_ft_set_flow_packet_callback(ft, flow_packet_process, NULL);
+    pfring_ft_set_flow_export_callback(ft, flow_free, NULL);
+    
+  }
+#endif
+
 #ifdef HAVE_ZMQ
   if (zmq_server) {
     src_ip_hash = inplace_alloc(32768);
@@ -1062,6 +1142,12 @@ int main(int argc, char* argv[]) {
     pthread_join(zmq_thread, NULL);
     inplace_free(src_ip_hash);
     inplace_free(dst_ip_hash);
+  }
+#endif
+
+#ifdef HAVE_PF_RING_FT
+  if (flow_table) {
+    pfring_ft_destroy_table(ft);
   }
 #endif
 
