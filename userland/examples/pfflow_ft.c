@@ -62,6 +62,7 @@ u_int64_t num_bytes = 0;
 
 void print_stats() {
   pfring_stat stat;
+  pfring_ft_stats *fstat;
   static struct timeval start_time = { 0 };
   static struct timeval last_time = { 0 };
   struct timeval end_time;
@@ -80,7 +81,7 @@ void print_stats() {
   n_bytes = num_bytes;
   n_pkts = num_pkts;
 
-  if (pfring_stats(pd, &stat) >= 0) {
+  if (pfring_stats(pd, &stat) >= 0 && (fstat = pfring_ft_get_stats(ft))) {
     if (last_time.tv_sec > 0) {
       delta_start = delta_time(&end_time, &start_time);
       delta_last = delta_time(&end_time, &last_time);
@@ -90,11 +91,15 @@ void print_stats() {
 
       snprintf(buf, sizeof(buf),
              "Duration:   %s\n"
+             "Flows:      %ju\n"
+             "Errors:     %ju\n"
              "Packets:    %lu\n"
              "Dropped:    %lu\n"
              "Bytes:      %lu\n"
              "Throughput: %s pps (%s Gbps)",
              msec2dhmsm(delta_start, timebuf, sizeof(timebuf)),
+             fstat->flows,
+             fstat->err_no_room + fstat->err_no_mem,
              (long unsigned int) n_pkts,
              (long unsigned int) stat.drop,
              (long unsigned int) n_bytes,
@@ -269,7 +274,7 @@ int main(int argc, char* argv[]) {
   pfring_ft_set_filter_protocol_by_name(ft, "UPnP", PFRING_FT_ACTION_DISCARD);
   */
 
-  pfring_ft_set_export_callback_flow(ft, processFlow, NULL);
+  pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
   promisc = 1;
 
