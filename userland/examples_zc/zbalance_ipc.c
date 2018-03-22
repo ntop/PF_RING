@@ -102,7 +102,7 @@ void flow_init(pfring_ft_flow *flow, void *user) {
 }
 
 void flow_packet_process(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
-  // Here you can process the packet and set the action to discard of forward packets for this flow:
+  // Here you can process the packet and set the action to discard or forward packets for this flow:
   // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
 }
 
