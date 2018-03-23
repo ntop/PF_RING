@@ -160,16 +160,22 @@ dnl> BPF - Default enabled
 AC_ARG_ENABLE([bpf], AS_HELP_STRING([--disable-bpf], [Disable BPF support in PF_RING]))
 AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
 
-AC_MSG_CHECKING([nDPI support])
-NDPI_HOME="../../nDPI"
-if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
-  NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
-  NDPI_INC="-I../$NDPI_HOME/src/include"
+AC_CHECK_LIB([ndpi], [ndpi_get_api_version], [LDFLAGS="${LDFLAGS} -lndpi"])
+if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then
+  NDPI_LIB=`pkg-config --libs libndpi`
+  NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I[^ \t]*\)/\1\/libndpi/g'`
   HAVE_NDPI="-D HAVE_NDPI"
-  AC_MSG_RESULT(yes)
-  AC_DEFINE_UNQUOTED(HAVE_NDPI, 1, [nDPI support is present])
 else
-  AC_MSG_RESULT(no)
+  AC_MSG_CHECKING([nDPI support - static linking])
+  NDPI_HOME="../../nDPI"
+  if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
+    NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
+    NDPI_INC="-I../$NDPI_HOME/src/include"
+    HAVE_NDPI="-D HAVE_NDPI"
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
 fi
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
