@@ -778,6 +778,23 @@ int pfring_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sampling */)
 
 /* **************************************************** */
 
+int pfring_set_sw_filtering_sampling_rate(pfring *ring, u_int32_t rate /* 0 = no sampling */) {
+  if(ring && ring->set_sw_filtering_sampling_rate) {
+    int rc;
+
+    rc = ring->set_sw_filtering_sampling_rate(ring, rate);
+
+    if (rc == 0)
+      ring->sw_filtering_sampling_rate = rate;
+
+    return(rc);
+  }
+
+  return(PF_RING_ERROR_NOT_SUPPORTED);
+}
+
+/* **************************************************** */
+
 int pfring_set_packet_slicing(pfring *ring, packet_slicing_level level, u_int32_t additional_bytes) {
   if (ring && ring->set_packet_slicing) {
     int rc;
