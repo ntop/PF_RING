@@ -4,16 +4,15 @@ Accolade Support
 Prerequisite
 ------------
 
-Accolade SDK v.1.2.26 or later installed.
-
-PF_RING has native support for Accolade adapters, the Accolade library
-needs to be installed (under /opt/accolade) in order to enable the 
-Accolade module at runtime.
+PF_RING has native support for Accolade adapters, the Accolade SDK
+(v.1.2.26 or later) needs to be installed (under /opt/accolade) in 
+order to enable the Accolade module at runtime.
 
 Installation
 ------------
 
-In order to install the Accolade driver run the following commands:
+In order to install the Accolade SDK and drivers run the following 
+commands:
 
 .. code-block:: console
 
@@ -22,7 +21,7 @@ In order to install the Accolade driver run the following commands:
    cd drv; make install; cd ..
    cd lib; make install; cd ..
 
-Then load the driver with:
+Before running any application please load the driver with:
 
 .. code-block:: console
 
@@ -94,7 +93,7 @@ Accolade and Packet Copy
 
 If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead
 if you use PF_RING ZC API, a per-packet copy takes place, which is required to move
-payload data from Accolade-memory to ZC memory. Keep this in mind!
+payload data from Accolade memory to ZC memory. Keep this in mind!
 
 Hw Filtering
 ------------
@@ -106,16 +105,21 @@ hw filter there are two options:
 
 - Using the pfring_add_hw_rule() API.
 
-Example of setting the default action to 'forward':
+When using the pfring_add_hw_rule() API, as first action we need to set the default 
+behaviour for packets, this can be 'pass' or 'drop'. Example:
 
 .. code-block:: c
 
-   hw_filtering_rule r = {0};
+   hw_filtering_rule r;
    r.rule_family_type = accolade_default;
    r.rule_family.accolade_rule.action = accolade_pass;
    pfring_add_hw_rule(pd, &r);
 
-Example of setting a filtering rule with 'drop' action for an IPv4 packet we received:
+In order to set a filtering rule, we need to create a rule and assign a rule ID, 
+which is a unique identifier for the rule. A standard Accolade firmware supports
+up to 32 rules, with IDs from 0 to 31. Enhanced Accolade firmwares for 100 Gbit
+adapters can support up to 1000 rules, with IDs from 0 to 999.
+Example of setting a filtering rule with 'drop' action for an IPv4 packet:
 
 .. code-block:: c
 
@@ -133,8 +137,10 @@ Example of setting a filtering rule with 'drop' action for an IPv4 packet we rec
    r.rule_family.accolade_rule.dst_port_low = h->extended_hdr.parsed_pkt.l4_dst_port;
    pfring_add_hw_rule(pd, &r);
 
+Please note that all fields are in host byte order.
+
 For a full list of supported fields please take a look at the hw_filtering_rule struct.
-Please note that the number of rule IDs on most adapters is limited to 32.
+
 Example of removing a filtering rule by id:
 
 .. code-block:: c
