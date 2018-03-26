@@ -112,7 +112,7 @@ Example of setting the default action to 'forward':
 
    hw_filtering_rule r = {0};
    r.rule_family_type = accolade_default;
-   r.rule_family.accolade_rule.action = accolade_forward;
+   r.rule_family.accolade_rule.action = accolade_pass;
    pfring_add_hw_rule(pd, &r);
 
 Example of setting a filtering rule with 'drop' action for an IPv4 packet we received:
