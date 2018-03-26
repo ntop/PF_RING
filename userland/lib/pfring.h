@@ -193,9 +193,24 @@ typedef struct pfring_if {
 /* ********************************* */
 
 struct __pfring {
-  u_int8_t initialized, enabled, long_header, force_timestamp;
-  u_int8_t strip_hw_timestamp, disable_parsing, disable_timestamp, ixia_timestamp_enabled;
-  u_int8_t vss_apcon_timestamp_enabled, chunk_mode_enabled, userspace_bpf, force_userspace_bpf;
+  u_int8_t initialized;
+  u_int8_t enabled;
+  u_int8_t long_header;
+
+  u_int8_t force_timestamp;
+  u_int8_t strip_hw_timestamp;
+
+  u_int8_t disable_parsing;
+
+  u_int8_t disable_timestamp;
+  u_int8_t ixia_timestamp_enabled;
+  u_int8_t vss_apcon_timestamp_enabled;
+
+  u_int8_t chunk_mode_enabled;
+
+  u_int8_t userspace_bpf;
+  u_int8_t force_userspace_bpf;
+
   u_int32_t rss_mode;
   packet_direction direction; /* Specify the capture direction for packets */
   socket_mode mode;
@@ -209,7 +224,10 @@ struct __pfring {
 
   /* Hardware Timestamp */
   struct {
-    u_int8_t force_timestamp, is_silicom_hw_timestamp_card, enable_hw_timestamp, last_hw_timestamp_head_offset;
+    u_int8_t force_timestamp;
+    u_int8_t is_silicom_hw_timestamp_card;
+    u_int8_t enable_hw_timestamp;
+    u_int8_t last_hw_timestamp_head_offset;
     struct timespec last_hw_timestamp;
   } hw_ts;
 
@@ -291,29 +309,52 @@ struct __pfring {
 
   /* Silicom Redirector Only */
   struct {
-    int8_t device_id, port_id;
+    int8_t device_id;
+    int8_t port_id;
   } rdi;
 
   filtering_mode ft_mode;
   pfring_device_type ft_device_type;  
 
   /* All devices */
-  char *buffer, *slots, *device_name;
+  char *buffer;
+  char *slots;
+  char *device_name;
+
   u_int32_t caplen;
-  u_int16_t slot_header_len, mtu /* 0 = unknown */;
-  u_int32_t sampling_rate, sampling_counter;
+  u_int16_t slot_header_len;
+  u_int16_t mtu /* 0 = unknown */;
+
+  u_int32_t sampling_rate;
+  u_int32_t sampling_counter;
+
   packet_slicing_level slicing_level;
+
   u_int32_t slicing_additional_bytes;
-  u_int8_t is_shutting_down, socket_default_accept_policy;
-  int fd, device_id;
+
+  u_int8_t is_shutting_down;
+  u_int8_t socket_default_accept_policy;
+
+  int fd;
+  int device_id;
+
   FlowSlotInfo *slots_info;
-  u_int poll_sleep;
+
+  u_int32_t poll_sleep;
   u_int16_t poll_duration;
-  u_int8_t promisc, __padding, reentrant, break_recv_loop;
+
+  u_int8_t promisc;
+  u_int8_t ft_enabled; /* PF_RING FT support enabled */
+  u_int8_t reentrant;
+  u_int8_t break_recv_loop;
   u_long num_poll_calls;
-  pfring_rwlock_t rx_lock, tx_lock;
+
+  pfring_rwlock_t rx_lock;
+  pfring_rwlock_t tx_lock;
 
   u_int32_t flags;
+
+  void *ft; /* PF_RING FT handle */
 
   struct sockaddr_ll sock_tx;
 
@@ -346,6 +387,7 @@ struct __pfring {
 #define PF_RING_FLOW_OFFLOAD	       (1 << 17) /**< pfring_open() flag: Enable hw flow table support when available */ 
 #define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Do not send flow updates with PF_RING_FLOW_OFFLOAD (enable support for flows shunting only) */
 #define PF_RING_FLOW_OFFLOAD_NORAWDATA (1 << 19) /**< pfring_open() flag: Do not send raw packets with PF_RING_FLOW_OFFLOAD */
+#define PF_RING_L7_FILTERING	       (1 << 20) /**< pfring_open() flag: Enable L7 filtering support based on PF_RING FT (Flow Table with nDPI support) */
 
 /* ********************************* */
 
