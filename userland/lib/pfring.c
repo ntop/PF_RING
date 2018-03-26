@@ -82,6 +82,11 @@
 #include "pfring_mod_timeline.h"
 #endif
 
+#ifdef HAVE_PF_RING_FT
+/* PF_RING FT */
+#include "pfring_ft.h"
+#endif
+
 #ifdef HAVE_PF_RING_ZC
 extern int pfring_zc_open(pfring *ring);
 #endif
@@ -243,6 +248,24 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->ixia_timestamp_enabled = !!(flags & PF_RING_IXIA_TIMESTAMP);
   ring->vss_apcon_timestamp_enabled = !!(flags & PF_RING_VSS_APCON_TIMESTAMP);
   ring->force_userspace_bpf = !!(flags & PF_RING_USERSPACE_BPF);
+  ring->ft_enabled          = !!(flags & PF_RING_L7_FILTERING);
+
+  if (getenv("PF_RING_FT_CONF") != NULL)
+    ring->ft_enabled = 1;
+
+  if (ring->ft_enabled) {
+#ifdef HAVE_PF_RING_FT
+    ring->ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI);
+
+    if (ring->ft == NULL) {
+      errno = ENOMEM;
+      return NULL;
+    }
+#else
+    errno = ENOTSUP;
+    return NULL;
+#endif
+  }
 
 #ifdef RING_DEBUG
   printf("[PF_RING] pfring_open: device_name=%s\n", device_name);
@@ -373,6 +396,11 @@ void pfring_close(pfring *ring) {
   if(ring->close)
     ring->close(ring);
 
+#ifdef HAVE_PF_RING_FT
+  if (ring->ft != NULL)
+    pfring_ft_destroy_table(ring->ft);
+#endif
+
   if(unlikely(ring->reentrant)) {
     pfring_rwlock_destroy(&ring->rx_lock);
     pfring_rwlock_destroy(&ring->tx_lock);
@@ -458,6 +486,12 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
       if (unlikely(ring->userspace_bpf && bpf_filter(ring->userspace_bpf_filter.bf_insns, buffer, hdr.caplen, hdr.len) == 0))
         continue; /* rejected */
 #endif
+
+#ifdef HAVE_PF_RING_FT
+      if (unlikely(ring->ft && pfring_ft_process(ring->ft, buffer, (pfring_ft_pcap_pkthdr *) &hdr) == PFRING_FT_ACTION_DISCARD)) 
+        continue; /* rejected */
+#endif
+
       if(unlikely(ring->ixia_timestamp_enabled))
         pfring_handle_ixia_hw_timestamp(buffer, &hdr);
       else if(unlikely(ring->vss_apcon_timestamp_enabled))
@@ -518,7 +552,7 @@ int pfring_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 
     ring->break_recv_loop = 0;
 
-#ifdef ENABLE_BPF
+#if defined(ENABLE_BPF) || defined(HAVE_PF_RING_FT)
 recv_next:
 #endif
 
@@ -531,6 +565,11 @@ recv_next:
 
 #ifdef ENABLE_BPF
     if (unlikely(rc > 0 && ring->userspace_bpf && bpf_filter(ring->userspace_bpf_filter.bf_insns, *buffer, hdr->caplen, hdr->len) == 0))
+      goto recv_next; /* rejected */
+#endif
+
+#ifdef HAVE_PF_RING_FT
+    if (unlikely(rc > 0 && ring->ft && pfring_ft_process(ring->ft, *buffer, (pfring_ft_pcap_pkthdr *) hdr) == PFRING_FT_ACTION_DISCARD)) 
       goto recv_next; /* rejected */
 #endif
 
