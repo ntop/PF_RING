@@ -36,13 +36,13 @@ INCLUDE    = -I${PFRING_KERNEL} -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../li
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC         = ${CROSS_COMPILE}gcc #--platform=native
-CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @NDPI_INC@ @HAVE_BPF@ @HAVE_REDIS@ @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@ @HAVE_NDPI@ -O2 # -g
+CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_BPF@ @HAVE_REDIS@ @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@ -O2 # -g
 # LDFLAGS  =
 
 #
 # User and System libraries
 #
-LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_config --libs` `../libpcap/pcap-config --additional-libs --static` -lpthread @SYSLIBS@ @NDPI_LIB@ @REDIS_LIB@ -lrt
+LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_config --libs` `../libpcap/pcap-config --additional-libs --static` -lpthread @SYSLIBS@ @REDIS_LIB@ -lrt
 
 # How to make an object file
 %.o: %.c pfutils.c
@@ -57,9 +57,7 @@ PFPROGS   = pfcount pfcount_multichannel preflect \
 	    pfcount_82599 pfsystest pfsend pflatency
 
 ifneq (@HAVE_PF_RING_FT@,)
-ifneq (@HAVE_NDPI@,)
 	PFPROGS += pfflow_ft
-endif
 endif
 
 PCAPPROGS = pcount pfwrite
