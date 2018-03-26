@@ -516,7 +516,7 @@ silicom_redirector_hw_rule;
 
 typedef enum {
   accolade_drop,
-  accolade_forward
+  accolade_pass
 } accolade_rule_action_type;
 
 typedef struct {
