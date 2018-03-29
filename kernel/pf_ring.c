@@ -3481,7 +3481,7 @@ int bpf_filter_skb(struct sk_buff *skb,
 
   filter = rcu_dereference(pfr->sk->sk_filter);
 
-  if(filter != NULL)
+  if(filter != NULL) {
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38))
     res = sk_run_filter(skb, filter->insns, filter->len);
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
@@ -3489,14 +3489,18 @@ int bpf_filter_skb(struct sk_buff *skb,
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
     res = SK_RUN_FILTER(filter, skb);
 #else
+    /* What about calling res = bpf_prog_run_clear_cb(filter->prog, skb); ? */
     res = (sk_filter(pfr->sk, skb) == 0) ? 1 : 0;
 #endif
+  }
 
   rcu_read_unlock();
 
   /* Restore */
-  if(displ > 0)
-    skb->data = skb_head, skb->len = skb_len;
+  if (displ > 0) {
+    skb->data = skb_head;
+    skb->len = skb_len;
+  }
 
   if(debug_on(2) && res == 0 /* Filter failed */ )
     debug_printk(2, "skb filtered out by bpf [len=%d][tot=%llu]"
@@ -4147,19 +4151,23 @@ static int buffer_ring_handler(struct net_device *dev, char *data, int len)
 static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 		      struct packet_type *pt, struct net_device *orig_dev)
 {
-  int rc = 0;
+  int rc;
   u_int8_t skb_reference_in_use = 0;
 
-  if(skb->pkt_type != PACKET_LOOPBACK
-      && !(skb->pkt_type != PACKET_OUTGOING && active_zc_socket[dev->ifindex]) /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */ ) {
-    rc = skb_ring_handler(skb,
-			  (skb->pkt_type == PACKET_OUTGOING) ? 0 : 1,
-			  1 /* real_skb */, &skb_reference_in_use,
-			  -1 /* unknown: any channel */,
-                          UNKNOWN_NUM_RX_CHANNELS);
-  }
+  if (skb->pkt_type == PACKET_LOOPBACK)
+    return 0;
 
-  if(!skb_reference_in_use)
+  /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
+  if (skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex])
+    return 0;
+
+  rc = skb_ring_handler(skb,
+			skb->pkt_type != PACKET_OUTGOING,
+			1 /* real_skb */, &skb_reference_in_use,
+			-1 /* unknown: any channel */,
+                        UNKNOWN_NUM_RX_CHANNELS);
+
+  if (!skb_reference_in_use)
     kfree_skb(skb);
 
   return rc;
@@ -7296,6 +7304,18 @@ static int ring_getsockopt(struct socket *sock,
 
     if(copy_to_user(optval, &pfr->ring_id, sizeof(pfr->ring_id)))
       return(-EFAULT);
+    break;
+
+  case SO_GET_BPF_EXTENSIONS:
+    {
+      int bpf_ext = bpf_tell_extensions();
+
+      if (len < sizeof(bpf_ext))
+        return -EINVAL;
+
+      if (copy_to_user(optval, &bpf_ext, sizeof(bpf_ext)))
+        return -EFAULT;
+    }
     break;
 
   case SO_GET_BOUND_DEVICE_ADDRESS:
