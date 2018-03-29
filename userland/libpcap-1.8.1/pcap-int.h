@@ -58,7 +58,7 @@ extern "C" {
 #include "nbpf.h"
 #endif
 
-#ifdef HAVE_NPCAP
+#ifdef HAVE_PCAP_NPCAP
 #include "npcap.h"
 #endif
 
@@ -287,7 +287,7 @@ struct pcap {
 	char *bpf_filter;
 	char *timeline;
 #endif
-#ifdef HAVE_NPCAP
+#ifdef HAVE_PCAP_NPCAP
 	npcap_fd_t *npcapfd;
 #endif
 };
