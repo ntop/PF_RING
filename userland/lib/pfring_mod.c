@@ -935,8 +935,10 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
   pcap_t *p;
   struct bpf_program filter;
   struct sock_fprog  fcode;
+#ifdef SKF_AD_VLAN_TAG_PRESENT
   int bpf_extensions;
   socklen_t len = sizeof(bpf_extensions);
+#endif
 
   if (!filter_buffer)
     return -1;
@@ -951,6 +953,7 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
     goto pfring_mod_set_bpf_filter_exit;
   }
 
+#ifdef SKF_AD_VLAN_TAG_PRESENT
   rc = getsockopt(ring->fd, 0, SO_GET_BPF_EXTENSIONS, &bpf_extensions, &len);
 
   if (rc == -1)
@@ -958,6 +961,7 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
 
   if (bpf_extensions >= SKF_AD_VLAN_TAG_PRESENT)
     p->bpf_codegen_flags |= BPF_SPECIAL_VLAN_HANDLING;
+#endif
 
   rc = pcap_compile(p, &filter, filter_buffer, 0, 0);
 
