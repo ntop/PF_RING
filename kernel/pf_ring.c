@@ -7308,7 +7308,7 @@ static int ring_getsockopt(struct socket *sock,
 
   case SO_GET_BPF_EXTENSIONS:
     {
-      int bpf_ext = bpf_tell_extensions();
+      int bpf_ext = SKF_AD_MAX; /* bpf_tell_extensions() on kernels >= 3.14 */
 
       if (len < sizeof(bpf_ext))
         return -EINVAL;
