@@ -889,15 +889,15 @@ fi
 LIBS="$LIBS `../lib/pfring_config --libs`"
 
 # NPCAP - Default disabled
-HAVE_NPCAP=""
+HAVE_PCAP_NPCAP=""
 AC_ARG_ENABLE([npcap], AS_HELP_STRING([--enable-npcap], [Enable NPCAP support in libpcap]))
 if test "x$enable_npcap" = "xyes"; then
 	AC_MSG_RESULT(yes)
-	HAVE_NPCAP="-DHAVE_NPCAP"
+	HAVE_PCAP_NPCAP="-DHAVE_PCAP_NPCAP"
 else
 	AC_MSG_RESULT(no)
 fi
-AC_SUBST(HAVE_NPCAP)
+AC_SUBST(HAVE_PCAP_NPCAP)
 
 AC_ARG_WITH(septel,
 AC_HELP_STRING([--with-septel@<:@=DIR@:>@],[include Septel support (located in directory DIR, if supplied).  @<:@default=yes, if present@:>@]),

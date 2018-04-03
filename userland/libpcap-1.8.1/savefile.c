@@ -246,7 +246,7 @@ sf_setdirection(pcap_t *p, pcap_direction_t d)
 void
 sf_cleanup(pcap_t *p)
 {
-#ifdef HAVE_NPCAP
+#ifdef HAVE_PCAP_NPCAP
 	if (p->npcapfd != NULL) {
 		npcap_close(p->npcapfd);
 		p->npcapfd = NULL;
@@ -275,7 +275,7 @@ FILE *fopen_safe(const char *filename, const char* mode)
 }
 #endif
 
-#ifdef HAVE_NPCAP
+#ifdef HAVE_PCAP_NPCAP
 
 #define LT_LINKTYPE(x)		((x) & 0x03FFFFFF)
 #define LT_LINKTYPE_EXT(x)	((x) & 0xFC000000)
@@ -388,7 +388,7 @@ npcap_open_offline(const char *fname, char *errbuf)
 	return (NULL);
 }
 
-#endif /* HAVE_NPCAP */
+#endif /* HAVE_PCAP_NPCAP */
 
 pcap_t *
 pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
@@ -413,7 +413,7 @@ pcap_open_offline_with_tstamp_precision(const char *fname, u_int precision,
 		SET_BINMODE(fp);
 #endif
 	}
-#ifdef HAVE_NPCAP
+#ifdef HAVE_PCAP_NPCAP
 	else if (strstr(fname, ".npcap") != NULL) {
 		return (npcap_open_offline(fname, errbuf));
 	}
@@ -545,7 +545,7 @@ pcap_fopen_offline_with_tstamp_precision(FILE *fp, u_int precision,
 found:
 	p->rfile = fp;
 
-#ifdef HAVE_NPCAP
+#ifdef HAVE_PCAP_NPCAP
 	p->npcapfd = NULL;
 #endif
 

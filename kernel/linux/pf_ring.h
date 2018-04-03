@@ -86,6 +86,7 @@
 #define SO_GET_ZC_DEVICE_INFO            173
 #define SO_GET_NUM_RX_CHANNELS           174
 #define SO_GET_RING_ID                   175
+#define SO_GET_BPF_EXTENSIONS            176
 #define SO_GET_BOUND_DEVICE_ADDRESS      177
 #define SO_GET_NUM_QUEUED_PKTS           178
 #define SO_GET_PKT_HEADER_LEN            179

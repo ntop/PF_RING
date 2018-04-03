@@ -1084,6 +1084,7 @@ int main(int argc, char* argv[]) {
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
   flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   /* flags |= PF_RING_FLOW_OFFLOAD | PF_RING_FLOW_OFFLOAD_NOUPDATES;  to receive FlowID on supported adapters*/
+  /* flags |= PF_RING_USERSPACE_BPF; to force userspace BPF even with kernel capture  */
 
   pd = pfring_open(device, snaplen, flags);
 
