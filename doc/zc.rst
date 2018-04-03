@@ -1,5 +1,5 @@
-PF_RING ZC
-==========
+PF_RING ZC (Zero Copy)
+======================
 
 PF_RING can work both on top of standard NIC drivers or on top of specialised drivers. 
 The PF_RING kernel module is the same, but based on the drivers being used some 
