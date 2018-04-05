@@ -43,7 +43,7 @@ Where:
 
 1. pfring_ft_create_table creates a new flow table
 2. pfring_ft_set_flow_export_callback sets a callback (processFlow) that will be called 
-when a new flow is created in the flow table
+   when a new flow is created in the flow table
 3. pfring_ft_process should be called for every packet in order to process and classify it. 
 
 The pfring_ft_process function returns an action (default/forward/discard) in case the 
@@ -69,7 +69,6 @@ everything happens behind the scenes. In order to get the L7 protocol in the flo
 you need to:
 
 1. install the nDPI library available at https://github.com/ntop/nDPI with "make install"
-
 2. enable L7 detection through the PFRING_FT_TABLE_FLAGS_DPI flag:
 
 .. code-block:: c
