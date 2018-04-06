@@ -3489,8 +3489,8 @@ int bpf_filter_skb(struct sk_buff *skb,
 #elif(LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0))
     res = SK_RUN_FILTER(filter, skb);
 #else
-    /* What about calling res = bpf_prog_run_clear_cb(filter->prog, skb); ? */
-    res = (sk_filter(pfr->sk, skb) == 0) ? 1 : 0;
+    //res = (sk_filter(pfr->sk, skb) == 0) ? 1 : 0;
+    res = bpf_prog_run_clear_cb(filter->prog, skb);
 #endif
   }
 
@@ -3498,6 +3498,7 @@ int bpf_filter_skb(struct sk_buff *skb,
 
   /* Restore */
   if (displ > 0) {
+    /* skb_pull(skb, displ); */
     skb->data = skb_head;
     skb->len = skb_len;
   }

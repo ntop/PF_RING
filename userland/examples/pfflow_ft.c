@@ -125,9 +125,6 @@ void sigproc(int sig) {
 
   do_shutdown = 1;
 
-  if (!quiet)
-    print_stats();
-
   pfring_breakloop(pd);
 }
 
@@ -219,7 +216,8 @@ void packet_consumer() {
 void printHelp(void) {
   printf("pfflow_ft - (C) 2018 ntop.org\n\n");
   printf("-h              Print this help\n");
-  printf("-i <device>     Device name. Use:\n");
+  printf("-i <device>     Device name\n");
+  printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
 }
@@ -309,10 +307,8 @@ int main(int argc, char* argv[]) {
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
 
-  if (!verbose && !quiet) {
-    signal(SIGALRM, my_sigalarm);
-    alarm(ALARM_SLEEP);
-  }
+  signal(SIGALRM, my_sigalarm);
+  alarm(ALARM_SLEEP);
 
   if (pfring_enable_ring(pd) != 0) {
     printf("Unable to enable ring :-(\n");
