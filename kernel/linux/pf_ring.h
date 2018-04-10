@@ -520,19 +520,24 @@ typedef enum {
   accolade_pass
 } accolade_rule_action_type;
 
+/* Accolade supports mode 1 filtering on almost all cards (up to 32 rules),
+ * and mode 2 filtering on selected adapters (up to 1K rules).
+ * PF_RING automatically select mode 2 when available, and mode 1 as fallback.
+ * Mode 1 and 2 support different fields, please refer to the fields description. */
 typedef struct {
-  accolade_rule_action_type action; /* ignored with mode 2 */
-  u_int32_t port_mask; /* ports on which the rule is defined (default 0xf), ignored with mode 2 */
+  accolade_rule_action_type action; /* in mode 2 this should be always the opposite of the default action */
+  u_int32_t port_mask; /* ports on which the rule is defined (default 0xf) - mode 1 only */
   u_int8_t ip_version;
   u_int8_t protocol; /* l4 */
-  u_int16_t vlan_id; /* ignored with mode 1 */
-  u_int32_t mpls_label; /* ignored with mode 1 */
+  u_int16_t vlan_id; /* mode 2 only (if vlan_id is set, mpls_label is ignored due to hw limitations) */
+  u_int32_t mpls_label; /* mode 2 only */
   ip_addr src_addr, dst_addr;
   u_int32_t src_addr_bits, dst_addr_bits;
   u_int16_t src_port_low;
-  u_int16_t src_port_high; /* ignored with mode 2 */
+  u_int16_t src_port_high; /* mode 1 only */
   u_int16_t dst_port_low;
-  u_int16_t dst_port_high; /* ignored with mode 2 */
+  u_int16_t dst_port_high; /* mode 1 only */
+  u_int8_t l4_port_not; /* rule match if src_port_low/dst_port_low are defined and they do not match - mode 2 only */
 } __attribute__((packed))
 accolade_hw_rule;
 
