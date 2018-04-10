@@ -117,8 +117,10 @@ behaviour for packets, this can be 'pass' or 'drop'. Example:
 
 In order to set a filtering rule, we need to create a rule and assign a rule ID, 
 which is a unique identifier for the rule. A standard Accolade firmware supports
-up to 32 rules, with IDs from 0 to 31. Enhanced Accolade firmwares for 100 Gbit
-adapters can support up to 1000 rules, with IDs from 0 to 999.
+up to 32 rules (called 'legacy mode' or 'mode 1'), with IDs from 0 to 31. 
+Enhanced Accolade firmwares for 100 Gbit adapters can support up to 1000 rules, 
+with IDs from 0 to 999 (called 'mode 2'). PF_RING automatically select 'mode 2' when 
+available, and 'mode 1' as fallback. 
 Example of setting a filtering rule with 'drop' action for an IPv4 packet:
 
 .. code-block:: c
@@ -140,6 +142,8 @@ Example of setting a filtering rule with 'drop' action for an IPv4 packet:
 Please note that all fields are in host byte order.
 
 For a full list of supported fields please take a look at the hw_filtering_rule struct.
+Please also note that mode 1 and 2 support different fields, please refer to the fields 
+description to check what is supported in each mode.
 
 Example of removing a filtering rule by id:
 
