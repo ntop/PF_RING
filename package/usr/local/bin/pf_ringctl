@@ -76,11 +76,11 @@ check_pf_ring() {
 	WARNING=0
 	RETVAL=0
 	if [ $1 == "start" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -gt 0 ]; then
-		MSG="PF_RING already loaded. Exiting"
+		MSG="PF_RING already loaded."
 		WARNING=1
 		RETVAL=1
 	elif [ $1 == "stop" ] && [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ]; then
-		MSG="PF_RING already unloaded Exiting"
+		MSG="PF_RING already unloaded."
 		WARNING=1
 		RETVAL=1
 	fi
@@ -230,6 +230,7 @@ load_driver() {
 			echo "Skipping driver ${1}: driver matches the management interface"
 			return
 		fi
+
 		# unload old module if needed
 		if [ `lsmod |grep -w ^${1} | wc -l` -eq 1 ]; then
 			/sbin/modprobe -r ${1}
@@ -285,10 +286,10 @@ load_zc() {
 		done
 	done
 	
-		CLUSTER_HUGEPAGES=0
-		if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null |wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
-				LOAD_HUGEPAGES=1
-		fi
+	CLUSTER_HUGEPAGES=0
+	if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null |wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
+		LOAD_HUGEPAGES=1
+	fi
 
 	if [ -f ${HUGEPAGES_CONFIG} ] ; then
 		LOAD_HUGEPAGES=1
@@ -345,6 +346,16 @@ start_pf_ring() {
 		return
 	fi
 
+	if [ ! -f "${FORCESTART_FILE}" ] && [ ${FORCESTART} -eq 0 ]; then
+		# remove pf_ring in any case
+		/sbin/modprobe -r pf_ring
+		
+		echo "PF_RING not enabled: please touch /etc/pf_ring/pf_ring.start"
+		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
+		[ ${DISTRO} == "centos" ] && echo_success && echo
+		return
+	fi
+
 	[ ${DISTRO} == "debian" ] && log_daemon_msg "Starting PF_RING module"
 	[ ${DISTRO} == "centos" ] && echo -n "Starting PF_RING module: "
 
@@ -363,60 +374,54 @@ start_pf_ring() {
 	check_pf_ring start
 
 	if [ $? -ne 0 ]; then
-		return
-	fi
-	
-	if [ ! -f "${FORCESTART_FILE}" ] && [ ${FORCESTART} -eq 0 ]; then
-		# remove pf_ring in any case
-		/sbin/modprobe -r pf_ring
-		#
-		echo "PF_RING not enabled: please touch /etc/pf_ring/pf_ring.start"
-		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-		[ ${DISTRO} == "centos" ] && echo_success && echo
-		return
-	fi
+		# pf_ring.ko already loaded
+	else
+		# Try loading pfring
+		/sbin/modprobe pf_ring $PARAM
 
-	# Try loading pfring
-	/sbin/modprobe pf_ring $PARAM
-
-	if [ `echo $?` -gt 0 ]; then
-	# try building dkms
-	rebuild_dkms pfring
-	/sbin/modprobe pf_ring $PARAM
+		if [ `echo $?` -gt 0 ]; then
+			# try building dkms
+			rebuild_dkms pfring
+			/sbin/modprobe pf_ring $PARAM
 		
-	# try with local copies in case of failure
-	if [ `echo $?` -gt 0 ]; then
-		if [ -f $PF_RING_MOD ]; then
-				/sbin/insmod $PF_RING_MOD $PARAM
-		elif [ -f $PF_RING_MOD_LOCAL ]; then
-				/sbin/insmod $PF_RING_MOD_LOCAL $PARAM
+			# try with local copies in case of failure
+			if [ `echo $?` -gt 0 ]; then
+				if [ -f $PF_RING_MOD ]; then
+					/sbin/insmod $PF_RING_MOD $PARAM
+				elif [ -f $PF_RING_MOD_LOCAL ]; then
+					/sbin/insmod $PF_RING_MOD_LOCAL $PARAM
+				fi
+			fi
 		fi
-		fi
-	fi
 	
-	if [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ] ; then
-		# PF_RING not loaded. Exiting
-		MSG="Unable to load PF_RING. Exiting"
-		ERROR=1
-		if [ ${DISTRO} == "debian" ]; then
-			log_failure_msg "${MSG}"
-			log_end_msg $ERROR
-			exit 99
-		elif [ ${DISTRO} == "centos" ]; then
-			echo -n ${MSG} 
-			echo_failure; echo
-			exit 99
+		if [ `lsmod | grep ^${PF_RING} | wc -l ` -le 0 ] ; then
+			# PF_RING not loaded. Exiting
+			MSG="Unable to load PF_RING. Exiting"
+			ERROR=1
+			if [ ${DISTRO} == "debian" ]; then
+				log_failure_msg "${MSG}"
+				log_end_msg $ERROR
+				exit 99
+			elif [ ${DISTRO} == "centos" ]; then
+				echo -n ${MSG} 
+				echo_failure; echo
+				exit 99
+			fi
 		fi
 	fi
 
 	## Load NTOP drivers ##
 	load_zc
+
 	## Load Napatech drivers ##
 	load_nt
+
 	## Sleep a bit for changes to be applied
 	sleep 1
+
 	## Load NTOP drivers ##
 	sleep 1
+
 	## Load dummy interfaces associated to timelines or nic cards ##
 	local N2IF_SCRIPT="/usr/bin/n2if"
 	if [ -f "${N2IF_SCRIPT}" ]; then
