@@ -374,7 +374,7 @@ start_pf_ring() {
 	check_pf_ring start
 
 	if [ $? -ne 0 ]; then
-		# pf_ring.ko already loaded
+		: # pf_ring.ko already loaded
 	else
 		# Try loading pfring
 		/sbin/modprobe pf_ring $PARAM
