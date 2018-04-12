@@ -75,6 +75,7 @@ you need to:
 
    ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI);
 
+3. read pfring_ft_flow_value.l7_protocol
 
 L7 Filtering and Shunting
 -------------------------
@@ -82,7 +83,7 @@ L7 Filtering and Shunting
 PF_RING FT features a L7 filtering engine that can be used by inline applications for 
 filtering flows based on the application protocol. In addition to the built-in filtering 
 engine, the application can mark flows for filtering or shunting them based on custom policies.
-It is possible to set filtering rules through the API (pfring_ft_set_filter_* / pfring_ft_set_shunt_*) 
+This is possible by setting filtering rules through the API (pfring_ft_set_filter_* / pfring_ft_set_shunt_*) 
 or through a configuration file:
 
 .. code-block:: text
@@ -96,6 +97,8 @@ or through a configuration file:
    [filter]
    YouTube = discard
 
+The pfring_ft_process() API returns "discard" as action for packets that should be
+discarded according to the filtering or shunting policies.
 
 IDS Acceleration
 ----------------
