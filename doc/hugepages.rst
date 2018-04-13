@@ -33,8 +33,7 @@ Hugepages advantages:
   memory with the default page size leads to processing overhead for 
   managing the TLB entries.
 
-The default hugepage size is usually 2 MBytes. The hugepage size can be 
-found in /proc/meminfo:
+The default hugepage size is usually 2 MBytes. The hugepage size can be found in /proc/meminfo:
 
 .. code-block:: console
 
@@ -60,19 +59,13 @@ amounts of memory at boot time using the following kernel options:
 
 .. code-block:: text
 
-  default_hugepagesz=1G hugepagesz=1G hugepages=4
+  default_hugepagesz=2M hugepagesz=2M hugepages=1024
 
 If this commands returns a non-empty string, 2MB pages are supported:
 
 .. code-block:: console
 
    cat /proc/cpuinfo | grep pse
-
-If this commands returns a non-empty string, 1GB pages are supported:
-
-.. code-block:: console
-
-   cat /proc/cpuinfo | grep pdpe1gb
 
 In order to make the hugepages available for use, Linux provides a 
 RAM-based filesystem called "hugetlbfs" that have to be mounted with:
@@ -81,8 +74,6 @@ RAM-based filesystem called "hugetlbfs" that have to be mounted with:
 
    mount -t hugetlbfs none /dev/hugepages
 
-With no options the default hugepage size is used. To use a different
-size it is possible to specify the "pagesize=" option.
 In order to control the maximum amount of memory bound to a mount point
 it is possible to specify the "size=" option (size is rounded down to 
 the nearest hugepage size). 
@@ -90,7 +81,7 @@ Example:
 
 .. code-block:: console
 
-   mount -t hugetlbfs -o pagesize=1G,size=2G none /dev/hugepages
+   mount -t hugetlbfs -o pagesize=2M,size=2G none /dev/hugepages
 
 It is possible to see what pages are currently in use using the
 following command:
