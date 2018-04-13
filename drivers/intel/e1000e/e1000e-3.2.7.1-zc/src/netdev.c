@@ -612,17 +612,14 @@ e1000_receive_skb(struct e1000_adapter *adapter,
 		struct pfring_hooks *hook = (struct pfring_hooks *) netdev->pfring_ptr;
 	  
 		if (hook && (hook->magic == PF_RING)) { /* PF_RING is alive */
-			u_int8_t skb_reference_in_use;
 			int rc;
 
 			//printk(KERN_INFO "[PF_RING] %s driver -> pf_ring [len=%d]\n", netdev->name, skb->len);
 
-			rc = hook->ring_handler(skb, 1, 1, &skb_reference_in_use, -1, 1);
+			rc = hook->ring_handler(skb, 1, 1, -1, 1);
 	      
 			if (rc > 0) { /* Packet handled by PF_RING */
-				if (!skb_reference_in_use)
-					kfree_skb(skb);
-
+				kfree_skb(skb);
 				return rc; /* PF_RING has already freed the memory */
 			}
 		}

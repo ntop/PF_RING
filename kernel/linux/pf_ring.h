@@ -1303,7 +1303,7 @@ extern void do_ring_zc_dev_handler(zc_dev_operation operation,
 				       zc_dev_notify dev_notify_function_ptr);
 
 typedef int (*handle_ring_skb)(struct sk_buff *skb, u_char recv_packet,
-			       u_char real_skb, u_int8_t *skb_reference_in_use,
+			       u_char real_skb,
 			       int32_t channel_id,
 			       u_int32_t num_rx_channels);
 typedef int (*handle_ring_buffer)(struct net_device *dev,

@@ -384,7 +384,7 @@ static struct proto_ops ring_ops;
 static struct proto ring_proto;
 
 static int skb_ring_handler(struct sk_buff *skb, u_char recv_packet,
-			    u_int8_t real_skb, u_int8_t *skb_reference_in_use,
+			    u_int8_t real_skb,
 			    int32_t channel_id, u_int32_t num_rx_channels);
 static int buffer_ring_handler(struct net_device *dev, char *data, int len);
 static int remove_from_cluster(struct sock *sock, struct pf_ring_socket *pfr);
@@ -800,26 +800,26 @@ static inline u_int64_t get_num_ring_free_slots(struct pf_ring_socket * pfr)
 */
 static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchronized)
 {
-  while(pfr->slots_info->kernel_remove_off != pfr->slots_info->remove_off &&
+  while (pfr->slots_info->kernel_remove_off != pfr->slots_info->remove_off &&
         /* one slot back (pfring_mod_send_last_rx_packet is called after pfring_recv has updated remove_off) */
         (synchronized || pfr->slots_info->remove_off != get_next_slot_offset(pfr, pfr->slots_info->kernel_remove_off))) {
-    struct pfring_pkthdr *hdr = (struct pfring_pkthdr*) &pfr->ring_slots[pfr->slots_info->kernel_remove_off];
+    struct pfring_pkthdr *hdr = (struct pfring_pkthdr *) &pfr->ring_slots[pfr->slots_info->kernel_remove_off];
 
     debug_printk(2, "Original offset [kernel_remove_off=%llu][remove_off=%llu][skb=%p]\n",
 	     pfr->slots_info->kernel_remove_off,
 	     pfr->slots_info->remove_off,
 	     hdr->extended_hdr.tx.reserved);
 
-    if(hdr->extended_hdr.tx.reserved != NULL) {
+    if (hdr->extended_hdr.tx.reserved != NULL) {
       /* Can't forward the packet on the same interface it has been received */
-      if(hdr->extended_hdr.tx.bounce_interface == pfr->ring_dev->dev->ifindex) {
+      if (hdr->extended_hdr.tx.bounce_interface == pfr->ring_dev->dev->ifindex) {
 	hdr->extended_hdr.tx.bounce_interface = UNKNOWN_INTERFACE;
       }
 
-      if(hdr->extended_hdr.tx.bounce_interface != UNKNOWN_INTERFACE) {
+      if (hdr->extended_hdr.tx.bounce_interface != UNKNOWN_INTERFACE) {
 	/* Let's check if the last used device is still the prefered one */
 	if(pfr->tx.last_tx_dev_idx != hdr->extended_hdr.tx.bounce_interface) {
-	  if(pfr->tx.last_tx_dev != NULL) {
+	  if (pfr->tx.last_tx_dev != NULL) {
 	    dev_put(pfr->tx.last_tx_dev); /* Release device */
 	  }
 
@@ -828,17 +828,17 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 
 	  pfr->tx.last_tx_dev = __dev_get_by_index(sock_net(pfr->sk), hdr->extended_hdr.tx.bounce_interface);
 
-	  if(pfr->tx.last_tx_dev != NULL) {
+	  if (pfr->tx.last_tx_dev != NULL) {
 	    /* We have found the device */
 	    pfr->tx.last_tx_dev_idx = hdr->extended_hdr.tx.bounce_interface;
 	    dev_hold(pfr->tx.last_tx_dev); /* Prevent it from being freed */
 	  }
 	}
 
-	if(pfr->tx.last_tx_dev) {
+	if (pfr->tx.last_tx_dev) {
 	  debug_printk(2, "Bouncing packet to interface %d/%s\n",
-		   hdr->extended_hdr.tx.bounce_interface,
-		   pfr->tx.last_tx_dev->name);
+		       hdr->extended_hdr.tx.bounce_interface,
+		       pfr->tx.last_tx_dev->name);
 
 	  reflect_packet(hdr->extended_hdr.tx.reserved, pfr,
 			 pfr->tx.last_tx_dev, 0 /* displ */,
@@ -853,6 +853,7 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 	kfree_skb(hdr->extended_hdr.tx.reserved); /* Free memory */
       }
     }
+
     hdr->extended_hdr.tx.reserved = NULL;
     hdr->extended_hdr.tx.bounce_interface = UNKNOWN_INTERFACE;
 
@@ -860,8 +861,8 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
     pfr->slots_info->kernel_tot_read++;
 
     debug_printk(2, "New offset [kernel_remove_off=%llu][remove_off=%llu]\n",
-	     pfr->slots_info->kernel_remove_off,
-	     pfr->slots_info->remove_off);
+		 pfr->slots_info->kernel_remove_off,
+		 pfr->slots_info->remove_off);
   }
 }
 
@@ -2706,8 +2707,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 				    struct pf_ring_socket *pfr,
 				    struct pfring_pkthdr *hdr,
 				    int displ, int offset,
-				    void *raw_data, uint raw_data_len,
-				    int *clone_id)
+				    void *raw_data, uint raw_data_len)
 {
   u_char *ring_bucket;
   u_int64_t off;
@@ -2807,26 +2807,17 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
       }
     }
 
-    if(pfr->tx.enable_tx_with_bounce
-       && (pfr->header_len == long_pkt_header)
-       && (skb != NULL)
-       && (clone_id != NULL) /* Just to be on the safe side */
-       ) {
-      struct sk_buff *cloned;
-      /*
-	The TX transmission is supported only with long_pkt_header
-	where we can read the id of the output interface
-      */
+    if (pfr->tx.enable_tx_with_bounce &&
+        pfr->header_len == long_pkt_header &&
+        skb != NULL) {
+      /* The TX transmission is supported only with long_pkt_header
+       * where we can read the id of the output interface */
 
-      if((*clone_id)++ == 0)
-	hdr->extended_hdr.tx.reserved = skb;
-      else {
-	cloned = skb_clone(skb, GFP_ATOMIC);
-	hdr->extended_hdr.tx.reserved = cloned;
+      hdr->extended_hdr.tx.reserved = skb_clone(skb, GFP_ATOMIC);
+
+      if (displ > 0) {
+        skb_push(hdr->extended_hdr.tx.reserved, displ);
       }
-
-      if(displ > 0) skb_push(hdr->extended_hdr.tx.reserved, displ);
-      /* printk("[PF_RING] copy_data_to_ring(): clone_id=%d\n", *clone_id); */
     }
   } else {
     /* Copy Raw data */
@@ -2867,7 +2858,7 @@ static inline int copy_raw_data_to_ring(struct pf_ring_socket *pfr,
 				 struct pfring_pkthdr *dummy_hdr,
 				 void *raw_data, uint raw_data_len)
 {
-  return(copy_data_to_ring(NULL, pfr, dummy_hdr, 0, 0, raw_data, raw_data_len, NULL));
+  return(copy_data_to_ring(NULL, pfr, dummy_hdr, 0, 0, raw_data, raw_data_len));
 }
 
 /* ********************************** */
@@ -2877,8 +2868,7 @@ static inline int add_pkt_to_ring(struct sk_buff *skb,
 				  struct pf_ring_socket *_pfr,
 				  struct pfring_pkthdr *hdr,
 				  int displ, int channel_id,
-				  int offset,
-				  int *clone_id)
+				  int offset)
 {
   struct pf_ring_socket *pfr = (_pfr->master_ring != NULL) ? _pfr->master_ring : _pfr;
   u_int64_t the_bit = 1 << channel_id;
@@ -2892,7 +2882,7 @@ static inline int add_pkt_to_ring(struct sk_buff *skb,
     return(0); /* Wrong channel */
 
   if(real_skb)
-    return(copy_data_to_ring(skb, pfr, hdr, displ, offset, NULL, 0, clone_id));
+    return(copy_data_to_ring(skb, pfr, hdr, displ, offset, NULL, 0));
   else
     return(copy_raw_data_to_ring(pfr, hdr, skb->data, hdr->len));
 }
@@ -2912,7 +2902,7 @@ static int add_packet_to_ring(struct pf_ring_socket *pfr,
   }
 
   ring_read_lock();
-  add_pkt_to_ring(skb, real_skb, pfr, hdr, 0, -1 /* any channel */, displ, NULL);
+  add_pkt_to_ring(skb, real_skb, pfr, hdr, 0, -1 /* any channel */, displ);
   ring_read_unlock();
   return(0);
 }
@@ -3220,54 +3210,58 @@ static int reflect_packet(struct sk_buff *skb,
 			  rule_action_behaviour behaviour,
 			  u_int8_t do_clone_skb)
 {
+  int ret;
+  struct sk_buff *cloned;
+
   debug_printk(2, "reflect_packet(%s) called\n", reflector_dev->name);
 
-  if((reflector_dev != NULL)
-     && (reflector_dev->flags & IFF_UP) /* Interface is up */) {
-    int ret;
-    struct sk_buff *cloned;
-
-    if(do_clone_skb) {
-      if((cloned = skb_clone(skb, GFP_ATOMIC)) == NULL)
-	return -ENOMEM;
-    } else
-      cloned = skb;
-
-    cloned->pkt_type = PACKET_OUTGOING;
-    cloned->dev = reflector_dev;
-
-    if(displ > 0) skb_push(cloned, displ);
-    skb_reset_network_header(skb);
-
-    if(behaviour == bounce_packet_and_stop_rule_evaluation ||
-       behaviour == bounce_packet_and_continue_rule_evaluation) {
-      char dst_mac[6];
-
-      /* Swap mac addresses (be aware that data is also forwarded to userspace) */
-      memcpy(dst_mac, cloned->data, 6);
-      memcpy(cloned->data, &cloned->data[6], 6);
-      memcpy(&cloned->data[6], dst_mac, 6);
-    }
-
-    /*
-      NOTE
-      dev_queue_xmit() must be called with interrupts enabled
-      which means it can't be called with spinlocks held.
-    */
-    ret = dev_queue_xmit(cloned);
-
-    if(ret == NETDEV_TX_OK)
-      pfr->slots_info->tot_fwd_ok++;
-    else
-      pfr->slots_info->tot_fwd_notok++;
-
-    debug_printk(2, "dev_queue_xmit(%s) returned %d\n", reflector_dev->name, ret);
-
-    return(ret == NETDEV_TX_OK ? 0 : -ENETDOWN);
-  } else
+  if (reflector_dev == NULL || !(reflector_dev->flags & IFF_UP) /* interface down */ ) {
     pfr->slots_info->tot_fwd_notok++;
+    return -ENETDOWN;
+  }
 
-  return(-ENETDOWN);
+  if (do_clone_skb) {
+    cloned = skb_clone(skb, GFP_ATOMIC);
+    if (cloned == NULL) {
+      pfr->slots_info->tot_fwd_notok++;
+      return -ENOMEM;
+    }
+  } else {
+    cloned = skb;
+  }
+
+  cloned->pkt_type = PACKET_OUTGOING;
+  cloned->dev = reflector_dev;
+
+  if (displ > 0) {
+    skb_push(cloned, displ);
+  }
+
+  skb_reset_network_header(skb);
+
+  if (behaviour == bounce_packet_and_stop_rule_evaluation ||
+      behaviour == bounce_packet_and_continue_rule_evaluation) {
+    char dst_mac[6];
+    /* Swap mac addresses (be aware that data is also forwarded to userspace) */
+    memcpy(dst_mac, cloned->data, 6);
+    memcpy(cloned->data, &cloned->data[6], 6);
+    memcpy(&cloned->data[6], dst_mac, 6);
+  }
+
+  /* NOTE
+   * dev_queue_xmit() must be called with interrupts enabled
+   * which means it can't be called with spinlocks held. */
+  ret = dev_queue_xmit(cloned);
+
+  debug_printk(2, "dev_queue_xmit(%s) returned %d\n", reflector_dev->name, ret);
+
+  if (ret != NETDEV_TX_OK) {
+    pfr->slots_info->tot_fwd_notok++;
+    return -ENETDOWN;
+  }
+ 
+  pfr->slots_info->tot_fwd_ok++;
+  return 0;
 }
 
 /* ********************************** */
@@ -3539,8 +3533,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
 			   struct pfring_pkthdr *hdr,
 			   int is_ip_pkt, int displ,
 			   int channel_id,
-			   u_int32_t num_rx_channels,
-			   int *clone_id)
+			   u_int32_t num_rx_channels)
 {
   int fwd_pkt = 0, rc = 0;
   u_int8_t hash_found = 0;
@@ -3617,7 +3610,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
       offset = 0;
 
-      rc = add_pkt_to_ring(skb, real_skb, pfr, hdr, displ, channel_id, offset, clone_id);
+      rc = add_pkt_to_ring(skb, real_skb, pfr, hdr, displ, channel_id, offset);
     }
   }
 
@@ -3823,7 +3816,6 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
 static int skb_ring_handler(struct sk_buff *skb,
 			    u_int8_t recv_packet,
 			    u_int8_t real_skb /* 1=real skb, 0=faked skb */,
-			    u_int8_t *skb_reference_in_use,
 			    /*
 			      This return value is set to 1 in case
 			      the input skb is in use by PF_RING and thus
@@ -3833,7 +3825,7 @@ static int skb_ring_handler(struct sk_buff *skb,
 			    u_int32_t num_rx_channels)
 {
   struct sock *skElement;
-  int rc = 0, is_ip_pkt = 0, room_available = 0, clone_id = 0;
+  int rc = 0, is_ip_pkt = 0, room_available = 0;
   struct pfring_pkthdr hdr;
   int displ;
   int defragmented_skb = 0;
@@ -3844,8 +3836,6 @@ static int skb_ring_handler(struct sk_buff *skb,
   ring_cluster_element *cluster_ptr;
   u_int16_t ip_id = 0;
   int skb_hash = -1;
-
-  *skb_reference_in_use = 0;
 
   /* Check if there's at least one PF_RING ring defined that
      could receive the packet: if none just stop here */
@@ -3926,7 +3916,7 @@ static int skb_ring_handler(struct sk_buff *skb,
 
         if (rc == 1) 
           room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
-					      displ, 0, NULL, 0, real_skb ? &clone_id : NULL);
+					      displ, 0, NULL, 0);
       }
     }
   } else {
@@ -3979,7 +3969,7 @@ static int skb_ring_handler(struct sk_buff *skb,
 	int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
 
 	room_available |= add_skb_to_ring(skb, real_skb, pfr, &hdr, is_ip_pkt,
-					  displ, channel_id, num_rx_channels, &clone_id);
+					  displ, channel_id, num_rx_channels);
 
 	hdr.len = old_len, hdr.caplen = old_caplen;
 	rc = 1;	/* Ring found: we've done our job */
@@ -4069,7 +4059,7 @@ static int skb_ring_handler(struct sk_buff *skb,
 		    int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
 
 		    room_available |= add_skb_to_ring(skb, real_skb, pfr, &hdr, is_ip_pkt,
-		                                      displ, channel_id, num_rx_channels, &clone_id);
+		                                      displ, channel_id, num_rx_channels);
 
 		    hdr.len = old_len, hdr.caplen = old_caplen;
 		    rc = 1; /* Ring found: we've done our job */
@@ -4103,9 +4093,6 @@ static int skb_ring_handler(struct sk_buff *skb,
       kfree_skb(skk);
   }
 
-  if(clone_id > 0)
-    *skb_reference_in_use = 1;
-
 #ifdef PROFILING
   rdt2 = _rdtsc() - rdt2;
   rdt = _rdtsc() - rdt;
@@ -4127,7 +4114,6 @@ static int skb_ring_handler(struct sk_buff *skb,
 static int buffer_ring_handler(struct net_device *dev, char *data, int len)
 {
   struct sk_buff skb;
-  u_int8_t skb_reference_in_use;
 
   skb.dev = dev;
   skb.len = len;
@@ -4142,7 +4128,6 @@ static int buffer_ring_handler(struct net_device *dev, char *data, int len)
 #endif
 
   return(skb_ring_handler(&skb, 1, 0 /* fake skb */,
-			  &skb_reference_in_use,
 			  -1 /* unknown: any channel */,
 			  UNKNOWN_NUM_RX_CHANNELS));
 }
@@ -4153,7 +4138,6 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 		      struct packet_type *pt, struct net_device *orig_dev)
 {
   int rc;
-  u_int8_t skb_reference_in_use = 0;
 
   if (skb->pkt_type == PACKET_LOOPBACK)
     return 0;
@@ -4164,12 +4148,11 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 
   rc = skb_ring_handler(skb,
 			skb->pkt_type != PACKET_OUTGOING,
-			1 /* real_skb */, &skb_reference_in_use,
+			1 /* real_skb */,
 			-1 /* unknown: any channel */,
                         UNKNOWN_NUM_RX_CHANNELS);
 
-  if (!skb_reference_in_use)
-    kfree_skb(skb);
+  kfree_skb(skb);
 
   return rc;
 }
