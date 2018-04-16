@@ -28,8 +28,8 @@ Installation
    sudo make install
    sudo ldconfig
    
-   make install-conf
-   make install-rules
+   sudo make install-conf
+   sudo make install-rules
    
    suricata --build-info | grep PF_RING
    PF_RING support:                         yes
