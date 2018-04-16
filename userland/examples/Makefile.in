@@ -53,7 +53,7 @@ LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_conf
 # Main targets
 #
 PFPROGS   = pfcount pfcount_multichannel preflect \
-	    pfflow pfbridge alldevs pcap2nspcap \
+	    pfflow_offload pfbridge alldevs pcap2nspcap \
 	    pfcount_82599 pfsystest pfsend pflatency
 
 ifneq (@HAVE_PF_RING_FT@,)
@@ -97,8 +97,8 @@ pfcount_82599: pfcount_82599.o ${LIBPFRING}
 preflect: preflect.o ${LIBPFRING}
 	${CC} ${CFLAGS} preflect.o ${LIBS} -o $@
 
-pfflow: pfflow.o ${LIBPFRING}
-	${CC} ${CFLAGS} pfflow.o ${LIBS} -o $@
+pfflow_offload: pfflow_offload.o ${LIBPFRING}
+	${CC} ${CFLAGS} pfflow_offload.o ${LIBS} -o $@
 
 pfflow_ft: pfflow_ft.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfflow_ft.o ${LIBS} -o $@

@@ -214,7 +214,8 @@ void packet_consumer() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow_ft - (C) 2018 ntop.org\n\n");
+  printf("pfflow_ft - (C) 2018 ntop.org\n");
+  printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
   printf("-g <core>       CPU core affinity\n");
