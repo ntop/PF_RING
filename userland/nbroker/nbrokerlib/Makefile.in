@@ -1,0 +1,37 @@
+CC=gcc
+
+API_OBJS=grammar.tab.o lex.nb.o nbroker_api.o parser.o
+API_STATIC_LIB=libnbroker.a
+API_DYNAMIC_LIB=libnbroker.so
+
+INCLUDES=-I../rrclib/include
+SYSLIBS=-lzmq -lpthread -ldl -lm
+LIBS=$(SYSLIBS)
+CFLAGS=-Wall -fPIC -D_GNU_SOURCE $(INCLUDES) -g # -O2
+LDFLAGS   = -shared
+
+%.o: %.c %.h Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
+
+all: $(API_STATIC_LIB) $(API_DYNAMIC_LIB)
+
+lex.nb.c: scanner.l grammar.tab.c
+	lex -P nb scanner.l
+
+#grammar.tab.h: grammar.tab.c
+
+grammar.tab.c: grammar.y
+	bison -d -p nb grammar.y
+
+$(API_OBJS): grammar.tab.c lex.nb.c
+
+$(API_STATIC_LIB): $(API_OBJS)
+	rm -f $(API_STATIC_LIB)
+	ar rs $@ $(API_OBJS)
+	ranlib $@
+
+$(API_DYNAMIC_LIB): $(API_OBJS)
+	${CC} $(LDFLAGS) $(API_OBJS) $(LIBS) -o $@
+
+clean:
+	rm -f *~ *.o *.a *.so *.tab.* lex.*.*

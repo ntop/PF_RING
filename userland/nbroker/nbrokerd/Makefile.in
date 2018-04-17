@@ -1,0 +1,27 @@
+RRC_LIB=../rrclib/lib/librrc.a
+NBROKER_LIB=../nbrokerlib/libnbroker.a
+
+CC=gcc -g
+INCLUDES=-I../nbrokerlib -I../rrclib/include -I@PF_RING_HOME@/userland/lib
+LIBS=$(RRC_LIB) $(NBROKER_LIB) -L../rrclib/lib -lpthread -lFocalpointSDK -lzmq -lm -ldl -pthread
+CFLAGS=-g $(INCLUDES) -Wall #-DHAVE_LICENSE
+RRC_COMMON_OBJS=utils.o
+RRC_DAEMON_OBJS=daemon.o rules_hash.o $(RRC_COMMON_OBJS)
+
+.PHONY: all clean
+all: nbrokerd cmdtest
+
+# Daemon
+
+nbrokerd: $(NBROKER_LIB) $(RRC_DAEMON_OBJS)
+	${CC} $(CFLAGS) $(RRC_DAEMON_OBJS) -o nbrokerd $(LIBS)
+
+$(NBROKER_LIB):
+	cd ../nbrokerlib; make
+
+cmdtest: $(RRC_COMMON_OBJS) cmdtest.c
+	${CC} $(CFLAGS) cmdtest.c -o cmdtest $(RRC_COMMON_OBJS) $(LIBS)
+
+clean:
+	rm -f *.o *.a
+	rm -f nbrokerd cmdtest
