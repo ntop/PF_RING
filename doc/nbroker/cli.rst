@@ -27,23 +27,23 @@ Cammand examples:
 
 Syntax supported by the "match" option:
 
-  - "smac 11:22:33:44:55:66" - a source MAC
-  - "dmac 11:22:33:44:55:66" - a destination MAC
-  - "shost 10.0.0.1" - a single source host
-  - "dhost 10.0.0.1" - a single destination host
-  - "shost 10.0.0.0/24" - a group of source hosts specified by the network CIDR
-  - "shost 10.0.0.0 netmask 255.255.255.0" - same as above, explicit netmask
-  - "shost 2001:db8::2:1" - IPv6 addresses are supported
-  - "sport 80" - source port 80
-  - "dport 443" - destination port 443
-  - "sport portrang 1-1023" - any source port in range 1-1023, *if supported*
-  - "vlan 1"
-  - "proto tcp" - L3 protocol by name
-  - "proto 6" - protocol by number
+- "smac 11:22:33:44:55:66" - a source MAC
+- "dmac 11:22:33:44:55:66" - a destination MAC
+- "shost 10.0.0.1" - a single source host
+- "dhost 10.0.0.1" - a single destination host
+- "shost 10.0.0.0/24" - a group of source hosts specified by the network CIDR
+- "shost 10.0.0.0 netmask 255.255.255.0" - same as above, explicit netmask
+- "shost 2001:db8::2:1" - IPv6 addresses are supported
+- "sport 80" - source port 80
+- "dport 443" - destination port 443
+- "sport portrang 1-1023" - any source port in range 1-1023, *if supported*
+- "vlan 1"
+- "proto tcp" - L3 protocol by name
+- "proto 6" - protocol by number
 
 Multiple values can be specified into the match value to compose a logic *and* filter. 
 
 Example:
 
- - "set port ens9 match sport 80 dport 1234 drop" - set a rule to drop source port 80 *and* destination port 1234
+- "set port ens9 match sport 80 dport 1234 drop" - set a rule to drop source port 80 *and* destination port 1234
 
