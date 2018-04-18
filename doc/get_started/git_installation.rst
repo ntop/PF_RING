@@ -55,7 +55,7 @@ Example:
 .. code-block:: console
 
    cd <PF_RING PATH>/kernel
-   insmod pf_ring.ko min_num_slot=8192 enable_tx_capture=0 quick_mode=1
+   insmod pf_ring.ko min_num_slots=8192 enable_tx_capture=0 quick_mode=1
 
 If you want to achieve line-rate packet capture at 10 Gigabit and above, you should use 
 ZC drivers. ZC drivers are part of the PF_RING distribution and can be found in drivers/.
