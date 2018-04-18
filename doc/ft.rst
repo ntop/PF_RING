@@ -96,6 +96,7 @@ or through a configuration file:
    
    [filter]
    YouTube = discard
+   Netflix = discard
 
 The pfring_ft_process() API returns "discard" as action for packets that should be
 discarded according to the filtering or shunting policies.
@@ -110,3 +111,15 @@ to inspect (typically multimedia traffic), dramatically reducing packet loss and
 system performance. Leveraging on PF_RING FT, a PF_RING-based or Libpcap-based application can 
 take advantage of L7 shunting without changing a single line of code, all you need to do is to 
 set the PF_RING_FT_CONF environment variable with the path of the configuration file.
+In the example below, we run Suricata on top of PF_RING FT, filtering out Youtube and Netflix
+traffic. Please refer to the "Using Suricata with PF_RING" guide for enabling PF_RING support
+in Suricata. The same can be achieved with other IDS/IPSs like Bro and Snort.
+
+.. code-block:: console
+
+   # PF_RING_FT_CONF=/etc/pf_ring/ft-rules.conf suricata --pfring-int=zc:eth1 -c /etc/suricata/suricata.yaml
+   
+   # cat /etc/pf_ring/ft-rules.conf
+   [filter]
+   YouTube = discard
+   Netflix = discard

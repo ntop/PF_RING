@@ -1,0 +1,33 @@
+AC_INIT([nbroker], 1.0)
+
+AC_PROG_CC
+AC_CONFIG_FILES(Makefile)
+
+NBROKER_VERSION="0.1"
+TODAY=`date +%y%m%d`
+RELEASE="$NBROKER_VERSION.$TODAY"
+GIT_RELEASE=`git rev-list --all |wc -l`
+
+INCS=""
+SYS_LIBS=""
+
+SYSLIBS="-lpthread -ldl"
+
+AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
+
+if test ".${prefix}" = ".NONE"; then
+  INSTALL_PREFIX=${ac_default_prefix};
+else
+  INSTALL_PREFIX=${prefix};
+fi
+
+AC_SUBST(INCS)
+AC_SUBST(SYSLIBS)
+AC_SUBST(INSTALL_PREFIX)
+
+AC_CONFIG_FILES([nbrokerd/Makefile])
+AC_CONFIG_FILES([nbrokerlib/Makefile])
+AC_CONFIG_FILES([cli/Makefile])
+AC_CONFIG_FILES([examples/Makefile])
+
+AC_OUTPUT

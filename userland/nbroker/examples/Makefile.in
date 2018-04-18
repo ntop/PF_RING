@@ -1,0 +1,22 @@
+RRCLIB_HOME=../rrclib
+
+NBROKERLIB_HOME=../nbrokerlib
+NBROKERLIB_INC=-I$(NBROKERLIB_HOME)
+NBROKERLIB_LIB=-L../nbrokerlib -lnbroker
+
+INCLUDES=$(NBROKERLIB_INC) -I$(RRCLIB_HOME)/include
+LIBS=$(NBROKERLIB_LIB) -lpthread -lm -ldl -lzmq
+CFLAGS=-g -Wall $(INCLUDES)
+
+.PHONY: all clean
+all: api-example
+
+clean:
+	rm -f *.o *.a
+	rm -f api-example
+
+nbrokerlib:
+	cd $(NBROKERLIB_HOME); make
+
+api-example: nbrokerlib api-example.o
+	${CC} $(CFLAGS) api-example.o $(LIBS) -o api-example

@@ -1,0 +1,27 @@
+THIRD_PARTY_DIR=./third-party
+
+LINENOISE_HOME=${THIRD_PARTY_DIR}/linenoise
+LINENOISE_INC=-I$(LINENOISE_HOME)
+
+RRCLIB_HOME=../rrclib
+NBROKERLIB_HOME=../nbrokerlib
+NBROKERLIB_INC=-I$(NBROKERLIB_HOME) -I$(RRCLIB_HOME)/include
+NBROKERLIB_LIB=-L../nbrokerlib -lnbroker
+
+INCLUDES=$(NBROKERLIB_INC) $(LINENOISE_INC)
+LIBS=$(NBROKERLIB_LIB) -lpthread -lm -ldl -lzmq
+CFLAGS=-g -Wall
+
+.PHONY: all clean
+all: nbroker-cli
+
+clean:
+	rm -f *.o *.a
+	rm -f nbroker-cli
+
+nbrokerlib:
+	cd $(NBROKERLIB_HOME); make
+
+nbroker-cli: nbrokerlib nbroker-cli.c
+	${CC} $(CFLAGS) $(INCLUDES) nbroker-cli.c $(LIBS) -o nbroker-cli
+

@@ -1,0 +1,32 @@
+
+all: nbroker_daemon nbroker_lib nbroker_cli examples_bin
+
+nbrokerd/Makefile:
+	./configure
+
+nbrokerlib/Makefile:
+	./configure
+	
+cli/Makefile:
+	./configure
+
+examples/Makefile:
+	./configure
+
+nbroker_daemon: nbrokerd/Makefile
+	cd nbrokerd; make
+
+nbroker_lib: nbrokerlib/Makefile
+	cd nbrokerlib; make
+
+nbroker_cli: cli/Makefile
+	cd cli; make
+
+examples_bin: examples/Makefile
+	cd examples; make
+
+clean: nbrokerd/Makefile nbrokerlib/Makefile cli/Makefile examples/Makefile
+	cd nbrokerd; make clean
+	cd nbrokerlib; make clean
+	cd cli; make clean
+	cd examples; make clean
