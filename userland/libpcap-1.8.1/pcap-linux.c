@@ -2309,7 +2309,7 @@ pcap_inject_linux(pcap_t *handle, const void *buf, size_t size)
 	if (handle->ring != NULL) {
 		if (!handle->ring->enabled)
 			pfring_enable_ring(handle->ring);
-		return pfring_send(handle->ring, (char*)buf, size, 1 /* FIX: set it to 1 */);
+		return pfring_send(handle->ring, (char *) buf, size, 1);
 	}
 #endif
 
