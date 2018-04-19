@@ -2548,6 +2548,9 @@ int i40e_napi_poll(struct napi_struct *napi, int budget)
 	int budget_per_ring;
 	int work_done = 0;
 
+	if (unlikely(enable_debug)) 
+		printk("[PF_RING-ZC] %s(%s)\n", __FUNCTION__, vsi->netdev->name);
+
 	if (test_bit(__I40E_VSI_DOWN, vsi->state)) {
 		napi_complete(napi);
 		return 0;

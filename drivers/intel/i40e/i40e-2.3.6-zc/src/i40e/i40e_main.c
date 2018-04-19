@@ -3586,7 +3586,7 @@ int wait_packet_function_ptr(void *data, int mode)
 	int new_packets;
 
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queueId=%d][next_to_clean=%u][next_to_use=%d] ******\n",
+		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d]\n",
 		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
 		       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use);
 
@@ -3600,32 +3600,29 @@ int wait_packet_function_ptr(void *data, int mode)
 			if (!rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled) {
 				i40e_enable_irq(rx_ring->q_vector);
 
-				if (unlikely(enable_debug)) 
-					printk("[PF_RING-ZC] %s: Enabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
-
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
-				if(unlikely(enable_debug))
-					printk("[PF_RING-ZC] %s: Packet not arrived yet: enabling interrupts, queue=%d\n",
-					       __FUNCTION__,rx_ring->q_vector->v_idx);
-      			}
+				if (unlikely(enable_debug)) 
+					printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+      			} else {
+				if (unlikely(enable_debug)) 
+					printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+			}
     		} else {
 			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
-		}
 
-		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s: Packet received: %d\n", __FUNCTION__, new_packets); 
+			if (unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
+		}
 
 		return new_packets;
 	} else {
 		/* Disable interrupts */
-
 		i40e_disable_irq(rx_ring->q_vector);
-
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s: Disabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+			printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 
 		return 0;
 	}
@@ -3640,10 +3637,13 @@ int wake_up_pfring_zc_socket(struct i40e_ring *rx_ring)
 			if (ring_is_not_empty(rx_ring)) {
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
 				wake_up_interruptible(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
+				if (unlikely(enable_debug))
+					printk("[PF_RING-ZC] %s: Waking up socket [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 				return 1;
 			}
 		}
 	}
+
 	return 0;
 }
 
