@@ -3526,6 +3526,7 @@ static void i40e_cloud_filter_restore(struct i40e_pf *pf)
 
 #ifdef HAVE_PF_RING
 
+#if 0
 /**
  * i40e_irq_dynamic_disable - Disable default interrupt generation settings
  * @vsi: pointer to a vsi
@@ -3556,6 +3557,7 @@ static void i40e_enable_irq(struct i40e_q_vector *q_vector) {
 	if (!test_bit(__I40E_VSI_DOWN, vsi->state))
 		i40e_irq_dynamic_enable(vsi, q_vector->v_idx + vsi->base_vector);
 }
+#endif
 
 int ring_is_not_empty(struct i40e_ring *rx_ring) {
 	union i40e_rx_desc *rx_desc;
@@ -3580,13 +3582,15 @@ int ring_is_not_empty(struct i40e_ring *rx_ring) {
 	return 0;
 }
 
+void i40e_update_enable_itr(struct i40e_vsi *vsi, struct i40e_q_vector *q_vector);
+
 int wait_packet_function_ptr(void *data, int mode)
 {
 	struct i40e_ring *rx_ring = (struct i40e_ring*) data;
 	int new_packets;
 
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queueId=%d][next_to_clean=%u][next_to_use=%d] ******\n",
+		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d]\n",
 		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
 		       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use);
 
@@ -3598,34 +3602,32 @@ int wait_packet_function_ptr(void *data, int mode)
 			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 0;
 
 			if (!rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled) {
-				i40e_enable_irq(rx_ring->q_vector);
-
-				if (unlikely(enable_debug)) 
-					printk("[PF_RING-ZC] %s: Enabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+				/* Enabling interrupts on demand, this has been disabled with napi in ZC mode */
+				i40e_update_enable_itr(rx_ring->vsi, rx_ring->q_vector);
 
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
-				if(unlikely(enable_debug))
-					printk("[PF_RING-ZC] %s: Packet not arrived yet: enabling interrupts, queue=%d\n",
-					       __FUNCTION__,rx_ring->q_vector->v_idx);
-      			}
+				if (unlikely(enable_debug)) 
+					printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+      			} else {
+				if (unlikely(enable_debug)) 
+					printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+			}
     		} else {
 			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
-		}
 
-		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s: Packet received: %d\n", __FUNCTION__, new_packets); 
+			if (unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
+		}
 
 		return new_packets;
 	} else {
-		/* Disable interrupts */
-
-		i40e_disable_irq(rx_ring->q_vector);
+		/* No Need to disable interrupts here, the standard napi mechanism will do it */
 
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s: Disabled interrupts, queue = %d\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+			printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 
 		return 0;
 	}
@@ -3640,10 +3642,13 @@ int wake_up_pfring_zc_socket(struct i40e_ring *rx_ring)
 			if (ring_is_not_empty(rx_ring)) {
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
 				wake_up_interruptible(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
+				if (unlikely(enable_debug))
+					printk("[PF_RING-ZC] %s: Waking up socket [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 				return 1;
 			}
 		}
 	}
+
 	return 0;
 }
 
@@ -3689,60 +3694,13 @@ static int i40e_control_rxq(struct i40e_vsi *vsi, int pf_q, bool enable)
 	return ret;
 }
 
-#if 0
-static int i40e_pf_txq_wait(struct i40e_pf *pf, int pf_q, bool enable);
-
-static int i40e_control_txq(struct i40e_vsi *vsi, int pf_q, bool enable)
-{
-	struct i40e_pf *pf = vsi->back;
-	struct i40e_hw *hw = &pf->hw;
-	int i, j, ret = 0;
-	u32 tx_reg;
-
-	/* warn the TX unit of coming changes */
-	i40e_pre_tx_queue_cfg(&pf->hw, pf_q, enable);
-	if (!enable)
-		udelay(10);
-
-	for (j = 0; j < 50; j++) {
-		tx_reg = rd32(hw, I40E_QTX_ENA(pf_q));
-		if (((tx_reg >> I40E_QTX_ENA_QENA_REQ_SHIFT) & 1) ==
-		    ((tx_reg >> I40E_QTX_ENA_QENA_STAT_SHIFT) & 1))
-			break;
-		usleep_range(1000, 2000);
-	}
-	/* Skip if the queue is already in the requested state */
-	if (enable == !!(tx_reg & I40E_QTX_ENA_QENA_STAT_MASK))
-		return ret;
-
-	/* turn on/off the queue */
-	if (enable) {
-		wr32(hw, I40E_QTX_HEAD(pf_q), 0);
-		tx_reg |= I40E_QTX_ENA_QENA_REQ_MASK;
-	} else {
-		tx_reg &= ~I40E_QTX_ENA_QENA_REQ_MASK;
-	}
-
-	wr32(hw, I40E_QTX_ENA(pf_q), tx_reg);
-
-	/* wait for the change to finish */
-	ret = i40e_pf_txq_wait(pf, pf_q, enable);
-	if (ret) {
-		dev_info(&pf->pdev->dev,
-			 "%s: VSI seid %d Tx ring %d %sable timeout\n",
-			 __func__, vsi->seid, pf_q,
-			 (enable ? "en" : "dis"));
-	}
-
-	return ret;
-}
-#endif
-
+/*
 int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget);
 static void i40e_vsi_disable_irq(struct i40e_vsi *vsi);
 static int i40e_vsi_enable_irq(struct i40e_vsi *vsi);
 static void i40e_napi_disable_all(struct i40e_vsi *vsi);
 static void i40e_napi_enable_all(struct i40e_vsi *vsi);
+*/
 
 void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
@@ -3773,10 +3731,8 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			i40e_control_rxq(vsi, pf_q, false /* stop */);
 
-			/* disabling irqs, they will be enabled on-demand */
-			i40e_disable_irq(rx_ring->q_vector);
-
-			/* FIXX this is causing system crashes on high traffic rates, TODO fix it as it causes some skbuff leak on every pfring_open!
+			/* FIXX this is causing system crashes on high traffic rates, 
+			 * however we should fix it as it causes some skbuff leak on every pfring_open!
 			i40e_clean_rx_ring(rx_ring);
 			i40e_control_rxq(vsi, pf_q, true);
 			*/
@@ -3787,13 +3743,6 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			if(unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
-		}
-
-		/* FIXX needed to disable IRQs */
-		//if (n >= vsi->num_queue_pairs) { /* last user */
-		if (n == 1) { /* first user */
-			i40e_vsi_disable_irq(xx_ring->vsi);
-			i40e_napi_disable_all(xx_ring->vsi);
 		}
 
 	} else { /* restore card memory */
@@ -3816,7 +3765,6 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
 			i40e_alloc_rx_buffers(rx_ring, I40E_DESC_UNUSED(rx_ring));
 
-			//i40e_vsi_enable_irq(rx_ring->vsi);
 			i40e_control_rxq(vsi, pf_q, true /* start */);
 		}
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
@@ -3833,16 +3781,14 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				tx_buffer->skb = NULL;
 			}
 
-			//i40e_configure_tx_ring(tx_ring);
 			rmb();
 		}
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */)
 			module_put(THIS_MODULE);  /* -- */
 
-		/* FIXX needed to disable IRQs */
 		if (n == 0) { /* last user */
-			i40e_napi_enable_all(xx_ring->vsi);
-			i40e_vsi_enable_irq(xx_ring->vsi);
+			/* Enabling interrupts in case they've been disabled by napi and never enabled in ZC mode */
+			i40e_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
 		}
 	}
 

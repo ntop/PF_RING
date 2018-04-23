@@ -2292,7 +2292,9 @@ static int i40e_clean_rx_irq(struct i40e_ring *rx_ring, int budget)
 
 	if (atomic_read(&i40e_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter) > 0) {
 		wake_up_pfring_zc_socket(rx_ring);
-		return budget;
+		/* Note: returning budget napi will call us again (keeping interrupts disabled),
+		 * returning budget-1 will tell napi that we are done (this usually also reenable interrupts, not with ZC) */
+		return budget-1;
 	}
 #endif
 
@@ -2448,7 +2450,11 @@ static inline int get_tx_itr(struct i40e_vsi *vsi, int idx)
  * @q_vector: q_vector for which itr is being updated and interrupt enabled
  *
  **/
-static inline void i40e_update_enable_itr(struct i40e_vsi *vsi,
+
+#ifndef HAVE_PF_RING
+static inline 
+#endif
+void i40e_update_enable_itr(struct i40e_vsi *vsi,
 					  struct i40e_q_vector *q_vector)
 {
 	struct i40e_hw *hw = &vsi->back->hw;
@@ -2627,6 +2633,7 @@ tx_only:
 	napi_complete_done(napi, work_done);
 
 #ifdef HAVE_PF_RING
+	/* Do not enable interrupts here, we do it in wait_packet_function_ptr when needed */
 	if (atomic_read(&i40e_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0)
 #endif
 	i40e_update_enable_itr(vsi, q_vector);
