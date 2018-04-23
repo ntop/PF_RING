@@ -12,7 +12,15 @@ The daemon supports two communication modes:
 
 Please note taht there is some difference in the supported features between the two modes: text mode supports a subset of the full features list.
 
-The daemon can be started running "nbrokerd". Please note it requires root privileges to drive the RRC switch.
+The daemon can be started running "nbrokerd"
+
+.. code-block:: console
+
+   nbrokerd
+
+Please note that nbrokerd requires root privileges to drive the RRC switch.
+
+According to the cables you are using, the RRC library requires different settings to configure the switch, those settings are contained in /etc/rrc/fm_platform_attributes.cfg. The /etc/rrc folder contains a few configuration files that should be used in case of DAC cables or Breakout cables.
 
 Basic Knowledge
 ---------------
