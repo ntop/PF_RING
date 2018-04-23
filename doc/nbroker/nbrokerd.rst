@@ -11,7 +11,11 @@ The daemon can be started running "nbrokerd"
 
 Please note that nbrokerd requires root privileges to drive the RRC switch.
 
-According to the cables you are using, the RRC library requires different settings to configure the switch, those settings are contained in /etc/rrc/fm_platform_attributes.cfg. The /etc/rrc folder contains a few configuration files that should be used in case of DAC cables or Breakout cables.
+According to the cables you are using, the RRC library requires different settings to configure the switch, those settings are contained in various configuration files in /etc/rrc. By default nbrokerd loads the /etc/rrcfm_platform_attributes.cfg file which is suitable for fiber, other configuration files are available under /etc/rrc for DAC cables and Breakout cables and can be selected with the --rrc-config-file option. Example with DAC cables:
+
+.. code-block:: console
+
+   nbrokerd --rrc-config-file /etc/rrc/fm_platform_attributes_dac.cfg
 
 This daemon allows multiple clients to access the switch configuration at the same time, to set rules on the RRC device. It also overcomes the limited number of rules supported by the device, as it supports rules deduplication.
 
