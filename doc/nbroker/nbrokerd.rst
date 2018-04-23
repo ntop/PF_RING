@@ -15,7 +15,7 @@ According to the cables you are using, the RRC library requires different settin
 
 .. code-block:: console
 
-   nbrokerd --rrc-config-file fm_platform_attributes_dac.cfg
+   nbrokerd --rrc-config-file /etc/rrc/fm_platform_attributes_dac.cfg
 
 This daemon allows multiple clients to access the switch configuration at the same time, to set rules on the RRC device. It also overcomes the limited number of rules supported by the device, as it supports rules deduplication.
 
