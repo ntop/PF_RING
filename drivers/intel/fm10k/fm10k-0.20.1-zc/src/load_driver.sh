@@ -120,6 +120,6 @@ else
 		cd ../../../../../userland/nbroker/
 		./configure && make
 	fi
-	$NBROKER_PATH/nbrokerd/nbrokerd -c $NBROKER_PATH/rrclib/etc/rrc/fm_platform_attributes.cfg
+	$NBROKER_PATH/nbrokerd/nbrokerd -d -c $NBROKER_PATH/rrclib/etc/rrc/fm_platform_attributes.cfg
 fi
 
