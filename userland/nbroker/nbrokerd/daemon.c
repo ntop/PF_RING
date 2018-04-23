@@ -54,6 +54,7 @@ static u_int8_t broker_ready = 0;
 static ruleshash_t hashes[MAX_NUM_PORTS*2];
 static const char *zmq_server_address = "tcp://127.0.0.1:5555";
 static void *zmq_context, *zmq_responder;
+static char *rrc_config_file = NULL;
 
 /* ****************************************************** */
 
@@ -1074,6 +1075,9 @@ int run() {
   flags |= RRC_INIT_FLAG_PORTMASK;
 #endif
 
+  if (rrc_config_file != NULL)
+    setenv("FM_LIBERTY_TRAIL_CONFIG_FILE", rrc_config_file, 0);
+
   if(rrc_init(flags) != 0) {
     traceEvent(TRACE_ERROR, "Cannot initialize the RRC device");
     return -1;
@@ -1103,6 +1107,7 @@ int run() {
 /* ****************************************************** */
 
 static const struct option long_options[] = {
+  { "rrc-config-file",             required_argument, NULL, 'c' },
   { "daemon",                      no_argument,       NULL, 'd' },
   { "trace-log",                   required_argument, NULL, 't' },
   { "verbose",                     required_argument, NULL, 'v' },
@@ -1113,10 +1118,10 @@ static const struct option long_options[] = {
 /* ****************************************************** */
 
 static void help(void) {
-  printf("Welcome to nbrokerd\n");
-  printf("Copyright 2017-2018 ntop.org\n\n");
+  printf("nbrokerd - Copyright 2017-2018 ntop.org\n\n");
   printf("Usage: nbrokerd -h\n\n");
   printf("[--daemon|-d]                               | Daemon mode\n");
+  printf("[--rrc-config-file|-c <path>]               | RRC configuration file\n");
   printf("[--trace-log|-t <path>]                     | Trace log file\n");
   printf("[--verbose|-v <level>]                      | Verbosity level (0=error .. 2=normal .. 4=debug)\n");
   printf("[--help|-h]                                 | Help\n");
@@ -1141,8 +1146,11 @@ int main(int argc, char *argv[]) {
     opt_argv = argv;
   }
 
-  while ((c = getopt_long(opt_argc, opt_argv, "dhv:t:", long_options, NULL)) != 255) {
+  while ((c = getopt_long(opt_argc, opt_argv, "c:dhv:t:", long_options, NULL)) != 255) {
     switch (c) {
+      case 'c':
+        rrc_config_file = strdup(optarg);
+      break;
       case 'd':
         daemon_mode = 1;
       break;
