@@ -5,8 +5,13 @@ CC=gcc -g
 INCLUDES=-I../nbrokerlib -I../rrclib/include -I@PF_RING_HOME@/userland/lib
 LIBS=$(RRC_LIB) $(NBROKER_LIB) -L../rrclib/lib -lpthread -lFocalpointSDK -lzmq -lm -ldl -pthread
 CFLAGS=-g $(INCLUDES) -Wall #-DHAVE_LICENSE
+
 RRC_COMMON_OBJS=utils.o
 RRC_DAEMON_OBJS=daemon.o rules_hash.o $(RRC_COMMON_OBJS)
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
 
 .PHONY: all clean
 all: nbrokerd cmdtest
@@ -21,6 +26,10 @@ $(NBROKER_LIB):
 
 cmdtest: $(RRC_COMMON_OBJS) cmdtest.c
 	${CC} $(CFLAGS) cmdtest.c -o cmdtest $(RRC_COMMON_OBJS) $(LIBS)
+
+install: nbrokerd
+	mkdir -p $(bindir)
+	cp nbrokerd $(bindir)/
 
 clean:
 	rm -f *.o *.a
