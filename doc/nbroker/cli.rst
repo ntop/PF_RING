@@ -1,7 +1,7 @@
 CLI Tool
 ========
 
-The "nbroker-cli" CLI tool can be used to setup a communication with the nbroker daemon through a ZMQ socket and use the textual API to control it.
+The nbroker-cli CLI tool can be used to setup a communication over ZMQ with the nbroker daemon in order to control it. Running nbroker-cli you get a prompt where you can issue commands in text format with autocompletion.
 
 .. code-block:: console
 
@@ -17,6 +17,8 @@ Below you can find the list of supported commands, for an updated list please ch
 - clear port PORT filtering|steering
 - rules port PORT filtering|steering
 - gc idle-for SECONDS
+- help
+- quit
 
 In general, a command is composed by an action (e.g. "set") followed by parameters. Each parameter is composed by an identifier (e.g. "match") and a value (e.g. "shost 10.0.0.1"). The parameters can appear in any order. Some parameters are mandatory, whereas others are optional.
 
