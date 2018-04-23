@@ -163,14 +163,14 @@ void processFlow(pfring_ft_flow *flow, void *user){
          "l7: %s, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
-         ip1, ip2, k->sport, k->dport, k->protocol, v->tcp_flags[s2d_direction] | v->tcp_flags[d2s_direction],
+         ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
          pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)),
-         v->pkts[s2d_direction], v->bytes[s2d_direction], 
-         (u_int) v->first[s2d_direction].tv_sec, (u_int) v->first[s2d_direction].tv_usec, 
-         (u_int) v->last[s2d_direction].tv_sec,  (u_int) v->last[s2d_direction].tv_usec,
-         v->pkts[d2s_direction], v->bytes[d2s_direction], 
-         (u_int) v->first[d2s_direction].tv_sec, (u_int) v->first[d2s_direction].tv_usec, 
-         (u_int) v->last[d2s_direction].tv_sec,  (u_int) v->last[d2s_direction].tv_usec);
+         v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes, 
+         (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec, 
+         (u_int) v->direction[s2d_direction].last.tv_sec,  (u_int) v->direction[s2d_direction].last.tv_usec,
+         v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes, 
+         (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec, 
+         (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec);
 }
 
 /* ******************************** */
