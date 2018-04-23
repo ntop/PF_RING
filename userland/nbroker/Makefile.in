@@ -25,6 +25,12 @@ nbroker_cli: cli/Makefile
 examples_bin: examples/Makefile
 	cd examples; make
 
+install:
+	cd nbrokerd; make install
+	cd nbrokerlib; make install
+	cd cli; make install
+	mkdir -p /etc/rrc; cp rrclib/etc/rrc/*.cfg /etc/rrc/
+
 clean: nbrokerd/Makefile nbrokerlib/Makefile cli/Makefile examples/Makefile
 	cd nbrokerd; make clean
 	cd nbrokerlib; make clean

@@ -1,28 +1,40 @@
 nBrokerd Daemon
 ===============
 
-The nbrokerd daemon provides a client-server pattern to communicate with the RRC physical device. Multiple clients can connect to the daemon at the same time to set rules on the RRC device.
+The nbrokerd daemon provides a client-server pattern to communicate with the RRC physical device.
 
-To overcome the limited number of rules supported by the device, the daemon is optimized to support rules deduplication.
+The daemon can be started running "nbrokerd"
 
-The daemon supports two communication modes:
+.. code-block:: console
 
-- text: commands are exchanged in string format, making this mode suitable for manual user interaction and debugging.
-- binary: commands are exchanged in binary format.
+   nbrokerd
 
-Please note taht there is some difference in the supported features between the two modes: text mode supports a subset of the full features list.
+Please note that nbrokerd requires root privileges to drive the RRC switch.
 
-The daemon can be started running "nbrokerd". Please note it requires root privileges to drive the RRC switch.
+According to the cables you are using, the RRC library requires different settings to configure the switch, those settings are contained in /etc/rrc/fm_platform_attributes.cfg. The /etc/rrc folder contains a few configuration files that should be used in case of DAC cables or Breakout cables.
+
+This daemon allows multiple clients to access the switch configuration at the same time, to set rules on the RRC device. It also overcomes the limited number of rules supported by the device, as it supports rules deduplication.
+
+It is possible to communicate with the daemon in a couple of ways:
+
+- text: commands are exchanged in string format (see nbroker-cli), making this mode suitable for manual user interaction and debugging.
+- binary: commands are exchanged in binary format (see the API).
+
+Please note that there is some difference in the supported features between the two modes: text mode supports a subset of the full features list.
 
 Basic Knowledge
 ---------------
 
-The RRC device has an internal switch that can be configured to apply policies on the traffic. The switch has internal (those seen by the host OS) and external (connected to the physical cables) ports, in a typical configuration 2 external ports and 2 internal ports. It supports two kind of policies:
+The RRC device has an internal switch that can be configured to apply policies on the traffic. The switch has internal (those seen by the host OS) and external (connected to the physical cables) ports, in a typical configuration 2 external ports and 2 internal ports. 
+
+It supports two kind of policies:
 
 - egress filtering, affecting packets *going out* a switch port, with the ability to set 'pass' or 'drop' rules.
 - ingress steering, affecting packets *coming in* a switch port, with the ability to set 'forward' rules for steering packets to a secondary port, either internal or external, of the switch.
 
 In order to simulate a typical network card, upon initialization the daemon binds the internal ports to the external ports by means of default steering policies. This way, the traffic coming from or going to the physical ports can reach the host OS.
+
+.. image:: ../img/rrc_nic_mode.png
 
 For each port, the filtering and steering rules are handled differently by the device. The tuple <port, filter_type> defines the context of a specified rule, where filter_type is of of "steering" or "filtering".
 

@@ -10,6 +10,11 @@ LIBS=$(SYSLIBS)
 CFLAGS=-Wall -fPIC -D_GNU_SOURCE $(INCLUDES) -g # -O2
 LDFLAGS   = -shared
 
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+libdir =  @libdir@
+includedir = @includedir@
+
 %.o: %.c %.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -32,6 +37,23 @@ $(API_STATIC_LIB): $(API_OBJS)
 
 $(API_DYNAMIC_LIB): $(API_OBJS)
 	${CC} $(LDFLAGS) $(API_OBJS) $(LIBS) -o $@
+
+install: install-static install-shared
+
+install-includes:
+	mkdir -p $(includedir)
+	cp nbroker_api.h ../rrclib/include/rrc.h $(includedir)/
+
+install-static: $(API_STATIC_LIB) install-includes
+	mkdir -p $(libdir)
+	cp $(API_STATIC_LIB) $(libdir)/
+
+install-shared:	$(API_DYNAMIC_LIB) install-includes
+	mkdir -p $(libdir)
+	cp $(API_DYNAMIC_LIB) $(libdir)/
+	-@if test "$(USER)" = "root"; then \
+		ldconfig; \
+	fi
 
 clean:
 	rm -f *~ *.o *.a *.so *.tab.* lex.*.*

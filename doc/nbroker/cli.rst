@@ -1,12 +1,24 @@
 CLI Tool
 ========
 
-The CLI tool can be used to setup a communication with the nbroker daemon through a ZMQ socket and use the textual API to control it.
-When issuing a command, the result output is composed by a status code and an explanatory message, a few examples:
+The nbroker-cli CLI tool can be used to setup a communication over ZMQ with the nbroker daemon in order to control it. Running nbroker-cli you get a prompt where you can issue commands in text format with autocompletion.
 
-- 0 OK
-- 4 Invalid device port
-- 8 Error while setting the command on the device
+.. code-block:: console
+
+   $ nbroker-cli
+   tcp://127.0.0.1:5555>
+
+Below you can find the list of supported commands, for an updated list please check the nbroker-cli help:
+
+- default port PORT pass|drop
+- set port PORT match FILTER pass|drop|steer-to [PORT]
+- delete port PORT filtering|steering match FILTER
+- delete port PORT filtering|steering rule ID
+- clear port PORT filtering|steering
+- rules port PORT filtering|steering
+- gc idle-for SECONDS
+- help
+- quit
 
 In general, a command is composed by an action (e.g. "set") followed by parameters. Each parameter is composed by an identifier (e.g. "match") and a value (e.g. "shost 10.0.0.1"). The parameters can appear in any order. Some parameters are mandatory, whereas others are optional.
 
@@ -47,3 +59,8 @@ Example:
 
 - "set port ens9 match sport 80 dport 1234 drop" - set a rule to drop source port 80 *and* destination port 1234
 
+When issuing a command, the result output is composed by a status code and an explanatory message, a few examples:
+
+- 0 OK
+- 4 Invalid device port
+- 8 Error while setting the command on the device

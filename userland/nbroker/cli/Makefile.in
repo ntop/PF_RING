@@ -12,16 +12,24 @@ INCLUDES=$(NBROKERLIB_INC) $(LINENOISE_INC)
 LIBS=$(NBROKERLIB_LIB) -lpthread -lm -ldl -lzmq
 CFLAGS=-g -Wall
 
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+
 .PHONY: all clean
 all: nbroker-cli
-
-clean:
-	rm -f *.o *.a
-	rm -f nbroker-cli
 
 nbrokerlib:
 	cd $(NBROKERLIB_HOME); make
 
 nbroker-cli: nbrokerlib nbroker-cli.c
 	${CC} $(CFLAGS) $(INCLUDES) nbroker-cli.c $(LIBS) -o nbroker-cli
+
+install: nbroker-cli
+	mkdir -p $(bindir)
+	cp nbroker-cli $(bindir)/
+
+clean:
+	rm -f *.o *.a
+	rm -f nbroker-cli
 
