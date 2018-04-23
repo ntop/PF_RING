@@ -90,8 +90,9 @@ if [ "$IS_RDIF_INSTALLED" -eq 1 ]; then
 	fi
 fi
 
-# Uncomment the line below if you do not want to configure the switch with rdif/rdifctl
-#IS_SILICOM=0
+# Comment the line below if you want to configure the switch 
+# with rdif/rdifctl (when available) instead of nbrokerd
+IS_SILICOM=0
 
 if [ "$IS_SILICOM" -eq 1 ]; then
 	rdif stop
@@ -113,5 +114,12 @@ if [ "$IS_SILICOM" -eq 1 ]; then
 	rdifctl dir port 1 redir_port 3
 	rdifctl dir port 2 redir_port 4
 	rdifctl dir port 4 redir_port 2
+else
+	NBROKER_PATH=../../../../../userland/nbroker
+	if [ ! -e $NBROKER_PATH/nbrokerd/nbrokerd ]; then
+		cd ../../../../../userland/nbroker/
+		./configure && make
+	fi
+	$NBROKER_PATH/nbrokerd/nbrokerd -c $NBROKER_PATH/rrclib/etc/rrc/fm_platform_attributes.cfg
 fi
 
