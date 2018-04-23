@@ -1,7 +1,12 @@
 CLI Tool
 ========
 
-The CLI tool can be used to setup a communication with the nbroker daemon through a ZMQ socket and use the textual API to control it.
+The "nbroker-cli" CLI tool can be used to setup a communication with the nbroker daemon through a ZMQ socket and use the textual API to control it.
+
+.. code-block:: console
+
+   $ nbroker-cli
+   tcp://127.0.0.1:5555>
 
 Below you can find the list of supported commands, for an updated list please check the nbroker-cli help:
 
