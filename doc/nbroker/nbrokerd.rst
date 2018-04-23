@@ -1,16 +1,7 @@
 nBrokerd Daemon
 ===============
 
-The nbrokerd daemon provides a client-server pattern to communicate with the RRC physical device. Multiple clients can connect to the daemon at the same time to set rules on the RRC device.
-
-To overcome the limited number of rules supported by the device, the daemon is optimized to support rules deduplication.
-
-The daemon supports two communication modes:
-
-- text: commands are exchanged in string format, making this mode suitable for manual user interaction and debugging.
-- binary: commands are exchanged in binary format.
-
-Please note taht there is some difference in the supported features between the two modes: text mode supports a subset of the full features list.
+The nbrokerd daemon provides a client-server pattern to communicate with the RRC physical device.
 
 The daemon can be started running "nbrokerd"
 
@@ -21,6 +12,15 @@ The daemon can be started running "nbrokerd"
 Please note that nbrokerd requires root privileges to drive the RRC switch.
 
 According to the cables you are using, the RRC library requires different settings to configure the switch, those settings are contained in /etc/rrc/fm_platform_attributes.cfg. The /etc/rrc folder contains a few configuration files that should be used in case of DAC cables or Breakout cables.
+
+This daemon allows multiple clients to access the switch configuration at the same time, to set rules on the RRC device. It also overcomes the limited number of rules supported by the device, as it supports rules deduplication.
+
+It is possible to communicate with the daemon in a couple of ways:
+
+- text: commands are exchanged in string format (see nbroker-cli), making this mode suitable for manual user interaction and debugging.
+- binary: commands are exchanged in binary format (see the API).
+
+Please note that there is some difference in the supported features between the two modes: text mode supports a subset of the full features list.
 
 Basic Knowledge
 ---------------
