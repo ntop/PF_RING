@@ -17,7 +17,11 @@ The daemon can be started running "nbrokerd". Please note it requires root privi
 Basic Knowledge
 ---------------
 
-The RRC device has an internal switch that can be configured to apply policies on the traffic. The switch has internal (those seen by the host OS) and external (connected to the physical cables) ports, in a typical configuration 2 external ports and 2 internal ports. It supports two kind of policies:
+The RRC device has an internal switch that can be configured to apply policies on the traffic. The switch has internal (those seen by the host OS) and external (connected to the physical cables) ports, in a typical configuration 2 external ports and 2 internal ports. 
+
+.. image:: ../img/rrc_switch.png
+
+It supports two kind of policies:
 
 - egress filtering, affecting packets *going out* a switch port, with the ability to set 'pass' or 'drop' rules.
 - ingress steering, affecting packets *coming in* a switch port, with the ability to set 'forward' rules for steering packets to a secondary port, either internal or external, of the switch.
