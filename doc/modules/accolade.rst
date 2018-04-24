@@ -121,6 +121,8 @@ up to 32 rules (called 'legacy mode' or 'mode 1'), with IDs from 0 to 31.
 Enhanced Accolade firmwares for 100 Gbit adapters can support up to 1000 rules, 
 with IDs from 0 to 999 (called 'mode 2'). PF_RING automatically select 'mode 2' when 
 available, and 'mode 1' as fallback. 
+It is possible to use the FILTERING_RULE_AUTO_RULE_ID macro as rule.rule_id in order 
+to automatically assign the next available rule ID.
 Example of setting a filtering rule with 'drop' action for an IPv4 packet:
 
 .. code-block:: c
