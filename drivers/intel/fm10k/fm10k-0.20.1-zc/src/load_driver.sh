@@ -115,11 +115,13 @@ if [ "$IS_SILICOM" -eq 1 ]; then
 	rdifctl dir port 2 redir_port 4
 	rdifctl dir port 4 redir_port 2
 else
-	NBROKER_PATH=../../../../../userland/nbroker
+	NBROKER_PATH="$(cd ../../../../../userland/nbroker; pwd)"
 	if [ ! -e $NBROKER_PATH/nbrokerd/nbrokerd ]; then
-		cd ../../../../../userland/nbroker/
+		cd $NBROKER_PATH
 		./configure && make
 	fi
-	$NBROKER_PATH/nbrokerd/nbrokerd -d -c $NBROKER_PATH/rrclib/etc/rrc/fm_platform_attributes.cfg
+	echo "FM10K switch initialization.."
+	nohup $NBROKER_PATH/nbrokerd/nbrokerd -c $NBROKER_PATH/rrclib/etc/rrc/fm_platform_attributes.cfg &
+	sleep 12 # It takes a while to initialize the switch
 fi
 

@@ -261,5 +261,15 @@ int rrc_get_internal_phys_port(int external_phys_port);
  */
 void rrc_dump_rules(rrc_port_t *port, rrc_filter_type_t type);
 
+/**
+ * Sets the verbosity level for logs
+ */
+void rrc_set_log_level(u_int8_t l);
+
+/**
+ * Sets the output file for logs (default is stdout)
+ */
+void rrc_set_log_file(FILE *f);
+
 #endif /* RRC_LIB */
 

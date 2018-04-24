@@ -20,7 +20,8 @@
 
 #include "utils.h"
 
-static u_int8_t trace_level = 2, use_syslog = 0;
+static u_int8_t trace_level = 2;
+static u_int8_t use_syslog = 0;
 static FILE *trace_out_stream = NULL;
 
 /* ****************************************************** */
@@ -29,14 +30,14 @@ void daemonize() {
   pid_t pid, sid;
 
   pid = fork();
-  if(pid < 0) exit(EXIT_FAILURE);
-  if(pid > 0) exit(EXIT_SUCCESS); /* Father will leave */
+  if (pid < 0) exit(EXIT_FAILURE);
+  if (pid > 0) exit(EXIT_SUCCESS); /* Father will leave */
 
   /* Child */
   sid = setsid();
-  if(sid < 0) exit(EXIT_FAILURE);
+  if (sid < 0) exit(EXIT_FAILURE);
 
-  if((chdir("/")) < 0) exit(EXIT_FAILURE);
+  if ((chdir("/")) < 0) exit(EXIT_FAILURE);
 
   close(STDIN_FILENO), close(STDOUT_FILENO), close(STDERR_FILENO);
 }
@@ -234,6 +235,7 @@ void traceEvent(int level, char* file, int line, char * format, ...) {
     char buf[2048], out_buf[640];
     char theDate[32], *extra_msg = "";
     time_t theTime = time(NULL);
+    FILE *out_file = (trace_out_stream ? trace_out_stream : stdout);
 
     va_start(va_ap, format);
 
@@ -254,8 +256,8 @@ void traceEvent(int level, char* file, int line, char * format, ...) {
 
     if (use_syslog) syslog(LOG_INFO, "%s", out_buf);
 
-    printf("%s\n", out_buf);
-    fflush(stdout);
+    fprintf(out_file, "%s\n", out_buf);
+    fflush(out_file);
 
     va_end(va_ap);
   }

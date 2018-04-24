@@ -83,7 +83,7 @@ static void term_zmq() {
   Read this for multiple clients connected to the same server
   https://stackoverflow.com/questions/41803349/how-does-zeromq-req-rep-handle-multiple-clients
 */
-static void init_zmq() {
+static int init_zmq() {
   int timeout_millisec = 5000; /* seconds */
 
   zmq_context = zmq_ctx_new();
@@ -92,12 +92,14 @@ static void init_zmq() {
   if(zmq_bind(zmq_responder, zmq_server_address) != 0) {
     traceEvent(TRACE_ERROR, "Unable to bind ZMQ to address %s", zmq_server_address);
     term_zmq();
-    exit(0);
+    return -1;
   }
  
   zmq_setsockopt(zmq_responder, ZMQ_RCVTIMEO, &timeout_millisec, sizeof(timeout_millisec));
 
   traceEvent(TRACE_NORMAL, "[ZMQ] Listening at %s", zmq_server_address);
+
+  return 0;
 }
 
 /* ****************************************************** */
@@ -1011,34 +1013,29 @@ static void signal_handler(int signal) {
 /* *********************************************************** */
 
 static int setup_signal_handlers() {
-#if 1
   struct sigaction sa;
 
   sa.sa_handler = signal_handler;
   sa.sa_flags = 0;
   sigemptyset(&sa.sa_mask); /* Necessary for ZMQ */
 
-  if(sigaction(SIGINT, &sa, NULL) == -1) {
-    perror("sigaction(SIGINT) error");
+  if (sigaction(SIGINT, &sa, NULL) == -1) {
+    traceEvent(TRACE_ERROR, "sigaction(SIGINT) error");
     return -errno;
   }
 
-  if(sigaction(SIGTERM, &sa, NULL) == -1) {
-    perror("sigaction(SIGTERM) error");
+  if (sigaction(SIGTERM, &sa, NULL) == -1) {
+    traceEvent(TRACE_ERROR, "sigaction(SIGTERM) error");
     return -errno;
   }
 
-  if(sigaction(SIGHUP, &sa, NULL) == -1) {
-    perror("sigaction(SIGHUP) error");
+  if (sigaction(SIGHUP, &sa, NULL) == -1) {
+    traceEvent(TRACE_ERROR, "sigaction(SIGHUP) error");
     return -errno;
   }
-#else
-  signal(SIGINT, SIG_IGN);
-  signal(SIGTERM, SIG_IGN);
-  signal(SIGHUP, SIG_IGN);
-#endif
 
   signal(SIGPIPE, SIG_IGN);
+
   return 0;
 }
 
@@ -1064,10 +1061,13 @@ int run() {
 
   memset(hashes, 0, sizeof(hashes));
 
-  init_zmq();
+  if (init_zmq() < 0)
+    return -1;
 
-  if((rv = setup_signal_handlers()) < 0)
+  if ((rv = setup_signal_handlers()) < 0) {
+    traceEvent(TRACE_ERROR, "Cannot setup signal handlers");
     return rv; 
+  }
 
 #ifndef RRC_TEST_ON
   /* TEST (remove this) */
@@ -1078,7 +1078,9 @@ int run() {
   if (rrc_config_file != NULL)
     setenv("FM_LIBERTY_TRAIL_CONFIG_FILE", rrc_config_file, 0);
 
-  if(rrc_init(flags) != 0) {
+  traceEvent(TRACE_NORMAL, "RRC initialization..");
+
+  if (rrc_init(flags) != 0) {
     traceEvent(TRACE_ERROR, "Cannot initialize the RRC device");
     return -1;
   }
@@ -1123,7 +1125,7 @@ static void help(void) {
   printf("[--daemon|-d]                               | Daemon mode\n");
   printf("[--rrc-config-file|-c <path>]               | RRC configuration file\n");
   printf("[--trace-log|-t <path>]                     | Trace log file\n");
-  printf("[--verbose|-v <level>]                      | Verbosity level (0=error .. 2=normal .. 4=debug)\n");
+  printf("[--verbose|-v <level>]                      | Verbosity level (0: Error, 2: Normal, 4: Debug)\n");
   printf("[--help|-h]                                 | Help\n");
   printf("\n");
   exit(0);
@@ -1137,9 +1139,10 @@ int main(int argc, char *argv[]) {
   char **opt_argv;
   int rc;
   FILE *trace_file;
+  int verbosity = 2;
 
-  if(argc == 2 && argv[1][0] != '-') { /* configuration file */
-    if(file2argv(argv[0], argv[1], &opt_argc, &opt_argv) < 0)
+  if (argc == 2 && argv[1][0] != '-') { /* configuration file */
+    if (file2argv(argv[0], argv[1], &opt_argc, &opt_argv) < 0)
       return -1;
   } else { /* command line */
     opt_argc = argc;
@@ -1156,12 +1159,14 @@ int main(int argc, char *argv[]) {
       break;
       case 't':
         trace_file = fopen(optarg, "w");
-        if (trace_file == NULL)
+        if (trace_file == NULL) {
           traceEvent(TRACE_WARNING, "Unable to open log file %s", optarg);
-        else
+        } else {
           setTraceFile(trace_file);
+          rrc_set_log_file(trace_file);
+        }
       case 'v':
-        setTraceLevel(atoi(optarg));
+        verbosity = atoi(optarg);
       break;
       case 'h':
       default:
@@ -1170,7 +1175,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if(daemon_mode)
+  setTraceLevel(verbosity);
+  rrc_set_log_level(verbosity);
+
+  if (daemon_mode)
     daemonize();
 
   traceEvent(TRACE_NORMAL, "Welcome to nbrokerd");
