@@ -4,8 +4,7 @@ API
 The programmer API is defined into the nbroker_api.h header. Please refer to the API documentation for detailed informations.
 
 Please find below a sample application that is using the C API to set a "pass all" rule on the traffic, and only drop
-flows matching the provided filter. This is the typical case of an IDS which allows all the traffic to flow by default and only drops the unwanted traffic.
-In this example, the ens9 interface is the interface from which the IDS reads the packets to analyze.
+flows matching the provided filters. This is the typical case of an application (e.g. an IDS) that wants to inspect all traffic, exception made for selected traffic. In this example, the eth1 interface is the interface from which the application reads the packets to analyse.
 
 .. code-block:: c
 
@@ -14,7 +13,7 @@ In this example, the ens9 interface is the interface from which the IDS reads th
    
    #include "nbroker_api.h"
    
-   #define INGRESS_INTERFACE   "ens9"
+   #define INGRESS_INTERFACE   "eth1"
    #define IDLE_SECONDS        60
    
    int main() {
@@ -33,16 +32,19 @@ In this example, the ens9 interface is the interface from which the IDS reads th
      nbroker_set_default_policy(brk, INGRESS_INTERFACE, NBROKER_POLICY_PASS);
      
      while (running) {
-       /* Set up a rule to drop the unwanted traffic.
-        * NOTE: all nbroker_match_t fields are in network byte order
-        */
+     
+       /* Do something here.. */
+     
+       /* Set up a rule to discard unwanted traffic (this rule would change on each iteration in a real application).
+        * Note: all nbroker_match_t fields are in network byte order */
        memset(&match, 0, sizeof(match));
        match.dport.low = htons(25);
        rule_id = NBROKER_AUTO_RULE_ID;
        nbroker_set_filtering_rule(brk, INGRESS_INTERFACE, &rule_id, &match, NBROKER_POLICY_DROP);
        
        if (i % 1024 == 0) {
-         /* This ensures rules older then IDLE_SECONDS are removed, making space for new rules */
+         /* From time to time call nbroker_purge_idle_rules. 
+          * This ensures that rules older then IDLE_SECONDS are removed */
          nbroker_purge_idle_rules(brk, IDLE_SECONDS);
        }
        i++;
@@ -57,14 +59,14 @@ All the API functions return a broker_rc_t return code, which can be used to che
 
 The programmer can use the port conversion api to get the internal or external switch port index associated to the symbolic interface name. This grantes him full control over the target port for a particular rule.
 
-The following example covers the scenario in which a user is interested in only monitoring the HTTP traffic of the host 10.0.0.1, assuming it is located on the INGRESS_INTERFACE side. All the other traffic is passed to the egress port.
+The following example covers the scenario in which a user is interested in only monitoring the HTTP traffic of the host 10.0.0.1, assuming it is located on the INGRESS_INTERFACE side. All the other traffic is forwarded to the egress port.
 
 .. code-block:: c
    
-   #define INGRESS_INTERFACE "ens9"
-   #define EGRESS_INTERFACE "enp1s0f1"
+   #define INGRESS_INTERFACE "eth1"
+   #define EGRESS_INTERFACE "eth2"
    
-   // initialization here
+   /* initialization here */
    
    u_int8_t ingress_internal_port;
    u_int8_t ingress_external_port;
