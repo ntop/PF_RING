@@ -1,14 +1,12 @@
-E1000=e1000/e1000-8.0.35
-E1000E=e1000e/e1000e-3.2.7.1-zc
-IGB=igb/igb-5.3.3.5-zc
-IXGBE=ixgbe/ixgbe-5.0.4-zc
-I40E=i40e/i40e-2.3.6-zc
-FM10K=fm10k/fm10k-0.20.1-zc
+E1000E=e1000e/e1000e-3.4.0.2-zc
+IGB=igb/igb-5.3.5.18-zc
+IXGBE=ixgbe/ixgbe-5.3.7-zc
+I40E=i40e/i40e-2.4.6-zc
+FM10K=fm10k/fm10k-0.23.5-zc
 
 export C_INCLUDE_PATH := $(shell cd ../../kernel/linux; pwd)
 
 all:
-#	cd $(E1000)/src; make
 	cd $(E1000E)/src; make
 	cd $(IGB)/src; make
 	cd $(IXGBE)/src; make
@@ -16,7 +14,6 @@ all:
 	cd $(FM10K)/src; make
 
 clean:
-#	cd $(E1000)/src; make clean
 	cd $(E1000E)/src; make clean
 	cd $(IGB)/src; make clean
 	cd $(IXGBE)/src; make clean
