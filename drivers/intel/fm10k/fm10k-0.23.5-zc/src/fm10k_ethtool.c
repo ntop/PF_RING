@@ -1359,7 +1359,7 @@ static const struct ethtool_ops_ext fm10k_ethtool_ops_ext = {
 	.get_channels		= fm10k_get_channels,
 	.set_channels		= fm10k_set_channels,
 #endif
-	.get_ts_info		= ethtool_op_get_ts_info,
+	/* .get_ts_info		= ethtool_op_get_ts_info, */
 };
 
 void fm10k_set_ethtool_ops(struct net_device *dev)

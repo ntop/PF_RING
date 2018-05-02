@@ -405,9 +405,12 @@ static inline void fm10k_rx_checksum(struct fm10k_ring *ring,
 	}
 
 	/* It must be a TCP or UDP packet with a valid checksum */
+#ifdef HAVE_VXLAN_RX_OFFLOAD
 	if (fm10k_test_staterr(rx_desc, FM10K_RXD_STATUS_L4CS2))
 		skb->encapsulation = true;
-	else if (!fm10k_test_staterr(rx_desc, FM10K_RXD_STATUS_L4CS))
+	else 
+#endif
+	if (!fm10k_test_staterr(rx_desc, FM10K_RXD_STATUS_L4CS))
 		return;
 
 	skb->ip_summed = CHECKSUM_UNNECESSARY;
