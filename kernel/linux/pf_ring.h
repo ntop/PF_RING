@@ -436,7 +436,9 @@ typedef struct {
 filtering_internals;
 
 typedef struct {
+#define FILTERING_RULE_AUTO_RULE_ID 0xFFFF
   u_int16_t rule_id;                 /* Rules are processed in order from lowest to higest id */
+
   rule_action_behaviour rule_action; /* What to do in case of match */
   u_int8_t balance_id, balance_pool; /* If balance_pool > 0, then pass the packet above only if the
 					(hash(proto, sip, sport, dip, dport) % balance_pool) = balance_id */
