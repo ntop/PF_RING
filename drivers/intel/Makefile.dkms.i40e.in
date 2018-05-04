@@ -2,11 +2,11 @@ all: install
 
 add: veryclean
 	\/bin/rm -rf /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@
-	mkdir -p /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
-	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; make clean; cp -r i40e/* /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
-	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/i40e/ ; cp ../../../../../../kernel/linux/pf_ring.h /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/
-	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; cp Makefile /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
-	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-/i40e_zc-/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/Kbuild
+	mkdir -p /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
+	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
+	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
+	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-/i40e_zc-/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Kbuild
+	mv /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Kbuild /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@I40E@ /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
 
@@ -23,11 +23,11 @@ rpm: add add_rpm install
 	dkms mkrpm -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --source-only
 
 add_rpm:
-	cp -f zc.spec /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/@I40E@-zc-dkms-mkrpm.spec
+	cp -f zc.spec /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/@I40E@-zc-dkms-mkrpm.spec
 
 add_deb:
-	cp -r zc-dkms-mkdeb /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/@I40E@-zc-dkms-mkdeb
-	-cd  /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/i40e_zc/@I40E@-zc-dkms-mkdeb ; find . -type d -name ".git" -exec rm -fr {} \;
+	cp -r zc-dkms-mkdeb /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/@I40E@-zc-dkms-mkdeb
+	-cd  /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/@I40E@-zc-dkms-mkdeb ; find . -type d -name ".git" -exec rm -fr {} \;
 
 remove:
 	-dkms remove -m @I40E@-zc -v @I40E_VERSION@.@REVISION@ --all
