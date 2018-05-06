@@ -618,6 +618,15 @@ int pfring_set_poll_watermark(pfring *ring, u_int16_t watermark) {
 
 /* **************************************************** */
 
+int pfring_set_poll_calls_to_flush(pfring *ring, u_int16_t poll_calls_to_flush) {
+  if(ring && ring->set_poll_calls_to_flush)
+    return ring->set_poll_calls_to_flush(ring, poll_calls_to_flush);
+
+  return(PF_RING_ERROR_NOT_SUPPORTED);
+}
+
+/* **************************************************** */
+
 int pfring_set_poll_duration(pfring *ring, u_int duration) {
   if(ring && ring->set_poll_duration)
     return ring->set_poll_duration(ring, duration);

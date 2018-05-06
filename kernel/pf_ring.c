@@ -1555,6 +1555,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
         seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
         seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
         seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
+		seq_printf(m, "Num Poll Calls To Flush Queue   : %u\n", pfr->poll_calls_to_flush);
       }
 
       if(pfr->zc_device_entry != NULL) {
@@ -4227,6 +4228,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->channel_id_mask = RING_ANY_CHANNEL;
   pfr->bucket_len = DEFAULT_BUCKET_LEN;
   pfr->poll_num_pkts_watermark = DEFAULT_MIN_PKT_QUEUED;
+  pfr->poll_calls_to_flush = DEFAULT_POLL_CALLS_TO_FLUSH;
   pfr->add_packet_to_ring = add_packet_to_ring;
   pfr->add_raw_packet_to_ring = add_raw_packet_to_ring;
   pfr->header_len = quick_mode ? short_pkt_header : long_pkt_header;
@@ -5565,8 +5567,14 @@ unsigned int ring_poll(struct file *file,
     if(num_queued_pkts(pfr) < pfr->poll_num_pkts_watermark /* || pfr->num_poll_calls == 1 */)
       poll_wait(file, &pfr->ring_slots_waitqueue, wait);
 
-    if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark)
+    /* Flush the queue in 2 cases: (1) ring's queue reached the watermark, or (2) there are packets that wait in the queue too long ('poll_calls_to_flush' poll cycles).
+       The 2nd part of the condition is good for preventing packets from waiting too long in the queue (e.g. in case of low-traffic network).
+    */
+    if( (num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark) || (pfr->poll_calls_to_flush>0 && num_queued_pkts(pfr)>0 && (pfr->num_poll_calls%pfr->poll_calls_to_flush)==0) ) {
+        debug_printk(2, "[ring_id=%u] Flushing queue (num_queued_pkts=%llu, poll_num_pkts_watermark=%u, num_poll_calls=%u, poll_calls_to_flush=%u)\n",
+                    pfr->ring_id, num_queued_pkts(pfr), pfr->poll_num_pkts_watermark, pfr->num_poll_calls, pfr->poll_calls_to_flush);		
       mask |= POLLIN | POLLRDNORM;
+    }
 
     return(mask);
   } else {
@@ -6732,6 +6740,16 @@ static int ring_setsockopt(struct socket *sock,
       debug_printk(2, "--> SO_SET_POLL_WATERMARK=%d\n", pfr->poll_num_pkts_watermark);
     }
     break;
+
+  case SO_SET_POLL_CALLS_TO_FLUSH:
+	  if(optlen != sizeof(u_int16_t))
+		return(-EINVAL);
+	  else {
+		if(copy_from_user(&pfr->poll_calls_to_flush, optval, optlen))
+           return(-EFAULT);
+		debug_printk(2, "--> SO_SET_POLL_CALLS_TO_FLUSH=%u\n", pfr->poll_calls_to_flush);
+	  }
+  	break;
 
   case SO_RING_BUCKET_LEN:
     if(optlen != sizeof(u_int32_t))
