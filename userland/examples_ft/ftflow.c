@@ -46,7 +46,7 @@
 #include "pfring.h"
 #include "pfring_ft.h"
 
-#include "pfutils.c"
+#include "ftutils.c"
 
 #define ALARM_SLEEP 1
 #define DEFAULT_DEVICE "eth0"
@@ -131,7 +131,7 @@ void sigproc(int sig) {
 /* ************************************ */
 
 void my_sigalarm(int sig) {
-  if(do_shutdown)
+  if (do_shutdown)
     return;
 
   print_stats();
@@ -175,8 +175,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 /* ******************************** */
 
-void processPacket(const struct pfring_pkthdr *h,
-		   const u_char *p, const u_char *user_bytes) {
+void processPacket(const struct pfring_pkthdr *h, const u_char *p, const u_char *user_bytes) {
   pfring_ft_action action;
 
   action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
@@ -214,7 +213,7 @@ void packet_consumer() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow_ft - (C) 2018 ntop.org\n");
+  printf("ftflow - (C) 2018 ntop.org\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
@@ -257,7 +256,7 @@ int main(int argc, char* argv[]) {
   if (device == NULL) device = DEFAULT_DEVICE;
   bind2node(bind_core);
 
-  ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI);
+  ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0);
 
   if (ft == NULL) {
     fprintf(stderr, "pfring_ft_create_table error\n");
@@ -289,7 +288,7 @@ int main(int argc, char* argv[]) {
   } else {
     u_int32_t version;
 
-    pfring_set_application_name(pd, "pfflow_ft");
+    pfring_set_application_name(pd, "ftflow");
     pfring_version(pd, &version);
 
     if (!quiet) {

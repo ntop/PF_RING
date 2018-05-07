@@ -1,0 +1,31 @@
+#
+# Makefile for the PF_RING FT examples using DPDK as capture framework
+#
+# Run 'make -f Makefile.dpdk' to compile the DPDK examples
+#
+
+ifeq ($(RTE_SDK),)
+#$(error "Please define RTE_SDK environment variable")
+RTE_SDK = $(HOME)/DPDK
+endif
+
+# Default target, can be overridden by command line or environment
+RTE_TARGET ?= x86_64-native-linuxapp-gcc
+
+include $(RTE_SDK)/mk/rte.vars.mk
+
+APP = ftflow_dpdk
+
+SRCS-y := ftflow_dpdk.c
+
+CFLAGS += -O3
+CFLAGS += $(WERROR_FLAGS) -Wno-strict-prototypes -Wno-missing-prototypes -Wno-missing-declarations -Wno-unused-parameter
+CFLAGS += -I $(HOME)/PF_RING/userland/lib
+LDLIBS = $(HOME)/PF_RING/userland/lib/libs/libpfring_ft_x86_64.a
+
+ifeq ($(CONFIG_RTE_TOOLCHAIN_GCC),y)
+CFLAGS_main.o += -Wno-return-type
+endif
+
+include $(RTE_SDK)/mk/rte.extapp.mk
+

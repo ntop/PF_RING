@@ -56,10 +56,6 @@ PFPROGS   = pfcount pfcount_multichannel preflect \
 	    pfflow_offload pfbridge alldevs pcap2nspcap \
 	    pfcount_82599 pfsystest pfsend pflatency
 
-ifneq (@HAVE_PF_RING_FT@,)
-	PFPROGS += pfflow_ft
-endif
-
 PCAPPROGS = pcount pfwrite
 TARGETS   = ${PFPROGS} ${PCAPPROGS}
 
@@ -99,9 +95,6 @@ preflect: preflect.o ${LIBPFRING}
 
 pfflow_offload: pfflow_offload.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfflow_offload.o ${LIBS} -o $@
-
-pfflow_ft: pfflow_ft.o ${LIBPFRING}
-	${CC} ${CFLAGS} pfflow_ft.o ${LIBS} -o $@
 
 pfsend: pfsend.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfsend.o ${LIBS} -o $@
