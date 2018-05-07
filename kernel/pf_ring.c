@@ -1555,7 +1555,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
         seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
         seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
         seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
-		seq_printf(m, "Num Poll Calls To Flush Queue   : %u\n", pfr->poll_calls_to_flush);
+	seq_printf(m, "Num Poll Calls To Flush Queue   : %u\n", pfr->poll_calls_to_flush);
       }
 
       if(pfr->zc_device_entry != NULL) {
@@ -6742,14 +6742,14 @@ static int ring_setsockopt(struct socket *sock,
     break;
 
   case SO_SET_POLL_CALLS_TO_FLUSH:
-	  if(optlen != sizeof(u_int16_t))
-		return(-EINVAL);
-	  else {
-		if(copy_from_user(&pfr->poll_calls_to_flush, optval, optlen))
-           return(-EFAULT);
-		debug_printk(2, "--> SO_SET_POLL_CALLS_TO_FLUSH=%u\n", pfr->poll_calls_to_flush);
-	  }
-  	break;
+    if(optlen != sizeof(u_int16_t))
+      return(-EINVAL);
+    else {
+      if(copy_from_user(&pfr->poll_calls_to_flush, optval, optlen))
+        return(-EFAULT);
+      debug_printk(2, "--> SO_SET_POLL_CALLS_TO_FLUSH=%u\n", pfr->poll_calls_to_flush);
+    }
+    break;
 
   case SO_RING_BUCKET_LEN:
     if(optlen != sizeof(u_int32_t))

@@ -244,7 +244,7 @@ struct __pfring {
   int       (*stats)                        (pfring *, pfring_stat *);
   int       (*recv)                         (pfring *, u_char**, u_int, struct pfring_pkthdr *, u_int8_t);
   int       (*set_poll_watermark)           (pfring *, u_int16_t);
-  int       (*set_poll_calls_to_flush)       (pfring *, u_int16_t);
+  int       (*set_poll_calls_to_flush)      (pfring *, u_int16_t);
   int       (*set_poll_duration)            (pfring *, u_int);
   int       (*set_tx_watermark)             (pfring *, u_int16_t);
   int       (*set_channel_id)               (pfring *, u_int32_t);
@@ -521,8 +521,8 @@ int pfring_get_metadata(pfring *ring, u_char **metadata, u_int32_t *metadata_len
 int pfring_set_poll_watermark(pfring *ring, u_int16_t watermark);
 
 /**
- * To avoid situation where packets are waiting in the rings's queue for too long (e.g. low-traffic network), setting this number helps to flush
- * the queue, even if the watermark limit hasn't been reached.
+ * To avoid situation where packets are waiting in the rings's queue too long (e.g. low-traffic network), setting this number helps to flush
+ * the queue, even if the watermark limit hasn't been reached. The higher the given number of poll calls, the slower it will take the queue to be flushed.
  * The default value is 0, which disables flushing the queue in case its not empty.
  * @param ring                The PF_RING handle.
  * @param poll_calls_to_flush The number of poll() calls, till flushing the packets in the queue, if watermark hasn't reached yet.
