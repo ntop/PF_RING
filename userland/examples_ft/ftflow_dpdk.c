@@ -60,9 +60,6 @@ static inline int port_init(struct rte_mempool *mbuf_pool) {
   int retval;
   u_int16_t q;
 
-  if (port >= rte_eth_dev_count())
-    return -1;
-
   /* 1 RX queue */
   retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
 
@@ -230,8 +227,8 @@ int main(int argc, char *argv[]) {
 
   num_ports = rte_eth_dev_count();
 
-  if (num_ports < 1)
-    rte_exit(EXIT_FAILURE, "Error: interface not found\n");
+  if (port >= num_ports)
+    rte_exit(EXIT_FAILURE, "Error: port %u not available\n", port);
 
   mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS, MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
