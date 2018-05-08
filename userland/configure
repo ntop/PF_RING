@@ -3871,8 +3871,10 @@ if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then
   NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I^ \t*\)/\1\/libndpi/g'`
   HAVE_NDPI="-D HAVE_NDPI"
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support - static linking" >&5
-$as_echo_n "checking nDPI support - static linking... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI" >&5
+$as_echo "$as_me: WARNING: nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI" >&2;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support for nBPF - static linking" >&5
+$as_echo_n "checking nDPI support for nBPF - static linking... " >&6; }
   NDPI_HOME="../../nDPI"
   if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
     NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"

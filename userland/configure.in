@@ -174,7 +174,8 @@ if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then
   NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I[^ \t]*\)/\1\/libndpi/g'`
   HAVE_NDPI="-D HAVE_NDPI"
 else
-  AC_MSG_CHECKING([nDPI support - static linking])
+  AC_MSG_WARN([nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI])
+  AC_MSG_CHECKING([nDPI support for nBPF - static linking])
   NDPI_HOME="../../nDPI"
   if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
     NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
