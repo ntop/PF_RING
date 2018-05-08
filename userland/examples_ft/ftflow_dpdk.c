@@ -44,9 +44,6 @@
 #define BURST_SIZE        32
 #define PREFETCH_OFFSET    3
 
-#define OPTION_PORT "port"
-#define OPTION_L7   "l7"
-
 static pfring_ft_table *ft = NULL;
 static u_int32_t ft_flags = 0;
 static u_int8_t port = 0;
@@ -175,8 +172,10 @@ static void lcore_main(void) {
 static void print_help(void) {
   printf("ftflow_dpdk - (C) 2018 ntop.org\n");
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
-  printf("--"OPTION_PORT"=<id> Port id\n");
-  printf("--"OPTION_L7"        Enable L7 protocol detection (nDPI)\n");
+  printf("-p <id>     Port id\n");
+  printf("-7          Enable L7 protocol detection (nDPI)\n");
+  printf("-v          Verbose (print also raw packets)\n");
+  printf("-h          Print this help\n");
 }
 
 static int parse_args(int argc, char **argv) {
@@ -185,20 +184,26 @@ static int parse_args(int argc, char **argv) {
   int option_index;
   char *prgname = argv[0];
   static struct option lgopts[] = {
-    { OPTION_PORT, 1, 0, 0},
-    { OPTION_L7, 1, 0, 0},
     { NULL, 0, 0, 0 }
   };
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "hp:v7", lgopts, &option_index)) != EOF) {
     switch (opt) {
-    case 0:
-      if (!strncmp(lgopts[option_index].name, OPTION_PORT, sizeof(OPTION_PORT)))
+    case 'p':
+      if (optarg)
         port = atoi(optarg);
-      else if (!strncmp(lgopts[option_index].name, OPTION_L7, sizeof(OPTION_L7)))
-        ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      break;
+    case '7':
+      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      break;
+    case 'v':
+      verbose = 1;
+      break;
+    case 'h':
+      print_help();
+      exit(0);
       break;
     default:
       print_help();
