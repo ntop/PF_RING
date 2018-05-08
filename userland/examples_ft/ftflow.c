@@ -175,7 +175,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 /* ******************************** */
 
-void processPacket(const struct pfring_pkthdr *h, const u_char *p, const u_char *user_bytes) {
+void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char *user_bytes) {
   pfring_ft_action action;
 
   action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
@@ -201,7 +201,7 @@ void packet_consumer() {
 
   while (!do_shutdown) {
     if (pfring_recv(pd, &buffer_p, 0, &hdr, 0) > 0) {
-      processPacket(&hdr, buffer_p, NULL);
+      process_packet(&hdr, buffer_p, NULL);
     } else {
       if (!pfring_ft_housekeeping(ft, time(NULL))) {
         usleep(1);
@@ -212,11 +212,12 @@ void packet_consumer() {
 
 /* *************************************** */
 
-void printHelp(void) {
+void print_help(void) {
   printf("ftflow - (C) 2018 ntop.org\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
+  printf("-7              Enable L7 protocol detection (nDPI)\n");
   printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
@@ -227,10 +228,10 @@ void printHelp(void) {
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
   int promisc, snaplen = 1518, rc;
-  u_int32_t flags = 0;
+  u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
 
-  while ((c = getopt(argc,argv,"g:hi:qv")) != '?') {
+  while ((c = getopt(argc,argv,"g:hi:qv7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -238,7 +239,7 @@ int main(int argc, char* argv[]) {
       bind_core = atoi(optarg);
       break;
     case 'h':
-      printHelp();
+      print_help();
       exit(0);
       break;
     case 'i':
@@ -250,13 +251,16 @@ int main(int argc, char* argv[]) {
     case 'v':
       verbose = 1;
       break;
+    case '7':
+      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      break;
     }
   }
 
   if (device == NULL) device = DEFAULT_DEVICE;
   bind2node(bind_core);
 
-  ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0);
+  ft = pfring_ft_create_table(ft_flags, 0, 0);
 
   if (ft == NULL) {
     fprintf(stderr, "pfring_ft_create_table error\n");

@@ -45,9 +45,11 @@
 #define PREFETCH_OFFSET    3
 
 #define OPTION_PORT "port"
+#define OPTION_L7   "l7"
 
-static u_int8_t port = 0;
 static pfring_ft_table *ft = NULL;
+static u_int32_t ft_flags = 0;
+static u_int8_t port = 0;
 static u_int8_t verbose = 0;
 
 static const struct rte_eth_conf port_conf_default = {
@@ -170,10 +172,11 @@ static void lcore_main(void) {
   }
 }
 
-static void print_usage(const char *prgname) {
-  printf("%s usage:\n", prgname);
-  printf("[EAL options] -- --"OPTION_PORT"=<id>");
-  printf("\n");
+static void print_help(void) {
+  printf("ftflow_dpdk - (C) 2018 ntop.org\n");
+  printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
+  printf("--"OPTION_PORT"=<id> Port id\n");
+  printf("--"OPTION_L7"        Enable L7 protocol detection (nDPI)\n");
 }
 
 static int parse_args(int argc, char **argv) {
@@ -183,6 +186,7 @@ static int parse_args(int argc, char **argv) {
   char *prgname = argv[0];
   static struct option lgopts[] = {
     { OPTION_PORT, 1, 0, 0},
+    { OPTION_L7, 1, 0, 0},
     { NULL, 0, 0, 0 }
   };
 
@@ -193,9 +197,11 @@ static int parse_args(int argc, char **argv) {
     case 0:
       if (!strncmp(lgopts[option_index].name, OPTION_PORT, sizeof(OPTION_PORT)))
         port = atoi(optarg);
+      else if (!strncmp(lgopts[option_index].name, OPTION_L7, sizeof(OPTION_L7)))
+        ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
       break;
     default:
-      print_usage(prgname);
+      print_help();
       return -1;
     }
   }
@@ -214,6 +220,7 @@ int main(int argc, char *argv[]) {
   int ret;
 
   ret = rte_eal_init(argc, argv);
+
   if (ret < 0)
     rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
 
@@ -241,7 +248,7 @@ int main(int argc, char *argv[]) {
   if (rte_lcore_count() > 1)
     printf("WARNING: Too many lcores enabled, only 1 used\n");
 
-  ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0);
+  ft = pfring_ft_create_table(ft_flags, 0, 0);
 
   if (ft == NULL) {
     fprintf(stderr, "pfring_ft_create_table error\n");

@@ -170,7 +170,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 /* ****************************************************** */
 
-void processPacket(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char *p) {
+void process_packet(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char *p) {
   pfring_ft_action action;
 
   action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
@@ -185,10 +185,11 @@ void processPacket(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char 
 
 /* *************************************** */
 
-void printHelp(void) {
+void print_help(void) {
   printf("ftflow_pcap - (C) 2018 ntop.org\n");
   printf("-h              Print help\n");
   printf("-i <device>     Device name\n");
+  printf("-7              Enable L7 protocol detection (nDPI)\n");
   printf("-f <filter>     BPF filter\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose\n");
@@ -201,15 +202,16 @@ int main(int argc, char* argv[]) {
   char errbuf[PCAP_ERRBUF_SIZE];
   int promisc, snaplen = DEFAULT_SNAPLEN;
   struct bpf_program fcode;
+  u_int32_t ft_flags = 0;
 
   startTime.tv_sec = 0;
 
-  while ((c = getopt(argc,argv,"hi:vf:q")) != '?') {
+  while ((c = getopt(argc,argv,"hi:vf:q7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
     case 'h':
-      printHelp();
+      print_help();
       exit(0);
       break;
     case 'i':
@@ -224,6 +226,9 @@ int main(int argc, char* argv[]) {
     case 'f':
       bpfFilter = strdup(optarg);
       break;
+    case '7':
+      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      break;
     }
   }
 
@@ -234,7 +239,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0);
+  ft = pfring_ft_create_table(ft_flags, 0, 0);
 
   if (ft == NULL) {
     fprintf(stderr, "pfring_ft_create_table error\n");
@@ -274,7 +279,7 @@ int main(int argc, char* argv[]) {
     alarm(ALARM_SLEEP);
   }
 
-  pcap_loop(pd, -1, processPacket, NULL);
+  pcap_loop(pd, -1, process_packet, NULL);
 
   pcap_close(pd);
 
