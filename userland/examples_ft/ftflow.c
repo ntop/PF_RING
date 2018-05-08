@@ -141,6 +141,15 @@ void my_sigalarm(int sig) {
 
 /* ******************************** */
 
+/* This callback is called when a packet has been classified
+void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
+  printf("[Packet Classified]\n");
+}
+*/
+
+/* ******************************** */
+
+/* This callback is called when a flow expires */
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
@@ -276,7 +285,12 @@ int main(int argc, char* argv[]) {
   pfring_ft_set_filter_protocol_by_name(ft, "UPnP", PFRING_FT_ACTION_DISCARD);
   */
 
+  /* Example of callback for expired flows */
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
+
+  /* Example of callback for processing packets that have been successfully classified
+  pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
+  */
 
   promisc = 1;
 
