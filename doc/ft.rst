@@ -19,8 +19,8 @@ Designing and implementing a flow processing application on top of PF_RING FT is
 straightforward as it provides a clean API that can be used to do complex things in a 
 few lines of code. The following code snippet shows how it is easy to capture traffic 
 and export flow informations with PF_RING FT. The full example is available on github 
-under userland/examples/pfflow_ft.c. For more information about the API, please refer 
-to the Doxygen documentation.
+at https://github.com/ntop/PF_RING/tree/dev/userland/examples_ft. 
+For more information about the API, please refer to the Doxygen documentation.
 
 .. code-block:: c
 
