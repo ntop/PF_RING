@@ -41,24 +41,24 @@ to the Doxygen documentation.
 
 Where:
 
-1. pfring_ft_create_table creates a new flow table
-2. pfring_ft_set_flow_export_callback sets a callback (processFlow) that will be called 
+1. *pfring_ft_create_table* creates a new flow table
+2. *pfring_ft_set_flow_export_callback* sets a callback (processFlow) that will be called 
    when a new flow is created in the flow table
-3. pfring_ft_process should be called for every packet in order to process and classify it. 
+3. *pfring_ft_process* should be called for every packet in order to process and classify it. 
 
-The pfring_ft_process function returns an action (default/forward/discard) in case the 
+The *pfring_ft_process* function returns an action (default/forward/discard) in case the 
 flow has been marked by the filtering engine or by the application according to custom 
 policies (this is where packet filtering should happen, based on the action).
 
 The flow of an application designed on top of PF_RING FT is event-driven. Through a few 
-hooks (pfring_ft_set_*_callback) it is possible to register to events like:
+hooks it is possible to register to events like:
 
-- New flow
-- Packet classified
-- Flow expiration
+- New flow (see *pfring_ft_set_new_flow_callback*)
+- Packet classified (see *pfring_ft_set_flow_packet_callback*)
+- Flow expiration (see *pfring_ft_set_flow_export_callback* and *pfring_ft_set_flow_list_export_callback*)
 
 and access the flow informations in order to compute actions based on the flow status. 
-Flow informations can be extended with custom metadata defined by the application.
+Flow informations can be extended with custom metadata defined by the application (see *pfring_ft_flow_value.user*).
 
 nDPI Integration
 ----------------
@@ -68,14 +68,21 @@ the box. The application itself does not need to deal with the nDPI library dire
 everything happens behind the scenes. In order to get the L7 protocol in the flow metadata, 
 you need to:
 
-1. install the nDPI library available at https://github.com/ntop/nDPI with "make install"
-2. enable L7 detection through the PFRING_FT_TABLE_FLAGS_DPI flag:
+1. install the nDPI library available at https://github.com/ntop/nDPI
+
+.. code-block:: console
+
+   git clone https://github.com/ntop/nDPI.git
+   ./autogen
+   make && make install
+
+2. enable L7 detection through the *PFRING_FT_TABLE_FLAGS_DPI* flag:
 
 .. code-block:: c
 
    ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI);
 
-3. read pfring_ft_flow_value.l7_protocol
+3. read the L7 protocol from *pfring_ft_flow_value.l7_protocol*
 
 L7 Filtering and Shunting
 -------------------------
@@ -98,7 +105,7 @@ or through a configuration file:
    YouTube = discard
    Netflix = discard
 
-The pfring_ft_process() API returns "discard" as action for packets that should be
+The *pfring_ft_process* API returns "discard" as action for packets that should be
 discarded according to the filtering or shunting policies.
 
 IDS Acceleration
@@ -110,7 +117,7 @@ is becoming a common yet effective practice for reducing the amount of traffic a
 to inspect (typically multimedia traffic), dramatically reducing packet loss and improving the 
 system performance. Leveraging on PF_RING FT, a PF_RING-based or Libpcap-based application can 
 take advantage of L7 shunting without changing a single line of code, all you need to do is to 
-set the PF_RING_FT_CONF environment variable with the path of the configuration file.
+set the *PF_RING_FT_CONF* environment variable with the path of the configuration file.
 In the example below, we run Suricata on top of PF_RING FT, filtering out Youtube and Netflix
 traffic. Please refer to the "Using Suricata with PF_RING" guide for enabling PF_RING support
 in Suricata. The same can be achieved with other IDS/IPSs like Bro and Snort.
