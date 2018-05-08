@@ -1,4 +1,4 @@
-all: libpfring pcap build_examples build_examples_zc build_extcap 
+all: libpfring pcap build_examples build_examples_zc build_examples_ft build_extcap 
 # build_tcpdump build_c++
 
 ###################
@@ -26,6 +26,9 @@ build_examples: config
 build_examples_zc: config
 	cd examples_zc; make
 
+build_examples_ft: config
+	cd examples_ft; make
+
 build_c++: libpfring
 	cd c++; make
 
@@ -40,7 +43,7 @@ build_extcap: libpfring pcap
 
 ###################
 
-clean: libpfring_clean pcap_clean examples_clean examples_zc_clean c++_clean tcpdump_clean nbpf_clean extcap_clean
+clean: libpfring_clean pcap_clean examples_clean examples_ft_clean examples_zc_clean c++_clean tcpdump_clean nbpf_clean extcap_clean
 
 libpfring_clean:
 	cd lib; make clean
@@ -54,6 +57,9 @@ examples_clean:
 examples_zc_clean:
 	cd examples_zc; make clean
 
+examples_ft_clean:
+	cd examples_ft; make clean
+
 c++_clean:
 	cd c++; make clean
 
@@ -66,7 +72,7 @@ nbpf_clean:
 extcap_clean:
 	cd wireshark/extcap; make clean
 
-install: libpfring pcap examples examples_zc
+install: libpfring pcap examples examples_zc examples_ft
 	cd lib; make install
 	cd libpcap; make install
 	cd examples; make install
