@@ -75,6 +75,14 @@ if test -f lib/$PF_RING_FT_LIB; then
   PF_RING_FT_DEP="extract_pfring_ft_lib"
   PF_RING_FT_H="pfring_ft.h"
   AC_MSG_RESULT(yes)
+
+  AC_MSG_CHECKING([hyperscan.io presence])
+  if test -f /usr/local/lib/libhs.a; then     
+    AC_DEFINE_UNQUOTED(HAVE_HYPERSCAN, 1, [hyperscan.io support is enabled])
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
 else
   AC_MSG_RESULT(no)
 fi
