@@ -1,16 +1,9 @@
 PF_RING FT (Flow Table)
 =======================
 
-Most Network monitoring and security applications are based on flow processing, that 
-includes packet capture, decoding and classification. PF_RING is a flexible framework 
-that can be used to accelerate the packet capture, leveraging on PF_RING ZC drivers or 
-specialized adapters, and extract packet metadata. This let the application focus on 
-packet processing, rather than dealing with packet capture and packet parsing, while 
-running with the best performance.
-PF_RING FT is taking one step further, it assists any flow processing application in 
-the packet classification activity. PF_RING FT implements a flow table that can be used 
-to keep track of flows and provides many hooks to be able to customize and extend it 
-for building any type of application on top of it, including probes, IDSs, IPSs.
+PF_RING FT implements a flow table that can be used to keep track of flows and provides 
+many hooks to be able to customize and extend it for building any type of application on 
+top of it, including probes, IDSs, IPSs.
 
 API
 ---
