@@ -47,6 +47,10 @@ LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_conf
 #
 ifneq (@HAVE_PF_RING_FT@,)
 FTPROGS = ftflow ftflow_pcap
+ifneq (@HAVE_HYPERSCAN@,)
+LIBS   += /usr/local/lib/libhs.a
+CFLAGS += -I/usr/local/include/hs/
+endif
 endif
 
 TARGETS = ${FTPROGS}

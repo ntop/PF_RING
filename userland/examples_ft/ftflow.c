@@ -141,14 +141,13 @@ void my_sigalarm(int sig) {
 
 /* ******************************** */
 
-/* This callback is called when a packet has been classified
+/* This callback is called when a packet has been classified */
 void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
   printf("[Packet Classified]\n");
-
+  
   // Marking the flow to discard all packets (this can be used to implement custom filtering policies)
-  pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
+  // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
 }
-*/
 
 /* ******************************** */
 
@@ -230,6 +229,9 @@ void print_help(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
+#ifdef HAVE_HYPERSCAN
+  printf("-p <pattern>    Pattern to search on flow payload\n");
+#endif
   printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
@@ -291,9 +293,8 @@ int main(int argc, char* argv[]) {
   /* Example of callback for expired flows */
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
-  /* Example of callback for processing packets that have been successfully classified
+  /* Example of callback for processing packets that have been successfully classified */
   pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
-  */
 
   promisc = 1;
 
