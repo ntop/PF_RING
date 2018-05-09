@@ -142,8 +142,13 @@ void my_sigalarm(int sig) {
 /* ******************************** */
 
 /* This callback is called when a packet has been classified */
-void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
-  printf("[Packet Classified]\n");
+void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata,
+		       pfring_ft_flow *flow, void *user) {
+#if 0
+  u_int len = metadata->payload - data;
+
+  fprintf(stderr, "Processing packet [payloadLen: %u][\n", len);
+#endif
   
   // Marking the flow to discard all packets (this can be used to implement custom filtering policies)
   // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
