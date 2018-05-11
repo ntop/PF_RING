@@ -174,11 +174,11 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
   printf("[Flow] "
          "srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
-         "l7: %s, "
+         "l7: %s, category: %u, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
-         pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)),
+         pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category, 
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes, 
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec, 
          (u_int) v->direction[s2d_direction].last.tv_sec,  (u_int) v->direction[s2d_direction].last.tv_usec,
@@ -235,6 +235,7 @@ void print_help(void) {
 #ifdef HAVE_HYPERSCAN
   printf("-p <pattern>    Pattern to search on flow payload\n");
 #endif
+  printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
@@ -244,14 +245,18 @@ void print_help(void) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
+  char *categories_file = NULL;
   int promisc, snaplen = 1518, rc;
   u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
 
-  while ((c = getopt(argc,argv,"g:hi:qv7")) != '?') {
+  while ((c = getopt(argc,argv,"c:g:hi:qv7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
+    case 'c':
+      categories_file = strdup(optarg);
+      break;
     case 'g':
       bind_core = atoi(optarg);
       break;
@@ -301,6 +306,20 @@ int main(int argc, char* argv[]) {
   pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
 #endif
 
+  if (categories_file) {
+    if (!(ft_flags & PFRING_FT_TABLE_FLAGS_DPI)) {
+      fprintf(stderr, "Categories detection require L7 detection (please use -c in combination with -7)\n");
+      return -1;
+    }
+
+    rc = pfring_ft_load_ndpi_categories(ft, categories_file);
+
+    if (rc < 0) {
+      fprintf(stderr, "Failure loading categories from %s\n", categories_file);
+      return -1;
+    }
+  }
+ 
   promisc = 1;
 
   if (promisc) flags |= PF_RING_PROMISC;
