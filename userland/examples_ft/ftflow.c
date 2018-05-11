@@ -141,8 +141,7 @@ void my_sigalarm(int sig) {
 
 /* ******************************** */
 
-#ifdef HAVE_HYPERSCAN
-/* This callback is called after a packet has been processed */
+/* This callback is called after a packet has been processed
 void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata,
 		       pfring_ft_flow *flow, void *user) {
   //fprintf(stderr, "Processing packet [payloadLen: %u]\n", metadata->payload_len);
@@ -150,7 +149,7 @@ void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata,
   // Marking the flow to discard all packets (this can be used to implement custom filtering policies)
   // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
 }
-#endif
+*/
 
 /* ******************************** */
 
@@ -232,9 +231,6 @@ void print_help(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
-#ifdef HAVE_HYPERSCAN
-  printf("-p <pattern>    Pattern to search on flow payload\n");
-#endif
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
@@ -301,10 +297,9 @@ int main(int argc, char* argv[]) {
   /* Example of callback for expired flows */
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
-#ifdef HAVE_HYPERSCAN
-  /* Example of callback for packets that have been successfully processed */
+  /* Example of callback for packets that have been successfully processed
   pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
-#endif
+  */
 
   if (categories_file) {
     if (!(ft_flags & PFRING_FT_TABLE_FLAGS_DPI)) {
