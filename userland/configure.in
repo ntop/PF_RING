@@ -75,6 +75,14 @@ if test -f lib/$PF_RING_FT_LIB; then
   PF_RING_FT_DEP="extract_pfring_ft_lib"
   PF_RING_FT_H="pfring_ft.h"
   AC_MSG_RESULT(yes)
+
+  AC_MSG_CHECKING([hyperscan.io presence])
+  if test -f /usr/local/lib/libhs.a; then     
+    AC_DEFINE_UNQUOTED(HAVE_HYPERSCAN, 1, [hyperscan.io support is enabled])
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
 else
   AC_MSG_RESULT(no)
 fi
@@ -166,7 +174,8 @@ if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then
   NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I[^ \t]*\)/\1\/libndpi/g'`
   HAVE_NDPI="-D HAVE_NDPI"
 else
-  AC_MSG_CHECKING([nDPI support - static linking])
+  AC_MSG_WARN([nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI])
+  AC_MSG_CHECKING([nDPI support for nBPF - static linking])
   NDPI_HOME="../../nDPI"
   if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
     NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
@@ -255,7 +264,7 @@ AC_SUBST(REDIS_LIB)
 
 AC_SUBST(HAVE_ZMQ)
 AC_SUBST(ZMQ_LIB)
-
+AC_SUBST(HAVE_HYPERSCAN)
 AC_SUBST(SYSLIBS)
 AC_SUBST(HAVE_HW_TIMESTAMP)
 AC_SUBST(AR_X)
@@ -264,6 +273,7 @@ dnl> AC_CONFIG_FILES([lib/Makefile])
 AC_CONFIG_FILES([lib/pfring_config])
 AC_CONFIG_FILES([examples/Makefile])
 AC_CONFIG_FILES([examples_zc/Makefile])
+AC_CONFIG_FILES([examples_ft/Makefile])
 AC_CONFIG_FILES([c++/Makefile])
 AC_CONFIG_FILES([nbpf/Makefile])
 AC_CONFIG_FILES([wireshark/extcap/Makefile])

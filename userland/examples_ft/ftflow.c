@@ -46,7 +46,7 @@
 #include "pfring.h"
 #include "pfring_ft.h"
 
-#include "pfutils.c"
+#include "ftutils.c"
 
 #define ALARM_SLEEP 1
 #define DEFAULT_DEVICE "eth0"
@@ -131,7 +131,7 @@ void sigproc(int sig) {
 /* ************************************ */
 
 void my_sigalarm(int sig) {
-  if(do_shutdown)
+  if (do_shutdown)
     return;
 
   print_stats();
@@ -141,6 +141,19 @@ void my_sigalarm(int sig) {
 
 /* ******************************** */
 
+/* This callback is called after a packet has been processed
+void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata,
+		       pfring_ft_flow *flow, void *user) {
+  //fprintf(stderr, "Processing packet [payloadLen: %u]\n", metadata->payload_len);
+  
+  // Marking the flow to discard all packets (this can be used to implement custom filtering policies)
+  // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
+}
+*/
+
+/* ******************************** */
+
+/* This callback is called when a flow expires */
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
@@ -160,11 +173,11 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
   printf("[Flow] "
          "srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
-         "l7: %s, "
+         "l7: %s, category: %u, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
-         pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)),
+         pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category, 
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes, 
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec, 
          (u_int) v->direction[s2d_direction].last.tv_sec,  (u_int) v->direction[s2d_direction].last.tv_usec,
@@ -175,8 +188,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 /* ******************************** */
 
-void processPacket(const struct pfring_pkthdr *h,
-		   const u_char *p, const u_char *user_bytes) {
+void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char *user_bytes) {
   pfring_ft_action action;
 
   action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
@@ -202,7 +214,7 @@ void packet_consumer() {
 
   while (!do_shutdown) {
     if (pfring_recv(pd, &buffer_p, 0, &hdr, 0) > 0) {
-      processPacket(&hdr, buffer_p, NULL);
+      process_packet(&hdr, buffer_p, NULL);
     } else {
       if (!pfring_ft_housekeeping(ft, time(NULL))) {
         usleep(1);
@@ -213,11 +225,13 @@ void packet_consumer() {
 
 /* *************************************** */
 
-void printHelp(void) {
-  printf("pfflow_ft - (C) 2018 ntop.org\n");
+void print_help(void) {
+  printf("ftflow - (C) 2018 ntop.org\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
+  printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
@@ -227,19 +241,23 @@ void printHelp(void) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
+  char *categories_file = NULL;
   int promisc, snaplen = 1518, rc;
-  u_int32_t flags = 0;
+  u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
 
-  while ((c = getopt(argc,argv,"g:hi:qv")) != '?') {
+  while ((c = getopt(argc,argv,"c:g:hi:qv7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
+    case 'c':
+      categories_file = strdup(optarg);
+      break;
     case 'g':
       bind_core = atoi(optarg);
       break;
     case 'h':
-      printHelp();
+      print_help();
       exit(0);
       break;
     case 'i':
@@ -251,13 +269,16 @@ int main(int argc, char* argv[]) {
     case 'v':
       verbose = 1;
       break;
+    case '7':
+      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      break;
     }
   }
 
   if (device == NULL) device = DEFAULT_DEVICE;
   bind2node(bind_core);
 
-  ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI);
+  ft = pfring_ft_create_table(ft_flags, 0, 0);
 
   if (ft == NULL) {
     fprintf(stderr, "pfring_ft_create_table error\n");
@@ -273,8 +294,27 @@ int main(int argc, char* argv[]) {
   pfring_ft_set_filter_protocol_by_name(ft, "UPnP", PFRING_FT_ACTION_DISCARD);
   */
 
+  /* Example of callback for expired flows */
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
+  /* Example of callback for packets that have been successfully processed
+  pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
+  */
+
+  if (categories_file) {
+    if (!(ft_flags & PFRING_FT_TABLE_FLAGS_DPI)) {
+      fprintf(stderr, "Categories detection require L7 detection (please use -c in combination with -7)\n");
+      return -1;
+    }
+
+    rc = pfring_ft_load_ndpi_categories(ft, categories_file);
+
+    if (rc < 0) {
+      fprintf(stderr, "Failure loading categories from %s\n", categories_file);
+      return -1;
+    }
+  }
+ 
   promisc = 1;
 
   if (promisc) flags |= PF_RING_PROMISC;
@@ -289,7 +329,7 @@ int main(int argc, char* argv[]) {
   } else {
     u_int32_t version;
 
-    pfring_set_application_name(pd, "pfflow_ft");
+    pfring_set_application_name(pd, "ftflow");
     pfring_version(pd, &version);
 
     if (!quiet) {

@@ -1,7 +1,7 @@
 /* lib/config.h.in.  Generated from configure.in by autoheader.  */
 
-/* Define to 1 if you have the <exanic/exanic.h> header file. */
-#undef HAVE_EXANIC_EXANIC_H
+/* hyperscan.io support is enabled */
+#undef HAVE_HYPERSCAN
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
@@ -12,17 +12,11 @@
 /* Define to 1 if you have the <librdi.h> header file. */
 #undef HAVE_LIBRDI_H
 
-/* Define to 1 if you have the `sze2' library (-lsze2). */
-#undef HAVE_LIBSZE2
-
 /* Define to 1 if you have the `zmq' library (-lzmq). */
 #undef HAVE_LIBZMQ
 
 /* Define to 1 if you have the <linux/net_tstamp.h> header file. */
 #undef HAVE_LINUX_NET_TSTAMP_H
-
-/* Mellanox support is present */
-#undef HAVE_MELLANOX
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
