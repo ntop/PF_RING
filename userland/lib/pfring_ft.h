@@ -12,6 +12,12 @@
 #ifndef _PFRING_FT_H_
 #define _PFRING_FT_H_
 
+/**
+ * @file pfring_ft.h
+ *
+ * @brief      PF_RING FT library header file.
+ */
+
 #include <sys/types.h>
 
 #ifdef __cplusplus
