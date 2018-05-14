@@ -54,7 +54,7 @@
 pfring *pd = NULL;
 pfring_ft_table *ft = NULL;
 int bind_core = -1;
-u_int8_t quiet = 0, verbose = 0, do_shutdown = 0;
+u_int8_t quiet = 0, verbose = 0, do_shutdown = 0, enable_l7 = 0;
 u_int64_t num_pkts = 0;
 u_int64_t num_bytes = 0;
 
@@ -145,7 +145,7 @@ void my_sigalarm(int sig) {
 void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata,
 		       pfring_ft_flow *flow, void *user) {
   //fprintf(stderr, "Processing packet [payloadLen: %u]\n", metadata->payload_len);
-  
+
   // Marking the flow to discard all packets (this can be used to implement custom filtering policies)
   // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
 }
@@ -171,18 +171,21 @@ void processFlow(pfring_ft_flow *flow, void *user){
     ip2 = (char *) inet_ntop(AF_INET6, &k->daddr.v6, buf2, sizeof(buf2));
   }
 
-  printf("[Flow] "
-         "srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
-         "l7: %s, category: %u, "
+  printf("[Flow] ");
+
+  if(enable_l7)
+    printf("l7: %s, category: %u, ",
+	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category);
+
+  printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
-         pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category, 
-         v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes, 
-         (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec, 
+         v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes,
+         (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec,
          (u_int) v->direction[s2d_direction].last.tv_sec,  (u_int) v->direction[s2d_direction].last.tv_usec,
-         v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes, 
-         (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec, 
+         v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes,
+         (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec,
          (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec);
 }
 
@@ -225,6 +228,41 @@ void packet_consumer() {
 
 /* *************************************** */
 
+void print_version(void) {
+  char version[32], system_id[32];
+  time_t license_expiration, maintenance_expiration;
+  int rc;
+  
+  pfring_ft_version(version);
+ 
+  printf("PF_RING FT v.%s\n" 
+         "Copyright 2018 ntop.org\n",
+         version);
+      
+  rc = pfring_ft_license(system_id, &license_expiration, &maintenance_expiration);
+
+  printf("SystemID:      %s\n", system_id);
+              
+  if (rc != 0) {
+    printf("License:       Invalid license\n");
+  } else {
+    printf("License:       Valid license\n");  
+
+    if (license_expiration) {
+      printf("License Type:  Time-limited License \n");
+      printf("Lic. Duration: Until %s [%u days left]\n", ctime_nonl(license_expiration), days_left(license_expiration));
+    } else if (maintenance_expiration > 0) {
+      printf("License Type:  Permanent License \n");
+      if (days_left(maintenance_expiration) <= 0)
+        printf("Maintenance:   Expired\n");
+      else
+        printf("Maintenance:   Until %s [%u days left]\n", ctime_nonl(maintenance_expiration), days_left(maintenance_expiration));
+    }
+  } 
+}
+
+/* *************************************** */
+
 void print_help(void) {
   printf("ftflow - (C) 2018 ntop.org\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
@@ -235,6 +273,10 @@ void print_help(void) {
   printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
+  printf("-V              Print version");
+
+  printf("\nFor nDPI categories see for instance\n"
+	 "https://github.com/ntop/nDPI/blob/dev/example/mining_hosts.txt\n");
 }
 
 /* *************************************** */
@@ -246,7 +288,7 @@ int main(int argc, char* argv[]) {
   u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
 
-  while ((c = getopt(argc,argv,"c:g:hi:qv7")) != '?') {
+  while ((c = getopt(argc,argv,"c:g:hi:qvV7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -270,13 +312,20 @@ int main(int argc, char* argv[]) {
       verbose = 1;
       break;
     case '7':
-      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      enable_l7 = 1;
+      break;
+    case 'V':
+      print_version();
+      exit(0);
       break;
     }
   }
 
   if (device == NULL) device = DEFAULT_DEVICE;
   bind2node(bind_core);
+
+  if (enable_l7)
+    ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
 
   ft = pfring_ft_create_table(ft_flags, 0, 0);
 
@@ -302,7 +351,7 @@ int main(int argc, char* argv[]) {
   */
 
   if (categories_file) {
-    if (!(ft_flags & PFRING_FT_TABLE_FLAGS_DPI)) {
+    if (!enable_l7) {
       fprintf(stderr, "Categories detection require L7 detection (please use -c in combination with -7)\n");
       return -1;
     }
@@ -314,7 +363,7 @@ int main(int argc, char* argv[]) {
       return -1;
     }
   }
- 
+
   promisc = 1;
 
   if (promisc) flags |= PF_RING_PROMISC;
@@ -336,7 +385,7 @@ int main(int argc, char* argv[]) {
       printf("Using PF_RING v.%d.%d.%d\n",
        (version & 0xFFFF0000) >> 16,
        (version & 0x0000FF00) >> 8,
-       version & 0x000000FF); 
+       version & 0x000000FF);
     }
   }
 
@@ -350,6 +399,9 @@ int main(int argc, char* argv[]) {
 
   signal(SIGALRM, my_sigalarm);
   alarm(ALARM_SLEEP);
+
+  if (!quiet)
+    printf("Capturing from %s %s nDPI support\n", device, enable_l7 ? "with" : "without (see -7)");
 
   if (pfring_enable_ring(pd) != 0) {
     printf("Unable to enable ring :-(\n");
@@ -372,4 +424,3 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
-

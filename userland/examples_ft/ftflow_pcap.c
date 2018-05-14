@@ -1,5 +1,5 @@
 /*
- * (C) 2018 - ntop 
+ * (C) 2018 - ntop.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,7 +49,7 @@
 
 pcap_t *pd = NULL;
 pfring_ft_table *ft = NULL;
-u_int8_t quiet = 0, verbose = 0, do_shutdown = 0;
+u_int8_t quiet = 0, verbose = 0, do_shutdown = 0, enable_l7 = 0;
 
 static struct timeval startTime;
 unsigned long long numPkts = 0, numBytes = 0;
@@ -153,13 +153,16 @@ void processFlow(pfring_ft_flow *flow, void *user){
     ip2 = (char *) inet_ntop(AF_INET6, &k->daddr.v6, buf2, sizeof(buf2));
   }
 
-  printf("[Flow] "
-         "srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
-         "l7: %s, "
+  printf("[Flow] ");
+
+  if(enable_l7)
+    printf("l7: %s, category: %u, ",
+	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category);
+  
+  printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
-         ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
-         pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)),
+         ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,         
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes, 
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec, 
          (u_int) v->direction[s2d_direction].last.tv_sec,  (u_int) v->direction[s2d_direction].last.tv_usec,
@@ -190,9 +193,14 @@ void print_help(void) {
   printf("-h              Print help\n");
   printf("-i <device>     Device name\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-f <filter>     BPF filter\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose\n");
+
+  printf("\nFor nDPI categories see for instance\n"
+	 "https://github.com/ntop/nDPI/blob/dev/example/mining_hosts.txt\n");
+
 }
 
 /* *************************************** */
@@ -203,13 +211,17 @@ int main(int argc, char* argv[]) {
   int promisc, snaplen = DEFAULT_SNAPLEN;
   struct bpf_program fcode;
   u_int32_t ft_flags = 0;
-
+  char *categories_file = NULL;
+  
   startTime.tv_sec = 0;
 
-  while ((c = getopt(argc,argv,"hi:vf:q7")) != '?') {
+  while ((c = getopt(argc,argv,"c:hi:vf:q7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
+    case 'c':
+      categories_file = strdup(optarg);
+      break;
     case 'h':
       print_help();
       exit(0);
@@ -227,7 +239,7 @@ int main(int argc, char* argv[]) {
       bpfFilter = strdup(optarg);
       break;
     case '7':
-      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      enable_l7 = 1;
       break;
     }
   }
@@ -239,6 +251,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  if (enable_l7)
+    ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+
   ft = pfring_ft_create_table(ft_flags, 0, 0);
 
   if (ft == NULL) {
@@ -248,10 +263,19 @@ int main(int argc, char* argv[]) {
 
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
-  if (!quiet) {
-    printf("Capturing from %s\n", device);
-  }
+  if (categories_file) {
+    if (!enable_l7) {
+      fprintf(stderr, "Categories detection require L7 detection "
+	      "(please use -c in combination with -7)\n");
+      return -1;
+    }
 
+    if(pfring_ft_load_ndpi_categories(ft, categories_file) < 0) {
+      fprintf(stderr, "Failure loading categories from %s\n", categories_file);
+      return -1;
+    }
+  }
+    
   promisc = 1;
 
   if ((pd = pcap_open_live(device, snaplen, promisc, 500, errbuf)) == NULL) {
@@ -267,6 +291,10 @@ int main(int argc, char* argv[]) {
 	printf("pcap_setfilter error: '%s'\n", pcap_geterr(pd));
       }
     }
+  }
+  
+  if (!quiet) {
+    printf("Capturing from %s %s nDPI support\n", device, enable_l7 ? "with" : "without (see -7)");    
   }
 
   pcap_set_application_name(pd, "ftflow_pcap");
