@@ -426,12 +426,14 @@ static inline int packet_filter(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue 
 #ifdef HAVE_PF_RING_FT
   if (flow_table) {
     pfring_ft_pcap_pkthdr hdr;
+    pfring_ft_ext_pkthdr ext_hdr;
     pfring_ft_action action;
 
     hdr.len = hdr.caplen = pkt_handle->len;
     SET_TIMEVAL_FROM_PULSE(hdr.ts, *pulse_timestamp_ns);
+    ext_hdr.hash = pkt_handle->hash;
 
-    action = pfring_ft_process(ft, pfring_zc_pkt_buff_data(pkt_handle, in_queue), &hdr);
+    action = pfring_ft_process(ft, pfring_zc_pkt_buff_data(pkt_handle, in_queue), &hdr, &ext_hdr);
 
     if (action == PFRING_FT_ACTION_DISCARD)
       return 0; /* drop */
