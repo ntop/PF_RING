@@ -82,6 +82,7 @@ cp $HOME/PF_RING/userland/examples_zc/zbalance_ipc $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples_zc/zsend $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples_zc/zcount $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples_zc/zcount_ipc $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples_ft/ftflow $RPM_BUILD_ROOT/usr/bin
 %endif
 
 
@@ -110,6 +111,7 @@ rm -fr $RPM_BUILD_ROOT
 /usr/bin/zsend
 /usr/bin/zcount
 /usr/bin/zcount_ipc
+/usr/bin/ftflow
 %endif
 #/usr/bin/tcpdump
 /usr/bin/pfcount
