@@ -74,6 +74,20 @@ char *msec2dhmsm(u_int64_t msec, char *buf, u_int buf_len) {
 
 /* *************************************** */
 
+u_int32_t days_left(time_t to) {
+  return (to - time(NULL)) / 86400;
+}
+
+/* *************************************** */
+
+char *ctime_nonl(time_t time) {
+  char *s = ctime(&time);
+  s[strlen(s) - 1] = '\0';
+  return s;
+}
+
+/* *************************************** */
+
 char *_intoa(unsigned int addr, char* buf, u_short bufLen) {
   char *cp, *retStr;
   u_int byte;

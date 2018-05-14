@@ -228,6 +228,41 @@ void packet_consumer() {
 
 /* *************************************** */
 
+void print_version(void) {
+  char version[32], system_id[32];
+  time_t license_expiration, maintenance_expiration;
+  int rc;
+  
+  pfring_ft_version(version);
+ 
+  printf("PF_RING FT v.%s\n" 
+         "Copyright 2018 ntop.org\n",
+         version);
+      
+  rc = pfring_ft_license(system_id, &license_expiration, &maintenance_expiration);
+
+  printf("SystemID:      %s\n", system_id);
+              
+  if (rc != 0) {
+    printf("License:       Invalid license\n");
+  } else {
+    printf("License:       Valid license\n");  
+
+    if (license_expiration) {
+      printf("License Type:  Time-limited License \n");
+      printf("Lic. Duration: Until %s [%u days left]\n", ctime_nonl(license_expiration), days_left(license_expiration));
+    } else if (maintenance_expiration > 0) {
+      printf("License Type:  Permanent License \n");
+      if (days_left(maintenance_expiration) <= 0)
+        printf("Maintenance:   Expired\n");
+      else
+        printf("Maintenance:   Until %s [%u days left]\n", ctime_nonl(maintenance_expiration), days_left(maintenance_expiration));
+    }
+  } 
+}
+
+/* *************************************** */
+
 void print_help(void) {
   printf("ftflow - (C) 2018 ntop.org\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
@@ -238,6 +273,7 @@ void print_help(void) {
   printf("-g <core>       CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
+  printf("-V              Print version");
 
   printf("\nFor nDPI categories see for instance\n"
 	 "https://github.com/ntop/nDPI/blob/dev/example/mining_hosts.txt\n");
@@ -252,7 +288,7 @@ int main(int argc, char* argv[]) {
   u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
 
-  while ((c = getopt(argc,argv,"c:g:hi:qv7")) != '?') {
+  while ((c = getopt(argc,argv,"c:g:hi:qvV7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -276,13 +312,20 @@ int main(int argc, char* argv[]) {
       verbose = 1;
       break;
     case '7':
-      enable_l7 = 1, ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      enable_l7 = 1;
+      break;
+    case 'V':
+      print_version();
+      exit(0);
       break;
     }
   }
 
   if (device == NULL) device = DEFAULT_DEVICE;
   bind2node(bind_core);
+
+  if (enable_l7)
+    ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
 
   ft = pfring_ft_create_table(ft_flags, 0, 0);
 
@@ -308,7 +351,7 @@ int main(int argc, char* argv[]) {
   */
 
   if (categories_file) {
-    if (!(ft_flags & PFRING_FT_TABLE_FLAGS_DPI)) {
+    if (!enable_l7) {
       fprintf(stderr, "Categories detection require L7 detection (please use -c in combination with -7)\n");
       return -1;
     }

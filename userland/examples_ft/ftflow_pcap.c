@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
       bpfFilter = strdup(optarg);
       break;
     case '7':
-      enable_l7 = 1, ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      enable_l7 = 1;
       break;
     }
   }
@@ -251,6 +251,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  if (enable_l7)
+    ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+
   ft = pfring_ft_create_table(ft_flags, 0, 0);
 
   if (ft == NULL) {
@@ -261,7 +264,7 @@ int main(int argc, char* argv[]) {
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
   if (categories_file) {
-    if (!(ft_flags & PFRING_FT_TABLE_FLAGS_DPI)) {
+    if (!enable_l7) {
       fprintf(stderr, "Categories detection require L7 detection "
 	      "(please use -c in combination with -7)\n");
       return -1;
