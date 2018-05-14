@@ -192,9 +192,12 @@ void processFlow(pfring_ft_flow *flow, void *user){
 /* ******************************** */
 
 void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char *user_bytes) {
+  pfring_ft_ext_pkthdr ext_hdr;
   pfring_ft_action action;
 
-  action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
+  ext_hdr.hash = h->extended_hdr.pkt_hash;
+
+  action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h, &ext_hdr);
 
   num_pkts++;
   num_bytes += h->len + 24;

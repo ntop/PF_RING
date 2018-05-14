@@ -174,9 +174,10 @@ void processFlow(pfring_ft_flow *flow, void *user){
 /* ****************************************************** */
 
 void process_packet(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char *p) {
+  pfring_ft_ext_pkthdr ext_hdr = { 0 };
   pfring_ft_action action;
 
-  action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h);
+  action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h, &ext_hdr);
 
   if (verbose) {
     char buffer[256];

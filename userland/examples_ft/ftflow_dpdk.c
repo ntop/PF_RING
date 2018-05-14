@@ -121,6 +121,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 static void lcore_main(void) {
   pfring_ft_pcap_pkthdr h;
+  pfring_ft_ext_pkthdr ext_hdr = { 0 };
   u_int32_t i;
 
   if (rte_eth_dev_socket_id(port) > 0 && rte_eth_dev_socket_id(port) != (int) rte_socket_id()) {
@@ -149,7 +150,7 @@ static void lcore_main(void) {
       h.len = h.caplen = len;
       gettimeofday(&h.ts, NULL);
 
-      action = pfring_ft_process(ft, (const u_char *) data, &h);
+      action = pfring_ft_process(ft, (const u_char *) data, &h, &ext_hdr);
  
       if (verbose) {
         int j;

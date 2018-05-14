@@ -109,8 +109,13 @@ typedef struct { /* pfring_pkthdr / pcap_pkthdr common struct */
   u_int32_t len;     /**< length original packet (off wire) */
 } pfring_ft_pcap_pkthdr;
 
+typedef struct { /* additional packet metadata not available in pcap_pkthdr */
+  u_int32_t hash;  /**< packet hash */
+} pfring_ft_ext_pkthdr;
+
 typedef struct {
   pfring_ft_pcap_pkthdr *hdr;
+  pfring_ft_ext_pkthdr *ext_hdr;
   pfring_ft_direction direction;
   u_int16_t vlan_id;
   u_int8_t ip_version;
@@ -281,13 +286,15 @@ pfring_ft_set_flow_list_export_callback(
  * @param table The flow table handle. 
  * @param packet The raw packet.
  * @param header The packet metadata (including length and timestamp).
+ * @param ext_header Additional packet metadata not available in the pcap header (including hash).
  * @return The action for the packet, in case filtering rules have been specified.
  */
 pfring_ft_action
 pfring_ft_process(
   pfring_ft_table *table,
   const u_char *packet,
-  const pfring_ft_pcap_pkthdr *header
+  const pfring_ft_pcap_pkthdr *header,
+  const pfring_ft_ext_pkthdr *ext_header
 );
 
 /**

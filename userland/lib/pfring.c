@@ -464,6 +464,9 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
   struct pfring_pkthdr hdr;
   u_char *buffer = NULL;
   int rc = 0;
+#ifdef HAVE_PF_RING_FT
+  pfring_ft_ext_pkthdr ext_hdr = { 0 };
+#endif
 
   memset(&hdr, 0, sizeof(hdr));
   ring->break_recv_loop = 0;
@@ -488,7 +491,7 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
 #endif
 
 #ifdef HAVE_PF_RING_FT
-      if (unlikely(ring->ft && pfring_ft_process(ring->ft, buffer, (pfring_ft_pcap_pkthdr *) &hdr) == PFRING_FT_ACTION_DISCARD)) 
+      if (unlikely(ring->ft && pfring_ft_process(ring->ft, buffer, (pfring_ft_pcap_pkthdr *) &hdr, &ext_hdr) == PFRING_FT_ACTION_DISCARD)) 
         continue; /* rejected */
 #endif
 
@@ -540,6 +543,10 @@ int pfring_stats(pfring *ring, pfring_stat *stats) {
 int pfring_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 		struct pfring_pkthdr *hdr,
 		u_int8_t wait_for_incoming_packet) {
+#ifdef HAVE_PF_RING_FT
+  pfring_ft_ext_pkthdr ext_hdr = { 0 };
+#endif
+
   if (likely(ring
 	     && ring->enabled
 	     && ring->recv
@@ -569,7 +576,7 @@ recv_next:
 #endif
 
 #ifdef HAVE_PF_RING_FT
-    if (unlikely(rc > 0 && ring->ft && pfring_ft_process(ring->ft, *buffer, (pfring_ft_pcap_pkthdr *) hdr) == PFRING_FT_ACTION_DISCARD)) 
+    if (unlikely(rc > 0 && ring->ft && pfring_ft_process(ring->ft, *buffer, (pfring_ft_pcap_pkthdr *) hdr, &ext_hdr) == PFRING_FT_ACTION_DISCARD)) 
       goto recv_next; /* rejected */
 #endif
 
