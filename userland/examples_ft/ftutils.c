@@ -24,13 +24,17 @@
 #define __USE_GNU
 #endif
 
-//#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sched.h>
 #include <pthread.h>
-#include <sched.h> /* for CPU_XXXX */
 
 #include <sys/types.h>
 #include <pwd.h>
 #include <sys/stat.h>
+
+#include "config.h"
 
 /*
  * The time difference in millisecond
@@ -154,6 +158,69 @@ int bindthread2core(pthread_t thread_id, u_int core_id) {
 
 int bind2core(u_int core_id) {
   return(bindthread2core(pthread_self(), core_id));
+}
+
+/* *************************************** */
+
+struct ip_header {
+#if BYTE_ORDER == LITTLE_ENDIAN
+  u_int32_t	ihl:4,		/* header length */
+    version:4;			/* version */
+#else
+  u_int32_t	version:4,			/* version */
+    ihl:4;		/* header length */
+#endif
+  u_int8_t	tos;			/* type of service */
+  u_int16_t	tot_len;			/* total length */
+  u_int16_t	id;			/* identification */
+  u_int16_t	frag_off;			/* fragment offset field */
+  u_int8_t	ttl;			/* time to live */
+  u_int8_t	protocol;			/* protocol */
+  u_int16_t	check;			/* checksum */
+  u_int32_t saddr, daddr;	/* source and dest address */
+} __attribute__((packed));
+
+struct udp_header {
+  u_int16_t	source;		/* source port */
+  u_int16_t	dest;		/* destination port */
+  u_int16_t	len;		/* udp length */
+  u_int16_t	check;		/* udp checksum */
+} __attribute__((packed));
+
+u_char *forge_udp_packet(u_char *buffer, u_int32_t buffer_len, u_int32_t id) {
+  int i;
+  u_int32_t src_ip = 0x0A000100 /* 10.0.1.0 */;
+  u_int32_t dst_ip = 0xC0A80001 /* 192.168.0.1 */;
+  u_int16_t src_port = 2012, dst_port = 3000;
+  struct ip_header *ip_header;
+  struct udp_header *udp_header;
+
+  /* Reset packet */
+  memset(buffer, 0, buffer_len);
+
+  for (i = 0; i < 12; i++) buffer[i] = i;
+  buffer[12] = 0x08, buffer[13] = 0x00; /* IP */
+
+  ip_header = (struct ip_header *) &buffer[sizeof(struct ether_header)];
+  ip_header->ihl = 5;
+  ip_header->version = 4;
+  ip_header->tos = 0;
+  ip_header->tot_len = htons(buffer_len-sizeof(struct ether_header));
+  ip_header->id = htons(2012);
+  ip_header->ttl = 64;
+  ip_header->frag_off = htons(0);
+  ip_header->protocol = IPPROTO_UDP;
+  ip_header->daddr = htonl(dst_ip);
+  ip_header->saddr = htonl(id + src_ip);
+  ip_header->check = 0;
+
+  udp_header = (struct udp_header*)&buffer[sizeof(struct ether_header) + sizeof(struct ip_header)];
+  udp_header->source = htons(src_port);
+  udp_header->dest = htons(dst_port);
+  udp_header->len = htons(buffer_len-sizeof(struct ether_header)-sizeof(struct udp_header));
+  udp_header->check = 0; /* It must be 0 to compute the checksum */
+
+  return buffer;
 }
 
 /* *************************************** */

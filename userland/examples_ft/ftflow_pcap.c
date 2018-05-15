@@ -20,9 +20,9 @@
  * THE SOFTWARE.
  */
 
+#define _GNU_SOURCE
 #include <pcap/pcap.h>
 #include <signal.h>
-#include <sched.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
