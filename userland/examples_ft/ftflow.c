@@ -54,9 +54,29 @@
 pfring *pd = NULL;
 pfring_ft_table *ft = NULL;
 int bind_core = -1;
-u_int8_t quiet = 0, verbose = 0, do_shutdown = 0, enable_l7 = 0;
+int bind_time_pulse_core = -1;
+u_int8_t quiet = 0, verbose = 0, time_pulse = 0, enable_l7 = 0, do_shutdown = 0;
 u_int64_t num_pkts = 0;
 u_int64_t num_bytes = 0;
+
+volatile u_int64_t *pulse_timestamp;
+
+/* ************************************ */
+
+void *time_pulse_thread(void *data) {
+  struct timespec tn;
+
+  if (bind_time_pulse_core >= 0)
+    bind2core(bind_time_pulse_core);
+
+  while (likely(!do_shutdown)) {
+    clock_gettime(CLOCK_REALTIME, &tn);
+    *pulse_timestamp = ((u_int64_t) ((u_int64_t) tn.tv_sec << 32) | (tn.tv_nsec/1000));
+    usleep(1);
+  }
+
+  return NULL;
+}
 
 /* ************************************ */
 
@@ -192,12 +212,20 @@ void processFlow(pfring_ft_flow *flow, void *user){
 /* ******************************** */
 
 void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char *user_bytes) {
+  pfring_ft_pcap_pkthdr *hdr = (pfring_ft_pcap_pkthdr *) h;
   pfring_ft_ext_pkthdr ext_hdr;
+  u_int64_t ts;
   pfring_ft_action action;
 
   ext_hdr.hash = h->extended_hdr.pkt_hash;
 
-  action = pfring_ft_process(ft, p, (pfring_ft_pcap_pkthdr *) h, &ext_hdr);
+  if (time_pulse) {
+    ts = *pulse_timestamp;
+    hdr->ts.tv_sec = ts >> 32;
+    hdr->ts.tv_usec = (ts << 32) >> 32;
+  }
+
+  action = pfring_ft_process(ft, p, hdr, &ext_hdr);
 
   num_pkts++;
   num_bytes += h->len + 24;
@@ -274,6 +302,7 @@ void print_help(void) {
   printf("-7              Enable L7 protocol detection (nDPI)\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-g <core>       CPU core affinity\n");
+  printf("-S <core>       Enable timer thread and set CPU core affinity\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-V              Print version");
@@ -290,8 +319,9 @@ int main(int argc, char* argv[]) {
   int promisc, snaplen = 1518, rc;
   u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
+  pthread_t time_thread;
 
-  while ((c = getopt(argc,argv,"c:g:hi:qvV7")) != '?') {
+  while ((c = getopt(argc,argv,"c:g:hi:qvS:V7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -316,6 +346,10 @@ int main(int argc, char* argv[]) {
       break;
     case '7':
       enable_l7 = 1;
+      break;
+    case 'S':
+      time_pulse = 1;
+      bind_time_pulse_core = atoi(optarg);
       break;
     case 'V':
       print_version();
@@ -369,8 +403,8 @@ int main(int argc, char* argv[]) {
 
   promisc = 1;
 
-  if (promisc) flags |= PF_RING_PROMISC;
-  flags |= PF_RING_TIMESTAMP; /* needed for flow processing (FIXX optimise ts generation) */
+  if (promisc)      flags |= PF_RING_PROMISC;
+  if (!time_pulse) flags |= PF_RING_TIMESTAMP; /* needed for flow processing */
 
   pd = pfring_open(device, snaplen, flags);
 
@@ -403,6 +437,12 @@ int main(int argc, char* argv[]) {
   signal(SIGALRM, my_sigalarm);
   alarm(ALARM_SLEEP);
 
+  if (time_pulse) {
+    pulse_timestamp = calloc(CACHE_LINE_LEN/sizeof(u_int64_t), sizeof(u_int64_t));
+    pthread_create(&time_thread, NULL, time_pulse_thread, NULL);
+    while (!*pulse_timestamp && !do_shutdown); /* wait for ts */
+  }
+
   if (!quiet)
     printf("Capturing from %s %s nDPI support\n", device, enable_l7 ? "with" : "without (see -7)");
 
@@ -418,6 +458,10 @@ int main(int argc, char* argv[]) {
   packet_consumer();
 
   sleep(1);
+
+  if (time_pulse) {
+    pthread_join(time_thread, NULL);
+  }
 
   pfring_close(pd);
 

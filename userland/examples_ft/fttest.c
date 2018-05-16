@@ -49,7 +49,6 @@
 #include "ftutils.c"
 
 #define ALARM_SLEEP 1
-#define CACHE_LINE_LEN 64
 
 pfring_ft_table *ft = NULL;
 int bind_core = -1;
@@ -60,7 +59,7 @@ u_int64_t num_bytes = 0;
 
 volatile u_int64_t *pulse_timestamp;
 
-/* ******************************** */
+/* ************************************ */
 
 void *time_pulse_thread(void *data) {
   struct timespec tn;
@@ -77,7 +76,7 @@ void *time_pulse_thread(void *data) {
   return NULL;
 }
 
-/* ************************************ */
+/* *************************************** */
 
 void print_stats() {
   pfring_ft_stats *fstat;

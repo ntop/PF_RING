@@ -36,6 +36,10 @@
 
 #include "config.h"
 
+#define CACHE_LINE_LEN 64
+
+/* ******************************** */
+
 /*
  * The time difference in millisecond
  */
