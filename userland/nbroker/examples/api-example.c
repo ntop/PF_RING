@@ -86,7 +86,7 @@ int rule_with_ids() {
   rule_id = 5;
 
   if ((rc = nbroker_set_filtering_rule(bkr, target_port, &rule_id, &match, NBROKER_POLICY_PASS)) != NBROKER_RC_OK) {
-    printf("nbroker_set_filtering_rule failed with code %d\n", rc);
+    printf("nbroker_set_filtering_rule #1 failed with code %d\n", rc);
     return 1;
   }
 
@@ -108,7 +108,7 @@ int rule_with_ids() {
   match.dport.low = htons(443);
 
   if ((rc = nbroker_set_filtering_rule(bkr, target_port, &rule_id, &match, NBROKER_POLICY_DROP)) != NBROKER_RC_OK) {
-    printf("nbroker_set_filtering_rule failed with code %d\n", rc);
+    printf("nbroker_set_filtering_rule #2 failed with code %d\n", rc);
     return 1;
   }
 
@@ -128,7 +128,7 @@ int rule_with_ids() {
 
   /* Now add a new rule, it should not be addeded again since the match already exists */
   if ((rc = nbroker_set_filtering_rule(bkr, target_port, &rule_id, &match, NBROKER_POLICY_DROP)) != NBROKER_RC_OK) {
-    printf("%d) nbroker_set_filtering_rule failed with code %d\n", __LINE__, rc);
+    printf("%d) nbroker_set_filtering_rule #3 failed with code %d\n", __LINE__, rc);
     return 1;
   }
 
@@ -150,7 +150,7 @@ int rule_with_ids() {
   rule_id = NBROKER_AUTO_RULE_ID;
 
   if ((rc = nbroker_set_filtering_rule(bkr, target_port, &rule_id, &match, NBROKER_POLICY_PASS)) != NBROKER_RC_OK) {
-    printf("nbroker_set_filtering_rule failed with code %d\n", rc);
+    printf("nbroker_set_filtering_rule #3 failed with code %d\n", rc);
     return 1;
   }
 
@@ -466,7 +466,7 @@ a_test tests[] = {
   { pass_all_drop_http, "Pass all drop http/https traffic" },
   { drop_all_pass_7,    "Drop all but 10.0.0.7 traffic" },
   { garbage_collect,    "Garbage collect with rules" },
-  { port_conversion,    "Internal/external ports conversion - use ens9 to test" },
+  { port_conversion,    "Internal/external ports conversion - expected success on the second port only" },
   { returned_rule_id,   "Check the rule ID returned by nbroker_set_steering_rule/nbroker_set_filtering_rule" },
   { rule_string,        "Conversion from a textual BPF rule into the binary form" },
   { auto_rule_purge,    "Automatic rule purge" }
