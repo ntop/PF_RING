@@ -1555,7 +1555,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
         seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
         seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
         seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
-		seq_printf(m, "Queue Flush Timeout : %u\n", pfr->queue_flush_timeout);
+        seq_printf(m, "Queue Flush Timeout : %u\n", pfr->queue_flush_timeout);
       }
 
       if(pfr->zc_device_entry != NULL) {

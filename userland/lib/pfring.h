@@ -244,7 +244,7 @@ struct __pfring {
   int       (*stats)                        (pfring *, pfring_stat *);
   int       (*recv)                         (pfring *, u_char**, u_int, struct pfring_pkthdr *, u_int8_t);
   int       (*set_poll_watermark)           (pfring *, u_int16_t);
-  int       (*set_queue_flush_timeout)       (pfring *, u_int16_t);
+  int       (*set_queue_flush_timeout)      (pfring *, u_int16_t);
   int       (*set_poll_duration)            (pfring *, u_int);
   int       (*set_tx_watermark)             (pfring *, u_int16_t);
   int       (*set_channel_id)               (pfring *, u_int32_t);
