@@ -13,6 +13,12 @@
 #ifndef NBROKER_API
 #define NBROKER_API
 
+/**
+ * @file nbroker_api.h
+ *
+ * @brief      nBroker C API header file.
+ */
+
 #include <net/if.h>
 
 #include "rrc.h"
