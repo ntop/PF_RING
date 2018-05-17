@@ -32,6 +32,8 @@
 #include "parser.h"
 #include "rules_hash.h"
 
+//#define DEBUG
+
 /* Enable this to skip RRC device calls for local testing */
 // #define RRC_TEST_ON
 
@@ -247,7 +249,7 @@ static int receive_command(nbroker_command_t **command, char *buf,
       traceEvent(TRACE_ERROR, "Communication error. Leaving...");
       exit(1);
     } else {
-      traceEvent(TRACE_INFO, "[ZMQ] Command received");
+      traceEvent(TRACE_DEBUG, "[ZMQ] Command received");
       break;
     }
   }
@@ -259,11 +261,8 @@ static int receive_command(nbroker_command_t **command, char *buf,
     return(rc);
 
   if (header.binary_mark == RRC_BINARY_MARK) { /* binary format */
-    *is_binary = 1;
 
-#ifdef DEBUG
-    traceEvent(TRACE_DEBUG, "Processing rule in binary format");
-#endif
+    *is_binary = 1;
 
     if (header.binary_version != RRC_BINARY_VERSION) {
       traceEvent(TRACE_ERROR, "Unsupported binary version 0x%02x", header.binary_version);
@@ -273,22 +272,21 @@ static int receive_command(nbroker_command_t **command, char *buf,
 
     *command = (nbroker_command_t *) calloc(sizeof(nbroker_command_t), 1);
     if (*command == NULL) {
+      traceEvent(TRACE_ERROR, "Memory allocation failure");
       send_command_set_error(err_buf, sizeof(err_buf), 1);
       return -1;
     }
     
     if ((rc = zmq_recv(zmq_responder, (char*)*command, sizeof(nbroker_command_t), 0)) == -1) {
+      traceEvent(TRACE_WARNING, "Error reading the full command");
       free(*command);
       send_command_set_error(err_buf, sizeof(err_buf), 1);
       return rc;
     }
 
   } else { /* text format */
-    *is_binary = 0;
 
-#ifdef DEBUG
-    traceEvent(TRACE_DEBUG, "Processing rule in ASCII format");
-#endif
+    *is_binary = 0;
 
     memcpy(buf, &header, sizeof(nbroker_command_header_t));
 
@@ -297,6 +295,8 @@ static int receive_command(nbroker_command_t **command, char *buf,
       traceEvent(TRACE_DEBUG, "Error reading the full message");
       return rc;
     }
+
+    traceEvent(TRACE_INFO, "[ZMQ] Command: '%s'", buf);
 
     *command = rrc_parse(buf, errbuf, errbuf_size);
 
@@ -570,9 +570,7 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
   u_int64_t to_apply = 0;
   nbroker_rc_t command_rv = NBROKER_RC_OK;
 
-#ifdef DEBUG
-  traceEvent(TRACE_DEBUG, "[RRC] Processing command type %d", cmd->type);
-#endif
+  traceEvent(TRACE_DEBUG, "Processing command [%d]", cmd->type);
 
   switch (cmd->type) {
     case RRC_RULE_TYPE_ACTION: {
@@ -754,6 +752,7 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
       auto_garbage_collect_idle_for = cmd->gc.idle_for;
       command_rv = send_ok_code(buf, buf_size, is_binary, 0);
       break;
+
     case RRC_RULE_TYPE_LIST_RULES:
 #ifdef DEBUG
        traceEvent(TRACE_DEBUG, "Type = LIST_RULES");
@@ -769,8 +768,8 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
 
       command_rv = send_ok_code(buf, buf_size, is_binary, 1);
 
-      if(is_binary) {
-        nbroker_command_rules_result_t res;
+      if  (is_binary) {
+        nbroker_command_rules_result_ res;
         res.num_rules = hash->num_rules;
         zmq_send(zmq_responder, (char*)&res, sizeof(res), 0);
 
@@ -787,7 +786,9 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
         snprintf(buf, buf_size, "%s", "");
         zmq_send(zmq_responder, buf, strlen(buf) + 1, 0);
       }
+
       send_ok_code(buf, buf_size, is_binary, 0);
+
       break;
 
     case RRC_RULE_TYPE_IFNAME_TO_INTERNAL:

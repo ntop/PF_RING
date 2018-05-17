@@ -28,6 +28,10 @@ u_int32_t rule_id;
 /* *************************************** */
 
 int test0() {
+  /* list filtering rules */
+  u_int32_t num_rules;
+  nbroker_rule_t *rules;
+
   /* add a filtering rule */
   memset(&match, 0, sizeof(match));
   match.dport.low = htons(25);
@@ -55,10 +59,6 @@ int test0() {
     printf("nbroker_remove_rule_by_match failed with code %d\n", rc);
     return 1;
   }
-
-  /* list filtering rules */
-  u_int32_t num_rules;
-  nbroker_rule_t *rules;
 
   if ((rc = nbroker_list_rules(bkr, target_port, NBROKER_TYPE_FILTERING, &num_rules, &rules)) != NBROKER_RC_OK) {
     printf("nbroker_list_rules failed with code %d\n", rc);
@@ -545,7 +545,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  printf("Running test %d, target_port=%s steering_port=%s\n", testno, target_port, steering_port ? steering_port : "none");
+  printf("Running test %d (%s), target_port=%s steering_port=%s\n", 
+         testno, tests[testno].description, target_port, steering_port ? steering_port : "none");
   rc = tests[testno].fn();
 
   if (nbroker_term(bkr) != NBROKER_RC_OK) {

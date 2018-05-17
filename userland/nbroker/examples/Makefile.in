@@ -2,7 +2,7 @@ RRCLIB_HOME=../rrclib
 
 NBROKERLIB_HOME=../nbrokerlib
 NBROKERLIB_INC=-I$(NBROKERLIB_HOME)
-NBROKERLIB_LIB=-L../nbrokerlib -lnbroker
+NBROKERLIB_LIB=$(NBROKERLIB_HOME)/libnbroker.a #-L$(NBROKERLIB_HOME) -lnbroker
 
 INCLUDES=$(NBROKERLIB_INC) -I$(RRCLIB_HOME)/include
 LIBS=$(NBROKERLIB_LIB) -lpthread -lm -ldl -lzmq
