@@ -624,25 +624,29 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
           if(rc < 0)
             return send_return_code(NBROKER_RC_INTERNAL_ERROR, strerror(-rc), buf, buf_size, is_binary, 0);
 
-          if(rc != 0) {
-            /* Something has changed */
-            if(rc == 2) {
-              /* The rule must be updated */
+          if (rc != 0) { /* Rule is not there or should be updated */
+
+            if (rc == 2) { /* Rule should be updated, something has changed */
+
               traceEvent(TRACE_INFO, "Removing rule %d to insert the new one", rule_id);
+
 #ifndef RRC_TEST_ON
               if(rrc_remove_rule(port, rule_id, filter_type) == -1)
                 return send_command_set_error(buf, buf_size, is_binary);
 
               /* NOTE: currently apply is necessary after remove to avoid rule apply issues */
-              if(apply_rules(1) == -1)
+              if (apply_rules(1) == -1)
                 return send_command_set_error(buf, buf_size, is_binary);
 #endif
               to_apply = 0;
             }
 
 #ifndef RRC_TEST_ON
-            if(rrc_add_rule(port, rule_id, filter_type, &cmd->action.match, command_to_rrc_policy(cmd->action.policy), steer_port) == -1)
+            if (rrc_add_rule(port, rule_id, filter_type, &cmd->action.match, command_to_rrc_policy(cmd->action.policy), steer_port) == -1) {
+              /* Failure adding rule, removing also from hash */
+              rules_hash_delete(hash, &cmd->action.match, rule_id);
               return send_command_set_error(buf, buf_size, is_binary);
+            }
 #endif
             to_apply++;
           }
@@ -1122,7 +1126,6 @@ static const struct option long_options[] = {
 static void help(void) {
   printf("nbrokerd - Copyright 2017-2018 ntop.org\n\n");
   printf("Usage: nbrokerd -h\n\n");
-  printf("[--daemon|-d]                               | Daemon mode\n");
   printf("[--rrc-config-file|-c <path>]               | RRC configuration file\n");
   printf("[--trace-log|-t <path>]                     | Trace log file\n");
   printf("[--verbose|-v <level>]                      | Verbosity level (0: Error, 2: Normal, 4: Debug)\n");

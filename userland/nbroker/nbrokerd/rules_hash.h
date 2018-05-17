@@ -70,6 +70,15 @@ typedef ruleshash_callback_rc (ruleshash_item_callback)(const ruleshash_key *key
 int rules_hash_set(ruleshash_t *hash, ruleshash_key *key, u_int32_t *rule_id, u_int8_t policy, u_int8_t redirectionPort);
 
 /*
+ * Checks if an item matches the key or the rule_id into the hash.
+ *
+ * If rule_id is 0, it looks for the first item matching the key.
+ *
+ * Return 1 if the element does exist, 0 otherwise.
+ */
+int rules_hash_is_set(ruleshash_t *hash, ruleshash_key *key, u_int32_t rule_id);
+
+/*
  * Delete the first item which matches the key or the rule_id into the hash.
  *
  * If rule_id is 0, then the first item matching the key is deleted, otherwise

@@ -43,11 +43,7 @@ static u_int32_t calculate_hash(void *key, size_t keysize) {
 
 /* *********************************************************** */
 
-#if 0
-static int get_hash_bucket(ruleshash_key *key) { return HASH_BUCKETS - 1; }
-#else
 static int get_hash_bucket(ruleshash_key *key) { return calculate_hash(key, sizeof(ruleshash_key)) % HASH_BUCKETS; }
-#endif
 
 /* *********************************************************** */
 
@@ -227,6 +223,22 @@ int rules_hash_set(ruleshash_t *hash, ruleshash_key *key, u_int32_t *rule_id, u_
 
   /* rule unchanged */
   return 0;
+}
+
+/* *********************************************************** */
+
+int rules_hash_is_set(ruleshash_t *hash, ruleshash_key *key, u_int32_t rule_id) {
+  int b;
+  ruleshash_bucket_t *bucket, *prev;
+
+  if (rule_id) {
+    find_by_rule_id(hash, rule_id, &prev, &bucket, &b);
+  } else {
+    b = get_hash_bucket(key);
+    hash_find_bucket(hash->buckets[b], key, &prev, &bucket);
+  }
+
+  return (bucket != NULL);
 }
 
 /* *********************************************************** */
