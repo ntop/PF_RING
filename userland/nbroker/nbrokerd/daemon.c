@@ -350,6 +350,7 @@ static ruleshash_callback_rc send_rules_list_callback(const ruleshash_key *key, 
 
 static ruleshash_callback_rc send_rules_list_binary_callback(const ruleshash_key *key, ruleshash_data *data, void *user_data) {
   nbroker_command_rule_t rule;
+  int rc;
 
   rule.rule_id = data->rule_id;
   rule.match = *key;
@@ -359,7 +360,10 @@ static ruleshash_callback_rc send_rules_list_binary_callback(const ruleshash_key
   else
     rule.u.policy = data->policy;
 
-  zmq_send(zmq_responder, (char*)&rule, sizeof(rule), ZMQ_SNDMORE);
+  rc = zmq_send(zmq_responder, (char *) &rule, sizeof(rule), ZMQ_SNDMORE);
+
+  if (rc != sizeof(rule))
+    traceEvent(TRACE_ERROR, "zmq_send failure (%d): %s", rc, strerror(errno));
 
   return RULESHASH_ITER_CONTINUE;
 }
@@ -768,10 +772,14 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
 
       command_rv = send_ok_code(buf, buf_size, is_binary, 1);
 
-      if  (is_binary) {
-        nbroker_command_rules_result_ res;
+      if (is_binary) {
+        nbroker_command_rules_result_t res;
         res.num_rules = hash->num_rules;
-        zmq_send(zmq_responder, (char*)&res, sizeof(res), 0);
+
+        rc = zmq_send(zmq_responder, (char*)&res, sizeof(res), hash->num_rules > 0 ? ZMQ_SNDMORE : 0);
+
+        if (rc != sizeof(res))
+          traceEvent(TRACE_ERROR, "zmq_send failure: %s", strerror(errno));
 
         rules_hash_walk(hash, send_rules_list_binary_callback, NULL);
       } else {
