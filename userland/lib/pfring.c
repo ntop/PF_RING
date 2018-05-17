@@ -625,6 +625,15 @@ int pfring_set_poll_watermark(pfring *ring, u_int16_t watermark) {
 
 /* **************************************************** */
 
+int pfring_set_queue_flush_timeout(pfring *ring, u_int16_t queue_flush_timeout) {
+  if(ring && ring->set_queue_flush_timeout)
+    return ring->set_queue_flush_timeout(ring, queue_flush_timeout);
+
+  return(PF_RING_ERROR_NOT_SUPPORTED);
+}
+
+/* **************************************************** */
+
 int pfring_set_poll_duration(pfring *ring, u_int duration) {
   if(ring && ring->set_poll_duration)
     return ring->set_poll_duration(ring, duration);

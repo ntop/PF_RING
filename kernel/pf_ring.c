@@ -1555,6 +1555,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
         seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
         seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
         seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
+		seq_printf(m, "Queue Flush Timeout : %u\n", pfr->queue_flush_timeout);
       }
 
       if(pfr->zc_device_entry != NULL) {
@@ -4227,6 +4228,8 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->channel_id_mask = RING_ANY_CHANNEL;
   pfr->bucket_len = DEFAULT_BUCKET_LEN;
   pfr->poll_num_pkts_watermark = DEFAULT_MIN_PKT_QUEUED;
+  pfr->queue_flush_timeout = DEFAULT_QUEUE_FLUSH_TIMEOUT;
+  pfr->queue_nonempty_timestamp = 0;
   pfr->add_packet_to_ring = add_packet_to_ring;
   pfr->add_raw_packet_to_ring = add_raw_packet_to_ring;
   pfr->header_len = quick_mode ? short_pkt_header : long_pkt_header;
@@ -5545,6 +5548,7 @@ unsigned int ring_poll(struct file *file,
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   int rc, mask = 0;
+  u_long now=0;
 
   pfr->num_poll_calls++;
 
@@ -5565,8 +5569,26 @@ unsigned int ring_poll(struct file *file,
     if(num_queued_pkts(pfr) < pfr->poll_num_pkts_watermark /* || pfr->num_poll_calls == 1 */)
       poll_wait(file, &pfr->ring_slots_waitqueue, wait);
 
-    if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark)
+    /* Flush the queue when watermark reached */
+    if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark) {
       mask |= POLLIN | POLLRDNORM;
+      pfr->queue_nonempty_timestamp=0;
+    }
+
+    if ( pfr->queue_flush_timeout > 0 ) {
+      /* Flush the queue also in case its not empty but timeout passed */		
+      if ( num_queued_pkts(pfr) > 0 ) {
+        now = jiffies;
+        if ( pfr->queue_nonempty_timestamp == 0 ) {
+          pfr->queue_nonempty_timestamp = now;
+        } else if( (jiffies_to_msecs(now - pfr->queue_nonempty_timestamp) >= (u_long)pfr->queue_flush_timeout) ) {
+            debug_printk(2, "[ring_id=%u] Flushing queue (num_queued_pkts=%llu, now=%lu, queue_nonempty_timestamp=%lu, diff=%u, pfr->queue_flush_timeout=%u)\n",
+                      pfr->ring_id, num_queued_pkts(pfr), now, pfr->queue_nonempty_timestamp, jiffies_to_msecs(now - pfr->queue_nonempty_timestamp), pfr->queue_flush_timeout);
+            mask |= POLLIN | POLLRDNORM;
+            pfr->queue_nonempty_timestamp=0;
+        }
+      }
+    }
 
     return(mask);
   } else {
@@ -6732,6 +6754,16 @@ static int ring_setsockopt(struct socket *sock,
       debug_printk(2, "--> SO_SET_POLL_WATERMARK=%d\n", pfr->poll_num_pkts_watermark);
     }
     break;
+
+  case SO_SET_QUEUE_FLUSH_TIMEOUT:
+	  if(optlen != sizeof(u_int16_t))
+		return(-EINVAL);
+	  else {
+		if(copy_from_user(&pfr->queue_flush_timeout, optval, optlen))
+           return(-EFAULT);
+		debug_printk(2, "--> SO_SET_QUEUE_FLUSH_TIMEOUT=%u\n", pfr->queue_flush_timeout);
+	  }
+  	break;
 
   case SO_RING_BUCKET_LEN:
     if(optlen != sizeof(u_int32_t))

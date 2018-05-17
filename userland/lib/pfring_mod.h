@@ -23,6 +23,7 @@ int pfring_mod_next_pkt_time(pfring *ring, struct timespec *ts);
 int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len, 
 			  struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet);
 int pfring_mod_set_poll_watermark(pfring *ring, u_int16_t watermark);
+int pfring_mod_set_queue_flush_timeout(pfring *ring, u_int16_t queue_flush_timeout);
 int pfring_mod_set_poll_duration(pfring *ring, u_int duration);
 int pfring_mod_add_hw_rule(pfring *ring, hw_filtering_rule *rule);
 int pfring_mod_remove_hw_rule(pfring *ring, u_int16_t rule_id);

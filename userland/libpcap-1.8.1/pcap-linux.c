@@ -7256,5 +7256,17 @@ pcap_set_watermark(pcap_t *handle, u_int watermark)
 
 	return ret;
 }
+
+int
+pcap_set_queue_flush_timeout(pcap_t *handle, u_int16_t queue_flush_timeout)
+{
+	int ret = -1;
+
+	if (handle->ring) {
+		ret = pfring_set_queue_flush_timeout(handle->ring, queue_flush_timeout);
+	}
+
+	return ret;
+}
 #endif
 
