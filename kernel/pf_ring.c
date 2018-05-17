@@ -1478,11 +1478,24 @@ pf_ring_device *pf_ring_device_ifindex_lookup(int ifindex) {
 
 pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char *name) {
   struct list_head *ptr, *tmp_ptr;
-
+  int l = strlen(name);
+  
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(strcmp(dev_ptr->device_name, name) == 0 &&
-        (net == NULL /* any */ || net_eq(dev_net(dev_ptr->dev), net)))
+    
+    if(((strcmp(dev_ptr->device_name, name) == 0)
+	/*
+	  The problem is that pfring_mod_bind() needs to specify the interface
+	  name using struct sockaddr that is defined as
+	  
+	  struct sockaddr { ushort sa_family; char sa_data[14]; };
+
+	  so the total interface name lenght is 13 chars (plus \0 trailer).	  
+	  The check below is to trap this case.
+	 */
+	|| ((l >= 13) && (strncmp(dev_ptr->device_name, name, 13) == 0)))
+       &&
+       (net == NULL /* any */ || net_eq(dev_net(dev_ptr->dev), net)))
       return dev_ptr;
   }
 
@@ -5185,7 +5198,7 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 
   /* Safety check: add trailing zero if missing */
   sa->sa_data[sizeof(sa->sa_data) - 1] = '\0';
-
+  
   debug_printk(2, "searching device %s\n", sa->sa_data);
 
   return(packet_ring_bind(sk, sa->sa_data));
