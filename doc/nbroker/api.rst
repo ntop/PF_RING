@@ -1,7 +1,7 @@
 API
 ===
 
-The programmer API is defined into the nbroker_api.h header. Please refer to the API documentation for detailed informations.
+The programmer API is defined into the nbroker_api.h header. Please refer to the API documentation at https://www.ntop.org/guides/pf_ring_api/ for detailed informations.
 
 Please find below a sample application that is using the C API to set a "pass all" rule on the traffic, and only drop
 flows matching the provided filters. This is the typical case of an application (e.g. an IDS) that wants to inspect all traffic, exception made for selected traffic. In this example, the eth1 interface is the interface from which the application reads the packets to analyse.
