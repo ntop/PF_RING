@@ -12,13 +12,13 @@
 #ifndef RRC_LIB
 #define RRC_LIB
 
-/**
- * @file rrc.h
- *
- * @brief      RRC library header file (low-level API to configure the switch).
- */
+/**                                                                                                          
+ * @file rrc.h                                                                                               
+ *                                                                                                           
+ * @brief      RRC library header file (low-level API to configure the switch).                              
+ */ 
 
-#define DEBUG
+//#define DEBUG
 
 #include "nbpf.h"
 
