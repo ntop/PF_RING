@@ -222,7 +222,7 @@ static nbroker_rc_t __nbroker_read_rules(nbroker_t *bkr, nbroker_filter_type_t t
     return NBROKER_RC_INTERNAL_ERROR;
 
   /* Read the rules */
-  for (i=0; i<res.num_rules; i++) {
+  for (i = 0; i < res.num_rules; i++) {
     if ((retv = zmq_recv(bkr->zmq_requester, (char*)&recv_rule, sizeof(recv_rule), 0)) <= 0) {
       if (! retv) __disconnected(bkr);
       free(alloc_rules);
@@ -427,7 +427,11 @@ nbroker_rc_t nbroker_list_rules(nbroker_t *bkr, const char *port, nbroker_filter
   if ((rc = __nbroker_exec(bkr, &command)) != NBROKER_RC_OK)
     return rc;
 
-  rc = __nbroker_read_rules(bkr, filter_type, num_rules, rules);
+  if ((rc = __nbroker_read_rules(bkr, filter_type, num_rules, rules)) != NBROKER_RC_OK)
+    return rc;
+
+  if ((rc = __read_command_result(bkr)) != NBROKER_RC_OK)
+    return rc;
 
   if(*rules)
     qsort(*rules, *num_rules, sizeof(nbroker_rule_t), ruleSorter);

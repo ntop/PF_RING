@@ -776,12 +776,14 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
         nbroker_command_rules_result_t res;
         res.num_rules = hash->num_rules;
 
-        rc = zmq_send(zmq_responder, (char*)&res, sizeof(res), hash->num_rules > 0 ? ZMQ_SNDMORE : 0);
+        rc = zmq_send(zmq_responder, (char*)&res, sizeof(res), ZMQ_SNDMORE);
 
         if (rc != sizeof(res))
           traceEvent(TRACE_ERROR, "zmq_send failure: %s", strerror(errno));
 
         rules_hash_walk(hash, send_rules_list_binary_callback, NULL);
+      
+        send_ok_code(buf, buf_size, is_binary, 0);
       } else {
         snprintf(buf, buf_size, "%d rules", hash->num_rules);
         zmq_send(zmq_responder, buf, strlen(buf) + 1, ZMQ_SNDMORE);
@@ -794,8 +796,6 @@ static nbroker_rc_t process_command(nbroker_command_t *cmd, char *buf, size_t bu
         snprintf(buf, buf_size, "%s", "");
         zmq_send(zmq_responder, buf, strlen(buf) + 1, 0);
       }
-
-      send_ok_code(buf, buf_size, is_binary, 0);
 
       break;
 
