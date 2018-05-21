@@ -244,7 +244,7 @@ struct __pfring {
   int       (*stats)                        (pfring *, pfring_stat *);
   int       (*recv)                         (pfring *, u_char**, u_int, struct pfring_pkthdr *, u_int8_t);
   int       (*set_poll_watermark)           (pfring *, u_int16_t);
-  int       (*set_queue_flush_timeout)      (pfring *, u_int16_t);
+  int       (*set_poll_watermark_timeout)   (pfring *, u_int16_t);
   int       (*set_poll_duration)            (pfring *, u_int);
   int       (*set_tx_watermark)             (pfring *, u_int16_t);
   int       (*set_channel_id)               (pfring *, u_int32_t);
@@ -524,11 +524,11 @@ int pfring_set_poll_watermark(pfring *ring, u_int16_t watermark);
  * Flush ring's queue if timeout passed.
  * This helps to avoid situation where packets are waiting in the rings's queue too long (e.g. low-traffic network).
  * The default value for the timeout is 0, which disables the flushing.
- * @param ring                The PF_RING handle.
- * @param queue_flush_timeout Milliseconds to flush ring's queue even if watermark packets hasn't reached yet.
+ * @param ring                   The PF_RING handle.
+ * @param poll_watermark_timeout Milliseconds to flush ring's queue even if watermark packets hasn't reached yet.
  * @return 0 on success, a negative value otherwise.
  */
-int pfring_set_queue_flush_timeout(pfring *ring, u_int16_t queue_flush_timeout);
+int pfring_set_poll_watermark_timeout(pfring *ring, u_int16_t poll_watermark_timeout);
 
 /**
  * Set the poll timeout when passive wait is used. 
