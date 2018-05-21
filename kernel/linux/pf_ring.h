@@ -35,6 +35,7 @@
 
 /* Watermark */
 #define DEFAULT_MIN_PKT_QUEUED        128
+#define DEFAULT_POLL_CALLS_TO_FLUSH   0
 
 /* Dirty hack I know, but what else shall I do man? */
 #define pfring_ptr ax25_ptr
@@ -64,6 +65,7 @@
 #define SO_SET_POLL_WATERMARK            117
 #define SO_SET_VIRTUAL_FILTERING_DEVICE  118
 #define SO_REHASH_RSS_PACKET             119
+#define SO_SET_POLL_CALLS_TO_FLUSH       121
 #define SO_SHUTDOWN_RING                 124
 #define SO_PURGE_IDLE_RULES              125 /* inactivity (sec) */
 #define SO_SET_SOCKET_MODE               126
@@ -1144,6 +1146,7 @@ struct pf_ring_socket {
   /* Poll Watermark */
   u_int32_t num_poll_calls;
   u_int16_t poll_num_pkts_watermark;
+  u_int16_t poll_calls_to_flush;
 
   /* Master Ring */
   struct pf_ring_socket *master_ring;

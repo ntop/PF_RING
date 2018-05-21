@@ -546,6 +546,7 @@ int pcap_set_master_id(pcap_t *handle, u_int32_t master_id);
 int pcap_set_master(pcap_t *handle, pcap_t *master);
 int pcap_set_application_name(pcap_t *handle, char *name);
 int pcap_set_watermark(pcap_t *handle, u_int watermark);
+int pcap_set_poll_calls_to_flush(pcap_t *handle, u_int16_t poll_calls_to_flush);
 #endif
 
 #ifdef HAVE_REMOTE

@@ -7256,5 +7256,17 @@ pcap_set_watermark(pcap_t *handle, u_int watermark)
 
 	return ret;
 }
+
+int
+pcap_set_poll_calls_to_flush(pcap_t *handle, u_int16_t poll_calls_to_flush)
+{
+	int ret = -1;
+
+	if (handle->ring) {
+		ret = pfring_set_poll_calls_to_flush(handle->ring, poll_calls_to_flush);
+	}
+
+	return ret;
+}
 #endif
 
