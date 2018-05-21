@@ -7256,5 +7256,17 @@ pcap_set_watermark(pcap_t *handle, u_int watermark)
 
 	return ret;
 }
+
+int
+pcap_set_poll_watermark_timeout(pcap_t *handle, u_int16_t poll_watermark_timeout)
+{
+	int ret = -1;
+
+	if (handle->ring) {
+		ret = pfring_set_poll_watermark_timeout(handle->ring, poll_watermark_timeout);
+	}
+
+	return ret;
+}
 #endif
 

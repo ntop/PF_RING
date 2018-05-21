@@ -1550,60 +1550,61 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
       seq_printf(m, "\n");
 
-      seq_printf(m, "Active             : %d\n", pfr->ring_active);
-      seq_printf(m, "Breed              : %s\n", (pfr->zc_device_entry != NULL) ? "ZC" : "Standard");
-      seq_printf(m, "Appl. Name         : %s\n", pfr->appl_name ? pfr->appl_name : "<unknown>");
-      seq_printf(m, "Socket Mode        : %s\n", sockmode2string(pfr->mode));
+      seq_printf(m, "Active                 : %d\n", pfr->ring_active);
+      seq_printf(m, "Breed                  : %s\n", (pfr->zc_device_entry != NULL) ? "ZC" : "Standard");
+      seq_printf(m, "Appl. Name             : %s\n", pfr->appl_name ? pfr->appl_name : "<unknown>");
+      seq_printf(m, "Socket Mode            : %s\n", sockmode2string(pfr->mode));
       if(pfr->mode != send_only_mode) {
-        seq_printf(m, "Capture Direction  : %s\n", direction2string(pfr->direction));
+        seq_printf(m, "Capture Direction      : %s\n", direction2string(pfr->direction));
         if(pfr->zc_device_entry == NULL) {
-          seq_printf(m, "Sampling Rate      : %d\n", pfr->sample_rate);
-          seq_printf(m, "IP Defragment      : %s\n", enable_ip_defrag ? "Yes" : "No");
-          seq_printf(m, "BPF Filtering      : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
-          seq_printf(m, "Sw Filt Hash Rules : %d\n", pfr->num_sw_filtering_hash);
-          seq_printf(m, "Sw Filt WC Rules   : %d\n", pfr->num_sw_filtering_rules);
-          seq_printf(m, "Sw Filt Hash Match : %llu\n", pfr->sw_filtering_hash_match);
-          seq_printf(m, "Sw Filt Hash Miss  : %llu\n", pfr->sw_filtering_hash_miss);
+          seq_printf(m, "Sampling Rate          : %d\n", pfr->sample_rate);
+          seq_printf(m, "IP Defragment          : %s\n", enable_ip_defrag ? "Yes" : "No");
+          seq_printf(m, "BPF Filtering          : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
+          seq_printf(m, "Sw Filt Hash Rules     : %d\n", pfr->num_sw_filtering_hash);
+          seq_printf(m, "Sw Filt WC Rules       : %d\n", pfr->num_sw_filtering_rules);
+          seq_printf(m, "Sw Filt Hash Match     : %llu\n", pfr->sw_filtering_hash_match);
+          seq_printf(m, "Sw Filt Hash Miss      : %llu\n", pfr->sw_filtering_hash_miss);
         }
-        seq_printf(m, "Hw Filt Rules      : %d\n", pfr->num_hw_filtering_rules);
-        seq_printf(m, "Poll Pkt Watermark : %d\n", pfr->poll_num_pkts_watermark);
-        seq_printf(m, "Num Poll Calls     : %u\n", pfr->num_poll_calls);
+        seq_printf(m, "Hw Filt Rules          : %d\n", pfr->num_hw_filtering_rules);
+        seq_printf(m, "Poll Pkt Watermark     : %d\n", pfr->poll_num_pkts_watermark);
+        seq_printf(m, "Num Poll Calls         : %u\n", pfr->num_poll_calls);
+        seq_printf(m, "Poll Watermark Timeout : %u\n", pfr->poll_watermark_timeout);
       }
 
       if(pfr->zc_device_entry != NULL) {
         /* ZC */
-        seq_printf(m, "Channel Id         : %d\n", pfr->zc_device_entry->zc_dev.channel_id);
+        seq_printf(m, "Channel Id             : %d\n", pfr->zc_device_entry->zc_dev.channel_id);
         if(pfr->mode != send_only_mode)
-          seq_printf(m, "Num RX Slots       : %d\n", pfr->zc_device_entry->zc_dev.mem_info.rx.packet_memory_num_slots);
+          seq_printf(m, "Num RX Slots           : %d\n", pfr->zc_device_entry->zc_dev.mem_info.rx.packet_memory_num_slots);
         if(pfr->mode != recv_only_mode)
-	  seq_printf(m, "Num TX Slots       : %d\n", pfr->zc_device_entry->zc_dev.mem_info.tx.packet_memory_num_slots);
+	  seq_printf(m, "Num TX Slots           : %d\n", pfr->zc_device_entry->zc_dev.mem_info.tx.packet_memory_num_slots);
       } else if(fsi != NULL) {
         /* Standard PF_RING */
-	seq_printf(m, "Channel Id Mask    : 0x%016llX\n", pfr->channel_id_mask);
-	seq_printf(m, "VLAN Id            : %d\n", pfr->vlan_id);
+	seq_printf(m, "Channel Id Mask        : 0x%016llX\n", pfr->channel_id_mask);
+	seq_printf(m, "VLAN Id                : %d\n", pfr->vlan_id);
         if(pfr->cluster_id != 0)
-          seq_printf(m, "Cluster Id         : %d\n", pfr->cluster_id);
-	seq_printf(m, "Slot Version       : %d [%s]\n", fsi->version, RING_VERSION);
-	seq_printf(m, "Min Num Slots      : %d\n", fsi->min_num_slots);
-	seq_printf(m, "Bucket Len         : %d\n", fsi->data_len);
-	seq_printf(m, "Slot Len           : %d [bucket+header]\n", fsi->slot_len);
-	seq_printf(m, "Tot Memory         : %llu\n", fsi->tot_mem);
+          seq_printf(m, "Cluster Id             : %d\n", pfr->cluster_id);
+	seq_printf(m, "Slot Version           : %d [%s]\n", fsi->version, RING_VERSION);
+	seq_printf(m, "Min Num Slots          : %d\n", fsi->min_num_slots);
+	seq_printf(m, "Bucket Len             : %d\n", fsi->data_len);
+	seq_printf(m, "Slot Len               : %d [bucket+header]\n", fsi->slot_len);
+	seq_printf(m, "Tot Memory             : %llu\n", fsi->tot_mem);
         if(pfr->mode != send_only_mode) {
-	  seq_printf(m, "Tot Packets        : %lu\n", (unsigned long)fsi->tot_pkts);
-	  seq_printf(m, "Tot Pkt Lost       : %lu\n", (unsigned long)fsi->tot_lost);
-	  seq_printf(m, "Tot Insert         : %lu\n", (unsigned long)fsi->tot_insert);
-	  seq_printf(m, "Tot Read           : %lu\n", (unsigned long)fsi->tot_read);
-	  seq_printf(m, "Insert Offset      : %lu\n", (unsigned long)fsi->insert_off);
-	  seq_printf(m, "Remove Offset      : %lu\n", (unsigned long)fsi->remove_off);
-	  seq_printf(m, "Num Free Slots     : %lu\n",  (unsigned long)get_num_ring_free_slots(pfr));
+	  seq_printf(m, "Tot Packets            : %lu\n", (unsigned long)fsi->tot_pkts);
+	  seq_printf(m, "Tot Pkt Lost           : %lu\n", (unsigned long)fsi->tot_lost);
+	  seq_printf(m, "Tot Insert             : %lu\n", (unsigned long)fsi->tot_insert);
+	  seq_printf(m, "Tot Read               : %lu\n", (unsigned long)fsi->tot_read);
+	  seq_printf(m, "Insert Offset          : %lu\n", (unsigned long)fsi->insert_off);
+	  seq_printf(m, "Remove Offset          : %lu\n", (unsigned long)fsi->remove_off);
+	  seq_printf(m, "Num Free Slots         : %lu\n",  (unsigned long)get_num_ring_free_slots(pfr));
         }
         if(pfr->mode != recv_only_mode) {
-	  seq_printf(m, "TX: Send Ok        : %lu\n", (unsigned long)fsi->good_pkt_sent);
-	  seq_printf(m, "TX: Send Errors    : %lu\n", (unsigned long)fsi->pkt_send_error);
+	  seq_printf(m, "TX: Send Ok            : %lu\n", (unsigned long)fsi->good_pkt_sent);
+	  seq_printf(m, "TX: Send Errors        : %lu\n", (unsigned long)fsi->pkt_send_error);
         }
         if(pfr->mode != send_only_mode) {
-	  seq_printf(m, "Reflect: Fwd Ok    : %lu\n", (unsigned long)fsi->tot_fwd_ok);
-	  seq_printf(m, "Reflect: Fwd Errors: %lu\n", (unsigned long)fsi->tot_fwd_notok);
+	  seq_printf(m, "Reflect: Fwd Ok        : %lu\n", (unsigned long)fsi->tot_fwd_ok);
+	  seq_printf(m, "Reflect: Fwd Errors    : %lu\n", (unsigned long)fsi->tot_fwd_notok);
         }
       }
     } else
@@ -4240,6 +4241,8 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->channel_id_mask = RING_ANY_CHANNEL;
   pfr->bucket_len = DEFAULT_BUCKET_LEN;
   pfr->poll_num_pkts_watermark = DEFAULT_MIN_PKT_QUEUED;
+  pfr->poll_watermark_timeout = DEFAULT_POLL_WATERMARK_TIMEOUT;
+  pfr->queue_nonempty_timestamp = 0;
   pfr->add_packet_to_ring = add_packet_to_ring;
   pfr->add_raw_packet_to_ring = add_raw_packet_to_ring;
   pfr->header_len = quick_mode ? short_pkt_header : long_pkt_header;
@@ -5558,6 +5561,7 @@ unsigned int ring_poll(struct file *file,
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   int rc, mask = 0;
+  u_long now=0;
 
   pfr->num_poll_calls++;
 
@@ -5578,8 +5582,26 @@ unsigned int ring_poll(struct file *file,
     if(num_queued_pkts(pfr) < pfr->poll_num_pkts_watermark /* || pfr->num_poll_calls == 1 */)
       poll_wait(file, &pfr->ring_slots_waitqueue, wait);
 
-    if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark)
+    /* Flush the queue when watermark reached */
+    if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark) {
       mask |= POLLIN | POLLRDNORM;
+      pfr->queue_nonempty_timestamp=0;
+    }
+
+    if ( pfr->poll_watermark_timeout > 0 ) {
+      /* Flush the queue also in case its not empty but timeout passed */		
+      if ( num_queued_pkts(pfr) > 0 ) {
+        now = jiffies;
+        if ( pfr->queue_nonempty_timestamp == 0 ) {
+          pfr->queue_nonempty_timestamp = now;
+        } else if( (jiffies_to_msecs(now - pfr->queue_nonempty_timestamp) >= (u_long)pfr->poll_watermark_timeout) ) {
+            debug_printk(2, "[ring_id=%u] Flushing queue (num_queued_pkts=%llu, now=%lu, queue_nonempty_timestamp=%lu, diff=%u, pfr->poll_watermark_timeout=%u)\n",
+                      pfr->ring_id, num_queued_pkts(pfr), now, pfr->queue_nonempty_timestamp, jiffies_to_msecs(now - pfr->queue_nonempty_timestamp), pfr->poll_watermark_timeout);
+            mask |= POLLIN | POLLRDNORM;
+            pfr->queue_nonempty_timestamp=0;
+        }
+      }
+    }
 
     return(mask);
   } else {
@@ -6745,6 +6767,16 @@ static int ring_setsockopt(struct socket *sock,
       debug_printk(2, "--> SO_SET_POLL_WATERMARK=%d\n", pfr->poll_num_pkts_watermark);
     }
     break;
+
+  case SO_SET_POLL_WATERMARK_TIMEOUT:
+	  if(optlen != sizeof(u_int16_t))
+		return(-EINVAL);
+	  else {
+		if(copy_from_user(&pfr->poll_watermark_timeout, optval, optlen))
+           return(-EFAULT);
+		debug_printk(2, "--> SO_SET_POLL_WATERMARK_TIMEOUT=%u\n", pfr->poll_watermark_timeout);
+	  }
+  	break;
 
   case SO_RING_BUCKET_LEN:
     if(optlen != sizeof(u_int32_t))

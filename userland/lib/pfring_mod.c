@@ -195,6 +195,7 @@ int pfring_mod_open(pfring *ring) {
   ring->stats = pfring_mod_stats;
   ring->recv  = pfring_mod_recv;
   ring->set_poll_watermark = pfring_mod_set_poll_watermark;
+  ring->set_poll_watermark_timeout = pfring_mod_set_poll_watermark_timeout;
   ring->set_poll_duration = pfring_mod_set_poll_duration;
   ring->set_channel_id = pfring_mod_set_channel_id;
   ring->set_channel_mask = pfring_mod_set_channel_mask;
@@ -418,6 +419,12 @@ int  pfring_mod_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_pack
 
 int pfring_mod_set_poll_watermark(pfring *ring, u_int16_t watermark) {
   return(setsockopt(ring->fd, 0, SO_SET_POLL_WATERMARK, &watermark, sizeof(watermark)));
+}
+
+/* **************************************************** */
+
+int pfring_mod_set_poll_watermark_timeout(pfring *ring, u_int16_t poll_watermark_timeout) {
+  return(setsockopt(ring->fd, 0, SO_SET_POLL_WATERMARK_TIMEOUT, &poll_watermark_timeout, sizeof(poll_watermark_timeout)));
 }
 
 /* **************************************************** */
