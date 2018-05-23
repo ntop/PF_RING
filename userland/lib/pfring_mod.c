@@ -71,6 +71,8 @@ unsigned long long rdtsc() {
 #define DUPLEX_UNKNOWN          0xff
 #endif
 
+#define ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32 (SCHAR_MAX)
+
 /* **************************************************** */
 
 #define pfring_there_is_pkt_available(ring) (ring->slots_info->tot_insert != ring->slots_info->tot_read)
@@ -1057,13 +1059,17 @@ static u_int32_t __ethtool_get_link_settings(const char *ifname) {
   struct ethtool_cmd edata;
   u_int32_t speed = 0;
   const char *col;
+  struct {
+    struct ethtool_link_settings edata;
+    uint32_t link_mode_data[3 *	ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32];
+  } ecmd;
 
   col = strchr(ifname, ':');
 
   if (col != NULL)
     ifname = &col[1];
 
-  sock = socket(PF_INET, SOCK_DGRAM, 0);
+  sock = socket(PF_INET, SOCK_DGRAM, 0 /* IPPROTO_IP */);
 
   if (sock < 0) {
     fprintf(stderr, "Socket error [%s]\n", ifname);
@@ -1072,20 +1078,40 @@ static u_int32_t __ethtool_get_link_settings(const char *ifname) {
 
   memset(&ifr, 0, sizeof(struct ifreq));
   strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
-  ifr.ifr_data = (char *) &edata;
 
-  edata.cmd = ETHTOOL_GSET;
+  /* Try with ETHTOOL_GLINKSETTINGS first */
 
+  memset(&ecmd, 0, sizeof(ecmd));
+  ecmd.edata.cmd = ETHTOOL_GLINKSETTINGS;
+  ifr.ifr_data = (void *) &ecmd;
+	
   rc = ioctl(sock, SIOCETHTOOL, &ifr);
+
+  if (rc == 0) {
+
+    speed = ecmd.edata.speed;
+
+  } else {
+
+    /* Try with ETHTOOL_GSET */
+
+    memset(&edata, 0, sizeof(struct ethtool_cmd));
+    edata.cmd = ETHTOOL_GSET;
+    ifr.ifr_data = (char *) &edata;
+
+    rc = ioctl(sock, SIOCETHTOOL, &ifr);
+
+    if (rc == 0) {
+
+      speed = ethtool_cmd_speed(&edata);
+
+    } else {
+      fprintf(stderr, "error reading link speed on %s\n", ifname);
+    }  
+  }  
 
   close(sock);
 
-  if (rc < 0) {
-    fprintf(stderr, "error reading link speed on %s\n", ifname);
-    return speed;
-  }
-
-  speed = ethtool_cmd_speed(&edata);
   if (speed == SPEED_UNKNOWN)
     speed = 0;
 
