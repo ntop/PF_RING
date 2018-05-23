@@ -1069,10 +1069,12 @@ static u_int32_t __ethtool_get_link_settings(const char *ifname) {
   struct ethtool_cmd edata;
   u_int32_t speed = 0;
   const char *col;
+#ifdef USE_ETHTOOL_GLINKSETTINGS
   struct {
     struct ethtool_link_settings edata;
     uint32_t link_mode_data[3 *	ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32];
   } ecmd;
+#endif
 
   col = strchr(ifname, ':');
 
