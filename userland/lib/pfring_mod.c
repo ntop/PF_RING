@@ -71,7 +71,10 @@ unsigned long long rdtsc() {
 #define DUPLEX_UNKNOWN          0xff
 #endif
 
+#if defined(ETHTOOL_GLINKSETTINGS) && defined(SCHAR_MAX)
+#define USE_ETHTOOL_GLINKSETTINGS
 #define ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32 (SCHAR_MAX)
+#endif
 
 /* **************************************************** */
 
@@ -1086,6 +1089,7 @@ static u_int32_t __ethtool_get_link_settings(const char *ifname) {
   memset(&ifr, 0, sizeof(struct ifreq));
   strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
 
+#ifdef USE_ETHTOOL_GLINKSETTINGS
   /* Try with ETHTOOL_GLINKSETTINGS first */
 
   memset(&ecmd, 0, sizeof(ecmd));
@@ -1098,7 +1102,9 @@ static u_int32_t __ethtool_get_link_settings(const char *ifname) {
 
     speed = ecmd.edata.speed;
 
-  } else {
+  } else 
+#endif
+  {
 
     /* Try with ETHTOOL_GSET */
 
