@@ -117,6 +117,8 @@ void processFlow(pfring_ft_flow *flow, void *user){
          v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes, 
          (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec, 
          (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec);
+
+  pfring_ft_flow_free(flow);
 }
 
 static void lcore_main(void) {
