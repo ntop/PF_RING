@@ -11,21 +11,11 @@ nBroker is a framework that can be used for configuring traffic steering and fil
 
 nBroker consists of a daemon that drive the RRC switch, and an API that can be used to control the daemon and configure  steering and filtering rules. In addition to the API, a command-line tool with auto-completion is also provided to control the adapter.
 
-Installation
-------------
-
-nBroker is part of the PF_RING distribution, you can compile and install it running the commands below:
-
-.. code-block:: console
-
-   cd <PF_RING PATH>/userland/nbroker
-   ./configure
-   make install
-
 .. toctree::
     :maxdepth: 2
     :numbered:
 
+    installation
     nbrokerd
     api
     cli
