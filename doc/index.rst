@@ -18,6 +18,7 @@ PF_RING is a high speed packet capture library that turns a commodity PC into an
    rss
    hugepages
    amd
+   api/index
 
 .. Indices and tables
 .. ==================
