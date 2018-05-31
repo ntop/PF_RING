@@ -6421,13 +6421,17 @@ int i40e_open(struct net_device *netdev)
 
 #ifdef HAVE_VXLAN_RX_OFFLOAD
 #if IS_ENABLED(CONFIG_VXLAN)
+#ifndef HAVE_RHEL7_EXTENDED_MIN_MAX_MTU /* TODO improve this check on Centos 7 */
 	vxlan_get_rx_port(netdev);
+#endif
 #endif
 #endif /* HAVE_VXLAN_RX_OFFLOAD */
 #ifdef HAVE_GENEVE_RX_OFFLOAD
 #if IS_ENABLED(CONFIG_GENEVE)
+#ifndef HAVE_RHEL7_EXTENDED_MIN_MAX_MTU /* TODO improve this check on Centos 7 */
 	if (pf->hw_features & I40E_HW_GENEVE_OFFLOAD_CAPABLE)
 		geneve_get_rx_port(netdev);
+#endif
 #endif
 #endif /* HAVE_GENEVE_RX_OFFLOAD */
 #ifdef HAVE_UDP_ENC_RX_OFFLOAD

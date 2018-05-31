@@ -1869,6 +1869,7 @@ static const struct net_device_ops fm10k_netdev_ops = {
 #else
 	.ndo_get_stats		= fm10k_get_stats,
 #endif /* HAVE_NDO_GET_STATS64 */
+#ifndef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SETUP_TC
 #ifdef HAVE_SETUP_TC
 #ifdef NETIF_F_HW_TC
 	.ndo_setup_tc		= __fm10k_setup_tc,
@@ -1876,6 +1877,7 @@ static const struct net_device_ops fm10k_netdev_ops = {
 	.ndo_setup_tc		= fm10k_setup_tc,
 #endif
 #endif
+#endif /* !HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SETUP_TC */
 #ifndef HAVE_MQPRIO
 	.ndo_select_queue	= __netdev_pick_tx,
 #endif
@@ -1925,6 +1927,9 @@ static const struct net_device_ops fm10k_netdev_ops = {
 #ifdef NETIF_F_HW_L2FW_DOFFLOAD
 	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,
 	.ndo_dfwd_del_station	= fm10k_dfwd_del_station,
+#endif
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SETUP_TC
+	.ndo_setup_tc_rh	= __fm10k_setup_tc,
 #endif
 #ifdef HAVE_RHEL7_NET_DEVICE_OPS_EXT
 	/* End of ops backported into RHEL7.x */
@@ -2039,9 +2044,14 @@ struct net_device *fm10k_alloc_netdev(void)
 
 #ifdef HAVE_NETDEVICE_MIN_MAX_MTU
 	/* MTU range: 68 - 15342 */
+#ifdef HAVE_RHEL7_EXTENDED_MIN_MAX_MTU
+	dev->extended->min_mtu = ETH_MIN_MTU;
+	dev->extended->max_mtu = FM10K_MAX_JUMBO_FRAME_SIZE;
+#else
 	dev->min_mtu = ETH_MIN_MTU;
 	dev->max_mtu = FM10K_MAX_JUMBO_FRAME_SIZE;
-#endif
+#endif /* HAVE_RHEL7_EXTENDED_MIN_MAX_MTU */
+#endif /* HAVE_NETDEVICE_MIN_MAX_MTU */
 
 	return dev;
 }

@@ -2379,8 +2379,13 @@ static ssize_t i40e_dbg_netdev_ops_write(struct file *filp,
 			dev_info(&pf->pdev->dev, "change_mtu: no netdev for VSI %d\n",
 				 vsi_seid);
 		} else if (rtnl_trylock()) {
+#ifdef HAVE_RHEL7_EXTENDED_MIN_MAX_MTU
+			vsi->netdev->netdev_ops->extended.ndo_change_mtu(vsi->netdev,
+								mtu);
+#else
 			vsi->netdev->netdev_ops->ndo_change_mtu(vsi->netdev,
 								mtu);
+#endif
 			rtnl_unlock();
 			dev_info(&pf->pdev->dev, "change_mtu called\n");
 		} else {

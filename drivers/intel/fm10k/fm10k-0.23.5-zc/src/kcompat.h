@@ -1,22 +1,5 @@
-/* Intel(R) Ethernet Switch Host Interface Driver
- * Copyright(c) 2013 - 2018 Intel Corporation.
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * The full GNU General Public License is included in this distribution in
- * the file called "COPYING".
- *
- * Contact Information:
- * e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
- * Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
- */
+/* SPDX-License-Identifier: GPL-2.0 */
+/* Copyright(c) 2013 - 2018 Intel Corporation. */
 
 #ifndef _KCOMPAT_H_
 #define _KCOMPAT_H_
@@ -859,9 +842,11 @@ struct _kc_ethtool_pauseparam {
 #elif (LINUX_VERSION_CODE == KERNEL_VERSION(4,4,21))
 /* SLES12 SP2 GA is 4.4.21-69 */
 #define SLE_VERSION_CODE SLE_VERSION(12,2,0)
-/* SLES12 SP3 GM is 4.4.73-5 and update kernel is 4.4.82-6.3 */
+/* SLES12 SP3 GM is 4.4.73-5 and update kernels are 4.4.82-6.3
+ * and 4.4.114-94.11 */
 #elif ((LINUX_VERSION_CODE == KERNEL_VERSION(4,4,73)) || \
-       (LINUX_VERSION_CODE == KERNEL_VERSION(4,4,82)))
+       (LINUX_VERSION_CODE == KERNEL_VERSION(4,4,82)) || \
+       (LINUX_VERSION_CODE == KERNEL_VERSION(4,4,114)))
 #define SLE_VERSION_CODE SLE_VERSION(12,3,0)
 /* SLES15 Beta1 is 4.12.14-2 */
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,14))
@@ -4085,8 +4070,10 @@ of_get_mac_address(struct device_node __always_unused *np)
 #define HAVE_RHEL7_PCI_RESET_NOTIFY
 #endif /* RHEL >= 7.2 */
 #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,3))
-#define HAVE_RHEL7_NET_DEVICE_OPS_EXT
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,5))
 #define HAVE_GENEVE_RX_OFFLOAD
+#endif /* RHEL >=7.3 && RHEL < 7.5 */
+#define HAVE_RHEL7_NET_DEVICE_OPS_EXT
 #if !defined(HAVE_UDP_ENC_TUNNEL) && IS_ENABLED(CONFIG_GENEVE)
 #define HAVE_UDP_ENC_TUNNEL
 #endif
@@ -4179,7 +4166,6 @@ extern int __kc_dma_set_mask_and_coherent(struct device *dev, u64 mask);
 #else
 #define HAVE_NDO_SELECT_QUEUE_ACCEL
 #endif
-#define HAVE_NET_GET_RANDOM_ONCE
 #define HAVE_HWMON_DEVICE_REGISTER_WITH_GROUPS
 #endif
 
@@ -4231,9 +4217,11 @@ static inline void __kc_skb_set_hash(struct sk_buff __maybe_unused *skb,
 
 #else	/* RHEL_RELEASE_CODE >= 7.0 || SLE_VERSION_CODE >= 12.0 */
 
+#if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5)))
 #ifndef HAVE_VXLAN_RX_OFFLOAD
 #define HAVE_VXLAN_RX_OFFLOAD
 #endif /* HAVE_VXLAN_RX_OFFLOAD */
+#endif
 
 #if !defined(HAVE_UDP_ENC_TUNNEL) && IS_ENABLED(CONFIG_VXLAN)
 #define HAVE_UDP_ENC_TUNNEL
@@ -4298,6 +4286,7 @@ char *_kc_devm_kstrdup(struct device *dev, const char *s, gfp_t gfp);
 #define devm_kstrdup(dev, s, gfp) _kc_devm_kstrdup(dev, s, gfp)
 
 #else
+#define HAVE_NET_GET_RANDOM_ONCE
 #define HAVE_PTP_1588_CLOCK_PINS
 #define HAVE_NETDEV_PORT
 #endif /* 3.15.0 */
@@ -4519,9 +4508,9 @@ static inline void _kc_napi_complete_done(struct napi_struct *napi,
 #ifndef NETDEV_RSS_KEY_LEN
 #define NETDEV_RSS_KEY_LEN (13 * 4)
 #endif
-#if ( !(RHEL_RELEASE_CODE && \
-	(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,7) && \
-	(RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)))) )
+#if (!(RHEL_RELEASE_CODE && \
+      ((RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,7) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)) || \
+       (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,2)))))
 #define netdev_rss_key_fill(buffer, len) __kc_netdev_rss_key_fill(buffer, len)
 #endif /* RHEL_RELEASE_CODE */
 extern void __kc_netdev_rss_key_fill(void *buffer, size_t len);
@@ -4607,6 +4596,9 @@ static inline struct sk_buff *__kc_napi_alloc_skb(struct napi_struct *napi, unsi
 #ifndef ETH_MODULE_SFF_8436_LEN
 #define ETH_MODULE_SFF_8436_LEN		256
 #endif
+#ifndef writel_relaxed
+#define writel_relaxed	writel
+#endif
 #else /* 3.19.0 */
 #define HAVE_NDO_FDB_ADD_VID
 #define HAVE_RXFH_HASHFUNC
@@ -4682,6 +4674,7 @@ extern unsigned int _kc_cpumask_local_spread(unsigned int i, int node);
 #define HAVE_NDO_BRIDGE_GETLINK_NLFLAGS
 #define HAVE_PASSTHRU_FEATURES_CHECK
 #define HAVE_NDO_SET_VF_RSS_QUERY_EN
+#define HAVE_NDO_SET_TX_MAXRATE
 #endif /* 4,1,0 */
 
 /*****************************************************************************/
@@ -4840,7 +4833,7 @@ static inline void page_ref_inc(struct page *page)
 #define HAVE_PAGE_COUNT_BULK_UPDATE
 #endif
 
-#else /* 4.6.0 */
+#else /* >= 4.6.0 */
 #define HAVE_PAGE_COUNT_BULK_UPDATE
 #endif /* 4.6.0 */
 
@@ -4850,7 +4843,15 @@ static inline void page_ref_inc(struct page *page)
 	(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4))
 #define HAVE_NETIF_TRANS_UPDATE
 #endif
+#if (UBUNTU_VERSION_CODE && \
+     UBUNTU_VERSION_CODE >= UBUNTU_VERSION(4,4,0,21)) || \
+     (RHEL_RELEASE_CODE && \
+      RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4)) || \
+     (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(12,3,0))
+#define HAVE_DEVLINK_SUPPORT
+#endif /* UBUNTU 4,4,0,21, RHEL 7.4, SLES12 SP3 */
 #else /* 4.7.0 */
+#define HAVE_DEVLINK_SUPPORT
 #define HAVE_NETIF_TRANS_UPDATE
 #define HAVE_ETHTOOL_CONVERT_U32_AND_LINK_MODE
 #ifdef ETHTOOL_GLINKSETTINGS
@@ -4933,7 +4934,14 @@ pci_release_mem_regions(struct pci_dev *pdev)
 #define HAVE_NETDEVICE_MIN_MAX_MTU
 #endif
 
-#if !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,3,0)))
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5)))
+#define HAVE_STRUCT_DMA_ATTRS
+#define HAVE_RHEL7_EXTENDED_MIN_MAX_MTU
+#define HAVE_NETDEVICE_MIN_MAX_MTU
+#endif
+
+#if (!(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,3,0))) && \
+     !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))))
 #ifndef dma_map_page_attrs
 #define dma_map_page_attrs __kc_dma_map_page_attrs
 static inline dma_addr_t __kc_dma_map_page_attrs(struct device *dev,
@@ -4972,7 +4980,7 @@ static inline void __page_frag_cache_drain(struct page *page,
 #endif
 	__free_pages(page, compound_order(page));
 }
-#endif /* !SLE_VERSION(12,3,0) */
+#endif /* !SLE_VERSION(12,3,0) && !RHEL_VERSION(7,5) */
 #ifndef page_frag_free
 #define page_frag_free __free_page_frag
 #endif
@@ -4991,7 +4999,8 @@ static inline void __page_frag_cache_drain(struct page *page,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0))
 #ifdef CONFIG_NET_RX_BUSY_POLL
 #define HAVE_NDO_BUSY_POLL
-#if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,3,0)))
+#if ((SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,3,0))) || \
+     (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))))
 #define HAVE_VOID_NDO_GET_STATS64
 #endif
 #endif
@@ -5019,6 +5028,11 @@ static inline void __page_frag_cache_drain(struct page *page,
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #endif
 
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5)))
+#define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
+#define HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SETUP_TC
+#endif
+
 #define TIMER_DATA_TYPE		unsigned long
 #define TIMER_FUNC_TYPE		void (*)(TIMER_DATA_TYPE)
 
@@ -5029,7 +5043,17 @@ static inline void __page_frag_cache_drain(struct page *page,
 #define from_timer(var, callback_timer, timer_fieldname) \
 	container_of(callback_timer, typeof(*var), timer_fieldname)
 
+struct _kc_xdp_buff {
+	void *data;
+	void *data_end;
+	void *data_hard_start;
+};
+#define xdp_buff _kc_xdp_buff
+struct _kc_bpf_prog {
+};
+#define bpf_prog _kc_bpf_prog
 #else /* > 4.14 */
+#define HAVE_XDP_SUPPORT
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #endif /* 4.14.0 */
 
@@ -5041,6 +5065,14 @@ void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
 				      struct ethtool_link_ksettings *src);
 #define ethtool_intersect_link_masks _kc_ethtool_intersect_link_masks
 #endif /* ETHTOOL_GLINKSETTINGS */
+#else /* >= 4.15 */
+#define HAVE_NDO_BPF
+#define HAVE_XDP_BUFF_DATA_META
 #endif /* 4.15.0 */
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,16,0))
+#else /* >= 4.16 */
+#define HAVE_XDP_BUFF_RXQ
+#endif /* 4.16.0 */
 
 #endif /* _KCOMPAT_H_ */

@@ -5623,6 +5623,7 @@ pci_release_mem_regions(struct pci_dev *pdev)
 #if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5)))
 #define HAVE_RHEL7_EXTENDED_MIN_MAX_MTU
 #define HAVE_NETDEVICE_MIN_MAX_MTU
+#define HAVE_STRUCT_DMA_ATTRS
 #endif
 
 #if (!(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,3,0))) && \
