@@ -181,13 +181,13 @@ void *packet_consumer_thread(void *_i) {
     if(pfring_zc_recv_pkt(i->inzq, &i->tmpbuff, 0 /* wait_for_packet */) > 0) {
 
       if (unlikely(verbose)) {
-#if 1
+#if 1 /* Print 5-tuple and other info */
         char strbuf[4096];
         int strlen = sizeof(strbuf);
         int strused = snprintf(strbuf, strlen, "[%s -> %s]", i->in_dev, i->out_dev);
         pfring_print_pkt(&strbuf[strused], strlen - strused, pfring_zc_pkt_buff_data(i->tmpbuff, i->inzq), i->tmpbuff->len, i->tmpbuff->len);
         fputs(strbuf, stdout);
-#else
+#else /* Print hex */
 	u_char *pkt_data = pfring_zc_pkt_buff_data(i->tmpbuff, i->inzq);
         int j;
         for(j = 0; j < i->tmpbuff->len; j++)
@@ -195,6 +195,23 @@ void *packet_consumer_thread(void *_i) {
         printf("\n");
 #endif
       }
+
+#if 0 /* Example of header modification pushing a vlan header */
+      {
+        struct ethhdr eth;
+        u_char *pkt_data = pfring_zc_pkt_buff_data(i->tmpbuff, i->inzq);
+        memcpy(&eth, pkt_data, sizeof(eth));
+        pkt_data = pfring_zc_pkt_buff_push(i->tmpbuff, i->inzq, sizeof(struct eth_vlan_hdr));
+        if (pkt_data != NULL) {
+          struct eth_vlan_hdr vlan;
+          vlan.h_proto = eth.h_proto;
+          vlan.h_vlan_id = htons(10); /* VLAN ID */
+          eth.h_proto = htons(0x8100); /* 802.1q (VLAN) */
+          memcpy(pkt_data, &eth, sizeof(eth));
+          memcpy(&pkt_data[sizeof(eth)], &vlan, sizeof(vlan));
+        }
+      }
+#endif
 
       i->numPkts++;
       i->numBytes += i->tmpbuff->len + 24; /* 8 Preamble + 4 CRC + 12 IFG */
