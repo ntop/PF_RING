@@ -71,7 +71,7 @@ u_int32_t instances_per_app[MAX_NUM_APP];
 char **devices = NULL;
 char **outdevs;
 
-int cluster_id = DEFAULT_CLUSTER_ID;
+int cluster_id = DEFAULT_CLUSTER_ID+4;
 int metadata_len = 0;
 
 int bind_worker_core = -1;

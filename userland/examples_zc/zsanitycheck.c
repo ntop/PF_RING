@@ -67,7 +67,7 @@ void printHelp(void) {
 
 int main(int argc, char* argv[]) {
   char c;
-  int i, cluster_id = DEFAULT_CLUSTER_ID;
+  int i, cluster_id = DEFAULT_CLUSTER_ID+8;
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
   pfring_zc_cluster *zc;
   pfring_zc_queue *zq;

@@ -203,7 +203,7 @@ void *packet_consumer_thread(void *_id) {
 
 int main(int argc, char* argv[]) {
   char c;
-  int cluster_id = DEFAULT_CLUSTER_ID, queue_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID+1, queue_id = -1;
   pthread_t my_thread;
   int wait_for_packet = 1, verbose = 0, dump_as_sysdig_event = 0;
   char *filter = NULL;

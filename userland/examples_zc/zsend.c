@@ -69,7 +69,7 @@ pfring_zc_pkt_buff *buffers[NBUFF];
 
 struct timeval startTime;
 unsigned long long numPkts = 0, numBytes = 0;
-int cluster_id = DEFAULT_CLUSTER_ID, queue_id = -1, bind_core = -1, pps = -1, packet_len = 60, num_ips = 0, metadata_len = 0;
+int cluster_id = DEFAULT_CLUSTER_ID+2, queue_id = -1, bind_core = -1, pps = -1, packet_len = 60, num_ips = 0, metadata_len = 0;
 u_int64_t num_to_send = 0;
 u_int8_t active = 0, flush_packet = 0, append_timestamp = 0, use_pulse_time = 0, enable_vm_support = 0;
 #ifdef BURST_API

@@ -193,7 +193,7 @@ void *packet_consumer_thread(void *data) {
 
 int main(int argc, char* argv[]) {
   char c;
-  int cluster_id = DEFAULT_CLUSTER_ID, in_queue_id = -1, out_queue_id = -1;
+  int cluster_id = DEFAULT_CLUSTER_ID+10, in_queue_id = -1, out_queue_id = -1;
   pthread_t my_thread;
 
   startTime.tv_sec = 0;
