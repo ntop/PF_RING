@@ -259,6 +259,7 @@ struct __pfring {
   u_int8_t  (*get_num_rx_channels)          (pfring *);
   int       (*get_card_settings)            (pfring *, pfring_card_settings *);
   int       (*set_sampling_rate)            (pfring *, u_int32_t);
+  int       (*set_filtering_sampling_rate)  (pfring *, u_int32_t);
   int       (*set_packet_slicing)           (pfring *, packet_slicing_level, u_int32_t);
   int       (*get_selectable_fd)            (pfring *);
   int       (*set_direction)                (pfring *, packet_direction);
@@ -674,6 +675,16 @@ u_int8_t pfring_get_num_rx_channels(pfring *ring);
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sampling */);
+
+/**
+ * Implement packet sampling during filtering directly into the kernel. Note that this solution is much more efficient than implementing it in user-space. 
+ * Sampled packets during filtering are only those that already has been filtered (if any).
+ * @param ring The PF_RING handle on which filtering sampling is applied. 
+ * @param rate The filtering sampling rate. Rate of X means that first X packets out of 'FILTERING_SAMPLING_SIZE' are forwarded.
+ *             This means that a filtering sampling rate of 0 disables sampling.
+ * @return 0 on success, a negative value otherwise.
+ */
+int pfring_set_filtering_sampling_rate(pfring *ring, u_int32_t rate /* 0 = no sampling */);
 
 /**
  * Set packet slicing level.

@@ -212,6 +212,7 @@ int pfring_mod_open(pfring *ring) {
   ring->send = pfring_mod_send;
   ring->get_num_rx_channels = pfring_mod_get_num_rx_channels;
   ring->set_sampling_rate = pfring_mod_set_sampling_rate;
+  ring->set_filtering_sampling_rate = pfring_mod_set_filtering_sampling_rate;
   ring->get_selectable_fd = pfring_mod_get_selectable_fd;
   ring->set_direction = pfring_mod_set_direction;
   ring->set_socket_mode = pfring_mod_set_socket_mode;
@@ -454,6 +455,12 @@ u_int8_t pfring_mod_get_num_rx_channels(pfring *ring) {
 
 int pfring_mod_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sampling */) {
   return(setsockopt(ring->fd, 0, SO_SET_SAMPLING_RATE, &rate, sizeof(rate)));
+}
+
+/* **************************************************** */
+
+int pfring_mod_set_filtering_sampling_rate(pfring *ring, u_int32_t rate /* 0 = no sampling */) {
+  return(setsockopt(ring->fd, 0, SO_SET_FILTERING_SAMPLING_RATE, &rate, sizeof(rate)));
 }
 
 /* ******************************* */

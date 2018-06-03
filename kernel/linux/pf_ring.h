@@ -40,6 +40,9 @@
 /* Dirty hack I know, but what else shall I do man? */
 #define pfring_ptr ax25_ptr
 
+/* Size of packets "window" to take the filtering sample from */
+#define FILTERING_SAMPLING_SIZE       100
+
 /* Versioning */
 #define RING_VERSION                "7.1.0"
 #define RING_VERSION_NUM           0x070100
@@ -65,6 +68,7 @@
 #define SO_SET_POLL_WATERMARK            117
 #define SO_SET_VIRTUAL_FILTERING_DEVICE  118
 #define SO_REHASH_RSS_PACKET             119
+#define SO_SET_FILTERING_SAMPLING_RATE   120
 #define SO_SET_POLL_WATERMARK_TIMEOUT    121
 #define SO_SHUTDOWN_RING                 124
 #define SO_PURGE_IDLE_RULES              125 /* inactivity (sec) */
@@ -719,6 +723,7 @@ hash_filtering_rule;
 typedef struct {
   u_int64_t match;
   u_int64_t miss;
+  u_int64_t filtered;
   u_int32_t inactivity; /* sec */
 } __attribute__((packed))
 hash_filtering_rule_stats;
@@ -727,7 +732,8 @@ hash_filtering_rule_stats;
 
 typedef struct _sw_filtering_hash_bucket {
   hash_filtering_rule           rule;
-  u_int64_t                     match; /* number of packets matching the rule */
+  u_int64_t                     match;    /* number of packets matching the rule */
+  u_int64_t                     filtered; /* number of packets filtered by the rule */
   struct _sw_filtering_hash_bucket *next;
 } __attribute__((packed))
 sw_filtering_hash_bucket;
@@ -1204,6 +1210,7 @@ struct pf_ring_socket {
   sw_filtering_hash_bucket **sw_filtering_hash;
   u_int64_t sw_filtering_hash_match;
   u_int64_t sw_filtering_hash_miss;
+  u_int64_t sw_filtering_hash_filtered;
   u_int32_t num_sw_filtering_hash;
 
   /* Sw Filtering Rules - wildcard */
@@ -1213,6 +1220,10 @@ struct pf_ring_socket {
   /* Hw Filtering Rules */
   u_int16_t num_hw_filtering_rules;
   struct list_head hw_filtering_rules;
+
+  /* Filtering - sampling rate */
+  u_int32_t filtering_sample_rate;
+  u_int32_t filtering_sampled_packets;  
 
   /* Locks */
   atomic_t num_ring_users;

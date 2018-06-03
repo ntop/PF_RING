@@ -22,6 +22,7 @@ int  pfring_mod_multi_add_hw_rule(pfring *ring, hw_filtering_rule *rule);
 int  pfring_mod_multi_remove_hw_rule(pfring *ring, u_int16_t rule_id);
 int  pfring_mod_multi_bind(pfring *ring, char *device_name);
 int  pfring_mod_multi_set_sampling_rate(pfring *ring, u_int32_t rate);
+int  pfring_mod_multi_set_filtering_sampling_rate(pfring *ring, u_int32_t rate);
 int  pfring_mod_multi_set_direction(pfring *ring, packet_direction direction);
 int  pfring_mod_multi_enable_rss_rehash(pfring *ring);
 

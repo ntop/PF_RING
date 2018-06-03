@@ -1558,12 +1558,14 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
         seq_printf(m, "Capture Direction      : %s\n", direction2string(pfr->direction));
         if(pfr->zc_device_entry == NULL) {
           seq_printf(m, "Sampling Rate          : %d\n", pfr->sample_rate);
+          seq_printf(m, "Filtering Sampling Rate: %u\n", pfr->filtering_sample_rate);
           seq_printf(m, "IP Defragment          : %s\n", enable_ip_defrag ? "Yes" : "No");
           seq_printf(m, "BPF Filtering          : %s\n", pfr->bpfFilter ? "Enabled" : "Disabled");
           seq_printf(m, "Sw Filt Hash Rules     : %d\n", pfr->num_sw_filtering_hash);
           seq_printf(m, "Sw Filt WC Rules       : %d\n", pfr->num_sw_filtering_rules);
           seq_printf(m, "Sw Filt Hash Match     : %llu\n", pfr->sw_filtering_hash_match);
           seq_printf(m, "Sw Filt Hash Miss      : %llu\n", pfr->sw_filtering_hash_miss);
+          seq_printf(m, "Sw Filt Hash Filtered  : %llu\n", pfr->sw_filtering_hash_filtered);
         }
         seq_printf(m, "Hw Filt Rules          : %d\n", pfr->num_hw_filtering_rules);
         seq_printf(m, "Poll Pkt Watermark     : %d\n", pfr->poll_num_pkts_watermark);
@@ -3284,7 +3286,8 @@ int check_perfect_rules(struct sk_buff *skb,
 			struct pf_ring_socket *pfr,
 			struct pfring_pkthdr *hdr,
 			int *fwd_pkt,
-			int displ)
+			int displ,
+			sw_filtering_hash_bucket **p_hash_bucket)
 {
   u_int32_t hash_idx;
   sw_filtering_hash_bucket *hash_bucket;
@@ -3305,8 +3308,7 @@ int check_perfect_rules(struct sk_buff *skb,
 
   while(hash_bucket != NULL) {
     if(hash_bucket_match(hash_bucket, hdr, 0, 0)) {
-      hash_bucket->rule.internals.jiffies_last_match = jiffies;
-      hash_bucket->match++;
+	  *p_hash_bucket=hash_bucket;
       hash_found = 1;
       break;
     } else
@@ -3583,11 +3585,32 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
   /* [2] Filter packet according to rules */
 
+  debug_printk(2, "ring_id=%d pfr->filtering_sample_rate=%u pfr->filtering_sampled_packets=%u\n",
+	  pfr->ring_id, pfr->filtering_sample_rate, pfr->filtering_sampled_packets);
+
   /* [2.1] Search the hash */
   if(pfr->sw_filtering_hash != NULL) {
-    hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ);
-    if(hash_found)
-      pfr->sw_filtering_hash_match++;
+  	sw_filtering_hash_bucket *hash_bucket=NULL;
+
+  	hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ, &hash_bucket);
+
+    if (hash_found) {
+	  hash_bucket->rule.internals.jiffies_last_match = jiffies;
+	  hash_bucket->match++;		
+	  pfr->sw_filtering_hash_match++;
+	  /* If there is a filter for the session, let the first 'filtering_sampled_packets' packets of every
+         'FILTERING_SAMPLING_SIZE' filtered packets, to pass the filter.
+         Note that the ratio of the defined rate ('filtering_sample_rate') is kept the same.
+	   */
+	  if ( fwd_pkt==0 ) {
+		if (pfr->filtering_sample_rate && ((hash_bucket->match % FILTERING_SAMPLING_SIZE) < pfr->filtering_sampled_packets) ) {
+			fwd_pkt=1;
+		} else {
+			hash_bucket->filtered++;
+		  	pfr->sw_filtering_hash_filtered++;
+		}
+	  }
+    }
     else
       pfr->sw_filtering_hash_miss++;
   }
@@ -4255,6 +4278,8 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->master_ring = NULL;
   pfr->ring_dev = &none_device_element; /* Unbound socket */
   pfr->sample_rate = 1;	/* No sampling */
+  pfr->filtering_sample_rate = 0; /* No filtering sampling */
+  pfr->filtering_sampled_packets = 0;
   sk->sk_family = PF_RING;
   sk->sk_destruct = ring_sock_destruct;
   pfr->ring_id = atomic_inc_return(&ring_id_serial);
@@ -6707,6 +6732,28 @@ static int ring_setsockopt(struct socket *sock,
       return(-EFAULT);
     break;
 
+  case SO_SET_FILTERING_SAMPLING_RATE:
+	  if(optlen != sizeof(pfr->filtering_sample_rate))
+		return(-EINVAL);
+  
+	  if(copy_from_user(&pfr->filtering_sample_rate, optval, sizeof(pfr->filtering_sample_rate)))
+		return(-EFAULT);
+
+	  if(pfr->filtering_sample_rate > (u_int32_t)FILTERING_SAMPLING_SIZE) {
+	  	printk("[PF_RING] Filtering sampling rate (%u) cannot exceed %u. Filtering sampling disabled.\n",
+			pfr->filtering_sample_rate, (u_int32_t)FILTERING_SAMPLING_SIZE);
+		pfr->filtering_sample_rate = 0;
+		return(-EFAULT);
+	  }
+
+      if (pfr->filtering_sample_rate > 0) {
+	      pfr->filtering_sampled_packets = (u_int32_t)FILTERING_SAMPLING_SIZE / pfr->filtering_sample_rate;
+      }
+
+	  debug_printk(2, "--> SO_SET_FILTERING_SAMPLING_RATE: filtering_sample_rate=%u, filtering_sampled_packets=%u\n",
+	  	pfr->filtering_sample_rate, pfr->filtering_sampled_packets);
+	  break;
+
   case SO_ACTIVATE_RING:
     debug_printk(2, "* SO_ACTIVATE_RING *\n");
 
@@ -7187,13 +7234,14 @@ static int ring_getsockopt(struct socket *sock,
 
               hash_filtering_rule_stats hfrs;
               hfrs.match = bucket->match;
-              hfrs.miss = pfr->sw_filtering_hash_miss;
+              hfrs.filtered = bucket->filtered;
+			  hfrs.miss = bucket->match - bucket->filtered;
               hfrs.inactivity = (u_int32_t) (jiffies_to_msecs(jiffies - bucket->rule.internals.jiffies_last_match) / 1000);
-	      rc = sizeof(hash_filtering_rule_stats);
+              rc = sizeof(hash_filtering_rule_stats);
               if(copy_to_user(optval, &hfrs, rc)) {
               	printk("[PF_RING] SO_GET_HASH_FILTERING_RULE_STATS: copy_to_user() failure\n");
-		rc = -EFAULT;
-	      }
+              	rc = -EFAULT;
+              }
 
 	      break;
 	    }
