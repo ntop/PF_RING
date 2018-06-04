@@ -99,15 +99,43 @@ typedef struct {
 } pfring_zc_queue_info;
 
 /**
- * Returns the pointer to the actual packet data.
+ * Return the pointer to the actual packet data.
  * @param pkt_handle The buffer handle.
- * @param queue      The queue from which the packet is arrived or destined.
+ * @param queue      Any queue from the cluster (e.g. the queue from which the packet is arrived or destined).
  * @return           The pointer on success, NULL otherwise.
  */
 u_char *
 pfring_zc_pkt_buff_data(
   pfring_zc_pkt_buff *pkt_handle,
   pfring_zc_queue *queue
+);
+
+/**
+ * Remove data from the start of a buffer.
+ * @param pkt_handle The buffer handle.
+ * @param queue Any queue from the cluster.
+ * @param len The number of bytes to remove.
+ * @return The pointer to the start of the buffer on success, NULL otherwise. 
+ */
+u_char *
+pfring_zc_pkt_buff_pull(
+  pfring_zc_pkt_buff *pkt_handle,
+  pfring_zc_queue *queue,
+  u_int16_t len
+);
+
+/**
+ * Add data to the start of a buffer.
+ * @param pkt_handle The buffer handle.
+ * @param queue Any queue from the cluster.
+ * @param len The number of bytes to add.
+ * @return The pointer to the start of the buffer on success, NULL otherwise. 
+ */
+u_char *
+pfring_zc_pkt_buff_push(
+  pfring_zc_pkt_buff *pkt_handle,
+  pfring_zc_queue *queue,
+  u_int16_t len
 );
 
 /* **************************************************************************************** */
