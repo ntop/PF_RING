@@ -37,14 +37,18 @@ Installation
 Standard Mode
 -------------
 
+In order to run Suricata on standard drivers, leveraging on the PF_RING kernel clustering, run:
+
 .. code-block:: console
 
    sudo modprobe pf_ring
    
    sudo suricata --pfring-int=eth0 --pfring-cluster-id=99 --pfring-cluster-type=cluster_flow -c /etc/suricata/suricata.yaml
 
-ZC Mode
--------
+PF_RING ZC Mode
+---------------
+
+In order to take advantage of the PF_RING ZC drivers on Intel adapters, you also need to load the ZC driver, according to your nework card model. Example for ixgbe cards:
 
 .. code-block:: console
 
@@ -52,4 +56,33 @@ ZC Mode
    make && sudo ./load_driver.sh
    
    sudo suricata --pfring-int=zc:eth1 -c /etc/suricata/suricata.yaml
+
+
+PF_RING FT Acceleration
+-----------------------
+
+In order to take advantage of the PF_RING FT L7 filtering/shunting, you also need to install nDPI: 
+
+.. code-block:: console
+   
+   git clone https://github.com/ntop/nDPI.git
+   ./autogen
+   make && make install
+
+Then you need to create a configuration file with the filtering rules:
+
+.. code-block:: console
+   
+   # cat /etc/pf_ring/ft-rules.conf
+   [filter]
+   YouTube = discard
+   Netflix = discard
+
+And run Suricata setting the path of the configuration file using the PF_RING_FT_CONF environment variable:
+
+.. code-block:: console
+   
+   PF_RING_FT_CONF=/etc/pf_ring/ft-rules.conf suricata --pfring-int=zc:eth1 -c /etc/suricata/suricata.yaml
+
+For further information about PF_RING FT please read http://www.ntop.org/guides/pf_ring/ft.html
 
