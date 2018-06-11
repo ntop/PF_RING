@@ -7746,11 +7746,16 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
-  printk("[PF_RING] Removing %s/%s from /proc\n", dev_ptr->device_name, PROC_INFO);
+  printk("[PF_RING] removing %s/%s from /proc [net=%llu]\n", 
+    dev_ptr->device_name, PROC_INFO, 
+    (long long unsigned) netns->net);
+
   remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
 
   if (netns->proc_dev_dir != NULL) {
-    printk("[PF_RING] Removing %s from /proc\n", dev_ptr->device_name);
+    printk("[PF_RING] removing %s from /proc [net=%llu]\n", 
+      dev_ptr->device_name, 
+      (long long unsigned) netns->net);
     /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
     remove_proc_entry(dev_ptr->device_name, netns->proc_dev_dir);
   }
@@ -8178,7 +8183,8 @@ static int __net_init ring_net_init(struct net *net)
 {
   pf_ring_net *netns;
 
-  printk("[PF_RING] Init network namespace %p\n", net);
+  printk("[PF_RING] init network namespace [net=%llu]\n", 
+    (long long unsigned) net);
 
   netns = netns_add(net);
 
@@ -8192,7 +8198,8 @@ static int __net_init ring_net_init(struct net *net)
 
 static void __net_exit ring_net_exit(struct net *net)
 {
-  printk("[PF_RING] Exit network namespace %p\n", net);
+  printk("[PF_RING] exit network namespace [net=%llu]\n", 
+    (long long unsigned) net);
 
   netns_remove(net);
 }
@@ -8350,7 +8357,7 @@ static int __init ring_init(void)
 
   register_device_handler();
 
-  printk("[PF_RING] Initialized correctly\n");
+  printk("[PF_RING] pf_ring initialized correctly\n");
 
   pfring_enabled = 1;
   return 0;
