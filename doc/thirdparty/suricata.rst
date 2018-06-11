@@ -17,7 +17,7 @@ Installation
    cd PF_RING/userland/lib
    ./configure && make && sudo make install
    
-   git clone https://github.com/inliniac/suricata.git
+   git clone https://github.com/OISF/suricata
    cd suricata
    git clone https://github.com/OISF/libhtp
    ./autogen.sh
