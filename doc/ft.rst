@@ -114,7 +114,7 @@ in *pfring_ft_flow_value.l7_protocol*, all you need to do is:
 .. code-block:: console
 
    git clone https://github.com/ntop/nDPI.git
-   ./autogen
+   ./autogen.sh
    make && make install
 
 2. enable L7 detection through the *PFRING_FT_TABLE_FLAGS_DPI* flag:
