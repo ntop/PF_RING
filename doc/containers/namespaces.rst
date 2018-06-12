@@ -22,17 +22,17 @@ Create a network namespace ns0:
 
    ip netns add ns0
 
-Delete a network namespace ns1:
-
-.. code-block:: console
-
-   ip netns del ns1
-
 List all network namespaces:
 
 .. code-block:: console
 
    ip netns list
+
+Move a network interface eth1 to the network namespace ns0:
+
+.. code-block:: console
+
+   ip link set eth1 netns ns0
 
 List all interfaces registered with pf_ring in the host (default namespace):
 
@@ -44,14 +44,13 @@ List all interfaces registered with pf_ring in the namespace ns0:
 
 .. code-block:: console
    
-   ip netns exec ns0 bash
-   ls /proc/net/pf_ring/dev/
+   ip netns exec ns0 ls /proc/net/pf_ring/dev/
 
-Move a network interface to the network namespace ns0:
+Bring the interface eth1 up in the namespace ns0:
 
 .. code-block:: console
 
-   ip link set eth1 netns ns0
+   ip netns exec ns0 ifconfig eth1 up
 
 Run pfcount in the network namespace ns0 capturing from eth1:
 
@@ -59,3 +58,8 @@ Run pfcount in the network namespace ns0 capturing from eth1:
 
    ip netns exec ns0 pfcount -i eth1
 
+Delete the network namespace ns0 (all interfaces in ns0 will move back to the host default namespace):
+
+.. code-block:: console
+
+   ip netns del ns0
