@@ -13,6 +13,7 @@ PF_RING is a high speed packet capture library that turns a commodity PC into an
    modules/index
    nbpf/index
    nbroker/index
+   containers/index
    vm/index
    thirdparty/index
    rss
