@@ -43,6 +43,7 @@ List all interfaces registered with pf_ring in the host (default namespace):
 List all interfaces registered with pf_ring in the namespace ns0:
 
 .. code-block:: console
+   
    ip netns exec ns0 bash
    ls /proc/net/pf_ring/dev/
 
