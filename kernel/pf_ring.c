@@ -1621,7 +1621,8 @@ static void ring_proc_init(pf_ring_net *netns)
   netns->proc_dir = proc_mkdir("pf_ring", netns->net->proc_net);
 
   if (netns->proc_dir == NULL) {
-    printk("[PF_RING] unable to create /proc/net/pf_ring\n");
+    printk("[PF_RING] unable to create /proc/net/pf_ring [net=%llu]\n",
+      (long long unsigned) netns->net);
     return;
   }
 
@@ -1634,11 +1635,13 @@ static void ring_proc_init(pf_ring_net *netns)
 			  &ring_proc_fops /* file operations */);
 
   if (netns->proc == NULL) {
-    printk("[PF_RING] unable to register proc file\n");
+    printk("[PF_RING] unable to register proc file [net=%llu]\n",
+      (long long unsigned) netns->net);
     return;
   }
 
-  printk("[PF_RING] registered /proc/net/pf_ring/\n");
+  printk("[PF_RING] registered /proc/net/pf_ring [net=%llu]\n",
+    (long long unsigned) netns->net);
 }
 
 /* ********************************** */
@@ -1648,15 +1651,17 @@ static void ring_proc_term(pf_ring_net *netns)
   if (netns->proc_dir == NULL) 
     return;
 
-  remove_proc_entry(PROC_INFO, netns->proc_dir);
-  debug_printk(2, "removed /proc/net/pf_ring/%s\n", PROC_INFO);
+  printk("[PF_RING] removing /proc/net/pf_ring [net=%llu]\n", 
+    (long long unsigned) netns->net);
 
+  remove_proc_entry(PROC_INFO,  netns->proc_dir);
   remove_proc_entry(PROC_STATS, netns->proc_dir);
   remove_proc_entry(PROC_DEV,   netns->proc_dir);
 
   if (netns->proc != NULL) {
     remove_proc_entry("pf_ring", netns->net->proc_net);
-    debug_printk(2, "deregistered /proc/net/pf_ring\n");
+    printk("[PF_RING] deregistered /proc/net/pf_ring [net=%llu]\n",
+      (long long unsigned) netns->net);
   }
 }
 
