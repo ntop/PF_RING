@@ -1,3 +1,79 @@
+
+---------------------------------------                                                                                                                                                                             
+2018-06-12 PF_RING 7.1
+
+* ZC Library
+ - New API pfring_zc_pkt_buff_pull / pfring_zc_pkt_buff_push to manage buffer head room
+ - New builtin hash pfring_zc_builtin_gre_hash with support for GRE tunneling
+   - zbalance_ipc -m 5 option for enabling GRE hashing
+ - Support for up to 64 queues in pfring_zc_send_pkt_multi and pfring_zc_distribution_func
+ - Fix for attaching to ZC IPC queues from containers
+
+* FT Library (New)
+ - L7 flow classification and filtering library
+ - Event-driven capture-agnostic API
+ - Sample applications
+   - ftflow: flow records generation with PF_RING capture
+   - ftflow_pcap: flow records generation with PCAP capture
+   - ftflow_dpdk: flow records generation with DPDK capture
+   - fttest: performance benchmarking tool
+   - zbalance_ipc extension to process flows and filter packets
+
+* nBroker (New)
+ - Traffic steering and filtering on Intel RRC (FM10K adapters)
+ - Daemon to drive the adapter (nbrokerd)
+ - API to configure the adapter using a C library (nbrokerlib)
+ - Command-line tool with auto-completion to configure the adapter using scripts (nbroker-cli)
+ - Low-level library used by nbrokerd to drive the adapter (rrclib)
+
+* PF_RING-aware Libpcap
+ - PCAP_PF_RING_USERSPACE_BPF env var to force userspace filtering instead of kernel filtering
+
+* PF_RING Kernel Module
+ - Full support for namespaces and containers
+ - Fixed skbuff forwarding with fast-tx using reflect_packet
+ - Fixed VLAN support in BPF with kernel extensions
+ - Fixed support for NetXtreme cards with multiple queues
+ - Fixed sw hash filtering for IPv6
+ - Fixed intel_82599_perfect_filter_hw_rule VLAN byte order
+ - Fixed huge rings (high number of slots or huge slot size)
+ - Fixed VLAN offset and packet hash in case of QinQ and VLAN offload
+ - Support for Ubuntu 18
+ - Support for latest Centos 7 kernel
+ - Support for latest Debian 8 kernel
+
+* PF_RING Capture Modules
+ - Released source code for FPGA capture modules including Endace, Exablaze, Inveatech, Mellanox, Netcope
+ - Accolade lib updates
+   - New flag PF_RING_FLOW_OFFLOAD_NOUP to enable flow offload without flow updates (standard raw packets are received, flow id is in the packet hash)
+   - Automatically generate the rule ID using rule_id = FILTERING_RULE_AUTO_RULE_ID
+   - Support for accolade 200Ku Flex adapters
+ - Fiberblaze lib updates
+   - Packet recv in chunk mode
+ - Fixed extraction from npcap/timeline in case of empty PCAP files in the dump set
+ - Endace DAG updates
+   - Setting extended_hdr.pkt_hash from ERF FlowID or Packet Signature extension headers if available
+   - Support for pfring_set_application_name
+   - Support for pfring_dag_findalldevs
+ - Napatech lib updates
+   - Support for sdk v10
+
+* Drivers
+ - e1000e zc driver update v.3.4.0.2
+ - i40e zc driver update v.2.4.6
+ - ixgbe zc driver update v.5.3.7
+ - igb zc driver update v.5.3.5.18
+ - Fixed interrupts handling on i40e when in zc mode, this fixes the case where packets are received in batches of 4/8 packets
+ - Using nbrokerd for initializing FM10K adapters and configuring the RRC switch
+
+* nBPF
+ - Fixed rules constraints
+
+* Misc
+ - Reworked init.d systemd support
+ - New pf_ringctl script to manage pf_ring and drivers (this is used by init.d/systemd)
+ - Documentation improvements, Doxygen integration with "read the docs"
+
 ---------------------------------------                                                                                                                                                                             
 2017-10-20 PF_RING 7.0
 
