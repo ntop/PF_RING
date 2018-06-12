@@ -2,15 +2,16 @@ Installing from packages
 ========================
 
 At http://packages.ntop.org we build binary PF_RING packages ready to use.
+Please follow the instructions on the web page for configuring the repository
+and install *pfring* and *pfring-dkms*. Optionally you can also install
+*pfring-drivers-zc-dkms* if you need the ZC drivers for line-rate capture on 
+Intel adapters.
 
 An option for configuring PF_RING and drivers is doing it through the nBox GUI. 
 In case you are not using the nBox GUI, you can manually configure the packages 
-from command line, as described below.
-
-Once the "pfring" package, and optionally the "pfring-drivers-zc-dkms" package
-containing ZC  drivers, is installed following the procedure on the web page, 
-it is possible to use the init script /etc/init.d/pf_ring to automate the kernel 
-module and drivers loading. The init script acts as follows:
+from command line, and use the init scripts (under /etc/init.d or systemctl, 
+according to your linux distribution) to automate the kernel module and drivers 
+loading. The init script acts as follows:
 
 1. loads the pf_ring.ko kernel module.
 2. scans the folders /etc/pf_ring/zc/{e1000e,igb,ixgbe,i40e,fm10k}/ searching files:
