@@ -41,8 +41,8 @@
 #define pfring_ptr ax25_ptr
 
 /* Versioning */
-#define RING_VERSION                "7.1.0"
-#define RING_VERSION_NUM           0x070100
+#define RING_VERSION                "7.2.0"
+#define RING_VERSION_NUM           0x070200
 
 /* Set */
 #define SO_ADD_TO_CLUSTER                 99

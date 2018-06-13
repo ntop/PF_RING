@@ -1,6 +1,6 @@
 
 ---------------------------------------                                                                                                                                                                             
-2018-06-12 PF_RING 7.1
+2018-06-13 PF_RING 7.2
 
 * ZC Library
  - New API pfring_zc_pkt_buff_pull / pfring_zc_pkt_buff_push to manage buffer head room
