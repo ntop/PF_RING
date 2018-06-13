@@ -40,8 +40,7 @@
 /* Dirty hack I know, but what else shall I do man? */
 #define pfring_ptr ax25_ptr
 
-/* Size of packets "window" to take the filtering sample from */
-#define FILTERING_SAMPLING_SIZE       100
+#define FILTERING_SAMPLING_RATIO       10
 
 /* Versioning */
 #define RING_VERSION                "7.1.0"
@@ -1221,9 +1220,9 @@ struct pf_ring_socket {
   u_int16_t num_hw_filtering_rules;
   struct list_head hw_filtering_rules;
 
-  /* Filtering - sampling rate */
+  /* Filtering sampling */
   u_int32_t filtering_sample_rate;
-  u_int32_t filtering_sampled_packets;  
+  u_int32_t filtering_sampling_size;
 
   /* Locks */
   atomic_t num_ring_users;

@@ -3585,8 +3585,8 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
   /* [2] Filter packet according to rules */
 
-  debug_printk(2, "ring_id=%d pfr->filtering_sample_rate=%u pfr->filtering_sampled_packets=%u\n",
-	  pfr->ring_id, pfr->filtering_sample_rate, pfr->filtering_sampled_packets);
+  debug_printk(2, "ring_id=%d pfr->filtering_sample_rate=%u pfr->filtering_sampling_size=%u\n",
+	  pfr->ring_id, pfr->filtering_sample_rate, pfr->filtering_sampling_size);
 
   /* [2.1] Search the hash */
   if(pfr->sw_filtering_hash != NULL) {
@@ -3598,12 +3598,11 @@ static int add_skb_to_ring(struct sk_buff *skb,
 	  hash_bucket->rule.internals.jiffies_last_match = jiffies;
 	  hash_bucket->match++;		
 	  pfr->sw_filtering_hash_match++;
-	  /* If there is a filter for the session, let the first 'filtering_sampled_packets' packets of every
-         'FILTERING_SAMPLING_SIZE' filtered packets, to pass the filter.
-         Note that the ratio of the defined rate ('filtering_sample_rate') is kept the same.
+	  /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
+         Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO'.
 	   */
 	  if ( fwd_pkt==0 ) {
-		if (pfr->filtering_sample_rate && ((hash_bucket->match % FILTERING_SAMPLING_SIZE) < pfr->filtering_sampled_packets) ) {
+		if (pfr->filtering_sample_rate && ((hash_bucket->match % (u_int64_t)pfr->filtering_sampling_size) < (u_int64_t)(FILTERING_SAMPLING_RATIO)) ) {
 			fwd_pkt=1;
 		} else {
 			hash_bucket->filtered++;
@@ -4279,7 +4278,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->ring_dev = &none_device_element; /* Unbound socket */
   pfr->sample_rate = 1;	/* No sampling */
   pfr->filtering_sample_rate = 0; /* No filtering sampling */
-  pfr->filtering_sampled_packets = 0;
+  pfr->filtering_sampling_size = 0;
   sk->sk_family = PF_RING;
   sk->sk_destruct = ring_sock_destruct;
   pfr->ring_id = atomic_inc_return(&ring_id_serial);
@@ -6739,19 +6738,14 @@ static int ring_setsockopt(struct socket *sock,
 	  if(copy_from_user(&pfr->filtering_sample_rate, optval, sizeof(pfr->filtering_sample_rate)))
 		return(-EFAULT);
 
-	  if(pfr->filtering_sample_rate > (u_int32_t)FILTERING_SAMPLING_SIZE) {
-	  	printk("[PF_RING] Filtering sampling rate (%u) cannot exceed %u. Filtering sampling disabled.\n",
-			pfr->filtering_sample_rate, (u_int32_t)FILTERING_SAMPLING_SIZE);
-		pfr->filtering_sample_rate = 0;
-		return(-EFAULT);
-	  }
+      pfr->filtering_sampling_size = pfr->filtering_sample_rate;
+	  
+	  if((FILTERING_SAMPLING_RATIO)>0) { /* In case FILTERING_SAMPLING_RATIO will mistakenly not be positive */
+	  	pfr->filtering_sampling_size *= (u_int32_t)(FILTERING_SAMPLING_RATIO);
+	  }	  
 
-      if (pfr->filtering_sample_rate > 0) {
-	      pfr->filtering_sampled_packets = (u_int32_t)FILTERING_SAMPLING_SIZE / pfr->filtering_sample_rate;
-      }
-
-	  debug_printk(2, "--> SO_SET_FILTERING_SAMPLING_RATE: filtering_sample_rate=%u, filtering_sampled_packets=%u\n",
-	  	pfr->filtering_sample_rate, pfr->filtering_sampled_packets);
+	  debug_printk(2, "--> SO_SET_FILTERING_SAMPLING_RATE: filtering_sample_rate=%u, filtering_sampling_size=%u\n",
+	  	pfr->filtering_sample_rate, pfr->filtering_sampling_size);
 	  break;
 
   case SO_ACTIVATE_RING:

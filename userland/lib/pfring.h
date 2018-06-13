@@ -680,8 +680,7 @@ int pfring_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sampling */)
  * Implement packet sampling during filtering directly into the kernel. Note that this solution is much more efficient than implementing it in user-space. 
  * Sampled packets during filtering are only those that already has been filtered (if any).
  * @param ring The PF_RING handle on which filtering sampling is applied. 
- * @param rate The filtering sampling rate. Rate of X means that first X packets out of 'FILTERING_SAMPLING_SIZE' are forwarded.
- *             This means that a filtering sampling rate of 0 disables sampling.
+ * @param rate The filtering sampling rate. Rate of X means 1 packet every X packets is forwarded. A filtering sampling rate of 0 disables sampling.
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_set_filtering_sampling_rate(pfring *ring, u_int32_t rate /* 0 = no sampling */);
