@@ -4887,6 +4887,8 @@ unlock:
 static int is_netdev_promisc(struct net_device *netdev) {
   unsigned int if_flags;
 
+  debug_printk(1, "checking promisc for %s\n", netdev->name);
+
   rtnl_lock();
   if_flags = (short) dev_get_flags(netdev);
   rtnl_unlock();
@@ -4898,6 +4900,8 @@ static int is_netdev_promisc(struct net_device *netdev) {
 
 static void set_netdev_promisc(struct net_device *netdev) {
   unsigned int if_flags;
+
+  debug_printk(1, "setting promisc for %s\n", netdev->name);
 
   rtnl_lock();
 
@@ -4914,6 +4918,8 @@ static void set_netdev_promisc(struct net_device *netdev) {
 
 static void unset_netdev_promisc(struct net_device *netdev) {
   unsigned int if_flags;
+
+  debug_printk(1, "resetting promisc for %s\n", netdev->name);
 
   rtnl_lock();
 
@@ -7039,40 +7045,44 @@ static int ring_setsockopt(struct socket *sock,
       if(copy_from_user(&enable_promisc, optval, optlen))
         return (-EFAULT);
 
-      if(enable_promisc) {
-        if(!pfr->ring_dev || pfr->ring_dev == &none_device_element || pfr->ring_dev == &any_device_element) {
-          debug_printk(2, "SO_SET_IFF_PROMISC: not a real device\n");
-        } else if(!pfr->promisc_enabled) {
-          pfr->promisc_enabled = 1;
-          if(atomic_inc_return(&pfr->ring_dev->promisc_users) == 1) { /* first user */
-            if(is_netdev_promisc(pfr->ring_dev->dev)) { /* promisc already set via ifconfig */
-              pfr->ring_dev->do_not_remove_promisc = 1;
-            } else {
-              pfr->ring_dev->do_not_remove_promisc = 0;
-              set_netdev_promisc(pfr->ring_dev->dev);
+      if(!pfr->ring_dev || pfr->ring_dev == &none_device_element || pfr->ring_dev == &any_device_element) {
+        debug_printk(1, "SO_SET_IFF_PROMISC: not a real device\n");
+      } else {
+        if(enable_promisc) {
+          if(!pfr->promisc_enabled) {
+            pfr->promisc_enabled = 1;
+            if(atomic_inc_return(&pfr->ring_dev->promisc_users) == 1) { /* first user */
+              if(is_netdev_promisc(pfr->ring_dev->dev)) { /* promisc already set via ifconfig */
+                pfr->ring_dev->do_not_remove_promisc = 1;
+              } else {
+                pfr->ring_dev->do_not_remove_promisc = 0;
+                set_netdev_promisc(pfr->ring_dev->dev);
+                /* managing promisc for additional devices */
+                list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+                  pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+                  if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
+                      test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
+                    set_netdev_promisc(dev_ptr->dev);
+                }
+              }
+            }
+          }
+        } else {
+          if(!atomic_read(&pfr->ring_dev->promisc_users)) { /* no users (otherwise keep promisc) */
+            if(!pfr->ring_dev->do_not_remove_promisc) {
+              unset_netdev_promisc(pfr->ring_dev->dev);
               /* managing promisc for additional devices */
               list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
                 pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
                 if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
                     test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
-                  set_netdev_promisc(dev_ptr->dev);
+                  unset_netdev_promisc(dev_ptr->dev);
               }
             }
           }
         }
-      } else {
-        if(!atomic_read(&pfr->ring_dev->promisc_users)) /* no users (otherwise keep promisc) */
-          if(!pfr->ring_dev->do_not_remove_promisc) {
-            unset_netdev_promisc(pfr->ring_dev->dev);
-            /* managing promisc for additional devices */
-            list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-              pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-              if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
-                  test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
-                unset_netdev_promisc(dev_ptr->dev);
-            }
-          }
       }
+
     }
     break;
 
