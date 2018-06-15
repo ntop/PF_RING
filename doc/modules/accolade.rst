@@ -158,8 +158,8 @@ TX DMA
 ------
 
 If you have an Accolade adapter (e.g. 200Ku-Flex) with a firmware supporting 
-TX DMA for replaying PCAP files at line-rate up to 100G, you need to configure 
-1G hugepages in order to send big PCAP files. 
+TX DMA for replaying PCAP files at line-rate up to 100G, you need to enable
+both 2MB and 1G hugepages.
 
 First of all you should check that your CPU supports 1G hugepages, running the
 command below you should get some output:
@@ -174,7 +174,7 @@ in /etc/default/grub:
 
 .. code-block:: text
 
-   default_hugepagesz=1GB hugepagesz=1G hugepages=4
+   default_hugepagesz=2MB hugepagesz=1GB hugepages=1 hugepagesz=2M hugepages=1024
 
 In order to apply the changes, update grub and reboot the system:
 
@@ -183,18 +183,22 @@ In order to apply the changes, update grub and reboot the system:
    sudo update-grub
    sudo reboot
 
-After rebooting the system, you should mount 1G hugepages and reload the Accolade
-driver as described in the installation steps above. 
+After rebooting the system, you should mount the hugepages and reload the Accolade
+driver: 
 
 .. code-block:: console
 
+   sudo sh -c "echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages"
    sudo mkdir /mnt/hugetlbfs1G
    sudo mount -t hugetlbfs none -opagesize=1G /mnt/hugetlbfs1G
+   sudo insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
+   sudo /opt/accolade/bin/anic_load
 
-At this point you should be finally able to run one of the TX tools provided by Accolade.
-Example of running one of the Accolade TX tools:
+At this point you should be finally able to run the TX tool provided by Accolade,
+example:
 
 .. code-block:: console
 
-   sudo test_200kflex_tx --id 0 --repeat 1000 mixed.pcap
+   cd SDK_*/examples/; make
+   sudo ./anic_200k_tx -i 0 -p 0 -r 1000000 mixed.pcap
 
