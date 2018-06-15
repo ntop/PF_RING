@@ -18,17 +18,17 @@ commands:
 
    tar xvzf SDK_*.tgz
    cd SDK_*
-   cd drv; make install; cd ..
-   cd lib; make install; cd ..
-   echo "/opt/accolade/lib/" > /etc/ld.so.conf.d/accolade.conf
+   cd drv; sudo make install; cd ..
+   cd lib; sudo make install; cd ..
+   sudo sh -c "echo /opt/accolade/lib/ > /etc/ld.so.conf.d/accolade.conf"
 
 Before running any application please load the driver with:
 
 .. code-block:: console
 
-   echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
-   insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
-   /opt/accolade/bin/anic_load
+   sudo sh -c "echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages"
+   sudo insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
+   sudo /opt/accolade/bin/anic_load
 
 If you are running an old firmware and you need to update it, you should
 run the following commands: 
@@ -37,8 +37,8 @@ run the following commands:
 
    cd SDK_*/tools/
    gunzip fpga_*.rbt.gz
-   ./anic_fwupdate --id 0 --script fpga_*.rbt
-   reboot
+   sudo ./anic_fwupdate --id 0 --script fpga_*.rbt
+   sudo reboot
 
 Now you are ready to compile and run PF_RING with Accolade support.
 Note that if you are installing pfring from packages, Accolade support
@@ -47,7 +47,7 @@ is already enabled.
 .. code-block:: console
 
    cd PF_RING/kernel; make
-   insmod pf_ring.ko; cd ..
+   sudo insmod pf_ring.ko; cd ..
    cd userland; ./configure
    cd lib; make; cd ..
    cd libpcap; ./configure; make; cd ..
@@ -180,14 +180,14 @@ In order to apply the changes, update grub and reboot the system:
 
 .. code-block:: console
 
-   update-grub
-   reboot
+   sudo update-grub
+   sudo reboot
 
 After rebooting the system, you should mount 1G hugepages and you are ready to run 
 the TX tool provided by Accolade.
 
 .. code-block:: console
 
-   mkdir -f /mnt/hugetlbfs1G
-   mount -t hugetlbfs none -opagesize=1G /mnt/hugetlbfs1G
+   sudo mkdir -f /mnt/hugetlbfs1G
+   sudo mount -t hugetlbfs none -opagesize=1G /mnt/hugetlbfs1G
 
