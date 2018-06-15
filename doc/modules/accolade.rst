@@ -183,14 +183,15 @@ In order to apply the changes, update grub and reboot the system:
    sudo update-grub
    sudo reboot
 
-After rebooting the system, you should mount 1G hugepages and you are ready to run 
-the TX tool provided by Accolade.
+After rebooting the system, you should mount 1G hugepages and reload the Accolade
+driver as described in the installation steps above. 
 
 .. code-block:: console
 
-   sudo mkdir -f /mnt/hugetlbfs1G
+   sudo mkdir /mnt/hugetlbfs1G
    sudo mount -t hugetlbfs none -opagesize=1G /mnt/hugetlbfs1G
 
+At this point you should be finally able to run one of the TX tools provided by Accolade.
 Example of running one of the Accolade TX tools:
 
 .. code-block:: console
