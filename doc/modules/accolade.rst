@@ -20,6 +20,7 @@ commands:
    cd SDK_*
    cd drv; make install; cd ..
    cd lib; make install; cd ..
+   echo "/opt/accolade/lib/" > /etc/ld.so.conf.d/accolade.conf
 
 Before running any application please load the driver with:
 
@@ -46,7 +47,7 @@ is already enabled.
 .. code-block:: console
 
    cd PF_RING/kernel; make
-   sudo insmod pf_ring.ko; cd ..
+   insmod pf_ring.ko; cd ..
    cd userland; ./configure
    cd lib; make; cd ..
    cd libpcap; ./configure; make; cd ..
@@ -152,4 +153,41 @@ Example of removing a filtering rule by id:
 .. code-block:: c
 
    pfring_remove_hw_rule(pd, rule_id);
+
+TX DMA
+------
+
+If you have an Accolade adapter (e.g. 200Ku-Flex) with a firmware supporting 
+TX DMA for replaying PCAP files at line-rate up to 100G, you need to configure 
+1G hugepages in order to send big PCAP files. 
+
+First of all you should check that your CPU supports 1G hugepages, running the
+command below you should get some output:
+
+.. code-block:: console
+
+   grep pdpe1gb /proc/cpuinfo
+
+In order to make sure that the system is able to reserve 1G pages from physical
+memory, it is recommended to add the boot parameters below to GRUB_CMDLINE_LINUX
+in /etc/default/grub:
+
+.. code-block:: text
+
+   default_hugepagesz=1GB hugepagesz=1G hugepages=4
+
+In order to apply the changes, update grub and reboot the system:
+
+.. code-block:: console
+
+   update-grub
+   reboot
+
+After rebooting the system, you should mount 1G hugepages and you are ready to run 
+the TX tool provided by Accolade.
+
+.. code-block:: console
+
+   mkdir -f /mnt/hugetlbfs1G
+   mount -t hugetlbfs none -opagesize=1G /mnt/hugetlbfs1G
 
