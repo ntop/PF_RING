@@ -35,7 +35,7 @@ run the following commands:
 
 .. code-block:: console
 
-   cd SDK_*/tools/
+   cd SDK_*/tools/; make
    gunzip fpga_*.rbt.gz
    sudo ./anic_fwupdate --id 0 --script fpga_*.rbt
    sudo reboot
@@ -190,4 +190,10 @@ the TX tool provided by Accolade.
 
    sudo mkdir -f /mnt/hugetlbfs1G
    sudo mount -t hugetlbfs none -opagesize=1G /mnt/hugetlbfs1G
+
+Example of running one of the Accolade TX tools:
+
+.. code-block:: console
+
+   sudo test_200kflex_tx --id 0 --repeat 1000 mixed.pcap
 
