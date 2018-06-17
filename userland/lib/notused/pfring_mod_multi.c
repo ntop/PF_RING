@@ -161,6 +161,18 @@ int pfring_mod_multi_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sa
 
 /* ******************************* */
 
+int pfring_mod_multi_set_filtering_sampling_rate(pfring *ring, u_int32_t rate /* 0 = no sampling */) {
+  struct ring_list_element *elem = (struct ring_list_element *) ring->priv_data;
+  while(elem != NULL) {
+    if(pfring_set_filtering_sampling_rate(elem->ring, rate)<0)
+      return -1;
+    elem = elem->next;
+  }
+  return 0;
+}
+
+/* ******************************* */
+
 int pfring_mod_multi_set_direction(pfring *ring, packet_direction direction) {
   struct ring_list_element *elem = (struct ring_list_element *) ring->priv_data;
   while(elem != NULL) {

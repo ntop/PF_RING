@@ -79,6 +79,8 @@ class PFring {
   inline int enable_ring()       { return pfring_enable_ring(ring); };
   inline int set_sampling_rate(u_int32_t rate /* 1 = no sampling */)
     { return pfring_set_sampling_rate(ring, rate); };
+  inline int set_filtering_sampling_rate(u_int32_t rate /* 0 = no sampling */)
+    { return pfring_set_filtering_sampling_rate(ring, rate); };
   inline int get_version(u_int32_t *version) 
     { return pfring_version(ring, version); };
   inline int get_socket_id()  { return ring->fd; };

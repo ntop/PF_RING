@@ -37,6 +37,7 @@ int pfring_mod_bind(pfring *ring, char *device_name);
 int pfring_mod_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet);
 u_int8_t pfring_mod_get_num_rx_channels(pfring *ring);
 int pfring_mod_set_sampling_rate(pfring *ring, u_int32_t rate);
+int pfring_mod_set_filtering_sampling_rate(pfring *ring, u_int32_t rate);
 int pfring_mod_get_selectable_fd(pfring *ring);
 int pfring_mod_set_direction(pfring *ring, packet_direction direction);
 int pfring_mod_set_socket_mode(pfring *ring, socket_mode mode);
