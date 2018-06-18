@@ -3591,32 +3591,32 @@ static int add_skb_to_ring(struct sk_buff *skb,
   /* [2] Filter packet according to rules */
 
   debug_printk(2, "ring_id=%d pfr->filtering_sample_rate=%u pfr->filtering_sampling_size=%u\n",
-	  pfr->ring_id, pfr->filtering_sample_rate, pfr->filtering_sampling_size);
+    pfr->ring_id, pfr->filtering_sample_rate, pfr->filtering_sampling_size);
 
   /* [2.1] Search the hash */
   if(pfr->sw_filtering_hash != NULL) {
-  	sw_filtering_hash_bucket *hash_bucket=NULL;
+    sw_filtering_hash_bucket *hash_bucket=NULL;
 
-  	hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ, &hash_bucket);
+    hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ, &hash_bucket);
 
     if (hash_found) {
-	  hash_bucket->rule.internals.jiffies_last_match = jiffies;
-	  hash_bucket->match++;		
-	  pfr->sw_filtering_hash_match++;
-	  /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
-         Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO'.
-	   */
-	  if ( fwd_pkt==0 ) {
-		if (pfr->filtering_sample_rate && ((hash_bucket->match % (u_int64_t)pfr->filtering_sampling_size) < (u_int64_t)(FILTERING_SAMPLING_RATIO)) ) {
-			fwd_pkt=1;
-		} else {
-			hash_bucket->filtered++;
-		  	pfr->sw_filtering_hash_filtered++;
-		}
-	  }
-    }
-    else
+      hash_bucket->rule.internals.jiffies_last_match = jiffies;
+      hash_bucket->match++;		
+      pfr->sw_filtering_hash_match++;
+      /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
+       * Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO' */
+      if (fwd_pkt == 0 && pfr->filtering_sample_rate && 
+          ((hash_bucket->match % (u_int64_t) pfr->filtering_sampling_size) < (u_int64_t)(FILTERING_SAMPLING_RATIO))) {
+          fwd_pkt=1;
+      }
+
+      if (fwd_pkt == 0) {
+        hash_bucket->filtered++;
+        pfr->sw_filtering_hash_filtered++;
+      }
+    } else {
       pfr->sw_filtering_hash_miss++;
+    }
   }
 
   /* [2.2] Search rules list */
