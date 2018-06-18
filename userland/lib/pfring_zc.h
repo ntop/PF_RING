@@ -28,6 +28,7 @@
 #define PF_RING_ZC_DEVICE_CAPTURE_TX         (1 <<  7) /**< pfring_zc_open_device() flag: capture RX+TX traffic (ignored in kernel-bypass mode) */
 #define PF_RING_ZC_DEVICE_IPONLY_RSS         (1 <<  8) /**< pfring_zc_open_device() flag: compute RSS hash on IP only (not 4-tuple) */
 #define PF_RING_ZC_DEVICE_NOT_PROMISC        (1 <<  9) /**< pfring_zc_open_device() flag: do NOT set the device in promiscuos mode */
+#define PF_RING_ZC_DO_NOT_STRIP_FCS          (1 << 10) /**< pfring_zc_open_device() flag: do NOT strip the FCS (CRC), when not stripped out by the adapter */
 
 #define UNDEFINED_QUEUEID 0xFFFFFFFF    /**< pfring_zc_get_queue_id() return val: queue id is not valid */
 #define QUEUE_IS_DEVICE(i) (i > 0xFFFF) /**< pfring_zc_get_queue_id() return val: queue id is an encoded device index */
