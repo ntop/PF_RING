@@ -3601,12 +3601,13 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
     if (hash_found) {
       hash_bucket->rule.internals.jiffies_last_match = jiffies;
-      hash_bucket->match++;		
+      hash_bucket->match++;
       pfr->sw_filtering_hash_match++;
       /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
        * Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO' */
       if (fwd_pkt == 0 && pfr->filtering_sample_rate && 
           ((hash_bucket->match % (u_int64_t) pfr->filtering_sampling_size) < (u_int64_t)(FILTERING_SAMPLING_RATIO))) {
+          hash_bucket->match_forward++;
           fwd_pkt=1;
       }
 
@@ -7244,7 +7245,7 @@ static int ring_getsockopt(struct socket *sock,
               hash_filtering_rule_stats hfrs;
               hfrs.match = bucket->match;
               hfrs.filtered = bucket->filtered;
-			  hfrs.miss = bucket->match - bucket->filtered;
+              hfrs.match_forward = bucket->match_forward;
               hfrs.inactivity = (u_int32_t) (jiffies_to_msecs(jiffies - bucket->rule.internals.jiffies_last_match) / 1000);
               rc = sizeof(hash_filtering_rule_stats);
               if(copy_to_user(optval, &hfrs, rc)) {

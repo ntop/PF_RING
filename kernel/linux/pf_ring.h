@@ -721,8 +721,8 @@ hash_filtering_rule;
 
 typedef struct {
   u_int64_t match;
-  u_int64_t miss;
   u_int64_t filtered;
+  u_int64_t match_forward;
   u_int32_t inactivity; /* sec */
 } __attribute__((packed))
 hash_filtering_rule_stats;
@@ -731,8 +731,9 @@ hash_filtering_rule_stats;
 
 typedef struct _sw_filtering_hash_bucket {
   hash_filtering_rule           rule;
-  u_int64_t                     match;    /* number of packets matching the rule */
-  u_int64_t                     filtered; /* number of packets filtered by the rule */
+  u_int64_t                     match;         /* number of packets matching the rule */
+  u_int64_t                     filtered;      /* number of packets filtered by the rule */
+  u_int64_t                     match_forward; /* number of packets sampled by the rule (equivalent to match minus filtered) */
   struct _sw_filtering_hash_bucket *next;
 } __attribute__((packed))
 sw_filtering_hash_bucket;
