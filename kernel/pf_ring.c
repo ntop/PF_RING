@@ -45,6 +45,7 @@
  * - XTao <xutao881001@gmail.com>
  * - James Juran <james.juran@mandiant.com>
  * - Paulo Angelo Alves Resende <pa@pauloangelo.com>
+ * - Amir Kaduri (Kadoorie) <akaduri75@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
