@@ -296,6 +296,34 @@ void sample_filtering_rules(){
 
     pfring_toggle_filtering_policy(pd, 0); /* Default to drop */
   }
+
+  if (0) { /* Accolade */
+    hw_filtering_rule r = { 0 };
+
+    r.rule_family_type = accolade_default;
+    r.rule_family.accolade_rule.action = accolade_drop;
+
+    pfring_add_hw_rule(pd, &r);
+
+    memset(&r, 0, sizeof(r));
+
+    r.rule_id = 0;
+    r.rule_family_type = accolade_rule;
+    r.rule_family.accolade_rule.action = accolade_pass;
+    r.rule_family.accolade_rule.ip_version = 4;
+    r.rule_family.accolade_rule.protocol = 6;
+    r.rule_family.accolade_rule.src_addr.v4 = ntohl(inet_addr("10.62.4.239"));
+    r.rule_family.accolade_rule.src_addr_bits = 32;
+    r.rule_family.accolade_rule.src_port_low = 80;
+    r.rule_family.accolade_rule.dst_addr.v4 = ntohl(inet_addr("10.62.7.8"));
+    r.rule_family.accolade_rule.dst_addr_bits = 32;
+    r.rule_family.accolade_rule.dst_port_low = 54830;
+
+    if ((rc = pfring_add_hw_rule(pd, &r)) < 0)
+      fprintf(stderr, "pfring_add_hw_rule(id=%d) failed: rc=%d\n", r.rule_id, rc);
+    else
+      printf("Rule %d added successfully...\n", r.rule_id );
+  }
 }
 
 /* ******************************** */
@@ -1179,8 +1207,6 @@ int main(int argc, char* argv[]) {
     alarm(ALARM_SLEEP);
   }
 
-  sample_filtering_rules();
-
   pfring_set_application_stats(pd, "Statistics not yet computed: please try again...");
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
     fprintf(stderr, "Dumping statistics on %s\n", path);
@@ -1190,6 +1216,8 @@ int main(int argc, char* argv[]) {
     pfring_close(pd);
     return(-1);
   }
+
+  sample_filtering_rules();
 
   if(num_threads <= 1) {
     if(bind_core >= 0)
