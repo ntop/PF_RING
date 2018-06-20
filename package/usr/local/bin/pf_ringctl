@@ -286,9 +286,14 @@ load_zc() {
 		done
 	done
 	
-	CLUSTER_HUGEPAGES=0
-	if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null |wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null |wc -l` -ge 1 ]; then
-		LOAD_HUGEPAGES=1
+	if hash systemctl 2>/dev/null; then
+		if [ `find /etc/systemd/system/multi-user.target.wants/ -name "cluster@*.service" | wc -l ` -ge 1 ]; then
+			LOAD_HUGEPAGES=1
+		fi
+	else
+		if [ `grep '\-u\=' /etc/cluster/cluster-*conf 2>/dev/null | wc -l` -ge 1 ] && [ `ls /etc/cluster/cluster-*.start 2>/dev/null | wc -l` -ge 1 ]; then
+			LOAD_HUGEPAGES=1
+		fi
 	fi
 
 	if [ -f ${HUGEPAGES_CONFIG} ] ; then
@@ -476,7 +481,8 @@ stop_pf_ring() {
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/cluster@.service ]; then
-		/bin/systemctl stop "cluster@*"
+		#/bin/systemctl stop "cluster@*"
+		:
 	elif [ -f /etc/init.d/cluster ]; then
 		/etc/init.d/cluster stop
 	fi
