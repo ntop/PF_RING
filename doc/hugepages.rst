@@ -96,9 +96,21 @@ following command:
 Possible errors
 ---------------
 
-1. "error mmap'ing hugepage xxx: Resource temporarily unavailable"
+1. The number of pages reported by HugePages_Total is lower then the configured number of pages.
 
 Causes:
+
+The memory manager is not able to reserve enough physical memory to allocate the requested number 
+of pages. Try with a fresh boot, or even just emptying the buffers cache might help:
+
+.. code-block:: console
+
+   echo 3 > /proc/sys/vm/drop_caches
+
+2. The application prints "error mmap'ing hugepage xxx: Resource temporarily unavailable"
+
+Causes:
+
 - You might not have permissions to mmap hugepages.
 
 - Increase the "max locked memory" ulimit (see ulimit -l) to accomodate 
