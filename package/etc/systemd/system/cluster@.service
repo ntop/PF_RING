@@ -1,5 +1,5 @@
 [Unit]
-Description=Start/stop cluster service with ID %I
+Description=PF_RING ZC cluster service with ID %I
 After=network.target syslog.target pf_ring.service
 Requires=pf_ring.service
 

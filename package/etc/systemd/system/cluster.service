@@ -1,5 +1,5 @@
 [Unit]
-Description=Start/stop all enabled cluster services
+Description=PF_RING ZC cluster services
 After=network.target syslog.target pf_ring.service
 Requires=pf_ring.service
 

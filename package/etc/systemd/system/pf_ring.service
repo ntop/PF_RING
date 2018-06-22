@@ -1,5 +1,5 @@
 [Unit]
-Description=Start/stop pfring service
+Description=PF_RING service
 After=network.target syslog.target
 
 [Service]
