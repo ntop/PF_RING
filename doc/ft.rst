@@ -10,8 +10,8 @@ any type of flow analysis application, including probes, IDSs, IPSs.
 
 .. image:: img/pfring_ft.png
 
-API
----
+API Overview
+------------
 
 Designing and implementing a flow processing application on top of PF_RING FT is quite 
 straightforward as it provides a clean API that can be used to do complex things in a 
