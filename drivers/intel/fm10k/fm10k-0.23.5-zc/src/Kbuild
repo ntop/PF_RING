@@ -43,6 +43,8 @@ fm10k-y += fm10k_uio.o
 endif
 fm10k-y += kcompat.o
 
+EXTRA_CFLAGS += -DHAVE_PF_RING
+
 KVER=$(shell uname -r)
 
 all:
