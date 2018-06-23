@@ -7797,7 +7797,7 @@ static struct pfring_hooks ring_hooks = {
 /* ************************************ */
 
 void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
-  if(dev_ptr->proc_entry == NULL)
+  if (dev_ptr->proc_entry == NULL)
     return;
 
 #ifdef ENABLE_PROC_WRITE_RULE
@@ -7805,11 +7805,15 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
-  printk("[PF_RING] removing %s/%s from /proc [net=%llu]\n", 
-    dev_ptr->device_name, PROC_INFO, 
-    (long long unsigned) netns->net);
+  if (dev_ptr->proc_info_entry != NULL) {
+    printk("[PF_RING] removing %s/%s from /proc [net=%llu]\n", 
+      dev_ptr->device_name, PROC_INFO, 
+      (long long unsigned) netns->net);
 
-  remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
+    remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
+
+    dev_ptr->proc_info_entry = NULL;
+  }
 
   if (netns->proc_dev_dir != NULL) {
     printk("[PF_RING] removing %s from /proc [net=%llu]\n", 
@@ -7884,12 +7888,29 @@ static const struct file_operations ring_proc_dev_fops = {
 /* ************************************ */
 
 void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
+
   dev_ptr->proc_entry = proc_mkdir(dev_ptr->device_name, netns->proc_dev_dir);
 
-  proc_create_data(PROC_INFO, 0 /* read-only */,
-		   dev_ptr->proc_entry,
-		   &ring_proc_dev_fops /* read */,
-		   dev_ptr);
+  if (dev_ptr->proc_entry == NULL) {
+    printk("[PF_RING] failure creating %s in /proc [net=%llu]\n", 
+      dev_ptr->device_name, (long long unsigned) netns->net);
+    return;
+  }
+
+  dev_ptr->proc_info_entry = proc_create_data(PROC_INFO, 0 /* read-only */,
+    dev_ptr->proc_entry,
+    &ring_proc_dev_fops /* read */,
+    dev_ptr);
+
+  if (dev_ptr->proc_info_entry == NULL) {
+    printk("[PF_RING] failure creating %s/%s in /proc [net=%llu]\n", 
+      dev_ptr->device_name, PROC_INFO, (long long unsigned) netns->net);
+    return;
+  }
+
+  printk("[PF_RING] created %s/%s in /proc [net=%llu]\n", 
+    dev_ptr->device_name, PROC_INFO, 
+    (long long unsigned) netns->net);
 }
 
 /* ************************************ */
