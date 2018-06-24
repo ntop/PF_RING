@@ -1037,6 +1037,7 @@ typedef struct {
 
   /* Entry in the /proc filesystem */
   struct proc_dir_entry *proc_entry;
+  struct proc_dir_entry *proc_info_entry;
 
   /* ZC */
   u_int8_t is_zc_device;
