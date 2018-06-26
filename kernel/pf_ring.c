@@ -8075,7 +8075,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       case NETDEV_POST_INIT:        what = "NETDEV_POST_INIT"; break;
 #ifdef NETDEV_UNREGISTER_FINAL
       case NETDEV_UNREGISTER_FINAL: what = "NETDEV_UNREGISTER_FINAL"; break;
-#else
+#endif
+#ifdef NETDEV_UNREGISTER_BATCH
       case NETDEV_UNREGISTER_BATCH: what = "NETDEV_UNREGISTER_BATCH"; break;
 #endif
       case NETDEV_RELEASE:          what = "NETDEV_RELEASE"; break;
