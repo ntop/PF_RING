@@ -453,8 +453,10 @@ stop_pf_ring() {
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/nprobe@.service ]; then
-		/bin/systemctl stop "nprobe"
-		/bin/systemctl stop "nprobe@*"
+		# Systemd will take care of stopping nprobe
+		#/bin/systemctl stop "nprobe"
+		#/bin/systemctl stop "nprobe@*"
+		:
 	elif [ -f /etc/init.d/nprobe ]; then
 		/etc/init.d/nprobe stop
 	fi
@@ -606,6 +608,8 @@ init_config() {
 }
 ########
 
+echo "$(/bin/date) pf_ringctl $1" >> /var/log/ntop-systemd.log
+
 case "$1" in
   start)
 	FORCESTART=1
@@ -639,5 +643,7 @@ case "$1" in
 	echo "Usage: ${0} {start|stop|restart|status}"
 	exit 1
 esac
+
+echo "$(/bin/date) pf_ringctl done" >> /var/log/ntop-systemd.log
 
 exit 0
