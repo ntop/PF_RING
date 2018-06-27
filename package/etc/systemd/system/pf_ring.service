@@ -6,8 +6,15 @@ After=network.target syslog.target
 Type=oneshot
 RemainAfterExit=yes
 
+ExecStartPre=/bin/sh -c '/bin/echo "$(/bin/date) pf_ring StartPre" >> /var/log/ntop-systemd.log'
+
 ExecStart=/usr/local/bin/pf_ringctl start
+
+ExecStartPost=/bin/sh -c '/bin/echo "$(/bin/date) pf_ring StartPost" >> /var/log/ntop-systemd.log'
+
 ExecStop=/usr/local/bin/pf_ringctl stop
+
+ExecStopPost=/bin/sh -c '/bin/echo "$(/bin/date) pf_ring StopPost" >> /var/log/ntop-systemd.log'
 
 [Install]
 WantedBy=multi-user.target
