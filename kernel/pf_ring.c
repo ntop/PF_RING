@@ -7806,9 +7806,10 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
 #endif
 
   if (dev_ptr->proc_info_entry != NULL) {
-    printk("[PF_RING] removing %s/%s from /proc [net=%llu]\n", 
+    printk("[PF_RING] removing %s/%s from /proc [net=%llu] [entry=%llu]\n", 
       dev_ptr->device_name, PROC_INFO, 
-      (long long unsigned) netns->net);
+      (long long unsigned) netns->net,
+      (long long unsigned) dev_ptr->proc_entry);
 
     remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
 
@@ -7816,9 +7817,10 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   }
 
   if (netns->proc_dev_dir != NULL) {
-    printk("[PF_RING] removing %s from /proc [net=%llu]\n", 
+    printk("[PF_RING] removing %s from /proc [net=%llu] [entry=%llu]\n", 
       dev_ptr->device_name, 
-      (long long unsigned) netns->net);
+      (long long unsigned) netns->net,
+      (long long unsigned) dev_ptr->proc_entry);
     /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
     remove_proc_entry(dev_ptr->device_name, netns->proc_dev_dir);
   }
@@ -7908,9 +7910,10 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     return;
   }
 
-  printk("[PF_RING] created %s/%s in /proc [net=%llu]\n", 
+  printk("[PF_RING] created %s/%s in /proc [net=%llu] [entry=%llu]\n", 
     dev_ptr->device_name, PROC_INFO, 
-    (long long unsigned) netns->net);
+    (long long unsigned) netns->net,
+    (long long unsigned) dev_ptr->proc_entry);
 }
 
 /* ************************************ */
