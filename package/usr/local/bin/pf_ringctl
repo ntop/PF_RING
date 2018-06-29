@@ -197,10 +197,12 @@ start_interfaces() {
 
 		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D_PHYSIF ; then
 			# Disabling offloads
-			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
+			for i in rx tx sg tso ufo gso gro lro rxhash ntuple; do
+				/sbin/ethtool -K $D $i off > /dev/null 2>&1
+			done
 
 			# Disabling VLAN stripping
-			/sbin/ethtool -K $D rxvlan off > /dev/null 2>&1
+			/sbin/ethtool -K $D rxvlan off txvlan off > /dev/null 2>&1
 
 			# Disabling Flow Control
 			/sbin/ethtool -A $D rx off > /dev/null 2>&1
