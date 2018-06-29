@@ -454,15 +454,14 @@ stop_pf_ring() {
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/nprobe@.service ]; then
 		# Systemd will take care of stopping nprobe
-		#/bin/systemctl stop "nprobe"
-		#/bin/systemctl stop "nprobe@*"
 		:
 	elif [ -f /etc/init.d/nprobe ]; then
 		/etc/init.d/nprobe stop
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/n2disk@.service ]; then
-		/bin/systemctl stop "n2disk@*"
+		# Systemd will take care of stopping n2disk
+		:
 	elif [ -f /etc/init.d/n2disk ]; then
 		/etc/init.d/n2disk stop
 	fi
@@ -483,7 +482,7 @@ stop_pf_ring() {
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/cluster@.service ]; then
-		#/bin/systemctl stop "cluster@*"
+		# Systemd will take care of stopping clusters
 		:
 	elif [ -f /etc/init.d/cluster ]; then
 		/etc/init.d/cluster stop
