@@ -473,10 +473,8 @@ stop_pf_ring() {
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/cento.service ]; then
-		/bin/systemctl stop "cento"
-		/bin/systemctl stop "cento@*"
-		/bin/systemctl stop "cento-ids"
-		/bin/systemctl stop "cento-bridge"
+		# Systemd will take care of stopping cento
+		:
 	elif [ -f /etc/init.d/cento ]; then
 		/etc/init.d/cento stop
 	fi
@@ -489,7 +487,8 @@ stop_pf_ring() {
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/nscrub.service ]; then
-		/bin/systemctl stop "nscrub"
+		# Systemd will take care of stopping clusters
+		:
 	elif [ -f /etc/init.d/nscrub ]; then
 		/etc/init.d/nscrub stop
 	fi
