@@ -467,7 +467,8 @@ stop_pf_ring() {
 	fi
 
 	if hash systemctl 2>/dev/null && [ -f /etc/systemd/system/ntopng.service ]; then
-		/bin/systemctl stop "ntopng"
+		# Systemd will take care of stopping ntopng
+		:
 	elif [ -f /etc/init.d/ntopng ]; then
 		/etc/init.d/ntopng stop
 	fi
