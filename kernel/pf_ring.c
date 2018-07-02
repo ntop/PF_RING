@@ -7800,6 +7800,11 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   if (dev_ptr->proc_entry == NULL)
     return;
 
+  /*
+   * What about using proc_remove(struct proc_dir_entry *e))
+   * that is calling remove_proc_subtree(const char *name, struct proc_dir_entry *parent)
+   */
+
 #ifdef ENABLE_PROC_WRITE_RULE
   if(dev_ptr->device_type != standard_nic_family)
     remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
@@ -7809,7 +7814,7 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     printk("[PF_RING] removing %s/%s from /proc [net=%llu] [entry=%llu]\n", 
       dev_ptr->device_name, PROC_INFO, 
       (long long unsigned) netns->net,
-      (long long unsigned) dev_ptr->proc_entry);
+      (long long unsigned) dev_ptr->proc_info_entry);
 
     remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
 
@@ -7845,8 +7850,10 @@ void remove_device_from_ring_list(struct net_device *dev)
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
     if(dev_ptr->dev->ifindex == dev->ifindex) {
 
-      if (netns != NULL)
+      if (netns != NULL) {
+        printk("[PF_RING] removing dev=%s ifindex=%d (1)\n", dev->name, dev->ifindex);
         remove_device_from_proc(netns, dev_ptr);
+      }
 
       /* We now have to "un-bind" existing sockets */
       sk = (struct sock*)lockless_list_get_first(&ring_table, &last_list_idx);
@@ -7899,6 +7906,11 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     return;
   }
 
+  printk("[PF_RING] created %s in /proc [net=%llu] [entry=%llu]\n", 
+    dev_ptr->device_name, 
+    (long long unsigned) netns->net,
+    (long long unsigned) dev_ptr->proc_entry);
+
   dev_ptr->proc_info_entry = proc_create_data(PROC_INFO, 0 /* read-only */,
     dev_ptr->proc_entry,
     &ring_proc_dev_fops /* read */,
@@ -7913,7 +7925,7 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   printk("[PF_RING] created %s/%s in /proc [net=%llu] [entry=%llu]\n", 
     dev_ptr->device_name, PROC_INFO, 
     (long long unsigned) netns->net,
-    (long long unsigned) dev_ptr->proc_entry);
+    (long long unsigned) dev_ptr->proc_info_entry);
 }
 
 /* ************************************ */
@@ -7937,8 +7949,10 @@ int add_device_to_ring_list(struct net_device *dev)
   strcpy(dev_ptr->device_name, dev->name);
   dev_ptr->device_type = standard_nic_family; /* Default */
 
-  if (netns != NULL)
+  if (netns != NULL) {
+    printk("[PF_RING] adding dev=%s ifindex=%d (1)\n", dev->name, dev->ifindex);
     add_device_to_proc(netns, dev_ptr);
+  }
 
   /* Dirty trick to fix at some point used to discover Intel 82599 interfaces: FIXME */
   if((dev_ptr->dev->ethtool_ops != NULL) && (dev_ptr->dev->ethtool_ops->set_rxnfc != NULL)) {
@@ -8219,15 +8233,19 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
         netns = netns_lookup(dev_net(dev));
 
 	/* Remove old entry */
-        if (netns != NULL)
+        if (netns != NULL) {
+          printk("[PF_RING] removing dev=%s ifindex=%d (2)\n", dev->name, dev->ifindex);
           remove_device_from_proc(netns, dev_ptr);
+        }
 
         if(!if_name_clash) { /* do not add in case of name clash */
 	  strcpy(dev_ptr->device_name, dev_ptr->dev->name);
 
 	  /* Add new entry */
-          if (netns != NULL)
+          if (netns != NULL) {
+            printk("[PF_RING] adding dev=%s ifindex=%d (2)\n", dev->name, dev->ifindex);
             add_device_to_proc(netns, dev_ptr);
+          }
 
 #ifdef ENABLE_PROC_WRITE_RULE
 	  if(dev_ptr->device_type != standard_nic_family) {
