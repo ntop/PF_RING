@@ -18,7 +18,7 @@ Expressions
 -----------
 
 An expression consists of one or more primitives.
-The filter expressions are built by using AND and OR (NOT operation is not permitted).
+The filter expressions are built by using AND and OR.
 
 * Protocol: tcp, udp, sctp
 * Direction: src, dst, src or dst, src and dst
@@ -30,6 +30,7 @@ Additional constraints for packet capture filters include:
 * it is not possible to use the "or" operator inside parenthesis
 * it is not possible to mix different operators (only 1-level "or" of "and" blocks is allowed)
 * is not possible to combine different directions in the same block using   the "and" operator.
+* the NOT operator is not always permitted, depending on the match engine in use (for instance it is not supported on most adapters when translating to hardware rules)
 
 Filter Examples
 ~~~~~~~~~~~~~~~
