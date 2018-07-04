@@ -5170,6 +5170,8 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
     ring_proc_add(pfr);
   }
 
+  pfr->last_bind_dev = dev; 
+
   pfr->num_rx_channels = get_num_rx_queues(pfr->ring_dev->dev);
 
   if(dev == &any_device_element && !quick_mode) {
@@ -6486,7 +6488,7 @@ static int ring_setsockopt(struct socket *sock,
         u_int64_t the_bit = 1 << i;
 
         if(channel_id_mask & the_bit) {
-	  if(device_rings[pfr->ring_dev->dev->ifindex][i] != NULL)
+	  if(device_rings[pfr->last_bind_dev->dev->ifindex][i] != NULL)
 	    return(-EINVAL); /* Socket already bound on this device */
         }
       }
@@ -6501,7 +6503,7 @@ static int ring_setsockopt(struct socket *sock,
         debug_printk(2, "Setting channel %d\n", i);
 
 	if(quick_mode) {
-	  device_rings[pfr->ring_dev->dev->ifindex][i] = pfr;
+	  device_rings[pfr->last_bind_dev->dev->ifindex][i] = pfr;
 	}
 
 	pfr->num_channels_per_ring++;
