@@ -1132,6 +1132,10 @@ struct pf_ring_socket {
   u_int8_t ring_active, ring_shutdown, num_rx_channels, num_bound_devices;
   pf_ring_device *ring_dev;
 
+  /* last device set with bind, needed to heck channels when multiple
+   * devices are used with quick-mode */
+  pf_ring_device *last_bind_dev; 
+
   DECLARE_BITMAP(netdev_mask, MAX_NUM_DEVICES_ID /* bits */);
   int ring_pid;
   u_int32_t ring_id;
