@@ -314,7 +314,7 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
   if((device_name == NULL) || (strcmp(device_name, "none") == 0))
     return(-1);
 
-  /* TODO/FIX: in case of multiple interfaces the channel ID must be the same */
+  /* In case of multiple interfaces, channels are the same for all interfaces */
   at = strchr(device_name, '@');
   if(at != NULL) {
     char *tok;
@@ -375,20 +375,17 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
     rc = bind(ring->fd, (struct sockaddr *)&sa, sizeof(sa));
     
     if(rc == 0) {
-      /* if(channel_mask != RING_ANY_CHANNEL) */ {
-	rc = pfring_set_channel_mask(ring, channel_mask);
-	
-	/*
-	  if(rc != 0)
-	    printf("pfring_set_channel_id() failed: %d\n", rc);
-	*/
-      }
+      rc = pfring_set_channel_mask(ring, channel_mask);
+      /*
+      if(rc != 0)
+        printf("pfring_set_channel_id() failed: %d\n", rc);
+      */
 
       if(vlan_id != 0) {
 	rc = pfring_set_vlan_id(ring, vlan_id);
 	/*
-	  if(rc != 0)
-	    printf("pfring_set_vlan_id() failed: %d\n", rc); 
+	if(rc != 0)
+	  printf("pfring_set_vlan_id() failed: %d\n", rc); 
 	*/
       }
     }

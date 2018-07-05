@@ -406,7 +406,18 @@ struct __pfring {
  * 1. you can use physical (e.g. ethX) and virtual (e.g. tapX) devices, RX-queues (e.g. ethX@Y), 
  *    and additional modules (e.g. zc:ethX@Y, dag:dagX:Y, "multi:ethA@X;ethB@Y;ethC@Z", "stack:ethX").
  * 2. you need super-user capabilities in order to open a device.
- * @param device_name Symbolic name of the PF_RING-aware device we’re attempting to open (e.g. eth0).
+ * @param device_name Symbolic name of the PF_RING-aware device we are attempting to open.
+ * Syntax:
+ *  - eth0           interface eth0, all channels
+ *  - eth0@1         interface eth0, channel 1
+ *  - eth0,eth1      interface eth0 and eth1, all channels
+ *  - eth0,eth1@1    interface eth0 and eth1, channel 1
+ *  - eth0@1,5       interface eth0, channel 1 and 5
+ *  - eth0@1-5       interface eth0, channel 1,2...5
+ *  - eth0@1-3,5-7   interface eth0, channel 1,2,3,5,6,7
+ * Note: 
+ *  - ',' and '-' are supported with standard kernel capture / drivers only
+ *  - in case of multiple interfaces, the channels are same for all interfaces
  * @param caplen      Maximum packet capture len (also known as snaplen).
  * @param flags       It allows several options to be specified on a compact format using bitmaps (see PF_RING_* macros).
  * @return On success a handle is returned, NULL otherwise.
@@ -416,7 +427,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags);
 /**
  * This call is similar to pfring_open() with the exception that in case of a multi RX-queue NIC, 
  * instead of opening a single ring for the whole device, several individual rings are open (one per RX-queue).
- * @param device_name Symbolic name of the PF_RING-aware device we’re attempting to open (e.g. eth0). 
+ * @param device_name Symbolic name of the PF_RING-aware device we are attempting to open (e.g. eth0). 
  *                    No queue name hash to be specified, but just the main device name.
  * @param caplen      Maximum packet capture len (also known as snaplen).
  * @param flags       See pfring_open() for details.

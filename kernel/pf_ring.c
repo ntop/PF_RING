@@ -1789,8 +1789,9 @@ static inline int ring_insert(struct sock *sk)
 
   atomic_inc(&ring_table_size);
 
-  pfr = (struct pf_ring_socket *)ring_sk(sk);
-  bitmap_zero(pfr->netdev_mask, MAX_NUM_DEVICES_ID), pfr->num_bound_devices = 0;
+  pfr = (struct pf_ring_socket *) ring_sk(sk);
+  bitmap_zero(pfr->netdev_mask, MAX_NUM_DEVICES_ID);
+  pfr->num_bound_devices = 0;
 
   return 0;
 }
@@ -2893,14 +2894,14 @@ static inline int add_pkt_to_ring(struct sk_buff *skb,
 				  int offset)
 {
   struct pf_ring_socket *pfr = (_pfr->master_ring != NULL) ? _pfr->master_ring : _pfr;
-  u_int64_t the_bit = 1 << channel_id;
+  u_int64_t channel_id_bit = 1 << channel_id;
 
   if((!pfr->ring_active) || (!skb))
     return(0);
 
   if((pfr->channel_id_mask != RING_ANY_CHANNEL)
      && (channel_id != -1 /* any channel */)
-     && (!(pfr->channel_id_mask & the_bit)))
+     && (!(pfr->channel_id_mask & channel_id_bit)))
     return(0); /* Wrong channel */
 
   if(real_skb)
@@ -5005,9 +5006,9 @@ static int ring_release(struct socket *sock)
 	num_rings_per_device[pfr->ring_dev->dev->ifindex]--;
 
       for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
-	u_int64_t the_bit = 1 << i;
+	u_int64_t channel_id_bit = 1 << i;
 
-	if(pfr->channel_id_mask & the_bit) {
+	if(pfr->channel_id_mask & channel_id_bit) {
 	  if(device_rings[pfr->ring_dev->dev->ifindex][i] == pfr) {
 	    /*
 	      We must make sure that this is really us and not that by some chance
@@ -5185,7 +5186,8 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
                dev->dev->name, pfr->bucket_len);
 
   /* Set for all devices */
-  set_bit(dev->dev->ifindex, pfr->netdev_mask), pfr->num_bound_devices++;
+  set_bit(dev->dev->ifindex, pfr->netdev_mask);
+  pfr->num_bound_devices++;
 
   /* We set the master device only when we have not yet set a device */
   if(pfr->ring_dev == &none_device_element) {
@@ -6416,7 +6418,6 @@ static int ring_setsockopt(struct socket *sock,
   int found = 1, ret = 0 /* OK */, i;
   u_int32_t ring_id;
   struct add_to_cluster cluster;
-  u_int64_t channel_id_mask;
   char name[32 + 1] = { 0 };
   u_int16_t rule_id, rule_inactivity, vlan_id;
   packet_direction direction;
@@ -6502,24 +6503,28 @@ static int ring_setsockopt(struct socket *sock,
     break;
 
   case SO_SET_CHANNEL_ID:
-    if(optlen != sizeof(channel_id_mask))
+  {
+    u_int64_t channel_id_mask;
+    u_int16_t num_channels = 0;
+
+    if (optlen != sizeof(channel_id_mask))
       return(-EINVAL);
 
-    if(copy_from_user(&channel_id_mask, optval, sizeof(channel_id_mask)))
+    if (copy_from_user(&channel_id_mask, optval, sizeof(channel_id_mask)))
       return(-EFAULT);
 
-    pfr->num_channels_per_ring = 0;
+    num_channels = 0;
 
     /*
       We need to set the device_rings[] for all channels set
       in channel_id_mask
     */
 
-    if(quick_mode) {
-      for(i=0; i<pfr->num_rx_channels; i++) {
-        u_int64_t the_bit = 1 << i;
+    if (quick_mode) {
+      for (i = 0; i < pfr->num_rx_channels; i++) {
+        u_int64_t channel_id_bit = 1 << i;
 
-        if(channel_id_mask & the_bit) {
+        if(channel_id_mask & channel_id_bit) {
 	  if(device_rings[pfr->last_bind_dev->dev->ifindex][i] != NULL)
 	    return(-EINVAL); /* Socket already bound on this device */
         }
@@ -6528,26 +6533,29 @@ static int ring_setsockopt(struct socket *sock,
 
     /* Everything seems to work thus let's set the values */
 
-    for(i=0; i<pfr->num_rx_channels; i++) {
-      u_int64_t the_bit = 1 << i;
+    for (i = 0; i < pfr->num_rx_channels; i++) {
+      u_int64_t channel_id_bit = 1 << i;
 
-      if(channel_id_mask & the_bit) {
+      if (channel_id_mask & channel_id_bit) {
         debug_printk(2, "Setting channel %d\n", i);
 
 	if(quick_mode) {
 	  device_rings[pfr->last_bind_dev->dev->ifindex][i] = pfr;
 	}
 
-	pfr->num_channels_per_ring++;
+	num_channels++;
       }
     }
 
+    /* Note: in case of multiple interfaces, channels are the same for all */
+    pfr->num_channels_per_ring = num_channels;
     pfr->channel_id_mask = channel_id_mask;
-    debug_printk(2, "[pfr->channel_id_mask=%016llX][channel_id_mask=%016llX]\n",
-	     pfr->channel_id_mask, channel_id_mask);
+
+    debug_printk(2, "[channel_id_mask=%016llX]\n", pfr->channel_id_mask);
 
     ret = 0;
     break;
+  }
 
   case SO_SET_APPL_NAME:
     if(optlen > sizeof(name) /* Names should not be too long */ )
@@ -8013,7 +8021,7 @@ int pf_ring_inject_packet_to_ring(int if_index, int channel_id, u_char *data, in
   struct sock* sk = NULL;
   u_int32_t last_list_idx;
   struct pf_ring_socket *pfr;
-  u_int64_t the_bit = 1 << channel_id;
+  u_int64_t channel_id_bit = 1 << channel_id;
   int rc = -2; /* -2 == socket not found */
 
   if(quick_mode) {
@@ -8027,7 +8035,7 @@ int pf_ring_inject_packet_to_ring(int if_index, int channel_id, u_char *data, in
 
       if(pfr != NULL
           && (test_bit(if_index, pfr->netdev_mask) /* || pfr->ring_dev == &any_device_element */ )
-          && ((pfr->channel_id_mask & the_bit) || channel_id == -1 /* any channel */)) {
+          && ((pfr->channel_id_mask & channel_id_bit) || channel_id == -1 /* any channel */)) {
         /* 0  == success, -1 == no room available */
         rc = add_raw_packet_to_ring(pfr, hdr, data, data_len, 0);
       }
