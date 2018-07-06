@@ -1660,6 +1660,10 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			try_module_get(THIS_MODULE); /* ++ */
 
 		if(rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
+
+			/* wait for igb_clean_rx_irq to complete the current receive if any */
+			usleep_range(10, 20);
+
 			igb_irq_disable(adapter);
 
 			igb_clean_rx_ring(rx_ring);

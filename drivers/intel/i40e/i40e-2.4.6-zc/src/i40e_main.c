@@ -3755,6 +3755,9 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			struct i40e_vsi *vsi = rx_ring->vsi;
 			u16 pf_q = vsi->base_queue + rx_ring->queue_index;
 
+			/* wait for i40e_clean_rx_irq to complete the current receive if any */
+			usleep_range(10, 20);  
+
 			if (unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
 
@@ -3762,6 +3765,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			/* FIXX this is causing system crashes on high traffic rates, 
 			 * however we should fix it as it causes some skbuff leak on every pfring_open!
+			 * Note: the usleep_range above should be enough to avoid crashes, more tests are needed
 			i40e_clean_rx_ring(rx_ring);
 			i40e_control_rxq(vsi, pf_q, true);
 			*/
