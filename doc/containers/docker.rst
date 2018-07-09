@@ -27,7 +27,7 @@ Dockerfile.ubuntu16
    MAINTAINER ntop.org
    
    RUN apt-get update && \
-       apt-get -y -q install wget lsb-release && \
+       apt-get -y -q install wget lsb-release gnupg && \
        wget -q http://apt.ntop.org/16.04/all/apt-ntop.deb && dpkg -i apt-ntop.deb && \
        apt-get clean all && \
        apt-get update && \
