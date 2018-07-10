@@ -1463,12 +1463,13 @@ static char* sockmode2string(socket_mode m)
 
 /* ********************************** */
 
-pf_ring_device *pf_ring_device_ifindex_lookup(int ifindex) {
+pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
   struct list_head *ptr, *tmp_ptr;
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(dev_ptr->dev->ifindex == ifindex)
+    if (net_eq(net, dev_net(dev_ptr->dev)) && 
+        dev_ptr->dev->ifindex == ifindex)
       return dev_ptr;
   }
 
@@ -7858,7 +7859,8 @@ void remove_device_from_ring_list(struct net_device *dev)
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(dev_ptr->dev->ifindex == dev->ifindex) {
+    if (net_eq(netns->net, dev_net(dev_ptr->dev)) && 
+        dev_ptr->dev->ifindex == dev->ifindex) {
 
       if (netns != NULL) {
         printk("[PF_RING] removing dev=%s ifindex=%d (1)\n", dev->name, dev->ifindex);
@@ -8233,7 +8235,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
         }
       }
 
-      dev_ptr = pf_ring_device_ifindex_lookup(dev->ifindex);
+      dev_ptr = pf_ring_device_ifindex_lookup(dev_net(dev), dev->ifindex);
 
       if(dev_ptr != NULL) {
         pf_ring_net *netns;
