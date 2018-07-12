@@ -91,7 +91,7 @@ You should use as interface name zc:<cluster id> as in the example below.
 
 Example:
 
-.. code-block:: console
+.. code-block:: text
 
    [worker-1]
    type=worker
@@ -123,7 +123,7 @@ Then you need to create a configuration file with the filtering rules:
 
 And set the path of the configuration file using the PF_RING_FT_CONF environment variable in your node.cfg file:
 
-.. code-block:: console
+.. code-block:: text
    
    [worker-1]
    type=worker
@@ -137,4 +137,3 @@ And set the path of the configuration file using the PF_RING_FT_CONF environment
 At this point you are ready to run Bro.
 
 For further information about PF_RING FT please read http://www.ntop.org/guides/pf_ring/ft.html
-
