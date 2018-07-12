@@ -101,3 +101,40 @@ Example:
    lb_procs=8
    pin_cpus=0,1,2,3,4,5,6,7
 
+PF_RING FT Acceleration
+-----------------------
+
+In order to take advantage of the PF_RING FT L7 filtering/shunting, you also need to install nDPI: 
+
+.. code-block:: console
+   
+   git clone https://github.com/ntop/nDPI.git
+   ./autogen.sh
+   make && sudo make install
+
+Then you need to create a configuration file with the filtering rules:
+
+.. code-block:: console
+   
+   # cat /etc/pf_ring/ft-rules.conf
+   [filter]
+   YouTube = discard
+   Netflix = discard
+
+And set the path of the configuration file using the PF_RING_FT_CONF environment variable in your node.cfg file:
+
+.. code-block:: console
+   
+   [worker-1]
+   type=worker
+   host=10.10.10.1
+   interface=eth1
+   lb_method=pf_ring
+   lb_procs=8
+   pin_cpus=0,1,2,3,4,5,6,7
+   env_vars=PF_RING_FT_CONF=/etc/pf_ring/ft-rules.conf
+
+At this point you are ready to run Bro.
+
+For further information about PF_RING FT please read http://www.ntop.org/guides/pf_ring/ft.html
+
