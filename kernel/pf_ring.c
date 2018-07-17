@@ -5670,8 +5670,9 @@ unsigned int ring_poll(struct file *file,
       poll_wait(file, pfr->zc_dev->packet_waitqueue, wait);
 
       debug_printk(2, "poll_wait() just returned\n");
-    } else
+    } else {
       rc = pfr->zc_dev->wait_packet_function_ptr(pfr->zc_dev->rx_adapter_ptr, 0);
+    }
 
     debug_printk(2, "wait_packet_function_ptr(0) returned %d\n", rc);
 

@@ -3680,6 +3680,7 @@ int wake_up_pfring_zc_socket(struct i40e_ring *rx_ring)
 		if (waitqueue_active(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue)) {
 			if (ring_is_not_empty(rx_ring)) {
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
+				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0; /* napi disables them */
 				wake_up_interruptible(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 				if (unlikely(enable_debug))
 					printk("[PF_RING-ZC] %s: Waking up socket [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
