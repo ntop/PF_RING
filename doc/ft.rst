@@ -196,7 +196,8 @@ to the configuration file path:
    
    # PF_RING_FT_CONF=/etc/pf_ring/ft-rules.conf suricata --pfring-int=zc:eth1 -c /etc/suricata/suricata.yaml
 
-Please refer to the `Using Suricata with PF_RING <https://www.ntop.org/guides/pf_ring/thirdparty/suricata.html>`_ 
-guide for enabling PF_RING support in Suricata. Note that the same acceleration can be used with other 
-IDS/IPSs like Bro and Snort.
+Please refer to the `Using Suricata with PF_RING <https://www.ntop.org/guides/pf_ring/thirdparty/suricata.html#pf-ring-ft-acceleration>`_ 
+and `Using Bro with PF_RING <https://www.ntop.org/guides/pf_ring/thirdparty/bro.html#pf-ring-ft-acceleration>`_
+guides for enabling PF_RING FT support in Suricata and Bro. Note that the same acceleration can be used with other 
+IDSs like Snort.
 
