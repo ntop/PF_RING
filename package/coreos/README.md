@@ -21,6 +21,14 @@ After that you are ready to load the kernel modules installed on the host under 
 sudo insmod /opt/pf_ring/7.2.0-stable/1745.7.0/lib64/modules/4.14.48-coreos-r2/kernel/net/pf_ring/pf_ring.ko
 ```
 
+## Test
+
+In order to test the drivers you can use the pfring image available on Docker Hub:
+
+```
+docker run --net=host ntop/pfring:stable pfcount -i enp0s3
+```
+
 ## Additional Notes
 
 Kubernetes support will be added asap.
