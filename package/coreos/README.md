@@ -8,7 +8,8 @@ Please also note that a system update changes the kernel requiring modules recom
 
 ## Installation
 
-Running the build.sh script it will compile and install the pf_ring kernel module and all the ZC drivers:
+Running the build.sh script it will compile and install the pf_ring kernel module and all the ZC drivers.
+It is possible to select the pf_ring version to install changing the branch name in the PF_RING_VERSION variable in build.sh.
 
 ```
 ./build.sh
