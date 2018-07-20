@@ -1625,8 +1625,7 @@ static void ring_proc_init(pf_ring_net *netns)
   netns->proc_dir = proc_mkdir("pf_ring", netns->net->proc_net);
 
   if (netns->proc_dir == NULL) {
-    printk("[PF_RING] unable to create /proc/net/pf_ring [net=%llu]\n",
-      (long long unsigned) netns->net);
+    printk("[PF_RING] unable to create /proc/net/pf_ring [net=%pK]\n", netns->net);
     return;
   }
 
@@ -1639,13 +1638,11 @@ static void ring_proc_init(pf_ring_net *netns)
 			  &ring_proc_fops /* file operations */);
 
   if (netns->proc == NULL) {
-    printk("[PF_RING] unable to register proc file [net=%llu]\n",
-      (long long unsigned) netns->net);
+    printk("[PF_RING] unable to register proc file [net=%pK]\n", netns->net);
     return;
   }
 
-  debug_printk(1, "registered /proc/net/pf_ring [net=%llu]\n",
-    (long long unsigned) netns->net);
+  debug_printk(1, "registered /proc/net/pf_ring [net=%pK]\n", netns->net);
 }
 
 /* ********************************** */
@@ -1655,8 +1652,7 @@ static void ring_proc_term(pf_ring_net *netns)
   if (netns->proc_dir == NULL) 
     return;
 
-  debug_printk(1, "removing /proc/net/pf_ring [net=%llu]\n", 
-    (long long unsigned) netns->net);
+  debug_printk(1, "removing /proc/net/pf_ring [net=%pK]\n", netns->net);
 
   remove_proc_entry(PROC_INFO,  netns->proc_dir);
   remove_proc_entry(PROC_STATS, netns->proc_dir);
@@ -1664,8 +1660,7 @@ static void ring_proc_term(pf_ring_net *netns)
 
   if (netns->proc != NULL) {
     remove_proc_entry("pf_ring", netns->net->proc_net);
-    debug_printk(1, "deregistered /proc/net/pf_ring [net=%llu]\n",
-      (long long unsigned) netns->net);
+    debug_printk(1, "deregistered /proc/net/pf_ring [net=%pK]\n", netns->net);
   }
 }
 
@@ -3561,6 +3556,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
 {
   int fwd_pkt = 0, rc = 0;
   u_int8_t hash_found = 0;
+  u32 remainder;
 
   if(pfr && pfr->rehash_rss != NULL && skb->dev)
     channel_id = pfr->rehash_rss(skb, hdr) % get_num_rx_queues(skb->dev);
@@ -3608,8 +3604,9 @@ static int add_skb_to_ring(struct sk_buff *skb,
       pfr->sw_filtering_hash_match++;
       /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
        * Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO' */
+      div_u64_rem(hash_bucket->match, pfr->filtering_sampling_size, &remainder);
       if (fwd_pkt == 0 && pfr->filtering_sample_rate && 
-          ((hash_bucket->match % (u_int64_t) pfr->filtering_sampling_size) < (u_int64_t)(FILTERING_SAMPLING_RATIO))) {
+          (remainder < FILTERING_SAMPLING_RATIO)) {
           hash_bucket->match_forward++;
           fwd_pkt=1;
       }
@@ -7823,10 +7820,8 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
 #endif
 
   if (dev_ptr->proc_info_entry != NULL) {
-    debug_printk(1, "removing %s/%s from /proc [net=%llu] [entry=%llu]\n", 
-      dev_ptr->device_name, PROC_INFO, 
-      (long long unsigned) netns->net,
-      (long long unsigned) dev_ptr->proc_info_entry);
+    debug_printk(1, "removing %s/%s from /proc [net=%pK] [entry=%pK]\n", 
+      dev_ptr->device_name, PROC_INFO, netns->net, dev_ptr->proc_info_entry);
 
     remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
 
@@ -7834,10 +7829,8 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   }
 
   if (netns->proc_dev_dir != NULL) {
-    debug_printk(1, "removing %s from /proc [net=%llu] [entry=%llu]\n", 
-      dev_ptr->device_name, 
-      (long long unsigned) netns->net,
-      (long long unsigned) dev_ptr->proc_entry);
+    debug_printk(1, "removing %s from /proc [net=%pK] [entry=%pK]\n", 
+      dev_ptr->device_name, netns->net, dev_ptr->proc_entry);
     /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
     remove_proc_entry(dev_ptr->device_name, netns->proc_dev_dir);
   }
@@ -7914,15 +7907,13 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   dev_ptr->proc_entry = proc_mkdir(dev_ptr->device_name, netns->proc_dev_dir);
 
   if (dev_ptr->proc_entry == NULL) {
-    printk("[PF_RING] failure creating %s in /proc [net=%llu]\n", 
-      dev_ptr->device_name, (long long unsigned) netns->net);
+    printk("[PF_RING] failure creating %s in /proc [net=%pK]\n", 
+      dev_ptr->device_name, netns->net);
     return;
   }
 
-  debug_printk(1, "created %s in /proc [net=%llu] [entry=%llu]\n", 
-    dev_ptr->device_name, 
-    (long long unsigned) netns->net,
-    (long long unsigned) dev_ptr->proc_entry);
+  debug_printk(1, "created %s in /proc [net=%pK] [entry=%pK]\n", 
+    dev_ptr->device_name, netns->net, dev_ptr->proc_entry);
 
   dev_ptr->proc_info_entry = proc_create_data(PROC_INFO, 0 /* read-only */,
     dev_ptr->proc_entry,
@@ -7930,15 +7921,13 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     dev_ptr);
 
   if (dev_ptr->proc_info_entry == NULL) {
-    printk("[PF_RING] failure creating %s/%s in /proc [net=%llu]\n", 
-      dev_ptr->device_name, PROC_INFO, (long long unsigned) netns->net);
+    printk("[PF_RING] failure creating %s/%s in /proc [net=%pK]\n", 
+      dev_ptr->device_name, PROC_INFO, netns->net);
     return;
   }
 
-  debug_printk(1, "created %s/%s in /proc [net=%llu] [entry=%llu]\n", 
-    dev_ptr->device_name, PROC_INFO, 
-    (long long unsigned) netns->net,
-    (long long unsigned) dev_ptr->proc_info_entry);
+  debug_printk(1, "created %s/%s in /proc [net=%pK] [entry=%pK]\n", 
+    dev_ptr->device_name, PROC_INFO, netns->net, dev_ptr->proc_info_entry);
 }
 
 /* ************************************ */
@@ -8298,8 +8287,7 @@ static int __net_init ring_net_init(struct net *net)
 {
   pf_ring_net *netns;
 
-  debug_printk(1, "init network namespace [net=%llu]\n", 
-    (long long unsigned) net);
+  debug_printk(1, "init network namespace [net=%pK]\n", net);
 
   netns = netns_add(net);
 
@@ -8313,8 +8301,7 @@ static int __net_init ring_net_init(struct net *net)
 
 static void __net_exit ring_net_exit(struct net *net)
 {
-  debug_printk(1, "exit network namespace [net=%llu]\n", 
-    (long long unsigned) net);
+  debug_printk(1, "exit network namespace [net=%pK]\n", net);
 
   netns_remove(net);
 }
