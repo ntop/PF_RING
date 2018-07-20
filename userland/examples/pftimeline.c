@@ -106,7 +106,7 @@ void print_help(void) {
   printf("-e <end>        End date and time\n");
   printf("-f <filter>     BPF filter\n");
   printf("-o <path>       Output file path (default: -)\n");
-  printf("\nExample: pftimeline -t /storage -b %s -e %s -f \"host 192.168.1.1\" -o - | tshark -i -\n", 
+  printf("\nExample: pftimeline -t /storage -b \"%s\" -e \"%s\" -f \"host 192.168.1.1\" -o - | tshark -i -\n", 
          time_buffer_start, time_buffer_end);
 }
 
