@@ -54,7 +54,7 @@ LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_conf
 #
 PFPROGS   = pfcount pfcount_multichannel preflect \
 	    pfflow_offload pfbridge alldevs pcap2nspcap \
-	    pfcount_82599 pfsystest pfsend pflatency
+	    pfcount_82599 pfsystest pfsend pflatency pftimeline
 
 PCAPPROGS = pcount pfwrite
 TARGETS   = ${PFPROGS} ${PCAPPROGS}
@@ -122,6 +122,9 @@ pfwrite: pfwrite.o ${LIBPFRING}
 
 pfsystest: pfsystest.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfsystest.o ${LIBS} -o $@
+
+pftimeline: pftimeline.o ${LIBPFRING}
+	${CC} ${CFLAGS} pftimeline.o ${LIBS} -o $@
 
 install:
 	mkdir -p $(DESTDIR)/usr/bin
