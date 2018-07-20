@@ -830,6 +830,9 @@ int main(int argc, char* argv[]) {
         queues_list[strlen(queues_list)-1] = '\0';
 
         fprintf(stderr, "Run n2disk with: --cluster-ipc-attach --cluster-id %d --cluster-ipc-queues %s --cluster-ipc-pool 0\n", cluster_id, queues_list);
+      } else {
+        fprintf(stderr, "Run your consumer application as follows:\n");
+        fprintf(stderr, "\tpfcount -i zc:%d@%d\n", cluster_id, 0);
       }
     }
 
