@@ -3556,6 +3556,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
 {
   int fwd_pkt = 0, rc = 0;
   u_int8_t hash_found = 0;
+  u32 remainder;
 
   if(pfr && pfr->rehash_rss != NULL && skb->dev)
     channel_id = pfr->rehash_rss(skb, hdr) % get_num_rx_queues(skb->dev);
@@ -3603,8 +3604,9 @@ static int add_skb_to_ring(struct sk_buff *skb,
       pfr->sw_filtering_hash_match++;
       /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
        * Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO' */
+      div_u64_rem(hash_bucket->match, pfr->filtering_sampling_size, &remainder);
       if (fwd_pkt == 0 && pfr->filtering_sample_rate && 
-          ((hash_bucket->match % (u_int64_t) pfr->filtering_sampling_size) < (u_int64_t)(FILTERING_SAMPLING_RATIO))) {
+          (remainder < FILTERING_SAMPLING_RATIO)) {
           hash_bucket->match_forward++;
           fwd_pkt=1;
       }
