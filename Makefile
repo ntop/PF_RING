@@ -17,7 +17,7 @@ snort:
 	cd userland/snort/pfring-daq-module-zc; autoreconf -ivf; ./configure; make
 
 changelog:
-	git log --since={`curl -s https://sourceforge.net/projects/ntop/files/PF_RING/|grep -o "<td headers=\"files_date_h\" class=\"opt\"><abbr title=\"[^\"]*\">[^<]*</abbr></td>"|head -n 3|tail -n 1|egrep -o "[0-9]+\-[0-9]+\-[0-9]+"|head -n 1`} --name-only --pretty=format:" - %s" > ./doc/Changelog.txt
+	git log --since={`curl -s https://github.com/ntop/PF_RING/releases | grep datetime | head -n1 | egrep -o "[0-9]+\-[0-9]+\-[0-9]+"`} --name-only --pretty=format:" - %s" > ./doc/Changelog.txt
 
 documentation:
 	cd doc/doxygen; doxygen Doxyfile
