@@ -30,6 +30,15 @@ Before running any application please load the driver with:
    sudo insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
    sudo /opt/accolade/bin/anic_load
 
+Please note that FEC (Forward Error Correction) is disabled by default on Accolade
+adapters. If you experience issues bringing up the link when connecting Accolade to 
+other adapters, you probably need to enable it (e.g. FM10K on SR4 media run with FEC
+enabled). In order to enable it please run anic_load as follows:
+
+.. code-block:: console
+
+   /opt/accolade/bin/anic_load fec_enabled=1,1
+
 If you are running an old firmware and you need to update it, you should
 run the following commands: 
 
