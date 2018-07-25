@@ -3630,10 +3630,10 @@ int wait_packet_function_ptr(void *data, int mode)
 	struct i40e_ring *rx_ring = (struct i40e_ring*) data;
 	int new_packets;
 
-	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d]\n",
-		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
-		       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use);
+	//if (unlikely(enable_debug))
+	//	printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d]\n",
+	//	       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
+	//	       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use);
 
 	if (mode == 1 /* Enable interrupt */) {
 
@@ -3648,17 +3648,17 @@ int wait_packet_function_ptr(void *data, int mode)
 
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
-				if (unlikely(enable_debug)) 
-					printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+				//if (unlikely(enable_debug)) 
+				//	printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
       			} else {
-				if (unlikely(enable_debug)) 
-					printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+				//if (unlikely(enable_debug)) 
+				//	printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 			}
     		} else {
 			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
 
-			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
+			//if (unlikely(enable_debug))
+			//	printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
 		}
 
 		return new_packets;
@@ -3667,9 +3667,9 @@ int wait_packet_function_ptr(void *data, int mode)
 
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
-		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
-
+		//if (unlikely(enable_debug))
+		//	printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+		
 		return 0;
 	}
 }
@@ -3686,6 +3686,12 @@ int wake_up_pfring_zc_socket(struct i40e_ring *rx_ring)
 					printk("[PF_RING-ZC] %s: Waking up socket [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 				return 1;
 			}
+		}
+		if (!ring_is_not_empty(rx_ring)) {
+			/* Note: in case of multiple sockets (RSS), if i40e_clean_*x_irq is called
+			 * for some queue, interrupts are disabled, preventing packets from arriving 
+			 * on other active queues, in order to avoid this we need to enable interrupts */
+			i40e_update_enable_itr(rx_ring->vsi, rx_ring->q_vector);
 		}
 	}
 
@@ -3779,6 +3785,11 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
 		}
 
+		/* Note: in case of multiple sockets (RX and TX or RSS) i40e_clean_*x_irq is called
+ 		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
+ 		 * in order to avoid this we need to enable interrupts */
+		i40e_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
+
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			struct i40e_vsi *vsi = rx_ring->vsi;
@@ -3817,13 +3828,19 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			rmb();
 		}
-		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */)
+		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */) {
 			module_put(THIS_MODULE);  /* -- */
 
-		if (n == 0) { /* last user */
+		}
+
+		/* Note: in case of multiple sockets (RX and TX or RSS) i40e_clean_*x_irq is called
+ 		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
+ 		 * in order to avoid this we need to enable interrupts even if this is not the last user */
+		//if (n == 0) { /* last user */
 			/* Enabling interrupts in case they've been disabled by napi and never enabled in ZC mode */
 			i40e_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
-		}
+		//}
+
 	}
 
 	if (unlikely(enable_debug))
