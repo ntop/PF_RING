@@ -449,7 +449,8 @@ struct i40e_ring {
 		union {
 			struct {
 				wait_queue_head_t packet_waitqueue;
-				u8 interrupt_received, interrupt_enabled;
+				u8 interrupt_received;
+				u8 interrupt_enabled;
 			} rx;
 		} rx_tx;
 	} pfring_zc;

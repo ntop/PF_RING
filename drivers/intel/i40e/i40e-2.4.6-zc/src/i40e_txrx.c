@@ -2677,6 +2677,11 @@ int i40e_napi_poll(struct napi_struct *napi, int budget)
 	bool arm_wb = false;
 	int budget_per_ring;
 	int work_done = 0;
+#ifdef HAVE_PF_RING
+	struct i40e_pf *adapter = i40e_netdev_to_pf(vsi->netdev);
+
+	adapter->pfring_zc.interrupts_required = 0;
+#endif
 
 	if (test_bit(__I40E_VSI_DOWN, vsi->state)) {
 		napi_complete(napi);
@@ -2757,8 +2762,12 @@ tx_only:
 	napi_complete_done(napi, work_done);
 
 #ifdef HAVE_PF_RING
-	/* Do not enable interrupts here, we do it in wait_packet_function_ptr when needed */
-	if (atomic_read(&i40e_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0)
+	/* We should not enable interrupts here, as wait_packet_function_ptr should 
+	 * do it when needed, however since on some i40e adapters, when interrupts are 
+	 * disabled, packets are not delivered if #queued < 4, we should always enable
+	 * interrupts to avoid race conditions in case of multiple sockets (RSS) 
+	 * if (atomic_read(&i40e_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0 || 
+         *    adapter->pfring_zc.interrupts_required) */
 #endif
 	i40e_update_enable_itr(vsi, q_vector);
 

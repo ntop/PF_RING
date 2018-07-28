@@ -623,6 +623,7 @@ struct i40e_pf {
 #ifdef HAVE_PF_RING
 	struct {
 		atomic_t usage_counter;
+		u8 interrupts_required;
 	} pfring_zc;
 #endif
 };

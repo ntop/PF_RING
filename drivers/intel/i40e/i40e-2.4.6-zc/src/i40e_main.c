@@ -3691,7 +3691,12 @@ int wake_up_pfring_zc_socket(struct i40e_ring *rx_ring)
 			/* Note: in case of multiple sockets (RSS), if i40e_clean_*x_irq is called
 			 * for some queue, interrupts are disabled, preventing packets from arriving 
 			 * on other active queues, in order to avoid this we need to enable interrupts */
-			i40e_update_enable_itr(rx_ring->vsi, rx_ring->q_vector);
+					
+			struct i40e_pf *adapter = i40e_netdev_to_pf(rx_ring->netdev);
+			adapter->pfring_zc.interrupts_required = 1;
+
+			/* Enabling interrupts in i40e_napi_poll()
+			 * i40e_update_enable_itr(rx_ring->vsi, rx_ring->q_vector); */
 		}
 	}
 
