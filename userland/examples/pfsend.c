@@ -534,7 +534,6 @@ int main(int argc, char* argv[]) {
       break;
     case 'w':
       watermark = atoi(optarg);
-      if(watermark < 1) watermark = 1;
       break;
     case 'd':
       daemon_mode = 1;
@@ -589,8 +588,12 @@ int main(int argc, char* argv[]) {
   if(watermark > 0) {
     int rc;
 
-    if((rc = pfring_set_tx_watermark(pd, watermark)) < 0)
-      printf("pfring_set_tx_watermark() failed [rc=%d]\n", rc);
+    if((rc = pfring_set_tx_watermark(pd, watermark)) < 0) {
+      if (rc == PF_RING_ERROR_NOT_SUPPORTED)
+        printf("pfring_set_tx_watermark() now supported on %s\n", device);
+      else
+        printf("pfring_set_tx_watermark() failed [rc=%d]\n", rc);
+    }
   }
 
   signal(SIGINT, sigproc);
