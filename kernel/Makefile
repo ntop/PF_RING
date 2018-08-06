@@ -26,7 +26,11 @@ ifneq ($(strip $(GIT_REV)),)
 endif
 
 ifeq (,$(BUILD_KERNEL))
- BUILD_KERNEL=$(shell uname -r)
+ ifneq (,$(KERNELRELEASE))
+  BUILD_KERNEL=$(KERNELRELEASE)
+ else
+  BUILD_KERNEL=$(shell uname -r)
+ endif
 endif
 
 PWD := $(shell pwd)
