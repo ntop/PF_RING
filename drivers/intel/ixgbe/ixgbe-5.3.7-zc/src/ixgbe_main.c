@@ -8785,6 +8785,12 @@ static bool ixgbe_vf_tx_pending(struct ixgbe_adapter *adapter)
  **/
 static void ixgbe_watchdog_flush_tx(struct ixgbe_adapter *adapter)
 {
+#ifdef HAVE_PF_RING
+	/* do not check tx pending if interface is in use from userspace */
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
+		return; /* avoid card reset while application is running on top of ZC */
+#endif	
+
 	if (!netif_carrier_ok(adapter->netdev)) {
 		if (ixgbe_ring_tx_pending(adapter) ||
 		    ixgbe_vf_tx_pending(adapter)) {
