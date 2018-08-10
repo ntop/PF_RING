@@ -24,6 +24,7 @@
 #include <ifaddrs.h>
 
 #ifdef ENABLE_BPF
+#include <string.h>
 #include <pcap/pcap.h>
 #include <pcap/bpf.h>
 #include <pcap-int.h>
