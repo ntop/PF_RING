@@ -975,8 +975,8 @@ typedef enum {
  * parameter.
  */
 struct ring_cluster {
-  u_short        cluster_id; /* 0 = no cluster */
-  u_short        num_cluster_elements;
+  u_int32_t      cluster_id; /* 0 = no cluster */
+  u_int32_t      num_cluster_elements;
   cluster_type   hashing_mode;
   u_short        hashing_id;
   struct sock    *sk[CLUSTER_LEN];
@@ -1174,7 +1174,7 @@ struct pf_ring_socket {
   struct dma_memory_info *extra_dma_memory;
 
   /* Cluster */
-  u_int16_t cluster_id /* 0 = no cluster */;
+  u_int32_t cluster_id /* 0 = no cluster */;
 
   /* Channel */
   int64_t channel_id_mask;  /* -1 = any channel */
