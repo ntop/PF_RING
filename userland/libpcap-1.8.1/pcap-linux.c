@@ -1536,6 +1536,7 @@ pcap_activate_linux(pcap_t *handle)
 		char *appname, *active = getenv("PCAP_PF_RING_ACTIVE_POLL"), *rss_rehash;
 		char timeline_device[256];
 		char *real_device = NULL;
+		char *always_sync_fd;
 
 		if (handle->opt.promisc) flags |= PF_RING_PROMISC;
 		if (getenv("PCAP_PF_RING_DNA_RSS" /* deprecated (backward compatibility) */ )) flags |= PF_RING_ZC_SYMMETRIC_RSS;
@@ -1590,6 +1591,10 @@ pcap_activate_linux(pcap_t *handle)
 					pfring_enable_rss_rehash(handle->ring);
 			}
 			pfring_set_poll_watermark(handle->ring, 1 /* watermark */);
+			if (always_sync_fd = getenv("PCAP_PF_RING_ALWAYS_SYNC_FD"))
+				handle->sync_selectable_fd = atoi(always_sync_fd);
+			else
+				handle->sync_selectable_fd = 0;
 		}
 	} else
         	handle->ring = NULL;
@@ -1914,6 +1919,12 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 						pcap_header.ts.tv_usec = pcap_header.ts.tv_usec * 1000;
 				} else if (pcap_header.ts.tv_sec == 0)
 						gettimeofday((struct timeval *) &pcap_header.ts, NULL);
+
+				if (handle->sync_selectable_fd) {
+					/* applications like tshark always poll the fd before calling recv,
+					 * this require kernel to be always synchronized (required in case of ZC) */
+					pfring_sync_indexes_with_kernel(handle->ring);
+				}
 
 				break;
 			} else {

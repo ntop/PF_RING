@@ -286,6 +286,7 @@ struct pcap {
 	pfring *ring;
 	char *bpf_filter;
 	char *timeline;
+	int sync_selectable_fd;
 #endif
 #ifdef HAVE_PCAP_NPCAP
 	npcap_fd_t *npcapfd;
