@@ -1009,7 +1009,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef HAVE_PF_RING_FT
   if (flow_table) {
-    ft = pfring_ft_create_table(0, 0, 0);
+    ft = pfring_ft_create_table(0, 0, 0, 0);
 
     if (ft == NULL) {
       trace(TRACE_ERROR, "pfring_ft_create_table error");

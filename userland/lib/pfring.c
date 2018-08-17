@@ -255,7 +255,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 
   if (ring->ft_enabled) {
 #ifdef HAVE_PF_RING_FT
-    ring->ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0);
+    ring->ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0, 0);
 
     if (ring->ft == NULL) {
       errno = ENOMEM;

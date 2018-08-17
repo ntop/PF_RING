@@ -206,14 +206,16 @@ typedef void
  * Create a new flow table.
  * @param flags Flags to enable selected flow table features.
  * @param max_flows Maximum number of concurrent flows the table should be able to handle (use 0 if not sure to use default settings).
- * @param flow_timeout Maximum flow idle time (seconds) before expiration (use 0 if not sure to use default settings).
+ * @param flow_idle_timeout Maximum flow idle time (seconds) before expiration (use 0 if not sure to use default: 30s).
+ * @param flow_lifetime_timeout Maximum flow duration (seconds) before expiration (use 0 if not sure to use default: 2m).
  * @return The flow table on success, NULL on failure.
  */
 pfring_ft_table *
 pfring_ft_create_table(
   u_int32_t flags,
   u_int32_t max_flows,
-  u_int32_t flow_timeout
+  u_int32_t flow_idle_timeout,
+  u_int32_t flow_lifetime_timeout
 );
 
 /**

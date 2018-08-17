@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
   if (rte_lcore_count() > 1)
     printf("WARNING: Too many lcores enabled, only 1 used\n");
 
-  ft = pfring_ft_create_table(ft_flags, 0, 0);
+  ft = pfring_ft_create_table(ft_flags, 0, 0, 0);
 
   if (ft == NULL) {
     fprintf(stderr, "pfring_ft_create_table error\n");
