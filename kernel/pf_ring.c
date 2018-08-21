@@ -1641,7 +1641,7 @@ static void ring_proc_init(pf_ring_net *netns)
     return;
   }
 
-  printk("[PF_RING] registered /proc/net/pf_ring [net=%llu]\n",
+  debug_printk(1, "registered /proc/net/pf_ring [net=%llu]\n",
     (long long unsigned) netns->net);
 }
 
@@ -1652,7 +1652,7 @@ static void ring_proc_term(pf_ring_net *netns)
   if (netns->proc_dir == NULL) 
     return;
 
-  printk("[PF_RING] removing /proc/net/pf_ring [net=%llu]\n", 
+  debug_printk(1, "removing /proc/net/pf_ring [net=%llu]\n", 
     (long long unsigned) netns->net);
 
   remove_proc_entry(PROC_INFO,  netns->proc_dir);
@@ -1661,7 +1661,7 @@ static void ring_proc_term(pf_ring_net *netns)
 
   if (netns->proc != NULL) {
     remove_proc_entry("pf_ring", netns->net->proc_net);
-    printk("[PF_RING] deregistered /proc/net/pf_ring [net=%llu]\n",
+    debug_printk(1, "deregistered /proc/net/pf_ring [net=%llu]\n",
       (long long unsigned) netns->net);
   }
 }
@@ -8195,7 +8195,7 @@ static int __net_init ring_net_init(struct net *net)
 {
   pf_ring_net *netns;
 
-  printk("[PF_RING] init network namespace [net=%llu]\n", 
+  debug_printk(1, "init network namespace [net=%llu]\n", 
     (long long unsigned) net);
 
   netns = netns_add(net);
@@ -8210,7 +8210,7 @@ static int __net_init ring_net_init(struct net *net)
 
 static void __net_exit ring_net_exit(struct net *net)
 {
-  printk("[PF_RING] exit network namespace [net=%llu]\n", 
+  debug_printk(1, "exit network namespace [net=%llu]\n", 
     (long long unsigned) net);
 
   netns_remove(net);
