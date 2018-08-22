@@ -3914,7 +3914,7 @@ static int skb_ring_handler(struct sk_buff *skb,
 
     if (pfr != NULL) {
       if (pfr->rehash_rss != NULL) {
-        parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
+        is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
         channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
         pfr = device_rings[skb->dev->ifindex][channel_id];
       }
@@ -4013,30 +4013,36 @@ static int skb_ring_handler(struct sk_buff *skb,
       if(num_cluster_elements > 0) {
 	u_short num_iterations;
 	int cluster_element_idx;
-        int fragment_not_first = hdr.extended_hdr.flags & PKT_FLAGS_IP_FRAG_OFFSET;
-        int more_fragments     = hdr.extended_hdr.flags & PKT_FLAGS_IP_MORE_FRAG;
-	int first_fragment     = more_fragments && !fragment_not_first;
 
-        if(enable_frag_coherence && fragment_not_first) {
-          if(skb_hash == -1) { /* read hash once */
-            skb_hash = get_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
-				           hdr.extended_hdr.parsed_pkt.ipv4_dst,
-				           ip_id, more_fragments);
-            if(skb_hash < 0)
-              skb_hash = 0;
-          }
-        } else if(!(enable_frag_coherence && first_fragment) || skb_hash == -1) {
-            /* compute hash once for all clusters in case of first fragment */
+        if (enable_frag_coherence &&
+            is_ip_pkt && hdr.extended_hdr.parsed_pkt.ip_version == 4 &&
+            skb_hash == -1 /* read hash once */) {
+          int fragment_not_first = hdr.extended_hdr.flags & PKT_FLAGS_IP_FRAG_OFFSET;
+          int more_fragments     = hdr.extended_hdr.flags & PKT_FLAGS_IP_MORE_FRAG;
+          int first_fragment     = more_fragments && !fragment_not_first;
 
+          if (first_fragment) {
+            /* first fragment: compute hash (once for all clusters) */
             skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
+            if (skb_hash < 0) skb_hash = -skb_hash;
 
-            if(skb_hash < 0)
-              skb_hash = -skb_hash;
+            /* add hash to cache */
+            add_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
+                                hdr.extended_hdr.parsed_pkt.ipv4_dst,
+                                ip_id, skb_hash % num_cluster_elements);
+          } else if (fragment_not_first) {
+            /* fragment, but not the first: read hash from cache */
+            skb_hash = get_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
+                                           hdr.extended_hdr.parsed_pkt.ipv4_dst,
+                                           ip_id, more_fragments);
+            if (skb_hash < 0) skb_hash = 0; /* not found, using hash = 0 */
+          }
+        }
 
-            if(enable_frag_coherence && first_fragment) {
-              add_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src, hdr.extended_hdr.parsed_pkt.ipv4_dst,
-                ip_id, skb_hash % num_cluster_elements);
-            }
+        if (skb_hash == -1) {
+          /* compute hash (once for all clusters) */
+          skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
+          if (skb_hash < 0) skb_hash = -skb_hash;
         }
 
         cluster_element_idx = skb_hash % num_cluster_elements;
