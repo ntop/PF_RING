@@ -59,7 +59,7 @@ Example:
 
 If you want to achieve line-rate packet capture at 10 Gigabit and above, you should use 
 ZC drivers. ZC drivers are part of the PF_RING distribution and can be found in drivers/.
-Please also read README.ZC.
+Please also read the *PF_RING ZC (Zero Copy)* section.
 
 Libpfring and Libpcap Installation
 ----------------------------------
