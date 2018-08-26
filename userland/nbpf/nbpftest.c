@@ -397,8 +397,18 @@ int main(int argc, char *argv[]) {
 
   memset(&pkt, 0, sizeof(pkt));
 
-  pkt.vlan_id = 34, pkt.tuple.l4_src_port = htons(34), pkt.tuple.l4_dst_port = htons(345), pkt.l7_proto = 7;
-  printf("VlanID=34 SrcPort=34 DstPort=345 L7Proto=7 -> %s\n", nbpf_match(tree, &pkt) ? "MATCHED" : "DISCARDED");
+  pkt.vlan_id = 34;
+  pkt.tuple.l3_proto = 17;
+  pkt.tuple.l4_src_port = htons(34);
+  pkt.tuple.l4_dst_port = htons(345);
+  pkt.l7_proto = 7;
+  printf("VlanID=%u Proto=%u SrcPort=%u DstPort=%u L7Proto=%u -> %s\n",
+    pkt.vlan_id,
+    pkt.tuple.l3_proto,
+    ntohs(pkt.tuple.l4_src_port),
+    ntohs(pkt.tuple.l4_dst_port),
+    pkt.l7_proto,
+    nbpf_match(tree, &pkt) ? "MATCHED" : "DISCARDED");
 
   nbpf_free(tree);
 

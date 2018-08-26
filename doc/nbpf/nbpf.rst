@@ -10,6 +10,7 @@ BPF, and it is designed to be fast and small in size, with no external dependenc
 
 This library has been designed to be efficient, and easy to embed in applications 
 (e.g. n2disk uses it to filter traffic). 
+
 Currently it is used by selected PF_RING modules to convert BPF filtering expressions 
 onto hardware filters supported by popular network adapters such as Napatech, Intel FM10K, 
 and Exablaze.
@@ -22,7 +23,7 @@ The filter expressions are built by using AND and OR.
 
 * Protocol: tcp, udp, sctp
 * Direction: src, dst, src or dst, src and dst
-* Type: host, port and protocol
+* Type: host, port, proto, portrange (not supported on most adapters)
 
 Additional constraints for packet capture filters include:
 

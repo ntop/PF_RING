@@ -79,7 +79,7 @@ host	return HOST;
 net	return NET;
 mask	return NETMASK;
 port	return PORT;
-portrang return PORTRANGE;
+portrange return PORTRANGE;
 proto	return PROTO;
 l7proto	return L7PROTO;
 

@@ -13,7 +13,7 @@ module in a zero-copy fashion.
 In ZC both RX and TX operations are supported. As the kernel is bypassed, some PF_RING 
 functionality are missing, including in kernel packet filtering (BPF and PF_RING filters).
 
-With PF_RING ZC you can achieve 1/10G wire rate at any packet size and create 
+With PF_RING ZC you can achieve 1/10G wire-rate at any packet size and create 
 inter-process and inter-VM clusters (PF_RING ZC is not just a driver, it provides a 
 simple yet powerful API). It can be considered as the successor of DNA/LibZero
 that offers a single and consistent API based on the lessons learnt on the past 
@@ -67,9 +67,9 @@ These drivers can be found in drivers/
 
 Please note that:
 
-* the PF_RING kernel module must be loaded before the ZC driver
 * in order to correctly configure the device, it is highly recommended to use the load_driver.sh script provided with the drivers (take a look at the script to fine-tune the configuration)
-* ZC drivers need hugepages, the load_driver.sh script takes care of hugepages configuration. For more informations please read README.hugepages.
+* the PF_RING kernel module must be loaded before the ZC driver (the load_driver.sh script takes care of this)
+* ZC drivers need hugepages (the load_driver.sh script takes care of hugepages configuration). For more informations please read the *Hugepages Support* section.
 
 Example loading PF_RING and the ixgbe-ZC driver:
 
@@ -77,8 +77,9 @@ Example loading PF_RING and the ixgbe-ZC driver:
 
    cd <PF_RING PATH>/kernel
    insmod pf_ring.ko
-   cd PF_RING/drivers/intel/ixgbe/ixgbe-X.X.X-zc/src
+   cd PF_RING/drivers/intel
    make
+   cd ixgbe/ixgbe-*-zc/src
    ./load_driver.sh
 
 ZC API
