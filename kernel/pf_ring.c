@@ -2528,10 +2528,12 @@ static int match_filtering_rule(struct pf_ring_socket *pfr,
 
   if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
     /* IPv6 */
-    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, &rule->rule.extended_fields.tunnel.dhost_mask,
-		   &rule->rule.extended_fields.tunnel.dhost)
-       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, &rule->rule.extended_fields.tunnel.shost_mask,
-		      &rule->rule.extended_fields.tunnel.shost))
+    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, 
+		   &rule->rule.extended_fields.tunnel.dhost,
+		   &rule->rule.extended_fields.tunnel.dhost_mask)
+       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, 
+		      &rule->rule.extended_fields.tunnel.shost,
+		      &rule->rule.extended_fields.tunnel.shost_mask))
       return(0);
   } else {
     /* IPv4 */
@@ -2550,10 +2552,12 @@ static int match_filtering_rule(struct pf_ring_socket *pfr,
 
   if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
     /* IPv6 */
-    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, &rule->rule.core_fields.shost_mask,
-		   &rule->rule.core_fields.shost)
-       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, &rule->rule.core_fields.dhost_mask,
-		      &rule->rule.core_fields.dhost))
+    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, 
+		   &rule->rule.core_fields.shost,
+		   &rule->rule.core_fields.shost_mask)
+       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, 
+		      &rule->rule.core_fields.dhost,
+		      &rule->rule.core_fields.dhost_mask))
         goto swap_direction;
   } else {
     /* IPv4 */
@@ -2589,10 +2593,12 @@ swap_direction:
 
   if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
     /* IPv6 */
-    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, &rule->rule.core_fields.dhost_mask,
-		   &rule->rule.core_fields.dhost)
-       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, &rule->rule.core_fields.shost_mask,
-		      &rule->rule.core_fields.shost))
+    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, 
+		   &rule->rule.core_fields.dhost,
+		   &rule->rule.core_fields.dhost_mask)
+       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, 
+		      &rule->rule.core_fields.shost,
+		      &rule->rule.core_fields.shost_mask))
       return(0);
   } else {
     /* IPv4 */
