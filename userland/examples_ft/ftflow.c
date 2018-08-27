@@ -199,7 +199,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
   printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
-         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
+         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u } ",
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes,
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec,
@@ -207,6 +207,11 @@ void processFlow(pfring_ft_flow *flow, void *user){
          v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes,
          (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec,
          (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec);
+
+  if (pfring_ft_flow_get_action(flow) == PFRING_FT_ACTION_DISCARD)
+    printf("[discard]");
+
+  printf("\n");
 
   pfring_ft_flow_free(flow);
 }
