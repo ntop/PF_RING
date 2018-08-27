@@ -364,6 +364,16 @@ pfring_ft_flow_set_action(
 );
 
 /**
+ * Get the computed/actual flow action, the same returned by pfring_ft_process() for this flow.
+ * @param flow The flow handle.
+ * @return The action.
+ */
+pfring_ft_action
+pfring_ft_flow_get_action(
+  pfring_ft_flow *flow
+);
+
+/**
  * Release a flow.
  * @param flow The flow handle.
  */
