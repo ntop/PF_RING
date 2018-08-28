@@ -176,6 +176,7 @@ void printHelp(void) {
   printf("-R              Test hw filters adding a rule (Intel 82599)\n");
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
+  printf("-D              Debug mode\n");
   printf("-C              Check license\n");
   printf("-M              Print maintenance\n");
   printf("-v              Verbose\n");
@@ -264,7 +265,7 @@ int main(int argc, char* argv[]) {
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:g:hi:vCMRHS:")) != '?') {
+  while((c = getopt(argc,argv,"ac:g:hi:vCDMRHS:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -299,6 +300,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'C':
       check_license = 1;
+      break;
+    case 'D':
+      pfring_zc_debug();
       break;
     case 'M':
       print_maintenance = 1;
