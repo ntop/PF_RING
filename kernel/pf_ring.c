@@ -4244,11 +4244,14 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
 
   /* Are you root or with capabilities? */
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
-  if(!capable(CAP_NET_ADMIN))
+  if(!capable(CAP_NET_ADMIN)) {
+    printk("[PF_RING] User is not capable, please run as root or setcap cap_net_admin\n");
 #else
-  if(!ns_capable(net->user_ns, CAP_NET_RAW))
+  if(!ns_capable(net->user_ns, CAP_NET_RAW)) {
+    printk("[PF_RING] User is not capable, please run as root or setcap cap_net_raw\n");
 #endif
     return -EPERM;
+  }
 
   if(sock->type != SOCK_RAW)
     return -ESOCKTNOSUPPORT;
