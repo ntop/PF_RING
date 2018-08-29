@@ -9556,6 +9556,15 @@ static int i40e_pf_config_rss(struct i40e_pf *pf)
 			(reg_val & ~I40E_PFQF_CTL_0_HASHLUTSIZE_512);
 	i40e_write_rx_ctl(hw, I40E_PFQF_CTL_0, reg_val);
 
+#ifdef HAVE_PF_RING
+	/* Force symmetric hash (required on some fw version) */
+	reg_val = i40e_read_rx_ctl(hw, I40E_PRTQF_CTL_0);
+	if ((reg_val & I40E_PRTQF_CTL_0_HSYM_ENA_MASK) == 0) {
+		reg_val |= I40E_PRTQF_CTL_0_HSYM_ENA_MASK;
+		i40e_write_rx_ctl(hw, I40E_PRTQF_CTL_0, reg_val);
+	}
+ #endif
+
 	/* Determine the RSS size of the VSI */
 	if (!vsi->rss_size) {
 		u16 qcount;
