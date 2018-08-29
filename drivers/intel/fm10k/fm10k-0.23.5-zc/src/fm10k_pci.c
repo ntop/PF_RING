@@ -1981,13 +1981,15 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 	if (device_in_use) { /* free all memory */
 
-		if (atomic_inc_return(&interface->pfring_zc.usage_counter) == 1 /* first user */)
+		if (atomic_inc_return(&interface->pfring_zc.usage_counter) == 1 /* first user */) {
 			try_module_get(THIS_MODULE); /* ++ */
 
-		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-
 			/* wait for fm10k_clean_rx_irq to complete the current receive if any */
-			usleep_range(10, 20);
+			usleep_range(100, 200);
+		}
+
+
+		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 
 			/* disable queue */
 			fm10k_write_reg(hw, FM10K_RXQCTL(rx_ring->reg_idx), 0);

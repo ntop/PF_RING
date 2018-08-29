@@ -3760,15 +3760,17 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 	if (device_in_use) { /* free all memory */
 
-		if ((n = atomic_inc_return(&adapter->pfring_zc.usage_counter)) == 1 /* first user */)
+		if ((n = atomic_inc_return(&adapter->pfring_zc.usage_counter)) == 1 /* first user */) {
 			try_module_get(THIS_MODULE); /* ++ */
+
+			/* wait for i40e_clean_rx_irq to complete the current receive if any */
+			usleep_range(100, 200);  
+		}
+
     
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 			struct i40e_vsi *vsi = rx_ring->vsi;
 			u16 pf_q = vsi->base_queue + rx_ring->queue_index;
-
-			/* wait for i40e_clean_rx_irq to complete the current receive if any */
-			usleep_range(10, 20);  
 
 			if (unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
@@ -9565,11 +9567,10 @@ static int i40e_pf_config_rss(struct i40e_pf *pf)
 #ifdef HAVE_PF_RING
 	reg_val = i40e_read_rx_ctl(hw, I40E_PRTQF_CTL_0);
 	if ((reg_val & I40E_PRTQF_CTL_0_HSYM_ENA_MASK) == 0) {
+		if (unlikely(enable_debug))
+			dev_dbg(&pf->pdev->dev, "Enabling symmetric hash (HSYM)\n");
 		reg_val |= I40E_PRTQF_CTL_0_HSYM_ENA_MASK;
 		i40e_write_rx_ctl(hw, I40E_PRTQF_CTL_0, reg_val);
-		dev_dbg(&pf->pdev->dev, "HSYM enabled\n");
-	} else {
-		dev_dbg(&pf->pdev->dev, "HSYM already enabled\n");
 	}
 #endif
 
