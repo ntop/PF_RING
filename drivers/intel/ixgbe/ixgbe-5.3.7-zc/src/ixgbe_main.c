@@ -1322,6 +1322,8 @@ static void ixgbe_irq_disable_queues(struct ixgbe_adapter *adapter, u64 qmask);
 static void ixgbe_enable_rx_drop(struct ixgbe_adapter *adapter, struct ixgbe_ring *ring);
 static void ixgbe_clean_rx_ring(struct ixgbe_ring *rx_ring);
 
+static void ixgbe_clean_tx_ring(struct ixgbe_ring *tx_ring);
+
 int ring_is_not_empty(struct ixgbe_ring *rx_ring) {
 	union ixgbe_adv_rx_desc *rx_desc;
 	u32 staterr;
@@ -1445,7 +1447,8 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		if (atomic_inc_return(&adapter->pfring_zc.usage_counter) == 1 /* first user */) {
 			try_module_get(THIS_MODULE); /* ++ */
 
-			/* wait for ixgbe_clean_rx_irq to complete the current receive if any */
+			/* wait for ixgbe_clean_rx_irq to complete the current receive if any
+			 * and ixgbe_clean_tx_irq to reclaim resources */
 			usleep_range(100, 200);
 		}
 
@@ -1465,7 +1468,9 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		}
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-			//ixgbe_clean_tx_ring(tx_ring);
+			/* Note: this will also reset BQL with netdev_tx_reset_queue to avoid 
+ 			 * false tx hangs detected by dev_watchdog */
+			ixgbe_clean_tx_ring(tx_ring);
 		}
 
 	} else { /* restore card memory */
