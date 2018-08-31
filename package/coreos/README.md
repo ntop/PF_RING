@@ -12,6 +12,8 @@ Running the build.sh script it will compile and install the pf_ring kernel modul
 It is possible to select the pf_ring version to install changing the branch name in the PF_RING_VERSION variable in build.sh.
 
 ```
+git clone https://github.com/ntop/PF_RING.git
+cd PF_RING/package/coreos
 ./build.sh
 ```
 
