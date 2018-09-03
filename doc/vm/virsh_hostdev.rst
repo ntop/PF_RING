@@ -1,5 +1,17 @@
-PCI Passthrough with ZC on QEMU/KVM
-===================================
+PCI Passthrough with ZC
+=======================
+
+In order to capture traffic from an Intel/ZC interface using PF_RING ZC 
+drivers on a VM, you need to assign the network device to the VM in your 
+hypervisor configuring the PCI Passthrough. This is available both on 
+QEMU/KVM and VMWare (aka DirectPath I/O).
+
+After following the steps below to configure the passthrough, you should 
+be able to see the device on the VM using lspci, and load the native ZC 
+driver according to the card model.
+
+PCI Passthrough on QEMU/KVM
+---------------------------
 
 In order to assign a network device to a VM with virsh, to be used with native PF_RING ZC drivers, follow the following steps:
 
@@ -67,5 +79,9 @@ Start the VM:
 
    virsh start ubuntu14
 
-At this point you should be able to see the device on the VM using lspci, and load the ZC driver according to the card model.
 
+PCI Passthrough on VMWare
+-------------------------
+
+In order to configure the PCI Passthrough on VMWare, please refer to the 
+VMWare documentation according to your VMWare version looking for DirectPath I/O.
