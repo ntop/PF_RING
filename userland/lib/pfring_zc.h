@@ -737,6 +737,7 @@ pfring_zc_vm_guest_init(
 
 /**
  * Computes an IP-based packet hash.
+ * Hash input: <src ip, dst ip>
  * @param pkt_handle The pointer to the buffer handle.
  * @param queue      The queue from which the packet is arrived or destined.
  * @return           The packet hash.
@@ -749,6 +750,10 @@ pfring_zc_builtin_ip_hash(
 
 /**
  * Computes a GTP-C Seq-based packet hash and a GTP-U Inner-IP/Port-based packet hash, Outer-IP/Port-based packet hash otherwise.
+ * Hash input: 
+ * - <GTP-C Seq> for GTP-C packets
+ * - <inner src ip, inner dst ip, inner src port, inner dst port> for GTP-U packets
+ * - <src ip, dst ip, src port, dst port> for non GTP packets
  * @param pkt_handle The pointer to the buffer handle.
  * @param queue      The queue from which the packet is arrived or destined.
  * @return           The packet hash.
@@ -761,6 +766,9 @@ pfring_zc_builtin_gtp_hash(
 
 /**
  * Computes a Inner-IP-based packet hash on GRE packets, Outer-IP/Port-based packet hash otherwise.
+ * Hash input:
+ * - <inner src ip, inner dst ip> for GRE packets
+ * - <src ip, dst ip, src port, dst port> for non GRE packets
  * @param pkt_handle The pointer to the buffer handle.
  * @param queue      The queue from which the packet is arrived or destined.
  * @return           The packet hash.

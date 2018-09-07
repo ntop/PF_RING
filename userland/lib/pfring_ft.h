@@ -451,7 +451,8 @@ pfring_ft_set_ndpi_handle(
 
 /**
  * Load nDPI categories (defined by hostname) from a configuration file.
- * Please refer to the documentation for the file format.
+ * Please refer to the nDPI documentation for the file format.
+ * Example: https://github.com/ntop/nDPI/blob/dev/example/mining_hosts.txt
  * @param table The flow table handle. 
  * @param path The configuration file path.
  */
