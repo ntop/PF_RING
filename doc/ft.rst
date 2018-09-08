@@ -20,7 +20,7 @@ and export flow informations with PF_RING FT.
 
 .. code-block:: c
 
-   ft = pfring_ft_create_table(0);
+   ft = pfring_ft_create_table(flags, 0, 0, 0);
    
    pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
    
@@ -47,7 +47,7 @@ which represents a flow table instance, this can be done calling *pfring_ft_crea
 
 .. code-block:: c
 
-   pfring_ft_table *ft = pfring_ft_create_table(flags, 0, 0);
+   pfring_ft_table *ft = pfring_ft_create_table(flags, 0, 0, 0);
 
 The *pfring_ft_create_table* parameters include flags that can be used to enable optional features like
 L7 protocol detection based on nDPI (PFRING_FT_TABLE_FLAGS_DPI), and advanced settings to tune the flow
