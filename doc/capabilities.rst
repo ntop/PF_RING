@@ -37,6 +37,13 @@ users and set the GID when mounting the hugetlb mountpoint:
 
    mount -t hugetlbfs -o gid=1002 nodev /dev/hugepages
 
+Please note that you can set the GID in the pf_ring hugepages configuration file
+to automatically mount the hugetlb filesystem with the right permissions:
+
+.. code-block:: console
+
+   echo "node=0 hugepagenumber=1024 gid=1002" > /etc/pf_ring/hugepages.conf 
+
 Please also note that the a ZC application using hugepages, needs to translate
 virtual addresses to physical addresses. For this reason it needs to access
 /proc/self/pagemap, however on some kernel versions (e.g. 4.0 and 4.1) opening

@@ -138,16 +138,22 @@ load_hugepages() {
 		return
 	fi
 
+	MOUNT_OPTION=""
 	if [ -f ${HUGEPAGES_CONFIG} ]; then
-		cat ${HUGEPAGES_CONFIG} | while read node ; do
-			HUGEPAGES_NODE=`echo ${node} | cut -d ' ' -f 1 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
-			HUGEPAGES_NUMBER=`echo ${node} | cut -d ' ' -f 2 | cut -d '=' -f 2` # entry should contain node=yy hugepagenumber=XXX
+		while read node ; do
+			# entry should contain 'node=X hugepagenumber=Y gid=Z'
+			HUGEPAGES_NODE=`echo ${node} | cut -d ' ' -f 1 | cut -d '=' -f 2`
+			HUGEPAGES_NUMBER=`echo ${node} | cut -d ' ' -f 2 | cut -d '=' -f 2`
+			HUGEPAGES_GID=`echo ${node} | cut -d ' ' -f 3 | cut -d '=' -f 2`
 			if [[ ${HUGEPAGES_NUMBER} -gt 0 ]] && [ -f /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages ]; then
 				echo ${HUGEPAGES_NUMBER} > /sys/devices/system/node/node${HUGEPAGES_NODE}/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
 			fi
+			if [ -n "$HUGEPAGES_GID" ]; then
+				MOUNT_OPTION="-o gid=${HUGEPAGES_GID}"
+			fi
 			HUGEPAGES_NODE=""
 			HUGEPAGES_NUMBER=""
-		done
+		done <<< "$(cat ${HUGEPAGES_CONFIG})"
 	else # set it to default
 		# Computing max available
 		#MEM_AVAIL=`grep MemFree /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'`;
@@ -161,7 +167,7 @@ load_hugepages() {
 	if [ ! -d ${HUGEPAGES_MOUNTPOINT} ]; then
 		mkdir ${HUGEPAGES_MOUNTPOINT}
 	fi
-	mount -t hugetlbfs none ${HUGEPAGES_MOUNTPOINT}
+	mount -t hugetlbfs ${MOUNT_OPTION} none ${HUGEPAGES_MOUNTPOINT}
 }
 
 set_interface_mtu() {
