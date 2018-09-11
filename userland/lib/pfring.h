@@ -901,7 +901,7 @@ int pfring_poll(pfring *ring, u_int wait_duration);
 /**
  * Check if a packet is available.
  * @param ring The PF_RING handle.
- * @return 1 if a packet is available, 0 otherwise.
+ * @return 1 if a packet is available, 0 if there is no packet available, a negative number in case of error.
  */
 int pfring_is_pkt_available(pfring *ring);
 
