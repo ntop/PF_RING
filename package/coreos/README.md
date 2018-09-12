@@ -20,7 +20,7 @@ cd PF_RING/package/coreos
 After that you are ready to load the kernel modules installed on the host under /opt/pf_ring, example:
 
 ```
-sudo insmod /opt/pf_ring/7.2.0-stable/$(cat /etc/os-release|grep VERSION|cut -d= -f2)/lib64/modules/$(uname -r)/kernel/net/pf_ring/pf_ring.ko
+sudo insmod /opt/pf_ring/7.2.0-stable/$(cat /etc/os-release|grep VERSION=|cut -d= -f2)/lib64/modules/$(uname -r)/kernel/net/pf_ring/pf_ring.ko
 ```
 
 ## Test
