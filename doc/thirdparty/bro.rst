@@ -112,6 +112,8 @@ In order to take advantage of the PF_RING FT L7 filtering/shunting, you also nee
    ./autogen.sh
    make && sudo make install
 
+.. note::  If you are installing a **stable** version of PF_RING, you should also clone latest stable version of nDPI.
+
 Then you need to create a configuration file with the filtering rules:
 
 .. code-block:: console
