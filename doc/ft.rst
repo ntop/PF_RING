@@ -117,6 +117,8 @@ in *pfring_ft_flow_value.l7_protocol*, all you need to do is:
    ./autogen.sh
    make && sudo make install
 
+.. note::  If you are installing a **stable** version of PF_RING, you should also clone latest stable version of nDPI.
+
 2. enable L7 detection through the *PFRING_FT_TABLE_FLAGS_DPI* flag:
 
 .. code-block:: c
