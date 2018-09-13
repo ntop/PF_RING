@@ -114,6 +114,7 @@ in *pfring_ft_flow_value.l7_protocol*, all you need to do is:
 .. code-block:: console
 
    git clone https://github.com/ntop/nDPI.git
+   cd nDPI
    ./autogen.sh
    make && sudo make install
 
