@@ -311,6 +311,7 @@ void print_help(void) {
   printf("-g <core>       CPU core affinity\n");
   printf("-S <core>       Enable timer thread and set CPU core affinity\n");
   printf("-q              Quiet mode\n");
+  printf("-d              Debug mode\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-V              Print version");
 
@@ -328,12 +329,15 @@ int main(int argc, char* argv[]) {
   packet_direction direction = rx_and_tx_direction;
   pthread_t time_thread;
 
-  while ((c = getopt(argc,argv,"c:g:hi:qvS:V7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dg:hi:qvS:V7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
     case 'c':
       categories_file = strdup(optarg);
+      break;
+    case 'd':
+      pfring_ft_debug();
       break;
     case 'g':
       bind_core = atoi(optarg);
