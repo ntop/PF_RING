@@ -6,7 +6,7 @@ This guide shows how to run a consumer reading from a ZC queue on a KVM virtual 
 Prerequisites
 -------------
 
-- Qemu >= 1.5.1 (latest stable from http://wiki.qemu.org/Download is supported)
+- Qemu >= 1.5.1
 - KVM support in Linux kernel (kvm_intel module)
 
 In order to run a PF_RING ZC slave application on top of a QEMU/KVM Virtual Machine, follow these simple steps:
@@ -17,16 +17,15 @@ In order to run a PF_RING ZC slave application on top of a QEMU/KVM Virtual Mach
 
    (H) qemu ... -chardev socket,path=/tmp/qmp0,server,nowait,id=qmp0 -mon chardev=qmp0,mode=control
 
-(there are some ready-to-use scripts under scripts/, see next section for more informations)
+(there are some ready-to-use scripts under PF_RING/userland/examples_zc/kvm/host/, see next section for more information)
 
-2. Load the hotplug module, the virtio_console module and the uio module in the guest.
+2. Load the uio module in the guest. Note that it could be needed to load the hotplug module (acpiphp) and the virtio_console module (virtio_console) according to your linux distribution.
 
 .. code-block:: console
 
-   (G) modprobe acpiphp
-   (G) modprobe virtio_console
    (G) modprobe uio
-   (G) cd uio_kernel_module; make; insmod uio_ivshmem.ko
+   (G) cd PF_RING/userland/examples_zc/kvm/guest/uio_kernel_module
+   (G) make && insmod uio_ivshmem.ko
 
 3. Run the PF_RING ZC master application in the host, listing the monitor sockets of all the running Virtual Machines:
 
@@ -75,15 +74,16 @@ Then run:
 How to create/boot a Qemu VM
 ----------------------------
 
-Download latest stable Qemu (2.4.0):
+Install latest Qemu according to your Linux distribution, or compile Qemu from source code:
 
 .. code-block:: console
 
-   wget http://wiki.qemu-project.org/download/qemu-2.4.0.tar.bz2
-   tar xvjf qemu-2.4.0.tar.bz2 
-   cd qemu-2.4.0
+   wget http://wiki.qemu-project.org/download/qemu-*.tar.bz2
+   tar xvjf qemu-*.tar.bz2 
+   cd qemu-*
 
-Edit hw/misc/ivshmem.c commenting out line 303 (see http://patchwork.ozlabs.org/patch/316785/):
+On old Qemu versions (<=2.4) you need to patch the ivshmem component editing hw/misc/ivshmem.c 
+and commenting out line 303 (see http://patchwork.ozlabs.org/patch/316785/):
 
 .. code-block:: console
 
@@ -93,22 +93,22 @@ Configure/compile/install:
 
 .. code-block:: console
 
-   ./configure --prefix=/usr/local/kvm
-   make; make install
+   ./configure
+   make
+   make install
 
-Load the needed KVM and networking modules:
+Load the needed KVM and networking modules (this creates a bridge with the provided interface):
 
 .. code-block:: console
 
-   cd PF_RING/userland/examples_zc/scripts
-   ./kvm-load.sh
+   cd PF_RING/userland/examples_zc/kvm/host/
+   ./kvm-load.sh eth1
 
 Boot from a linux cdrom iso to install the OS:
-(the script looks for /root/ubuntu-12.04.2-server-amd64.iso, creating the virtual drive ubuntu-amd64.img, using eth1 for networking)
 
 .. code-block:: console
 
-   ./vm-boot-cdrom.sh
+   ./vm-boot-cdrom.sh ubuntu-16.04.5-server-amd64.iso
 
 A VNC client should be used to connect to the VM and setup networking for ssh access.
 Bridge and TUN/TAP support are needed for networking (bridge module, brctl and tunctl tools).

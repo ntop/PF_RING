@@ -158,6 +158,8 @@ ivshmem_pci_probe(struct pci_dev *dev,
 		return -ENOMEM;
 	}
 
+	info->priv = ivshmem_info;
+
 	if (pci_enable_device(dev))
 		goto out_free;
 
@@ -168,31 +170,35 @@ ivshmem_pci_probe(struct pci_dev *dev,
 	if (!info->mem[0].addr)
 		goto out_release;
 
-	info->mem[0].size = pci_resource_len(dev, 0);
+	info->mem[0].size = (pci_resource_len(dev, 0) + PAGE_SIZE - 1) & PAGE_MASK;
 	info->mem[0].internal_addr = pci_ioremap_bar(dev, 0);
 	if (!info->mem[0].internal_addr) {
 		goto out_release;
 	}
 
 	info->mem[0].memtype = UIO_MEM_PHYS;
+	info->mem[0].name = "registers";
 
 	info->mem[1].addr = pci_resource_start(dev, 2);
 	if (!info->mem[1].addr)
 		goto out_unmap;
 
-    info->mem[1].internal_addr = ioremap_cache(pci_resource_start(dev, 2),
+#if 1
+	/*
+	info->mem[1].internal_addr = ioremap_cache(pci_resource_start(dev, 2),
 				     pci_resource_len(dev, 2));
 	if (!info->mem[1].internal_addr)
 		goto out_unmap;
-
-#if 0
-    info->mem[1].internal_addr = pci_ioremap_bar(dev, 2);
+	*/
+#else
+	info->mem[1].internal_addr = pci_ioremap_bar(dev, 2);
 	if (!info->mem[1].internal_addr)
 		goto out_unmap;
 #endif
 
 	info->mem[1].size = pci_resource_len(dev, 2);
 	info->mem[1].memtype = UIO_MEM_PHYS;
+	info->mem[1].name = "shmem";
 
 	ivshmem_info->uio = info;
 	ivshmem_info->dev = dev;
@@ -212,18 +218,18 @@ ivshmem_pci_probe(struct pci_dev *dev,
 	info->irq = -1;
 #endif
 
-	info->name = "ivshmem";
+	pci_set_master(dev);
+
+	info->name = "uio_ivshmem";
 	info->version = "0.0.1";
 
 	if (uio_register_device(&dev->dev, info))
-		goto out_unmap2;
+		goto out_unmap;
 
-	pci_set_drvdata(dev, info);
-
+	pci_set_drvdata(dev, ivshmem_info);
 
 	return 0;
-out_unmap2:
-	iounmap(info->mem[2].internal_addr);
+
 out_unmap:
 	iounmap(info->mem[0].internal_addr);
 out_release:
@@ -231,21 +237,25 @@ out_release:
 out_disable:
 	pci_disable_device(dev);
 out_free:
+	kfree(ivshmem_info);
 	kfree (info);
 	return -ENODEV;
 }
 
 static void ivshmem_pci_remove(struct pci_dev *dev)
 {
-	struct uio_info *info = pci_get_drvdata(dev);
+	struct ivshmem_info *ivshmem_info = pci_get_drvdata(dev);
+	struct uio_info *info = ivshmem_info->uio;
 
+	pci_set_drvdata(dev, NULL);
 	uio_unregister_device(info);
+	iounmap(info->mem[0].internal_addr);
 	pci_release_regions(dev);
 	pci_disable_device(dev);
 	pci_set_drvdata(dev, NULL);
-	iounmap(info->mem[0].internal_addr);
 
 	kfree (info);
+	kfree(ivshmem_info);
 }
 
 static struct pci_device_id ivshmem_pci_ids[] 
@@ -269,19 +279,7 @@ static struct pci_driver ivshmem_pci_driver = {
 	.remove = ivshmem_pci_remove,
 };
 
-static int __init ivshmem_init_module(void)
-{
-	return pci_register_driver(&ivshmem_pci_driver);
-}
-
-static void __exit ivshmem_exit_module(void)
-{
-	pci_unregister_driver(&ivshmem_pci_driver);
-}
-
-module_init(ivshmem_init_module);
-module_exit(ivshmem_exit_module);
-
+module_pci_driver(ivshmem_pci_driver);
 MODULE_DEVICE_TABLE(pci, ivshmem_pci_ids);
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Cam Macdonell");

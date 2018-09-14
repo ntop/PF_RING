@@ -66,6 +66,7 @@ In order to take advantage of the PF_RING FT L7 filtering/shunting, you also nee
 .. code-block:: console
    
    git clone https://github.com/ntop/nDPI.git
+   cd nDPI
    ./autogen.sh
    make && sudo make install
 
