@@ -307,6 +307,7 @@ void print_help(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-F <file>       Load filtering/shunting rules from file\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-g <core>       CPU core affinity\n");
   printf("-S <core>       Enable timer thread and set CPU core affinity\n");
@@ -323,17 +324,19 @@ void print_help(void) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c;
+  char *configuration_file = NULL;
   char *categories_file = NULL;
   int promisc, snaplen = 1518, rc;
   u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
   pthread_t time_thread;
 
-  while ((c = getopt(argc,argv,"c:dg:hi:qvS:V7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dg:hi:qvF:S:V7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
     case 'c':
+      enable_l7 = 1;
       categories_file = strdup(optarg);
       break;
     case 'd':
@@ -357,6 +360,10 @@ int main(int argc, char* argv[]) {
       break;
     case '7':
       enable_l7 = 1;
+      break;
+    case 'F':
+      enable_l7 = 1;
+      configuration_file = strdup(optarg);
       break;
     case 'S':
       time_pulse = 1;
@@ -382,9 +389,15 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  /* Example of L7 packet filtering/shunting loading from configuration file
-  pfring_ft_load_configuration(ft, "rules.conf");
-  */
+  if (configuration_file) {
+    /* Loading L7 filtering/shunting from configuration file */
+    rc = pfring_ft_load_configuration(ft, configuration_file);
+
+    if (rc < 0) {
+      fprintf(stderr, "Failure loading rules from %s\n", configuration_file);
+      return -1;
+    }
+  }
 
   /* Example of L7 packet filtering rules
   pfring_ft_set_filter_protocol_by_name(ft, "MDNS", PFRING_FT_ACTION_DISCARD);
@@ -399,11 +412,6 @@ int main(int argc, char* argv[]) {
   */
 
   if (categories_file) {
-    if (!enable_l7) {
-      fprintf(stderr, "Categories detection require L7 detection (please use -c in combination with -7)\n");
-      return -1;
-    }
-
     rc = pfring_ft_load_ndpi_categories(ft, categories_file);
 
     if (rc < 0) {
@@ -454,8 +462,12 @@ int main(int argc, char* argv[]) {
     while (!*pulse_timestamp && !do_shutdown); /* wait for ts */
   }
 
-  if (!quiet)
-    printf("Capturing from %s %s nDPI support\n", device, enable_l7 ? "with" : "without (see -7)");
+  if (!quiet) {
+    if (enable_l7)
+      printf("Capturing from %s with nDPI support enabled\n", device);
+    else
+      printf("Capturing from %s without nDPI support (see -7)\n", device);
+  }
 
   if (pfring_enable_ring(pd) != 0) {
     printf("Unable to enable ring :-(\n");
