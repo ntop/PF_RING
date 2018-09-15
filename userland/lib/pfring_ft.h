@@ -387,8 +387,9 @@ pfring_ft_flow_free(
  * Please refer to the documentation for the file format.
  * @param table The flow table handle. 
  * @param path The configuration file path.
+ * @return 0 on success, a negative number on failures.
  */
-void
+int
 pfring_ft_load_configuration(
   pfring_ft_table *table, 
   const char *path
@@ -455,6 +456,7 @@ pfring_ft_set_ndpi_handle(
  * Example: https://github.com/ntop/nDPI/blob/dev/example/mining_hosts.txt
  * @param table The flow table handle. 
  * @param path The configuration file path.
+ * @return 0 on success, a negative number on failures.
  */
 int
 pfring_ft_load_ndpi_categories(
