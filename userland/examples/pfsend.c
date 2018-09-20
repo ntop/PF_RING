@@ -248,8 +248,8 @@ void printHelp(void) {
 #endif
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
-  printf("-S <ip>         Use <ip> as base source IP -b\n");
-  printf("-D <ip>         Use <ip> as destination IP in -b\n");
+  printf("-S <ip>         Use <ip> as base source IP for -b (default: 10.0.0.1)\n");
+  printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
   printf("-V <version>    Generate IP version <version> packets (default: 4, mixed: 0)\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
@@ -456,7 +456,7 @@ int main(int argc, char* argv[]) {
 
   srandom(time(NULL));
 
-  srcaddr.s_addr = 0x0000000A /* 10.0.0.0 */;
+  srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
   while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:p:P:S:w:V:z")) != -1) {
