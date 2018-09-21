@@ -7769,14 +7769,14 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
-  printk("[PF_RING] removing %s/%s from /proc [net=%llu]\n", 
+  debug_printk(1, "removing %s/%s from /proc [net=%llu]\n", 
     dev_ptr->device_name, PROC_INFO, 
     (long long unsigned) netns->net);
 
   remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
 
   if (netns->proc_dev_dir != NULL) {
-    printk("[PF_RING] removing %s from /proc [net=%llu]\n", 
+    debug_printk(1, "removing %s from /proc [net=%llu]\n", 
       dev_ptr->device_name, 
       (long long unsigned) netns->net);
     /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
