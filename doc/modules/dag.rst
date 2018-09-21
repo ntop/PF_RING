@@ -1,15 +1,22 @@
 Endace DAG Support
 ==================
 
+PF_RING has native support for Endace DAG adapters, the DAG SDK needs to be installed in order to enable the DAG module at runtime.
+
 Prerequisite
 ------------
 
-DAG SDK installed.
+DAG SDK installed. Example from source tarball:
 
-PF_RING has native support for Endace DAG adapters, the DAG SDK needs to be installed in order to enable the DAG module at runtime.
+.. code-block:: console
+
+   tar -xvz dag-<version>.tar.gz
+   cd dag
+   ./configure && make && make install
 
 Installation
 ------------
+
 In order to get up and running with a DAG adapter just run the following commands.
 
 Load the DAG module:
@@ -23,8 +30,9 @@ Compile/load pf_ring and sample applications:
 .. code-block:: console
 
    cd PF_RING/kernel; make; sudo insmod pf_ring.ko
-   cd ../userland/lib; ./configure; make
-   cd ../libpcap; ./configure; make
+   cd ../userland/modules/Endace; ./configure && make && make install
+   cd ../../lib; ./configure && make
+   cd ../libpcap; ./configure && make
    cd ../examples; make
 
 Run the sample application to make sure everything is working:
