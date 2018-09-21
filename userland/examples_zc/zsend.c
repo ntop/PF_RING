@@ -380,6 +380,7 @@ void printHelp(void) {
   printf("-z              Use burst API\n");
   printf("-a              Active packet wait\n");
   printf("-Q <sock>       Enable VM support to attach a consumer from a VM (<sock> is a QEMU monitor sockets)\n");
+  printf("-D              Debug mode\n");
   exit(-1);
 }
 
@@ -654,7 +655,7 @@ int main(int argc, char* argv[]) {
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ab:c:f:g:hi:m:n:o:p:r:l:zN:S:P:Q:")) != '?') {
+  while((c = getopt(argc,argv,"ab:c:f:g:hi:m:n:o:p:r:l:zDN:S:P:Q:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -714,15 +715,18 @@ int main(int argc, char* argv[]) {
     case 'g':
       bind_core = atoi(optarg);
       break;
-    case 'Q':
-      enable_vm_support = 1;
-      vm_sock = strdup(optarg);
-      break;
 #ifdef BURST_API
     case 'z':
       use_pkt_burst_api = 1;
       break;
 #endif
+    case 'D':
+      pfring_zc_debug();
+      break;
+    case 'Q':
+      enable_vm_support = 1;
+      vm_sock = strdup(optarg);
+      break;
     case 'N':
       n2disk_producer = 1;
       n2disk_threads = atoi(optarg);
