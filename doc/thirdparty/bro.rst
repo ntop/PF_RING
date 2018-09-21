@@ -56,6 +56,17 @@ Example:
    lb_procs=8
    pin_cpus=0,1,2,3,4,5,6,7
 
+If you are running multiple workers setting ls_procs > 1 as in the
+example above, Bro needs to setup a pf_ring kernel cluster in order
+to split the traffic across the processes (otherwise your get duplicated
+data). In order to force this you can append the line below to the 
+configuration file (note: '99' in the example below is the cluster ID, 
+feel free to replace it with any number).
+
+.. code-block:: text
+
+   env_vars=PCAP_PF_RING_CLUSTER_ID=99
+
 If you installed the ZC drivers, you can configure the number of RSS queues,
 as explained in README.apt_rpm_packages (or running "ethtool -L eth1 combined <num>"),
 to the same number of processes in lb_procs, and use zc:ethX as interface name.
