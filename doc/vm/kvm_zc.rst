@@ -6,7 +6,7 @@ This guide shows how to run a consumer reading from a ZC queue on a KVM virtual 
 Prerequisites
 -------------
 
-- Qemu >= 1.5.1
+- Qemu >= 1.5.1 and <= 2.5
 - KVM support in Linux kernel (kvm_intel module)
 
 In order to run a PF_RING ZC slave application on top of a QEMU/KVM Virtual Machine, follow these simple steps:
