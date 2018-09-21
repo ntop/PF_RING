@@ -39,12 +39,13 @@ Run the sample application to make sure everything is working:
 
 .. code-block:: console
 
-   sudo ./pfcount -i dag:0
+   ./pfcount -i dag:0
 
-If you are installing from repository:
+Please note that in order to open port 0 from the DAG adapter you should specify "dag:0" as interface name, if you want to open stream 2 (default is 0) on port 0 you should specify "dag:0@2".
+
+If you are installing from repository, dag support is already enabled:
 
 .. code-block:: console
 
    pfcount -i dag:0
 
-Please note that in order to open port 0 from the DAG adapter you should specify "dag:0" as interface name, if you want to open stream 2 (default is 0) on port 0 you should specify "dag:0@2".
