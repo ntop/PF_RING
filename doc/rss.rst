@@ -1,9 +1,23 @@
-RSS (Receive Side Scaling)
-==========================
+Load Balancing / RSS
+====================
+
+Processing traffic from the network adapter using a single stream requires 
+a single CPU core to be able to keep up with the ingress rate. At high rates
+this becames a bottleneck even with lightweight traffic processing due to 
+the limited amount of CPU cycles available per packet. Evenly distribute 
+traffic from a single interface across multiple streams (aka channels or 
+queues) while maintaining flow continuity is usually the best option for
+scaling the performance, as long as our application is designed to work
+with multiple threads or processes and run on multiple CPU cores.
 
 Almost all Intel (and other vendors) NICs have RSS support, this means they
 are able to hash packets in hardware in order to distribute the load across 
-multiple RX queues.
+multiple RX queues. In some cases RSS is not available or not flexible 
+enough (e.g. a custom distribution function is needed) and it can be 
+replaced by software distribution using ZC.
+
+RSS (Receive Side Scaling)
+--------------------------
 
 In order to configure the number of queues, you can use the RSS parameter at 
 insmod time (if you are installing PF_RING ZC drivers from packages you can 
@@ -55,7 +69,7 @@ below:
    ethtool -X <if> weight 1 0 0 0
 
 Naming convention
------------------
+~~~~~~~~~~~~~~~~~
 
 In order to open a specific interface queue, you have to specify the queue ID
 using the "@<ID>" suffix. Example:
@@ -71,4 +85,68 @@ interface and capturing from eth1 means capturing from all the queues. This
 happens because ZC is a kernel-bypass technology, thus there is no abstraction,
 and the application directly opens an interface queue, which corresponds to the
 full interface only when RSS=1.
+
+ZC Load-Balancing (zbalance_ipc)
+--------------------------------
+
+There are cases where RSS cannot be used for traffic load-balancing, because:
+
+- it is not always available (e.g. if you are not using an Intel adapter) 
+- sometimes is not flexible enough (e.g. when a custom distribution function is needed)
+- when the same traffic needs to be delivered to different application, but we 
+are using ZC that locks the network interface (we cannot have multiple 
+applications capturing traffic from the same interface at the same time)
+- when the same traffic needs to be delivered to different application, but we 
+need a different number of streams per application (e.g. we want to load-balance 
+traffic to 4 nProbe instances for Netflow generation, and 1 n2disk instance for 
+traffic recording)
+
+In the above situations, RSS can be replaced by software distribution using ZC,
+either writing a custom application on top of the ZC API, or leveraging on the
+'zbalance_ipc' application distributed with PF_RING. zbalance_ipc is a process
+that can be used for capturing traffic from one or more interfaces, and 
+load-balancing packets to multiple consumer processes.
+Please note that in order to use zbalance_ipc, RSS should be disabled.
+
+Example of traffic aggregation from 2 interfaces, and load-balancing to 2 
+processes using an IP-based hash:
+
+.. code-block:: console
+
+   zbalance_ipc -i zc:eth1,zc:eth2 -n 2 -m 1 -c 10 -g 1
+
+Where:
+- -n specifies the number of egress queues
+- -m selects the hash function
+- -g is the core affinity for the capture/hashing thread
+- -c specifies the ZC cluster ID
+
+The example above creates 2 streams, that can be used by a consumer application
+opening them as standard PF_RING interfaces, zc:10@0 and zc:10@1. Example:
+
+.. code-block:: console
+
+   nprobe -i zc:10@0
+   nprobe -i zc:10@1
+
+In a similar way, it is possible to load-balance the traffic to multiple
+applications, each having multiple threads/processes:
+
+.. code-block:: console
+
+   zbalance_ipc -i zc:eth1,zc:eth2 -n 2,1 -m 1 -c 10 -g 1
+
+Where -n 2,1 means:
+
+- load-balance to 2 queues
+- send a fill copy to 1 more queue
+
+This is the case for instance of nProbe and n2disk processing the same traffic:
+
+.. code-block:: console
+
+   nprobe -i zc:10@0
+   nprobe -i zc:10@1
+   n2disk -i zc:10@2 -o /storage
+
 

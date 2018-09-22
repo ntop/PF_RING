@@ -1,5 +1,5 @@
-3rd Party Integration
-=====================
+IDS/IPSs Integration
+====================
 
 .. toctree::
     :maxdepth: 2
