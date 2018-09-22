@@ -94,8 +94,7 @@ There are cases where RSS cannot be used for traffic load-balancing, because:
 - it is not always available (e.g. if you are not using an Intel adapter) 
 - sometimes is not flexible enough (e.g. when a custom distribution function is needed)
 - when the same traffic needs to be delivered to different application, but we are using ZC that locks the network interface (we cannot have multiple applications capturing traffic from the same interface at the same time) 
-- when the same traffic needs to be delivered to different application, but we need a different number of streams per application (e.g. we want to load-balance traffic to 4 nProbe instances for Netflow generation, and 1 n2disk instance for 
-traffic recording)
+- when the same traffic needs to be delivered to different application, but we need a different number of streams per application (e.g. we want to load-balance traffic to 4 nProbe instances for Netflow generation, and 1 n2disk instance for traffic recording)
 
 In the above situations, RSS can be replaced by software distribution using ZC,
 either writing a custom application on top of the ZC API, or leveraging on the
