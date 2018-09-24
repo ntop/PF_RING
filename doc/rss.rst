@@ -92,16 +92,16 @@ ZC Load-Balancing (zbalance_ipc)
 There are cases where RSS cannot be used for traffic load-balancing, because:
 
 - it is not always available (e.g. if you are not using an Intel adapter) 
-- sometimes is not flexible enough (e.g. when a custom distribution function is needed)
+- for some use case it is not flexible enough and a custom distribution function is needed (e.g. tunneled traffic like GTP)
 - when the same traffic needs to be delivered to different application, but we are using ZC that locks the network interface (we cannot have multiple applications capturing traffic from the same interface at the same time) 
 - when the same traffic needs to be delivered to different application, but we need a different number of streams per application (e.g. we want to load-balance traffic to 4 nProbe instances for Netflow generation, and 1 n2disk instance for traffic recording)
 
 In the above situations, RSS can be replaced by software distribution using ZC,
 either writing a custom application on top of the ZC API, or leveraging on the
-'zbalance_ipc' application distributed with PF_RING. zbalance_ipc is a process
+*zbalance_ipc* application distributed with PF_RING. *zbalance_ipc* is a process
 that can be used for capturing traffic from one or more interfaces, and 
 load-balancing packets to multiple consumer processes.
-Please note that in order to use zbalance_ipc, RSS should be disabled.
+Please note that in order to use *zbalance_ipc*, RSS should be disabled.
 
 Example of traffic aggregation from 2 interfaces, and load-balancing to 2 
 processes using an IP-based hash:
@@ -113,12 +113,12 @@ processes using an IP-based hash:
 Where:
 
 - -n specifies the number of egress queues
-- -m selects the hash function
-- -g is the core affinity for the capture/hashing thread
+- -m selects the hash function (there are a few options available, or it is possible to write a custom one)
+- -g is the core affinity for the capture/distribution thread
 - -c specifies the ZC cluster ID
 
-The example above creates 2 streams, that can be used by a consumer application
-opening them as standard PF_RING interfaces, zc:10@0 and zc:10@1. Example:
+The example above creates 2 streams, that can be opened by a consumer application 
+as standard PF_RING interfaces (zc:10@0 and zc:10@1). Example:
 
 .. code-block:: console
 
@@ -134,8 +134,8 @@ applications, each having multiple threads/processes:
 
 Where -n 2,1 means:
 
-- load-balance to 2 queues
-- send a fill copy to 1 more queue
+- load-balance the traffic to 2 queues
+- send a full copy of the traffic to 1 more queue
 
 This is the case for instance of nProbe and n2disk processing the same traffic:
 
@@ -145,4 +145,42 @@ This is the case for instance of nProbe and n2disk processing the same traffic:
    nprobe -i zc:10@1
    n2disk -i zc:10@2 -o /storage
 
+Using zbalance_ipc with systemd
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+*zbalance_ipc* can be controlled using *systemctl* on operating systems
+and distributions that use the *systemd* service manager, configuring the
+*cluster* service shipped with the *pfring* package.
+
+Since multiple clusters are often required, multiple instances of the 
+*cluster* service may run on the same host. To manage a particular cluster
+*<instance>* append *@<instance>* to the *cluster* service name.
+Typically, *<instance>* corresponds to the cluster ID (e.g., *10* in the
+examples above). The *<instance>* uniquely identifies a service and its 
+corresponding configuration file that is located under */etc/cluster/cluster-<instance>.conf*.
+
+For example, to start a *cluster* instance, one can create the following 
+configuration file containing all the command line options (see -h) one
+per line:
+
+.. code-block:: text
+
+   /etc/cluster/cluster-10.conf
+
+And then start the services with:
+
+.. code-block:: console
+
+   systemctl start cluster@10
+
+Optionally, one may want to enable the service to start at boot with:
+
+.. code-block:: console
+
+   systemctl enable cluster@10
+
+The status of the service can be controlled with:
+
+.. code-block:: console
+
+   systemctl status cluster@10
