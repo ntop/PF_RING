@@ -1144,7 +1144,7 @@ struct pf_ring_socket {
   /* /proc */
   char sock_proc_name[64];       /* /proc/net/pf_ring/<sock_proc_name>             */
   char sock_proc_stats_name[64]; /* /proc/net/pf_ring/stats/<sock_proc_stats_name> */
-  char statsString[512 + 1];
+  char statsString[1024];
   char custom_bound_device_name[32];
 
   /* Poll Watermark */

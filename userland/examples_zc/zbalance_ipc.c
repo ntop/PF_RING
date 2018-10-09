@@ -272,23 +272,23 @@ void print_stats() {
   }
 
   snprintf(stats_buf, sizeof(stats_buf), 
-           "ClusterId:         %d\n"
-           "TotQueues:         %d\n"
-           "Applications:      %d\n", 
+           "ClusterId:    %d\n"
+           "TotQueues:    %d\n"
+           "Applications: %d\n", 
            cluster_id,
            num_consumer_queues,
            num_apps);
 
   for (i = 0; i < num_apps; i++)
     snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf), 
-             "App%dQueues:        %d\n", 
+             "App%dQueues:   %d\n", 
              i, instances_per_app[i]);
 
   snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
-           "Duration:          %s\n"
-  	   "Packets:           %lu\n"
-	   "Forwarded:         %lu\n"
-	   "Processed:         %lu\n",
+           "Duration:     %s\n"
+  	   "Packets:      %lu\n"
+	   "Forwarded:    %lu\n"
+	   "Processed:    %lu\n",
            msec2dhmsm(duration, time_buf, sizeof(time_buf)),
 	   (long unsigned int)tot_recv,
 	   (long unsigned int)tot_slave_sent,
@@ -309,8 +309,8 @@ void print_stats() {
       }
     }
     snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
-             "IFPackets:         %lu\n"
-  	     "IFDropped:         %lu\n",
+             "IFPackets:    %lu\n"
+  	     "IFDropped:    %lu\n",
 	     (long unsigned int)tot_if_recv, 
 	     (long unsigned int)tot_if_drop);
     for (i = 0; i < num_consumer_queues; i++) {
@@ -319,6 +319,19 @@ void print_stats() {
           trace(TRACE_NORMAL, "                Q %u RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
                   i, stats.recv, stats.drop, 
 	          stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
+        }
+        if (outdevs[i]) {
+          snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
+             "%s-TXPackets: %lu\n"
+  	     "%s-TXDropped: %lu\n",
+             outdevs[i], (long unsigned int) stats.sent, 
+	     outdevs[i], (long unsigned int) stats.drop);
+        } else {
+          snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
+             "Q%uPackets:    %lu\n"
+  	     "Q%uDropped:    %lu\n",
+             i, (long unsigned int) stats.recv, 
+	     i, (long unsigned int) stats.drop);
         }
       }
     }
