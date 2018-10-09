@@ -7,10 +7,16 @@ Requires=pf_ring.service
 Type=simple
 
 ExecStartPre=/bin/sh -c '/bin/sed "/-d$\\|-P=.*/s/^/#/" /etc/cluster/cluster-%i.conf > /run/cluster-%i.conf'
+ExecStartPre=/bin/sh -c '/bin/echo "$(/bin/date) cluster StartPre" >> /var/log/ntop-systemd.log'
+
 ExecStart=/usr/bin/zbalance_ipc /run/cluster-%i.conf
+
+ExecStartPost=/bin/sh -c '/bin/echo "$(/bin/date) cluster StartPost" >> /var/log/ntop-systemd.log'
 
 ExecStopPost=/usr/local/bin/clusterctl stop-deps %i
 ExecStopPost=-/bin/rm -rf /run/cluster-%i.conf
+
+ExecStopPost=/bin/sh -c '/bin/echo "$(/bin/date) cluster StopPost" >> /var/log/ntop-systemd.log'
  
 Restart=on-abnormal
 RestartSec=5
