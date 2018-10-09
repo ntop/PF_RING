@@ -7,8 +7,14 @@ Requires=pf_ring.service
 Type=oneshot
 RemainAfterExit=yes
 
+ExecStartPre=/bin/sh -c '/bin/echo "$(/bin/date) cluster StartPre" >> /var/log/ntop-systemd.log'
+
 ExecStart=/usr/local/bin/clusterctl start-if-enabled
+
+ExecStartPost=/bin/sh -c '/bin/echo "$(/bin/date) cluster StartPost" >> /var/log/ntop-systemd.log'
+
 ExecStop=/usr/local/bin/clusterctl stop
+ExecStopPost=/bin/sh -c '/bin/echo "$(/bin/date) cluster StopPost" >> /var/log/ntop-systemd.log'
 
 [Install]
 WantedBy=multi-user.target
