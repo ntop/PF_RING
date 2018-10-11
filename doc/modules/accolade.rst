@@ -116,6 +116,7 @@ There are two options for setting the number of blocks and solve this error:
 
 1. run anic_rx_block_mfl with --blocks=64 (old default)
 2. set the ACCOLADE_RING_BLOCKS env var to 16 (new default) when running pf_ring as anic_rx_block_mfl consumer
+
 Example:
 
 .. code-block:: console
