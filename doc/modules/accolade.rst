@@ -28,16 +28,15 @@ Before running any application please load the driver with:
 
    sudo sh -c "echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages"
    sudo insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
-   sudo /opt/accolade/bin/anic_load
+   sudo insmod /opt/accolade/driver/anic.ko
 
-Note: SDK version >1.2.26.20180510 no longer include anic_load, the 'anic' kernel 
-module is be automatically loaded on reboot or manually with:
+Note: with the SDK version <=1.2.26.20180510 the anic_load utility should be used to load the 'anic' module:
 
 .. code-block:: console
 
    sudo sh -c "echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages"
    sudo insmod /opt/accolade/driver/anic_mem.ko mbytes_per_device=64
-   sudo insmod /opt/accolade/driver/anic.ko
+   sudo /opt/accolade/bin/anic_load
 
 Please note that FEC (Forward Error Correction) is disabled by default on Accolade
 adapters. If you experience issues bringing up the link when connecting Accolade to 
@@ -72,9 +71,8 @@ is already enabled.
    cd examples; make
    sudo ./pfcount -i anic:0
 
-Please note that:
-
-- in order to open port 0 from adapter 0 you should specify anic:DEV:PORT, example:
+Please note that in order to open port 0 from adapter 0 you should specify anic:DEV:PORT, 
+example:
 
 .. code-block:: console
 
@@ -86,14 +84,13 @@ or just anic:PORT when using the default adapter 0, example:
 
    pfcount -i anic:0
 
-Opening a port this way, the full card is initialised, causing issues when opening other ports later (previous ports stop working), this can be avoided using the port-to-ring binding as explained later on.
-- in order to open ring 0 from adapter 0 you should specify anic:DEV@RING, example:
+Opening a port this way, the full card is initialised, causing issues when opening 
+other ports later (previous ports may stop working), this can be avoided using the 
+port-to-ring binding as explained later on.
 
-.. code-block:: console
-
-   pfcount -i anic:0@0
-
-This is usually used in combination with anic_rx_block_mfl which is used to setup the card for multi-process applications. 
+The anic_rx_block_mfl tool included in the Accolade SDK can be used to aggregate 
+traffic from multiple ports and setup the card for load-balancing (similar to RSS)
+and multi-process applications. 
 
 Example of ports aggregation and load-balancing to 2 rings:
 
@@ -106,6 +103,24 @@ Example of port-to-ring (ring 0 is port 0) binding:
 .. code-block:: console
 
    anic_rx_block_mfl -i 0 --mode=port
+
+In order to open ring 0 from adapter 0 you should specify anic:DEV@RING, example:
+
+.. code-block:: console
+
+   pfcount -i anic:0@0
+
+Note: on SDK version >1.2.26.20180510 the default Accolade 'blocks' setting has
+been changed and you might get errors like "ANIC_block_add(ring:0 buf:16) failed, oversubscribed?"
+There are two options for setting the number of blocks and solve this error:
+
+1. run anic_rx_block_mfl with --blocks=64 (old default)
+2. set the ACCOLADE_RING_BLOCKS env var to 16 (new default) when running pf_ring as anic_rx_block_mfl consumer
+Example:
+
+.. code-block:: console
+
+   anic_rx_block_mfl -i 0 --mode=port --blocks=64
 
 Accolade and Packet Copy
 ------------------------
