@@ -541,12 +541,12 @@ PCAP_API void	bpf_dump(const struct bpf_program *, int);
 #endif /* _WIN32/MSDOS/UN*X */
 
 #ifdef HAVE_PF_RING
-u_int32_t pcap_get_pfring_id(pcap_t *handle);
-int pcap_set_master_id(pcap_t *handle, u_int32_t master_id);
-int pcap_set_master(pcap_t *handle, pcap_t *master);
-int pcap_set_application_name(pcap_t *handle, char *name);
-int pcap_set_watermark(pcap_t *handle, u_int watermark);
-int pcap_set_poll_watermark_timeout(pcap_t *handle, u_int16_t poll_watermark_timeout);
+  PCAP_API u_int32_t pcap_get_pfring_id(pcap_t *handle);
+  PCAP_API int pcap_set_master_id(pcap_t *handle, u_int32_t master_id);
+  PCAP_API int pcap_set_master(pcap_t *handle, pcap_t *master);
+  PCAP_API int pcap_set_application_name(pcap_t *handle, char *name);
+  PCAP_API int pcap_set_watermark(pcap_t *handle, u_int watermark);
+  PCAP_API int pcap_set_poll_watermark_timeout(pcap_t *handle, u_int16_t poll_watermark_timeout);
 #endif
 
 #ifdef HAVE_REMOTE
