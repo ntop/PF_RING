@@ -13,7 +13,7 @@ from command line, and use the init scripts (under /etc/init.d or systemctl,
 according to your linux distribution) to automate the kernel module and drivers 
 loading. The init script acts as follows:
 
-1. loads the pf_ring.ko kernel module.
+1. loads the pf_ring.ko kernel module reading the module parameters from /etc/pf_ring/pf_ring.conf
 2. scans the folders /etc/pf_ring/zc/{e1000e,igb,ixgbe,i40e,fm10k}/ searching files:
 
    - {e1000e,igb,ixgbe,i40e,fm10k}.conf containing the driver parameters
