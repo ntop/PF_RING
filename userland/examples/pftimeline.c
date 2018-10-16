@@ -196,10 +196,10 @@ int main(int argc, char* argv[]) {
 
   filter[0] = '\0';
 
-  if (bpf_filter) 
-    sprintf(filter, "%s and ", bpf_filter);
+  sprintf(filter, "start %s and end %s", begin, end);
 
-  sprintf(&filter[strlen(filter)], "start %s and end %s", begin, end);
+  if (bpf_filter) 
+    sprintf(&filter[strlen(filter)], " and %s", bpf_filter);
 
   open_dump();
 
