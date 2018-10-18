@@ -7,4 +7,5 @@ Containers Support
 
     namespaces
     docker
+    coreos
     
