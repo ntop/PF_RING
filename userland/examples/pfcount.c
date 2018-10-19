@@ -68,8 +68,9 @@ pcap_dumper_t *dumper = NULL;
 u_int string_id = 1;
 char *out_pcap_file = NULL;
 FILE *match_dumper = NULL;
-u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0;
+u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0, check_ts;
 int num_packets = 0;
+time_t last_ts = 0;
 
 struct app_stats {
   u_int64_t numPkts[MAX_NUM_THREADS];
@@ -525,12 +526,19 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
 
 /* ****************************************************** */
 
-void dummyProcesssPacket(const struct pfring_pkthdr *h,
+void dummyProcessPacket(const struct pfring_pkthdr *h,
 			 const u_char *p, const u_char *user_bytes) {
   long threadId = (long)user_bytes;
   u_int8_t dump_match = !!dumper;
 
   stats->numPkts[threadId]++, stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
+
+  if (unlikely(check_ts && h->ts.tv_sec != last_ts)) {
+    if (h->ts.tv_sec < last_ts)
+      printf("Bad timestamp [expected ts >= %ld][received ts = %ld]\n", 
+        last_ts, h->ts.tv_sec);
+    last_ts = h->ts.tv_sec;
+  }
 
   if(touch_payload) {
     volatile int __attribute__ ((unused)) i;
@@ -659,6 +667,7 @@ void printHelp(void) {
   printf("-t              Touch payload (to force packet load on cache)\n");
   printf("-M              Packet memcpy (to test memcpy speed)\n");
   printf("-C <mode>       Work with the adapter in chunk mode (1=chunk API, 2=packet API)\n");
+  printf("-T              Check packet timestamps\n");
   printf("-x <path>       File containing strings to search string (case sensitive) on payload.\n");
   printf("-o <path>       Dump packets on the specified pcap (in case of -x this dumps only matching packets)\n");
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
@@ -697,7 +706,7 @@ void* packet_consumer_thread(void* _id) {
 
     if((rc = pfring_recv(pd, &buffer_p, NO_ZC_BUFFER_LEN, &hdr, wait_for_packet)) > 0) {
       if(stats->do_shutdown) break;
-      dummyProcesssPacket(&hdr, buffer, (u_char*)thread_id);
+      dummyProcessPacket(&hdr, buffer, (u_char*)thread_id);
 #ifdef TEST_SEND
       buffer[0] = 0x99;
       buffer[1] = 0x98;
@@ -900,7 +909,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:H:l:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:M")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:H:l:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MT")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -992,12 +1001,6 @@ int main(int argc, char* argv[]) {
     case 'M':
       memcpy_test = 1;
       break;
-    case 's':
-      enable_hw_timestamp = 1;
-      break;
-    case 'S':
-      dont_strip_timestamps = 1;
-      break;
     case 'g':
       bind_core = atoi(optarg);
       break;
@@ -1022,6 +1025,16 @@ int main(int argc, char* argv[]) {
     case 'o':
       out_pcap_file = optarg;
       if (strcmp(out_pcap_file, "-") == 0) quiet = 1; 
+      break;
+    case 's':
+      enable_hw_timestamp = 1;
+      break;
+    case 'S':
+      dont_strip_timestamps = 1;
+      break;
+    case 'T':
+      check_ts = 1;
+      last_ts = time(NULL);
       break;
     case 'z':
       if(strcmp(optarg, "ixia") == 0)
@@ -1198,11 +1211,7 @@ int main(int argc, char* argv[]) {
     if (chunk_mode == 1) {
       chunk_consumer_thread(0);
     } else {
-#if 1
-      pfring_loop(pd, dummyProcesssPacket, (u_char*)NULL, wait_for_packet);
-#else
-      packet_consumer_thread(0);
-#endif
+      pfring_loop(pd, dummyProcessPacket, (u_char*)NULL, wait_for_packet);
     }
   } else {
     pthread_t my_thread;
