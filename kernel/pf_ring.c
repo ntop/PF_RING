@@ -1064,6 +1064,9 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
       case intel_ixgbe_82599_ts:
 	dev_family = "Silicom ixgbe 82599 HW TS";
 	break;
+      case intel_ixgbe_vf:
+	dev_family = "Intel ixgbe VF";
+	break;
       case intel_i40e:
         dev_family = "Intel i40e";
         break;
