@@ -482,7 +482,7 @@ pfring_ft_load_ndpi_categories(
  * #return 1 if nDPI is available, 0 otherwise.
  */
 int
-pfring_is_ndpi_available();
+pfring_ft_is_ndpi_available();
 
 /**
  * Get flow processing statistics.
