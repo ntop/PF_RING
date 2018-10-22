@@ -478,6 +478,13 @@ pfring_ft_load_ndpi_categories(
 );
 
 /**
+ * Check if nDPI is available.
+ * #return 1 if nDPI is available, 0 otherwise.
+ */
+int
+pfring_is_ndpi_available();
+
+/**
  * Get flow processing statistics.
  * @param table The flow table handle. 
  * @return The stats struct.
