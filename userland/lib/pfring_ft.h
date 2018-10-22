@@ -254,6 +254,19 @@ pfring_ft_set_flow_packet_callback(
 );
 
 /**
+ * Set the function to be called when a packet and its flow have been processed and the l7 protocol has been just detected.
+ * @param table The flow table handle.
+ * @param callback The callback.
+ * @param user The user data provided to the callback.
+ */
+void
+pfring_ft_set_l7_detected_callback(
+  pfring_ft_table *table,
+  pfring_ft_flow_packet_func callback, 
+  void *user
+);
+
+/**
  * Set the function to be called when a flow expires and needs to be exported.
  * The callback should release the flow calling pfring_ft_flow_free(flow).
  * @param table The flow table handle. 
