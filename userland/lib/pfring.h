@@ -154,6 +154,7 @@ typedef enum {
 typedef enum {
   PCAP_CHUNK,
   PCAP_NSEC_CHUNK,
+  PCAPNG_NSEC_CHUNK,
   UNKNOWN_CHUNK_TYPE
 } pfring_chunk_type;
 
