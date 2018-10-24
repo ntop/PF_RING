@@ -7,20 +7,22 @@ In order to use Bro on top of pf_ring support please follow this guide.
 if you want to use ZC drivers) from http://packages.ntop.org as explained
 in README.apt_rpm_packages
 
-2. Download Bro sources from https://www.bro.org/download/. Please note that installing Bro from package leads to failures when capturing from multiple PF_RING queues (as explained below).
+2. Download Bro sources from https://www.bro.org/download/. Please note 
+that installing Bro from package can lead to failures when capturing 
+from multiple PF_RING queues.
 
 .. code-block:: console
 
    wget https://www.bro.org/downloads/release/bro-X.X.X.tar.gz
-   tar xvzf bro-*.tar.gz
+   tar xvzf bro-X.X.X.tar.gz
 
 3. Configure and install Bro
 
 .. code-block:: console
 
+   cd bro-X.X.X
    ./configure --with-pcap=/usr/local/lib
-   make
-   make install
+   make && sudo make install
 
 Please note that on some installations your should tune the LDFLAGS in order
 to fix linking issues. Example:
@@ -68,7 +70,8 @@ feel free to replace it with any number).
    env_vars=PCAP_PF_RING_CLUSTER_ID=99
 
 If you installed the ZC drivers, you can configure the number of RSS queues,
-as explained in README.apt_rpm_packages (or running "ethtool -L eth1 combined <num>"),
+as explained in the "Installing from packages" section (or running 
+"ethtool -L eth1 combined <num>" as described in the "Load Balancing / RSS" section),
 to the same number of processes in lb_procs, and use zc:ethX as interface name.
 
 Example:
@@ -90,7 +93,7 @@ Run zbalance_ipc *before* running bro with:
 
 .. code-block:: console
 
-   zbalance_ipc -i zc:eth1 -c 99 -n 8 -m 1 -g 8
+   sudo zbalance_ipc -i zc:eth1 -c 99 -n 8 -m 1 -g 8
 
 Where:
 
