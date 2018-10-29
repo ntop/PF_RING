@@ -26,7 +26,7 @@
 # Driver files
 
 # core driver files
-CFILES = ixgbevf_main.c ixgbe_mbx.c ixgbe_vf.c ixgbevf_ethtool.c kcompat.c
+CFILES = ixgbevf_main.c ixgbe_mbx.c ixgbe_hv_vf.c ixgbe_vf.c ixgbevf_ethtool.c kcompat.c
 
 HFILES = ixgbevf.h ixgbe_common.h ixgbevf_osdep.h kcompat.h ixgbe_mbx.h
 ifeq (,$(BUILD_KERNEL))

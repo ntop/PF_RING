@@ -50,12 +50,6 @@ for IF in $INTERFACES ; do
 
 		# Disabling VLAN stripping
 		ethtool -K $IF rxvlan off
-
-		# Disabling Flow Control (actually it should be automatically disabled by the driver)
-		#ethtool -A $IF autoneg off
-		ethtool -A $IF rx off
-		ethtool -A $IF tx off
-		#ethtool -s $IF speed 10000
 	fi
 done
 

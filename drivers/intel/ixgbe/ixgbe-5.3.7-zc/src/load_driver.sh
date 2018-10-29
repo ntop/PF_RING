@@ -40,7 +40,7 @@ killall irqbalance
 
 INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
 for IF in $INTERFACES ; do
-	TOCONFIG=$(ethtool -i $IF|grep $FAMILY|wc -l)
+	TOCONFIG=$(ethtool -i $IF|grep "$FAMILY\$"|wc -l)
         if [ "$TOCONFIG" -eq 1 ]; then
 		printf "Configuring %s\n" "$IF"
 		ifconfig $IF up
@@ -67,27 +67,34 @@ for IF in $INTERFACES ; do
 
 		# Virtual Functions (host)
 		#
-		# Add the kernel parameters below to grub and reboot the machine:
+		# 1. Enable SR-IOV support in your BIOS
+		#
+		# 2. Add the kernel parameters below to grub and reboot the machine:
 		# $ vim /etc/default/grub
 		# GRUB_CMDLINE_LINUX_DEFAULT="iommu=1 msi=1 pci=assign-busses intel_iommu=on"
+		# If the above does not work, try with:
+		# GRUB_CMDLINE_LINUX_DEFAULT="iommu=1 msi=1 pci=realloc intel_iommu=on"
 		# $ update-grub && reboot
 		#
-		# Create a XML file with bus/slot/function of the VF (see lscpi):
+		# Enable 2 Virtual Functions per interface (uncomment the following line before running the script)
+		#echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
+		#echo "Enable VFs on $IF with: echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs"
+		#
+		# SR-IOV with KV and virsh:
+		#
+		# 3. Create a XML file with bus/slot/function of the VF (see lscpi):
 		# <interface type='hostdev' managed='yes'>
 		#     <source>
 		#         <address type='pci' domain='0' bus='11' slot='16' function='0'/>
 		#     </source>
 		# </interface>
 		#
-		# Add the VF to the VM configuration:
+		# 4. Add the VF to the VM configuration:
 		# $ virsh attach-device <vm name> <xml file> --config
 		#
-		# Assign more memory to the VM:
+		# 5. Assign more memory to the VM:
 		# $ virsh setmaxmem ubuntu14 2097152 --config
 		# $ virsh setmem ubuntu14 2097152
-		#
-		# Enable 2 Virtual Functions per interface (uncomment the following line before running the script)
-		#echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
 	fi
 done
 

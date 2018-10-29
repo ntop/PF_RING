@@ -35,9 +35,6 @@
 #ifdef HAVE_PF_RING
 #include "pf_ring.h"
 
-#define IXGBE_PCI_DEVICE_CACHE_LINE_SIZE	0x0C
-#define PCI_DEVICE_CACHE_LINE_SIZE_BYTES	8
-
 #define IXGBE_MAX_NIC   32
 
 static unsigned int enable_debug = 0;
@@ -2941,12 +2938,7 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 
 	if (hook != NULL) {
 		int i;
-		u16 cache_line_size;
-
-		cache_line_size = cpu_to_le16(IXGBE_READ_PCIE_WORD(hw, IXGBE_PCI_DEVICE_CACHE_LINE_SIZE));
-		cache_line_size &= 0x00FF;
-		cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
-		if(cache_line_size == 0) cache_line_size = 64;
+		u16 cache_line_size = 64;
  
 		for (i = 0; i < adapter->num_rx_queues; i++) {
 			struct ixgbevf_ring *rx_ring = adapter->rx_ring[i];
