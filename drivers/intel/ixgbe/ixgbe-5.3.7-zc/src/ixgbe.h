@@ -733,6 +733,10 @@ static inline u16 ixgbe_desc_unused(struct ixgbe_ring *ring)
 	(&(((struct ixgbe_adv_tx_context_desc *)((R)->desc))[i]))
 
 #define IXGBE_MAX_JUMBO_FRAME_SIZE	9728
+#ifdef HAVE_PF_RING
+#undef IXGBE_MAX_JUMBO_FRAME_SIZE
+#define IXGBE_MAX_JUMBO_FRAME_SIZE     (ETH_HLEN+16000+ETH_FCS_LEN)
+#endif
 #if IS_ENABLED(CONFIG_FCOE)
 /* use 3K as the baby jumbo frame size for FCoE */
 #define IXGBE_FCOE_JUMBO_FRAME_SIZE	3072

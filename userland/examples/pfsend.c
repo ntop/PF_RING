@@ -43,7 +43,7 @@
 #include "pfring.h"
 #include "pfutils.c"
 
-#define MAX_PACKET_SIZE 9018
+#define MAX_PACKET_SIZE 16018
 
 struct packet {
   u_int16_t len;
