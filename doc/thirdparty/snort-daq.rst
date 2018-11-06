@@ -169,3 +169,33 @@ IPS mode:
    snort -q --pid-path /var/run --create-pidfile -D -c /etc/snort/snort.conf -l /var/log/snort/bpbr0/instance-3 --daq-dir=/usr/local/lib/daq --daq pfring --daq-mode inline -i eth2:eth3 --daq-var fast-tx=1 --daq-var clusterid=10,11 --daq-var bindcpu=3
    snort -q --pid-path /var/run --create-pidfile -D -c /etc/snort/snort.conf -l /var/log/snort/bpbr0/instance-4 --daq-dir=/usr/local/lib/daq --daq pfring --daq-mode inline -i eth2:eth3 --daq-var fast-tx=1 --daq-var clusterid=10,11 --daq-var bindcpu=4
 
+PF_RING FT Acceleration
+-----------------------
+
+In order to take advantage of the PF_RING FT L7 filtering/shunting, you also need to install nDPI: 
+
+.. code-block:: console
+   
+   git clone https://github.com/ntop/nDPI.git
+   cd nDPI
+   ./autogen.sh
+   make && sudo make install
+
+.. note::  If you are installing a **stable** version of PF_RING, you should also clone latest stable version of nDPI.
+
+Then you need to create a configuration file with the filtering rules:
+
+.. code-block:: console
+   
+   # cat /etc/pf_ring/ft-rules.conf
+   [filter]
+   YouTube = discard
+   Netflix = discard
+
+At this point you are ready to run Snort, setting the path of the configuration file using the PF_RING_FT_CONF environment variable:
+
+.. code-block:: console
+   
+   sudo PF_RING_FT_CONF=/etc/pf_ring/ft-rules.conf snort --daq-dir=/usr/local/lib/daq --daq pfring --daq-mode passive -i ethX -v -e
+
+For further information about PF_RING FT please read http://www.ntop.org/guides/pf_ring/ft.html
