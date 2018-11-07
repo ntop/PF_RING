@@ -173,6 +173,17 @@ void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata,
 
 /* ******************************** */
 
+const char *action_to_string(pfring_ft_action action) {
+  switch (action) {
+    case PFRING_FT_ACTION_FORWARD: return "forward";
+    case PFRING_FT_ACTION_DISCARD: return "discard";
+    case PFRING_FT_ACTION_DEFAULT: return "default";
+  }
+  return "";
+}
+
+/* ******************************** */
+
 /* This callback is called when a flow expires */
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
@@ -199,19 +210,15 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
   printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
-         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u } ",
+         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, action: %s\n",
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes,
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec,
          (u_int) v->direction[s2d_direction].last.tv_sec,  (u_int) v->direction[s2d_direction].last.tv_usec,
          v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes,
          (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec,
-         (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec);
-
-  if (pfring_ft_flow_get_action(flow) == PFRING_FT_ACTION_DISCARD)
-    printf("[discard]");
-
-  printf("\n");
+         (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec,
+         action_to_string(pfring_ft_flow_get_action(flow)));
 
   pfring_ft_flow_free(flow);
 }
@@ -241,7 +248,7 @@ void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char
     char buffer[256];
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->caplen);
-    printf("[Packet]%s %s", action == PFRING_FT_ACTION_DISCARD ? " [discard]" : "", buffer);
+    printf("[Packet][%s] %s", action_to_string(action), buffer);
   }
 }
 
@@ -402,6 +409,11 @@ int main(int argc, char* argv[]) {
   /* Example of L7 packet filtering rules
   pfring_ft_set_filter_protocol_by_name(ft, "MDNS", PFRING_FT_ACTION_DISCARD);
   pfring_ft_set_filter_protocol_by_name(ft, "UPnP", PFRING_FT_ACTION_DISCARD);
+  */
+
+  /* Example of 'drop all' L7 protocols except Skype
+  pfring_ft_set_default_action(ft, PFRING_FT_ACTION_DISCARD);
+  pfring_ft_set_filter_protocol_by_name(ft, "Skype", PFRING_FT_ACTION_FORWARD);
   */
 
   /* Example of callback for expired flows */
