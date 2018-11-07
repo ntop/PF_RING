@@ -396,6 +396,21 @@ pfring_ft_flow_free(
 );
 
 /**
+ * Set the default action for detected L7 protocols with no filtering rule.
+ * This can be used to 'drop all' traffic, exception made for specific protocols
+ * setting the default to PFRING_FT_ACTION_DISCARD and filter actions to PFRING_FT_ACTION_FORWARD
+ * Default: PFRING_FT_ACTION_DEFAULT
+ * @param table The flow table handle. 
+ * @param protocol_name The nDPI protocol name.
+ * @param action The action returned by pfring_ft_process() for all packets matching the protocol.
+ */
+void 
+pfring_ft_set_default_action(
+  pfring_ft_table *table,
+  pfring_ft_action action
+);
+
+/**
  * Load filtering/shunting rules from a configuration file.
  * Please refer to the documentation for the file format.
  * @param table The flow table handle. 
