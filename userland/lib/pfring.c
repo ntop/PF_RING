@@ -205,6 +205,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   int mod_found = 0;
   int ret;
   char prefix[32];
+  char *ft_conf_file;
   pfring *ring;
 
   if (device_name == NULL)
@@ -250,17 +251,20 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->force_userspace_bpf = !!(flags & PF_RING_USERSPACE_BPF);
   ring->ft_enabled          = !!(flags & PF_RING_L7_FILTERING);
 
-  if (getenv("PF_RING_FT_CONF") != NULL)
+  ft_conf_file = getenv("PF_RING_FT_CONF");
+
+  if (ft_conf_file != NULL) {
+#ifdef HAVE_PF_RING_FT
     ring->ft_enabled = 1;
 
-  if (ring->ft_enabled) {
-#ifdef HAVE_PF_RING_FT
     ring->ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0, 0);
 
     if (ring->ft == NULL) {
       errno = ENOMEM;
       return NULL;
     }
+
+    pfring_ft_load_configuration(ring->ft, ft_conf_file);
 #else
     errno = ENOTSUP;
     return NULL;
@@ -491,7 +495,7 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
 #endif
 
 #ifdef HAVE_PF_RING_FT
-      if (unlikely(ring->ft && pfring_ft_process(ring->ft, buffer, (pfring_ft_pcap_pkthdr *) &hdr, &ext_hdr) == PFRING_FT_ACTION_DISCARD)) 
+      if (unlikely(ring->ft && pfring_ft_process(ring->ft, buffer, (pfring_ft_pcap_pkthdr *) &hdr, &ext_hdr) == PFRING_FT_ACTION_DISCARD))
         continue; /* rejected */
 #endif
 
@@ -576,7 +580,7 @@ recv_next:
 #endif
 
 #ifdef HAVE_PF_RING_FT
-    if (unlikely(rc > 0 && ring->ft && pfring_ft_process(ring->ft, *buffer, (pfring_ft_pcap_pkthdr *) hdr, &ext_hdr) == PFRING_FT_ACTION_DISCARD)) 
+    if (unlikely(rc > 0 && ring->ft && pfring_ft_process(ring->ft, *buffer, (pfring_ft_pcap_pkthdr *) hdr, &ext_hdr) == PFRING_FT_ACTION_DISCARD))
       goto recv_next; /* rejected */
 #endif
 
