@@ -5,7 +5,6 @@
 #
 # See http://core.dpdk.org/doc/quick-start/ for DPDK installation and setup
 #
-
 ifeq ($(RTE_SDK),)
 #$(error "Please define RTE_SDK environment variable")
 RTE_SDK = $(HOME)/DPDK
@@ -21,7 +20,7 @@ APP = ftflow_dpdk
 
 SRCS-y := ftflow_dpdk.c
 
-CFLAGS += -O3
+CFLAGS += -g
 CFLAGS += $(WERROR_FLAGS) -Wno-strict-prototypes -Wno-missing-prototypes -Wno-missing-declarations -Wno-unused-parameter
 CFLAGS += -I $(HOME)/PF_RING/userland/lib
 LDLIBS = $(HOME)/PF_RING/userland/lib/libs/libpfring_ft_x86_64.a

@@ -30,6 +30,7 @@
 #include <getopt.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <signal.h>
 
 
 #include <rte_eal.h>
@@ -54,12 +55,14 @@
 
 static pfring_ft_table *ft = NULL;
 static u_int32_t ft_flags = 0;
-static u_int8_t port = 0;
+static u_int8_t port = 0, do_loop = 1;
 static u_int8_t verbose = 0;
 
 static const struct rte_eth_conf port_conf_default = {
   .rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
 };
+
+/* ************************************ */
 
 static inline int port_init(struct rte_mempool *mbuf_pool) {
   struct rte_eth_conf port_conf = port_conf_default;
@@ -95,6 +98,8 @@ static inline int port_init(struct rte_mempool *mbuf_pool) {
   return 0;
 }
 
+/* ************************************ */
+
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
@@ -129,16 +134,20 @@ void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_free(flow);
 }
 
-static void lcore_main(void) {
+/* ************************************ */
+
+static void packet_consumer(void) {
   pfring_ft_pcap_pkthdr h;
   pfring_ft_ext_pkthdr ext_hdr = { 0 };
   u_int32_t i;
 
+  printf("Capturing from port %u...\n", port);
+  
   if (rte_eth_dev_socket_id(port) > 0 && rte_eth_dev_socket_id(port) != (int) rte_socket_id()) {
     printf("WARNING: port %u and processing core %u are on different NUMA nodes\n", port, rte_lcore_id());
   }
 
-  while (1) {
+  while (do_loop) {
     struct rte_mbuf *bufs[BURST_SIZE];
     u_int16_t num;
 
@@ -167,7 +176,7 @@ static void lcore_main(void) {
 
         printf("[Packet] hex: ");
         for (j = 0; j < len; j++)
-          printf("%02X ", data[j]);
+          printf("%02X ", data[j] & 0xFF);
 
         if (action == PFRING_FT_ACTION_DISCARD)
           printf(" [discard]");
@@ -180,6 +189,8 @@ static void lcore_main(void) {
   }
 }
 
+/* ************************************ */
+
 static void print_help(void) {
   printf("ftflow_dpdk - (C) 2018 ntop.org\n");
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
@@ -188,6 +199,8 @@ static void print_help(void) {
   printf("-v          Verbose (print also raw packets)\n");
   printf("-h          Print this help\n");
 }
+
+/* ************************************ */
 
 static int parse_args(int argc, char **argv) {
   int opt, ret;
@@ -230,6 +243,15 @@ static int parse_args(int argc, char **argv) {
   return ret;
 }
 
+/* ************************************ */
+
+void sigproc(int sig) {
+  fprintf(stderr, "Leaving...\n");
+  do_loop = 0;
+}
+
+/* ************************************ */
+
 int main(int argc, char *argv[]) {
   struct rte_mempool *mbuf_pool;
   int ret;
@@ -266,7 +288,7 @@ int main(int argc, char *argv[]) {
     rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu8 "\n", port);
 
   if (rte_lcore_count() > 1)
-    printf("WARNING: Too many lcores enabled, only 1 used\n");
+    printf("INFO: Too many lcores enabled, only 1 used\n");
 
   ft = pfring_ft_create_table(ft_flags, 0, 0, 0);
 
@@ -277,7 +299,10 @@ int main(int argc, char *argv[]) {
 
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
-  lcore_main();
+  signal(SIGINT, sigproc);
+  signal(SIGTERM, sigproc);
+
+  packet_consumer();
 
   pfring_ft_flush(ft);
 
