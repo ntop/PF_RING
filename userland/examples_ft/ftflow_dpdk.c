@@ -20,19 +20,27 @@
  * THE SOFTWARE.
  */
 
-#include <stdint.h>
+#define _GNU_SOURCE
+#include <sched.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <assert.h>
 #include <inttypes.h>
 #include <getopt.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 
+
 #include <rte_eal.h>
+#include <rte_ether.h>
 #include <rte_ethdev.h>
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
-#include <unistd.h>
 
+/* NOTE: ether_hdr is defined in rte_ether.h */
+#define ether_header ether_hdr
 #include "ftutils.c"
 
 #include "pfring_ft.h"
@@ -224,9 +232,11 @@ static int parse_args(int argc, char **argv) {
 
 int main(int argc, char *argv[]) {
   struct rte_mempool *mbuf_pool;
-  u_int8_t num_ports;
   int ret;
-
+#if 0
+  u_int8_t num_ports;
+#endif
+  
   ret = rte_eal_init(argc, argv);
 
   if (ret < 0)
@@ -240,11 +250,13 @@ int main(int argc, char *argv[]) {
   if (ret < 0)
     rte_exit(EXIT_FAILURE, "Invalid flow_classify parameters\n");
 
+#if 0
   num_ports = rte_eth_dev_count();
 
   if (port >= num_ports)
     rte_exit(EXIT_FAILURE, "Error: port %u not available\n", port);
-
+#endif
+  
   mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS, MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
   if (mbuf_pool == NULL)

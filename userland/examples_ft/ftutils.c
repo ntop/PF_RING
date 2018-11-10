@@ -34,7 +34,7 @@
 #include <pwd.h>
 #include <sys/stat.h>
 
-#include "config.h"
+#include "../lib/config.h"
 
 #define CACHE_LINE_LEN 64
 
