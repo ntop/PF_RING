@@ -114,6 +114,11 @@ Where:
 
 - -n specifies the number of egress queues
 - -m selects the hash function (there are a few options available, or it is possible to write a custom one)
+   - 0: Round-Robin (default)
+   - 1: IP hash
+   - 2: Fan-out
+   - 3: Fan-out (1st) + Round-Robin (2nd, 3rd, ..)
+   - 4: GTP hash (Inner IP/Port or GTP-C Seq-Num)
 - -g is the core affinity for the capture/distribution thread
 - -c specifies the ZC cluster ID
 

@@ -26,8 +26,19 @@ loading. The init script acts as follows:
 
    node=<NUMA node id> hugepagenumber=<number of pages>
 
-Note: in order to figure out what is the driver model that you need, please use
-ethtool -i <interface>. Example:
+Below you can find a configuration example for using pf_ring with standard drivers.
+In this example we tune a bit the ring buffer size (changing the default with the 
+min_num_slots parameter) to improve the performance and absorbe traffic bursts:
+
+.. code-block:: console
+
+   mkdir -p /etc/pf_ring
+   echo "min_num_slots=65536" > /etc/pf_ring/pf_ring.conf
+   touch /etc/pf_ring/pf_ring.start
+
+In order to use pf_ring with ZC drivers, you need first of all to figure out what is 
+the driver model for your network card. Please use ethtool -i <interface> for that. 
+Example:
 
 .. code-block:: console
 
