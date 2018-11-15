@@ -50,7 +50,9 @@ Please note that:
 
    pfcount -i nt:stream0
 
-- streams are logical port aggregations or packet spread (similar to RSS) can be created using the ntpl tool (ntpl -e "<command>")
+- streams with port aggregation or distribution (similar to RSS) can be created using the ntpl tool (ntpl -e "<command>")
+
+Note: it is possible to open the same stream from multiple applications at the same time (the slowest consumer will affect the others!). Instead it is not possible to open a port multiple times (as the port is reassigned to a new stream every time you open it).
 
 Command example for ports (2 and 3) aggregation on a single stream (1):
 
@@ -85,7 +87,10 @@ Command example for merging two ports and load balancing them across 24 streams 
    /opt/napatech3/bin/ntpl -e "Setup[NUMANode=1]=Streamid==(12..23)"
    /opt/napatech3/bin/ntpl -e "Assign[streamid=(0..23)]=port==0,1"
 
-- in order to use the Napatech adapter with n2disk the configuration file /opt/napatech3/config/ntservice.ini should contain:
+Adapter configuration for n2disk
+--------------------------------
+
+In order to use the Napatech adapter with n2disk the configuration file /opt/napatech3/config/ntservice.ini should contain:
 
 .. code-block:: text
 
