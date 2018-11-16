@@ -315,6 +315,7 @@ void print_help(void) {
   printf("-i <device>     Device name\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
   printf("-F <file>       Load filtering/shunting rules from file\n");
+  printf("-p <file>       Load nDPI custom protocols from file\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-g <core>       CPU core affinity\n");
   printf("-S <core>       Enable timer thread and set CPU core affinity\n");
@@ -333,12 +334,13 @@ int main(int argc, char* argv[]) {
   char *device = NULL, c;
   char *configuration_file = NULL;
   char *categories_file = NULL;
+  char *protocols_file = NULL;
   int promisc, snaplen = 1518, rc;
   u_int32_t flags = 0, ft_flags = 0;
   packet_direction direction = rx_and_tx_direction;
   pthread_t time_thread;
 
-  while ((c = getopt(argc,argv,"c:dg:hi:qvF:S:V7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dg:hi:p:qvF:S:V7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -358,6 +360,10 @@ int main(int argc, char* argv[]) {
       break;
     case 'i':
       device = strdup(optarg);
+      break;
+    case 'p':
+      enable_l7 = 1;
+      protocols_file = strdup(optarg);
       break;
     case 'q':
       quiet = 1;
@@ -422,6 +428,15 @@ int main(int argc, char* argv[]) {
   /* Example of callback for packets that have been successfully processed
   pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
   */
+
+  if (protocols_file) {
+    rc = pfring_ft_load_ndpi_protocols(ft, protocols_file);
+
+    if (rc < 0) {
+      fprintf(stderr, "Failure loading custom protocols from %s\n", protocols_file);
+      return -1;
+    }
+  }
 
   if (categories_file) {
     rc = pfring_ft_load_ndpi_categories(ft, categories_file);

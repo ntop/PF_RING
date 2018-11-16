@@ -479,6 +479,20 @@ pfring_ft_set_ndpi_handle(
 );
 
 /**
+ * Load custom nDPI protocols from a configuration file.
+ * Please refer to the nDPI documentation for the file format.
+ * Example: https://github.com/ntop/nDPI/blob/dev/example/protos.txt
+ * @param table The flow table handle. 
+ * @param path The configuration file path.
+ * @return 0 on success, a negative number on failures.
+ */
+int
+pfring_ft_load_ndpi_protocols(
+  pfring_ft_table *table,
+  const char *path
+);
+
+/**
  * Load nDPI categories (defined by hostname) from a configuration file.
  * Please refer to the nDPI documentation for the file format.
  * Example: https://github.com/ntop/nDPI/blob/dev/example/mining_hosts.txt

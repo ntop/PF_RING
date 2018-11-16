@@ -255,6 +255,8 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 
   if (ft_conf_file != NULL) {
 #ifdef HAVE_PF_RING_FT
+    char *ft_proto_file = getenv("PF_RING_FT_PROTOCOLS");
+
     ring->ft_enabled = 1;
 
     ring->ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0, 0);
@@ -262,6 +264,10 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
     if (ring->ft == NULL) {
       errno = ENOMEM;
       return NULL;
+    }
+
+    if (ft_proto_file != NULL) {
+      pfring_ft_load_ndpi_protocols(ring->ft, ft_proto_file);
     }
 
     pfring_ft_load_configuration(ring->ft, ft_conf_file);
