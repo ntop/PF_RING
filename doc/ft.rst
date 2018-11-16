@@ -199,6 +199,8 @@ to the configuration file path:
    
    # PF_RING_FT_CONF=/etc/pf_ring/ft-rules.conf suricata --pfring-int=zc:eth1 -c /etc/suricata/suricata.yaml
 
+Please note that it is also possible to define custom L7 protocols (e.g. based on ip or hostname) using the standard nDPI file format for custom protocols  (see an `example here <https://github.com/ntop/nDPI/blob/dev/example/protos.txt>`_) and provide the file path by setting the PF_RING_FT_PROTOCOLS environment variable.
+
 Please refer to the `Using Suricata with PF_RING <https://www.ntop.org/guides/pf_ring/thirdparty/suricata.html#pf-ring-ft-acceleration>`_ 
 and `Using Bro with PF_RING <https://www.ntop.org/guides/pf_ring/thirdparty/bro.html#pf-ring-ft-acceleration>`_
 guides for enabling PF_RING FT support in Suricata and Bro. Note that the same acceleration can be used with other 
