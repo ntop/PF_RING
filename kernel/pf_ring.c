@@ -2425,9 +2425,11 @@ static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
 
 /* ********************************** */
 
-static inline int compare_hash_filtering_rules(hash_filtering_rule * a,
-				     hash_filtering_rule * b)
+static inline int compare_hash_filtering_rules(hash_filtering_rule *a,
+				     hash_filtering_rule *b)
 {
+  debug_printk_rules_comparison(2, a, b);
+
   if((a->ip_version == b->ip_version)
       &&(a->proto == b->proto)
       && (a->vlan_id == b->vlan_id)
@@ -2458,19 +2460,17 @@ static inline int compare_hash_filtering_rules(hash_filtering_rule * a,
 
 /* ********************************** */
 
-static inline int hash_bucket_match_rule(sw_filtering_hash_bucket * hash_bucket,
-				  hash_filtering_rule * rule)
+static inline int hash_bucket_match_rule(sw_filtering_hash_bucket *hash_bucket,
+				  hash_filtering_rule *rule)
 {
-  debug_printk_rules_comparison(2, &hash_bucket->rule, rule);
   return compare_hash_filtering_rules(&hash_bucket->rule, rule);
 }
 
 /* ********************************** */
 
-static inline int hash_filtering_rule_match(hash_filtering_rule * a,
-				     hash_filtering_rule * b)
+static inline int hash_filtering_rule_match(hash_filtering_rule *a,
+				     hash_filtering_rule *b)
 {
-  debug_printk_rules_comparison(2, a, b);
   return compare_hash_filtering_rules(a,b);
 }
 
@@ -2990,7 +2990,7 @@ static void free_sw_filtering_hash_bucket(sw_filtering_hash_bucket * bucket)
 /* ************************************* */
 
 static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
-					   sw_filtering_hash_bucket * rule,
+					   sw_filtering_hash_bucket *rule,
 					   u_char add_rule)
 {
   int rc = -1;
@@ -3060,8 +3060,8 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
     while(bucket != NULL) {
       if(hash_filtering_rule_match(&bucket->rule, &rule->rule)) {
 	if(add_rule) {
-	  printk("[PF_RING] %s:%d Duplicate found (rule_id=%u) while adding rule (rule_id=%u): discarded\n",
-	  	__FUNCTION__, __LINE__, bucket->rule.rule_id, rule->rule.rule_id);
+	  debug_printk(2, "duplicate found (rule_id=%u) while adding rule (rule_id=%u): discarded\n",
+	  	       bucket->rule.rule_id, rule->rule.rule_id);
 	  return(-EEXIST);
 	} else {
 	  /* We've found the bucket to delete */
