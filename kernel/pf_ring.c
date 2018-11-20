@@ -2384,32 +2384,24 @@ static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
     When protocol of host_peer is IPv4, s6_addr32[0] contains IPv4
     address and the value of other elements of s6_addr32 are 0.
   */
-  if((hash_bucket->rule.proto == hdr->extended_hdr.parsed_pkt.l3_proto)
-     && (hash_bucket->rule.vlan_id == hdr->extended_hdr.parsed_pkt.vlan_id)
-     && (((hash_bucket->rule.host4_peer_a == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_src))
-	  && (hash_bucket->rule.host4_peer_b == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_dst))
-	  && (hash_bucket->rule.port_peer_a == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.l4_src_port))
-	  && (hash_bucket->rule.port_peer_b == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.l4_dst_port)))
-	 ||
-	 ((hash_bucket->rule.host4_peer_a == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_dst))
-	  && (hash_bucket->rule.host4_peer_b == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_src))
-	  && (hash_bucket->rule.port_peer_a == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.l4_dst_port))
-	  && (hash_bucket->rule.port_peer_b == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.l4_src_port)))))
-  {
+  if(hash_bucket->rule.ip_version == hdr->extended_hdr.parsed_pkt.ip_version &&
+     hash_bucket->rule.proto == hdr->extended_hdr.parsed_pkt.l3_proto &&
+     hash_bucket->rule.vlan_id == hdr->extended_hdr.parsed_pkt.vlan_id &&
+     ((hash_bucket->rule.host4_peer_a == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_src) &&
+       hash_bucket->rule.host4_peer_b == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_dst) &&
+       hash_bucket->rule.port_peer_a  == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.l4_src_port) &&
+       hash_bucket->rule.port_peer_b  == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.l4_dst_port))
+      ||
+      (hash_bucket->rule.host4_peer_a == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_dst) &&
+       hash_bucket->rule.host4_peer_b == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.ipv4_src) &&
+       hash_bucket->rule.port_peer_a  == (mask_dst ? 0 : hdr->extended_hdr.parsed_pkt.l4_dst_port) &&
+       hash_bucket->rule.port_peer_b  == (mask_src ? 0 : hdr->extended_hdr.parsed_pkt.l4_src_port)))) {
     if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
-      if(((memcmp(&hash_bucket->rule.host6_peer_a,
-		    (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
-		    sizeof(ip_addr)) == 0)
-	    && (memcmp(&hash_bucket->rule.host6_peer_b,
-		       (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst),
-		       sizeof(ip_addr)) == 0))
+      if((memcmp(&hash_bucket->rule.host6_peer_a, (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src), sizeof(ip_addr)) == 0 &&
+          memcmp(&hash_bucket->rule.host6_peer_b, (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst), sizeof(ip_addr)) == 0)
 	   ||
-	   ((memcmp(&hash_bucket->rule.host6_peer_a,
-		    (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst),
-		    sizeof(ip_addr)) == 0)
-	    && (memcmp(&hash_bucket->rule.host6_peer_b,
-		       (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src),
-		       sizeof(ip_addr)) == 0))) {
+	 (memcmp(&hash_bucket->rule.host6_peer_a, (mask_dst ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_dst), sizeof(ip_addr)) == 0 &&
+	  memcmp(&hash_bucket->rule.host6_peer_b, (mask_src ? &ip_zero.v6 : &hdr->extended_hdr.parsed_pkt.ipv6_src), sizeof(ip_addr)) == 0)) {
         return 1;
       }
     } else { /* ip_version == 4 */
@@ -2983,10 +2975,15 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 					   u_char add_rule)
 {
   int rc = -1;
-  u_int32_t hash_idx = hash_pkt(rule->rule.vlan_id, zeromac, zeromac,
-                                  rule->rule.ip_version, rule->rule.proto,
-				  rule->rule.host_peer_a, rule->rule.host_peer_b,
-				  rule->rule.port_peer_a, rule->rule.port_peer_b)
+  u_int32_t hash_idx;
+
+  if (rule->rule.ip_version != 4 && rule->rule.ip_version != 6) /* safety check */
+    return(-EINVAL);
+
+  hash_idx = hash_pkt(rule->rule.vlan_id, zeromac, zeromac,
+                      rule->rule.ip_version, rule->rule.proto,
+	              rule->rule.host_peer_a, rule->rule.host_peer_b,
+                      rule->rule.port_peer_a, rule->rule.port_peer_b)
     % perfect_rules_hash_size;
 
   debug_printk_rule_info(2, &rule->rule, "hash_idx=%u rule_id=%u add_rule=%d\n",
@@ -3289,7 +3286,7 @@ int check_perfect_rules(struct sk_buff *skb,
 {
   u_int32_t hash_idx;
   sw_filtering_hash_bucket *hash_bucket;
-  u_int8_t hash_found = 0;
+  int hash_found = 0;
 
   hash_idx = hash_pkt(
     hdr->extended_hdr.parsed_pkt.vlan_id,
@@ -3399,6 +3396,7 @@ int check_wildcard_rules(struct sk_buff *skb,
 
 	if(hash_bucket != NULL) {
 	  hash_bucket->rule.vlan_id = hdr->extended_hdr.parsed_pkt.vlan_id;
+	  hash_bucket->rule.ip_version = hdr->extended_hdr.parsed_pkt.ip_version;
 	  hash_bucket->rule.proto = hdr->extended_hdr.parsed_pkt.l3_proto;
 	  hash_bucket->rule.host4_peer_a = hdr->extended_hdr.parsed_pkt.ipv4_src;
 	  hash_bucket->rule.host4_peer_b = hdr->extended_hdr.parsed_pkt.ipv4_dst;
@@ -3586,7 +3584,9 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
   /* [2.1] Search the hash */
   if(pfr->sw_filtering_hash != NULL) {
+    read_lock(&pfr->ring_rules_lock);
     hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ);
+    read_unlock(&pfr->ring_rules_lock);
     if(hash_found)
       pfr->sw_filtering_hash_match++;
     else

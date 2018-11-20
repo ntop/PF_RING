@@ -313,6 +313,7 @@ void drop_packet_rule(const struct pfring_pkthdr *h) {
     rule.rule_id = rule_id++;
     rule.vlan_id = hdr->vlan_id;
     rule.proto = hdr->l3_proto;
+    rule.ip_version = hdr->ip_version;
     rule.rule_action = dont_forward_packet_and_stop_rule_evaluation;
     rule.host4_peer_a = hdr->ip_src.v4, rule.host4_peer_b = hdr->ip_dst.v4;
     rule.port_peer_a = hdr->l4_src_port, rule.port_peer_b = hdr->l4_dst_port;
@@ -559,7 +560,8 @@ void dummyProcessPacket(const struct pfring_pkthdr *h,
 
   if(unlikely(add_drop_rule)) {
     if(!h->ts.tv_sec) pfring_parse_pkt((u_char*)p, (struct pfring_pkthdr*)h, 4, 0, 1);
-    drop_packet_rule(h);
+    if (h->extended_hdr.parsed_pkt.offset.l4_offset) /* IP packet */
+      drop_packet_rule(h);
   }
 
   if (dumper) {
