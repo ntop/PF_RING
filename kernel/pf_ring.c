@@ -3060,7 +3060,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
     while(bucket != NULL) {
       if(hash_filtering_rule_match(&bucket->rule, &rule->rule)) {
 	if(add_rule) {
-	  debug_printk(2, "duplicate found (rule_id=%u) while adding rule (rule_id=%u): discarded\n",
+	  debug_printk(1, "duplicate found (rule_id=%u) while adding rule (rule_id=%u): discarded\n",
 	  	       bucket->rule.rule_id, rule->rule.rule_id);
 	  return(-EEXIST);
 	} else {
