@@ -753,6 +753,7 @@ static int pfring_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t callbac
 
 	  hash_rule.rule_id     = context->filter_count++;
 	  hash_rule.vlan_id     = phdr.extended_hdr.parsed_pkt.vlan_id;
+	  hash_rule.ip_version  = phdr.extended_hdr.parsed_pkt.ip_version;
 	  hash_rule.proto       = phdr.extended_hdr.parsed_pkt.l3_proto;
 	  memcpy(&hash_rule.host_peer_a, &phdr.extended_hdr.parsed_pkt.ipv4_src, sizeof(ip_addr));
 	  memcpy(&hash_rule.host_peer_b, &phdr.extended_hdr.parsed_pkt.ipv4_dst, sizeof(ip_addr));
