@@ -147,21 +147,21 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
     return;
   }
   if (ip_version==4) {
-    printk("%d.%d.%d.%d:%u",
+    printk("IP=%d.%d.%d.%d:%u ",
         ((addr->v4 >> 24) & 0xff),
         ((addr->v4 >> 16) & 0xff),
         ((addr->v4 >> 8) & 0xff),
         ((addr->v4 >> 0) & 0xff),
         port);
   } else if (ip_version==6) {
-    printk("%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x:%u",
+    printk("IP=%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x:%u ",
         addr->v6.s6_addr[0],addr->v6.s6_addr[1], addr->v6.s6_addr[2],addr->v6.s6_addr[3],
         addr->v6.s6_addr[4],addr->v6.s6_addr[5], addr->v6.s6_addr[6],addr->v6.s6_addr[7],
         addr->v6.s6_addr[8],addr->v6.s6_addr[9], addr->v6.s6_addr[10],addr->v6.s6_addr[11],
         addr->v6.s6_addr[12],addr->v6.s6_addr[13], addr->v6.s6_addr[14],addr->v6.s6_addr[15],
         port);
   } else {
-    printk("Unknown IPv=%d", ip_version);
+    printk("IP=? (v=%d) ", ip_version);
   }
   return;
 }
@@ -173,17 +173,14 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
   printk("[PF_RING][DEBUG] %s:%d " fmt,  __FUNCTION__, __LINE__, ## __VA_ARGS__); }
 
 #define debug_printk_rule_session(rule) \
-  printk("[vlan=%u,proto=%d,", (rule)->vlan_id, (rule)->proto); \
-  printk("("); printk_addr((rule)->ip_version,&(rule)->host_peer_a, (rule)->port_peer_a); printk(")"); \
-  printk(","); \
-  printk("("); printk_addr((rule)->ip_version,&(rule)->host_peer_b, (rule)->port_peer_b); printk(")"); \
-  printk("]");
+  printk("vlan=%u proto=%d ", (rule)->vlan_id, (rule)->proto); \
+  printk_addr((rule)->ip_version,&(rule)->host_peer_a, (rule)->port_peer_a); \
+  printk_addr((rule)->ip_version,&(rule)->host_peer_b, (rule)->port_peer_b); \
 
 #define debug_printk_rules_comparison(debug_level, rule_a, rule_b) { \
   if (debug_on(debug_level)) { \
     printk("[PF_RING][DEBUG] %s:%d Comparing ", __FUNCTION__, __LINE__); \
     debug_printk_rule_session(rule_a); \
-    printk(" <-> "); \
     debug_printk_rule_session(rule_b); \
     printk("\n"); \
   } \
@@ -2427,8 +2424,8 @@ static int hash_bucket_match(sw_filtering_hash_bucket *hash_bucket,
 
 /* ********************************** */
 
-static inline int compare_hash_filtering_rules(hash_filtering_rule *a,
-				     hash_filtering_rule *b)
+static inline int hash_filtering_rule_match(hash_filtering_rule *a,
+					    hash_filtering_rule *b)
 {
   debug_printk_rules_comparison(2, a, b);
 
@@ -2465,15 +2462,7 @@ static inline int compare_hash_filtering_rules(hash_filtering_rule *a,
 static inline int hash_bucket_match_rule(sw_filtering_hash_bucket *hash_bucket,
 				  hash_filtering_rule *rule)
 {
-  return compare_hash_filtering_rules(&hash_bucket->rule, rule);
-}
-
-/* ********************************** */
-
-static inline int hash_filtering_rule_match(hash_filtering_rule *a,
-				     hash_filtering_rule *b)
-{
-  return compare_hash_filtering_rules(a,b);
+  return hash_filtering_rule_match(&hash_bucket->rule, rule);
 }
 
 /* ********************************** */
@@ -3002,7 +2991,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
 				  rule->rule.port_peer_a, rule->rule.port_peer_b)
     % perfect_rules_hash_size;
 
-  debug_printk_rule_info(2, &rule->rule, ", hash_idx=%u, rule_id=%u, add_rule=%d\n",
+  debug_printk_rule_info(2, &rule->rule, "hash_idx=%u rule_id=%u add_rule=%d\n",
     hash_idx, rule->rule.rule_id, add_rule);
 
   if(add_rule) {
@@ -7253,7 +7242,7 @@ static int ring_getsockopt(struct socket *sock,
 	  return(-EFAULT);
 	}
 
-	debug_printk_rule_info(2, &rule, " SO_GET_HASH_FILTERING_RULE_STATS: rule_id=%u\n", rule.rule_id);
+	debug_printk_rule_info(2, &rule, "SO_GET_HASH_FILTERING_RULE_STATS rule_id=%u\n", rule.rule_id);
 
 	hash_idx = hash_pkt(rule.vlan_id, zeromac, zeromac,
 	                    rule.ip_version, rule.proto,
