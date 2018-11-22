@@ -107,9 +107,9 @@ u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 struct timeval lastTime, startTime;
-int reforge_mac = 0, reforge_ip = 0, on_the_fly_reforging = 0;
+int reforge_src_mac = 0, reforge_dst_mac = 0, reforge_ip = 0, on_the_fly_reforging = 0;
 struct in_addr srcaddr, dstaddr;
-char mac_address[6];
+char srcmac[6], dstmac[6];
 int send_len = 60;
 int daemon_mode = 0;
 int num_ip = 1, ip_offset = 0;
@@ -246,6 +246,7 @@ void printHelp(void) {
   printf("-r <Gbps rate>  Rate to send (example -r 2.5 sends 2.5 Gbit/sec, -r -1 pcap capture rate)\n");
   printf("-p <pps rate>   Rate to send (example -p 100 send 100 pps)\n");
 #endif
+  printf("-M <src MAC>    Reforge source MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
   printf("-S <ip>         Use <ip> as base source IP for -b (default: 10.0.0.1)\n");
@@ -317,7 +318,8 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
   l2_len = sizeof(struct ether_header);
 
   for(i=0; i<12; i++) buffer[i] = i;
-  if(reforge_mac) memcpy(buffer, mac_address, 6);
+  if(reforge_dst_mac) memcpy(buffer, dstmac, 6);
+  if(reforge_src_mac) memcpy(&buffer[6], srcmac, 6);
 
   if (forge_vlan) { 
     vlan = (struct eth_vlan_hdr *) &buffer[l2_len];
@@ -383,7 +385,8 @@ static struct pfring_pkthdr hdr; /* note: this is static to be (re)used by on th
 static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use_prev_hdr) {
   struct ip_header *ip_header;
 
-  if (reforge_mac) memcpy(buffer, mac_address, 6);
+  if (reforge_dst_mac) memcpy(buffer, dstmac, 6);
+  if (reforge_src_mac) memcpy(&buffer[6], srcmac, 6);
 
   if (reforge_ip) {
     if (!use_prev_hdr) {
@@ -459,7 +462,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:p:P:S:w:V:z")) != -1) {
+  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z")) != -1) {
     switch(c) {
     case 'b':
       num_ip = atoi(optarg);
@@ -524,9 +527,19 @@ int main(int argc, char* argv[]) {
 	printf("Invalid MAC address format (XX:XX:XX:XX:XX:XX)\n");
 	return(0);
       } else {
-	reforge_mac = 1;
-	mac_address[0] = mac_a, mac_address[1] = mac_b, mac_address[2] = mac_c;
-	mac_address[3] = mac_d, mac_address[4] = mac_e, mac_address[5] = mac_f;
+	reforge_dst_mac = 1;
+	dstmac[0] = mac_a, dstmac[1] = mac_b, dstmac[2] = mac_c;
+	dstmac[3] = mac_d, dstmac[4] = mac_e, dstmac[5] = mac_f;
+      }
+      break;
+    case 'M':
+      if(sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &mac_a, &mac_b, &mac_c, &mac_d, &mac_e, &mac_f) != 6) {
+	printf("Invalid MAC address format (XX:XX:XX:XX:XX:XX)\n");
+	return(0);
+      } else {
+	reforge_src_mac = 1;
+	srcmac[0] = mac_a, srcmac[1] = mac_b, srcmac[2] = mac_c;
+	srcmac[3] = mac_d, srcmac[4] = mac_e, srcmac[5] = mac_f;
       }
       break;
     case 'S':
@@ -671,7 +684,7 @@ int main(int argc, char* argv[]) {
 	    } else {
 	      memcpy(p->pkt, pkt, p->len);
             }
-	    if(reforge_mac || reforge_ip)
+	    if(reforge_dst_mac || reforge_src_mac || reforge_ip)
               reforge_packet((u_char *) p->pkt, p->len, ip_offset + num_pcap_pkts, 0); 
 	  }
 
