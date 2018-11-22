@@ -65,7 +65,7 @@ for IF in $INTERFACES ; do
 		# Enable n-tuple hw filters
 		#ethtool -K $IF ntuple on
 
-		# Virtual Functions (host)
+		# Virtual Functions with KVM and virsh (host configuration)
 		#
 		# 1. Enable SR-IOV support in your BIOS
 		#
@@ -78,9 +78,6 @@ for IF in $INTERFACES ; do
 		#
 		# Enable 2 Virtual Functions per interface (uncomment the following line before running the script)
 		#echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
-		#echo "Enable VFs on $IF with: echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs"
-		#
-		# SR-IOV with KV and virsh:
 		#
 		# 3. Create a XML file with bus/slot/function of the VF (see lscpi):
 		# <interface type='hostdev' managed='yes'>
@@ -95,6 +92,8 @@ for IF in $INTERFACES ; do
 		# 5. Assign more memory to the VM:
 		# $ virsh setmaxmem ubuntu14 2097152 --config
 		# $ virsh setmem ubuntu14 2097152
+
+		echo "VFs can be enabled on $IF running: echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs"
 	fi
 done
 

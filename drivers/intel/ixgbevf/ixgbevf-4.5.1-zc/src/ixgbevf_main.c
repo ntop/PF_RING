@@ -35,8 +35,6 @@
 #ifdef HAVE_PF_RING
 #include "pf_ring.h"
 
-#define IXGBE_MAX_NIC   32
-
 static unsigned int enable_debug = 0;
 module_param(enable_debug, uint, 0644);
 MODULE_PARM_DESC(enable_debug, "Set to 1 to enable debug tracing into the syslog");
@@ -903,7 +901,7 @@ int wait_packet_function_ptr(void *data, int mode)
 	int new_packets;
 
 	if(unlikely(enable_debug))
-		printk("%s(): enter [mode=%d/%s][queueId=%d]\n",
+		printk("%s: [mode=%d/%s][queueId=%d]\n",
 		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
 		       rx_ring->queue_index);
 
@@ -921,7 +919,7 @@ int wait_packet_function_ptr(void *data, int mode)
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
 				if(unlikely(enable_debug))
-	 				printk("%s(): Packet not arrived yet: enabling interrupts, queue=%d\n",
+	 				printk("%s: Packet not arrived yet: enabling interrupts, queue=%d\n",
 					       __FUNCTION__, q_vector->v_idx);
 			}
 
@@ -930,7 +928,7 @@ int wait_packet_function_ptr(void *data, int mode)
 		}
 
 		if(unlikely(enable_debug))
-			printk("%s(): Packet received: %d\n", __FUNCTION__, new_packets);
+			printk("%s: Packet received: %d\n", __FUNCTION__, new_packets);
 
 		return new_packets;
 	} else {
@@ -942,7 +940,7 @@ int wait_packet_function_ptr(void *data, int mode)
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
 		if (unlikely(enable_debug))
-			printk("%s(): Disabled interrupts, queue = %d\n", __FUNCTION__, q_vector->v_idx);
+			printk("%s: Disabled interrupts, queue = %d\n", __FUNCTION__, q_vector->v_idx);
 
 		return 0;
  	}
@@ -2963,7 +2961,16 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 			tx_info.packet_memory_num_slots     = tx_ring->count;
 			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
-	      
+	     
+			if(unlikely(enable_debug))
+				printk("%s: [rx-ring=%u/%u/%u][tx-ring=%u/%u/%u]\n", __FUNCTION__,
+				  rx_info.packet_memory_num_slots,
+				  rx_info.packet_memory_slot_len,
+				  rx_ring->size,
+				  tx_info.packet_memory_num_slots,
+				  tx_info.packet_memory_slot_len,
+				  tx_ring->size);
+ 
 			hook->zc_dev_handler(add_device_mapping,
 			  &rx_info,
 			  &tx_info,
@@ -3443,6 +3450,9 @@ static void ixgbevf_set_num_queues(struct ixgbevf_adapter *adapter)
 		adapter->num_rx_queues = num_tcs;
 	} else {
 		u16 rss = min_t(u16, num_online_cpus(), IXGBEVF_MAX_RSS_QUEUES);
+#ifdef HAVE_PF_RING
+		rss = 1;
+#endif
 
 		switch (hw->api_version) {
 		case ixgbe_mbox_api_11:

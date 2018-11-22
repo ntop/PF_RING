@@ -27,12 +27,11 @@ FAMILY=ixgbevf
 #echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
 
 # Remove old modules (if loaded)
+# Note: if we are in the host, pf_ring and ixgbe-zc are running and pf_ring will not be removed (expected)
 rmmod ixgbevf
 rmmod pf_ring
 
-# We assume that you have compiled PF_RING
 insmod ../../../../../kernel/pf_ring.ko
-
 insmod ./ixgbevf.ko
 
 sleep 1
