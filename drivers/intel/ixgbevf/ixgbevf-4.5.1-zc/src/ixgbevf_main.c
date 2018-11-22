@@ -1016,6 +1016,9 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				rx_desc->read.pkt_addr = 0;
 				rx_desc->read.hdr_addr = 0;
 			}
+		
+			ixgbevf_configure_rx_ring(adapter, rx_ring);
+			rmb();
 
 			ixgbevf_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
 		}
