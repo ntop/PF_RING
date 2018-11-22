@@ -55,7 +55,7 @@
 
 static pfring_ft_table *ft = NULL;
 static u_int32_t ft_flags = 0;
-static u_int8_t port = 0, do_loop = 1;
+static u_int8_t port = 0, twin_port = 0xFF, do_loop = 1;
 static u_int8_t verbose = 0;
 
 static const struct rte_eth_conf port_conf_default = {
@@ -67,34 +67,45 @@ static const struct rte_eth_conf port_conf_default = {
 static inline int port_init(struct rte_mempool *mbuf_pool) {
   struct rte_eth_conf port_conf = port_conf_default;
   const u_int16_t rx_rings = 1, tx_rings = 1;
-  int retval;
+  int retval, i;
   u_int16_t q;
 
-  /* 1 RX queue */
-  retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
+  for(i=0; i<2; i++) {
+    u_int8_t port_id = (i == 0) ? port : twin_port;
+    unsigned int numa_socket_id;
+    
+    if(port_id == 0xFF) break;
 
-  if (retval != 0)
-    return retval;
+    printf("Configuring port %u...\n", port_id);
 
-  for (q = 0; q < rx_rings; q++) {
-    retval = rte_eth_rx_queue_setup(port, q, RX_RING_SIZE, rte_eth_dev_socket_id(port), NULL, mbuf_pool);
+    /* 1 RX queue */
+    retval = rte_eth_dev_configure(port_id, rx_rings, tx_rings, &port_conf);
+    
+    if (retval != 0)
+      return retval;    
+
+    numa_socket_id = rte_eth_dev_socket_id(port_id);
+    
+    for (q = 0; q < rx_rings; q++) {
+      retval = rte_eth_rx_queue_setup(port_id, q, RX_RING_SIZE, numa_socket_id, NULL, mbuf_pool);
+      if (retval < 0)
+	return retval;
+    }
+
+    for (q = 0; q < tx_rings; q++) {
+      retval = rte_eth_tx_queue_setup(port_id, q, TX_RING_SIZE, numa_socket_id, NULL);
+      if (retval < 0)
+	return retval;
+    }
+
+    retval = rte_eth_dev_start(port_id);
+
     if (retval < 0)
       return retval;
+
+    rte_eth_promiscuous_enable(port_id);
   }
-
-  for (q = 0; q < tx_rings; q++) {
-    retval = rte_eth_tx_queue_setup(port, q, TX_RING_SIZE, rte_eth_dev_socket_id(port), NULL);
-    if (retval < 0)
-      return retval;
-  }
-
-  retval = rte_eth_dev_start(port);
-
-  if (retval < 0)
-    return retval;
-
-  rte_eth_promiscuous_enable(port);
-
+  
   return 0;
 }
 
@@ -139,54 +150,64 @@ void processFlow(pfring_ft_flow *flow, void *user){
 static void packet_consumer(void) {
   pfring_ft_pcap_pkthdr h;
   pfring_ft_ext_pkthdr ext_hdr = { 0 };
-  u_int32_t i;
 
   printf("Capturing from port %u...\n", port);
-  
-  if (rte_eth_dev_socket_id(port) > 0 && rte_eth_dev_socket_id(port) != (int) rte_socket_id()) {
-    printf("WARNING: port %u and processing core %u are on different NUMA nodes\n", port, rte_lcore_id());
-  }
 
   while (do_loop) {
-    struct rte_mbuf *bufs[BURST_SIZE];
-    u_int16_t num;
+    u_int32_t idx;
+    
+    for(idx=0; idx<2; idx++) {
+      u_int8_t port_id      = (idx == 0) ? port      : twin_port;
+      u_int8_t twin_port_id = (idx == 0) ? twin_port : port;
+      struct rte_mbuf *bufs[BURST_SIZE];
+      u_int16_t num;
+      u_int32_t i;
+      
+      if(port_id == 0xFF) continue;
 
-    num = rte_eth_rx_burst(port, 0, bufs, BURST_SIZE);
+      num = rte_eth_rx_burst(port_id, 0, bufs, BURST_SIZE);
 
-    if (unlikely(num == 0)) {
-      pfring_ft_housekeeping(ft, time(NULL));
-      continue;
-    }
-
-    for (i = 0; i < PREFETCH_OFFSET && i < num; i++)
-      rte_prefetch0(rte_pktmbuf_mtod(bufs[i], void *));
-
-    for (i = 0; i < num; i++) {
-      char *data = rte_pktmbuf_mtod(bufs[i], char *);
-      int len = rte_pktmbuf_pkt_len(bufs[i]);
-      pfring_ft_action action;
-
-      h.len = h.caplen = len;
-      gettimeofday(&h.ts, NULL);
-
-      action = pfring_ft_process(ft, (const u_char *) data, &h, &ext_hdr);
- 
-      if (verbose) {
-        int j;
-
-        printf("[Packet] hex: ");
-        for (j = 0; j < len; j++)
-          printf("%02X ", data[j] & 0xFF);
-
-        if (action == PFRING_FT_ACTION_DISCARD)
-          printf(" [discard]");
-
-        printf("\n");
+      if (unlikely(num == 0)) {
+	pfring_ft_housekeeping(ft, time(NULL));
+	continue;
       }
 
-      rte_pktmbuf_free(bufs[i]);
-    }
-  }
+      for (i = 0; i < PREFETCH_OFFSET && i < num; i++)
+	rte_prefetch0(rte_pktmbuf_mtod(bufs[i], void *));
+
+      for (i = 0; i < num; i++) {
+	char *data = rte_pktmbuf_mtod(bufs[i], char *);
+	int len = rte_pktmbuf_pkt_len(bufs[i]);
+	pfring_ft_action action;
+	u_int8_t to_free = 1;
+	
+	h.len = h.caplen = len;
+	gettimeofday(&h.ts, NULL);
+
+	action = pfring_ft_process(ft, (const u_char *) data, &h, &ext_hdr);
+ 
+	if (verbose) {
+	  int j;
+
+	  printf("[Packet] hex: ");
+	  for (j = 0; j < len; j++)
+	    printf("%02X ", data[j] & 0xFF);
+
+	  if (action == PFRING_FT_ACTION_DISCARD)
+	    printf(" [discard]");
+
+	  printf("\n");
+	}
+
+	if((twin_port_id != 0xFF) && (action != PFRING_FT_ACTION_DISCARD)) {
+	  if(rte_eth_tx_burst(twin_port_id, 0, &bufs[i], 1) == 1)
+	    to_free = 0; /* Do not free this buffer */
+	}
+	
+	if(to_free) rte_pktmbuf_free(bufs[i]);
+      }
+    } /* for */
+  } /* while */
 }
 
 /* ************************************ */
@@ -194,10 +215,10 @@ static void packet_consumer(void) {
 static void print_help(void) {
   printf("ftflow_dpdk - (C) 2018 ntop.org\n");
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
-  printf("-p <id>     Port id\n");
-  printf("-7          Enable L7 protocol detection (nDPI)\n");
-  printf("-v          Verbose (print also raw packets)\n");
-  printf("-h          Print this help\n");
+  printf("-p <id>[,<id>]  Port id. Use -p <id>,<id> for bridge mode\n");
+  printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-v              Verbose (print also raw packets)\n");
+  printf("-h              Print this help\n");
 }
 
 /* ************************************ */
@@ -216,8 +237,16 @@ static int parse_args(int argc, char **argv) {
   while ((opt = getopt_long(argc, argvopt, "hp:v7", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'p':
-      if (optarg)
-        port = atoi(optarg);
+      if(optarg) {
+	char *p = strtok(optarg, ",");
+
+	if(p) {
+	  port = atoi(p);
+	  p = strtok(NULL, ",");
+	  if(p)
+	    twin_port = atoi(p);
+	}
+      }
       break;
     case '7':
       ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
