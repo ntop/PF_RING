@@ -10,8 +10,8 @@ BPFLIB=libnbpf.a
 all: nbpftest
 
 $(BPFLIB): $(OBJS)
-	ar rs $@ $(OBJS)
-	ranlib $@
+	$(AR) rs $@ $(OBJS)
+	$(RANLIB) $@
 
 nbpftest: $(BPFLIB) nbpftest.c
 	${CC} $(CFLAGS) -g nbpftest.c -o nbpftest $(BPFLIB) $(LIBS)

@@ -72,7 +72,7 @@ NPCAP_OBJS  = @NPCAP_OBJS@
 NBPF_HOME = ../nbpf
 NBPF_HDR = ${NBPF_HOME}/nbpf.h
 NBPF_LIB = ${NBPF_HOME}/libnbpf.a
-NBPF_OBJS = `ar t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
+NBPF_OBJS = `$(AR) t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 
 #
 # Object files
@@ -108,8 +108,8 @@ all: ${TARGETS}
 
 ${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
-	ar rs $@ ${OBJS} ${NBPF_OBJS}
-	ranlib $@
+	$(AR) rs $@ ${OBJS} ${NBPF_OBJS}
+	$(RANLIB) $@
 
 ${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
@@ -146,7 +146,7 @@ extract_npcap_lib:
 	@AR_X@ @NPCAP_LIB@
 
 extract_nbpf: ${NBPF_LIB}
-	ar x ${NBPF_LIB}
+	$(AR) x ${NBPF_LIB}
 	cp ${NBPF_HDR} .
 
 ${NBPF_LIB}:
