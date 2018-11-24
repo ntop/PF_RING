@@ -103,6 +103,8 @@ STATICLIB  = libpfring.a
 DYNAMICLIB = libpfring.so
 TARGETS    = ${STATICLIB} ${DYNAMICLIB}
 RING_H     = ../../kernel/linux/pf_ring.h
+AR ?= ar
+RANLIB ?= ranlib
 
 all: ${TARGETS}
 
