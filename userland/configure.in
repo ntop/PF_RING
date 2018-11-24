@@ -5,7 +5,7 @@ AC_CONFIG_FILES(lib/Makefile)
 
 AC_CHECK_HEADERS([linux/net_tstamp.h librdi.h])
 
-MACHINE=`uname -m`
+MACHINE=`$CC -c -Q --help=target | tr -d '[[:blank:]]' | grep "^\-march\=" | cut -d '=' -f 2`
 CFLAGS=""
 SYS_LIBS=""
 
@@ -92,7 +92,7 @@ else
 fi
 
 dnl> R/W locks are broken on some BSD releases
-if test "$IS_FREEBSD" != "1"; then
+if test "$IS_FREEBSD" != "1" && test "$cross_compiling" != "yes" ; then
   AC_MSG_CHECKING([if r/w locks are supported])
   AC_TRY_RUN([
   #include <pthread.h>

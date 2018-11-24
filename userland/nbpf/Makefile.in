@@ -3,6 +3,8 @@ YACC = bison
 INCLUDE = -I../lib -I../../kernel
 LIBS=`../lib/pfring_config --libs` -lpthread #@NDPI_LIB@
 CC=@CC@
+AR ?= ar
+RANLIB ?= ranlib
 CFLAGS=-Wall -fPIC -O2 ${INCLUDE} #@NDPI_INC@ @HAVE_NDPI@
 OBJS=nbpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o nbpf_mod_fiberblaze.o nbpf_mod_napatech.o
 BPFLIB=libnbpf.a
@@ -10,8 +12,8 @@ BPFLIB=libnbpf.a
 all: nbpftest
 
 $(BPFLIB): $(OBJS)
-	ar rs $@ $(OBJS)
-	ranlib $@
+	$(AR) rs $@ $(OBJS)
+	$(RANLIB) $@
 
 nbpftest: $(BPFLIB) nbpftest.c
 	${CC} $(CFLAGS) -g nbpftest.c -o nbpftest $(BPFLIB) $(LIBS)
