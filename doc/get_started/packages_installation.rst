@@ -51,11 +51,11 @@ the configuration for other card models is similar (replace ixgbe with your actu
 
 .. code-block:: console
 
-   mkdir -p /etc/pf_ring/zc/ixgbe
-   touch /etc/pf_ring/pf_ring.conf
-   echo "node=0 hugepagenumber=1024" > /etc/pf_ring/hugepages.conf 
-   echo "RSS=1,1" > /etc/pf_ring/zc/ixgbe/ixgbe.conf 
-   touch /etc/pf_ring/zc/ixgbe/ixgbe.start
+   sudo mkdir -p /etc/pf_ring/zc/ixgbe
+   sudo touch /etc/pf_ring/pf_ring.conf
+   echo "node=0 hugepagenumber=1024" | sudo tee /etc/pf_ring/hugepages.conf 
+   echo "RSS=1,1" | sudo tee /etc/pf_ring/zc/ixgbe/ixgbe.conf 
+   sudo touch /etc/pf_ring/zc/ixgbe/ixgbe.start
    tree /etc/pf_ring/
    |-- hugepages.conf
    |-- pf_ring.conf
@@ -74,14 +74,14 @@ if your system is using systemd run:
 
 .. code-block:: console
 
-   systemctl start pf_ring
+   sudo systemctl start pf_ring
    
 Otherwise you can use the init.d script:
 
 .. code-block:: console
 
-   touch /etc/pf_ring/pf_ring.start
-   /etc/init.d/pf_ring start
+   sudo touch /etc/pf_ring/pf_ring.start
+   sudo /etc/init.d/pf_ring start
 
 You can check that the ZC driver is actually running with:
 
