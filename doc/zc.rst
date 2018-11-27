@@ -30,15 +30,16 @@ networking (e.g. ping or SSH). If you open a device in zero copy using the "zc:"
 the device becomes unavailable to standard networking as it is accessed in zero-copy 
 through kernel bypass, as happened with the predecessor DNA. Once the application 
 accessing the device is closed, standard networking activities can take place again. 
-An interface in ZC mode provides the same performance  as DNA.
+An interface in ZC mode provides the same performance as DNA.
 
 Example:
 
 .. code-block:: console
 
-   pfcount -i zc:eth0
+   sudo pfcount -i zc:eth0
 
-If you omit 'zc:' you will open the device in PF_RING mode (no ZC).
+Note: if you omit 'zc:' you will open the device in standard PF_RING kernel mode (no ZC 
+acceleration).
 
 Supported Cards
 ---------------
@@ -69,18 +70,19 @@ Please note that:
 
 * in order to correctly configure the device, it is highly recommended to use the load_driver.sh script provided with the drivers (take a look at the script to fine-tune the configuration)
 * the PF_RING kernel module must be loaded before the ZC driver (the load_driver.sh script takes care of this)
-* ZC drivers need hugepages (the load_driver.sh script takes care of hugepages configuration). For more informations please read the *Hugepages Support* section.
+* ZC drivers need hugepages (the load_driver.sh script takes care of hugepages configuration). For more informations please read the `Hugepages Support <http://www.ntop.org/guides/pf_ring/hugepages.html>`_ section.
 
 Example loading PF_RING and the ixgbe-ZC driver:
 
 .. code-block:: console
 
-   cd <PF_RING PATH>/kernel
-   insmod pf_ring.ko
-   cd PF_RING/drivers/intel
+   cd PF_RING/kernel
+   make
+   sudo insmod ./pf_ring.ko
+   cd ../drivers/intel
    make
    cd ixgbe/ixgbe-*-zc/src
-   ./load_driver.sh
+   sudo ./load_driver.sh
 
 ZC API
 ------
@@ -111,7 +113,7 @@ devices have been created. In essence now you can do 10 Gbit line rate to your
 KVM using the same command you would use on a physical host, without changing a 
 single line of code.
 
-In PF_RING ZC you can use the zero-copy framework even with non-PF_RING aware drivers. 
+In PF_RING ZC you can use the zero-copy framework even with non-PF_RING-aware drivers. 
 This means that you can dispatch, process, originate, and inject packets into the 
 zero-copy framework even though they have not been originated from ZC devices. 
 Once the packet has been copied (one-copy) to the ZC world, from then onwards the 
