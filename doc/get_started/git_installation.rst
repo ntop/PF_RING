@@ -54,7 +54,7 @@ Example:
 .. code-block:: console
 
    cd PF_RING/kernel
-   insmod pf_ring.ko min_num_slots=65536 enable_tx_capture=0
+   sudo insmod pf_ring.ko min_num_slots=65536 enable_tx_capture=0
 
 If you want to achieve line-rate packet capture at 10 Gigabit and above, you should use 
 ZC drivers. ZC drivers are part of the PF_RING distribution and can be found in drivers/.
@@ -95,7 +95,7 @@ For instance, pfcount allows you to receive packets printing some statistics:
 
 .. code-block:: console
 
-   ./pfcount -i zc:eth1
+   sudo ./pfcount -i zc:eth1
    ...
    =========================
    Absolute Stats: [64415543 pkts rcvd][0 pkts dropped]
@@ -110,7 +110,7 @@ or optionally a *pcap* file) at an arbitrary rate:
 
 .. code-block:: console
 
-   ./pfsend -f 64byte_packets.pcap -n 0 -i zc:eth1 -r 5
+   sudo ./pfsend -f 64byte_packets.pcap -n 0 -i zc:eth1 -r 5
    ...
    TX rate: [current 7'508'239.00 pps/5.05 Gbps][average 7'508'239.00 pps/5.05 Gbps][total 7'508'239.00 pkts]
 
