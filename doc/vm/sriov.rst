@@ -2,15 +2,15 @@ SR-IOV with PF_RING ZC
 ======================
 
 SR-IOV allows a single physical PCI adapter to be shared by means of 
-different virtual functions. This is mainly used in virtual environments 
+different Virtual Functions (VF). This is mainly used in virtual environments 
 to allow different Virtual Machines to share a single physical interface 
 and improve network performance.
 
 PF_RING includes accelerated ZC drivers for Intel SR-IOV adapters based
 on ixgbe (ixgbevf). 
 
-Capture from a Virtual Function
--------------------------------
+Capture from a VF interface
+---------------------------
 
 In order to enable SR-IOV on an Intel ixgbe adapter, you can use sysfs.
 In the example below we enable 2 Virtual Functions for the interface eth1:
@@ -51,10 +51,10 @@ Function in ZC mode prepending "zc:" to the interface name:
 
    pfcount -i zc:enp3s16f1
 
-Assign a Virtual Function to a VM
----------------------------------
+Assign a VF to a VM on QEMU/KVM
+-------------------------------
 
-In order to assign a Virtual Function to a VM with virsh, follow the 
+In order to assign a Virtual Function to a VM using *virsh*, follow the 
 following steps:
 
 Edit /etc/default/grub as below:
@@ -114,3 +114,9 @@ Start the VM:
 
 At this point you should be able to load the *ixgbevf* driver as explained
 in the previous section, and capture traffic from the Virtual Function.
+
+Assign a VF to a VM on VMWare
+-----------------------------
+
+In order to configure the SR-IOV on VMWare, please refer to the 
+VMWare documentation according to your VMWare version.
