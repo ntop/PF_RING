@@ -1016,6 +1016,7 @@ int main(int argc, char* argv[]) {
 	add_drop_rule = 2;
 	break;
       }
+      use_extended_pkt_header = 1;
       break;
     case 'x':
       load_strings(optarg);      

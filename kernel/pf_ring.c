@@ -1942,9 +1942,6 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
   memcpy(&hdr->extended_hdr.parsed_pkt.smac, eh->h_source, sizeof(eh->h_source));
 
   hdr->extended_hdr.parsed_pkt.eth_type = ntohs(eh->h_proto);
-  hdr->extended_hdr.parsed_pkt.offset.eth_offset = 0;
-  hdr->extended_hdr.parsed_pkt.offset.vlan_offset = 0;
-  hdr->extended_hdr.parsed_pkt.vlan_id = 0; /* Any VLAN */
 
   if(hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_8021Q /* 802.1q (VLAN) */) {
     struct eth_vlan_hdr *vh;
