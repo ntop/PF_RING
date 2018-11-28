@@ -1,0 +1,39 @@
+all: install
+
+add: veryclean
+	\/bin/rm -rf /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
+	mkdir /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
+	cd @IXGBEVF@/@IXGBEVF@-@IXGBEVF_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
+	cd @IXGBEVF@/@IXGBEVF@-@IXGBEVF_VERSION@-zc/src ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
+	#sed -i -e 's|DRIVER_NAME=@IXGBEVF@|DRIVER_NAME=@IXGBEVF@_zc|g' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
+	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IXGBEVF@_zc' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
+	cp dkms.conf.@IXGBEVF@ /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/dkms.conf 
+	dkms add -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@
+
+build: add
+	dkms build -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@
+
+install: build
+	dkms install --force -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@
+
+deb: add add_deb install
+	dkms mkdeb -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@ --source-only
+
+rpm: add add_rpm install
+	dkms mkrpm -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@ --source-only
+
+add_rpm:
+	cp -f zc.spec /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/@IXGBEVF@-zc-dkms-mkrpm.spec
+
+add_deb:
+	cp -r zc-dkms-mkdeb /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/@IXGBEVF@-zc-dkms-mkdeb
+
+remove:
+	-dkms remove -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@ --all
+	\/bin/rm -f /lib/modules/*/weak-updates/ixgbevf*ko
+	\/bin/rm -f /lib/modules/*/extra/ixgbevf*ko
+	\/bin/rm -rf /var/lib/dkms/ixgbevf-zc
+
+veryclean: remove
+	\/bin/rm -fr /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
+	

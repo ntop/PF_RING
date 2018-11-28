@@ -1,6 +1,7 @@
 E1000E=e1000e/e1000e-3.4.0.2-zc
 IGB=igb/igb-5.3.5.18-zc
 IXGBE=ixgbe/ixgbe-5.3.7-zc
+IXGBEVF=ixgbevf/ixgbevf-4.5.1-zc
 I40E=i40e/i40e-2.4.6-zc
 FM10K=fm10k/fm10k-0.23.5-zc
 
@@ -10,6 +11,7 @@ all:
 	cd $(E1000E)/src; make
 	cd $(IGB)/src; make
 	cd $(IXGBE)/src; make
+	cd $(IXGBEVF)/src; make
 	cd $(I40E)/src; make
 	cd $(FM10K)/src; make
 
@@ -17,6 +19,7 @@ clean:
 	cd $(E1000E)/src; make clean
 	cd $(IGB)/src; make clean
 	cd $(IXGBE)/src; make clean
+	cd $(IXGBEVF)/src; make clean
 	cd $(I40E)/src; make clean
 	cd $(FM10K)/src; make clean
 	-/bin/rm *.deb *.rpm
@@ -43,6 +46,8 @@ dkms-deb: cleanup dkms-deb-virtual
 	cp /var/lib/dkms/igb-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.ixgbe deb
 	cp /var/lib/dkms/ixgbe-zc/*/deb/*.deb .
+	sudo make -f Makefile.dkms.ixgbevf deb
+	cp /var/lib/dkms/ixgbevf-zc/*/deb/*.deb .
 
 dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.fm10k rpm
@@ -50,6 +55,7 @@ dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.e1000e rpm
 	sudo make -f Makefile.dkms.igb rpm
 	sudo make -f Makefile.dkms.ixgbe rpm
+	sudo make -f Makefile.dkms.ixgbevf rpm
 
 dkms-rpm-virtual:
 	rpmbuild -ba pfring-zc-rpm.spec

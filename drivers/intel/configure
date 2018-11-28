@@ -588,6 +588,8 @@ E1000E_VERSION
 E1000E
 IGB_VERSION
 IGB
+IXGBEVF_VERSION
+IXGBEVF
 IXGBE_VERSION
 IXGBE
 I40E_VERSION
@@ -613,6 +615,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -677,6 +680,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -929,6 +933,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1066,7 +1079,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1219,6 +1232,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1679,11 +1693,15 @@ I40E="i40e"
 I40E_VERSION=`grep "I40E=" Makefile|cut -d '-' -f 2`
 IXGBE="ixgbe"
 IXGBE_VERSION=`grep "IXGBE=" Makefile|cut -d '-' -f 2`
+IXGBEVF="ixgbevf"
+IXGBEVF_VERSION=`grep "IXGBEVF=" Makefile|cut -d '-' -f 2`
 IGB="igb"
 IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
 E1000E="e1000e"
 E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
 REVISION=`git rev-list --all |wc -l`
+
+
 
 
 
@@ -1703,6 +1721,8 @@ ac_config_files="$ac_config_files Makefile.dkms.i40e"
 
 ac_config_files="$ac_config_files Makefile.dkms.ixgbe"
 
+ac_config_files="$ac_config_files Makefile.dkms.ixgbevf"
+
 ac_config_files="$ac_config_files Makefile.dkms.igb"
 
 ac_config_files="$ac_config_files Makefile.dkms.e1000e"
@@ -1712,6 +1732,8 @@ ac_config_files="$ac_config_files dkms.conf.fm10k"
 ac_config_files="$ac_config_files dkms.conf.i40e"
 
 ac_config_files="$ac_config_files dkms.conf.ixgbe"
+
+ac_config_files="$ac_config_files dkms.conf.ixgbevf"
 
 ac_config_files="$ac_config_files dkms.conf.igb"
 
@@ -2426,11 +2448,13 @@ do
     "Makefile.dkms.fm10k") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.fm10k" ;;
     "Makefile.dkms.i40e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.i40e" ;;
     "Makefile.dkms.ixgbe") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbe" ;;
+    "Makefile.dkms.ixgbevf") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbevf" ;;
     "Makefile.dkms.igb") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.igb" ;;
     "Makefile.dkms.e1000e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.e1000e" ;;
     "dkms.conf.fm10k") CONFIG_FILES="$CONFIG_FILES dkms.conf.fm10k" ;;
     "dkms.conf.i40e") CONFIG_FILES="$CONFIG_FILES dkms.conf.i40e" ;;
     "dkms.conf.ixgbe") CONFIG_FILES="$CONFIG_FILES dkms.conf.ixgbe" ;;
+    "dkms.conf.ixgbevf") CONFIG_FILES="$CONFIG_FILES dkms.conf.ixgbevf" ;;
     "dkms.conf.igb") CONFIG_FILES="$CONFIG_FILES dkms.conf.igb" ;;
     "dkms.conf.e1000e") CONFIG_FILES="$CONFIG_FILES dkms.conf.e1000e" ;;
 
