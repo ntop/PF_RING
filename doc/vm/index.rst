@@ -6,5 +6,6 @@ VM Support
     :numbered:
 
     virsh_hostdev
+    sriov
     kvm_zc
     
