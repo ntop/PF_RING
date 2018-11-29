@@ -1,5 +1,5 @@
-PCI Passthrough with ZC
-=======================
+PCI Passthrough with PF_RING ZC
+===============================
 
 In order to capture traffic from an Intel/ZC interface using PF_RING ZC 
 drivers on a VM, you need to assign the network device to the VM in your 
