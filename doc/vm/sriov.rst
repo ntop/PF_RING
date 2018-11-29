@@ -112,8 +112,8 @@ Start the VM:
 
    virsh start ubuntu16
 
-At this point you should be able to load the *ixgbevf* driver as explained
-in the previous section, and capture traffic from the Virtual Function.
+At this point you can log into the VM, load the *ixgbevf* driver (as explained
+in the previous section) and capture traffic from the Virtual Function.
 
 Assign a VF to a VM on VMWare
 -----------------------------
