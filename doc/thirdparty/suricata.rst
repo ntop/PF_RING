@@ -61,7 +61,11 @@ In order to take advantage of the PF_RING ZC drivers on Intel adapters, you also
 PF_RING FT Acceleration
 -----------------------
 
-In order to take advantage of the PF_RING FT L7 filtering/shunting, you also need to install nDPI: 
+In order to take advantage of the PF_RING FT L7 filtering/shunting, you also need nDPI.
+Since PF_RING 7.3 *ndpi* is installed as a dependency of *pfring* when installing
+from packages. If you are compiling from source code, or using an older version of PF_RING,
+you need to manually install the nDPI library from https://github.com/ntop/nDPI following
+the steps below:
 
 .. code-block:: console
    
