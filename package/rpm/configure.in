@@ -19,6 +19,14 @@ else
    EXTN="i386"
 fi
 
+if [ test -d $HOME/nDPI ]; then
+  NDPI_VERS=`cat $HOME/nDPI/configure.ac|grep C_INIT|cut -c 21-|rev|cut -c 3-|rev`
+  NDPI_RELEASE=`cd $HOME/nDPI ; git rev-list --all |wc -l | tr -d '[[:space:]]'`
+  NDPI_DEP="ndpi = $NDPI_VERS-$NDPI_RELEASE"
+else
+  NDPI_DEP=""
+fi
+
 dnl> The step below is necessary to make sure the package will work on the
 dnl> target system without having to deal with ldconfig
 dnl> if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so         /lib64; ln -s /lib64/libsnf.so /lib64/libsnf.so.0; fi
@@ -42,6 +50,7 @@ AC_SUBST(REVISION)
 AC_SUBST(GIT_BRANCH)
 AC_SUBST(GIT_HASH)
 AC_SUBST(EXTRA_REQUIRES)
+AC_SUBST(NDPI_DEP)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(pfring.spec)
