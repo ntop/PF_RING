@@ -5,11 +5,13 @@
 
 #
 # Cloud image download and configuration (as alternative to installing the system with vm-boot-cdrom.sh):
-#  wget https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-disk1.img
-#  mv https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-disk1.img zcvm-amd64.img 
-#  cloud-localds -H zcvm zcvm-seed.img vm-seed 
+#
+#   wget https://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-disk1.img
+#   mv xenial-server-cloudimg-amd64-disk1.img zcvm-amd64.img 
+#   cloud-localds -H zcvm zcvm-seed.img vm-seed 
+#
 # Add the option below to QEMU, and log into the VM with user 'ubuntu' and password 'ubuntu'
-# -drive file=zcvm-seed.img,if=virtio \
+#   -drive file=zcvm-seed.img,if=virtio \
 #
 
 qemu-system-x86_64 \
