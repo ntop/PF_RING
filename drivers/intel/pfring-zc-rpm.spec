@@ -8,7 +8,7 @@ URL: http://www.ntop.org/products/pf_ring/
 Packager: Luca Deri <deri@ntop.org>
 BuildArch: noarch
 # Temporary location where the RPM will be built
-Requires: e1000e-zc, igb-zc, ixgbe-zc, i40e-zc
+Requires: e1000e-zc, igb-zc, ixgbe-zc, ixgbevf-zc, i40e-zc
 # 
 
 
