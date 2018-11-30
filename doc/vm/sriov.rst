@@ -52,11 +52,11 @@ Function in ZC mode prepending "zc:" to the interface name:
 
    pfcount -i zc:enp3s16f1
 
-Assign a VF to a VM on QEMU/KVM
--------------------------------
+Assign a VF to a VM on QEMU/KVM (virsh)
+---------------------------------------
 
 In order to assign a Virtual Function to a VM using *virsh*, follow the 
-following steps:
+following steps.
 
 Edit /etc/default/grub as below:
 
@@ -112,6 +112,49 @@ Start the VM:
 .. code-block:: console
 
    virsh start ubuntu16
+
+At this point you can log into the VM, load the *ixgbevf* driver (as explained
+in the previous section) and capture traffic from the Virtual Function.
+
+Assign a VF to a VM on QEMU/KVM (manual)
+----------------------------------------
+
+In order to assign a Virtual Function to a VM **without** using *virsh*, follow 
+the following steps.
+
+Read the bus id for the VF:
+
+.. code-block:: console
+
+   ethtool -i enp3s16f1 | grep bus-info | cut -d ' ' -f2
+   0000:03:10.1
+
+Unbind the current driver:
+
+.. code-block:: console
+
+   echo 0000:03:10.1 > /sys/bus/pci/devices/0000\:03\:10.1/driver/unbind 
+
+Add the VF id the vfio driver:
+
+.. code-block:: console
+
+   modprobe vfio_pci
+   lspci -s 0000:03:10.1 -n
+   03:10.1 0200: 8086:10ed (rev 01)
+   echo "8086 10ed" > /sys/bus/pci/drivers/vfio-pci/new_id
+
+Check that the vfio-pci driver is set for the VF:
+
+.. code-block:: console
+
+   lspci -s 03:10.1 -k
+
+Add the VF to the QEMU configuration:
+
+.. code-block:: text
+
+   -device vfio-pci,host=03:10.1
 
 At this point you can log into the VM, load the *ixgbevf* driver (as explained
 in the previous section) and capture traffic from the Virtual Function.
