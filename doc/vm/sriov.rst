@@ -20,7 +20,7 @@ In the example below we enable 2 Virtual Functions for the interface eth1:
    echo '2' > /sys/bus/pci/devices/$(ethtool -i enp2s0f1 | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
 
 At this point, 2 new interfaces using the *ixgbevf* driver should appear 
-in *ifconfig -a*. Example:
+in *ifconfig -a* (e.g. enp3s16f1 and enp3s16f3). Example:
 
 .. code-block:: console
 
@@ -32,7 +32,8 @@ In order to steer the traffic to this interface, it is possible to use
 
 .. code-block:: console
 
-   ip link set enp3s16f1 vf 0 mac 00:01:02:03:04:05 vlan 1
+   ip link set enp2s0f1 vf 0 mac 00:01:02:03:04:05 vlan 1
+   ip link set enp2s0f1 vf 1 mac 00:01:02:03:04:06 vlan 1
 
 In order to enable the ZC driver for those interfaces, we need to load 
 the *ixgbevf* driver distributed with PF_RING. Example from source code:
