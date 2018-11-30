@@ -111,13 +111,15 @@ void print_stats() {
 
       snprintf(buf, sizeof(buf),
              "Duration:   %s\n"
-             "Flows:      %ju\n"
+             "ActFlows:   %ju\n"
+             "TotFlows:   %ju\n"
              "Errors:     %ju\n"
              "Packets:    %lu\n"
              "Dropped:    %lu\n"
              "Bytes:      %lu\n"
              "Throughput: %s pps (%s Gbps)",
              msec2dhmsm(delta_start, timebuf, sizeof(timebuf)),
+             fstat->active_flows,
              fstat->flows,
              fstat->err_no_room + fstat->err_no_mem,
              (long unsigned int) n_pkts,

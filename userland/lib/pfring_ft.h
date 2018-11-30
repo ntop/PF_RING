@@ -171,7 +171,8 @@ typedef struct {
 /*** stats struct ***/
 
 typedef struct {
-  u_int64_t flows;            /**< Number of flows */
+  u_int64_t active_flows;     /**< Number of currently active flows */
+  u_int64_t flows;            /**< Number of total flows */
   u_int64_t err_no_room;      /**< Flow creation errors due to no room left in the flow table */
   u_int64_t err_no_mem;       /**< Flow creation errors due to memory allocation failures */
   u_int64_t disc_no_ip;       /**< Number of packets not processed because L3 header was missing */

@@ -98,7 +98,8 @@ void print_stats() {
       deltaSec = (double)delta_time(&endTime, &lastTime)/1000000;
       diff = numPkts-lastPkts;
       fprintf(stderr, "=========================\n"
-	      "Actual Stats: %s pkts [%.1f ms][%s pkt/sec]\n",
+	      "Actual Stats: %ju flows %s pkts [%.1f ms][%s pkt/sec]\n",
+              fstat->active_flows,
 	      pfring_format_numbers(diff, buf1, sizeof(buf1), 0), deltaSec*1000,
 	      pfring_format_numbers(((double)diff/(double)(deltaSec)), buf2, sizeof(buf2), 1));
       lastPkts = numPkts;
