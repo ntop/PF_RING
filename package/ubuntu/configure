@@ -583,6 +583,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+NDPI_DEP
 PRE_BUILD_EXAMPLES
 PRE_DEP
 PFRING_VERS
@@ -1715,9 +1716,18 @@ else
    fi
 fi
 
+if  test -d $HOME/nDPI ; then
+  NDPI_VERS=`cat $HOME/nDPI/configure.ac|grep C_INIT|cut -c 21-|rev|cut -c 3-|rev`
+  NDPI_RELEASE=`cd $HOME/nDPI ; git rev-list --all |wc -l | tr -d '[:space:]'`
+  NDPI_DEP="ndpi (=$NDPI_VERS-$NDPI_RELEASE)"
+else
+  NDPI_DEP=""
+fi
+
 
 DATE=`date -R`
 KERNEL=`uname -r`
+
 
 
 
