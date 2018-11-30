@@ -107,9 +107,20 @@ nDPI Integration
 PF_RING FT is natively integrated with nDPI for providing L7 protocol information out of 
 the box. The application itself does not need to deal with the nDPI library directly as 
 everything happens behind the scenes. In order to get L7 information in the flow metadata 
-in *pfring_ft_flow_value.l7_protocol*, all you need to do is:
+in *pfring_ft_flow_value.l7_protocol*, all you need to do is to 
 
-1. install the nDPI library available at https://github.com/ntop/nDPI
+1. enable L7 detection through the *PFRING_FT_TABLE_FLAGS_DPI* flag:
+
+.. code-block:: c
+
+   ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI);
+
+2. read the L7 protocol from *pfring_ft_flow_value.l7_protocol*
+
+Note: since PF_RING 7.3 *ndpi* is installed as a dependency of *pfring* when installing
+from packages. If you are compiling from source code, or using an older version of PF_RING,
+you need to manually install the nDPI library from https://github.com/ntop/nDPI following
+the steps below:
 
 .. code-block:: console
 
@@ -118,15 +129,8 @@ in *pfring_ft_flow_value.l7_protocol*, all you need to do is:
    ./autogen.sh
    make && sudo make install
 
-.. note::  If you are installing a **stable** version of PF_RING, you should also clone latest stable version of nDPI.
-
-2. enable L7 detection through the *PFRING_FT_TABLE_FLAGS_DPI* flag:
-
-.. code-block:: c
-
-   ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI);
-
-3. read the L7 protocol from *pfring_ft_flow_value.l7_protocol*
+.. note::  If you are installing a **stable** version of PF_RING, you should also clone latest 
+stable version of nDPI, to make sure that the API is in sync.
 
 L7 Filtering and Shunting
 -------------------------
