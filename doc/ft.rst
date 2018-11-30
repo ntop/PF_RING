@@ -129,8 +129,7 @@ the steps below:
    ./autogen.sh
    make && sudo make install
 
-.. note::  If you are installing a **stable** version of PF_RING, you should also clone latest 
-stable version of nDPI, to make sure that the API is in sync.
+.. note::  If you are installing a **stable** version of PF_RING, you should also clone latest stable version of nDPI, to make sure that the API is in sync.
 
 L7 Filtering and Shunting
 -------------------------
