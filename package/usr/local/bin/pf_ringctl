@@ -16,7 +16,7 @@ fi
 PF_RING="pf_ring"
 PF_RING_CONFIG_DIR="/etc/pf_ring"
 DRIVERS_FLAVOR=("zc")
-DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe' 'i40e' 'fm10k')
+DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'fm10k')
 ERROR=0
 DRIVER_INSTALLED=0
 OLD_HUGEPAGES_CONFIG="${PF_RING_CONFIG_DIR}/hugepages"
@@ -280,7 +280,7 @@ load_zc() {
 	/sbin/modprobe configfs > /dev/null 2>&1
 
 	# load dkms drivers
-	# search for file under /etc/pf_ring/zc/{e1000e,igb,ixgbe,i40e,fm10k}/{e1000e,igb,ixgbe,i40e,fm10k}.conf
+	# search for file under /etc/pf_ring/zc/{e1000e,igb,ixgbe,ixgbevf,i40e,fm10k}/{e1000e,igb,ixgbe,ixgbevf,i40e,fm10k}.conf
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
 			if [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
