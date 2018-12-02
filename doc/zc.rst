@@ -54,7 +54,7 @@ the '-zc' suffix. Three driver families are currently available:
 
 - 10 Gbit
 
-  - ixgbe (RX and TX)
+  - ixgbe/ixgbevf (RX and TX)
 
 - 10/40 Gbit
 
