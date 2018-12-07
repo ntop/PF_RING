@@ -1684,13 +1684,13 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-VERS=`cat ../../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
+VERS=`../version.sh --release`
 PLATFORM=`uname -p`
 
 if which git >/dev/null; then
-   REVISION=`git rev-list --all |wc -l`
-   GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
-   GIT_HASH=`git log --pretty=format:"%H (%ad)"|head -1`
+   REVISION=`../version.sh --revision`
+   GIT_HASH=`../version.sh --hash`
+   GIT_BRANCH=`git branch | grep \* | cut -d ' ' -f2`
 else
    REVISION=nr
 fi
@@ -1704,9 +1704,8 @@ else
 fi
 
 if  test -d $HOME/nDPI ; then
-  NDPI_VERS=`cat $HOME/nDPI/configure.ac|grep C_INIT|cut -c 21-|rev|cut -c 3-|rev`
-  NDPI_RELEASE=`cd $HOME/nDPI ; git rev-list --all |wc -l | tr -d '[:space:]'`
-  NDPI_DEP="ndpi = $NDPI_VERS-$NDPI_RELEASE"
+  NDPI_VERSION=`$HOME/nDPI/packages/version.sh --version`
+  NDPI_DEP="ndpi = $NDPI_VERSION"
 else
   NDPI_DEP=""
 fi

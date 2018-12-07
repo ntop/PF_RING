@@ -1696,11 +1696,11 @@ fi
 cp debian/control.$UBUNTU_RELEASE.in debian/control.in
 
 MACHINE=`uname -m`
-REVISION=`git rev-list --all |wc -l`
-GIT_BRANCH=`git branch --no-color|cut -d ' ' -f 2`
-GIT_HASH=`git log --pretty=format:"%H (%ad)"|head -1`
+REVISION=`../version.sh --revision`
+GIT_BRANCH=`git branch | grep \* | cut -d ' ' -f2`
+GIT_HASH=`../version.sh --hash`
 
-PFRING_VERS=`cat $HOME/PF_RING/kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
+PFRING_VERS=`../version.sh --release`
 
 PRE_BUILD_EXAMPLES="pre-build-examples"
 
@@ -1717,9 +1717,8 @@ else
 fi
 
 if  test -d $HOME/nDPI ; then
-  NDPI_VERS=`cat $HOME/nDPI/configure.ac|grep C_INIT|cut -c 21-|rev|cut -c 3-|rev`
-  NDPI_RELEASE=`cd $HOME/nDPI ; git rev-list --all |wc -l | tr -d '[:space:]'`
-  NDPI_DEP="ndpi (=$NDPI_VERS-$NDPI_RELEASE)"
+  NDPI_VERSION=`$HOME/nDPI/packages/version.sh --version`
+  NDPI_DEP="ndpi (=$NDPI_VERSION)"
 else
   NDPI_DEP=""
 fi
