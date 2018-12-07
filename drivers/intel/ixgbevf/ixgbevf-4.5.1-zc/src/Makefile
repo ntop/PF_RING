@@ -26,7 +26,7 @@
 # Driver files
 
 # core driver files
-CFILES = ixgbevf_main.c ixgbe_mbx.c ixgbe_hv_vf.c ixgbe_vf.c ixgbevf_ethtool.c kcompat.c
+CFILES = ixgbevf_main.c ixgbe_mbx.c ixgbe_vf.c ixgbevf_ethtool.c kcompat.c
 
 HFILES = ixgbevf.h ixgbe_common.h ixgbevf_osdep.h kcompat.h ixgbe_mbx.h
 ifeq (,$(BUILD_KERNEL))
@@ -239,6 +239,12 @@ ifeq (1,$(shell [ $(KVER_CODE) -lt 197120 ] && echo 1 || echo 0))
 INSTDIR := /lib/modules/$(KVER)/kernel/drivers/net/$(DRIVER_NAME)
 else
 INSTDIR := /lib/modules/$(KVER)/kernel/drivers/net/ethernet/intel/$(DRIVER_NAME)
+endif
+
+HV_VF := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(CONFIG_FILE) | \
+        grep CONFIG_PCI_HYPERV | awk '{ print $$3 }')
+ifeq ($(HV_VF), 1)
+  CFILES += ixgbe_hv_vf.c
 endif
 
 # look for SMP in config.h
