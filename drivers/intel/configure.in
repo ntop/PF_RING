@@ -12,7 +12,7 @@ IGB="igb"
 IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
 E1000E="e1000e"
 E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
-REVISION=`git rev-list --all |wc -l`
+REVISION=`../../package/version.sh --revision`
 
 AC_SUBST(FM10K)
 AC_SUBST(FM10K_VERSION)
