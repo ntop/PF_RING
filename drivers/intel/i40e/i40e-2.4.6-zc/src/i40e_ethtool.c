@@ -283,6 +283,8 @@ static const struct i40e_priv_flags i40e_gl_gstrings_priv_flags[] = {
 #define I40E_GL_PRIV_FLAGS_STR_LEN ARRAY_SIZE(i40e_gl_gstrings_priv_flags)
 
 #endif /* HAVE_ETHTOOL_GET_SSET_COUNT */
+
+#if 0
 #ifndef ETHTOOL_GLINKSETTINGS
 #define I40E_LEGACY_LINK_MASK_SIZE 1
 /**
@@ -393,6 +395,8 @@ static void ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
 }
 
 #endif /* !ETHTOOL_GLINKSETTINGS */
+#endif
+
 /**
  * i40e_partition_setting_complaint - generic complaint for MFP restriction
  * @pf: the PF struct
@@ -1261,7 +1265,11 @@ static int i40e_get_settings(struct net_device *netdev,
 	struct ethtool_link_ksettings ks;
 
 	i40e_get_link_ksettings(netdev, &ks);
+#if 0
 	i40e_ethtool_ksettings_to_cmd(&ks, ecmd);
+#else
+	_kc_ethtool_ksettings_to_cmd(&ks, ecmd);
+#endif
 	ecmd->transceiver = XCVR_EXTERNAL;
 	return 0;
 }
