@@ -178,7 +178,7 @@ fi
 if [ ! -f /.dockerenv ]; then
 %if 0%{?centos_ver} == 7
   /bin/systemctl restart pf_ring
-  /bin/systemctl restart "cluster@*"
+  /bin/systemctl restart cluster
 %else
   /etc/init.d/pf_ring restart
   /etc/init.d/cluster restart
