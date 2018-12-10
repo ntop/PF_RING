@@ -119,6 +119,8 @@ Where:
    - 2: Fan-out
    - 3: Fan-out (1st) + Round-Robin (2nd, 3rd, ..)
    - 4: GTP hash (Inner IP/Port or GTP-C Seq-Num)
+   - 5: GRE hash (Inner or Outer IP)
+   - 6: Interface X to queue X
 - -g is the core affinity for the capture/distribution thread
 - -c specifies the ZC cluster ID
 
