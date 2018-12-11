@@ -35,6 +35,17 @@ In order to steer the traffic to this interface, it is possible to use
    ip link set enp2s0f1 vf 0 mac 00:01:02:03:04:05 vlan 1
    ip link set enp2s0f1 vf 1 mac 00:01:02:03:04:06 vlan 1
 
+Please note that the adapter is configured to detect spoofed packets by
+default, this prevents you from working in promiscuous mode when
+generating traffic. In this case you get "Spoofed packets detected" logs
+in dmesg on the host where the Physical Function is running. It is possible
+to disable spoofing check in the adapter, example:
+
+.. code-block:: console
+
+   ip link set enp2s0f1 vf 0 spoofchk off
+   ip link set enp2s0f1 vf 1 spoofchk off
+
 In order to enable the ZC driver for those interfaces, we need to load 
 the *ixgbevf* driver distributed with PF_RING. Example from source code:
 
