@@ -10,14 +10,14 @@ queues) while maintaining flow continuity is usually the best option for
 scaling the performance, as long as our application is designed to work
 with multiple threads or processes and run on multiple CPU cores.
 
+RSS (Receive Side Scaling)
+--------------------------
+
 Almost all Intel (and other vendors) NICs have RSS support, this means they
 are able to hash packets in hardware in order to distribute the load across 
 multiple RX queues. In some cases RSS is not available or not flexible 
 enough (e.g. a custom distribution function is needed) and it can be 
 replaced by software distribution using ZC.
-
-RSS (Receive Side Scaling)
---------------------------
 
 In order to configure the number of queues, you can use the RSS parameter at 
 insmod time (if you are installing PF_RING ZC drivers from packages you can 
@@ -85,6 +85,45 @@ interface and capturing from eth1 means capturing from all the queues. This
 happens because ZC is a kernel-bypass technology, thus there is no abstraction,
 and the application directly opens an interface queue, which corresponds to the
 full interface only when RSS=1.
+
+PF_RING Cluster (Kernel)
+------------------------
+
+Since not all network adapters feature RSS support to distribute the load across 
+multiple RX queues in hardware, the PF_RING kernel module implements a mechanisms 
+named clustering to partition and load-balance traffic across processes. This 
+means that different applications opening PF_RING sockets can bind them to a 
+specific cluster ID (via pfring_set_cluster) for joining the forces and each 
+analyze a portion of the packets.
+The way packets are partitioned across cluster sockets is specified in the cluster 
+policy. The default policy is per-flow (i.e. all the packets belonging to the same 
+5-tuple <proto, ip src/dst, port src/dst>), however there are a few options. This
+way all packets belonging to the same flow will go to the same application, preserving
+the application logic as traffic will be consistent.
+An example of kernel clustering is provided by pfcount:
+
+.. code-block:: console
+
+   pfcount -i eth1 -c 10 -H 5
+   
+Where:
+
+- -c 10 specifies the Cluster ID
+- -H 5 specifies the load-balancing policy:
+   -  1 - round-robin
+   -  2 - src ip,           dst ip 
+   -  3 - src ip, src port, dst ip, dst port
+   -  4 - src ip, src port, dst ip, dst port, proto (default)
+   -  0 - src ip, src port, dst ip, dst port, proto, vlan
+   -  5 - src ip, src port, dst ip, dst port, proto for TCP, src ip, dst ip otherwise
+   -  7 - tunneled src ip,           dst ip
+   -  8 - tunneled src ip, src port, dst ip, dst port
+   -  9 - tunneled src ip, src port, dst ip, dst port, proto (default)
+   -  6 - tunneled src ip, src port, dst ip, dst port, proto, vlan
+   - 10 - tunneled src ip, src port, dst ip, dst port, proto for TCP, src ip, dst ip otherwise                  
+   
+Note: kernel clustering cannot be used in combination with ZC driver as ZC is a 
+kernel-bypass technology.
 
 ZC Load-Balancing (zbalance_ipc)
 --------------------------------
