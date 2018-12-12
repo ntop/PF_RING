@@ -57,3 +57,5 @@ be consistent. On the other hand if you have a specific flow that takes most of 
 application that will handle such flow will be over-flooded by packets and thus the traffic will not be heavily 
 balanced.
 
+For more information about kernel clustering please read the `PF_RING Kernel Cluster section <http://www.ntop.org/guides/pf_ring/rss.html#pf-ring-cluster-kernel>`_.
+
