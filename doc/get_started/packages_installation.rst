@@ -26,7 +26,7 @@ The init script acts as follows:
 
 .. code-block:: console
 
-   node=<NUMA node id> hugepagenumber=<number of pages>
+   node=<NUMA node id> hugepagenumber=<number of pages> [gid=<GID>]
 
 Below you can find a configuration example for using PF_RING with standard drivers.
 In this example we tune the kernel buffer size (min_num_slots parameter) to improve 
