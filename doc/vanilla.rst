@@ -21,6 +21,27 @@ the space used in the ring for storing the packet just read will be used for acc
 This means that applications willing to keep a packet archive, must store themselves the packets just read 
 as the PF_RING will not preserve them.
 
+Packet Parsing
+--------------
+
+PF_RING supports a packet parser able to extract metadata from L2/L3/L4 headers. Packet parsing can be 
+enabled when using the pf_ring kernel module (standard drivers) setting the PF_RING_LONG_HEADER flag when
+calling *pfring_open()*, or explicitly calling *pfring_parse_pkt()* (this is usefile when using kernel-bypass 
+technologies). Parsing metadata are stored in the packet header, in the *struct pfring_pkthdr.extended_hdr*.
+
+Tunneling and Encapsulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The PF_RING parser is able to recognize various tunneling and encapsulation protocols such as:
+
+- VLAN/QinQ
+- MPLS
+- GRE
+- GTP
+
+Metadata about the inner headers are also stored in the *struct pfring_pkthdr* struct, please refer to
+the API documentation and the header files for an updated list of extracted fields.
+
 Packet Filtering
 ----------------
 
