@@ -56,10 +56,10 @@ AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SE
 if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
 AC_MSG_CHECKING([PF_RING ZC support])
-PF_RING_ZC_LIB="libs/libpfring_zc_$MACHINE$LIBARCH.a"
+PF_RING_ZC_LIB="libs/libpfring_zc_${MACHINE}${LIBARCH}.a"
 if test -f lib/$PF_RING_ZC_LIB; then
   HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
-  PF_RING_ZC_OBJS=`ar t lib/$PF_RING_ZC_LIB | grep -F .o | tr '\n' ' '`
+  PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB} | grep -F .o | tr '\n' ' '`
   PF_RING_ZC_DEP="extract_pfring_zc_lib"
   PF_RING_ZC_H="pfring_zc.h"
   AC_MSG_RESULT(yes)
@@ -68,10 +68,10 @@ else
 fi
 
 AC_MSG_CHECKING([PF_RING FT support])
-PF_RING_FT_LIB="libs/libpfring_ft_$MACHINE$LIBARCH.a"
+PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}_dl.a"
 if test -f lib/$PF_RING_FT_LIB; then
   HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
-  PF_RING_FT_OBJS=`ar t lib/$PF_RING_FT_LIB | grep -F .o | tr '\n' ' '`
+  PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
   PF_RING_FT_DEP="extract_pfring_ft_lib"
   PF_RING_FT_H="pfring_ft.h"
   AC_MSG_RESULT(yes)
@@ -80,10 +80,10 @@ else
 fi
 
 AC_MSG_CHECKING([PF_RING NPCAP support])
-NPCAP_LIB="libs/libnpcap_$MACHINE$LIBARCH.a"
+NPCAP_LIB="libs/libnpcap_${MACHINE}${LIBARCH}.a"
 if test -f lib/$NPCAP_LIB; then
   HAVE_NPCAP="-D HAVE_NPCAP"
-  NPCAP_OBJS=`ar t lib/$NPCAP_LIB | grep -F .o | tr '\n' ' '`
+  NPCAP_OBJS=`ar t lib/${NPCAP_LIB} | grep -F .o | tr '\n' ' '`
   NPCAP_DEP="extract_npcap_lib"
   NPCAP_H="npcap.h"
   AC_MSG_RESULT(yes)
