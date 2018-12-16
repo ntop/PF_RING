@@ -212,6 +212,8 @@ static void empty_unit(int chassis, int geoslot) {
 
 		bigger_buffer = (char *)realloc(u->imsg, 1);				/* and re-allocate the old large buffer into a new small one */
 		if (bigger_buffer == NULL) {	/* oops, realloc call failed */
+			free(u->imsg);
+			u->imsg = NULL;
 			fprintf(stderr, "Warning...call to realloc() failed, value of errno is %d\n", errno);
 			return;
 		}
@@ -689,6 +691,8 @@ static int process_client_data (char *errbuf) {								/* returns: -1 = error, 0
 				newname = translate_IOP_to_pcap_name(u, iff->name, interfaceType);		/* add a translation entry and get a point to the mangled name */
 				bigger_buffer = realloc(iff->name, strlen(newname) + 1));
 				if (bigger_buffer == NULL) {	/* we now re-write the name stored in the interface list */
+					free(iff->name);
+					iff->name = NULL;
 					pcap_snprintf(errbuf, PCAP_ERRBUF_SIZE, "realloc: %s", pcap_strerror(errno));
 					return -1;
 				}
@@ -705,13 +709,20 @@ static int read_client_data (int fd) {
 	int				chassis, geoslot;
 	unit_t			*u;
 	int				len;
+	void *			tmp;
 
 	find_unit_by_fd(fd, &chassis, &geoslot, &u);
 
 	if ((len = recv(fd, buf, sizeof(buf), 0)) <= 0)	return 0;	/* read in whatever data was sent to us */
 
-	if ((u->imsg = realloc(u->imsg, (u->len + len))) == NULL)	/* extend the buffer for the new data */
+	//if ((u->imsg = realloc(u->imsg, (u->len + len))) == NULL)	/* extend the buffer for the new data */
+	tmp = realloc(u->imsg, (u->len + len));
+	if(tmp){
+		u->imsg = tmp;
+	}else{
+		free(u->imsg);
 		return 0;
+	}
 	memcpy((u->imsg + u->len), buf, len);						/* append the new data */
 	u->len += len;
 	return 1;
