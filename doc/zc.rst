@@ -68,21 +68,12 @@ These drivers can be found in drivers/
 
 Please note that:
 
-* in order to correctly configure the device, it is highly recommended to use the load_driver.sh script provided with the drivers (take a look at the script to fine-tune the configuration)
-* the PF_RING kernel module must be loaded before the ZC driver (the load_driver.sh script takes care of this)
+* in order to correctly configure the device, it is highly recommended to use systemd
+creating a configuration as explained in the `Installing from packages <http://www.ntop.org/guides/pf_ring/get_started/packages_installation.html>`_ section,
+or use the *load_driver.sh* script provided with the drivers as explained in the 
+`Installing from GIT <http://www.ntop.org/guides/pf_ring/get_started/git_installation.html>`_ section.
+* the PF_RING kernel module must be loaded before the ZC driver (systemd and load_driver.sh takes care of this)
 * ZC drivers need hugepages (the load_driver.sh script takes care of hugepages configuration). For more informations please read the `Hugepages Support <http://www.ntop.org/guides/pf_ring/hugepages.html>`_ section.
-
-Example loading PF_RING and the ixgbe-ZC driver:
-
-.. code-block:: console
-
-   cd PF_RING/kernel
-   make
-   sudo insmod ./pf_ring.ko
-   cd ../drivers/intel
-   make
-   cd ixgbe/ixgbe-*-zc/src
-   sudo ./load_driver.sh
 
 ZC API
 ------
