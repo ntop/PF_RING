@@ -141,6 +141,54 @@ for capturing traffic from one or multiple interfaces, and load-balance packets 
 processes. Please read the `ZC Load-Balancing <https://www.ntop.org/guides/pf_ring/rss.html#zc-load-balancing-zbalance-ipc>`_ 
 section to learn more about this application.
 
+Divide and Conquer
+------------------
 
+**zbalance_DC_ipc** (in *PF_RING/userland/examples_zc*) is a sample application able to capture traffic
+from multiple interfaces or RSS queues, filter traffic using multiple capture threads, aggregate filtered 
+traffic from all interfaces in a single stream, and load-balance packets to multiple consumer processes.
 
+.. code-block:: text
 
+   eth1 \ 
+   eth2 - (Filtering Thread 0) \                                    / (Consumer Process 0) 
+                                 (FIFO Thread) - (Collector Thread) - (Consumer Process 1) 
+   eth2 - (Filtering Thread 1) /                                    \ (Consumer Process 2) 
+   eth3 / 
+
+Example capturing traffic from 4 interfaces, using 2 capture/filtering threads, and forwarding load-balanced 
+traffic to 3 consumer applications:
+
+.. code-block:: console
+
+   sudo ./zbalance -i zc:eth1,zc:eth2 -i zc:eth2,zc:eth3 -c 10 -m 1 -g 0:1 -r 2 -n 3
+   Run your consumers as follows:
+	   pfcount -i zc:10@0
+	   pfcount -i zc:10@1
+	   pfcount -i zc:10@2
+   =========================
+   Absolute Stats: Recv 534 pkts (0 drops) - Forwarded 534 pkts (0 drops)
+   Actual Stats: Recv 211.00 pps (0.00 drops) - Forwarded 211.00 pps (0.00 drops)
+   =========================
+
+Basic Packet Forwarding
+-----------------------
+
+**zbounce** (in *PF_RING/userland/examples_zc*) bridges traffic between an interface pair as a
+bump in the wire.
+
+Example:
+
+.. code-block:: console
+
+   sudo ./zbounce -i zc:eth1 -o zc:eth2 -c 10 -b -g 1:2
+   =========================
+   Absolute Stats: 360 pkts (0 drops) - 57'340 bytes
+   Actual Stats: 57.00 pps (0.00 drops) - 0.00 Gbps
+   =========================
+
+Where:
+
+- The number specified with -c is the cluster ID (the ZC API requires a unique identifier to identify a cluster instance)
+- -b specifies that we want to forward traffic in both directions (otherwise it will forward -i to -o only)
+- This sample application uses 1 thread per direction, thus -g requires 2 cores to set the CPU affinity for both threads
