@@ -33,6 +33,7 @@ In order to compile the PF_RING kernel module you need to have the linux kernel 
 
 Running PF_RING
 ---------------
+
 Before using any PF_RING application, the pf_ring kernel module should be loaded:
 
 .. code-block:: console
@@ -56,10 +57,26 @@ Example:
    cd PF_RING/kernel
    sudo insmod pf_ring.ko min_num_slots=65536 enable_tx_capture=0
 
-If you want to achieve line-rate packet capture at 10 Gigabit and above, you should use 
-ZC drivers. ZC drivers are part of the PF_RING distribution and can be found in drivers/.
-Please also read the `PF_RING ZC (Zero Copy) <http://www.ntop.org/guides/pf_ring/zc.html>`_ 
-section.
+Drivers
+-------
+
+If you want to achieve line-rate packet capture at 10 Gigabit and above on Intel adapters, 
+you should use `ZC drivers <http://www.ntop.org/guides/pf_ring/zc.html>`_. You can check 
+the driver family using ethtool:
+
+.. code-block:: console
+
+   ethtool -i eth1 | grep driver
+   driver: ixgbe
+
+and load the corresponding driver using the *load_driver.sh* script in the driver folder:
+
+.. code-block:: console
+
+   cd PF_RING/drivers/intel
+   make
+   cd ixgbe/ixgbe-*-zc/src
+   sudo ./load_driver.sh
 
 Libpfring and Libpcap Installation
 ----------------------------------
