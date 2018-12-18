@@ -1,6 +1,107 @@
 
 ---------------------------------------                                                                                                                                                                             
-2018-06-12 PF_RING 7.1
+2018-12-19 PF_RING 7.4
+
+* PF_RING Library
+
+ - New pfring_open PF_RING_DO_NOT_STRIP_FCS flag to disable FCS/CRC stripping (when supported by the adapter)
+ - Improved support for cross-compilation
+ - New PF_RING_FT_CONF environment variable to enable PF_RING FT support and load L7 filtering rules
+ - New PF_RING_FT_PROTOCOLS environment variable to load L7 protocols when PF_RING FT for L7 filtering is enabled
+
+* ZC Library
+
+ - New pfring_zc_open_device flag PF_RING_ZC_DO_NOT_STRIP_FCS to disable FCS/CRC stripping (when supported by the adapter)
+ - New builtin hash function pfring_zc_builtin_5tuple_hash based on 5-tuple
+ - Fixed SPSC queues BPF support
+ - Fixed KVM/ivshmem support on Ubuntu 16
+ - Fixed pfring_zc_recv_pkt_burst with ixgbe-zc drivers
+
+* FT Library
+
+ - New pfring_ft_set_l7_detected_callback API to set a callback for classified flows/packets (L7 protocol detected)
+ - New pfring_ft_set_default_action API to set the default action for classified L7 flows
+ - New pfring_ft_flow_get_action API to get the computed/actual flow action asyncronously
+ - New pfring_ft_create_table flow_lifetime_timeout parameter to configure the maximum flow duration
+ - New pfring_ft_load_ndpi_protocols API to load custom nDPI protocols from a configuration file (example: https://github.com/ntop/nDPI/blob/dev/example/protos.txt)
+ - New pfring_ft_is_ndpi_available API to check nDPI availability
+ - Added active_flows to pfring_ft_stats to get the number of currently active flows
+
+* PF_RING-aware Libpcap
+
+ - New pcap_get_pfring_handle API to get the PF_RING handle used by Libpcap
+ - New PCAP_PF_RING_ALWAYS_SYNC_FD environment variable for applications not using the fd provided by pcap_get_selectable_fd
+ - Fix for applications polling from the pcap selectable fd when ZC drivers are used
+
+* PF_RING Kernel Module
+
+ - Updates to support kernel 4.18 or older
+ - Fixed 'stack' TX capture in ZC mode
+ - Fixed ifindex lookup
+ - Fixed promiscuous mode corner cases
+ - Fixed arm32 support
+ - Fixed IPv6 support in software filtering rules
+ - Fixed software hash rules
+ - Fixed kernel clustering in case of non-IP packets (sporadically recognized as IP fragments when the fragments cache was enabled)
+
+* PF_RING Capture Modules
+
+ - Timeline module fixes:
+   - Fixed extraction of non-IP packets
+   - Fixed permissions check when running as unprivileges user, when the user has permissions on the filesystem
+ - Accolade module update to support latest SDK API and features
+ - Fixed Fiberblaze module bulk mode
+
+* ZC Drivers
+
+ - New ixgbevf ZC driver
+ - Drivers updates to support kernel 4.18 or older
+ - Fixed sporadic crashes during application startup on high traffic rates
+ - Fixed the DKMS packages
+ - i40e ZC driver improvements:
+   - Forcing symmetric RSS hash on old firmwares
+   - Improved interrupts management to fix packets delivered in batches
+   - Fixed interrupts management when multiple sockets are active on the same interface (RX+TX or RSS)
+ - ixgbe ZC driver improvements:
+   - Increased max MTU length to 16K
+   - Fixed card reset due to kernel-space TX packets pending while the interface is in use by ZC
+ - Improved hardware timestamp support for igb ZC (i350/82580 adapters)
+
+* nBPF 
+
+ - Fixed 'portrange' token in BPF-like filters
+
+* Examples
+
+ - New pftimeline example to extract traffic from a n2disk dump set using the pf_ring API
+ - New pfsend -M <mac> option to forge the source MAC address
+ - zbalance_ipc improvements:
+   - Added -m 6 distribution function (interface X to queue X)
+   - Added queues and TX interface stats under /proc (-p)
+   - Fixed multiapp (fanout) distribution for more than 32 egress queues
+ - ftflow improvements:
+   - New -F option to load rules from a configuration file
+   - New -p option to load custom protocols
+   - Improved output (e.g. printing the flow action)
+ - Improved ftflow_dpdk example, added bridging support 
+ - Fixed software filtering in pfcount (enabling full headers when filtering is enabled)
+
+* IDS Support (Snort/Bro)
+
+ - Fixed Snort DAQ filtering API
+ - Fixed cluster issues on Bro (due to a libpcap symbols issue)
+
+* Misc
+
+ - Improved 'zbalance_ipc' clusters management with systemd:
+   - Service improvements to set the status after the cluster process is actually up and running
+   - Fixed hugepages memory allocation in case of clusters not using ZC drivers 
+ - CoreOS support, pf_ring module and drivers installation scripts
+ - Improved service dependencies with systemd with respect to other ntop applications
+ - Added GID to the hugepages configuration file to allow nonprivileged users to use ZC applications
+
+---------------------------------------                                                                                                                                                                             
+2018-06-12 PF_RING 7.2
 
 * ZC Library
  - New API pfring_zc_pkt_buff_pull / pfring_zc_pkt_buff_push to manage buffer head room
