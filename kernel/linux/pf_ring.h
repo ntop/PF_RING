@@ -43,8 +43,8 @@
 #define FILTERING_SAMPLING_RATIO       10
 
 /* Versioning */
-#define RING_VERSION                "7.3.0"
-#define RING_VERSION_NUM           0x070300
+#define RING_VERSION                "7.5.0"
+#define RING_VERSION_NUM           0x070500
 
 /* Set */
 #define SO_ADD_TO_CLUSTER                 99
