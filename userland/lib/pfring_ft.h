@@ -535,7 +535,7 @@ pfring_ft_version(
 
 /**
  * Get license info.
- * @param system_id A buffer (32 bytes long) where system id  is returned. (out)
+ * @param system_id A buffer (32 bytes long) where system id is returned. (out)
  * @param license_expiration A pointer to a time_t where license expiration is returned. (out)
  * @param maintenance_expiration A pointer to a time_t where maintenance expiration is returned. (out)
  * @return 1 if a valid license is installed, 0 otherwise.
@@ -545,6 +545,16 @@ pfring_ft_license(
   char *system_id, 
   time_t *license_expiration, 
   time_t *maintenance_expiration
+);
+
+/**
+ * Install a PF_RING FT license key.
+ * @param license_key The license key.
+ * @return 1 if the license has been successfully installed, 0 otherwise (e.g. no permissions).
+ */
+int
+pfring_ft_set_license(
+  const char *license_key
 );
 
 /**
