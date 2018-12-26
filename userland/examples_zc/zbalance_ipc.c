@@ -623,7 +623,7 @@ int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
 
   for (i = 0; i < num_apps; i++) {
     app_instance = hash % instances_per_app[i];
-    consumers_mask |= (1 << (offset + app_instance));
+    consumers_mask |= ((int64_t) 1 << (offset + app_instance));
     offset += instances_per_app[i];
   }
 
@@ -647,7 +647,7 @@ int64_t fo_multiapp_gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
 
   for (i = 0; i < num_apps; i++) {
     app_instance = hash % instances_per_app[i];
-    consumers_mask |= (1 << (offset + app_instance));
+    consumers_mask |= ((int64_t) 1 << (offset + app_instance));
     offset += instances_per_app[i];
   }
 
@@ -672,7 +672,7 @@ int64_t fo_multiapp_direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfr
 
   for (i = 0; i < num_apps; i++) {
     app_instance = ingress_id % instances_per_app[i];
-    consumers_mask |= (1 << (offset + app_instance));
+    consumers_mask |= ((int64_t) 1 << (offset + app_instance));
     offset += instances_per_app[i];
   }
 
