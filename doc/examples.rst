@@ -80,12 +80,26 @@ Example with synthetic traffic on a standard interface:
 
    sudo ./pfsend -i eth1
    TX rate: [current 1'275'650.89 pps/0.86 Gbps][average 1'275'650.89 pps/0.86 Gbps][total 1'275'656.00 pkts]
- 
-Example replaying a pcap file on a ZC interface, controlling the rate:
+
+Useful options:
+
+- -l <length> to specify the packets length
+- -n <num> to stop the transmission after <num> packets
+- -r <gbps> to specify the transmission rate (Gbit/s)
+- -p <pps rate> to specify the transmission rate (Packets/s)
+- -M <mac> to specify the source MAC address
+- -m <mac> to specify the destination MAC address
+- -b <num> specifies the number of different source IPs to be generated
+- -S <ip> to specify the source IP
+- -D <ip> to specify the destination IP
+- -V <version> to specify the IP version (default: 4)
+- -L <num> to add a VLAN header (generate <num> different VLAN IDs)
+
+Example replaying a pcap file on a ZC interface, controlling the rate (5 Gbps), sending in loop (-n 0):
  
 .. code-block:: console
 
-   sudo ./pfsend -i zc:eth1 -f 64byte_packets.pcap -n 0  -r 5
+   sudo ./pfsend -i zc:eth1 -f 64byte_packets.pcap -n 0 -r 5
    TX rate: [current 7'508'239.00 pps/5.05 Gbps][average 7'508'239.00 pps/5.05 Gbps][total 7'508'239.00 pkts]
    
 **zsend** (in *PF_RING/userland/examples_zc*) is similar to **pfsend**, however
@@ -103,6 +117,28 @@ Where:
 
 - The interface specified with -i can be any interface (in the example above we are using a standard kernel driver)
 - The number specified with -c is the cluster ID (the ZC API requires a unique identifier to identify a cluster instance)
+
+Basic Packet Forwarding
+-----------------------
+
+**zbounce** (in *PF_RING/userland/examples_zc*) bridges traffic between an interface pair as a
+bump in the wire.
+
+Example:
+
+.. code-block:: console
+
+   sudo ./zbounce -i zc:eth1 -o zc:eth2 -c 10 -b -g 1:2
+   =========================
+   Absolute Stats: 360 pkts (0 drops) - 57'340 bytes
+   Actual Stats: 57.00 pps (0.00 drops) - 0.00 Gbps
+   =========================
+
+Where:
+
+- The number specified with -c is the cluster ID (the ZC API requires a unique identifier to identify a cluster instance)
+- -b specifies that we want to forward traffic in both directions (otherwise it will forward -i to -o only)
+- This sample application uses 1 thread per direction, thus -g requires 2 cores to set the CPU affinity for both threads
 
 Load Balancing
 --------------
@@ -139,7 +175,39 @@ Multi-Process
 **zbalance_ipc** (in *PF_RING/userland/examples_zc*) is a sample application that can be used 
 for capturing traffic from one or multiple interfaces, and load-balance packets to multiple consumer 
 processes. Please read the `ZC Load-Balancing <https://www.ntop.org/guides/pf_ring/rss.html#zc-load-balancing-zbalance-ipc>`_ 
-section to learn more about this application.
+section to learn more about multi-process load-balancing and this application.
+
+Simple example of traffic aggregation from 2 interfaces, and load-balancing to 2 processes using an IP-based hash:
+
+.. code-block:: console
+
+   zbalance_ipc -i zc:eth1,zc:eth2 -n 2 -m 1 -c 10
+
+Where:
+   
+- -n specifies the number of egress queues
+- -m selects the hash function
+- -c specifies the ZC cluster ID
+
+This simple example creates 2 streams. In order to capture traffic from those streams it is possible to use both the standard PF_RING API or the ZC API. 
+A consumer application using the standard PF_RING API is able to open each stream as a standard interface using as name zc:<cluster ID>@<queue ID> (e.g. zc:10@0 and zc:10@1). Example with pfcount:
+
+.. code-block:: console
+
+   pfcount -i zc:10@0
+   pfcount -i zc:10@1
+
+A consumer application using the ZC API, in order to fully take advantage of the flexible ZC API and work in zero-copy, can open each stream attaching to the queue ID directly. Example with zcount_ipc:
+
+.. code-block:: console
+
+   zcount_ipc -c 10 -i 0
+   zcount_ipc -c 10 -i 0
+
+Where:
+
+- -c <id> is the cluster ID specified in zbalance_ipc
+- -i <id> is the queue ID
 
 Divide and Conquer
 ------------------
@@ -170,25 +238,3 @@ traffic to 3 consumer applications:
    Absolute Stats: Recv 534 pkts (0 drops) - Forwarded 534 pkts (0 drops)
    Actual Stats: Recv 211.00 pps (0.00 drops) - Forwarded 211.00 pps (0.00 drops)
    =========================
-
-Basic Packet Forwarding
------------------------
-
-**zbounce** (in *PF_RING/userland/examples_zc*) bridges traffic between an interface pair as a
-bump in the wire.
-
-Example:
-
-.. code-block:: console
-
-   sudo ./zbounce -i zc:eth1 -o zc:eth2 -c 10 -b -g 1:2
-   =========================
-   Absolute Stats: 360 pkts (0 drops) - 57'340 bytes
-   Actual Stats: 57.00 pps (0.00 drops) - 0.00 Gbps
-   =========================
-
-Where:
-
-- The number specified with -c is the cluster ID (the ZC API requires a unique identifier to identify a cluster instance)
-- -b specifies that we want to forward traffic in both directions (otherwise it will forward -i to -o only)
-- This sample application uses 1 thread per direction, thus -g requires 2 cores to set the CPU affinity for both threads
