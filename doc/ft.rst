@@ -150,7 +150,7 @@ are allowed to pass before discarding them) based on the application protocol. E
 It is also possible to specify filtering and shunting rules using a configuration file:
 
 .. code-block:: text
-
+   
    [shunt]
    default = 10
    tcp = 15
@@ -160,6 +160,13 @@ It is also possible to specify filtering and shunting rules using a configuratio
    [filter]
    YouTube = discard
    Netflix = discard
+
+It is also possible to set specify the default action for detected protocols adding the global default:
+
+.. code-block:: text
+
+   [global]
+   default = forward
 
 This file can be provided to the filtering engine using the *pfring_ft_load_configuration* API:
 
