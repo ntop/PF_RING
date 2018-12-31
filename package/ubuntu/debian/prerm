@@ -7,13 +7,22 @@ case "$1" in
   *)
     if [ -f /.dockerenv ]; then exit 0; fi
     echo "Stopping pf_ring.."
-    if grep -q systemd /proc/1/comm; then
-      /bin/systemctl stop pf_ring
-      /bin/systemctl stop "cluster"
-      /bin/systemctl stop "cluster@*"
-      /bin/systemctl disable pf_ring
-      /bin/systemctl disable "cluster"
-      /bin/systemctl disable "cluster@*"
+    if hash systemctl 2>/dev/null; then
+      if hash deb-systemd-invoke 2>/dev/null; then
+        deb-systemd-invoke stop pf_ring.service
+        deb-systemd-invoke stop "cluster.service"
+        deb-systemd-invoke stop "cluster@*.service"
+        deb-systemd-invoke disable pf_ring.service
+        deb-systemd-invoke disable "cluster.service"
+        deb-systemd-invoke disable "cluster@*.service"
+      else
+        /bin/systemctl stop pf_ring.service
+        /bin/systemctl stop "cluster.service"
+        /bin/systemctl stop "cluster@*.service"
+        /bin/systemctl disable pf_ring.service
+        /bin/systemctl disable "cluster.service"
+        /bin/systemctl disable "cluster@*.service"
+      fi
     else
       /etc/init.d/pf_ring stop
       /etc/init.d/cluster stop
