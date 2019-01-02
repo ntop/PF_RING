@@ -161,6 +161,8 @@ It is also possible to specify filtering and shunting rules using a configuratio
    YouTube = discard
    Netflix = discard
 
+Where supported protocol actions are *forward* and *discard*.
+
 It is also possible to set specify the default action for detected protocols adding the global default:
 
 .. code-block:: text
