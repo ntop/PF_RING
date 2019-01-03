@@ -200,6 +200,20 @@ pfring_zc_create_queue(
   u_int32_t queue_len
 );
 
+/**
+ * Close a queue tied to a network device. Please note that by using this API 
+ * to release a SPSC hugepages, memory is not actually released for a few 
+ * reasons (e.g. memory becomes fragmented, and there could be consumer
+ * processes still mapping this memory).
+ * Please note that both devices and SPSC queues are automatically released
+ * calling pfring_zc_destroy_cluster.
+ * @param queue       The queue handle.
+ */
+void
+pfring_zc_close_device(
+  pfring_zc_queue *queue
+);
+
 /* **************************************************************************************** */
 
 /**
