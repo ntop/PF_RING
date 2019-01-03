@@ -225,7 +225,7 @@ int main(int argc, char* argv[]) {
   rc = pfring_set_bpf_filter(pd, filter);
 
   if (rc != 0) {
-    fprintf(stderr, "pfring_set_bpf_filter(%s) returned %d\n", filter, rc);
+    fprintf(stderr, "Unable to open timeline and set filter '%s' (%d: %s)\n", filter, rc, strerror(errno));
     exit(-1);
   } else if (!quiet) {
     printf("Successfully set filter '%s'\n", filter);
@@ -235,7 +235,7 @@ int main(int argc, char* argv[]) {
   signal(SIGTERM, sigproc);
 
   if (pfring_enable_ring(pd) != 0) {
-    fprintf(stderr, "Unable to enable ring :-(\n");
+    fprintf(stderr, "Unable to enable extraction :-(\n");
     pfring_close(pd);
     exit(-1);
   }
