@@ -190,14 +190,14 @@ Where:
 - -c specifies the ZC cluster ID
 
 This simple example creates 2 streams. In order to capture traffic from those streams it is possible to use both the standard PF_RING API or the ZC API. 
-A consumer application using the standard PF_RING API is able to open each stream as a standard interface using as name zc:<cluster ID>@<queue ID> (e.g. zc:10@0 and zc:10@1). Example with pfcount:
+A consumer application using the standard PF_RING API is able to open each stream as a standard interface passing as name zc:<cluster ID>@<queue ID> (e.g. zc:10@0 and zc:10@1) to the *pfring_open* API. Example with pfcount:
 
 .. code-block:: console
 
    pfcount -i zc:10@0
    pfcount -i zc:10@1
 
-A consumer application using the ZC API, in order to fully take advantage of the flexible ZC API and work in zero-copy, can open each stream attaching to the queue ID directly. Example with zcount_ipc:
+A consumer application using the ZC API, in order to fully take advantage of the flexible ZC API and work in zero-copy, can open each stream attaching to the queue ID directly through the *pfring_zc_ipc_attach_queue* API. Example with zcount_ipc:
 
 .. code-block:: console
 
@@ -238,3 +238,29 @@ traffic to 3 consumer applications:
    Absolute Stats: Recv 534 pkts (0 drops) - Forwarded 534 pkts (0 drops)
    Actual Stats: Recv 211.00 pps (0.00 drops) - Forwarded 211.00 pps (0.00 drops)
    =========================
+
+L7 Flow Classification
+----------------------
+
+**ftflow** (in *PF_RING/userland/examples_ft*) is a sample application based on the PF_RING FT API
+able to classify traffic up to layer 7. This can also be extended to filter traffic based on the 
+application protocol leveraging on the filtering/shunting capabilities of the PF_RING FT API. 
+The application prints flows information as soon as flows expire (or terminating the application
+in case of active flows). Example:
+
+.. code-block:: console
+
+   sudo ./ftflow -i eno1 -7
+   [Flow] l7: SSH, category: 12, srcIp: 192.168.1.222, dstIp: 192.168.1.221, srcPort: 22, dstPort: 34900, protocol: 6, tcpFlags: 0x18, c2s: { Packets: 1, Bytes: 174, First: 1546590146.892275, Last: 1546590146.892275 }, s2c: { Packets: 2, Bytes: 168, First: 1546590146.892518, Last: 1546590150.675197 }, action: default
+   [Flow] l7: DHCP, category: 14, srcIp: 0.0.0.0, dstIp: 255.255.255.255, srcPort: 68, dstPort: 67, protocol: 17, tcpFlags: 0x00, c2s: { Packets: 2, Bytes: 684, First: 1546590147.30906, Last: 1546590150.130988 }, s2c: { Packets: 0, Bytes: 0, First: 0.0, Last: 0.0 }, action: default
+   [Flow] l7: sFlow, category: 14, srcIp: 192.168.1.222, dstIp: 192.168.1.225, srcPort: 47472, dstPort: 6343, protocol: 17, tcpFlags: 0x00, c2s: { Packets: 2, Bytes: 456, First: 1546590147.324577, Last: 1546590149.308650 }, s2c: { Packets: 0, Bytes: 0, First: 0.0, Last: 0.0 }, action: default
+   [Flow] l7: DNS, category: 14, srcIp: 192.168.1.222, dstIp: 8.8.8.8, srcPort: 55522, dstPort: 53, protocol: 17, tcpFlags: 0x00, c2s: { Packets: 1, Bytes: 86, First: 1546590149.13028, Last: 1546590149.13028 }, s2c: { Packets: 1, Bytes: 86, First: 1546590149.30081, Last: 1546590149.30081 }, action: default
+
+Where:
+
+- -7 enables L7 protocol detection through nDPI as described in the `PF_RING FT - nDPI Integration <http://www.ntop.org/guides/pf_ring/ft.html#ndpi-integration>`_ section
+- -F <file> loads filtering/shunting rules from a configuration file (see the `L7 Filtering and Shunting <http://www.ntop.org/guides/pf_ring/ft.html#l7-filtering-and-shunting>`_ section)
+- -p <file> loads custom protocols to nDPI from a configuration file (see the `example <https://github.com/ntop/nDPI/blob/dev/example/protos.txt>`_)
+- -c <file> loads custom categories to nDPI from a configuration file (see the `example <https://github.com/ntop/nDPI/blob/dev/example/mining_hosts.txt>`_)
+
+For further information please read the introduction to `PF_RING FT <http://www.ntop.org/guides/pf_ring/ft.html#api-overview>`_ and the `API documentation <https://www.ntop.org/guides/pf_ring_api/pfring__ft_8h.html>`_.
