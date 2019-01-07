@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2017-2018 ntop.org
+ *  Copyright (C) 2017-2019 ntop.org
  *
  *      http://www.ntop.org/
  *
@@ -1133,7 +1133,7 @@ static const struct option long_options[] = {
 /* ****************************************************** */
 
 static void help(void) {
-  printf("nbrokerd - Copyright 2017-2018 ntop.org\n\n");
+  printf("nbrokerd - Copyright 2017-2019 ntop.org\n\n");
   printf("Usage: nbrokerd -h\n\n");
   printf("[--rrc-config-file|-c <path>]               | RRC configuration file\n");
   printf("[--trace-log|-t <path>]                     | Trace log file\n");
