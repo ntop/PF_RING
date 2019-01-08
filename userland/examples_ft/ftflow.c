@@ -290,7 +290,7 @@ void print_version(void) {
 
   printf("SystemID:      %s\n", system_id);
               
-  if (rc != 0) {
+  if (!rc) {
     printf("License:       Invalid license\n");
   } else {
     printf("License:       Valid license\n");  
