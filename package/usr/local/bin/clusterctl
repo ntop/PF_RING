@@ -84,7 +84,7 @@ stop_cluster_id() {
 	CLUSTER_ID=$1
 
 	if [ ! -d "/etc/cluster" ]; then
-		echo "Configuration directory /etc/cluster does not exist: quitting..."
+		#echo "Configuration directory /etc/cluster does not exist: quitting..."
 		return 0
 	fi
 
