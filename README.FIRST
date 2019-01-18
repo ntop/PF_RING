@@ -2,13 +2,13 @@ PF_RING is a Linux kernel module and user-space framework that allows
 you to process packets at high-rates while providing you a consistent
 API for packet processing applications. This directory contains:
 
-drivers                         PF_RING optimized drivers
-drivers/                        PF_RING-aware/ZC drivers (suggested option)
+drivers/                        PF_RING ZC accelerated drivers
 userland/			User space code
 userland/lib/			User space library
 userland/libpcap/		Libpcap enhanced with PF_RING support
 userland/examples/		PF_RING sample applications
 userland/examples_zc/		PF_RING ZC sample applications
+userland/examples_ft/		PF_RING FT sample applications
 userland/snort/			Snort DAQ module for using snort over PF_RING
 
 
