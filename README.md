@@ -13,10 +13,12 @@ API for packet processing applications.
 ### Who needs PF_RING™?
 Basically everyone who has to handle many packets per second. The term ‘many’ changes according to the hardware you use for traffic analysis. It can range from 80k pkt/sec on a 1,2GHz ARM to 15M pkt/sec and above per core on a low-end 2,5GHz Xeon. PF_RING™ not only enables you to capture packets faster, it also captures packets more efficiently preserving CPU cycles.
 
-### Details
-For more information about PF_RING™, please visit [http://ntop.org](http://www.ntop.org/products/packet-capture/pf_ring/)
+### Documentation
 
-If you want to know about PF_RING™ internals or for the User’s Manual visit the [Wiki](https://github.com/ntop/PF_RING/wiki) or the ntop.org [Documentation](http://www.ntop.org/support/documentation/documentation/) section.
+If you want to learn more about PF_RING™ please visit the [User's Guide](https://www.ntop.org/guides/pf_ring) and the [API Documentation](http://www.ntop.org/guides/pf_ring_api/files.html).
+
+### Details
+For more information about PF_RING™ and other ntop technologies, please visit [http://ntop.org](http://www.ntop.org/products/packet-capture/pf_ring/)
 
 ## License
 PF_RING™ kernel module and drivers are distributed under the GNU GPLv2 license, LGPLv2.1 for the user-space PF_RING library, and are available in source code format.
