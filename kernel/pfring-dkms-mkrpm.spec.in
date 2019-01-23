@@ -43,8 +43,8 @@ case "$1" in
 	2)
 	# upgrade
 	dkms remove -m %{module_name} -v %{version} --all --rpm_safe_upgrade
-	\/bin/rm -f /lib/modules/$kernel/weak-updates/pf_ring.ko
-	\/bin/rm -f /lib/modules/$kernel/extra/pf_ring.ko
+	\/bin/rm -f /lib/modules/$kernel/weak-updates/%{module_name}*
+	\/bin/rm -f /lib/modules/$kernel/extra/%{module_name}*
 	\/bin/rm -fr /var/lib/dkms/%{module_name}
 	;;
 esac
