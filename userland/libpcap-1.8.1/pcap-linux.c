@@ -1902,7 +1902,7 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 			ret = pfring_recv(handle->ring, (u_char**)&packet, 0, &pcap_header, wait_for_incoming_packet);
 
 			if (ret == 0) {
-				if (wait_for_incoming_packet) 
+				if (wait_for_incoming_packet && errno != EINTR) 
 					continue;
 				return 0; /* non-blocking */
 			} else if (ret > 0) {
