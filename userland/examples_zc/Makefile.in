@@ -86,8 +86,10 @@ zsanitycheck: zsanitycheck.o ${LIBPFRING} Makefile
 	${CC} ${CFLAGS} zsanitycheck.o ${LIBS} -o $@
 
 install:
+ifneq (-D HAVE_PF_RING_ZC,)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp $(TARGETS) $(DESTDIR)/usr/bin/
+endif
 
 clean:
 	@rm -f ${TARGETS} *.o *~ config.*
