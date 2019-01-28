@@ -45,6 +45,7 @@ LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_conf
 #
 # Main targets
 #
+FTPROGS = 
 ifneq (@HAVE_PF_RING_FT@,)
 FTPROGS = ftflow ftflow_pcap fttest
 ifneq (@HAVE_HYPERSCAN@,)
@@ -67,8 +68,10 @@ fttest: fttest.o ${LIBPFRING}
 	${CC} ${CFLAGS} fttest.o ${LIBS} -o $@
 
 install: ${TARGETS}
+ifneq (@HAVE_PF_RING_FT@,)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp $(TARGETS) $(DESTDIR)/usr/bin/
+endif
 
 clean:
 	@rm -f ${TARGETS} *.o *~
