@@ -466,6 +466,7 @@ int main(int argc, char* argv[]) {
     switch(c) {
     case 'b':
       num_ip = atoi(optarg);
+      if(num_ip == 0) num_ip = 1;
       if (num_uniq_pkts < num_ip)
         num_uniq_pkts = num_ip;
       reforge_ip = 1;
