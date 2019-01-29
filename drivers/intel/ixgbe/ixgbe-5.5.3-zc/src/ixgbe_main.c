@@ -7808,21 +7808,21 @@ int ixgbe_setup_tx_resources(struct ixgbe_ring *tx_ring)
 	int selected_cpu;
         struct ixgbe_adapter *adapter = netdev_priv(tx_ring->netdev);
 
-	numa_node = orig_node;
+	node = orig_node;
 
 	selected_cpu = numa_cpu_affinity[adapter->bd_number];
 	if (selected_cpu != -1) {
 		if (cpu_online(selected_cpu)) {
-			int selected_numa_node = cpu_to_node(selected_cpu);
-			if (node_online(selected_numa_node)) {
-				numa_node = selected_numa_node;
+			int selected_node = cpu_to_node(selected_cpu);
+			if (node_online(selected_node)) {
+				node = selected_node;
 				if (tx_ring->q_vector)
-					tx_ring->q_vector->numa_node = numa_node;
+					tx_ring->q_vector->node = node;
 				e_dev_info("selected numa node %d for tx memory allocation\n", 
-				           selected_numa_node);
+				           selected_node);
 			} else {
 				printk("[PF_RING-ZC] %s(): Warning: numa node %d is not available\n",
-				       __FUNCTION__, selected_numa_node);
+				       __FUNCTION__, selected_node);
 			}
 		} else {
 			printk("[PF_RING-ZC] %s(): Warning: cpu %d is not available\n",
@@ -7932,23 +7932,22 @@ int ixgbe_setup_rx_resources(struct ixgbe_adapter *adapter,
 #endif /* HAVE_XDP_BUFF_RXQ */
 #ifdef HAVE_PF_RING
 	int selected_cpu;
-        struct ixgbe_adapter *adapter = netdev_priv(rx_ring->netdev);
 
-	numa_node = orig_node;
+	node = orig_node;
 
 	selected_cpu = numa_cpu_affinity[adapter->bd_number];
 	if (selected_cpu != -1) {
 		if (cpu_online(selected_cpu)) {
-			int selected_numa_node = cpu_to_node(selected_cpu);
-			if (node_online(selected_numa_node)) {
-				numa_node = selected_numa_node;
+			int selected_node = cpu_to_node(selected_cpu);
+			if (node_online(selected_node)) {
+				node = selected_node;
 				if (rx_ring->q_vector)
-					rx_ring->q_vector->numa_node = numa_node;
+					rx_ring->q_vector->node = node;
 				e_dev_info("selected numa node %d for rx memory allocation\n", 
-				           selected_numa_node);
+				           selected_node);
 			} else {
 				printk("[PF_RING-ZC] %s(): Warning: numa node %d is not available\n",
-				       __FUNCTION__, selected_numa_node);
+				       __FUNCTION__, selected_node);
 			}
 		} else {
 			printk("[PF_RING-ZC] %s(): Warning: cpu %d is not available\n",
