@@ -184,6 +184,10 @@ MODULE_VERSION(DRV_VERSION);
 
 #define DEFAULT_DEBUG_LEVEL_SHIFT 3
 
+#define IXGBE_XDP_PASS 0
+#define IXGBE_XDP_CONSUMED 1
+#define IXGBE_XDP_TX 2
+
 static struct workqueue_struct *ixgbe_wq;
 
 static bool ixgbe_is_sfp(struct ixgbe_hw *hw);
@@ -2346,10 +2350,6 @@ static struct sk_buff *ixgbe_build_skb(struct ixgbe_ring *rx_ring,
 }
 
 #endif  /* HAVE_SWIOTLB_SKIP_CPU_SYNC */
-
-#define IXGBE_XDP_PASS 0
-#define IXGBE_XDP_CONSUMED 1
-#define IXGBE_XDP_TX 2
 
 #ifdef HAVE_XDP_SUPPORT
 static int ixgbe_xmit_xdp_ring(struct ixgbe_adapter *adapter,
@@ -11598,7 +11598,10 @@ ixgbe_features_check(struct sk_buff *skb, struct net_device *dev,
 #ifdef HAVE_XDP_SUPPORT
 static int ixgbe_xdp_setup(struct net_device *dev, struct bpf_prog *prog)
 {
-	int i, frame_size = dev->mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN;
+	int i;
+#ifndef CONFIG_IXGBE_DISABLE_PACKET_SPLIT
+	int frame_size = dev->mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN;
+#endif
 	struct ixgbe_adapter *adapter = netdev_priv(dev);
 	struct bpf_prog *old_prog;
 
@@ -11615,8 +11618,10 @@ static int ixgbe_xdp_setup(struct net_device *dev, struct bpf_prog *prog)
 		if (ring_is_rsc_enabled(ring))
 			return -EINVAL;
 
+#ifndef CONFIG_IXGBE_DISABLE_PACKET_SPLIT
 		if (frame_size > ixgbe_rx_bufsz(ring))
 			return -EINVAL;
+#endif
 	}
 
 	if (nr_cpu_ids > MAX_XDP_QUEUES)
