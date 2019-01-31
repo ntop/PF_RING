@@ -34,7 +34,9 @@
 #include <pwd.h>
 #include <sys/stat.h>
 
+#ifndef HAVE_DPDK
 #include "../lib/config.h"
+#endif
 
 #define CACHE_LINE_LEN 64
 

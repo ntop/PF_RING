@@ -20,7 +20,6 @@
  * THE SOFTWARE.
  */
 
-#define _GNU_SOURCE
 #include <sched.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,7 +30,6 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <signal.h>
-
 
 #include <rte_eal.h>
 #include <rte_ether.h>
