@@ -38,6 +38,8 @@
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
 
+#define ALARM_SLEEP        1
+
 /* NOTE: ether_hdr is defined in rte_ether.h */
 #define ether_header ether_hdr
 #include "ftutils.c"
@@ -53,8 +55,11 @@
 
 static pfring_ft_table *ft = NULL;
 static u_int32_t ft_flags = 0;
-static u_int8_t port = 0, twin_port = 0xFF, do_loop = 1;
+static u_int8_t port = 0, twin_port = 0xFF, compute_flows = 1, do_loop = 1;
 static u_int8_t verbose = 0;
+
+static u_int64_t num_pkts = 0;
+static u_int64_t num_bytes = 0;
 
 static const struct rte_eth_conf port_conf_default = {
   .rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
@@ -166,7 +171,8 @@ static void packet_consumer(void) {
       num = rte_eth_rx_burst(port_id, 0, bufs, BURST_SIZE);
 
       if (unlikely(num == 0)) {
-	pfring_ft_housekeeping(ft, time(NULL));
+        if (likely(compute_flows))
+	  pfring_ft_housekeeping(ft, time(NULL));
 	continue;
       }
 
@@ -176,15 +182,20 @@ static void packet_consumer(void) {
       for (i = 0; i < num; i++) {
 	char *data = rte_pktmbuf_mtod(bufs[i], char *);
 	int len = rte_pktmbuf_pkt_len(bufs[i]);
-	pfring_ft_action action;
+	pfring_ft_action action = PFRING_FT_ACTION_DISCARD;
 	u_int8_t to_free = 1;
 	
-	h.len = h.caplen = len;
-	gettimeofday(&h.ts, NULL);
+        num_pkts++;
+        num_bytes += len + 24;
 
-	action = pfring_ft_process(ft, (const u_char *) data, &h, &ext_hdr);
+	if (likely(compute_flows)) {
+          h.len = h.caplen = len;
+          gettimeofday(&h.ts, NULL);
+
+	  action = pfring_ft_process(ft, (const u_char *) data, &h, &ext_hdr);
+        }
  
-	if (verbose) {
+	if (unlikely(verbose)) {
 	  int j;
 
 	  printf("[Packet] hex: ");
@@ -215,6 +226,7 @@ static void print_help(void) {
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
   printf("-p <id>[,<id>]  Port id. Use -p <id>,<id> for bridge mode\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-0              Do not compute flows (packet capture only)");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-h              Print this help\n");
 }
@@ -232,7 +244,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "hp:v7", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "hp:v07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'p':
       if(optarg) {
@@ -246,9 +258,6 @@ static int parse_args(int argc, char **argv) {
 	}
       }
       break;
-    case '7':
-      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
-      break;
     case 'v':
       verbose = 1;
       break;
@@ -256,6 +265,13 @@ static int parse_args(int argc, char **argv) {
       print_help();
       exit(0);
       break;
+    case '0':
+      compute_flows = 0;
+      break;
+    case '7':
+      ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      break;
+
     default:
       print_help();
       return -1;
@@ -272,9 +288,76 @@ static int parse_args(int argc, char **argv) {
 
 /* ************************************ */
 
+static void print_stats(void) {
+  pfring_ft_stats *fstat;
+  static struct timeval start_time = { 0 };
+  static struct timeval last_time = { 0 };
+  struct timeval end_time;
+  unsigned long long n_bytes, n_pkts;
+  static u_int64_t last_pkts = 0;
+  static u_int64_t last_bytes = 0;
+  double diff, bytes_diff;
+  double delta_last;
+  char buf[512];
+
+  if (start_time.tv_sec == 0)
+    gettimeofday(&start_time, NULL);
+  gettimeofday(&end_time, NULL);
+
+  n_bytes = num_bytes;
+  n_pkts = num_pkts;
+
+  if ((fstat = pfring_ft_get_stats(ft))) {
+    if (last_time.tv_sec > 0) {
+      delta_last = delta_time(&end_time, &last_time);
+      diff = n_pkts - last_pkts;
+      bytes_diff = n_bytes - last_bytes;
+      bytes_diff /= (1000*1000*1000)/8;
+
+      snprintf(buf, sizeof(buf),
+             "ActFlows: %ju\t"
+             "TotFlows: %ju\t"
+             "Errors:   %ju\t"
+             "Packets:  %lu\t"
+             "Bytes:    %lu\t"
+             "Throughput: %f Mpps (%f Gbps)",
+             fstat->active_flows,
+             fstat->flows,
+             fstat->err_no_room + fstat->err_no_mem,
+             (long unsigned int) n_pkts,
+             (long unsigned int) n_bytes,
+	     ((double) diff / (double)(delta_last/1000)) / 1000000,
+	     ((double) bytes_diff / (double)(delta_last/1000)));
+
+      fprintf(stderr, "%s\n", buf);
+    }
+  }
+
+  last_pkts = n_pkts;
+  last_bytes = n_bytes;
+  memcpy(&last_time, &end_time, sizeof(last_time));
+}
+
+/* ************************************ */
+
 void sigproc(int sig) {
+  static int called = 0;
+
   fprintf(stderr, "Leaving...\n");
+  if (called) return; else called = 1;
+
   do_loop = 0;
+}
+
+/* ************************************ */
+
+void my_sigalarm(int sig) {
+  if (!do_loop)
+    return;
+
+  print_stats();
+  alarm(ALARM_SLEEP);
+  signal(SIGALRM, my_sigalarm);
 }
 
 /* ************************************ */
@@ -328,6 +411,9 @@ int main(int argc, char *argv[]) {
 
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
+
+  signal(SIGALRM, my_sigalarm);
+  alarm(ALARM_SLEEP);
 
   packet_consumer();
 
