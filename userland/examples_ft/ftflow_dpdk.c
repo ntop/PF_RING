@@ -46,20 +46,25 @@
 
 #include "pfring_ft.h"
 
-#define RX_RING_SIZE     128
-#define TX_RING_SIZE     512
-#define NUM_MBUFS       8191
-#define MBUF_CACHE_SIZE  250
-#define BURST_SIZE        32
-#define PREFETCH_OFFSET    3
+#define RX_RING_SIZE     8192
+#define TX_RING_SIZE     1024
+#define MBUF_CACHE_SIZE   256
+#define BURST_SIZE         32
+#define PREFETCH_OFFSET     3
 
-static pfring_ft_table *ft = NULL;
+static pfring_ft_table *fts[RTE_MAX_LCORE] = { 0 };
 static u_int32_t ft_flags = 0;
-static u_int8_t port = 0, twin_port = 0xFF, compute_flows = 1, do_loop = 1;
+static u_int8_t port = 0, twin_port = 0xFF;
+static u_int8_t num_queues = 1;
+static u_int8_t compute_flows = 1;
+static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
 
-static u_int64_t num_pkts = 0;
-static u_int64_t num_bytes = 0;
+static struct lcore_stats {
+  u_int64_t num_pkts;
+  u_int64_t num_bytes;
+  u_int64_t padding[6];
+} stats[RTE_MAX_LCORE];
 
 static const struct rte_eth_conf port_conf_default = {
   .rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
@@ -67,13 +72,23 @@ static const struct rte_eth_conf port_conf_default = {
 
 /* ************************************ */
 
-static inline int port_init(struct rte_mempool *mbuf_pool) {
+static int port_init(void) {
   struct rte_eth_conf port_conf = port_conf_default;
-  const u_int16_t rx_rings = 1, tx_rings = 1;
+  struct rte_mempool *mbuf_pool;
+  const u_int16_t rx_rings = num_queues, tx_rings = num_queues;
+  int num_mbufs;
   int retval, i;
   u_int16_t q;
 
-  for(i=0; i<2; i++) {
+  num_mbufs = ((2 * RX_RING_SIZE) + BURST_SIZE) * num_queues;
+
+  mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs, MBUF_CACHE_SIZE, 0, 
+    RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+
+  if (mbuf_pool == NULL)
+    rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
+
+  for (i = 0; i < 2; i++) {
     u_int8_t port_id = (i == 0) ? port : twin_port;
     unsigned int numa_socket_id;
     
@@ -81,7 +96,6 @@ static inline int port_init(struct rte_mempool *mbuf_pool) {
 
     printf("Configuring port %u...\n", port_id);
 
-    /* 1 RX queue */
     retval = rte_eth_dev_configure(port_id, rx_rings, tx_rings, &port_conf);
     
     if (retval != 0)
@@ -114,7 +128,8 @@ static inline int port_init(struct rte_mempool *mbuf_pool) {
 
 /* ************************************ */
 
-void processFlow(pfring_ft_flow *flow, void *user){
+void processFlow(pfring_ft_flow *flow, void *user) {
+  pfring_ft_table *ft = (pfring_ft_table *) user;
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
   char buf1[32], buf2[32], buf3[32];
@@ -150,16 +165,24 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 /* ************************************ */
 
-static void packet_consumer(void) {
+static int packet_consumer(__attribute__((unused)) void *arg) {
+  unsigned lcore_id = rte_lcore_id();
+  u_int16_t queue_id = lcore_id;
+  pfring_ft_table *ft;
   pfring_ft_pcap_pkthdr h;
   pfring_ft_ext_pkthdr ext_hdr = { 0 };
 
-  printf("Capturing from port %u...\n", port);
+  if (queue_id >= num_queues)
+    return 0;
+
+  ft = fts[queue_id];
+
+  printf("Capturing from port %u queue %u...\n", port, queue_id);
 
   while (do_loop) {
     u_int32_t idx;
     
-    for(idx=0; idx<2; idx++) {
+    for (idx = 0; idx < 2; idx++) {
       u_int8_t port_id      = (idx == 0) ? port      : twin_port;
       u_int8_t twin_port_id = (idx == 0) ? twin_port : port;
       struct rte_mbuf *bufs[BURST_SIZE];
@@ -168,7 +191,7 @@ static void packet_consumer(void) {
       
       if(port_id == 0xFF) continue;
 
-      num = rte_eth_rx_burst(port_id, 0, bufs, BURST_SIZE);
+      num = rte_eth_rx_burst(port_id, queue_id, bufs, BURST_SIZE);
 
       if (unlikely(num == 0)) {
         if (likely(compute_flows))
@@ -185,8 +208,8 @@ static void packet_consumer(void) {
 	pfring_ft_action action = PFRING_FT_ACTION_DISCARD;
 	u_int8_t to_free = 1;
 	
-        num_pkts++;
-        num_bytes += len + 24;
+        stats[queue_id].num_pkts++;
+        stats[queue_id].num_bytes += len + 24;
 
 	if (likely(compute_flows)) {
           h.len = h.caplen = len;
@@ -209,7 +232,7 @@ static void packet_consumer(void) {
 	}
 
 	if((twin_port_id != 0xFF) && (action != PFRING_FT_ACTION_DISCARD)) {
-	  if(rte_eth_tx_burst(twin_port_id, 0, &bufs[i], 1) == 1)
+	  if(rte_eth_tx_burst(twin_port_id, queue_id, &bufs[i], 1) == 1)
 	    to_free = 0; /* Do not free this buffer */
 	}
 	
@@ -217,6 +240,8 @@ static void packet_consumer(void) {
       }
     } /* for */
   } /* while */
+
+  return 0;
 }
 
 /* ************************************ */
@@ -226,7 +251,8 @@ static void print_help(void) {
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
   printf("-p <id>[,<id>]  Port id. Use -p <id>,<id> for bridge mode\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
-  printf("-0              Do not compute flows (packet capture only)");
+  printf("-n <num cores>  Enable multiple cores/queues (default: 1)\n");
+  printf("-0              Do not compute flows (packet capture only)\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-h              Print this help\n");
 }
@@ -244,8 +270,17 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "hp:v07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "hn:p:v07", lgopts, &option_index)) != EOF) {
     switch (opt) {
+    case 'n':
+      if (optarg) {
+        num_queues = atoi(optarg);
+      }
+      break;
+    case 'h':
+      print_help();
+      exit(0);
+      break;
     case 'p':
       if(optarg) {
 	char *p = strtok(optarg, ",");
@@ -260,10 +295,6 @@ static int parse_args(int argc, char **argv) {
       break;
     case 'v':
       verbose = 1;
-      break;
-    case 'h':
-      print_help();
-      exit(0);
       break;
     case '0':
       compute_flows = 0;
@@ -289,48 +320,59 @@ static int parse_args(int argc, char **argv) {
 /* ************************************ */
 
 static void print_stats(void) {
+  pfring_ft_stats fstat_sum = { 0 };
   pfring_ft_stats *fstat;
   static struct timeval start_time = { 0 };
   static struct timeval last_time = { 0 };
   struct timeval end_time;
-  unsigned long long n_bytes, n_pkts;
+  unsigned long long n_bytes = 0, n_pkts = 0;
   static u_int64_t last_pkts = 0;
   static u_int64_t last_bytes = 0;
   double diff, bytes_diff;
   double delta_last;
   char buf[512];
+  int q;
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
   gettimeofday(&end_time, NULL);
 
-  n_bytes = num_bytes;
-  n_pkts = num_pkts;
+  for (q = 0; q < num_queues; q++) {
+    n_bytes += stats[q].num_bytes;
+    n_pkts  += stats[q].num_pkts;
 
-  if ((fstat = pfring_ft_get_stats(ft))) {
-    if (last_time.tv_sec > 0) {
-      delta_last = delta_time(&end_time, &last_time);
-      diff = n_pkts - last_pkts;
-      bytes_diff = n_bytes - last_bytes;
-      bytes_diff /= (1000*1000*1000)/8;
+    //fprintf(stderr, "Q%u Packets: %lu\tBytes:%lu\n", q, stats[q].num_pkts, stats[q].num_bytes);
 
-      snprintf(buf, sizeof(buf),
+    if ((fstat = pfring_ft_get_stats(fts[q]))) {
+      fstat_sum.active_flows += fstat->active_flows;
+      fstat_sum.flows += fstat->flows;
+      fstat_sum.err_no_room += fstat->err_no_room;
+      fstat_sum.err_no_mem += fstat->err_no_mem;
+    }
+  }
+
+  if (last_time.tv_sec > 0) {
+    delta_last = delta_time(&end_time, &last_time);
+    diff = n_pkts - last_pkts;
+    bytes_diff = n_bytes - last_bytes;
+    bytes_diff /= (1000*1000*1000)/8;
+
+    snprintf(buf, sizeof(buf),
              "ActFlows: %ju\t"
              "TotFlows: %ju\t"
              "Errors:   %ju\t"
              "Packets:  %lu\t"
              "Bytes:    %lu\t"
              "Throughput: %f Mpps (%f Gbps)",
-             fstat->active_flows,
-             fstat->flows,
-             fstat->err_no_room + fstat->err_no_mem,
+             fstat_sum.active_flows,
+             fstat_sum.flows,
+             fstat_sum.err_no_room + fstat_sum.err_no_mem,
              (long unsigned int) n_pkts,
              (long unsigned int) n_bytes,
 	     ((double) diff / (double)(delta_last/1000)) / 1000000,
 	     ((double) bytes_diff / (double)(delta_last/1000)));
 
-      fprintf(stderr, "%s\n", buf);
-    }
+    fprintf(stderr, "%s\n", buf);
   }
 
   last_pkts = n_pkts;
@@ -363,11 +405,8 @@ void my_sigalarm(int sig) {
 /* ************************************ */
 
 int main(int argc, char *argv[]) {
-  struct rte_mempool *mbuf_pool;
-  int ret;
-#if 0
-  u_int8_t num_ports;
-#endif
+  int q, ret;
+  unsigned lcore_id;
   
   ret = rte_eal_init(argc, argv);
 
@@ -382,32 +421,30 @@ int main(int argc, char *argv[]) {
   if (ret < 0)
     rte_exit(EXIT_FAILURE, "Invalid flow_classify parameters\n");
 
-#if 0
-  num_ports = rte_eth_dev_count();
+  memset(stats, 0, sizeof(stats));
 
-  if (port >= num_ports)
-    rte_exit(EXIT_FAILURE, "Error: port %u not available\n", port);
-#endif
-  
-  mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS, MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+  if (rte_lcore_count() > num_queues)
+    printf("INFO: %u lcores enabled, only %u used\n", rte_lcore_count(), num_queues);
 
-  if (mbuf_pool == NULL)
-    rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
-
-  if (port_init(mbuf_pool) != 0)
-    rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu8 "\n", port);
-
-  if (rte_lcore_count() > 1)
-    printf("INFO: Too many lcores enabled, only 1 used\n");
-
-  ft = pfring_ft_create_table(ft_flags, 0, 0, 0);
-
-  if (ft == NULL) {
-    fprintf(stderr, "pfring_ft_create_table error\n");
+  if (rte_lcore_count() < num_queues) {
+    num_queues = rte_lcore_count();
+    printf("INFO: only %u lcores enabled, using %u queues\n", rte_lcore_count(), num_queues);
     return -1;
   }
 
-  pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
+  if (port_init() != 0)
+    rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu8 "\n", port);
+
+  for (q = 0; q < num_queues; q++) {
+    fts[q] = pfring_ft_create_table(ft_flags, 0, 0, 0);
+
+    if (fts[q] == NULL) {
+      fprintf(stderr, "pfring_ft_create_table error\n");
+      return -1;
+    }
+
+    pfring_ft_set_flow_export_callback(fts[q], processFlow, fts[q]);
+  }
 
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
@@ -415,11 +452,17 @@ int main(int argc, char *argv[]) {
   signal(SIGALRM, my_sigalarm);
   alarm(ALARM_SLEEP);
 
-  packet_consumer();
+  rte_eal_mp_remote_launch(packet_consumer, NULL, CALL_MASTER);
 
-  pfring_ft_flush(ft);
+  RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+    rte_eal_wait_lcore(lcore_id);
+  } 
 
-  pfring_ft_destroy_table(ft);
+  for (q = 0; q < num_queues; q++)
+    pfring_ft_flush(fts[q]);
+
+  for (q = 0; q < num_queues; q++)
+    pfring_ft_destroy_table(fts[q]);
 
   return 0;
 }
