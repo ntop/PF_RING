@@ -205,7 +205,7 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
       for (i = 0; i < num; i++) {
 	char *data = rte_pktmbuf_mtod(bufs[i], char *);
 	int len = rte_pktmbuf_pkt_len(bufs[i]);
-	pfring_ft_action action = PFRING_FT_ACTION_DISCARD;
+	pfring_ft_action action = PFRING_FT_ACTION_DEFAULT;
 	u_int8_t to_free = 1;
 	
         stats[queue_id].num_pkts++;
@@ -231,12 +231,12 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 	  printf("\n");
 	}
 
-	if((twin_port_id != 0xFF) && (action != PFRING_FT_ACTION_DISCARD)) {
+	if ((twin_port_id != 0xFF) && (action != PFRING_FT_ACTION_DISCARD)) {
 	  if(rte_eth_tx_burst(twin_port_id, queue_id, &bufs[i], 1) == 1)
 	    to_free = 0; /* Do not free this buffer */
 	}
 	
-	if(to_free) rte_pktmbuf_free(bufs[i]);
+	if (to_free) rte_pktmbuf_free(bufs[i]);
       }
     } /* for */
   } /* while */
@@ -322,10 +322,11 @@ static int parse_args(int argc, char **argv) {
 static void print_stats(void) {
   pfring_ft_stats fstat_sum = { 0 };
   pfring_ft_stats *fstat;
+  struct rte_eth_stats pstats = { 0 };
   static struct timeval start_time = { 0 };
   static struct timeval last_time = { 0 };
   struct timeval end_time;
-  unsigned long long n_bytes = 0, n_pkts = 0;
+  unsigned long long n_bytes = 0, n_pkts = 0, n_drops = 0;
   static u_int64_t last_pkts = 0;
   static u_int64_t last_bytes = 0;
   double diff, bytes_diff;
@@ -341,13 +342,24 @@ static void print_stats(void) {
     n_bytes += stats[q].num_bytes;
     n_pkts  += stats[q].num_pkts;
 
-    //fprintf(stderr, "Q%u Packets: %lu\tBytes:%lu\n", q, stats[q].num_pkts, stats[q].num_bytes);
+    if (num_queues > 1)
+      fprintf(stderr, "Q%u Packets: %lu\tBytes:%lu\n", q, stats[q].num_pkts, stats[q].num_bytes);
 
     if ((fstat = pfring_ft_get_stats(fts[q]))) {
       fstat_sum.active_flows += fstat->active_flows;
       fstat_sum.flows += fstat->flows;
       fstat_sum.err_no_room += fstat->err_no_room;
       fstat_sum.err_no_mem += fstat->err_no_mem;
+    }
+  }
+
+  if (rte_eth_stats_get(port, &pstats)) {
+    n_drops += pstats.imissed + pstats.ierrors;
+  }
+
+  if (twin_port != 0xFF) {
+    if (rte_eth_stats_get(twin_port, &pstats)) {
+      n_drops += pstats.imissed + pstats.ierrors;
     }
   }
 
@@ -363,12 +375,14 @@ static void print_stats(void) {
              "Errors:   %ju\t"
              "Packets:  %lu\t"
              "Bytes:    %lu\t"
+             "Drop:     %lu\t"
              "Throughput: %f Mpps (%f Gbps)",
              fstat_sum.active_flows,
              fstat_sum.flows,
              fstat_sum.err_no_room + fstat_sum.err_no_mem,
              (long unsigned int) n_pkts,
              (long unsigned int) n_bytes,
+             (long unsigned int) n_drops,
 	     ((double) diff / (double)(delta_last/1000)) / 1000000,
 	     ((double) bytes_diff / (double)(delta_last/1000)));
 
