@@ -1,20 +1,3 @@
-commit fa59986e955b43dcdcc479afe3b122ef0442522b
-Author: RageLtMan <rageltman [at] sempervictus>
-Date:   Sun Jun 24 00:55:33 2018 -0400
-
-    PF_RING: initial commit in-tree of v6.6.0
-    
-    Manually port PF_RING 6.6.0 sources into the kernel tree as DKMS
-    doesnt play well with plugins right now, and installing a test
-    kernel to build the driver and test it with the kernel is tedious
-    and time consuming.
-    
-    Import core drivers and header, adapt old Kconfig and Makefiles
-    from legacy repos such as https://github.com/xrl/pf_ring
-    
-    Option is visible in configuration and built module in initial
-    testing.
-
 diff --git a/net/Kconfig b/net/Kconfig
 index 9dba2715919d..b1f39da0ebba 100644
 --- a/net/Kconfig
@@ -29,11 +12,13 @@ diff --git a/net/Makefile b/net/Makefile
 index 14fede520840..975aee777432 100644
 --- a/net/Makefile
 +++ b/net/Makefile
-@@ -86,3 +86,4 @@ obj-y				+= l3mdev/
+@@ -86,5 +86,6 @@ obj-y                         += l3mdev/
  endif
- obj-$(CONFIG_QRTR)		+= qrtr/
- obj-$(CONFIG_NET_NCSI)		+= ncsi/
-+obj-$(CONFIG_PF_RING)           += pf_ring/
+ obj-$(CONFIG_QRTR)             += qrtr/
+ obj-$(CONFIG_NET_NCSI)         += ncsi/
++obj-$(CONFIG_PF_RING)          += pf_ring/
+ obj-$(CONFIG_XDP_SOCKETS)      += xdp/
+ obj-$(CONFIG_MPTCP)            += mptcp/
 diff --git a/net/pf_ring/Kconfig b/net/pf_ring/Kconfig
 new file mode 100644
 index 000000000000..0ac61ce02522
@@ -41,8 +26,8 @@ index 000000000000..0ac61ce02522
 +++ b/net/pf_ring/Kconfig
 @@ -0,0 +1,12 @@
 +config PF_RING
-+	tristate "PF_RING sockets (v6)"
-+	---help---
++	tristate "PF_RING sockets (v7)"
++	help
 +	  PF_RING socket family, optimized for packet capture.
 +          If a PF_RING socket is bound to an adapter (via the bind() system
 +          call), such adapter will be used in read-only mode until the socket

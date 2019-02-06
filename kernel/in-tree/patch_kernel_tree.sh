@@ -4,8 +4,7 @@
 # Apply diff to relevant configuration files for in-tree builds
 # Configure KDIR to your source tree and run this script
 
-
-KDIR="/usr/src/linux"
+KDIR="${KDIR:="/usr/src/linux"}"
 DIFFDIR="$(cd $( dirname "${BASH_SOURCE[0]}") && pwd )"
 echo "Patching kernel in $KDIR from $DIFFDIR"
 
@@ -22,7 +21,7 @@ else
   mkdir "$KDIR/net/pf_ring"
   cp ../pf_ring.c "$KDIR/net/pf_ring"
   cp ../linux/pf_ring.h "$KDIR/include/linux"
-  
+
   cd "$KDIR"
   if [[  $(patch -p1 -i "$DIFFDIR/build-config.diff") ]]; then
     echo "Update kernel build configuration to enable PF_RING module"
