@@ -339,11 +339,12 @@ static void print_stats(void) {
   gettimeofday(&end_time, NULL);
 
   for (q = 0; q < num_queues; q++) {
-    n_bytes += stats[q].num_bytes;
-    n_pkts  += stats[q].num_pkts;
+    /* Reading port packets/bytes with rte_eth_stats_get
+     * n_bytes += stats[q].num_bytes;
+     * n_pkts  += stats[q].num_pkts; */
 
     if (num_queues > 1)
-      fprintf(stderr, "Q%u Packets: %lu\tBytes:%lu\n", q, stats[q].num_pkts, stats[q].num_bytes);
+      fprintf(stderr, "Q%u Packets: %lu\tBytes: %lu\n", q, stats[q].num_pkts, stats[q].num_bytes);
 
     if ((fstat = pfring_ft_get_stats(fts[q]))) {
       fstat_sum.active_flows += fstat->active_flows;
@@ -353,13 +354,17 @@ static void print_stats(void) {
     }
   }
 
-  if (rte_eth_stats_get(port, &pstats)) {
+  if (rte_eth_stats_get(port, &pstats) == 0) {
+    n_pkts += pstats.ipackets;
+    n_bytes += pstats.ibytes;
     n_drops += pstats.imissed + pstats.ierrors;
-  }
 
-  if (twin_port != 0xFF) {
-    if (rte_eth_stats_get(twin_port, &pstats)) {
-      n_drops += pstats.imissed + pstats.ierrors;
+    if (twin_port != 0xFF) {
+      if (rte_eth_stats_get(twin_port, &pstats) == 0) {
+        n_pkts += pstats.ipackets;
+        n_bytes += pstats.ibytes;
+        n_drops += pstats.imissed + pstats.ierrors;
+      }
     }
   }
 
@@ -372,11 +377,11 @@ static void print_stats(void) {
     snprintf(buf, sizeof(buf),
              "ActFlows: %ju\t"
              "TotFlows: %ju\t"
-             "Errors:   %ju\t"
-             "Packets:  %lu\t"
-             "Bytes:    %lu\t"
-             "Drop:     %lu\t"
-             "Throughput: %f Mpps (%f Gbps)",
+             "Errors: %ju\t"
+             "Packets: %lu\t"
+             "Bytes: %lu\t"
+             "Drop: %lu\t"
+             "Throughput: %.3f Mpps (%.3f Gbps)",
              fstat_sum.active_flows,
              fstat_sum.flows,
              fstat_sum.err_no_room + fstat_sum.err_no_mem,
