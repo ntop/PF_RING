@@ -356,13 +356,13 @@ static void print_stats(void) {
 
   if (rte_eth_stats_get(port, &pstats) == 0) {
     n_pkts += pstats.ipackets;
-    n_bytes += pstats.ibytes;
+    n_bytes += pstats.ibytes + (n_pkts * 24);
     n_drops += pstats.imissed + pstats.ierrors;
 
     if (twin_port != 0xFF) {
       if (rte_eth_stats_get(twin_port, &pstats) == 0) {
         n_pkts += pstats.ipackets;
-        n_bytes += pstats.ibytes;
+        n_bytes += pstats.ibytes + (n_pkts * 24);
         n_drops += pstats.imissed + pstats.ierrors;
       }
     }
