@@ -5889,6 +5889,7 @@ static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapp
     entry = list_entry(ptr, zc_dev_list, list);
     if(strcmp(entry->zc_dev.dev->name, mapping->device_name) == 0
         && entry->zc_dev.channel_id == mapping->channel_id) {
+      mapping->device_model = entry->zc_dev.mem_info.device_model;
       dev_found = 1;
       break;
     }
@@ -6875,6 +6876,10 @@ static int ring_setsockopt(struct socket *sock,
       ret = pfring_select_zc_dev(pfr, &mapping);
     else
       ret = pfring_release_zc_dev(pfr);
+
+    if(copy_to_user(optval, &mapping, optlen)) /* returning device_model*/
+      return(-EFAULT);
+
     break;
 
   case SO_SET_MASTER_RING:
