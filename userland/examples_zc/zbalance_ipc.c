@@ -429,6 +429,7 @@ void printHelp(void) {
   printf("-E <endpoint>    Set the ZMQ endpoint to be used with -Z (default: %s)\n", DEFAULT_ENDPOINT);
   printf("-A <policy>      Set default policy (0: drop, 1: accept) to be used with -Z (default: accept)\n");
 #endif
+  printf("-E               Debug mode\n");
   printf("-v               Verbose\n");
   exit(-1);
 }
@@ -698,7 +699,7 @@ int main(int argc, char* argv[]) {
   char **opt_argv;
   char *user = NULL;
   int num_consumer_queues_limit = 0;
-  const char *opt_string = "ab:c:dD:g:hi:l:m:n:pr:Q:q:N:P:R:S:zu:wv"
+  const char *opt_string = "ab:c:dD:Eg:hi:l:m:n:pr:Q:q:N:P:R:S:zu:wv"
 #ifdef HAVE_PF_RING_FT
     "T"
 #endif
@@ -740,6 +741,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'D':
       user = strdup(optarg);
+      break;
+    case 'E':
+      pfring_zc_debug();
       break;
     case 'm':
       hash_mode = atoi(optarg);
