@@ -1,0 +1,67 @@
+AC_INIT([nbpf], 1.0)
+
+AC_PROG_CC
+AC_CONFIG_FILES(Makefile)
+
+MACHINE=`$CC -dumpmachine | cut -d '-' -f 1`
+CFLAGS=""
+SYS_LIBS=""
+AR_X=
+
+if test $MACHINE = "x86_64"; then
+
+AR_X="ar x"
+
+dnl> Check for a modern pthread library
+AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
+
+if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
+
+dnl> R/W locks are broken on some BSD releases
+if test "$IS_FREEBSD" != "1" && test "$cross_compiling" != "yes" ; then
+  AC_MSG_CHECKING([if r/w locks are supported])
+  AC_TRY_RUN([
+  #include <pthread.h>
+  int main()
+  {
+    pthread_rwlock_t t;
+    return 0;
+  }
+  ]
+  , [ AC_MSG_RESULT(yes) AC_DEFINE_UNQUOTED(HAVE_RW_LOCK, 1, [pthread has rw locks]) ], [AC_MSG_RESULT(no)]
+  )
+fi
+
+dnl> end of pthread_setaffinity_np check
+fi
+
+dnl> end of x86_64 check
+fi
+
+AC_CHECK_LIB([ndpi], [ndpi_get_api_version], [LDFLAGS="${LDFLAGS} -lndpi"])
+if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then
+  NDPI_LIB=`pkg-config --libs libndpi`
+  NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I[^ \t]*\)/\1\/libndpi/g'`
+  HAVE_NDPI="-D HAVE_NDPI"
+else
+  AC_MSG_CHECKING([nDPI support for nBPF - static linking])
+  NDPI_HOME="../../nDPI"
+  if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
+    NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
+    NDPI_INC="-I../$NDPI_HOME/src/include"
+    HAVE_NDPI="-D HAVE_NDPI"
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
+fi
+
+AC_SUBST(CC)
+AC_SUBST(CFLAGS)
+AC_SUBST(NDPI_LIB)
+AC_SUBST(NDPI_INC)
+AC_SUBST(HAVE_NDPI)
+AC_SUBST(AR_X)
+
+AC_OUTPUT
+
