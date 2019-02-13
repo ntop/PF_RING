@@ -332,7 +332,7 @@ static void print_stats(void) {
   double diff, bytes_diff;
   double delta_last;
   char buf[512];
-  int q;
+  int len = 0, q;
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
@@ -374,17 +374,20 @@ static void print_stats(void) {
     bytes_diff = n_bytes - last_bytes;
     bytes_diff /= (1000*1000*1000)/8;
 
-    snprintf(buf, sizeof(buf),
+    if (compute_flows)
+      len = snprintf(buf, sizeof(buf),
              "ActFlows: %ju\t"
              "TotFlows: %ju\t"
-             "Errors: %ju\t"
+             "Errors: %ju\t",
+             fstat_sum.active_flows,
+             fstat_sum.flows,
+             fstat_sum.err_no_room + fstat_sum.err_no_mem);
+
+    snprintf(&buf[len], sizeof(buf) - len,
              "Packets: %lu\t"
              "Bytes: %lu\t"
              "Drop: %lu\t"
              "Throughput: %.3f Mpps (%.3f Gbps)",
-             fstat_sum.active_flows,
-             fstat_sum.flows,
-             fstat_sum.err_no_room + fstat_sum.err_no_mem,
              (long unsigned int) n_pkts,
              (long unsigned int) n_bytes,
              (long unsigned int) n_drops,

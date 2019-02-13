@@ -4,7 +4,7 @@ API_OBJS=grammar.tab.o lex.nb.o nbroker_api.o parser.o
 API_STATIC_LIB=libnbroker.a
 API_DYNAMIC_LIB=libnbroker.so
 
-INCLUDES=-I../rrclib/include
+INCLUDES=-I../rrclib/include -I../../nbpf
 SYSLIBS=-lzmq -lpthread -ldl -lm
 LIBS=$(SYSLIBS)
 CFLAGS=-Wall -fPIC -D_GNU_SOURCE $(INCLUDES) -g # -O2
