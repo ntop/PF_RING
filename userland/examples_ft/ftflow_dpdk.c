@@ -65,7 +65,9 @@ static struct lcore_stats {
   u_int64_t num_bytes;
   u_int64_t tx_num_pkts;
   u_int64_t tx_num_bytes;
-  u_int64_t padding[6];
+  u_int64_t last_pkts;
+  u_int64_t last_bytes;
+  u_int64_t padding[2];
 } stats[RTE_MAX_LCORE];
 
 static const struct rte_eth_conf port_conf_default = {
@@ -223,7 +225,7 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 	if (unlikely(verbose)) {
 	  int j;
 
-	  printf("[Packet] hex: ");
+	  printf("[Q#%u][Packet] len: %u hex: ", queue_id, len);
 	  for (j = 0; j < len; j++)
 	    printf("%02X ", data[j] & 0xFF);
 
@@ -334,37 +336,60 @@ static void print_stats(void) {
   struct timeval end_time;
   unsigned long long n_bytes = 0, n_pkts = 0, n_drops = 0;
   unsigned long long tx_n_bytes = 0, tx_n_pkts = 0, tx_n_drops = 0;
+  unsigned long long q_n_bytes = 0, q_n_pkts = 0;
   static u_int64_t last_pkts = 0;
   static u_int64_t last_bytes = 0;
   double diff, bytes_diff;
-  double delta_last;
+  double delta_last = 0;
   char buf[512];
   int len, q;
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
+
   gettimeofday(&end_time, NULL);
 
+  if (last_time.tv_sec > 0)
+    delta_last = delta_time(&end_time, &last_time);
+
+  memcpy(&last_time, &end_time, sizeof(last_time));
+
   for (q = 0; q < num_queues; q++) {
+    q_n_pkts = stats[q].num_pkts;
+    q_n_bytes = stats[q].num_bytes;
+
     /* Reading port packets/bytes with rte_eth_stats_get
-     * n_bytes += stats[q].num_bytes;
-     * n_pkts  += stats[q].num_pkts; */
+     * n_pkts  += q_n_pkts;
+     * n_bytes += q_n_bytes; */
 
     // if (num_queues > 1) {
-      len = snprintf(buf, sizeof(buf), "[Q #%u]  ", q);
+      len = snprintf(buf, sizeof(buf), "[Q#%u]   ", q);
 
       len += snprintf(&buf[len], sizeof(buf) - len,
-        "Packets: %ju\t"
-        "Bytes: %ju\t", 
-        stats[q].num_pkts, 
-        stats[q].num_bytes);
+          "Packets: %llu\t"
+          "Bytes: %llu\t", 
+          q_n_pkts, 
+          q_n_bytes);
 
       if (twin_port != 0xFF)
         len += snprintf(&buf[len], sizeof(buf) - len,
-          "TXPackets: %ju\t"
-          "TXBytes: %ju\t",
-          stats[q].tx_num_pkts,
-          stats[q].tx_num_bytes);
+            "TXPackets: %ju\t"
+            "TXBytes: %ju\t",
+            stats[q].tx_num_pkts,
+            stats[q].tx_num_bytes);
+
+      if (delta_last) {
+        diff = q_n_pkts - stats[q].last_pkts;
+        bytes_diff = q_n_bytes - stats[q].last_bytes;
+        bytes_diff /= (1000*1000*1000)/8;
+
+        len += snprintf(&buf[len], sizeof(buf) - len,
+            "Throughput: %.3f Mpps (%.3f Gbps)",
+            ((double) diff / (double)(delta_last/1000)) / 1000000,
+            ((double) bytes_diff / (double)(delta_last/1000)));
+      }
+      stats[q].last_pkts = q_n_pkts;
+      stats[q].last_bytes = q_n_bytes;
 
       fprintf(stderr, "%s\n", buf);
     //}
@@ -397,16 +422,10 @@ static void print_stats(void) {
     }
   }
 
-  if (last_time.tv_sec > 0) {
-    delta_last = delta_time(&end_time, &last_time);
-    diff = n_pkts - last_pkts;
-    bytes_diff = n_bytes - last_bytes;
-    bytes_diff /= (1000*1000*1000)/8;
+  len = snprintf(buf, sizeof(buf), "[Total] ");
 
-    len = snprintf(buf, sizeof(buf), "[Total] ");
-
-    if (compute_flows)
-      len += snprintf(&buf[len], sizeof(buf) - len,
+  if (compute_flows)
+    len += snprintf(&buf[len], sizeof(buf) - len,
         "ActFlows: %ju\t"
         "TotFlows: %ju\t"
         "Errors: %ju\t",
@@ -414,36 +433,39 @@ static void print_stats(void) {
         fstat_sum.flows,
         fstat_sum.err_no_room + fstat_sum.err_no_mem);
 
-    len += snprintf(&buf[len], sizeof(buf) - len,
+  len += snprintf(&buf[len], sizeof(buf) - len,
       "Packets: %llu\t"
-      "Bytes: %llu\t"
-      "Drop: %llu\t",
+      "Bytes: %llu\t",
       n_pkts,
-      n_bytes,
-      n_drops);
+      n_bytes);
 
-    if (twin_port != 0xFF)
-      len += snprintf(&buf[len], sizeof(buf) - len,
+  if (twin_port != 0xFF)
+    len += snprintf(&buf[len], sizeof(buf) - len,
         "TXPackets: %llu\t"
         "TXBytes: %llu\t"
         "TXDrop: %llu\t",
         tx_n_pkts,
         tx_n_bytes,
         tx_n_drops);
-     
+
+  if (delta_last) {
+    diff = n_pkts - last_pkts;
+    bytes_diff = n_bytes - last_bytes;
+    bytes_diff /= (1000*1000*1000)/8;
+
     len += snprintf(&buf[len], sizeof(buf) - len,
-      "Throughput: %.3f Mpps (%.3f Gbps)",
-      ((double) diff / (double)(delta_last/1000)) / 1000000,
-      ((double) bytes_diff / (double)(delta_last/1000)));
-
-    fprintf(stderr, "%s\n", buf);
+        "Throughput: %.3f Mpps (%.3f Gbps)\t",
+        ((double) diff / (double)(delta_last/1000)) / 1000000,
+        ((double) bytes_diff / (double)(delta_last/1000)));
   }
-
-  fprintf(stderr, "---\n");
-
   last_pkts = n_pkts;
   last_bytes = n_bytes;
-  memcpy(&last_time, &end_time, sizeof(last_time));
+
+  len += snprintf(&buf[len], sizeof(buf) - len,
+      "Drop: %llu\t",
+      n_drops);
+
+  fprintf(stderr, "%s\n---\n", buf);
 }
 
 /* ************************************ */
