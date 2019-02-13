@@ -63,6 +63,8 @@ static u_int8_t verbose = 0;
 static struct lcore_stats {
   u_int64_t num_pkts;
   u_int64_t num_bytes;
+  u_int64_t tx_num_pkts;
+  u_int64_t tx_num_bytes;
   u_int64_t padding[6];
 } stats[RTE_MAX_LCORE];
 
@@ -80,7 +82,7 @@ static int port_init(void) {
   int retval, i;
   u_int16_t q;
 
-  num_mbufs = ((2 * RX_RING_SIZE) + BURST_SIZE) * num_queues;
+  num_mbufs = ((2 * RX_RING_SIZE + TX_RING_SIZE) + BURST_SIZE) * num_queues;
 
   mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs, MBUF_CACHE_SIZE, 0, 
     RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
@@ -232,8 +234,12 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 	}
 
 	if ((twin_port_id != 0xFF) && (action != PFRING_FT_ACTION_DISCARD)) {
-	  if(rte_eth_tx_burst(twin_port_id, queue_id, &bufs[i], 1) == 1)
+	  if (rte_eth_tx_burst(twin_port_id, queue_id, &bufs[i], 1) == 1) {
+            /* TODO transmission can be optimized using bursts */
+            stats[queue_id].tx_num_pkts++;
+            stats[queue_id].tx_num_bytes += len + 24;
 	    to_free = 0; /* Do not free this buffer */
+          }
 	}
 	
 	if (to_free) rte_pktmbuf_free(bufs[i]);
@@ -327,12 +333,13 @@ static void print_stats(void) {
   static struct timeval last_time = { 0 };
   struct timeval end_time;
   unsigned long long n_bytes = 0, n_pkts = 0, n_drops = 0;
+  unsigned long long tx_n_bytes = 0, tx_n_pkts = 0, tx_n_drops = 0;
   static u_int64_t last_pkts = 0;
   static u_int64_t last_bytes = 0;
   double diff, bytes_diff;
   double delta_last;
   char buf[512];
-  int len = 0, q;
+  int len, q;
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
@@ -343,8 +350,24 @@ static void print_stats(void) {
      * n_bytes += stats[q].num_bytes;
      * n_pkts  += stats[q].num_pkts; */
 
-    if (num_queues > 1)
-      fprintf(stderr, "Q%u Packets: %lu\tBytes: %lu\n", q, stats[q].num_pkts, stats[q].num_bytes);
+    // if (num_queues > 1) {
+      len = snprintf(buf, sizeof(buf), "[Q #%u]  ", q);
+
+      len += snprintf(&buf[len], sizeof(buf) - len,
+        "Packets: %ju\t"
+        "Bytes: %ju\t", 
+        stats[q].num_pkts, 
+        stats[q].num_bytes);
+
+      if (twin_port != 0xFF)
+        len += snprintf(&buf[len], sizeof(buf) - len,
+          "TXPackets: %ju\t"
+          "TXBytes: %ju\t",
+          stats[q].tx_num_pkts,
+          stats[q].tx_num_bytes);
+
+      fprintf(stderr, "%s\n", buf);
+    //}
 
     if ((fstat = pfring_ft_get_stats(fts[q]))) {
       fstat_sum.active_flows += fstat->active_flows;
@@ -355,15 +378,21 @@ static void print_stats(void) {
   }
 
   if (rte_eth_stats_get(port, &pstats) == 0) {
-    n_pkts += pstats.ipackets;
-    n_bytes += pstats.ibytes + (n_pkts * 24);
-    n_drops += pstats.imissed + pstats.ierrors;
+    n_pkts  = pstats.ipackets;
+    n_bytes = pstats.ibytes + (n_pkts * 24);
+    n_drops = pstats.imissed + pstats.ierrors;
+    tx_n_pkts  = pstats.opackets;
+    tx_n_bytes = pstats.obytes + (tx_n_pkts * 24);
+    tx_n_drops = pstats.oerrors;
 
     if (twin_port != 0xFF) {
       if (rte_eth_stats_get(twin_port, &pstats) == 0) {
-        n_pkts += pstats.ipackets;
+        n_pkts  += pstats.ipackets;
         n_bytes += pstats.ibytes + (n_pkts * 24);
         n_drops += pstats.imissed + pstats.ierrors;
+        tx_n_pkts  += pstats.opackets;
+        tx_n_bytes += pstats.obytes + (tx_n_pkts * 24);
+        tx_n_drops += pstats.oerrors;
       }
     }
   }
@@ -374,28 +403,43 @@ static void print_stats(void) {
     bytes_diff = n_bytes - last_bytes;
     bytes_diff /= (1000*1000*1000)/8;
 
-    if (compute_flows)
-      len = snprintf(buf, sizeof(buf),
-             "ActFlows: %ju\t"
-             "TotFlows: %ju\t"
-             "Errors: %ju\t",
-             fstat_sum.active_flows,
-             fstat_sum.flows,
-             fstat_sum.err_no_room + fstat_sum.err_no_mem);
+    len = snprintf(buf, sizeof(buf), "[Total] ");
 
-    snprintf(&buf[len], sizeof(buf) - len,
-             "Packets: %lu\t"
-             "Bytes: %lu\t"
-             "Drop: %lu\t"
-             "Throughput: %.3f Mpps (%.3f Gbps)",
-             (long unsigned int) n_pkts,
-             (long unsigned int) n_bytes,
-             (long unsigned int) n_drops,
-	     ((double) diff / (double)(delta_last/1000)) / 1000000,
-	     ((double) bytes_diff / (double)(delta_last/1000)));
+    if (compute_flows)
+      len += snprintf(&buf[len], sizeof(buf) - len,
+        "ActFlows: %ju\t"
+        "TotFlows: %ju\t"
+        "Errors: %ju\t",
+        fstat_sum.active_flows,
+        fstat_sum.flows,
+        fstat_sum.err_no_room + fstat_sum.err_no_mem);
+
+    len += snprintf(&buf[len], sizeof(buf) - len,
+      "Packets: %llu\t"
+      "Bytes: %llu\t"
+      "Drop: %llu\t",
+      n_pkts,
+      n_bytes,
+      n_drops);
+
+    if (twin_port != 0xFF)
+      len += snprintf(&buf[len], sizeof(buf) - len,
+        "TXPackets: %llu\t"
+        "TXBytes: %llu\t"
+        "TXDrop: %llu\t",
+        tx_n_pkts,
+        tx_n_bytes,
+        tx_n_drops);
+     
+    len += snprintf(&buf[len], sizeof(buf) - len,
+      "Throughput: %.3f Mpps (%.3f Gbps)",
+      ((double) diff / (double)(delta_last/1000)) / 1000000,
+      ((double) bytes_diff / (double)(delta_last/1000)));
 
     fprintf(stderr, "%s\n", buf);
   }
+
+  fprintf(stderr, "---\n");
 
   last_pkts = n_pkts;
   last_bytes = n_bytes;
