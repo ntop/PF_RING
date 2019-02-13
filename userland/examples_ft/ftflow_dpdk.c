@@ -63,11 +63,12 @@ static u_int8_t verbose = 0;
 static struct lcore_stats {
   u_int64_t num_pkts;
   u_int64_t num_bytes;
-  u_int64_t tx_num_pkts;
-  u_int64_t tx_num_bytes;
   u_int64_t last_pkts;
   u_int64_t last_bytes;
-  u_int64_t padding[2];
+  u_int64_t tx_num_pkts;
+  u_int64_t tx_num_bytes;
+  u_int64_t tx_drops;
+  u_int64_t padding;
 } stats[RTE_MAX_LCORE];
 
 static const struct rte_eth_conf port_conf_default = {
@@ -96,7 +97,7 @@ static int port_init(void) {
     u_int8_t port_id = (i == 0) ? port : twin_port;
     unsigned int numa_socket_id;
     
-    if(port_id == 0xFF) break;
+    if(port_id == 0xFF || (i == 1 && twin_port == port)) break;
 
     printf("Configuring port %u...\n", port_id);
 
@@ -241,6 +242,8 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
             stats[queue_id].tx_num_pkts++;
             stats[queue_id].tx_num_bytes += len + 24;
 	    to_free = 0; /* Do not free this buffer */
+          } else {
+            stats[queue_id].tx_drops++;
           }
 	}
 	
@@ -371,25 +374,28 @@ static void print_stats(void) {
           q_n_pkts, 
           q_n_bytes);
 
-      if (twin_port != 0xFF)
-        len += snprintf(&buf[len], sizeof(buf) - len,
-            "TXPackets: %ju\t"
-            "TXBytes: %ju\t",
-            stats[q].tx_num_pkts,
-            stats[q].tx_num_bytes);
-
       if (delta_last) {
         diff = q_n_pkts - stats[q].last_pkts;
         bytes_diff = q_n_bytes - stats[q].last_bytes;
         bytes_diff /= (1000*1000*1000)/8;
 
         len += snprintf(&buf[len], sizeof(buf) - len,
-            "Throughput: %.3f Mpps (%.3f Gbps)",
+            "Throughput: %.3f Mpps (%.3f Gbps)\t",
             ((double) diff / (double)(delta_last/1000)) / 1000000,
             ((double) bytes_diff / (double)(delta_last/1000)));
       }
       stats[q].last_pkts = q_n_pkts;
       stats[q].last_bytes = q_n_bytes;
+
+      if (twin_port != 0xFF)
+        len += snprintf(&buf[len], sizeof(buf) - len,
+            "            \t"
+            "TXPackets: %ju\t"
+            "TXBytes: %ju\t"
+            "TXDrops: %ju\t",
+            stats[q].tx_num_pkts,
+            stats[q].tx_num_bytes,
+            stats[q].tx_drops);
 
       fprintf(stderr, "%s\n", buf);
     //}
@@ -410,7 +416,7 @@ static void print_stats(void) {
     tx_n_bytes = pstats.obytes + (tx_n_pkts * 24);
     tx_n_drops = pstats.oerrors;
 
-    if (twin_port != 0xFF) {
+    if (twin_port != 0xFF && twin_port != port) {
       if (rte_eth_stats_get(twin_port, &pstats) == 0) {
         n_pkts  += pstats.ipackets;
         n_bytes += pstats.ibytes + (n_pkts * 24);
@@ -439,15 +445,6 @@ static void print_stats(void) {
       n_pkts,
       n_bytes);
 
-  if (twin_port != 0xFF)
-    len += snprintf(&buf[len], sizeof(buf) - len,
-        "TXPackets: %llu\t"
-        "TXBytes: %llu\t"
-        "TXDrop: %llu\t",
-        tx_n_pkts,
-        tx_n_bytes,
-        tx_n_drops);
-
   if (delta_last) {
     diff = n_pkts - last_pkts;
     bytes_diff = n_bytes - last_bytes;
@@ -462,8 +459,17 @@ static void print_stats(void) {
   last_bytes = n_bytes;
 
   len += snprintf(&buf[len], sizeof(buf) - len,
-      "Drop: %llu\t",
+      "Drops: %llu\t",
       n_drops);
+
+  if (twin_port != 0xFF)
+    len += snprintf(&buf[len], sizeof(buf) - len,
+        "TXPackets: %llu\t"
+        "TXBytes: %llu\t"
+        "TXDrop: %llu\t",
+        tx_n_pkts,
+        tx_n_bytes,
+        tx_n_drops);
 
   fprintf(stderr, "%s\n---\n", buf);
 }
