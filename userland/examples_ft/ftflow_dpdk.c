@@ -66,9 +66,8 @@ static struct lcore_stats {
   u_int64_t last_pkts;
   u_int64_t last_bytes;
   u_int64_t tx_num_pkts;
-  u_int64_t tx_num_bytes;
   u_int64_t tx_drops;
-  u_int64_t padding;
+  u_int64_t padding[2];
 } stats[RTE_MAX_LCORE];
 
 static const struct rte_eth_conf port_conf_default = {
@@ -176,6 +175,10 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
   pfring_ft_table *ft;
   pfring_ft_pcap_pkthdr h;
   pfring_ft_ext_pkthdr ext_hdr = { 0 };
+  struct rte_mbuf *bufs[BURST_SIZE];
+  struct rte_mbuf *tx_bufs[BURST_SIZE];
+  u_int16_t num, tx_num, sent;
+  u_int32_t i;
 
   if (queue_id >= num_queues)
     return 0;
@@ -190,9 +193,6 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
     for (idx = 0; idx < 2; idx++) {
       u_int8_t port_id      = (idx == 0) ? port      : twin_port;
       u_int8_t twin_port_id = (idx == 0) ? twin_port : port;
-      struct rte_mbuf *bufs[BURST_SIZE];
-      u_int16_t num;
-      u_int32_t i;
       
       if(port_id == 0xFF) continue;
 
@@ -207,11 +207,11 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
       for (i = 0; i < PREFETCH_OFFSET && i < num; i++)
 	rte_prefetch0(rte_pktmbuf_mtod(bufs[i], void *));
 
+      tx_num = 0;
       for (i = 0; i < num; i++) {
 	char *data = rte_pktmbuf_mtod(bufs[i], char *);
 	int len = rte_pktmbuf_pkt_len(bufs[i]);
 	pfring_ft_action action = PFRING_FT_ACTION_DEFAULT;
-	u_int8_t to_free = 1;
 	
         stats[queue_id].num_pkts++;
         stats[queue_id].num_bytes += len + 24;
@@ -237,18 +237,20 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 	}
 
 	if ((twin_port_id != 0xFF) && (action != PFRING_FT_ACTION_DISCARD)) {
-	  if (rte_eth_tx_burst(twin_port_id, queue_id, &bufs[i], 1) == 1) {
-            /* TODO transmission can be optimized using bursts */
-            stats[queue_id].tx_num_pkts++;
-            stats[queue_id].tx_num_bytes += len + 24;
-	    to_free = 0; /* Do not free this buffer */
-          } else {
-            stats[queue_id].tx_drops++;
-          }
-	}
-	
-	if (to_free) rte_pktmbuf_free(bufs[i]);
+          tx_bufs[tx_num++] = bufs[i];
+        } else {
+          rte_pktmbuf_free(bufs[i]);
+        }
       }
+
+      if (tx_num > 0) {        
+        sent = rte_eth_tx_burst(twin_port_id, queue_id, tx_bufs, tx_num);
+        stats[queue_id].tx_num_pkts += sent;
+        stats[queue_id].tx_drops += (tx_num - sent);
+        for (i = sent; i < tx_num; i++)
+          rte_pktmbuf_free(tx_bufs[i]);
+      }
+
     } /* for */
   } /* while */
 
@@ -391,10 +393,9 @@ static void print_stats(void) {
         len += snprintf(&buf[len], sizeof(buf) - len,
             "            \t"
             "TXPackets: %ju\t"
-            "TXBytes: %ju\t"
+            "            \t"
             "TXDrops: %ju\t",
             stats[q].tx_num_pkts,
-            stats[q].tx_num_bytes,
             stats[q].tx_drops);
 
       fprintf(stderr, "%s\n", buf);
