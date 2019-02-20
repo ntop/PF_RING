@@ -51,7 +51,9 @@
 #define MBUF_CACHE_SIZE   256
 #define BURST_SIZE         32
 #define PREFETCH_OFFSET     3
+#define TX_TEST_PKT_LEN    60
 
+static struct rte_mempool *mbuf_pool = NULL;
 static pfring_ft_table *fts[RTE_MAX_LCORE] = { 0 };
 static u_int32_t ft_flags = 0;
 static u_int8_t port = 0, twin_port = 0xFF;
@@ -59,6 +61,7 @@ static u_int8_t num_queues = 1;
 static u_int8_t compute_flows = 1;
 static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
+static u_int8_t test_tx = 0;
 
 static struct lcore_stats {
   u_int64_t num_pkts;
@@ -78,13 +81,12 @@ static const struct rte_eth_conf port_conf_default = {
 
 static int port_init(void) {
   struct rte_eth_conf port_conf = port_conf_default;
-  struct rte_mempool *mbuf_pool;
   const u_int16_t rx_rings = num_queues, tx_rings = num_queues;
   int num_mbufs;
   int retval, i;
   u_int16_t q;
 
-  num_mbufs = ((2 * RX_RING_SIZE + TX_RING_SIZE) + BURST_SIZE) * num_queues;
+  num_mbufs = 2 * (RX_RING_SIZE + TX_RING_SIZE + BURST_SIZE) * num_queues;
 
   mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs, MBUF_CACHE_SIZE, 0, 
     RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
@@ -169,6 +171,41 @@ void processFlow(pfring_ft_flow *flow, void *user) {
 
 /* ************************************ */
 
+static void tx_test(u_int16_t queue_id) {
+  struct rte_mbuf *tx_bufs[BURST_SIZE];
+  u_int32_t i;
+  u_int16_t sent;
+  int rc;
+
+  printf("Generating traffic on port %u queue %u...\n", port, queue_id);
+
+  while (do_loop) {
+
+    rc = rte_mempool_get_bulk(mbuf_pool, (void **) tx_bufs, BURST_SIZE);
+
+    if (rc) {
+      fprintf(stderr, "rte_mempool_get_bulk error\n");
+      return;
+    }
+  
+    for (i = 0; i < BURST_SIZE; i++) {
+      forge_udp_packet_fast((u_char *) rte_pktmbuf_mtod(tx_bufs[i], char *), 
+        TX_TEST_PKT_LEN, stats[queue_id].tx_num_pkts + i);
+      tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = TX_TEST_PKT_LEN;
+    }
+
+    sent = rte_eth_tx_burst(port, queue_id, tx_bufs, BURST_SIZE);
+
+    stats[queue_id].tx_num_pkts += sent;
+    stats[queue_id].tx_drops += (BURST_SIZE - sent);
+
+    for (i = sent; i < BURST_SIZE; i++)
+      rte_pktmbuf_free(tx_bufs[i]);
+  }
+}
+
+/* ************************************ */
+
 static int packet_consumer(__attribute__((unused)) void *arg) {
   unsigned lcore_id = rte_lcore_id();
   u_int16_t queue_id = lcore_id;
@@ -182,6 +219,11 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 
   if (queue_id >= num_queues)
     return 0;
+
+  if (test_tx) {
+    tx_test(queue_id);
+    return 0;
+  }
 
   ft = fts[queue_id];
 
@@ -266,6 +308,7 @@ static void print_help(void) {
   printf("-7              Enable L7 protocol detection (nDPI)\n");
   printf("-n <num cores>  Enable multiple cores/queues (default: 1)\n");
   printf("-0              Do not compute flows (packet capture only)\n");
+  printf("-t              Test TX\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-h              Print this help\n");
 }
@@ -283,7 +326,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "hn:p:v07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "hn:p:tv07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'n':
       if (optarg) {
@@ -305,6 +348,9 @@ static int parse_args(int argc, char **argv) {
 	    twin_port = atoi(p);
 	}
       }
+      break;
+    case 't':
+      test_tx = 1;
       break;
     case 'v':
       verbose = 1;
@@ -389,7 +435,7 @@ static void print_stats(void) {
       stats[q].last_pkts = q_n_pkts;
       stats[q].last_bytes = q_n_bytes;
 
-      if (twin_port != 0xFF)
+      if (twin_port != 0xFF || test_tx)
         len += snprintf(&buf[len], sizeof(buf) - len,
             "            \t"
             "TXPackets: %ju\t"

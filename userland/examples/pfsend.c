@@ -459,7 +459,7 @@ int main(int argc, char* argv[]) {
   bind2node(bind_core);
 
   if (daemon_mode)
-    daemonize(pidFileName);
+    daemonize();
 
   if (pidFileName)
     create_pid_file(pidFileName);

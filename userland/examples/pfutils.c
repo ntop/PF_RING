@@ -31,11 +31,16 @@
 //#define _GNU_SOURCE
 #include <pthread.h>
 #include <sched.h> /* for CPU_XXXX */
-
+#include <stdarg.h>
 #include <sys/types.h>
 #include <pwd.h>
 #include <sys/stat.h>
+
+#ifndef HAVE_DPDK
 #include <netinet/if_ether.h>
+#else
+#define ETH_ALEN 6
+#endif
 
 #ifdef HAVE_PF_RING_ZC
 #include "pfring_zc.h"
@@ -115,21 +120,12 @@ static u_int32_t wrapsum (u_int32_t sum) {
 /* ******************************** */
 
 static int num_ips = 1;
-static int ip_offset = 0;
-static int reforge_src_mac = 0, reforge_dst_mac = 0;
-static int forge_vlan = 0, num_vlan = 1;
-static char srcmac[6] = { 0 }, dstmac[6] = { 0 };
-static struct in_addr srcaddr = { 0 }, dstaddr = { 0 };
-
-/* ******************************** */
 
 static u_char matrix_buffer[
   sizeof(struct ether_header) + 
   sizeof(struct compact_ip_hdr) + 
   sizeof(struct compact_udp_hdr)
 ];
-
-/* ******************************** */
 
 static void forge_udp_packet_fast(u_char *buffer, u_int packet_len, u_int idx) {
   int i;
@@ -195,6 +191,13 @@ static void forge_udp_packet_fast(u_char *buffer, u_int packet_len, u_int idx) {
 }
 
 /* ******************************** */
+
+#if !defined(HAVE_DPDK)
+static int ip_offset = 0;
+static int reforge_src_mac = 0, reforge_dst_mac = 0;
+static int forge_vlan = 0, num_vlan = 1;
+static char srcmac[6] = { 0 }, dstmac[6] = { 0 };
+static struct in_addr srcaddr = { 0 }, dstaddr = { 0 };
 
 static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int ip_version) {
   struct eth_vlan_hdr *vlan;
@@ -269,10 +272,11 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
 				  in_cksum((unsigned char *) addr, 2 * addr_len,
 				    IPPROTO_UDP + ntohs(udp->len)))));
 }
+#endif
 
 /* ******************************** */
 
-void daemonize() {
+void daemonize(void) {
   pid_t pid, sid;
 
   pid = fork();
@@ -291,7 +295,7 @@ void daemonize() {
 
 /* ******************************** */
 
-int drop_privileges(char *username) {
+int drop_privileges(const char *username) {
   struct passwd *pw = NULL;
 
   if (getgid() && getuid()) {
@@ -515,6 +519,7 @@ static __inline__ ticks getticks(void)
 
 /* *************************************** */
 
+#if !defined(HAVE_DPDK)
 #define TRACE_ERROR     0, __FILE__, __LINE__
 #define TRACE_WARNING   1, __FILE__, __LINE__
 #define TRACE_NORMAL    2, __FILE__, __LINE__
@@ -526,7 +531,8 @@ static FILE *trace_file = NULL;
 void trace(int trace_level, char *file, int line, char * format, ...) {
   va_list va_ap;
   char buf[2048], out_buf[640];
-  char theDate[32], *extra_msg = "";
+  char theDate[32];
+  const char *extra_msg = "";
   time_t theTime;
   FILE *out_file;
 
@@ -560,6 +566,7 @@ void trace(int trace_level, char *file, int line, char * format, ...) {
 
   va_end(va_ap);
 }
+#endif
 
 /* *************************************** */
 

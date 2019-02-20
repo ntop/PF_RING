@@ -223,7 +223,7 @@ void packet_consumer() {
   }
 
   for (i = 0; i < num_forged_packets; i++)
-    forge_udp_packet(&forged_packets[i * packet_len], packet_len, i);
+    forge_udp_packet_fast(&forged_packets[i * packet_len], packet_len, i);
 
   i = 0;
   while (!do_shutdown) {
