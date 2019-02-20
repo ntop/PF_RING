@@ -24,6 +24,8 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+#include "../examples/pfutils.c"
+
 /* *************************************** */
 
 #define N2DISK_METADATA             16
@@ -33,36 +35,6 @@
 #define MAX_NUM_OPTIONS             64
 
 #define DEFAULT_CLUSTER_ID          99
-
-/* *************************************** */
-
-int bind2node(int core_id) {
-  if (core_id < 0)
-    return -1;
-
-  pfring_zc_numa_set_numa_affinity(pfring_zc_numa_get_cpu_node(core_id));
-
-  return 0;
-}
-
-/* *************************************** */
-
-int bind2core(int core_id) {
-  cpu_set_t cpuset;
-  int s;
-
-  if (core_id < 0)
-    return -1;
-
-  CPU_ZERO(&cpuset);
-  CPU_SET(core_id, &cpuset);
-  if((s = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) != 0) {
-    fprintf(stderr, "Error while binding to core %u: errno=%i\n", core_id, s);
-    return -1;
-  } else {
-    return 0;
-  }
-}
 
 /* *************************************** */
 
@@ -188,106 +160,6 @@ static inline int64_t upper_power_of_2(int64_t x) {
 
 /* *************************************** */
 
-double delta_time (struct timeval * now, struct timeval * before) {
-  time_t delta_seconds;
-  time_t delta_microseconds;
-  
-  delta_seconds      = now -> tv_sec  - before -> tv_sec;
-  delta_microseconds = now -> tv_usec - before -> tv_usec;
-
-  if(delta_microseconds < 0) {
-    delta_microseconds += 1000000;  /* 1e6 */
-    -- delta_seconds;
-  }
-
-  return ((double)(delta_seconds * 1000) + (double)delta_microseconds/1000);
-}
-
-/* *************************************** */
-
-#define MSEC_IN_DAY    (1000 * 60 * 60 * 24) 
-#define MSEC_IN_HOUR   (1000 * 60 * 60)
-#define MSEC_IN_MINUTE (1000 * 60)
-#define MSEC_IN_SEC    (1000)
-
-char *msec2dhmsm(u_int64_t msec, char *buf, u_int buf_len) {
-  snprintf(buf, buf_len, "%u:%02u:%02u:%02u:%03u", 
-    (unsigned) (msec / MSEC_IN_DAY), 
-    (unsigned) (msec / MSEC_IN_HOUR)   %   24, 
-    (unsigned) (msec / MSEC_IN_MINUTE) %   60, 
-    (unsigned) (msec / MSEC_IN_SEC)    %   60,
-    (unsigned) (msec)                  % 1000
-  );
-  return(buf);
-}
-
-/* *************************************** */
-
-void daemonize() {
-  pid_t pid, sid;
-
-  pid = fork();
-  if (pid < 0) exit(EXIT_FAILURE);
-  if (pid > 0) exit(EXIT_SUCCESS);
-
-  sid = setsid();
-  if (sid < 0) exit(EXIT_FAILURE);
-
-  if ((chdir("/")) < 0) exit(EXIT_FAILURE);
-
-  close(STDIN_FILENO);
-  close(STDOUT_FILENO);
-  close(STDERR_FILENO);
-}
-
-/* *************************************** */
-
-int drop_privileges(char *username) {
-  struct passwd *pw = NULL;
-
-  if (getgid() && getuid())
-    return -1; /* non root? */
-
-  pw = getpwnam(username);
-
-  if (pw == NULL) 
-    return -1;
-
-  if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0)
-    return -1;
-
-  umask(0);
-  return 0;
-}
-
-/* *************************************** */
-
-void create_pid_file(char *pidFile) {
-  FILE *fp;
-
-  if (pidFile == NULL) return;
-
-  fp = fopen(pidFile, "w");
-
-  if (fp == NULL) {
-    fprintf(stderr, "unable to create pid file %s: %s\n", pidFile, strerror(errno));
-    return;
-  }
-
-  fprintf(fp, "%d\n", getpid());
-  fclose(fp);
-}
-
-/* *************************************** */
-
-void remove_pid_file(char *pidFile) {
-  if (pidFile == NULL) return;
-
-  unlink(pidFile);
-}
-
-/* *************************************** */
-
 int load_args_from_file(char *conffile, int *ret_argc, char **ret_argv[]) {
   FILE *fd;
   char *tok, cont = 1;
@@ -367,52 +239,4 @@ int load_args_from_file(char *conffile, int *ret_argc, char **ret_argv[]) {
 }
 
 /* *************************************** */
-
-#define TRACE_ERROR   0, __FILE__, __LINE__
-#define TRACE_WARNING 1, __FILE__, __LINE__
-#define TRACE_NORMAL  2, __FILE__, __LINE__
-#define TRACE_DEBUG   3, __FILE__, __LINE__
-static int trace_verbosity = 2;
-static FILE *trace_file = NULL;
-
-void trace(int trace_level, char *file, int line, char * format, ...) {
-  va_list va_ap;
-  char buf[2048], out_buf[640];
-  char theDate[32], *extra_msg = "";
-  time_t theTime;
-  FILE *out_file;
-
-  if (trace_level > trace_verbosity)
-    return;
-
-  theTime = time(NULL);
-
-  va_start(va_ap, format);
-
-  memset(buf, 0, sizeof(buf));
-  strftime(theDate, 32, "%d/%b/%Y %H:%M:%S", localtime(&theTime));
-
-  vsnprintf(buf, sizeof(buf)-1, format, va_ap);
-
-  if (trace_level == 0)
-    extra_msg = "ERROR: ";
-  else if (trace_level == 1)
-    extra_msg = "WARNING: ";
-
-  while (buf[strlen(buf)-1] == '\n') buf[strlen(buf)-1] = '\0';
-
-  snprintf(out_buf, sizeof(out_buf), "%s [%s:%d] %s%s", theDate, file, line, extra_msg, buf);
-
-  if (trace_file != NULL) out_file = trace_file;
-  else if (trace_level == 0) out_file = stderr;
-  else out_file = stdout;
-
-  fprintf(out_file, "%s\n", out_buf);
-  fflush(out_file);
-
-  va_end(va_ap);
-}
-
-/* *************************************** */
-
 

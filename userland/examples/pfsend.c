@@ -107,13 +107,9 @@ u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 struct timeval lastTime, startTime;
-int reforge_src_mac = 0, reforge_dst_mac = 0, reforge_ip = 0, on_the_fly_reforging = 0;
-struct in_addr srcaddr, dstaddr;
-char srcmac[6], dstmac[6];
+int reforge_ip = 0, on_the_fly_reforging = 0;
 int send_len = 60;
 int daemon_mode = 0;
-int num_ip = 1, ip_offset = 0;
-int forge_vlan = 0, num_vlan = 1;
 
 #define DEFAULT_DEVICE     "eth0"
 
@@ -266,120 +262,6 @@ void printHelp(void) {
 
 /* ******************************************* */
 
-/*
- * Checksum routine for Internet Protocol family headers (C Version)
- *
- * Borrowed from DHCPd
- */
-
-static u_int32_t in_cksum(unsigned char *buf, unsigned nbytes, u_int32_t sum) {
-  uint i;
-
-  /* Checksum all the pairs of bytes first... */
-  for (i = 0; i < (nbytes & ~1U); i += 2) {
-    sum += (u_int16_t) ntohs(*((u_int16_t *)(buf + i)));
-    /* Add carry. */
-    if(sum > 0xFFFF)
-      sum -= 0xFFFF;
-  }
-
-  /* If there's a single byte left over, checksum it, too.   Network
-     byte order is big-endian, so the remaining byte is the high byte. */
-  if(i < nbytes) {
-    sum += buf [i] << 8;
-    /* Add carry. */
-    if(sum > 0xFFFF)
-      sum -= 0xFFFF;
-  }
-
-  return sum;
-}
-
-/* ******************************************* */
-
-static u_int32_t wrapsum (u_int32_t sum) {
-  sum = ~sum & 0xFFFF;
-  return htons(sum);
-}
-
-/* ******************************************* */
-
-static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int ip_version) {
-  struct eth_vlan_hdr *vlan;
-  struct ip_header *ip;
-  struct ip6_header *ip6;
-  struct udp_header *udp;
-  u_char *addr;
-  int l2_len, ip_len, addr_len, i;
-
-  /* Reset packet */
-  memset(buffer, 0, buffer_len);
-
-  l2_len = sizeof(struct ether_header);
-
-  for(i=0; i<12; i++) buffer[i] = i;
-  if(reforge_dst_mac) memcpy(buffer, dstmac, 6);
-  if(reforge_src_mac) memcpy(&buffer[6], srcmac, 6);
-
-  if (forge_vlan) { 
-    vlan = (struct eth_vlan_hdr *) &buffer[l2_len];
-    buffer[l2_len-2] = 0x81, buffer[l2_len-1] = 0x00;
-    vlan->h_vlan_id = htons((idx % num_vlan) + 1); 
-    l2_len += sizeof(struct eth_vlan_hdr);
-  }
-
-  if (ip_version == 6) {
-    buffer[l2_len-2] = 0x86, buffer[l2_len-1] = 0xDD;
-    ip6 = (struct ip6_header*) &buffer[l2_len];
-    ip_len = sizeof(*ip6);
-    ip6->version = 6;
-    ip6->payload_len = htons(buffer_len - l2_len - ip_len);
-    ip6->nexthdr = IPPROTO_UDP;
-    ip6->hop_limit = 0xFF;
-    ip6->saddr[0] = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ip)) & 0xFFFFFFFF);
-    ip6->daddr[0] = dstaddr.s_addr;
-    addr = (u_char *) ip6->saddr;
-    addr_len = sizeof(ip6->saddr);
-  } else {
-    buffer[l2_len-2] = 0x08, buffer[l2_len-1] = 0x00;
-    ip = (struct ip_header*) &buffer[l2_len];
-    ip_len = sizeof(*ip);
-    ip->ihl = 5;
-    ip->version = 4;
-    ip->tos = 0;
-    ip->tot_len = htons(buffer_len - l2_len);
-    ip->id = htons(2012);
-    ip->ttl = 64;
-    ip->frag_off = htons(0);
-    ip->protocol = IPPROTO_UDP;
-    ip->daddr = dstaddr.s_addr;
-    ip->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ip)) & 0xFFFFFFFF);
-    ip->check = wrapsum(in_cksum((unsigned char *) ip, ip_len, 0));
-    addr = (u_char *) &ip->saddr;
-    addr_len = sizeof(ip->saddr);
-  }
-
-  udp = (struct udp_header*)(buffer + l2_len + ip_len);
-  udp->source = htons(2012);
-  udp->dest = htons(3000);
-  udp->len = htons(buffer_len - l2_len - ip_len);
-  udp->check = 0; /* It must be 0 to compute the checksum */
-
-  /*
-    http://www.cs.nyu.edu/courses/fall01/G22.2262-001/class11.htm
-    http://www.ietf.org/rfc/rfc0761.txt
-    http://www.ietf.org/rfc/rfc0768.txt
-  */
-
-  i = l2_len + ip_len + sizeof(struct udp_header);
-  udp->check = wrapsum(in_cksum((unsigned char *) udp, sizeof(struct udp_header),
-                                in_cksum((unsigned char *) &buffer[i], buffer_len - i,
-				  in_cksum((unsigned char *) addr, 2 * addr_len,
-				    IPPROTO_UDP + ntohs(udp->len)))));
-}
-
-/* ******************************************* */
-
 static struct pfring_pkthdr hdr; /* note: this is static to be (re)used by on the fly reforging */
 
 static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use_prev_hdr) {
@@ -401,7 +283,7 @@ static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use
 
     ip_header = (struct ip_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l3_offset];
     ip_header->daddr = dstaddr.s_addr;
-    ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ip)) & 0xFFFFFFFF);
+    ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ips)) & 0xFFFFFFFF);
     ip_header->check = 0;
     ip_header->check = wrapsum(in_cksum((unsigned char *) ip_header, sizeof(struct ip_header), 0));
 
@@ -465,10 +347,10 @@ int main(int argc, char* argv[]) {
   while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z")) != -1) {
     switch(c) {
     case 'b':
-      num_ip = atoi(optarg);
-      if(num_ip == 0) num_ip = 1;
-      if (num_uniq_pkts < num_ip)
-        num_uniq_pkts = num_ip;
+      num_ips = atoi(optarg);
+      if(num_ips == 0) num_ips = 1;
+      if (num_uniq_pkts < num_ips)
+        num_uniq_pkts = num_ips;
       reforge_ip = 1;
       break;
     case 'D':

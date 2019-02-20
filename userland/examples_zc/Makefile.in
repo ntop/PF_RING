@@ -25,7 +25,7 @@ LIBS       = ${LIBPFRING} `../lib/pfring_config --libs` ../libpcap/libpcap.a `..
 # C compiler and flags
 #
 CC         = ${CROSS_COMPILE}gcc
-CFLAGS     = -O2 -Wall @CFLAGS@ ${INCLUDE} @HAVE_ZMQ@ @HAVE_PF_RING_FT@
+CFLAGS     = -O2 -Wall -Wno-unused-function @CFLAGS@ ${INCLUDE} @HAVE_ZMQ@ @HAVE_PF_RING_FT@
 
 %.o: %.c zutils.c
 	${CC} ${CFLAGS} -c $< -o $@
