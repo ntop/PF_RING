@@ -50,19 +50,24 @@ the '-zc' suffix. Three driver families are currently available:
 - 1 Gbit
 
   - e1000e (RX and TX)
+     - Supported cards: Intel 8254x/8256x/82571/82572/82573/82574/82583
   - igb    (RX and TX)
+     - Supported cards: Intel 82575/82576/82580/I210/I350
 
 - 10 Gbit
 
   - ixgbe/ixgbevf (RX and TX)
+     - Supported cards: Intel 82599/X520/X540/X55x
 
 - 10/40 Gbit
 
   - i40e (RX and TX)
+     - Supported cards: Intel X710/XL710
 
 - 10/40/100 Gbit
 
   - fm10k (RX and TX)
+     - Supported cards: FM10420
 
 These drivers can be found in drivers/
 
