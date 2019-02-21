@@ -98,7 +98,7 @@ static int port_init(void) {
     u_int8_t port_id = (i == 0) ? port : twin_port;
     unsigned int numa_socket_id;
     
-    if(port_id == 0xFF || (i == 1 && twin_port == port)) break;
+    if (port_id == 0xFF || (i == 1 && twin_port == port)) break;
 
     printf("Configuring port %u...\n", port_id);
 
@@ -130,6 +130,23 @@ static int port_init(void) {
   }
   
   return 0;
+}
+
+/* ************************************ */
+
+static void port_close(void) {
+  int i;
+
+  for (i = 0; i < 2; i++) {
+    u_int8_t port_id = (i == 0) ? port : twin_port;
+    
+    if (port_id == 0xFF || (i == 1 && twin_port == port)) break;
+
+    printf("Releasing port %u...\n", port_id);
+
+    rte_eth_dev_stop(port_id);
+    rte_eth_dev_close(port_id);
+  }
 }
 
 /* ************************************ */
@@ -604,6 +621,8 @@ int main(int argc, char *argv[]) {
 
   for (q = 0; q < num_queues; q++)
     pfring_ft_destroy_table(fts[q]);
+
+  port_close();
 
   return 0;
 }
