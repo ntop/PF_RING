@@ -62,6 +62,7 @@ static u_int8_t compute_flows = 1;
 static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
 static u_int8_t test_tx = 0;
+static u_int32_t num_mbufs_per_lcore = 0;
 
 static struct lcore_stats {
   u_int64_t num_pkts;
@@ -81,9 +82,10 @@ static const struct rte_eth_conf port_conf_default = {
 
 static int port_init(void) {
   struct rte_eth_conf port_conf = port_conf_default;
-  int num_mbufs;
   int retval, i;
   u_int16_t q;
+
+  num_mbufs_per_lcore = RX_RING_SIZE + TX_RING_SIZE + 2*BURST_SIZE;
 
   for (i = 0; i < 2; i++) {
     u_int8_t port_id = (i == 0) ? port : twin_port;
@@ -104,9 +106,7 @@ static int port_init(void) {
 
       printf("Configuring queue %u...\n", q);
 
-      num_mbufs = RX_RING_SIZE + TX_RING_SIZE + 2*BURST_SIZE;
-
-      mbuf_pool[q] = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs, MBUF_CACHE_SIZE, 0, 
+      mbuf_pool[q] = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs_per_lcore, MBUF_CACHE_SIZE, 0, 
         RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
       if (mbuf_pool[q] == NULL)
@@ -207,10 +207,12 @@ static void tx_test(u_int16_t queue_id) {
       return;
     }
   
-    for (i = 0; i < BURST_SIZE; i++) {
-      forge_udp_packet_fast((u_char *) rte_pktmbuf_mtod(tx_bufs[i], char *), 
-        TX_TEST_PKT_LEN, stats[queue_id].tx_num_pkts + i);
-      tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = TX_TEST_PKT_LEN;
+    if (stats[queue_id].tx_num_pkts < num_mbufs_per_lcore) { /* optimization */
+      for (i = 0; i < BURST_SIZE &&  num_mbufs_per_lcore; i++) {
+        forge_udp_packet_fast((u_char *) rte_pktmbuf_mtod(tx_bufs[i], char *), 
+          TX_TEST_PKT_LEN, stats[queue_id].tx_num_pkts + i);
+        tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = TX_TEST_PKT_LEN;
+      }
     }
 
     sent = rte_eth_tx_burst(port, queue_id, tx_bufs, BURST_SIZE);
