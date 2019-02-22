@@ -430,14 +430,18 @@ static void print_stats(void) {
      * n_pkts  += q_n_pkts;
      * n_bytes += q_n_bytes; */
 
+    if (test_tx)
+      q_n_pkts = stats[q].tx_num_pkts;
+
     // if (num_queues > 1) {
       len = snprintf(buf, sizeof(buf), "[Q#%u]   ", q);
 
-      len += snprintf(&buf[len], sizeof(buf) - len,
-          "Packets: %llu\t"
-          "Bytes: %llu\t", 
-          q_n_pkts, 
-          q_n_bytes);
+      if (!test_tx)
+        len += snprintf(&buf[len], sizeof(buf) - len,
+            "Packets: %llu\t"
+            "Bytes: %llu\t", 
+            q_n_pkts, 
+            q_n_bytes);
 
       if (delta_last) {
         diff = q_n_pkts - stats[q].last_pkts;
@@ -445,9 +449,15 @@ static void print_stats(void) {
         bytes_diff /= (1000*1000*1000)/8;
 
         len += snprintf(&buf[len], sizeof(buf) - len,
-            "Throughput: %.3f Mpps (%.3f Gbps)\t",
-            ((double) diff / (double)(delta_last/1000)) / 1000000,
-            ((double) bytes_diff / (double)(delta_last/1000)));
+            "Throughput: %.3f Mpps",
+            ((double) diff / (double)(delta_last/1000)) / 1000000);
+
+	if (!test_tx)
+          len += snprintf(&buf[len], sizeof(buf) - len,
+              " (%.3f Gbps)\t",
+              ((double) bytes_diff / (double)(delta_last/1000)));
+	else
+          len += snprintf(&buf[len], sizeof(buf) - len, "\t");
       }
       stats[q].last_pkts = q_n_pkts;
       stats[q].last_bytes = q_n_bytes;
@@ -471,6 +481,9 @@ static void print_stats(void) {
       fstat_sum.err_no_mem += fstat->err_no_mem;
     }
   }
+
+  if (test_tx)
+    return;
 
   if (rte_eth_stats_get(port, &pstats) == 0) {
     n_pkts  = pstats.ipackets;
