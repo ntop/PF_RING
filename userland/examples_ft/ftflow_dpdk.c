@@ -84,15 +84,28 @@ static int port_init(void) {
   struct rte_eth_conf port_conf = port_conf_default;
   int retval, i;
   u_int16_t q;
+  char name[64];
+  int num_ports;
 
-  num_mbufs_per_lcore = RX_RING_SIZE + TX_RING_SIZE + 2*BURST_SIZE;
+  if (twin_port == 0xFF || twin_port == port) num_ports = 1;
+  else num_ports = 2;
 
-  for (i = 0; i < 2; i++) {
+  num_mbufs_per_lcore = (RX_RING_SIZE + TX_RING_SIZE + 2*BURST_SIZE) * 2;
+
+  for (q = 0; q < num_queues; q++) {
+    snprintf(name, sizeof(name), "MBUF_POOL_%u", q);
+
+    mbuf_pool[q] = rte_pktmbuf_pool_create(name, num_mbufs_per_lcore, MBUF_CACHE_SIZE, 0, 
+      RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+
+    if (mbuf_pool[q] == NULL)
+      rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
+  }
+
+  for (i = 0; i < num_ports; i++) {
     u_int8_t port_id = (i == 0) ? port : twin_port;
     unsigned int numa_socket_id;
     
-    if (port_id == 0xFF || (i == 1 && twin_port == port)) break;
-
     printf("Configuring port %u...\n", port_id);
 
     retval = rte_eth_dev_configure(port_id, num_queues /* RX */, num_queues /* TX */, &port_conf);
@@ -105,12 +118,6 @@ static int port_init(void) {
     for (q = 0; q < num_queues; q++) {
 
       printf("Configuring queue %u...\n", q);
-
-      mbuf_pool[q] = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs_per_lcore, MBUF_CACHE_SIZE, 0, 
-        RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
-
-      if (mbuf_pool[q] == NULL)
-        rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
 
       retval = rte_eth_rx_queue_setup(port_id, q, RX_RING_SIZE, numa_socket_id, NULL, mbuf_pool[q]);
 
@@ -203,7 +210,7 @@ static void tx_test(u_int16_t queue_id) {
     rc = rte_mempool_get_bulk(mbuf_pool[queue_id], (void **) tx_bufs, BURST_SIZE);
 
     if (rc) {
-      fprintf(stderr, "rte_mempool_get_bulk error\n");
+      fprintf(stderr, "rte_mempool_get_bulk error (%d)\n", rc);
       return;
     }
   
@@ -479,7 +486,7 @@ static void print_stats(void) {
       fprintf(stderr, "%s\n", buf);
     //}
 
-    if ((fstat = pfring_ft_get_stats(fts[q]))) {
+    if (compute_flows && (fstat = pfring_ft_get_stats(fts[q]))) {
       fstat_sum.active_flows += fstat->active_flows;
       fstat_sum.flows += fstat->flows;
       fstat_sum.err_no_room += fstat->err_no_room;
@@ -611,15 +618,17 @@ int main(int argc, char *argv[]) {
   if (port_init() != 0)
     rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu8 "\n", port);
 
-  for (q = 0; q < num_queues; q++) {
-    fts[q] = pfring_ft_create_table(ft_flags, 0, 0, 0);
+  if (compute_flows) {
+    for (q = 0; q < num_queues; q++) {
+      fts[q] = pfring_ft_create_table(ft_flags, 0, 0, 0);
 
-    if (fts[q] == NULL) {
-      fprintf(stderr, "pfring_ft_create_table error\n");
-      return -1;
+      if (fts[q] == NULL) {
+        fprintf(stderr, "pfring_ft_create_table error\n");
+        return -1;
+      }
+
+      pfring_ft_set_flow_export_callback(fts[q], processFlow, fts[q]);
     }
-
-    pfring_ft_set_flow_export_callback(fts[q], processFlow, fts[q]);
   }
 
   signal(SIGINT, sigproc);
@@ -634,11 +643,13 @@ int main(int argc, char *argv[]) {
     rte_eal_wait_lcore(lcore_id);
   } 
 
-  for (q = 0; q < num_queues; q++)
-    pfring_ft_flush(fts[q]);
+  if (compute_flows) {
+    for (q = 0; q < num_queues; q++)
+      pfring_ft_flush(fts[q]);
 
-  for (q = 0; q < num_queues; q++)
-    pfring_ft_destroy_table(fts[q]);
+    for (q = 0; q < num_queues; q++)
+      pfring_ft_destroy_table(fts[q]);
+  }
 
   port_close();
 
