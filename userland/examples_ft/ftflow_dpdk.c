@@ -53,8 +53,8 @@
 #define PREFETCH_OFFSET     3
 #define TX_TEST_PKT_LEN    60
 
-static struct rte_mempool *mbuf_pool = NULL;
-static pfring_ft_table *fts[RTE_MAX_LCORE] = { 0 };
+static struct rte_mempool *mbuf_pool[RTE_MAX_LCORE] = { NULL };
+static pfring_ft_table *fts[RTE_MAX_LCORE] = { NULL };
 static u_int32_t ft_flags = 0;
 static u_int8_t port = 0, twin_port = 0xFF;
 static u_int8_t num_queues = 1;
@@ -81,18 +81,9 @@ static const struct rte_eth_conf port_conf_default = {
 
 static int port_init(void) {
   struct rte_eth_conf port_conf = port_conf_default;
-  const u_int16_t rx_rings = num_queues, tx_rings = num_queues;
   int num_mbufs;
   int retval, i;
   u_int16_t q;
-
-  num_mbufs = 2 * (RX_RING_SIZE + TX_RING_SIZE + BURST_SIZE) * num_queues;
-
-  mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs, MBUF_CACHE_SIZE, 0, 
-    RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
-
-  if (mbuf_pool == NULL)
-    rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
 
   for (i = 0; i < 2; i++) {
     u_int8_t port_id = (i == 0) ? port : twin_port;
@@ -102,21 +93,32 @@ static int port_init(void) {
 
     printf("Configuring port %u...\n", port_id);
 
-    retval = rte_eth_dev_configure(port_id, rx_rings, tx_rings, &port_conf);
+    retval = rte_eth_dev_configure(port_id, num_queues /* RX */, num_queues /* TX */, &port_conf);
     
     if (retval != 0)
       return retval;    
 
     numa_socket_id = rte_eth_dev_socket_id(port_id);
     
-    for (q = 0; q < rx_rings; q++) {
-      retval = rte_eth_rx_queue_setup(port_id, q, RX_RING_SIZE, numa_socket_id, NULL, mbuf_pool);
+    for (q = 0; q < num_queues; q++) {
+
+      printf("Configuring queue %u...\n", q);
+
+      num_mbufs = RX_RING_SIZE + TX_RING_SIZE + 2*BURST_SIZE;
+
+      mbuf_pool[q] = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs, MBUF_CACHE_SIZE, 0, 
+        RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+
+      if (mbuf_pool[q] == NULL)
+        rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
+
+      retval = rte_eth_rx_queue_setup(port_id, q, RX_RING_SIZE, numa_socket_id, NULL, mbuf_pool[q]);
+
       if (retval < 0)
 	return retval;
-    }
 
-    for (q = 0; q < tx_rings; q++) {
       retval = rte_eth_tx_queue_setup(port_id, q, TX_RING_SIZE, numa_socket_id, NULL);
+
       if (retval < 0)
 	return retval;
     }
@@ -198,7 +200,7 @@ static void tx_test(u_int16_t queue_id) {
 
   while (do_loop) {
 
-    rc = rte_mempool_get_bulk(mbuf_pool, (void **) tx_bufs, BURST_SIZE);
+    rc = rte_mempool_get_bulk(mbuf_pool[queue_id], (void **) tx_bufs, BURST_SIZE);
 
     if (rc) {
       fprintf(stderr, "rte_mempool_get_bulk error\n");
@@ -216,8 +218,8 @@ static void tx_test(u_int16_t queue_id) {
     stats[queue_id].tx_num_pkts += sent;
     stats[queue_id].tx_drops += (BURST_SIZE - sent);
 
-    for (i = sent; i < BURST_SIZE; i++)
-      rte_pktmbuf_free(tx_bufs[i]);
+    if (sent < BURST_SIZE)
+      rte_mempool_put_bulk(mbuf_pool[queue_id], (void **) &tx_bufs[sent], BURST_SIZE - sent);
   }
 }
 
@@ -368,6 +370,7 @@ static int parse_args(int argc, char **argv) {
       break;
     case 't':
       test_tx = 1;
+      compute_csum = 0;
       break;
     case 'v':
       verbose = 1;

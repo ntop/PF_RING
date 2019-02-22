@@ -119,6 +119,7 @@ static u_int32_t wrapsum (u_int32_t sum) {
 
 /* ******************************** */
 
+static int compute_csum = 1;
 static int num_ips = 1;
 
 static u_char matrix_buffer[
@@ -178,7 +179,10 @@ static void forge_udp_packet_fast(u_char *buffer, u_int packet_len, u_int idx) {
 
   ip_header = (struct compact_ip_hdr*) &buffer[sizeof(struct ether_header)];
   ip_header->saddr = htonl(src_ip);
-  ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header, sizeof(struct compact_ip_hdr), 0));
+  if (compute_csum)
+    ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header, sizeof(struct compact_ip_hdr), 0));
+  else
+    ip_header->check = 0;
 
 #if 0
   i = sizeof(struct ether_header) + sizeof(struct compact_ip_hdr) + sizeof(struct compact_udp_hdr);
