@@ -71,7 +71,7 @@ dkms-rpm:
 
 clean:
 	make -C /lib/modules/$(BUILD_KERNEL)/build SUBDIRS=$(HERE) clean
-	\rm -f *~ Module.symvers  Module.markers  modules.order *#
+	\rm -f *~ Module.markers  modules.order *#
 
 install:
 	mkdir -p $(INSTDIR)

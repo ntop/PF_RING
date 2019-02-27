@@ -4,7 +4,8 @@ add: veryclean
 	\/bin/rm -rf /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
 	mkdir /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
 	cd @IXGBEVF@/@IXGBEVF@-@IXGBEVF_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
-	cd @IXGBEVF@/@IXGBEVF@-@IXGBEVF_VERSION@-zc/src ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
+	cp ../../kernel/linux/pf_ring.h /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
+	cp ../../kernel/Module.symvers /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
 	#sed -i -e 's|DRIVER_NAME=@IXGBEVF@|DRIVER_NAME=@IXGBEVF@_zc|g' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
 	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IXGBEVF@_zc' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@IXGBEVF@ /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/dkms.conf 

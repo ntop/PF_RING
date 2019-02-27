@@ -1,4 +1,0 @@
-0x2cb44f25	pf_ring_zc_dev_handler	/home/blackout/PF_RING-dev/kernel/pf_ring	EXPORT_SYMBOL
-0x383fef3b	pf_ring_skb_ring_handler	/home/blackout/PF_RING-dev/kernel/pf_ring	EXPORT_SYMBOL
-0xfc9ae9a2	i40e_register_client	/home/blackout/PF_RING-dev/drivers/intel/i40e/i40e-2.4.6-zc/src/i40e	EXPORT_SYMBOL
-0x03af5957	i40e_unregister_client	/home/blackout/PF_RING-dev/drivers/intel/i40e/i40e-2.4.6-zc/src/i40e	EXPORT_SYMBOL

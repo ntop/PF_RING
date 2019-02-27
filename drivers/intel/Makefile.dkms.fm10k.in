@@ -4,7 +4,8 @@ add: veryclean
 	\/bin/rm -rf /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@
 	mkdir -p /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
 	cd @FM10K@/@FM10K@-@FM10K_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
-	cd @FM10K@/@FM10K@-@FM10K_VERSION@-zc/src/ ; cp ../../../../../kernel/linux/pf_ring.h /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
+	cp ../../kernel/linux/pf_ring.h /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
+	cp ../../kernel/Module.symvers /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
 	sed -i -e 's/fm10k\.o/fm10k_zc.o/' -e 's/fm10k-/fm10k_zc-/' /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Kbuild /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@FM10K@ /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/dkms.conf 
