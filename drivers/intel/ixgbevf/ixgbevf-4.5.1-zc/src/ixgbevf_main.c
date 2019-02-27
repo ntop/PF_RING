@@ -2934,10 +2934,7 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 
 #ifdef HAVE_PF_RING
 	{
-	struct ixgbe_hw *hw = &adapter->hw;
-	struct pfring_hooks *hook = (struct pfring_hooks *) adapter->netdev->pfring_ptr;
-
-	if (hook != NULL) {
+		struct ixgbe_hw *hw = &adapter->hw;
 		int i;
 		u16 cache_line_size = 64;
  
@@ -2974,7 +2971,7 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 				  tx_info.packet_memory_slot_len,
 				  tx_ring->size);
  
-			hook->zc_dev_handler(add_device_mapping,
+			pfring_zc_dev_handler(add_device_mapping,
 			  &rx_info,
 			  &tx_info,
 			  rx_ring->desc, /* Packet descriptors */
@@ -2994,8 +2991,6 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 			  notify_function_ptr
 			);
 	    	}
-	}
-
 	}
 #endif
 }
@@ -3311,13 +3306,10 @@ void ixgbevf_down(struct ixgbevf_adapter *adapter)
 
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks *) adapter->netdev->pfring_ptr;
-
-	if (hook != NULL) {
 		int i;
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
-			hook->zc_dev_handler(remove_device_mapping,
+			pfring_zc_dev_handler(remove_device_mapping,
 			  NULL, /* rx_info */
 			  NULL, /* tx_info */
 			  NULL, /* Packet descriptors */
@@ -3337,8 +3329,6 @@ void ixgbevf_down(struct ixgbevf_adapter *adapter)
 			  NULL /* notify_function_ptr */
 			);
 		}
-	}
-
 	}
 #endif
 

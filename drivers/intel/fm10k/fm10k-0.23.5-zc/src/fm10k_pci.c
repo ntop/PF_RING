@@ -2104,11 +2104,7 @@ void fm10k_up(struct fm10k_intfc *interface)
 
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*) interface->netdev->pfring_ptr;
-
-	if (hook != NULL) {
 		int i;
-
 		unsigned int buf_len = FM10K_RX_BUFSZ; /* TODO check the correct length (what about jumbo?) */
 
 		for (i = 0; i < interface->num_rx_queues; i++) {
@@ -2129,7 +2125,7 @@ void fm10k_up(struct fm10k_intfc *interface)
 			tx_info.packet_memory_slot_len      = buf_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 
-			hook->zc_dev_handler(add_device_mapping,
+			pfring_zc_dev_handler(add_device_mapping,
 			  &rx_info,
 			  &tx_info,
 			  rx_ring->desc,
@@ -2149,8 +2145,6 @@ void fm10k_up(struct fm10k_intfc *interface)
 			  notify_function_ptr
 			);
 	    	}
-	}
-
 	}
 #endif
 }
@@ -2245,13 +2239,10 @@ skip_tx_dma_drain:
 
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*)interface->netdev->pfring_ptr;
-
-	if (hook != NULL) {
 		int i;
 
 		for (i = 0; i < interface->num_rx_queues; i++) {
-			hook->zc_dev_handler(remove_device_mapping,
+			pfring_zc_dev_handler(remove_device_mapping,
 			  NULL, // rx_info,
 			  NULL, // tx_info,
 			  NULL, /* Packet descriptors */
@@ -2270,8 +2261,6 @@ skip_tx_dma_drain:
 			  NULL // notify_function_ptr
 			);
 		}
-	}
-
 	}
 #endif
 }

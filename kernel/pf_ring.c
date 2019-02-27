@@ -381,10 +381,6 @@ static inline void ring_read_unlock_inbh(void)  { read_unlock(&ring_mgmt_lock); 
 static struct proto_ops ring_ops;
 static struct proto ring_proto;
 
-static int skb_ring_handler(struct sk_buff *skb, u_char recv_packet,
-			    u_int8_t real_skb,
-			    int32_t channel_id, u_int32_t num_rx_channels);
-static int buffer_ring_handler(struct net_device *dev, char *data, int len);
 static int remove_from_cluster(struct sock *sock, struct pf_ring_socket *pfr);
 static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapping);
 static int pfring_get_zc_dev(struct pf_ring_socket *pfr);
@@ -3854,7 +3850,7 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
       the ring due to lack of available space
 */
 
-static int skb_ring_handler(struct sk_buff *skb,
+int pfring_skb_ring_handler(struct sk_buff *skb,
 			    u_int8_t recv_packet,
 			    u_int8_t real_skb /* 1=real skb, 0=faked skb */,
 			    /*
@@ -4156,28 +4152,7 @@ static int skb_ring_handler(struct sk_buff *skb,
   return(rc); /*  0 = packet not handled */
 }
 
-/* ********************************** */
-
-static int buffer_ring_handler(struct net_device *dev, char *data, int len)
-{
-  struct sk_buff skb;
-
-  skb.dev = dev;
-  skb.len = len;
-  skb.data = (u_char *) data;
-  skb.data_len = len;
-
-  /* BD - API changed for time keeping */
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0))
-  skb.tstamp.tv64 = 0;
-#else
-  skb.tstamp = 0;
-#endif
-
-  return(skb_ring_handler(&skb, 1, 0 /* fake skb */,
-			  -1 /* unknown: any channel */,
-			  UNKNOWN_NUM_RX_CHANNELS));
-}
+EXPORT_SYMBOL(pfring_skb_ring_handler);
 
 /* ********************************** */
 
@@ -4193,11 +4168,11 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
   if (skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)
     return 0;
 
-  rc = skb_ring_handler(skb,
-			skb->pkt_type != PACKET_OUTGOING,
-			1 /* real_skb */,
-			-1 /* unknown: any channel */,
-                        UNKNOWN_NUM_RX_CHANNELS);
+  rc = pfring_skb_ring_handler(skb,
+			       skb->pkt_type != PACKET_OUTGOING,
+			       1 /* real_skb */,
+			       1 /* unknown: any channel */,
+                	       UNKNOWN_NUM_RX_CHANNELS);
 
   kfree_skb(skb);
 
@@ -7614,23 +7589,23 @@ static int ring_getsockopt(struct socket *sock,
 
 /* ************************************* */
 
-void zc_dev_handler(zc_dev_operation operation,
-			mem_ring_info *rx_info,
-			mem_ring_info *tx_info,
-			void          *rx_descr_packet_memory,
-			void          *tx_descr_packet_memory,
-			void          *phys_card_memory,
-			u_int          phys_card_memory_len,
-			u_int channel_id,
-			struct net_device *dev,
-			struct device *hwdev,
-			zc_dev_model device_model,
-			u_char *device_address,
-			wait_queue_head_t *packet_waitqueue,
-			u_int8_t *interrupt_received,
-			void *rx_adapter_ptr, void *tx_adapter_ptr,
-			zc_dev_wait_packet wait_packet_function_ptr,
-			zc_dev_notify dev_notify_function_ptr)
+void pfring_zc_dev_handler(zc_dev_operation operation,
+			   mem_ring_info *rx_info,
+			   mem_ring_info *tx_info,
+			   void          *rx_descr_packet_memory,
+			   void          *tx_descr_packet_memory,
+			   void          *phys_card_memory,
+			   u_int          phys_card_memory_len,
+			   u_int channel_id,
+			   struct net_device *dev,
+			   struct device *hwdev,
+			   zc_dev_model device_model,
+			   u_char *device_address,
+			   wait_queue_head_t *packet_waitqueue,
+			   u_int8_t *interrupt_received,
+			   void *rx_adapter_ptr, void *tx_adapter_ptr,
+			   zc_dev_wait_packet wait_packet_function_ptr,
+			   zc_dev_notify dev_notify_function_ptr)
 {
   pf_ring_device *dev_ptr;
 
@@ -7733,6 +7708,8 @@ void zc_dev_handler(zc_dev_operation operation,
 	   zc_devices_list_size);
 }
 
+EXPORT_SYMBOL(pfring_zc_dev_handler);
+
 /* ************************************* */
 
 static int ring_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
@@ -7808,15 +7785,6 @@ static struct proto ring_proto = {
   .name = "PF_RING",
   .owner = THIS_MODULE,
   .obj_size = sizeof(struct ring_sock),
-};
-
-/* ************************************ */
-
-static struct pfring_hooks ring_hooks = {
-  .magic = PF_RING,
-  .ring_handler = skb_ring_handler,
-  .buffer_ring_handler = buffer_ring_handler,
-  .zc_dev_handler = zc_dev_handler,
 };
 
 /* ************************************ */
@@ -8083,7 +8051,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
   struct net_device *dev = netdev_notifier_info_to_dev(data);
   pf_ring_device *dev_ptr;
   struct list_head *ptr, *tmp_ptr;
-  struct pfring_hooks *hook;
   int if_name_clash = 0;
 
   if(debug_on(2)) {
@@ -8172,13 +8139,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     return NOTIFY_DONE;
   }
 
-  hook = (struct pfring_hooks *) dev->pfring_ptr;
-  if(hook && (hook->magic != PF_RING)) {
-    printk("[PF_RING] %s %s: interface already in use by another socket not compatible with PF_RING\n",
-           __FUNCTION__, dev->name);
-    return NOTIFY_DONE;
-  }
-
   switch (msg) {
     case NETDEV_POST_INIT:
     case NETDEV_PRE_UP:
@@ -8186,7 +8146,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     case NETDEV_DOWN:
       break;
     case NETDEV_REGISTER:
-      debug_printk(2, "%s: [REGISTER][ifindex: %u pfring_ptr=%p hook=%p]\n", dev->name, dev->ifindex, dev->pfring_ptr, &ring_hooks);
+      debug_printk(2, "%s: [REGISTER][ifindex: %u]\n", dev->name, dev->ifindex);
 
       /* safety check */
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
@@ -8199,7 +8159,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       }
 
       if(!if_name_clash) {
-	dev->pfring_ptr = &ring_hooks;
 	if(add_device_to_ring_list(dev) != 0) {
 	  printk("[PF_RING] Error in add_device_to_ring_list(%s)\n", dev->name);
 	}
@@ -8207,13 +8166,9 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       break;
 
     case NETDEV_UNREGISTER:
-      debug_printk(2, "%s: [UNREGISTER][ifindex: %u pfring_ptr=%p]\n", dev->name, dev->ifindex, dev->pfring_ptr);
+      debug_printk(2, "%s: [UNREGISTER][ifindex: %u]\n", dev->name, dev->ifindex);
 
-      hook = (struct pfring_hooks *) dev->pfring_ptr;
-      if(hook && (hook->magic == PF_RING)) {
-	remove_device_from_ring_list(dev);
-	dev->pfring_ptr = NULL;
-      }
+      remove_device_from_ring_list(dev);
       /* We don't have to worry updating rules that might have used this
 	 device (just removed) as reflection device. This because whenever
 	 we set a rule with reflection, we do dev_put() so such device is
@@ -8334,7 +8289,6 @@ static struct pernet_operations ring_net_ops = {
 static void __exit ring_exit(void)
 {
   struct list_head *ptr, *tmp_ptr;
-  struct pfring_hooks *hook;
   pf_ring_net *netns;
 
   pfring_enabled = 0;
@@ -8345,8 +8299,6 @@ static void __exit ring_exit(void)
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
 
-    hook = (struct pfring_hooks *) dev_ptr->dev->pfring_ptr;
-
     write_lock(&netns_lock);
 
     netns = netns_lookup(dev_net(dev_ptr->dev));
@@ -8355,15 +8307,6 @@ static void __exit ring_exit(void)
       remove_device_from_proc(netns, dev_ptr);
 
     write_unlock(&netns_lock);
-
-    if (hook != NULL) {
-      if(hook->magic == PF_RING) {
-        debug_printk(2, "Unregister hook for %s\n", dev_ptr->device_name);
-        dev_ptr->dev->pfring_ptr = NULL; /* Unhook PF_RING */
-      }
-    } else {
-      printk("[PF_RING] PF_RING hook was not set for %s\n", dev_ptr->device_name);
-    }
 
     list_del(ptr);
     kfree(dev_ptr);

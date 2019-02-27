@@ -6063,64 +6063,60 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 	if (vsi->netdev) {
-		struct pfring_hooks *hook = (struct pfring_hooks*)vsi->netdev->pfring_ptr;
+		int i;
+		u16 cache_line_size;
+		struct i40e_pf *pf = vsi->back;
 
-		if (hook != NULL) {
-			int i;
-			u16 cache_line_size;
-			struct i40e_pf *pf = vsi->back;
+		pci_read_config_word(pf->pdev, I40E_PCI_DEVICE_CACHE_LINE_SIZE, &cache_line_size);
+		cache_line_size &= 0x00FF;
+		cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
+		if (cache_line_size == 0) cache_line_size = 64;
 
-			pci_read_config_word(pf->pdev, I40E_PCI_DEVICE_CACHE_LINE_SIZE, &cache_line_size);
-			cache_line_size &= 0x00FF;
-			cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
-			if (cache_line_size == 0) cache_line_size = 64;
+		//if (unlikely(enable_debug))  
+			printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u][MSIX %s]\n", __FUNCTION__,
+				vsi->netdev->name, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0),
+				cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
 
-			//if (unlikely(enable_debug))  
-				printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u][MSIX %s]\n", __FUNCTION__,
-					vsi->netdev->name, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0),
-					cache_line_size, (vsi->back->flags & I40E_FLAG_MSIX_ENABLED) ? "enabled" : "disabled");
+		for (i = 0; i < vsi->num_queue_pairs; i++) {
+			struct i40e_ring *rx_ring = vsi->rx_rings[i];
+			struct i40e_ring *tx_ring = vsi->tx_rings[i];
+			mem_ring_info rx_info = { 0 };
+			mem_ring_info tx_info = { 0 };
 
-			for (i = 0; i < vsi->num_queue_pairs; i++) {
-				struct i40e_ring *rx_ring = vsi->rx_rings[i];
-				struct i40e_ring *tx_ring = vsi->tx_rings[i];
-				mem_ring_info rx_info = { 0 };
-				mem_ring_info tx_info = { 0 };
+			init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 
-				init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
-
-				rx_info.num_queues = vsi->num_queue_pairs;
-				rx_info.packet_memory_num_slots     = rx_ring->count;
-				rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
-				rx_info.descr_packet_memory_tot_len = rx_ring->size;
-				rx_info.registers_index		    = rx_ring->reg_idx;
-				rx_info.stats_index		    = vsi->info.stat_counter_idx;
-				rx_info.vector			    = rx_ring->q_vector->v_idx + vsi->base_vector;
+			rx_info.num_queues = vsi->num_queue_pairs;
+			rx_info.packet_memory_num_slots     = rx_ring->count;
+			rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
+			rx_info.descr_packet_memory_tot_len = rx_ring->size;
+			rx_info.registers_index		    = rx_ring->reg_idx;
+			rx_info.stats_index		    = vsi->info.stat_counter_idx;
+			rx_info.vector			    = rx_ring->q_vector->v_idx + vsi->base_vector;
  
-				tx_info.num_queues = vsi->num_queue_pairs;
-				tx_info.packet_memory_num_slots     = tx_ring->count;
-				tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
-				tx_info.descr_packet_memory_tot_len = tx_ring->size;
-				tx_info.registers_index		    = tx_ring->reg_idx;
+			tx_info.num_queues = vsi->num_queue_pairs;
+			tx_info.packet_memory_num_slots     = tx_ring->count;
+			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
+			tx_info.descr_packet_memory_tot_len = tx_ring->size;
+			tx_info.registers_index		    = tx_ring->reg_idx;
 
-				hook->zc_dev_handler(add_device_mapping,
-					&rx_info,
-					&tx_info,
-					rx_ring->desc, /* rx packet descriptors */
-					tx_ring->desc, /* tx packet descriptors */
-					(void *) pci_resource_start(pf->pdev, 0),
-					pci_resource_len(pf->pdev, 0),
-					rx_ring->queue_index, /* channel id */
-					rx_ring->netdev,
-					rx_ring->dev, /* for DMA mapping */
-					intel_i40e,
-					rx_ring->netdev->dev_addr,
-					&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
-					&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
-					(void *) rx_ring,
-					(void *) tx_ring,
-					wait_packet_function_ptr,
-					notify_function_ptr);
-			}
+			pfring_zc_dev_handler(add_device_mapping,
+				&rx_info,
+				&tx_info,
+				rx_ring->desc, /* rx packet descriptors */
+				tx_ring->desc, /* tx packet descriptors */
+				(void *) pci_resource_start(pf->pdev, 0),
+				pci_resource_len(pf->pdev, 0),
+				rx_ring->queue_index, /* channel id */
+				rx_ring->netdev,
+				rx_ring->dev, /* for DMA mapping */
+				intel_i40e,
+				rx_ring->netdev->dev_addr,
+				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
+				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
+				(void *) rx_ring,
+				(void *) tx_ring,
+				wait_packet_function_ptr,
+				notify_function_ptr);
 		}
 	}
 #endif
@@ -6273,42 +6269,38 @@ void i40e_down(struct i40e_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 	if (vsi->netdev) {
-		struct pfring_hooks *hook = (struct pfring_hooks*)vsi->netdev->pfring_ptr;
 		struct i40e_pf *pf = vsi->back;
 		struct i40e_pf    *adapter = i40e_netdev_to_pf(vsi->netdev);
 		int i;
 
-		if (hook != NULL) {
-			
-			//if (unlikely(enable_debug))
-	      			printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, vsi->netdev->name);
+		//if (unlikely(enable_debug))
+	      		printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, vsi->netdev->name);
 
-			if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
-				printk("[PF_RING-ZC] %s: detaching %s while in use\n", __FUNCTION__, vsi->netdev->name); 
+		if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
+			printk("[PF_RING-ZC] %s: detaching %s while in use\n", __FUNCTION__, vsi->netdev->name); 
 
-			for (i = 0; i < vsi->num_queue_pairs; i++) {
-				struct i40e_ring *rx_ring = vsi->rx_rings[i];
-				struct i40e_ring *tx_ring = vsi->tx_rings[i];
-				hook->zc_dev_handler(remove_device_mapping,
-					NULL, // rx_info,
-					NULL, // tx_info,
-					NULL, /* Packet descriptors */
-					NULL, /* Packet descriptors */
-					(void*)pci_resource_start(pf->pdev, 0),
-					pci_resource_len(pf->pdev, 0),
-					rx_ring->queue_index, /* Channel Id */
-					rx_ring->netdev,
-					rx_ring->dev, /* for DMA mapping */
-					intel_i40e,
-					rx_ring->netdev->dev_addr,
-					&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
-					&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
-					(void*)rx_ring,
-					(void*)tx_ring,
-					NULL, // wait_packet_function_ptr
-					NULL // notify_function_ptr
-				);
-			}
+		for (i = 0; i < vsi->num_queue_pairs; i++) {
+			struct i40e_ring *rx_ring = vsi->rx_rings[i];
+			struct i40e_ring *tx_ring = vsi->tx_rings[i];
+			pfring_zc_dev_handler(remove_device_mapping,
+				NULL, // rx_info,
+				NULL, // tx_info,
+				NULL, /* Packet descriptors */
+				NULL, /* Packet descriptors */
+				(void*)pci_resource_start(pf->pdev, 0),
+				pci_resource_len(pf->pdev, 0),
+				rx_ring->queue_index, /* Channel Id */
+				rx_ring->netdev,
+				rx_ring->dev, /* for DMA mapping */
+				intel_i40e,
+				rx_ring->netdev->dev_addr,
+				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
+				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
+				(void*)rx_ring,
+				(void*)tx_ring,
+				NULL, // wait_packet_function_ptr
+				NULL // notify_function_ptr
+			);
 		}
 	}
 #endif

@@ -610,19 +610,15 @@ e1000_receive_skb(struct e1000_adapter *adapter,
 
 #ifdef HAVE_PF_RING
 	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) { /* act as direct driver-to-ring */
-		struct pfring_hooks *hook = (struct pfring_hooks *) netdev->pfring_ptr;
-	  
-		if (hook && (hook->magic == PF_RING)) { /* PF_RING is alive */
-			int rc;
+		int rc;
 
-			//printk(KERN_INFO "[PF_RING] %s driver -> pf_ring [len=%d]\n", netdev->name, skb->len);
+		//printk(KERN_INFO "[PF_RING] %s driver -> pf_ring [len=%d]\n", netdev->name, skb->len);
 
-			rc = hook->ring_handler(skb, 1, 1, -1, 1);
+		rc = pfring_skb_ring_handler(skb, 1, 1, -1, 1);
 	      
-			if (rc > 0) { /* Packet handled by PF_RING */
-				kfree_skb(skb);
-				return rc; /* PF_RING has already freed the memory */
-			}
+		if (rc > 0) { /* Packet handled by PF_RING */
+			kfree_skb(skb);
+			return rc; /* PF_RING has already freed the memory */
 		}
 	}
 #endif
@@ -4611,9 +4607,6 @@ static void e1000_configure(struct e1000_adapter *adapter)
 
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*)adapter->netdev->pfring_ptr;
-
-	if (hook != NULL) {
 		u16	cache_line_size;
 		struct e1000_ring *rx_ring = adapter->rx_ring;
 		struct e1000_ring *tx_ring = adapter->tx_ring;
@@ -4638,7 +4631,7 @@ static void e1000_configure(struct e1000_adapter *adapter)
 		tx_info.descr_packet_memory_tot_len = tx_ring->size;
 
 		// printk("%s(%d)=%lu\n", __FUNCTION__, i, adapter->netdev->mem_start);
-		hook->zc_dev_handler(add_device_mapping,
+		pfring_zc_dev_handler(add_device_mapping,
 #ifdef ENABLE_RX_ZC
 				     &rx_info,
 #else
@@ -4666,8 +4659,6 @@ static void e1000_configure(struct e1000_adapter *adapter)
 				     notify_function_ptr);
 
 		//printk(KERN_INFO "[PF_RING] %s(%s, rx_ring=%p, tx_ring=%p)\n", __FUNCTION__, adapter->netdev->name, rx_ring, tx_ring);
-	}
-
 	}
 #endif
 }
@@ -5254,10 +5245,7 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 
 #ifdef HAVE_PF_RING
 	{
-	struct pfring_hooks *hook = (struct pfring_hooks*)adapter->netdev->pfring_ptr;
-
-	if (hook != NULL) {
-		hook->zc_dev_handler(remove_device_mapping,
+		pfring_zc_dev_handler(remove_device_mapping,
 				     NULL, // rx_info,
 				     NULL, // tx_info,
 				     NULL, /* Packet descriptors */
@@ -5275,8 +5263,6 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 				     NULL, // wait_packet_function_ptr
 				     NULL // notify_function_ptr
 				     );
-	}
-
 	}
 #endif
 

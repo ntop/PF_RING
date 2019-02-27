@@ -37,9 +37,6 @@
 #define DEFAULT_MIN_PKT_QUEUED        128
 #define DEFAULT_POLL_WATERMARK_TIMEOUT  0
 
-/* Dirty hack I know, but what else shall I do man? */
-#define pfring_ptr ax25_ptr
-
 #define FILTERING_SAMPLING_RATIO       10
 
 /* Versioning */
@@ -1286,63 +1283,31 @@ typedef struct {
 
 /* **************************************** */
 
-typedef void  (*handle_pfring_zc_dev)(zc_dev_operation operation,
-                                      mem_ring_info *rx_info,
-                                      mem_ring_info *tx_info,
-                                      void          *rx_descr_packet_memory,
-                                      void          *tx_descr_packet_memory,
-                                      void          *phys_card_memory,
-                                      u_int          phys_card_memory_len,
-                                      u_int channel_id,
-                                      struct net_device *dev,
-                                      struct device *hwdev,
-                                      zc_dev_model device_model,
-                                      u_char *device_address,
-                                      wait_queue_head_t *packet_waitqueue,
-                                      u_int8_t *interrupt_received,
-                                      void *rx_adapter_ptr, void *tx_adapter_ptr,
-                                      zc_dev_wait_packet wait_packet_function_ptr,
-                                      zc_dev_notify dev_notify_function_ptr);
+/* Exported functions - used by drivers */
 
-extern handle_pfring_zc_dev get_ring_zc_dev_handler(void);
-extern void set_ring_zc_dev_handler(handle_pfring_zc_dev the_zc_device_handler);
-extern void do_ring_zc_dev_handler(zc_dev_operation operation,
-				       mem_ring_info *rx_info,
-				       mem_ring_info *tx_info,
-			 	       unsigned long *rx_packet_memory,
-				       void          *rx_descr_packet_memory,
-				       unsigned long *tx_packet_memory,
-				       void          *tx_descr_packet_memory,
-				       void          *phys_card_memory,
-				       u_int          phys_card_memory_len,
-				       u_int channel_id,
-				       struct net_device *dev,
-				       struct device *hwdev,
-				       zc_dev_model device_model,
-				       u_char *device_address,
-				       wait_queue_head_t * packet_waitqueue,
-				       u_int8_t * interrupt_received,
-				       void *rx_adapter_ptr, void *tx_adapter_ptr,
-				       zc_dev_wait_packet wait_packet_function_ptr,
-				       zc_dev_notify dev_notify_function_ptr);
+int pfring_skb_ring_handler(struct sk_buff *skb,
+			    u_int8_t recv_packet,
+			    u_int8_t real_skb /* 1=real skb, 0=faked skb */,
+			    int32_t channel_id,
+			    u_int32_t num_rx_channels);
 
-typedef int (*handle_ring_skb)(struct sk_buff *skb, u_char recv_packet,
-			       u_char real_skb,
-			       int32_t channel_id,
-			       u_int32_t num_rx_channels);
-typedef int (*handle_ring_buffer)(struct net_device *dev,
-				  char *data, int len);
-
-/* Hack to jump from a device directly to PF_RING */
-struct pfring_hooks {
-  u_int32_t magic; /*
-		     It should be set to PF_RING
-		     and is MUST be the first one on this struct
-		   */
-  handle_ring_skb ring_handler;
-  handle_ring_buffer buffer_ring_handler;
-  handle_pfring_zc_dev zc_dev_handler;
-};
+void pfring_zc_dev_handler(zc_dev_operation operation,
+			   mem_ring_info *rx_info,
+			   mem_ring_info *tx_info,
+			   void          *rx_descr_packet_memory,
+			   void          *tx_descr_packet_memory,
+			   void          *phys_card_memory,
+			   u_int          phys_card_memory_len,
+			   u_int channel_id,
+			   struct net_device *dev,
+			   struct device *hwdev,
+			   zc_dev_model device_model,
+			   u_char *device_address,
+			   wait_queue_head_t *packet_waitqueue,
+			   u_int8_t *interrupt_received,
+			   void *rx_adapter_ptr, void *tx_adapter_ptr,
+			   zc_dev_wait_packet wait_packet_function_ptr,
+			   zc_dev_notify dev_notify_function_ptr);
 
 /* *************************************************************** */
 
