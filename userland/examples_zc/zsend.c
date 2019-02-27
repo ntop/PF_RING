@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <pcap.h>
+
 #include "pfring.h"
 #include "pfring_zc.h"
 
@@ -48,8 +49,6 @@ struct packet {
   char *pkt;
   struct packet *next;
 };
-
-#define POW2(n) ((n & (n - 1)) == 0)
 
 #define ALARM_SLEEP             1
 #define CACHE_LINE_LEN         64
@@ -69,7 +68,8 @@ pfring_zc_pkt_buff *buffers[NBUFF];
 
 struct timeval startTime;
 unsigned long long numPkts = 0, numBytes = 0;
-int cluster_id = DEFAULT_CLUSTER_ID+2, queue_id = -1, bind_core = -1, pps = -1, packet_len = 60, num_ips = 0, metadata_len = 0;
+int cluster_id = DEFAULT_CLUSTER_ID+2, queue_id = -1, bind_core = -1, pps = -1;
+int packet_len = 60, metadata_len = 0;
 u_int64_t num_to_send = 0;
 u_int8_t active = 0, flush_packet = 0, append_timestamp = 0, use_pulse_time = 0, enable_vm_support = 0;
 #ifdef BURST_API
@@ -95,16 +95,6 @@ volatile u_int64_t *pulse_timestamp_ns;
 volatile u_int64_t *pulse_timestamp_ns_n;
 
 /* *************************************** */
-
-typedef u_int64_t ticks;
-
-static __inline__ ticks getticks(void) {
-  u_int32_t a, d;
-  asm volatile("rdtsc" : "=a" (a), "=d" (d));
-  return (((ticks)a) | (((ticks)d) << 32));
-}
-
-/* ******************************************* */
 
 void *time_pulse_thread(void *data) {
   struct timespec tn;
@@ -161,94 +151,6 @@ struct udp_header {
   u_int16_t	len;		/* udp length */
   u_int16_t	check;		/* udp checksum */
 };
-
-static u_int32_t in_cksum(unsigned char *buf, unsigned nbytes, u_int32_t sum) {
-  uint i;
-
-  for (i = 0; i < (nbytes & ~1U); i += 2) {
-    sum += (u_int16_t) ntohs(*((u_int16_t *)(buf + i)));
-    if(sum > 0xFFFF)
-      sum -= 0xFFFF;
-  }
-
-  if(i < nbytes) {
-    sum += buf [i] << 8;
-    if(sum > 0xFFFF)
-      sum -= 0xFFFF;
-  }
-
-  return sum;
-}
-
-static u_int32_t wrapsum (u_int32_t sum) {
-  sum = ~sum & 0xFFFF;
-  return htons(sum);
-}
-
-static u_char matrix_buffer[sizeof(struct ether_header) +  sizeof(struct ip_header) + sizeof(struct udp_header)];
-
-static void forge_udp_packet(u_char *buffer, u_int idx) {
-  int i;
-  struct ip_header *ip_header;
-  struct udp_header *udp_header;
-  u_int32_t src_ip = 0x0A000000; /* 10.0.0.0 */ 
-  u_int32_t dst_ip =  0xC0A80001; /* 192.168.0.1 */
-  u_int16_t src_port = 2014-2019, dst_port = 3000;
-
-  if (num_ips == 0) {
-    src_ip |= idx & 0xFFFFFF;
-  } else if (num_ips > 1) {
-    if (POW2(num_ips))
-      src_ip |= idx & (num_ips - 1) & 0xFFFFFF;
-    else
-      src_ip |= (idx % num_ips) & 0xFFFFFF;
-  }
-
-#if 0
-  memset(buffer, 0, packet_len + 4);
-#endif
-
-  if (idx == 0) { /* first packet, precomputing headers */
-    for(i = 0; i < 12; i++) buffer[i] = i;
-    buffer[12] = 0x08, buffer[13] = 0x00; /* IP */
-
-    ip_header = (struct ip_header*) &buffer[sizeof(struct ether_header)];
-    ip_header->ihl = 5;
-    ip_header->version = 4;
-    ip_header->tos = 0;
-    ip_header->tot_len = htons(packet_len-sizeof(struct ether_header));
-    ip_header->id = htons(2012);
-    ip_header->ttl = 64;
-    ip_header->frag_off = htons(0);
-    ip_header->protocol = IPPROTO_UDP;
-    ip_header->daddr = htonl(dst_ip);
-    ip_header->saddr = htonl(src_ip);
-    ip_header->check = 0;
-
-    udp_header = (struct udp_header*)(buffer + sizeof(struct ether_header) + sizeof(struct ip_header));
-    udp_header->source = htons(src_port);
-    udp_header->dest = htons(dst_port);
-    udp_header->len = htons(packet_len-sizeof(struct ether_header)-sizeof(struct ip_header));
-    udp_header->check = 0;
-
-    memcpy(matrix_buffer, buffer, sizeof(struct ether_header) +  sizeof(struct ip_header) + sizeof(struct udp_header));
-  } else {
-    memcpy(buffer, matrix_buffer, sizeof(struct ether_header) +  sizeof(struct ip_header) + sizeof(struct udp_header));
-  }
-
-  ip_header = (struct ip_header*) &buffer[sizeof(struct ether_header)];
-  ip_header->saddr = htonl(src_ip);
-  ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header, sizeof(struct ip_header), 0));
-
-#if 0
-  i = sizeof(struct ether_header) + sizeof(struct ip_header) + sizeof(struct udp_header);
-  udp_header->check = wrapsum(in_cksum((unsigned char *)udp_header, sizeof(struct udp_header),
-                                       in_cksum((unsigned char *)&buffer[i], packet_len-i,
-						in_cksum((unsigned char *)&ip_header->saddr,
-							 2*sizeof(ip_header->saddr),
-							 IPPROTO_UDP + ntohs(udp_header->len)))));
-#endif
-}
 
 /* *************************************** */
 
@@ -556,7 +458,7 @@ void *send_traffic(void *user) {
 	    if (stdin_packet_len > 0)
 	      memcpy(buffer, stdin_packet, stdin_packet_len);
 	    else
-	      forge_udp_packet(buffer, numPkts + i);
+	      forge_udp_packet_fast(buffer, packet_len, numPkts + i);
 	  }
 	}
       }
@@ -603,7 +505,7 @@ void *send_traffic(void *user) {
 	  if (stdin_packet_len > 0)
 	    memcpy(buffer, stdin_packet, stdin_packet_len);
 	  else
-	    forge_udp_packet(buffer, numPkts);
+	    forge_udp_packet_fast(buffer, packet_len, numPkts);
 	}
       }
 

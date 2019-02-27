@@ -116,107 +116,6 @@ void printHelp(void) {
   exit(0);
 }
 
-/* ******************************************* */
-
-/*
- * Checksum routine for Internet Protocol family headers (C Version)
- *
- * Borrowed from DHCPd
- */
-
-static u_int32_t in_cksum(unsigned char *buf,
-			  unsigned nbytes, u_int32_t sum) {
-  uint i;
-
-  /* Checksum all the pairs of bytes first... */
-  for (i = 0; i < (nbytes & ~1U); i += 2) {
-    sum += (u_int16_t) ntohs(*((u_int16_t *)(buf + i)));
-    /* Add carry. */
-    if(sum > 0xFFFF)
-      sum -= 0xFFFF;
-  }
-
-  /* If there's a single byte left over, checksum it, too.   Network
-     byte order is big-endian, so the remaining byte is the high byte. */
-  if(i < nbytes) {
-#ifdef DEBUG_CHECKSUM_VERBOSE
-    debug ("sum = %x", sum);
-#endif
-    sum += buf [i] << 8;
-    /* Add carry. */
-    if(sum > 0xFFFF)
-      sum -= 0xFFFF;
-  }
-
-  return sum;
-}
-
-/* ******************************************* */
-
-static u_int32_t wrapsum (u_int32_t sum) {
-  sum = ~sum & 0xFFFF;
-  return htons(sum);
-}
-
-/* ******************************************* */
-
-static void forge_udp_packet(char *buffer, u_int idx,ticks *sent_in) {
-  int i;
-  struct ip_header *ip_header;
-  struct udp_header *udp_header;
-  u_int32_t src_ip = (0x0A000000 + idx) % 0xFFFFFFFF /* from 10.0.0.0 */;
-  u_int32_t dst_ip =  0xC0A80001 /* 192.168.0.1 */;
-  u_int16_t src_port = 2012, dst_port = 3000;
-
-  /* Reset packet */
-  memset(buffer, 0, send_len);
-
-  for(i=0; i<12; i++) buffer[i] = i;
-  buffer[12] = 0x08, buffer[13] = 0x00; /* IP */
-  if(reforge_mac) memcpy(buffer, mac_address, 6);
-
-  ip_header = (struct ip_header*) &buffer[sizeof(struct ether_header)];
-  ip_header->ihl = 5;
-  ip_header->version = 4;
-  ip_header->tos = 0;
-  ip_header->tot_len = htons(send_len-sizeof(struct ether_header));
-  ip_header->id = htons(2012);
-  ip_header->ttl = 64;
-  ip_header->frag_off = htons(0);
-  ip_header->protocol = IPPROTO_UDP;
-  ip_header->daddr = htonl(dst_ip);
-  ip_header->saddr = htonl(src_ip);
-  ip_header->check = wrapsum(in_cksum((unsigned char *)ip_header,
-			sizeof(struct ip_header), 0));
-
-  udp_header = (struct udp_header*)(buffer + sizeof(struct ether_header) + sizeof(struct ip_header));
-  udp_header->source = htons(src_port);
-  udp_header->dest = htons(dst_port);
-  udp_header->len = htons(send_len-sizeof(struct ether_header)-sizeof(struct ip_header));
-  udp_header->check = 0; /* It must be 0 to compute the checksum */
-
-
-  char *payload = buffer + sizeof(struct ether_header) + sizeof(struct ip_header) + sizeof(struct udp_header);
-  *sent_in = getticks();
-  memcpy(payload,sent_in,sizeof(*sent_in));
-
-  /*
-    http://www.cs.nyu.edu/courses/fall01/G22.2262-001/class11.htm
-    http://www.ietf.org/rfc/rfc0761.txt
-    http://www.ietf.org/rfc/rfc0768.txt
-  */
-
-  #if 0
-  i = sizeof(struct ether_header) + sizeof(struct ip_header) + sizeof(struct udp_header);
-  /* Don't add latency */
-  udp_header->check = wrapsum(in_cksum((unsigned char *)udp_header, sizeof(struct udp_header),
-                                       in_cksum((unsigned char *)&buffer[i], send_len-i,
-                                       in_cksum((unsigned char *)&ip_header->saddr,
-                                                2*sizeof(ip_header->saddr),
-                                                IPPROTO_UDP + ntohs(udp_header->len)))));
-  #endif
-}
-
 /* *************************************** */
 
 static void close_pd() {
@@ -388,8 +287,12 @@ int main(int argc, char* argv[]) {
       continue;
     }
     
-    forge_udp_packet(packet_to_send.data, 1, &last_sent_tick);
-  
+    forge_udp_packet_fast((u_char *) packet_to_send.data, send_len, 1);
+
+    char *payload = packet_to_send.data + sizeof(struct ether_header) + sizeof(struct ip_header) + sizeof(struct udp_header);
+    last_sent_tick = getticks();
+    memcpy(payload, &last_sent_tick, sizeof(last_sent_tick));
+
   redo:
     rc = pfring_send(pdo, packet_to_send.data, packet_to_send.len, 1);
   

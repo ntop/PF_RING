@@ -883,6 +883,7 @@ typedef struct {
   zc_dev_operation operation;
   char device_name[IFNAMSIZ];
   int32_t channel_id;
+  zc_dev_model device_model; /* out */
 } __attribute__((packed))
 zc_dev_mapping;
 

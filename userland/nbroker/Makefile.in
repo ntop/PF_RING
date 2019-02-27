@@ -30,6 +30,7 @@ install:
 	cd nbrokerlib; make install
 	cd cli; make install
 	mkdir -p /etc/rrc; cp rrclib/etc/rrc/*.cfg /etc/rrc/
+	mkdir -p /usr/local/lib; cp rrclib/lib/*.so /usr/local/lib/
 
 clean: nbrokerd/Makefile nbrokerlib/Makefile cli/Makefile examples/Makefile
 	cd nbrokerd; make clean

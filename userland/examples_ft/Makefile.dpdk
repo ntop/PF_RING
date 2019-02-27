@@ -20,10 +20,10 @@ APP = ftflow_dpdk
 
 SRCS-y := ftflow_dpdk.c
 
-CFLAGS += -g
+CFLAGS += -g -DHAVE_DPDK
 CFLAGS += $(WERROR_FLAGS) -Wno-strict-prototypes -Wno-missing-prototypes -Wno-missing-declarations -Wno-unused-parameter
 CFLAGS += -I $(HOME)/PF_RING/userland/lib
-LDLIBS = $(HOME)/PF_RING/userland/lib/libs/libpfring_ft_x86_64.a
+LDLIBS = $(HOME)/PF_RING/userland/lib/libs/libpfring_ft_x86_64_dl.a
 
 ifeq ($(CONFIG_RTE_TOOLCHAIN_GCC),y)
 CFLAGS_main.o += -Wno-return-type

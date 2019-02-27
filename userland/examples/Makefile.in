@@ -36,7 +36,7 @@ INCLUDE    = -I${PFRING_KERNEL} -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../li
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC         = ${CROSS_COMPILE}gcc #--platform=native
-CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_BPF@ @HAVE_REDIS@ @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@ -O2 # -g
+CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall -Wno-unused-function ${INCLUDE} @HAVE_BPF@ @HAVE_REDIS@ @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@ -O2 # -g
 # LDFLAGS  =
 
 #
