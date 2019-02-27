@@ -254,10 +254,12 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ft_conf_file = getenv("PF_RING_FT_CONF");
 
   if (ft_conf_file != NULL) {
-#ifdef HAVE_PF_RING_FT
-    char *ft_proto_file = getenv("PF_RING_FT_PROTOCOLS");
-
     ring->ft_enabled = 1;
+  }
+
+  if (ring->ft_enabled) {
+#ifdef HAVE_PF_RING_FT
+    char *ft_proto_file;
 
     ring->ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0, 0);
 
@@ -266,11 +268,23 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
       return NULL;
     }
 
+    ft_proto_file = getenv("PF_RING_FT_PROTOCOLS");
+
     if (ft_proto_file != NULL) {
-      pfring_ft_load_ndpi_protocols(ring->ft, ft_proto_file);
+      ret = pfring_ft_load_ndpi_protocols(ring->ft, ft_proto_file);
+
+      if (ret != 0) {
+        return NULL;
+      }
     }
 
-    pfring_ft_load_configuration(ring->ft, ft_conf_file);
+    if (ft_conf_file != NULL) {
+      ret = pfring_ft_load_configuration(ring->ft, ft_conf_file);
+
+      if (ret != 0) {
+        return NULL;
+      }
+    }
 #else
     errno = ENOTSUP;
     return NULL;
