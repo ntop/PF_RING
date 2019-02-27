@@ -1285,29 +1285,29 @@ typedef struct {
 
 /* Exported functions - used by drivers */
 
-int pfring_skb_ring_handler(struct sk_buff *skb,
-			    u_int8_t recv_packet,
-			    u_int8_t real_skb /* 1=real skb, 0=faked skb */,
-			    int32_t channel_id,
-			    u_int32_t num_rx_channels);
+int pf_ring_skb_ring_handler(struct sk_buff *skb,
+			     u_int8_t recv_packet,
+			     u_int8_t real_skb /* 1=real skb, 0=faked skb */,
+			     int32_t channel_id,
+			     u_int32_t num_rx_channels);
 
-void pfring_zc_dev_handler(zc_dev_operation operation,
-			   mem_ring_info *rx_info,
-			   mem_ring_info *tx_info,
-			   void          *rx_descr_packet_memory,
-			   void          *tx_descr_packet_memory,
-			   void          *phys_card_memory,
-			   u_int          phys_card_memory_len,
-			   u_int channel_id,
-			   struct net_device *dev,
-			   struct device *hwdev,
-			   zc_dev_model device_model,
-			   u_char *device_address,
-			   wait_queue_head_t *packet_waitqueue,
-			   u_int8_t *interrupt_received,
-			   void *rx_adapter_ptr, void *tx_adapter_ptr,
-			   zc_dev_wait_packet wait_packet_function_ptr,
-			   zc_dev_notify dev_notify_function_ptr);
+void pf_ring_zc_dev_handler(zc_dev_operation operation,
+			    mem_ring_info *rx_info,
+			    mem_ring_info *tx_info,
+			    void          *rx_descr_packet_memory,
+			    void          *tx_descr_packet_memory,
+			    void          *phys_card_memory,
+			    u_int          phys_card_memory_len,
+			    u_int channel_id,
+			    struct net_device *dev,
+			    struct device *hwdev,
+			    zc_dev_model device_model,
+			    u_char *device_address,
+			    wait_queue_head_t *packet_waitqueue,
+			    u_int8_t *interrupt_received,
+			    void *rx_adapter_ptr, void *tx_adapter_ptr,
+			    zc_dev_wait_packet wait_packet_function_ptr,
+			    zc_dev_notify dev_notify_function_ptr);
 
 /* *************************************************************** */
 

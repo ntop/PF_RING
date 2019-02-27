@@ -3850,7 +3850,7 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
       the ring due to lack of available space
 */
 
-int pfring_skb_ring_handler(struct sk_buff *skb,
+int pf_ring_skb_ring_handler(struct sk_buff *skb,
 			    u_int8_t recv_packet,
 			    u_int8_t real_skb /* 1=real skb, 0=faked skb */,
 			    /*
@@ -4151,8 +4151,7 @@ int pfring_skb_ring_handler(struct sk_buff *skb,
 
   return(rc); /*  0 = packet not handled */
 }
-
-EXPORT_SYMBOL(pfring_skb_ring_handler);
+EXPORT_SYMBOL(pf_ring_skb_ring_handler);
 
 /* ********************************** */
 
@@ -4168,11 +4167,11 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
   if (skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)
     return 0;
 
-  rc = pfring_skb_ring_handler(skb,
-			       skb->pkt_type != PACKET_OUTGOING,
-			       1 /* real_skb */,
-			       1 /* unknown: any channel */,
-                	       UNKNOWN_NUM_RX_CHANNELS);
+  rc = pf_ring_skb_ring_handler(skb,
+			        skb->pkt_type != PACKET_OUTGOING,
+			        1 /* real_skb */,
+			        1 /* unknown: any channel */,
+                	        UNKNOWN_NUM_RX_CHANNELS);
 
   kfree_skb(skb);
 
@@ -7589,7 +7588,7 @@ static int ring_getsockopt(struct socket *sock,
 
 /* ************************************* */
 
-void pfring_zc_dev_handler(zc_dev_operation operation,
+void pf_ring_zc_dev_handler(zc_dev_operation operation,
 			   mem_ring_info *rx_info,
 			   mem_ring_info *tx_info,
 			   void          *rx_descr_packet_memory,
@@ -7707,8 +7706,7 @@ void pfring_zc_dev_handler(zc_dev_operation operation,
   debug_printk(2, "%d registered ZC devices/queues\n",
 	   zc_devices_list_size);
 }
-
-EXPORT_SYMBOL(pfring_zc_dev_handler);
+EXPORT_SYMBOL(pf_ring_zc_dev_handler);
 
 /* ************************************* */
 
@@ -7984,6 +7982,8 @@ int add_device_to_ring_list(struct net_device *dev)
 
 /* ************************************ */
 
+#if 0 /* Obsolete - to be removed */
+
 void pf_ring_add_module_dependency(void)
 {
   /* Don't actually do anything */
@@ -8026,6 +8026,8 @@ int pf_ring_inject_packet_to_ring(int if_index, int channel_id, u_char *data, in
   return rc;
 }
 EXPORT_SYMBOL(pf_ring_inject_packet_to_ring);
+
+#endif
 
 /* ********************************** */
 

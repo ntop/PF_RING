@@ -2125,7 +2125,7 @@ void fm10k_up(struct fm10k_intfc *interface)
 			tx_info.packet_memory_slot_len      = buf_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 
-			pfring_zc_dev_handler(add_device_mapping,
+			pf_ring_zc_dev_handler(add_device_mapping,
 			  &rx_info,
 			  &tx_info,
 			  rx_ring->desc,
@@ -2242,7 +2242,7 @@ skip_tx_dma_drain:
 		int i;
 
 		for (i = 0; i < interface->num_rx_queues; i++) {
-			pfring_zc_dev_handler(remove_device_mapping,
+			pf_ring_zc_dev_handler(remove_device_mapping,
 			  NULL, // rx_info,
 			  NULL, // tx_info,
 			  NULL, /* Packet descriptors */

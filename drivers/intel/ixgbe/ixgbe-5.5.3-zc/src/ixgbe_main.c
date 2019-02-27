@@ -6676,7 +6676,7 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 	      
-			pfring_zc_dev_handler(add_device_mapping,
+			pf_ring_zc_dev_handler(add_device_mapping,
 			  &rx_info,
 			  &tx_info,
 			  rx_ring->desc, /* Packet descriptors */
@@ -7462,7 +7462,7 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 		int i;
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
-			pfring_zc_dev_handler(remove_device_mapping,
+			pf_ring_zc_dev_handler(remove_device_mapping,
 			  NULL, // rx_info,
 			  NULL, // tx_info,
 			  NULL, /* Packet descriptors */

@@ -6099,7 +6099,7 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 			tx_info.registers_index		    = tx_ring->reg_idx;
 
-			pfring_zc_dev_handler(add_device_mapping,
+			pf_ring_zc_dev_handler(add_device_mapping,
 				&rx_info,
 				&tx_info,
 				rx_ring->desc, /* rx packet descriptors */
@@ -6282,7 +6282,7 @@ void i40e_down(struct i40e_vsi *vsi)
 		for (i = 0; i < vsi->num_queue_pairs; i++) {
 			struct i40e_ring *rx_ring = vsi->rx_rings[i];
 			struct i40e_ring *tx_ring = vsi->tx_rings[i];
-			pfring_zc_dev_handler(remove_device_mapping,
+			pf_ring_zc_dev_handler(remove_device_mapping,
 				NULL, // rx_info,
 				NULL, // tx_info,
 				NULL, /* Packet descriptors */

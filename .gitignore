@@ -47,27 +47,21 @@ stamp-h1
 .tmp_versions
 *.manmisc
 *.manfile
-drivers/intel/e1000e/e1000e-*-zc/src/Module.symvers
 drivers/intel/e1000e/e1000e-*-zc/src/ixgbe.mod.c
 drivers/intel/e1000e/e1000e-*-zc/src/modules.order
 drivers/intel/e1000e/e1000e-*-zc/src/e1000e.mod.c
-drivers/intel/igb/igb-*-zc/src/Module.symvers
 drivers/intel/igb/igb-*-zc/src/ixgbe.mod.c
 drivers/intel/igb/igb-*-zc/src/modules.order
 drivers/intel/igb/igb-*-zc/src/igb.mod.c
-drivers/intel/ixgbe/ixgbe-*-zc/src/Module.symvers
 drivers/intel/ixgbe/ixgbe-*-zc/src/ixgbe.mod.c
 drivers/intel/ixgbe/ixgbe-*-zc/src/modules.order
 drivers/intel/ixgbe/ixgbe-*-zc/src/ixgbe.mod.c
-drivers/intel/i40e/i40e-*-zc/src/Module.symvers
 drivers/intel/i40e/i40e-*-zc/src/ixgbe.mod.c
 drivers/intel/i40e/i40e-*-zc/src/modules.order
 drivers/intel/i40e/i40e-*-zc/src/i40e.mod.c
-drivers/intel/fm10k/fm10k-*-zc/src/Module.symvers
 drivers/intel/fm10k/fm10k-*-zc/src/ixgbe.mod.c
 drivers/intel/fm10k/fm10k-*-zc/src/modules.order
 drivers/intel/fm10k/fm10k-*-zc/src/fm10k.mod.c
-kernel/Module.symvers
 kernel/modules.order
 kernel/pf_ring.mod.c
 userland/lib/config.h
@@ -130,7 +124,6 @@ userland/lib/libpfring.so
 !/.pc/
 
 
-drivers/intel/i40e/i40e-1.5.18-zc/src/i40e/Module.symvers
 drivers/intel/i40e/i40e-1.5.18-zc/src/i40e/i40e.mod.c
 drivers/intel/i40e/i40e-1.5.18-zc/src/i40e/modules.order
 userland/c++/Makefile

@@ -614,7 +614,7 @@ e1000_receive_skb(struct e1000_adapter *adapter,
 
 		//printk(KERN_INFO "[PF_RING] %s driver -> pf_ring [len=%d]\n", netdev->name, skb->len);
 
-		rc = pfring_skb_ring_handler(skb, 1, 1, -1, 1);
+		rc = pf_ring_skb_ring_handler(skb, 1, 1, -1, 1);
 	      
 		if (rc > 0) { /* Packet handled by PF_RING */
 			kfree_skb(skb);
@@ -4631,7 +4631,7 @@ static void e1000_configure(struct e1000_adapter *adapter)
 		tx_info.descr_packet_memory_tot_len = tx_ring->size;
 
 		// printk("%s(%d)=%lu\n", __FUNCTION__, i, adapter->netdev->mem_start);
-		pfring_zc_dev_handler(add_device_mapping,
+		pf_ring_zc_dev_handler(add_device_mapping,
 #ifdef ENABLE_RX_ZC
 				     &rx_info,
 #else
@@ -5245,7 +5245,7 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 
 #ifdef HAVE_PF_RING
 	{
-		pfring_zc_dev_handler(remove_device_mapping,
+		pf_ring_zc_dev_handler(remove_device_mapping,
 				     NULL, // rx_info,
 				     NULL, // tx_info,
 				     NULL, /* Packet descriptors */

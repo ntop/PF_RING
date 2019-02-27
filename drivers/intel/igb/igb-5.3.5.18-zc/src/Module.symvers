@@ -1,0 +1,2 @@
+0x2cb44f25	pf_ring_zc_dev_handler	/home/blackout/PF_RING-dev/kernel/pf_ring	EXPORT_SYMBOL
+0x383fef3b	pf_ring_skb_ring_handler	/home/blackout/PF_RING-dev/kernel/pf_ring	EXPORT_SYMBOL

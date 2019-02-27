@@ -5,23 +5,21 @@ IXGBEVF=ixgbevf/ixgbevf-4.5.1-zc
 I40E=i40e/i40e-2.4.6-zc
 FM10K=fm10k/fm10k-0.23.5-zc
 
-export C_INCLUDE_PATH := $(shell cd ../../kernel/linux; pwd)
-
 all:
-	cd $(E1000E)/src; make
-	cd $(IGB)/src; make
-	cd $(IXGBE)/src; make
-	cd $(IXGBEVF)/src; make
-	cd $(I40E)/src; make
-	cd $(FM10K)/src; make
+	cd $(E1000E); make
+	cd $(IGB); make
+	cd $(IXGBE); make
+	cd $(IXGBEVF); make
+	cd $(I40E); make
+	cd $(FM10K); make
 
 clean:
-	cd $(E1000E)/src; make clean
-	cd $(IGB)/src; make clean
-	cd $(IXGBE)/src; make clean
-	cd $(IXGBEVF)/src; make clean
-	cd $(I40E)/src; make clean
-	cd $(FM10K)/src; make clean
+	cd $(E1000E); make clean
+	cd $(IGB); make clean
+	cd $(IXGBE); make clean
+	cd $(IXGBEVF); make clean
+	cd $(I40E); make clean
+	cd $(FM10K); make clean
 	-/bin/rm *.deb *.rpm
 
 
