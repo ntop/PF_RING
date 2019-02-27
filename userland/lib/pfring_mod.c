@@ -668,7 +668,7 @@ int pfring_mod_toggle_filtering_policy(pfring *ring, u_int8_t rules_default_acce
   if(rc < 0)
     return rc;
 
-  if(ring->ft_mode != software_only)
+  if(ring->filter_mode != software_only)
     rc = pfring_hw_ft_set_traffic_policy(ring, rules_default_accept_policy);
 
   return rc;
@@ -783,7 +783,7 @@ int pfring_mod_add_filtering_rule(pfring *ring, filtering_rule* rule_to_add) {
   if(rule_to_add->balance_id > rule_to_add->balance_pool)
     rule_to_add->balance_id = 0;
 
-  if(ring->ft_mode != hardware_only) {
+  if(ring->filter_mode != hardware_only) {
     rc = setsockopt(ring->fd, 0, SO_ADD_FILTERING_RULE,
 		    rule_to_add, sizeof(filtering_rule));
    
@@ -791,7 +791,7 @@ int pfring_mod_add_filtering_rule(pfring *ring, filtering_rule* rule_to_add) {
       return rc;
   }
   
-  if(ring->ft_mode != software_only)
+  if(ring->filter_mode != software_only)
     rc = pfring_hw_ft_add_filtering_rule(ring, rule_to_add);
 
   return rc;
@@ -818,7 +818,7 @@ int pfring_mod_disable_ring(pfring *ring) {
 int pfring_mod_remove_filtering_rule(pfring *ring, u_int16_t rule_id) {
   int rc = -1;
 
-  if(ring->ft_mode != hardware_only) {
+  if(ring->filter_mode != hardware_only) {
     rc = setsockopt(ring->fd, 0, SO_REMOVE_FILTERING_RULE,
 		    &rule_id, sizeof(rule_id));
 
@@ -826,7 +826,7 @@ int pfring_mod_remove_filtering_rule(pfring *ring, u_int16_t rule_id) {
       return rc;
   }
 
-  if(ring->ft_mode != software_only)
+  if(ring->filter_mode != software_only)
     rc = pfring_hw_ft_remove_filtering_rule(ring, rule_id);
 
   return rc;
@@ -842,7 +842,7 @@ int pfring_mod_handle_hash_filtering_rule(pfring *ring,
   if(!rule_to_add)
     return -1;
 
-  if(ring->ft_mode != hardware_only) {
+  if(ring->filter_mode != hardware_only) {
     rc = setsockopt(ring->fd, 0, add_rule ? SO_ADD_FILTERING_RULE : SO_REMOVE_FILTERING_RULE,
 		    rule_to_add, sizeof(hash_filtering_rule));
     
@@ -850,7 +850,7 @@ int pfring_mod_handle_hash_filtering_rule(pfring *ring,
       return rc;
   }
   
-  if(ring->ft_mode != software_only)
+  if(ring->filter_mode != software_only)
     rc = pfring_hw_ft_handle_hash_filtering_rule(ring, rule_to_add, add_rule);
 
   return rc;

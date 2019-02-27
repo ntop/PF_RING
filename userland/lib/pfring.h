@@ -316,7 +316,7 @@ struct __pfring {
     int8_t port_id;
   } rdi;
 
-  filtering_mode ft_mode;
+  filtering_mode filter_mode;
   pfring_device_type ft_device_type;  
 
   /* All devices */

@@ -229,7 +229,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->caplen              = caplen;
   ring->direction           = rx_and_tx_direction;
   ring->mode                = send_and_recv_mode;
-  ring->ft_mode             = software_only;
+  ring->filter_mode             = software_only;
   ring->flags               = flags;
 
   ring->promisc             = !!(flags & PF_RING_PROMISC);
@@ -1305,7 +1305,7 @@ int pfring_set_filtering_mode(pfring *ring, filtering_mode mode) {
   if(!ring)
     return -1;
 
-  ring->ft_mode = mode;
+  ring->filter_mode = mode;
   return 0;
 }
 
