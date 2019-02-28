@@ -103,6 +103,8 @@ kernelbuild = ${MAKE} $(if ${GCC_I_SYS},CC:="${GCC_I_SYS}") \
 
 # Standard compilation, with regular output
 default:
+	cd ../../../../../kernel/; make
+	cp ../../../../../kernel/Module.symvers .
 	@+$(call kernelbuild,modules)
 
 # Noisy output, for extra debugging

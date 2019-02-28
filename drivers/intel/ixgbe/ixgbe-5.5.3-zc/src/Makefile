@@ -328,6 +328,8 @@ obj-m += $(DRIVER_NAME).o
 $(DRIVER_NAME)-objs := $(CFILES:.c=.o)
 else
 default:
+	cd ../../../../../kernel/; make
+	cp ../../../../../kernel/Module.symvers .
 ifeq ($(KOBJ),$(KSRC))
 	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) modules
 else

@@ -8,6 +8,7 @@ add: veryclean
 	cd /usr/src/pfring-@PF_RING_VERSION@ ; make ; cp Module.symvers /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-/i40e_zc-/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Kbuild /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Makefile
+	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@I40E@ /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @I40E@-zc -v @I40E_VERSION@.@REVISION@
 

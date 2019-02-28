@@ -8,6 +8,7 @@ add: veryclean
 	cd /usr/src/pfring-@PF_RING_VERSION@ ; make ; cp Module.symvers /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
 	#sed -i -e 's|DRIVER_NAME=@IXGBEVF@|DRIVER_NAME=@IXGBEVF@_zc|g' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
 	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IXGBEVF@_zc' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
+	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@IXGBEVF@ /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@
 
