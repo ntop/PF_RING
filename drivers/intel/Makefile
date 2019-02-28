@@ -13,9 +13,6 @@ all:
 	cd $(I40E); make
 	cd $(FM10K); make
 
-pf_ring_symvers:
-	cd ../../kernel; make 
-
 clean:
 	cd $(E1000E); make clean
 	cd $(IGB); make clean
@@ -35,7 +32,7 @@ dkms-deb-virtual:
 	find tmp -name .git|xargs /bin/rm -rf	
 	cd tmp; dpkg-deb -b pfring-drivers-zc-dkms .; mv *.deb ..
 
-dkms-deb: pf_ring_symvers cleanup dkms-deb-virtual
+dkms-deb: cleanup dkms-deb-virtual
 	sudo make -f Makefile.dkms.fm10k deb
 	cp /var/lib/dkms/fm10k-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.i40e deb
@@ -49,7 +46,7 @@ dkms-deb: pf_ring_symvers cleanup dkms-deb-virtual
 	sudo make -f Makefile.dkms.ixgbevf deb
 	cp /var/lib/dkms/ixgbevf-zc/*/deb/*.deb .
 
-dkms-rpm: pf_ring_symvers cleanup dkms-rpm-virtual
+dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.fm10k rpm
 	sudo make -f Makefile.dkms.i40e rpm
 	sudo make -f Makefile.dkms.e1000e rpm
