@@ -583,7 +583,6 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-REVISION
 E1000E_VERSION
 E1000E
 IGB_VERSION
@@ -596,6 +595,8 @@ I40E_VERSION
 I40E
 FM10K_VERSION
 FM10K
+REVISION
+PF_RING_VERSION
 target_alias
 host_alias
 build_alias
@@ -1687,6 +1688,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+PF_RING_VERSION=`../../package/version.sh --release`
+REVISION=`../../package/version.sh --revision`
+
 FM10K="fm10k"
 FM10K_VERSION=`grep "FM10K=" Makefile|cut -d '-' -f 2`
 I40E="i40e"
@@ -1699,7 +1703,7 @@ IGB="igb"
 IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
 E1000E="e1000e"
 E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
-REVISION=`../../package/version.sh --revision`
+
 
 
 
