@@ -5,7 +5,6 @@ add: veryclean
 	mkdir -p /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	cp ../../kernel/linux/pf_ring.h /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
-	cd /usr/src/pfring-@PF_RING_VERSION@ ; make ; cp Module.symvers /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-/i40e_zc-/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Kbuild /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Makefile
 	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Makefile

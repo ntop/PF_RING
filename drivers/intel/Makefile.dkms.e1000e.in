@@ -5,7 +5,6 @@ add: veryclean
 	mkdir /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@
 	cd @E1000E@/@E1000E@-@E1000E_VERSION@-zc/src ; make clean; cp -r * /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@
 	cp ../../kernel/linux/pf_ring.h /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@
-	cd /usr/src/pfring-@PF_RING_VERSION@ ; make ; cp Module.symvers /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@
 	#sed -i -e 's|DRIVER_NAME = @E1000E@|DRIVER_NAME = @E1000E@_zc|g' /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Makefile
 	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@E1000E@_zc' /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Makefile
 	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Makefile
