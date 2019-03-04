@@ -205,6 +205,8 @@ static void tx_test(u_int16_t queue_id) {
 
   printf("Generating traffic on port %u queue %u...\n", port, queue_id);
 
+  num_ips = TX_RING_SIZE;
+
   while (do_loop) {
 
     rc = rte_mempool_get_bulk(mbuf_pool[queue_id], (void **) tx_bufs, BURST_SIZE);
@@ -602,7 +604,7 @@ int main(int argc, char *argv[]) {
   ret = parse_args(argc, argv);
 
   if (ret < 0)
-    rte_exit(EXIT_FAILURE, "Invalid flow_classify parameters\n");
+    rte_exit(EXIT_FAILURE, "Invalid ftflow_dpdk parameters\n");
 
   memset(stats, 0, sizeof(stats));
 
