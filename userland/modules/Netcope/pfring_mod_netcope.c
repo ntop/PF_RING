@@ -67,7 +67,7 @@ static int __pfring_nsf_init() {
   if (pfring_nsf_initialized_ok != 0)
     return pfring_nsf_initialized_ok;
 
-  pfring_thirdparty_lib_init("/usr/lib64/libnsf.so", pfring_nsf_function_ptr);
+  pfring_thirdparty_lib_init("libnsf.so", pfring_nsf_function_ptr);
 
   for (i = 0; pfring_nsf_function_ptr[i].name != NULL; i++) {
     if (pfring_nsf_function_ptr[i].ptr == NULL) {
