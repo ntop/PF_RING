@@ -897,7 +897,7 @@ nbpf_rdif_handle_t *nbpf_rdif_init(char *ifname) {
   if (rdi_initialized_ok == 0) {
     //Initialize thirdparty libraries
     rdi_initialized_ok = 1;
-    pfring_thirdparty_lib_init("/usr/local/lib/librdif.so", rdi_function_ptr);
+    pfring_thirdparty_lib_init("librdif.so", rdi_function_ptr);
   }
 
   unit = 0; //TODO
@@ -947,7 +947,7 @@ int nbpf_rdif_reset(int unit) {
   if (rdi_initialized_ok == 0) {
     //Initialize thirdparty libraries
     rdi_initialized_ok = 1;
-    pfring_thirdparty_lib_init("/usr/local/lib/librdif.so", rdi_function_ptr);
+    pfring_thirdparty_lib_init("librdif.so", rdi_function_ptr);
   }
   
   /* Set MON2 configuration (value 5). No traffic in egress */
