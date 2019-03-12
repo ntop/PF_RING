@@ -195,7 +195,7 @@ void process_packet(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char
 void print_help(void) {
   printf("ftflow_pcap - (C) 2018 ntop.org\n");
   printf("-h              Print help\n");
-  printf("-i <device>     Device name\n");
+  printf("-i <device>     Device name or PCAP file\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
   printf("-p <file>       Load nDPI custom protocols from file\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
@@ -300,8 +300,10 @@ int main(int argc, char* argv[]) {
   promisc = 1;
 
   if ((pd = pcap_open_live(device, snaplen, promisc, 500, errbuf)) == NULL) {
-    printf("pcap_open_live: %s\n", errbuf);
-    return -1;
+    if ((pd = pcap_open_offline(device, errbuf)) == NULL) {
+      printf("pcap_open error: %s\n", errbuf);
+      return -1;
+    }
   }
 
   if (bpfFilter != NULL) {
