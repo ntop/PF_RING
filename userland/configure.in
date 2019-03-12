@@ -67,8 +67,13 @@ else
   AC_MSG_RESULT(no)
 fi
 
+dnl> FT dlopen - Default enabled
+PF_RING_FT_LIB_EXT=""
+AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI]))
+AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
+
 AC_MSG_CHECKING([PF_RING FT support])
-PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}_dl.a"
+PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
 if test -f lib/$PF_RING_FT_LIB; then
   HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
   PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
