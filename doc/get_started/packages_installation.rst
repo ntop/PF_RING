@@ -103,3 +103,12 @@ Alternatively you can explicitly tell to the init script which are the interface
    MANAGEMENT_INTERFACES="eth0 eth1"
    CAPTURE_INTERFACES="eth2 eth3 eth4 eth5"
 
+If you are forcing pf_ring to reload a driver which is in use by the management interface, you probably need to
+reconfigure the interface after the ZC driver has been loaded. The systemd script supports custom *post* scripts
+(as well as *pre* scripts) that are executed just after loading the pf_ring module and drivers, all you need to 
+do is to create a /etc/pf_ring/post script as in the example below:
+
+.. code-block:: console
+
+   echo "ifconfig eth0 192.168.1.1" > /etc/pf_ring/post
+   chmod +x /etc/pf_ring/post

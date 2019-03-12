@@ -92,11 +92,9 @@ static int _pfring_dag_init() {
   if(dag_initialized_ok != 0)
     return(dag_initialized_ok);
 
-  pfring_thirdparty_lib_init("/usr/local/lib/libdag.so", dag_function_ptr); /* src */
-  pfring_thirdparty_lib_init("/usr/lib64/libdag.so", dag_function_ptr); /* rpm */
+  pfring_thirdparty_lib_init("libdag.so", dag_function_ptr);
 
-  pfring_thirdparty_lib_init("/usr/local/lib/libdagconf.so", dag_function_ptr); /* src */
-  pfring_thirdparty_lib_init("/usr/lib64/libdagconf.so", dag_function_ptr); /* rpm */
+  pfring_thirdparty_lib_init("libdagconf.so", dag_function_ptr);
 
   for(i = 0; dag_function_ptr[i].name != NULL; i++) {
     if(dag_function_ptr[i].ptr == NULL) {
