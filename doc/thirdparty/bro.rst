@@ -1,7 +1,7 @@
-Using Bro with PF_RING
-======================
+Using Bro/Zeek with PF_RING
+===========================
 
-In order to use Bro on top of pf_ring support please follow this guide.
+In order to use Bro/Zeek on top of pf_ring support please follow this guide.
 
 1. Install the "pfring" package (and optionally "pfring-drivers-zc-dkms"
 if you want to use ZC drivers) from http://packages.ntop.org as explained
