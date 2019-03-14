@@ -59,7 +59,7 @@ Running snort in IDS mode
 
 .. code-block:: console
 
-   snort --daq-dir=/usr/local/lib/daq --daq pfring --daq-mode passive -i ethX -v -e
+   snort --daq-dir=/usr/local/lib/daq --daq pfring --daq-mode passive -i eth0 -v -e
 
 It is possible to specify multiple interfaces by using a comma-separated list.
 
@@ -68,7 +68,7 @@ Running snort in IPS mode
 
 .. code-block:: console
 
-   snort --daq-dir=/usr/local/lib/daq --daq pfring  -i ethX:ethY -e -Q
+   snort --daq-dir=/usr/local/lib/daq --daq pfring  -i eth0:eth1 -e -Q
 
 It is possible to specify multiple interface pairs by using a comma-separated list.
 
