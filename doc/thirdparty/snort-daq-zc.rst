@@ -48,7 +48,7 @@ Running snort in IDS mode
 
 .. code-block:: console
 
-   snort --daq-dir=/usr/local/lib/daq --daq pfring_zc --daq-mode passive -i zc:ethX --daq-var clusterid=Z -v -e
+   snort --daq-dir=/usr/local/lib/daq --daq pfring_zc --daq-mode passive -i zc:eth0 --daq-var clusterid=99 -v -e
 
 It is possible to specify multiple interfaces by using a comma-separated list.
 
@@ -57,7 +57,7 @@ Running snort in IPS mode
 
 .. code-block:: console
 
-   snort --daq-dir=/usr/local/lib/daq --daq pfring_zc  -i zc:ethX+zc:ethY --daq-var clusterid=Z -e -Q
+   snort --daq-dir=/usr/local/lib/daq --daq pfring_zc  -i zc:eth0+zc:eth1 --daq-var clusterid=99 -e -Q
 
 It is possible to specify multiple interface pairs by using a comma-separated list.
 
