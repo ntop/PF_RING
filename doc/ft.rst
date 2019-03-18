@@ -49,9 +49,12 @@ which represents a flow table instance, this can be done calling *pfring_ft_crea
 
    pfring_ft_table *ft = pfring_ft_create_table(flags, 0, 0, 0);
 
-The *pfring_ft_create_table* parameters include flags that can be used to enable optional features like
-L7 protocol detection based on nDPI (PFRING_FT_TABLE_FLAGS_DPI), and advanced settings to tune the flow
-table size.
+The *pfring_ft_create_table* parameters include:
+
+- *flags* that can be used to enable optional features like L7 protocol detection based on nDPI (PFRING_FT_TABLE_FLAGS_DPI)
+- the maximum number of active flows the flow table should be able to handle (default: 500K)
+- the timeout for idle flows (default: 30 sec)
+- the maximum flow duration/lifetime (default: 120 sec)
 
 As introduced before, the flow of an application designed on top of PF_RING FT is event-driven,
 before feeding the flow table with raw packets, the application can register for getting notified
