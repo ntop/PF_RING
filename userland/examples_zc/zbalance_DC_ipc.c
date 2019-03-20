@@ -309,6 +309,7 @@ int main(int argc, char* argv[]) {
   char *bind_tworker_mask = NULL;
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
   char *user = NULL;
+  u_int32_t flags;
 
   start_time.tv_sec = 0;
 
@@ -407,6 +408,11 @@ int main(int argc, char* argv[]) {
   if (daemon_mode)
     daemonize();
 
+  flags = 0;
+
+  if (enable_vm_support)
+    flags |= PF_RING_ZC_ENABLE_VM_SUPPORT;
+
   zc = pfring_zc_create_cluster(
     cluster_id, 
     max_packet_len(thread_devices[0][0]),
@@ -417,7 +423,8 @@ int main(int argc, char* argv[]) {
     PREFETCH_BUFFERS +
     (num_consumer_queues * (queue_len + POOL_SIZE)), 
     pfring_zc_numa_get_cpu_node(bind_worker_core),
-    NULL /* auto hugetlb mountpoint */ 
+    NULL /* auto hugetlb mountpoint */,
+    flags
   );
 
   if (zc == NULL) {

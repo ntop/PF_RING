@@ -200,6 +200,7 @@ int main(int argc, char* argv[]) {
   long i;
   int cluster_id = DEFAULT_CLUSTER_ID+6;
   int rc;
+  u_int32_t flags;
 
   start_time.tv_sec = 0;
 
@@ -265,13 +266,19 @@ int main(int argc, char* argv[]) {
   ipczqs = calloc(num_ipc_queues,  sizeof(pfring_zc_queue *));
   pools =  calloc(num_ipc_queues,  sizeof(pfring_zc_buffer_pool *));
 
+  flags = 0;
+
+  if (enable_vm_support)
+    flags |= PF_RING_ZC_ENABLE_VM_SUPPORT;
+
   zc = pfring_zc_create_cluster(
     cluster_id, 
     in_device != NULL ? max_packet_len(in_device) : 1536, 
     0,
     (((in_device != NULL) + (out_device != NULL)) * (MAX_CARD_SLOTS + 1)) + (num_ipc_queues * (QUEUE_LEN + 1)), 
     pfring_zc_numa_get_cpu_node(forwarder[RX_FWDR].bind_core),
-    NULL /* auto hugetlb mountpoint */ 
+    NULL /* auto hugetlb mountpoint */,
+    flags 
   );
 
   if(zc == NULL) {

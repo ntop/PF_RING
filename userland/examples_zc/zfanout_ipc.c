@@ -345,7 +345,8 @@ int main(int argc, char* argv[]) {
     0,
     MAX_CARD_SLOTS + (num_slaves * (queue_len + SLAVE_BUFFERS)) + SWAP_BUFFERS,
     pfring_zc_numa_get_cpu_node(bind_core),
-    NULL /* auto hugetlb mountpoint */ 
+    NULL /* auto hugetlb mountpoint */,
+    0 
   );
 
   if(zc == NULL) {

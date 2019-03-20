@@ -18,6 +18,8 @@
 #include <sys/types.h>
 #include <linux/pf_ring.h> /* needed for hw_filtering_rule */
 
+#define PF_RING_ZC_ENABLE_VM_SUPPORT         (1 << 0) /**< pfring_zc_create_cluster() flag:  */
+
 #define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     (1 <<  0) /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
 #define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0      (1 <<  1) /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
 #define PF_RING_ZC_DEVICE_SW_TIMESTAMP       (1 <<  2) /**< pfring_zc_open_device() flag: compute sw timestamp (please note: this adds per-packet overhead). */
@@ -149,6 +151,7 @@ pfring_zc_pkt_buff_push(
  * @param tot_num_buffers      The total number of buffers to reserve for queues/devices/extra allocations.
  * @param numa_node_id         The NUMA node id for cpu/memory binding.
  * @param hugepages_mountpoint The HugeTLB mountpoint (NULL for auto-detection) for memory allocation.
+ * @param flags                Optional flags.
  * @return                     The cluster handle on success, NULL otherwise (errno is set appropriately).
  */
 pfring_zc_cluster * 
@@ -158,7 +161,8 @@ pfring_zc_create_cluster(
   u_int32_t metadata_len,
   u_int32_t tot_num_buffers,
   int32_t numa_node_id,
-  const char *hugepages_mountpoint 
+  const char *hugepages_mountpoint,
+  u_int32_t flags
 );
 
 /**

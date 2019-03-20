@@ -261,7 +261,8 @@ int main(int argc, char* argv[]) {
 #endif
     MAX_CARD_SLOTS + (num_threads - 1) * QUEUE_LEN + num_threads, 
     pfring_zc_numa_get_cpu_node(bind_core[0]),
-    NULL /* auto hugetlb mountpoint */ 
+    NULL /* auto hugetlb mountpoint */,
+    0
   );
 
   if(zc == NULL) {

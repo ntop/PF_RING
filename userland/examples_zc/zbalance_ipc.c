@@ -699,6 +699,7 @@ int main(int argc, char* argv[]) {
   char **opt_argv;
   char *user = NULL;
   int num_consumer_queues_limit = 0;
+  u_int32_t flags;
   const char *opt_string = "ab:c:dD:Eg:hi:l:m:n:pr:Q:q:N:P:R:S:zu:wv"
 #ifdef HAVE_PF_RING_FT
     "T"
@@ -917,6 +918,11 @@ int main(int argc, char* argv[]) {
   if (daemon_mode)
     daemonize();
 
+  flags = 0;
+
+  if (enable_vm_support)
+    flags |= PF_RING_ZC_ENABLE_VM_SUPPORT;
+
   zc = pfring_zc_create_cluster(
     cluster_id, 
     max_packet_len(devices[0]),
@@ -925,7 +931,8 @@ int main(int argc, char* argv[]) {
      + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers
      + (num_outdevs * MAX_CARD_SLOTS) - (num_outdevs * (queue_len /* replaced queues */ - 1 /* dummy queues */)), 
     pfring_zc_numa_get_cpu_node(bind_worker_core),
-    hugepages_mountpoint 
+    hugepages_mountpoint,
+    flags 
   );
 
   if (zc == NULL) {

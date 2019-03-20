@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
 #endif
 
   zc = pfring_zc_create_cluster(cluster_id, BUFFER_LEN, 0,
-    num_buffers + 1, pfring_zc_numa_get_cpu_node(bind_core), NULL);
+    num_buffers + 1, pfring_zc_numa_get_cpu_node(bind_core), NULL, 0);
 
   if (zc == NULL) {
     fprintf(stderr, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",

@@ -679,8 +679,8 @@ int main(int argc, char* argv[]) {
 				  metadata_len, 
 				  num_queue_buffers + NBUFF + num_consumer_buffers, 
 				  pfring_zc_numa_get_cpu_node(bind_core),
-				  NULL /* auto hugetlb mountpoint */ 
-				  );
+				  NULL /* auto hugetlb mountpoint */,
+				  0);
 
     if(zc == NULL) {
       fprintf(stderr, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",

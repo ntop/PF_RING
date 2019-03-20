@@ -335,7 +335,8 @@ int main(int argc, char* argv[]) {
     0, 
     ((2 * MAX_CARD_SLOTS) + 1) * (1 + bidirectional),
     pfring_zc_numa_get_cpu_node(dir[0].bind_core), 
-    NULL /* auto hugetlb mountpoint */ 
+    NULL /* auto hugetlb mountpoint */,
+    0
   );
 
   if(zc == NULL) {

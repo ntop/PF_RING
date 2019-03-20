@@ -323,7 +323,8 @@ int main(int argc, char* argv[]) {
     0, 
     MAX_CARD_SLOTS + BURST_LEN,
     pfring_zc_numa_get_cpu_node(bind_core),
-    NULL /* auto hugetlb mountpoint */ 
+    NULL /* auto hugetlb mountpoint */,
+    0 
   );
 
   if(zc == NULL) {

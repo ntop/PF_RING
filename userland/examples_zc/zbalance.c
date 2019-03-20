@@ -299,8 +299,8 @@ int main(int argc, char* argv[]) {
 				0,
 				(num_devices * MAX_CARD_SLOTS) + (num_threads * QUEUE_LEN) + num_threads + PREFETCH_BUFFERS,
 				pfring_zc_numa_get_cpu_node(bind_worker_core), 
-				NULL /* auto hugetlb mountpoint */ 
-				);
+				NULL /* auto hugetlb mountpoint */,
+				0);
 
   if(zc == NULL) {
     fprintf(stderr, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",

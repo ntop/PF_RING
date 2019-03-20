@@ -303,7 +303,8 @@ int main(int argc, char* argv[]) {
 #endif
     (num_devices * (MAX_CARD_SLOTS + PREFETCH_BUFFERS)),
     pfring_zc_numa_get_cpu_node(bind_worker_core), 
-    NULL /* auto hugetlb mountpoint */ 
+    NULL /* auto hugetlb mountpoint */,
+    0
   );
 
   if(zc == NULL) {
