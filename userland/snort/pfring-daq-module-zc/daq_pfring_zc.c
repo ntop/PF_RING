@@ -576,7 +576,7 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
     }
 
     context->cluster = pfring_zc_create_cluster(context->cluster_id, context->max_buffer_len, 0, num_buffers,
-                                              context->bindcpu == 0 ? -1 : pfring_zc_numa_get_cpu_node(context->bindcpu), NULL);
+                                              context->bindcpu == 0 ? -1 : pfring_zc_numa_get_cpu_node(context->bindcpu), NULL, 0);
 
     if (context->cluster == NULL) {
       snprintf(errbuf, len, "%s: Cluster failed: %s (error %d)", __func__, strerror(errno), errno);
