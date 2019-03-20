@@ -562,6 +562,9 @@ void dummyProcessPacket(const struct pfring_pkthdr *h,
   long threadId = (long)user_bytes;
   u_int8_t dump_match = !!dumper;
 
+  if (stats->numPkts[threadId] == 0)
+    printf("[first packet received]\n");
+
   stats->numPkts[threadId]++, stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
 
   if (unlikely(check_ts && h->ts.tv_sec != last_ts)) {
@@ -714,6 +717,7 @@ void printHelp(void) {
   printf("-x <path>       File containing strings to search string (case sensitive) on payload.\n");
   printf("-o <path>       Dump packets on the specified pcap (in case of -x this dumps only matching packets)\n");
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
+  printf("-J              Do not enable promiscuous mode\n");
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
 	 "                ixia\tTimestamped packets by ixiacom.com hardware devices\n");
@@ -938,7 +942,7 @@ void handleSigHup(int signalId) {
 int main(int argc, char* argv[]) {
   char *device = NULL, c, buf[32], path[256] = { 0 }, *reflector_device = NULL;
   u_char mac_address[6] = { 0 };
-  int promisc, snaplen = DEFAULT_SNAPLEN, rc;
+  int promisc = 1, snaplen = DEFAULT_SNAPLEN, rc;
   u_int clusterId = 0;
   u_int8_t enable_ixia_timestamp = 0, list_interfaces = 0;
   u_int32_t flags = 0;
@@ -952,7 +956,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:H:l:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MTU")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:H:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MTU")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1005,6 +1009,9 @@ int main(int argc, char* argv[]) {
     case 'i':
       device = strdup(optarg);
       if(strcmp(device, "sysdig:") == 0) is_sysdig = 1;
+      break;
+    case 'J':
+      promisc = 0;
       break;
     case 'l':
       snaplen = atoi(optarg);
@@ -1107,9 +1114,6 @@ int main(int argc, char* argv[]) {
 
   if ((stats = calloc(1, sizeof(struct app_stats))) == NULL)
     return -1;
-
-  /* hardcode: promisc=1, to_ms=500 */
-  promisc = 1;
 
   if(wait_for_packet && (cpu_percentage > 0)) {
     if(cpu_percentage > 99) cpu_percentage = 99;
