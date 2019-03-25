@@ -1,6 +1,6 @@
 /* ***************************************************************
  *
- * (C) 2004-2019 - ntop.org
+ * (C) 2004-19 - ntop.org
  *
  * This code includes contributions courtesy of
  * - Amit D. Chaudhary <amit_ml@rajgad.com>
@@ -142,18 +142,18 @@
 
 static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t port)
 {
-  if (!addr) {
+  if(!addr) {
     printk("NULL addr");
     return;
   }
-  if (ip_version==4) {
+  if(ip_version==4) {
     printk("IP=%d.%d.%d.%d:%u ",
         ((addr->v4 >> 24) & 0xff),
         ((addr->v4 >> 16) & 0xff),
         ((addr->v4 >> 8) & 0xff),
         ((addr->v4 >> 0) & 0xff),
         port);
-  } else if (ip_version==6) {
+  } else if(ip_version==6) {
     printk("IP=%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x:%u ",
         addr->v6.s6_addr[0],addr->v6.s6_addr[1], addr->v6.s6_addr[2],addr->v6.s6_addr[3],
         addr->v6.s6_addr[4],addr->v6.s6_addr[5], addr->v6.s6_addr[6],addr->v6.s6_addr[7],
@@ -169,7 +169,7 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
 /* ************************************************* */
 
 #define debug_on(debug_level) (unlikely(enable_debug >= debug_level))
-#define debug_printk(debug_level, fmt, ...) { if (debug_on(debug_level)) \
+#define debug_printk(debug_level, fmt, ...) { if(debug_on(debug_level)) \
   printk("[PF_RING][DEBUG] %s:%d " fmt,  __FUNCTION__, __LINE__, ## __VA_ARGS__); }
 
 #define debug_printk_rule_session(rule) \
@@ -178,7 +178,7 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
   printk_addr((rule)->ip_version,&(rule)->host_peer_b, (rule)->port_peer_b); \
 
 #define debug_printk_rules_comparison(debug_level, rule_a, rule_b) { \
-  if (debug_on(debug_level)) { \
+  if(debug_on(debug_level)) { \
     printk("[PF_RING][DEBUG] %s:%d Comparing ", __FUNCTION__, __LINE__); \
     debug_printk_rule_session(rule_a); \
     debug_printk_rule_session(rule_b); \
@@ -187,7 +187,7 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
 }	
 
 #define debug_printk_rule_info(debug_level, rule, fmt, ...) { \
-  if (debug_on(debug_level)) { \
+  if(debug_on(debug_level)) { \
     printk("[PF_RING][DEBUG] %s:%d ", __FUNCTION__, __LINE__); \
     debug_printk_rule_session(rule); \
     printk(fmt, ## __VA_ARGS__); \
@@ -668,7 +668,7 @@ pf_ring_net *netns_lookup(struct net *net) {
 
   list_for_each_safe(ptr, tmp_ptr, &netns_list) {
     pf_ring_net *net_ptr = list_entry(ptr, pf_ring_net, list);
-    if (net_eq(net_ptr->net, net))
+    if(net_eq(net_ptr->net, net))
       return net_ptr;
   }
 
@@ -682,7 +682,7 @@ pf_ring_net *netns_add(struct net *net) {
 
   netns = kmalloc(sizeof(pf_ring_net), GFP_KERNEL);
 
-  if (netns == NULL)
+  if(netns == NULL)
     return NULL;
 
   memset(netns, 0, sizeof(*netns));
@@ -708,7 +708,7 @@ static int netns_remove(struct net *net)
 
   list_for_each_safe(ptr, tmp_ptr, &netns_list) {
     pf_ring_net *netns = list_entry(ptr, pf_ring_net, list);
-    if (net_eq(netns->net, net)) {
+    if(net_eq(netns->net, net)) {
 
       ring_proc_term(netns);
 
@@ -804,16 +804,16 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 	     pfr->slots_info->remove_off,
 	     hdr->extended_hdr.tx.reserved);
 
-    if (hdr->extended_hdr.tx.reserved != NULL) {
+    if(hdr->extended_hdr.tx.reserved != NULL) {
       /* Can't forward the packet on the same interface it has been received */
-      if (hdr->extended_hdr.tx.bounce_interface == pfr->ring_dev->dev->ifindex) {
+      if(hdr->extended_hdr.tx.bounce_interface == pfr->ring_dev->dev->ifindex) {
 	hdr->extended_hdr.tx.bounce_interface = UNKNOWN_INTERFACE;
       }
 
-      if (hdr->extended_hdr.tx.bounce_interface != UNKNOWN_INTERFACE) {
+      if(hdr->extended_hdr.tx.bounce_interface != UNKNOWN_INTERFACE) {
 	/* Let's check if the last used device is still the prefered one */
 	if(pfr->tx.last_tx_dev_idx != hdr->extended_hdr.tx.bounce_interface) {
-	  if (pfr->tx.last_tx_dev != NULL) {
+	  if(pfr->tx.last_tx_dev != NULL) {
 	    dev_put(pfr->tx.last_tx_dev); /* Release device */
 	  }
 
@@ -822,14 +822,14 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 
 	  pfr->tx.last_tx_dev = __dev_get_by_index(sock_net(pfr->sk), hdr->extended_hdr.tx.bounce_interface);
 
-	  if (pfr->tx.last_tx_dev != NULL) {
+	  if(pfr->tx.last_tx_dev != NULL) {
 	    /* We have found the device */
 	    pfr->tx.last_tx_dev_idx = hdr->extended_hdr.tx.bounce_interface;
 	    dev_hold(pfr->tx.last_tx_dev); /* Prevent it from being freed */
 	  }
 	}
 
-	if (pfr->tx.last_tx_dev) {
+	if(pfr->tx.last_tx_dev) {
 	  debug_printk(2, "Bouncing packet to interface %d/%s\n",
 		       hdr->extended_hdr.tx.bounce_interface,
 		       pfr->tx.last_tx_dev->name);
@@ -972,7 +972,7 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
 
   netns = netns_lookup(sock_net(pfr->sk));
 
-  if (netns != NULL && 
+  if(netns != NULL && 
       netns->proc_dir != NULL &&
       pfr->sock_proc_name[0] == '\0') {
     snprintf(pfr->sock_proc_name, sizeof(pfr->sock_proc_name),
@@ -996,7 +996,7 @@ static void ring_proc_remove(struct pf_ring_socket *pfr)
 
   netns = netns_lookup(sock_net(pfr->sk));
 
-  if (netns != NULL &&
+  if(netns != NULL &&
       netns->proc_dir != NULL &&
       pfr->sock_proc_name[0] != '\0') {
     debug_printk(2, "Removing /proc/net/pf_ring/%s\n", pfr->sock_proc_name);
@@ -1464,7 +1464,7 @@ pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if (net_eq(net, dev_net(dev_ptr->dev)) && 
+    if(net_eq(net, dev_net(dev_ptr->dev)) && 
         dev_ptr->dev->ifindex == ifindex)
       return dev_ptr;
   }
@@ -1620,7 +1620,7 @@ static void ring_proc_init(pf_ring_net *netns)
 {
   netns->proc_dir = proc_mkdir("pf_ring", netns->net->proc_net);
 
-  if (netns->proc_dir == NULL) {
+  if(netns->proc_dir == NULL) {
     printk("[PF_RING] unable to create /proc/net/pf_ring [net=%pK]\n", netns->net);
     return;
   }
@@ -1633,7 +1633,7 @@ static void ring_proc_init(pf_ring_net *netns)
 			  netns->proc_dir /* parent */,
 			  &ring_proc_fops /* file operations */);
 
-  if (netns->proc == NULL) {
+  if(netns->proc == NULL) {
     printk("[PF_RING] unable to register proc file [net=%pK]\n", netns->net);
     return;
   }
@@ -1645,7 +1645,7 @@ static void ring_proc_init(pf_ring_net *netns)
 
 static void ring_proc_term(pf_ring_net *netns)
 {
-  if (netns->proc_dir == NULL) 
+  if(netns->proc_dir == NULL) 
     return;
 
   debug_printk(1, "removing /proc/net/pf_ring [net=%pK]\n", netns->net);
@@ -1654,7 +1654,7 @@ static void ring_proc_term(pf_ring_net *netns)
   remove_proc_entry(PROC_STATS, netns->proc_dir);
   remove_proc_entry(PROC_DEV,   netns->proc_dir);
 
-  if (netns->proc != NULL) {
+  if(netns->proc != NULL) {
     remove_proc_entry("pf_ring", netns->net->proc_net);
     debug_printk(1, "deregistered /proc/net/pf_ring [net=%pK]\n", netns->net);
   }
@@ -2426,8 +2426,8 @@ static inline int hash_filtering_rule_match(hash_filtering_rule *a,
       && (a->host4_peer_b == b->host4_peer_a)
       && (a->port_peer_a == b->port_peer_b)
       && (a->port_peer_b == b->port_peer_a)))) {
-      if (a->ip_version == 6) {
-        if (((memcmp(&a->host6_peer_a, &b->host6_peer_a, sizeof(ip_addr)) == 0)
+      if(a->ip_version == 6) {
+        if(((memcmp(&a->host6_peer_a, &b->host6_peer_a, sizeof(ip_addr)) == 0)
              && (memcmp(&a->host6_peer_b, &b->host6_peer_b, sizeof(ip_addr)) == 0))
            ||
              ((memcmp(&a->host6_peer_a, &b->host6_peer_b, sizeof(ip_addr)) == 0) 
@@ -2781,7 +2781,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
 	if(!(hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL)) {
           hdr->extended_hdr.parsed_pkt.vlan_id = vlan_tci & VLAN_VID_MASK;
-          if (hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0)
+          if(hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0)
             hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
           else /* QinQ */
             hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
@@ -2809,7 +2809,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
       }
     }
 
-    if (pfr->tx.enable_tx_with_bounce &&
+    if(pfr->tx.enable_tx_with_bounce &&
         pfr->header_len == long_pkt_header &&
         skb != NULL) {
       /* The TX transmission is supported only with long_pkt_header
@@ -2817,7 +2817,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
       hdr->extended_hdr.tx.reserved = skb_clone(skb, GFP_ATOMIC);
 
-      if (displ > 0) {
+      if(displ > 0) {
         skb_push(hdr->extended_hdr.tx.reserved, displ);
       }
     }
@@ -2972,7 +2972,7 @@ static int handle_sw_filtering_hash_bucket(struct pf_ring_socket *pfr,
   int rc = -1;
   u_int32_t hash_idx;
 
-  if (rule->rule.ip_version != 4 && rule->rule.ip_version != 6) /* safety check */
+  if(rule->rule.ip_version != 4 && rule->rule.ip_version != 6) /* safety check */
     return(-EINVAL);
 
   hash_idx = hash_pkt(rule->rule.vlan_id, zeromac, zeromac,
@@ -3222,14 +3222,14 @@ static int reflect_packet(struct sk_buff *skb,
 
   debug_printk(2, "reflect_packet(%s) called\n", reflector_dev->name);
 
-  if (reflector_dev == NULL || !(reflector_dev->flags & IFF_UP) /* interface down */ ) {
+  if(reflector_dev == NULL || !(reflector_dev->flags & IFF_UP) /* interface down */ ) {
     pfr->slots_info->tot_fwd_notok++;
     return -ENETDOWN;
   }
 
-  if (do_clone_skb) {
+  if(do_clone_skb) {
     cloned = skb_clone(skb, GFP_ATOMIC);
-    if (cloned == NULL) {
+    if(cloned == NULL) {
       pfr->slots_info->tot_fwd_notok++;
       return -ENOMEM;
     }
@@ -3240,13 +3240,13 @@ static int reflect_packet(struct sk_buff *skb,
   cloned->pkt_type = PACKET_OUTGOING;
   cloned->dev = reflector_dev;
 
-  if (displ > 0) {
+  if(displ > 0) {
     skb_push(cloned, displ);
   }
 
   skb_reset_network_header(skb);
 
-  if (behaviour == bounce_packet_and_stop_rule_evaluation ||
+  if(behaviour == bounce_packet_and_stop_rule_evaluation ||
       behaviour == bounce_packet_and_continue_rule_evaluation) {
     char dst_mac[6];
     /* Swap mac addresses (be aware that data is also forwarded to userspace) */
@@ -3262,7 +3262,7 @@ static int reflect_packet(struct sk_buff *skb,
 
   debug_printk(2, "dev_queue_xmit(%s) returned %d\n", reflector_dev->name, ret);
 
-  if (ret != NETDEV_TX_OK) {
+  if(ret != NETDEV_TX_OK) {
     pfr->slots_info->tot_fwd_notok++;
     return -ENETDOWN;
   }
@@ -3499,7 +3499,7 @@ int bpf_filter_skb(struct sk_buff *skb,
   rcu_read_unlock();
 
   /* Restore */
-  if (displ > 0) {
+  if(displ > 0) {
     /* skb_pull(skb, displ); */
     skb->data = skb_head;
     skb->len = skb_len;
@@ -3589,22 +3589,22 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
     hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ, &hash_bucket);
 
-    if (hash_found) {
+    if(hash_found) {
       hash_bucket->rule.internals.jiffies_last_match = jiffies;
       hash_bucket->match++;
       pfr->sw_filtering_hash_match++;
 
-      if (!fwd_pkt && pfr->filtering_sample_rate) {
+      if(!fwd_pkt && pfr->filtering_sample_rate) {
         /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
          * Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO' */
         div_u64_rem(hash_bucket->match, pfr->filtering_sampling_size, &remainder);
-        if (remainder < FILTERING_SAMPLING_RATIO) {
+        if(remainder < FILTERING_SAMPLING_RATIO) {
           hash_bucket->match_forward++;
           fwd_pkt=1;
         }
       }
 
-      if (fwd_pkt == 0) {
+      if(fwd_pkt == 0) {
         hash_bucket->filtered++;
         pfr->sw_filtering_hash_filtered++;
       }
@@ -3678,15 +3678,14 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
   /* For the rest, set at least these 2 flags */
   flags |= HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN;
 
-  if(cluster_mode == cluster_per_flow_ip_5_tuple ||
-      cluster_mode == cluster_per_inner_flow_ip_5_tuple)
-  {
-    if(l3_proto == 0)
-    {
+  if((cluster_mode == cluster_per_flow_ip_5_tuple)
+     || (cluster_mode == cluster_per_inner_flow_ip_5_tuple)) {
+    if(l3_proto == 0) {
       /* Non-IP packets: use only MAC addresses, mask all else */
       flags |= ~(HASH_PKT_HDR_MASK_TUNNEL | HASH_PKT_HDR_MASK_MAC);
       return hash_pkt_header(hdr, flags);
     }
+    
     /* else, it's like 5-tuple for IP packets */
     cluster_mode = cluster_per_flow_5_tuple;
   }
@@ -3726,6 +3725,7 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
   default:  /* this ought to be an error */
     printk("[PF_RING] undefined clustering type.\n");
   }
+
   return hash_pkt_header(hdr, flags);
 }
 
@@ -3929,19 +3929,19 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   if(quick_mode) {
     pfr = device_rings[skb->dev->ifindex][channel_id];
 
-    if (pfr != NULL) {
-      if (pfr->rehash_rss != NULL) {
+    if(pfr != NULL) {
+      if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
         channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
         pfr = device_rings[skb->dev->ifindex][channel_id];
       }
 
-      if (is_valid_skb_direction(pfr->direction, recv_packet)) {
+      if(is_valid_skb_direction(pfr->direction, recv_packet)) {
         rc = 1;
         
-        if (pfr->sample_rate > 1) {
+        if(pfr->sample_rate > 1) {
           write_lock(&pfr->ring_index_lock);
-          if (pfr->pktToSample <= 1) {
+          if(pfr->pktToSample <= 1) {
             pfr->pktToSample = pfr->sample_rate;
           } else {
             pfr->slots_info->tot_pkts++;
@@ -3951,7 +3951,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
           write_unlock(&pfr->ring_index_lock);
         }
 
-        if (rc == 1) 
+        if(rc == 1) 
           room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
 					      displ, 0, NULL, 0);
       }
@@ -4030,40 +4030,52 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
       if(num_cluster_elements > 0) {
 	u_short num_iterations;
 	int cluster_element_idx;
+	u_int8_t num_ip_flow_iterations = 0;
+	
+	if(cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple) {
+	  /*
+	    This is a special mode that might lead to packet duplication and it is
+	    handled on a custom way
+	  */
+	  skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT);
+	  if(skb_hash < 0) skb_hash = -skb_hash;
+	} else {
+	  if(enable_frag_coherence
+	     && is_ip_pkt
+	     && (hdr.extended_hdr.parsed_pkt.ip_version == 4)
+	     && skb_hash == -1 /* read hash once */) {
+	    int fragment_not_first = hdr.extended_hdr.flags & PKT_FLAGS_IP_FRAG_OFFSET;
+	    int more_fragments     = hdr.extended_hdr.flags & PKT_FLAGS_IP_MORE_FRAG;
+	    int first_fragment     = more_fragments && !fragment_not_first;
 
-        if (enable_frag_coherence &&
-            is_ip_pkt && hdr.extended_hdr.parsed_pkt.ip_version == 4 &&
-            skb_hash == -1 /* read hash once */) {
-          int fragment_not_first = hdr.extended_hdr.flags & PKT_FLAGS_IP_FRAG_OFFSET;
-          int more_fragments     = hdr.extended_hdr.flags & PKT_FLAGS_IP_MORE_FRAG;
-          int first_fragment     = more_fragments && !fragment_not_first;
+	    if(first_fragment) {
+	      /* first fragment: compute hash (once for all clusters) */
+	      skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
+	      if(skb_hash < 0) skb_hash = -skb_hash;
 
-          if (first_fragment) {
-            /* first fragment: compute hash (once for all clusters) */
-            skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
-            if (skb_hash < 0) skb_hash = -skb_hash;
+	      /* add hash to cache */
+	      add_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
+				  hdr.extended_hdr.parsed_pkt.ipv4_dst,
+				  ip_id, skb_hash % num_cluster_elements);
+	    } else if(fragment_not_first) {
+	      /* fragment, but not the first: read hash from cache */
+	      skb_hash = get_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
+					     hdr.extended_hdr.parsed_pkt.ipv4_dst,
+					     ip_id, more_fragments);
+	      if(skb_hash < 0) skb_hash = 0; /* not found, using hash = 0 */
+	    }
+	  }
 
-            /* add hash to cache */
-            add_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
-                                hdr.extended_hdr.parsed_pkt.ipv4_dst,
-                                ip_id, skb_hash % num_cluster_elements);
-          } else if (fragment_not_first) {
-            /* fragment, but not the first: read hash from cache */
-            skb_hash = get_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
-                                           hdr.extended_hdr.parsed_pkt.ipv4_dst,
-                                           ip_id, more_fragments);
-            if (skb_hash < 0) skb_hash = 0; /* not found, using hash = 0 */
-          }
-        }
-
-        if (skb_hash == -1) {
-          /* compute hash (once for all clusters) */
-          skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
-          if (skb_hash < 0) skb_hash = -skb_hash;
-        }
-
+	  if(skb_hash == -1) {
+	    /* compute hash (once for all clusters) */
+	    skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
+	    if(skb_hash < 0) skb_hash = -skb_hash;
+	  }
+	}
+	
         cluster_element_idx = skb_hash % num_cluster_elements;
 
+      iterate_cluster_elements:
 	/*
 	  We try to add the packet to the right cluster
 	  element, but if we're working in round-robin and this
@@ -4074,7 +4086,6 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	for(num_iterations = 0;
 	    num_iterations < num_cluster_elements;
 	    num_iterations++) {
-
 	    skElement = cluster_ptr->cluster.sk[cluster_element_idx];
 
 	    if(skElement != NULL) {
@@ -4120,6 +4131,19 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	      break;
 	    else
 	      cluster_element_idx = (cluster_element_idx + 1) % num_cluster_elements;
+	} /* for */
+
+	if((cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple)
+	   && (num_ip_flow_iterations == 0)) {
+	  int new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT);
+
+	  if(new_cluster_element_idx < 0) new_cluster_element_idx = -new_cluster_element_idx;
+	  new_cluster_element_idx %= num_cluster_elements;
+	  
+	  if(new_cluster_element_idx != cluster_element_idx) {
+	    cluster_element_idx = new_cluster_element_idx, num_ip_flow_iterations = 1;
+	    goto iterate_cluster_elements;
+	  }
 	}
       }
 
@@ -4160,11 +4184,11 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 {
   int rc;
 
-  if (skb->pkt_type == PACKET_LOOPBACK)
+  if(skb->pkt_type == PACKET_LOOPBACK)
     return 0;
 
   /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
-  if (skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)
+  if(skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)
     return 0;
 
   rc = pf_ring_skb_ring_handler(skb,
@@ -4371,7 +4395,7 @@ add_virtual_filtering_device(struct pf_ring_socket *pfr, virtual_filtering_devic
   /* Add /proc entry */
   write_lock(&netns_lock);
   netns = netns_lookup(sock_net(pfr->sk));
-  if (netns != NULL) {
+  if(netns != NULL) {
     elem->info.proc_entry = proc_mkdir(elem->info.device_name, netns->proc_dev_dir);
     proc_create_data(PROC_INFO, 0 /* read-only */,
 		     elem->info.proc_entry,
@@ -4402,7 +4426,7 @@ static int remove_virtual_filtering_device(struct pf_ring_socket *pfr, char *dev
       /* Remove /proc entry */
       write_lock(&netns_lock);
       netns = netns_lookup(sock_net(pfr->sk));
-      if (netns != NULL) {
+      if(netns != NULL) {
         remove_proc_entry(PROC_INFO, filtering_ptr->info.proc_entry);
         remove_proc_entry(filtering_ptr->info.device_name, netns->proc_dev_dir);
       }
@@ -5609,11 +5633,11 @@ unsigned int ring_poll(struct file *file,
       pfr->queue_nonempty_timestamp=0;
     }
 
-    if ( pfr->poll_watermark_timeout > 0 ) {
+    if( pfr->poll_watermark_timeout > 0 ) {
       /* Flush the queue also in case its not empty but timeout passed */		
-      if ( num_queued_pkts(pfr) > 0 ) {
+      if( num_queued_pkts(pfr) > 0 ) {
         now = jiffies;
-        if ( pfr->queue_nonempty_timestamp == 0 ) {
+        if( pfr->queue_nonempty_timestamp == 0 ) {
           pfr->queue_nonempty_timestamp = now;
         } else if( (jiffies_to_msecs(now - pfr->queue_nonempty_timestamp) >= (u_long)pfr->poll_watermark_timeout) ) {
             debug_printk(2, "[ring_id=%u] Flushing queue (num_queued_pkts=%llu, now=%lu, queue_nonempty_timestamp=%lu, diff=%u, pfr->poll_watermark_timeout=%u)\n",
@@ -5933,7 +5957,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
     if(entry->bound_sockets[i] == NULL) {
       entry->bound_sockets[i] = pfr;
       entry->num_bound_sockets++;
-      if (entry->zc_dev.mem_info.rx.descr_packet_memory_tot_len == 0)
+      if(entry->zc_dev.mem_info.rx.descr_packet_memory_tot_len == 0)
         active_zc_socket[entry->zc_dev.dev->ifindex] = 2; /* 1-copy ZC mode */
       else
         active_zc_socket[entry->zc_dev.dev->ifindex] = 1; /* ZC mode */
@@ -6287,10 +6311,10 @@ int setSocketStats(struct pf_ring_socket *pfr)
 
   netns = netns_lookup(sock_net(pfr->sk));
 
-  if (netns != NULL) {
+  if(netns != NULL) {
     /* 1 - Check if the /proc entry exists otherwise create it */
 
-    if (netns->proc_stats_dir != NULL && 
+    if(netns->proc_stats_dir != NULL && 
         pfr->sock_proc_stats_name[0] == '\0') {
       struct proc_dir_entry *entry;
 
@@ -6298,7 +6322,7 @@ int setSocketStats(struct pf_ring_socket *pfr)
 	       "%d-%s.%d", pfr->ring_pid,
 	       pfr->ring_dev->dev->name, pfr->ring_id);
 
-      if ((entry = proc_create_data(pfr->sock_proc_stats_name,
+      if((entry = proc_create_data(pfr->sock_proc_stats_name,
 				    0 /* ro */,
 				    netns->proc_stats_dir,
 				    &ring_proc_stats_fops, pfr)) == NULL) {
@@ -6492,10 +6516,10 @@ static int ring_setsockopt(struct socket *sock,
     u_int64_t channel_id_mask;
     u_int16_t num_channels = 0;
 
-    if (optlen != sizeof(channel_id_mask))
+    if(optlen != sizeof(channel_id_mask))
       return(-EINVAL);
 
-    if (copy_from_user(&channel_id_mask, optval, sizeof(channel_id_mask)))
+    if(copy_from_user(&channel_id_mask, optval, sizeof(channel_id_mask)))
       return(-EFAULT);
 
     num_channels = 0;
@@ -6505,7 +6529,7 @@ static int ring_setsockopt(struct socket *sock,
       in channel_id_mask
     */
 
-    if (quick_mode) {
+    if(quick_mode) {
       for (i = 0; i < pfr->num_rx_channels; i++) {
         u_int64_t channel_id_bit = 1 << i;
 
@@ -6521,7 +6545,7 @@ static int ring_setsockopt(struct socket *sock,
     for (i = 0; i < pfr->num_rx_channels; i++) {
       u_int64_t channel_id_bit = 1 << i;
 
-      if (channel_id_mask & channel_id_bit) {
+      if(channel_id_mask & channel_id_bit) {
         debug_printk(2, "Setting channel %d\n", i);
 
 	if(quick_mode) {
@@ -7397,10 +7421,10 @@ static int ring_getsockopt(struct socket *sock,
     {
       int bpf_ext = SKF_AD_MAX; /* bpf_tell_extensions() on kernels >= 3.14 */
 
-      if (len < sizeof(bpf_ext))
+      if(len < sizeof(bpf_ext))
         return -EINVAL;
 
-      if (copy_to_user(optval, &bpf_ext, sizeof(bpf_ext)))
+      if(copy_to_user(optval, &bpf_ext, sizeof(bpf_ext)))
         return -EFAULT;
     }
     break;
@@ -7788,7 +7812,7 @@ static struct proto ring_proto = {
 /* ************************************ */
 
 void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
-  if (dev_ptr->proc_entry == NULL)
+  if(dev_ptr->proc_entry == NULL)
     return;
 
   /*
@@ -7801,7 +7825,7 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     remove_proc_entry(PROC_RULES, dev_ptr->proc_entry);
 #endif
 
-  if (dev_ptr->proc_info_entry != NULL) {
+  if(dev_ptr->proc_info_entry != NULL) {
     debug_printk(1, "removing %s/%s from /proc [net=%pK] [entry=%pK]\n", 
       dev_ptr->device_name, PROC_INFO, netns->net, dev_ptr->proc_info_entry);
 
@@ -7810,7 +7834,7 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     dev_ptr->proc_info_entry = NULL;
   }
 
-  if (netns->proc_dev_dir != NULL) {
+  if(netns->proc_dev_dir != NULL) {
     debug_printk(1, "removing %s from /proc [net=%pK] [entry=%pK]\n", 
       dev_ptr->device_name, netns->net, dev_ptr->proc_entry);
     /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
@@ -7835,10 +7859,10 @@ void remove_device_from_ring_list(struct net_device *dev)
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if (net_eq(netns->net, dev_net(dev_ptr->dev)) && 
+    if(net_eq(netns->net, dev_net(dev_ptr->dev)) && 
         dev_ptr->dev->ifindex == dev->ifindex) {
 
-      if (netns != NULL) {
+      if(netns != NULL) {
         debug_printk(1, "removing dev=%s ifindex=%d (1)\n", dev->name, dev->ifindex);
         remove_device_from_proc(netns, dev_ptr);
       }
@@ -7888,7 +7912,7 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
 
   dev_ptr->proc_entry = proc_mkdir(dev_ptr->device_name, netns->proc_dev_dir);
 
-  if (dev_ptr->proc_entry == NULL) {
+  if(dev_ptr->proc_entry == NULL) {
     printk("[PF_RING] failure creating %s in /proc [net=%pK]\n", 
       dev_ptr->device_name, netns->net);
     return;
@@ -7902,7 +7926,7 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     &ring_proc_dev_fops /* read */,
     dev_ptr);
 
-  if (dev_ptr->proc_info_entry == NULL) {
+  if(dev_ptr->proc_info_entry == NULL) {
     printk("[PF_RING] failure creating %s/%s in /proc [net=%pK]\n", 
       dev_ptr->device_name, PROC_INFO, netns->net);
     return;
@@ -7933,7 +7957,7 @@ int add_device_to_ring_list(struct net_device *dev)
   strcpy(dev_ptr->device_name, dev->name);
   dev_ptr->device_type = standard_nic_family; /* Default */
 
-  if (netns != NULL) {
+  if(netns != NULL) {
     debug_printk(1, "adding dev=%s ifindex=%d (1)\n", dev->name, dev->ifindex);
     add_device_to_proc(netns, dev_ptr);
   }
@@ -8208,7 +8232,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
         netns = netns_lookup(dev_net(dev));
 
 	/* Remove old entry */
-        if (netns != NULL) {
+        if(netns != NULL) {
           printk("[PF_RING] removing dev=%s ifindex=%d (2)\n", dev->name, dev->ifindex);
           remove_device_from_proc(netns, dev_ptr);
         }
@@ -8217,7 +8241,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 	  strcpy(dev_ptr->device_name, dev_ptr->dev->name);
 
 	  /* Add new entry */
-          if (netns != NULL) {
+          if(netns != NULL) {
             debug_printk(1, "adding dev=%s ifindex=%d (2)\n", dev->name, dev->ifindex);
             add_device_to_proc(netns, dev_ptr);
           }
@@ -8264,7 +8288,7 @@ static int __net_init ring_net_init(struct net *net)
 
   netns = netns_add(net);
 
-  if (netns == NULL)
+  if(netns == NULL)
     return -ENOMEM;
 
   return 0;
@@ -8305,7 +8329,7 @@ static void __exit ring_exit(void)
 
     netns = netns_lookup(dev_net(dev_ptr->dev));
 
-    if (netns != NULL)
+    if(netns != NULL)
       remove_device_from_proc(netns, dev_ptr);
 
     write_unlock(&netns_lock);
