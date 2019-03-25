@@ -55,10 +55,10 @@ struct compact_eth_hdr {
 };
 
 struct compact_ip_hdr {
-  u_int32_t	tot_len:16,
-  		tos:8,
-		ihl:4,
+  u_int8_t      ihl:4,
                 version:4;
+  u_int8_t      tos;
+  u_int16_t     tot_len;
   u_int16_t	id;
   u_int16_t	frag_off;
   u_int8_t	ttl;
