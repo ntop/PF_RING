@@ -184,7 +184,7 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
     debug_printk_rule_session(rule_b); \
     printk("\n"); \
   } \
-}	
+}
 
 #define debug_printk_rule_info(debug_level, rule, fmt, ...) { \
   if(debug_on(debug_level)) { \
@@ -192,7 +192,7 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
     debug_printk_rule_session(rule); \
     printk(fmt, ## __VA_ARGS__); \
   } \
-}	
+}
 
 /* ************************************************* */
 
@@ -455,7 +455,7 @@ MODULE_PARM_DESC(transparent_mode,
 u_int get_num_rx_queues(struct net_device *dev)
 {
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
-  /* FIXX now sure why we are taking the min here, it may depend on the way old kernels 
+  /* FIXX now sure why we are taking the min here, it may depend on the way old kernels
    * managed rss queues, setting real_num_tx_queues, not sure if it's still needed */
   return min_val(dev->real_num_rx_queues, dev->real_num_tx_queues);
 #elif(defined(RHEL_MAJOR) && (RHEL_MAJOR == 6)) && defined(CONFIG_RPS)
@@ -972,7 +972,7 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
 
   netns = netns_lookup(sock_net(pfr->sk));
 
-  if(netns != NULL && 
+  if(netns != NULL &&
       netns->proc_dir != NULL &&
       pfr->sock_proc_name[0] == '\0') {
     snprintf(pfr->sock_proc_name, sizeof(pfr->sock_proc_name),
@@ -1464,7 +1464,7 @@ pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(net_eq(net, dev_net(dev_ptr->dev)) && 
+    if(net_eq(net, dev_net(dev_ptr->dev)) &&
         dev_ptr->dev->ifindex == ifindex)
       return dev_ptr;
   }
@@ -1477,18 +1477,18 @@ pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
 pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char *name) {
   struct list_head *ptr, *tmp_ptr;
   int l = strlen(name);
-  
+
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    
+
     if(((strcmp(dev_ptr->device_name, name) == 0)
 	/*
 	  The problem is that pfring_mod_bind() needs to specify the interface
 	  name using struct sockaddr that is defined as
-	  
+
 	  struct sockaddr { ushort sa_family; char sa_data[14]; };
 
-	  so the total interface name lenght is 13 chars (plus \0 trailer).	  
+	  so the total interface name lenght is 13 chars (plus \0 trailer).
 	  The check below is to trap this case.
 	 */
 	|| ((l >= 13) && (strncmp(dev_ptr->device_name, name, 13) == 0)))
@@ -1645,7 +1645,7 @@ static void ring_proc_init(pf_ring_net *netns)
 
 static void ring_proc_term(pf_ring_net *netns)
 {
-  if(netns->proc_dir == NULL) 
+  if(netns->proc_dir == NULL)
     return;
 
   debug_printk(1, "removing /proc/net/pf_ring [net=%pK]\n", netns->net);
@@ -1723,7 +1723,7 @@ static int ring_alloc_mem(struct sock *sk)
   tot_mem = (u_int64_t) sizeof(FlowSlotInfo) + ((u_int64_t) min_num_slots * the_slot_len);
 
   if(unlikely(tot_mem > UINT_MAX)) {
-    printk("[PF_RING] Warning: ring size (min_num_slots = %u x slot_len = %u) exceeds max, resizing..\n", 
+    printk("[PF_RING] Warning: ring size (min_num_slots = %u x slot_len = %u) exceeds max, resizing..\n",
       min_num_slots, the_slot_len);
     tot_mem = UINT_MAX;
   }
@@ -2430,7 +2430,7 @@ static inline int hash_filtering_rule_match(hash_filtering_rule *a,
         if(((memcmp(&a->host6_peer_a, &b->host6_peer_a, sizeof(ip_addr)) == 0)
              && (memcmp(&a->host6_peer_b, &b->host6_peer_b, sizeof(ip_addr)) == 0))
            ||
-             ((memcmp(&a->host6_peer_a, &b->host6_peer_b, sizeof(ip_addr)) == 0) 
+             ((memcmp(&a->host6_peer_a, &b->host6_peer_b, sizeof(ip_addr)) == 0)
              && (memcmp(&a->host6_peer_b, &b->host6_peer_a, sizeof(ip_addr)) == 0))) {
            return 1;
         }
@@ -2505,10 +2505,10 @@ static int match_filtering_rule(struct pf_ring_socket *pfr,
 
   if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
     /* IPv6 */
-    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, 
+    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src,
 		   &rule->rule.extended_fields.tunnel.dhost,
 		   &rule->rule.extended_fields.tunnel.dhost_mask)
-       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, 
+       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst,
 		      &rule->rule.extended_fields.tunnel.shost,
 		      &rule->rule.extended_fields.tunnel.shost_mask))
       return(0);
@@ -2529,10 +2529,10 @@ static int match_filtering_rule(struct pf_ring_socket *pfr,
 
   if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
     /* IPv6 */
-    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, 
+    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src,
 		   &rule->rule.core_fields.shost,
 		   &rule->rule.core_fields.shost_mask)
-       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, 
+       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst,
 		      &rule->rule.core_fields.dhost,
 		      &rule->rule.core_fields.dhost_mask))
         goto swap_direction;
@@ -2570,10 +2570,10 @@ swap_direction:
 
   if(hdr->extended_hdr.parsed_pkt.ip_version == 6) {
     /* IPv6 */
-    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src, 
+    if(!match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_src,
 		   &rule->rule.core_fields.dhost,
 		   &rule->rule.core_fields.dhost_mask)
-       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst, 
+       || !match_ipv6(&hdr->extended_hdr.parsed_pkt.ip_dst,
 		      &rule->rule.core_fields.shost,
 		      &rule->rule.core_fields.shost_mask))
       return(0);
@@ -2786,9 +2786,9 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
           else /* QinQ */
             hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
           hdr->extended_hdr.parsed_pkt.offset.l3_offset += sizeof(struct eth_vlan_hdr);
-          if(hdr->extended_hdr.parsed_pkt.offset.l4_offset) 
+          if(hdr->extended_hdr.parsed_pkt.offset.l4_offset)
             hdr->extended_hdr.parsed_pkt.offset.l4_offset += sizeof(struct eth_vlan_hdr);
-          if(hdr->extended_hdr.parsed_pkt.offset.payload_offset) 
+          if(hdr->extended_hdr.parsed_pkt.offset.payload_offset)
             hdr->extended_hdr.parsed_pkt.offset.payload_offset += sizeof(struct eth_vlan_hdr);
           hdr->extended_hdr.flags |= PKT_FLAGS_VLAN_HWACCEL;
         }
@@ -3266,7 +3266,7 @@ static int reflect_packet(struct sk_buff *skb,
     pfr->slots_info->tot_fwd_notok++;
     return -ENETDOWN;
   }
- 
+
   pfr->slots_info->tot_fwd_ok++;
   return 0;
 }
@@ -3685,7 +3685,7 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
       flags |= ~(HASH_PKT_HDR_MASK_TUNNEL | HASH_PKT_HDR_MASK_MAC);
       return hash_pkt_header(hdr, flags);
     }
-    
+
     /* else, it's like 5-tuple for IP packets */
     cluster_mode = cluster_per_flow_5_tuple;
   }
@@ -3938,7 +3938,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
       if(is_valid_skb_direction(pfr->direction, recv_packet)) {
         rc = 1;
-        
+
         if(pfr->sample_rate > 1) {
           write_lock(&pfr->ring_index_lock);
           if(pfr->pktToSample <= 1) {
@@ -3951,7 +3951,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
           write_unlock(&pfr->ring_index_lock);
         }
 
-        if(rc == 1) 
+        if(rc == 1)
           room_available |= copy_data_to_ring(real_skb ? skb : NULL, pfr, &hdr,
 					      displ, 0, NULL, 0);
       }
@@ -4020,7 +4020,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
     /* [2] Check socket clusters */
     while(cluster_ptr != NULL) {
       struct pf_ring_socket *pfr;
-      u_short num_cluster_elements = 
+      u_short num_cluster_elements =
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
         ACCESS_ONCE(cluster_ptr->cluster.num_cluster_elements);
 #else
@@ -4037,8 +4037,9 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	    This is a special mode that might lead to packet duplication and it is
 	    handled on a custom way
 	  */
-	  skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC |
-				     HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_RECOMPUTE);
+	  skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC
+				     | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
+				     | HASH_PKT_HDR_RECOMPUTE);
 	  if(skb_hash < 0) skb_hash = -skb_hash;
 	} else {
 	  if(enable_frag_coherence
@@ -4073,7 +4074,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	    if(skb_hash < 0) skb_hash = -skb_hash;
 	  }
 	}
-	
+
         cluster_element_idx = skb_hash % num_cluster_elements;
 
       iterate_cluster_elements:
@@ -4136,15 +4137,15 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
 	if((cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple)
 	   && (num_ip_flow_iterations == 0)) {
-	  int new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC |
-							HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_RECOMPUTE);
+	  int new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC
+							| HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
+							| HASH_PKT_HDR_RECOMPUTE);
 
 	  if(new_cluster_element_idx < 0) new_cluster_element_idx = -new_cluster_element_idx;
 	  new_cluster_element_idx %= num_cluster_elements;
-	  
+
 	  if(new_cluster_element_idx != cluster_element_idx) {
 	    cluster_element_idx = new_cluster_element_idx, num_ip_flow_iterations = 1;
-	    printk("[2TUPLE] IP dst=%d\n", cluster_element_idx);
 	    goto iterate_cluster_elements;
 	  }
 	}
@@ -5211,7 +5212,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
     ring_proc_add(pfr);
   }
 
-  pfr->last_bind_dev = dev; 
+  pfr->last_bind_dev = dev;
 
   pfr->num_rx_channels = get_num_rx_queues(pfr->ring_dev->dev);
 
@@ -5249,7 +5250,7 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 
   /* Safety check: add trailing zero if missing */
   sa->sa_data[sizeof(sa->sa_data) - 1] = '\0';
-  
+
   debug_printk(2, "searching device %s\n", sa->sa_data);
 
   return(packet_ring_bind(sk, sa->sa_data));
@@ -5637,7 +5638,7 @@ unsigned int ring_poll(struct file *file,
     }
 
     if( pfr->poll_watermark_timeout > 0 ) {
-      /* Flush the queue also in case its not empty but timeout passed */		
+      /* Flush the queue also in case its not empty but timeout passed */
       if( num_queued_pkts(pfr) > 0 ) {
         now = jiffies;
         if( pfr->queue_nonempty_timestamp == 0 ) {
@@ -6317,7 +6318,7 @@ int setSocketStats(struct pf_ring_socket *pfr)
   if(netns != NULL) {
     /* 1 - Check if the /proc entry exists otherwise create it */
 
-    if(netns->proc_stats_dir != NULL && 
+    if(netns->proc_stats_dir != NULL &&
         pfr->sock_proc_stats_name[0] == '\0') {
       struct proc_dir_entry *entry;
 
@@ -6769,15 +6770,15 @@ static int ring_setsockopt(struct socket *sock,
   case SO_SET_FILTERING_SAMPLING_RATE:
 	  if(optlen != sizeof(pfr->filtering_sample_rate))
 		return(-EINVAL);
-  
+
 	  if(copy_from_user(&pfr->filtering_sample_rate, optval, sizeof(pfr->filtering_sample_rate)))
 		return(-EFAULT);
 
       pfr->filtering_sampling_size = pfr->filtering_sample_rate;
-	  
+
 	  if((FILTERING_SAMPLING_RATIO)>0) { /* In case FILTERING_SAMPLING_RATIO will mistakenly not be positive */
 	  	pfr->filtering_sampling_size *= (u_int32_t)(FILTERING_SAMPLING_RATIO);
-	  }	  
+	  }
 
 	  debug_printk(2, "--> SO_SET_FILTERING_SAMPLING_RATE: filtering_sample_rate=%u, filtering_sampling_size=%u\n",
 	  	pfr->filtering_sample_rate, pfr->filtering_sampling_size);
@@ -7829,7 +7830,7 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
 #endif
 
   if(dev_ptr->proc_info_entry != NULL) {
-    debug_printk(1, "removing %s/%s from /proc [net=%pK] [entry=%pK]\n", 
+    debug_printk(1, "removing %s/%s from /proc [net=%pK] [entry=%pK]\n",
       dev_ptr->device_name, PROC_INFO, netns->net, dev_ptr->proc_info_entry);
 
     remove_proc_entry(PROC_INFO, dev_ptr->proc_entry);
@@ -7838,7 +7839,7 @@ void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   }
 
   if(netns->proc_dev_dir != NULL) {
-    debug_printk(1, "removing %s from /proc [net=%pK] [entry=%pK]\n", 
+    debug_printk(1, "removing %s from /proc [net=%pK] [entry=%pK]\n",
       dev_ptr->device_name, netns->net, dev_ptr->proc_entry);
     /* Note: we are not using dev_ptr->dev->name below in case it is changed and has not been updated */
     remove_proc_entry(dev_ptr->device_name, netns->proc_dev_dir);
@@ -7862,7 +7863,7 @@ void remove_device_from_ring_list(struct net_device *dev)
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(net_eq(netns->net, dev_net(dev_ptr->dev)) && 
+    if(net_eq(netns->net, dev_net(dev_ptr->dev)) &&
         dev_ptr->dev->ifindex == dev->ifindex) {
 
       if(netns != NULL) {
@@ -7916,12 +7917,12 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
   dev_ptr->proc_entry = proc_mkdir(dev_ptr->device_name, netns->proc_dev_dir);
 
   if(dev_ptr->proc_entry == NULL) {
-    printk("[PF_RING] failure creating %s in /proc [net=%pK]\n", 
+    printk("[PF_RING] failure creating %s in /proc [net=%pK]\n",
       dev_ptr->device_name, netns->net);
     return;
   }
 
-  debug_printk(1, "created %s in /proc [net=%pK] [entry=%pK]\n", 
+  debug_printk(1, "created %s in /proc [net=%pK] [entry=%pK]\n",
     dev_ptr->device_name, netns->net, dev_ptr->proc_entry);
 
   dev_ptr->proc_info_entry = proc_create_data(PROC_INFO, 0 /* read-only */,
@@ -7930,12 +7931,12 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
     dev_ptr);
 
   if(dev_ptr->proc_info_entry == NULL) {
-    printk("[PF_RING] failure creating %s/%s in /proc [net=%pK]\n", 
+    printk("[PF_RING] failure creating %s/%s in /proc [net=%pK]\n",
       dev_ptr->device_name, PROC_INFO, netns->net);
     return;
   }
 
-  debug_printk(1, "created %s/%s in /proc [net=%pK] [entry=%pK]\n", 
+  debug_printk(1, "created %s/%s in /proc [net=%pK] [entry=%pK]\n",
     dev_ptr->device_name, PROC_INFO, netns->net, dev_ptr->proc_info_entry);
 }
 
