@@ -4031,13 +4031,14 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	u_short num_iterations;
 	int cluster_element_idx;
 	u_int8_t num_ip_flow_iterations = 0;
-	
+
 	if(cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple) {
 	  /*
 	    This is a special mode that might lead to packet duplication and it is
 	    handled on a custom way
 	  */
-	  skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT);
+	  skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC |
+				     HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_RECOMPUTE);
 	  if(skb_hash < 0) skb_hash = -skb_hash;
 	} else {
 	  if(enable_frag_coherence
@@ -4135,13 +4136,15 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
 	if((cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple)
 	   && (num_ip_flow_iterations == 0)) {
-	  int new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT);
+	  int new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC |
+							HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT | HASH_PKT_HDR_RECOMPUTE);
 
 	  if(new_cluster_element_idx < 0) new_cluster_element_idx = -new_cluster_element_idx;
 	  new_cluster_element_idx %= num_cluster_elements;
 	  
 	  if(new_cluster_element_idx != cluster_element_idx) {
 	    cluster_element_idx = new_cluster_element_idx, num_ip_flow_iterations = 1;
+	    printk("[2TUPLE] IP dst=%d\n", cluster_element_idx);
 	    goto iterate_cluster_elements;
 	  }
 	}

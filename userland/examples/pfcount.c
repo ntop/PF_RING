@@ -698,15 +698,16 @@ void printHelp(void) {
          "                   %d - tunneled src ip, src port, dst ip, dst port\n"
          "                   %d - tunneled src ip, src port, dst ip, dst port, proto (default)\n"
          "                   %d - tunneled src ip, src port, dst ip, dst port, proto, vlan\n"
-         "                  %d - tunneled src ip, src port, dst ip, dst port, proto for TCP, src ip, dst ip otherwise\n"
-         "                   %d - round-robin\n",
+         "                   %d - tunneled src ip, src port, dst ip, dst port, proto for TCP, src ip, dst ip otherwise\n"
+         "                   %d - round-robin\n"
+	 "                   %d - src + dst ip (with duplication)\n",
     cluster_per_flow_2_tuple, cluster_per_flow_4_tuple,
     cluster_per_flow_5_tuple, cluster_per_flow,
     cluster_per_flow_tcp_5_tuple,
     cluster_per_inner_flow_2_tuple, cluster_per_inner_flow_4_tuple,
     cluster_per_inner_flow_5_tuple, cluster_per_inner_flow,
     cluster_per_inner_flow_tcp_5_tuple,
-    cluster_round_robin);
+	 cluster_round_robin, cluster_per_flow_ip_with_dup_tuple);
   printf("-s              Enable hw timestamping\n");
   printf("-S              Do not strip hw timestamps (if present)\n");
   printf("-t              Touch payload (to force packet load on cache)\n");
@@ -995,15 +996,13 @@ int main(int argc, char* argv[]) {
       bind_core = atoi(optarg);
       break;
     case 'H':
-      switch (atoi(optarg)) {
-        case cluster_per_flow_2_tuple:
-        case cluster_per_flow_4_tuple:
-        case cluster_per_flow_5_tuple: 
-        case cluster_per_flow:
-        case cluster_per_flow_tcp_5_tuple:
-        case cluster_round_robin:
-          cluster_hash_type = atoi(optarg); break;
-        default: fprintf(stderr, "WARNING: Invalid hash type %u\n", atoi(optarg)); break;
+      {
+	int id = atoi(optarg);
+
+	if(id <= MAX_CLUSTER_TYPE_ID) 
+          cluster_hash_type = id;
+	else
+	  fprintf(stderr, "WARNING: Invalid hash type %u\n", atoi(optarg));
       }
       break;
     case 'i':
