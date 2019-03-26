@@ -104,6 +104,7 @@ pfring  *pd;
 pfring_stat pfringStats;
 char *device = NULL;
 u_int8_t wait_for_packet = 1, do_shutdown = 0;
+u_int32_t pkt_loop = 0, pkt_loop_sent = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 struct timeval lastTime, startTime;
@@ -248,6 +249,7 @@ void printHelp(void) {
   printf("-S <ip>         Use <ip> as base source IP for -b (default: 10.0.0.1)\n");
   printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
   printf("-V <version>    Generate IP version <version> packets (default: 4, mixed: 0)\n");
+  printf("-8 <num>        Send the same packets <num> times before moving to the next\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
@@ -344,7 +346,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z")) != -1) {
+  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z8:")) != -1) {
     switch(c) {
     case 'b':
       num_ips = atoi(optarg);
@@ -442,6 +444,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'z':
       randomize = 1;
+      break;
+    case '8':
+      pkt_loop = atoi(optarg);
       break;
     default:
       printHelp();
@@ -774,7 +779,15 @@ int main(int argc, char* argv[]) {
         for (j = 0; j < n; j++)
           tosend = tosend->next;
     }
-    tosend = tosend->next;
+
+    if (pkt_loop && ++pkt_loop_sent < pkt_loop) {
+      pkt_loop_sent++;
+      /* send the same packet again */
+    } else {
+      if (pkt_loop) pkt_loop_sent = 0;
+      /* move to the next packet */
+      tosend = tosend->next;
+    }
 
 #if !(defined(__arm__) || defined(__mips__))
     if(pps > 0) {
