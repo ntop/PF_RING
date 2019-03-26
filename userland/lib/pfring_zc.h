@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <linux/pf_ring.h> /* needed for hw_filtering_rule */
 
-#define PF_RING_ZC_ENABLE_VM_SUPPORT         (1 << 0) /**< pfring_zc_create_cluster() flag:  */
+#define PF_RING_ZC_ENABLE_VM_SUPPORT         (1 << 0) /**< pfring_zc_create_cluster() flag: enable KVM support (memory is rounded up to power of 2 thus it allocates more memory!) */
 
 #define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS     (1 <<  0) /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
 #define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0      (1 <<  1) /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
@@ -87,7 +87,7 @@ typedef struct {
  */
 typedef struct {
   u_int16_t len;         /**< Packet length. */
-  u_int16_t flags;       /**< Packet flags. */
+  u_int16_t flags;       /**< Packet flags (see PF_RING_ZC_PKT_FLAGS_*). */
   u_int32_t hash;        /**< Packet hash. */
   pfring_zc_timespec ts; /**< Packet timestamp (nsec) */
   u_char user[];         /**< Start of user metadata, if any. */
@@ -151,7 +151,10 @@ pfring_zc_pkt_buff_push(
  * @param tot_num_buffers      The total number of buffers to reserve for queues/devices/extra allocations.
  * @param numa_node_id         The NUMA node id for cpu/memory binding.
  * @param hugepages_mountpoint The HugeTLB mountpoint (NULL for auto-detection) for memory allocation.
- * @param flags                Optional flags.
+ * @param flags                Optional flags:
+ *                             @code
+ *                             PF_RING_ZC_ENABLE_VM_SUPPORT enable KVM support (memory is rounded up to power of 2 thus it allocates more memory!)
+ *                             @endcode
  * @return                     The cluster handle on success, NULL otherwise (errno is set appropriately).
  */
 pfring_zc_cluster * 
@@ -181,7 +184,20 @@ pfring_zc_destroy_cluster(
  * @param cluster     The cluster handle.
  * @param device_name The device name.
  * @param queue_mode  The direction, RX or TX.
- * @param flags       Optional flags.
+ * @param flags       Optional flags:
+ *                    @code
+ *                    PF_RING_ZC_DEVICE_ASYMMETRIC_RSS use asymmetric hw RSS for multiqueue devices
+ *                    PF_RING_ZC_DEVICE_FIXED_RSS_Q_0 redirect all traffic to the first hw queue
+ *                    PF_RING_ZC_DEVICE_SW_TIMESTAMP compute sw timestamp (please note: this adds per-packet overhead).
+ *                    PF_RING_ZC_DEVICE_HW_TIMESTAMP enable hw timestamp, when available 
+ *                    PF_RING_ZC_DEVICE_STRIP_HW_TIMESTAMP strip hw timestamp from packet, when available
+ *                    PF_RING_ZC_DEVICE_IXIA_TIMESTAMP extract IXIA timestamp from packet
+ *                    PF_RING_ZC_DEVICE_NOT_REPROGRAM_RSS do not reprogram RSS redirection table
+ *                    PF_RING_ZC_DEVICE_CAPTURE_TX capture RX+TX traffic (ignored in kernel-bypass mode)
+ *                    PF_RING_ZC_DEVICE_IPONLY_RSS compute RSS hash on IP only (not 4-tuple)
+ *                    PF_RING_ZC_DEVICE_NOT_PROMISC  do NOT set the device in promiscuos mode
+ *                    PF_RING_ZC_DO_NOT_STRIP_FCS do NOT strip the FCS (CRC), when not stripped out by the adapter
+ *                    @endcode
  * @return            The queue handle on success, NULL otherwise (errno is set appropriately). 
  */
 pfring_zc_queue * 
@@ -403,7 +419,23 @@ pfring_zc_get_cluster_id(
 /**
  * Read the queue id. If the actual queue is a device, it is possible to convert the ID to the device index using QUEUEID_TO_IFINDEX(id)
  * @param queue The queue handle.
- * @return      The queue id.
+ * @return      The queue id. A few macros are available to check the queue id:
+ *              @code
+ *              UNDEFINED_QUEUEID queue id is not valid
+ *              QUEUE_IS_DEVICE(i) queue id is an encoded device index
+ *              QUEUEID_TO_IFINDEX(i) convert queue id to device index, if QUEUE_IS_DEVICE(id)
+ *              IFINDEX_TO_QUEUEID(i) convert back device index to queue id, if QUEUE_IS_DEVICE(id)
+ *              @endcode
+ */
+u_int32_t
+pfring_zc_get_queue_id(
+  pfring_zc_queue *queue
+);
+
+/**
+ * Read queue settings, including queue len, buffers len, metadata len.
+ * @param queue The queue handle.
+ * @param info  The queue settings (out).
  */
 u_int32_t
 pfring_zc_get_queue_id(
