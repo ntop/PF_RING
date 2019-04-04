@@ -3872,8 +3872,9 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   struct pf_ring_socket *pfr;
   ring_cluster_element *cluster_ptr;
   u_int16_t ip_id = 0;
-  int skb_hash = -1;
-
+  u_int32_t skb_hash = 0;
+  u_int8_t skb_hash_set = 0;
+  
   /* Check if there's at least one PF_RING ring defined that
      could receive the packet: if none just stop here */
 
@@ -4024,12 +4025,12 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
         ACCESS_ONCE(cluster_ptr->cluster.num_cluster_elements);
 #else
-        READ_ONCE(cluster_ptr->cluster.num_cluster_elements);
+      READ_ONCE(cluster_ptr->cluster.num_cluster_elements);
 #endif
-
+      
       if(num_cluster_elements > 0) {
 	u_short num_iterations;
-	int cluster_element_idx;
+	u_int32_t cluster_element_idx;
 	u_int8_t num_ip_flow_iterations = 0;
 
 	if(cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple) {
@@ -4039,21 +4040,19 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	  */
 	  skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC
 				     | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
-				     | HASH_PKT_HDR_RECOMPUTE);
-	  if(skb_hash < 0) skb_hash = -skb_hash;
+				     | HASH_PKT_HDR_RECOMPUTE), skb_hash_set = 1;
 	} else {
 	  if(enable_frag_coherence
 	     && is_ip_pkt
 	     && (hdr.extended_hdr.parsed_pkt.ip_version == 4)
-	     && skb_hash == -1 /* read hash once */) {
+	     && (!skb_hash_set /* read hash once */)) {
 	    int fragment_not_first = hdr.extended_hdr.flags & PKT_FLAGS_IP_FRAG_OFFSET;
 	    int more_fragments     = hdr.extended_hdr.flags & PKT_FLAGS_IP_MORE_FRAG;
 	    int first_fragment     = more_fragments && !fragment_not_first;
 
 	    if(first_fragment) {
 	      /* first fragment: compute hash (once for all clusters) */
-	      skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
-	      if(skb_hash < 0) skb_hash = -skb_hash;
+	      skb_hash = hash_pkt_cluster(cluster_ptr, &hdr), skb_hash_set = 1;
 
 	      /* add hash to cache */
 	      add_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
@@ -4063,15 +4062,13 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	      /* fragment, but not the first: read hash from cache */
 	      skb_hash = get_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
 					     hdr.extended_hdr.parsed_pkt.ipv4_dst,
-					     ip_id, more_fragments);
-	      if(skb_hash < 0) skb_hash = 0; /* not found, using hash = 0 */
+					     ip_id, more_fragments), skb_hash_set = 1;
 	    }
 	  }
 
-	  if(skb_hash == -1) {
+	  if(!skb_hash_set) {
 	    /* compute hash (once for all clusters) */
-	    skb_hash = hash_pkt_cluster(cluster_ptr, &hdr);
-	    if(skb_hash < 0) skb_hash = -skb_hash;
+	    skb_hash = hash_pkt_cluster(cluster_ptr, &hdr), skb_hash_set = 1;
 	  }
 	}
 
@@ -4137,13 +4134,12 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
 	if((cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple)
 	   && (num_ip_flow_iterations == 0)) {
-	  int new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC
-							| HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
-							| HASH_PKT_HDR_RECOMPUTE);
-
-	  if(new_cluster_element_idx < 0) new_cluster_element_idx = -new_cluster_element_idx;
+	  u_int32_t new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC
+							      | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
+							      | HASH_PKT_HDR_RECOMPUTE);
+	  
 	  new_cluster_element_idx %= num_cluster_elements;
-
+	  
 	  if(new_cluster_element_idx != cluster_element_idx) {
 	    cluster_element_idx = new_cluster_element_idx, num_ip_flow_iterations = 1;
 	    goto iterate_cluster_elements;
