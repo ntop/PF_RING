@@ -197,6 +197,7 @@ void print_help(void) {
   printf("-h              Print help\n");
   printf("-i <device>     Device name\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-p <file>       Load nDPI custom protocols from file\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-f <filter>     BPF filter\n");
   printf("-q              Quiet mode\n");
@@ -212,14 +213,16 @@ void print_help(void) {
 int main(int argc, char* argv[]) {
   char *device = NULL, c, *bpfFilter = NULL;
   char errbuf[PCAP_ERRBUF_SIZE];
+  char *protocols_file = NULL;
   int promisc, snaplen = DEFAULT_SNAPLEN;
   struct bpf_program fcode;
   u_int32_t ft_flags = 0;
   char *categories_file = NULL;
-  
+  int rc; 
+ 
   startTime.tv_sec = 0;
 
-  while ((c = getopt(argc,argv,"c:hi:vf:q7")) != '?') {
+  while ((c = getopt(argc,argv,"c:hi:vf:p:q7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -235,6 +238,10 @@ int main(int argc, char* argv[]) {
       break;
     case 'v':
       verbose = 1;
+      break;
+    case 'p':
+      enable_l7 = 1;
+      protocols_file = strdup(optarg);
       break;
     case 'q':
       quiet = 1;
@@ -266,6 +273,16 @@ int main(int argc, char* argv[]) {
   }
 
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
+
+
+  if (protocols_file) {
+    rc = pfring_ft_load_ndpi_protocols(ft, protocols_file);
+
+    if (rc < 0) {
+      fprintf(stderr, "Failure loading custom protocols from %s\n", protocols_file);
+      return -1;
+    }
+  }
 
   if (categories_file) {
     if (!enable_l7) {
