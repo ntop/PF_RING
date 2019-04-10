@@ -3983,7 +3983,8 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
       pfr = ring_sk(sk);
 
       if(pfr != NULL
-         && net_eq(dev_net(skb->dev), sock_net(sk)) /* same namespace */
+         && (net_eq(dev_net(skb->dev), sock_net(sk)) /* same namespace */
+             || (pfr->ring_dev == &any_device_element /* any */ && net_eq(&init_net, sock_net(sk))) /* on host */)
 	 && (pfr->ring_slots != NULL)
 	 && (
 	     test_bit(skb->dev->ifindex, pfr->netdev_mask)
