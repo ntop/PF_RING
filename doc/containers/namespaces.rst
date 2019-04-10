@@ -12,7 +12,7 @@ On creation a network namespace only contains the loopback device, then you can 
 A network interface belongs to exactly one network namespace.
 Containers usually use virtual interface pairs (veth driver), eth0 in the container namespace is paired (logically cross- connected) with vethXXX in the host namespace.
 
-PF_RING exports sockets informations under /proc/net/pf_ring/, there is a /proc/net/pf_ring/ view for each namespace.
+PF_RING natively supports Network namespaces and exports sockets informations under /proc/net/pf_ring/. There is a /proc/net/pf_ring/ view for each namespace. When you open a socket on an interface, it capture traffic from that interface in the current namespace. The 'any' interface is an exception, with this interface name traffic from *all* namespaces is captured.
 
 The *ip netns* command can be used to play with network namespaces as in the examples below.
 
