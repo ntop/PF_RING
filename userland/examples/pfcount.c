@@ -562,9 +562,6 @@ void dummyProcessPacket(const struct pfring_pkthdr *h,
   long threadId = (long)user_bytes;
   u_int8_t dump_match = !!dumper;
 
-  if (stats->numPkts[threadId] == 0)
-    printf("[first packet received]\n");
-
   stats->numPkts[threadId]++, stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
 
   if (unlikely(check_ts && h->ts.tv_sec != last_ts)) {
