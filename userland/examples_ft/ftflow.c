@@ -250,7 +250,7 @@ void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char
     char buffer[256];
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->caplen);
-    printf("[Packet][%s] %s", action_to_string(action), buffer);
+    printf("[Packet]%s %s", action == PFRING_FT_ACTION_DISCARD ? " [discard]" : "", buffer);
   }
 }
 
@@ -404,16 +404,6 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  if (configuration_file) {
-    /* Loading L7 filtering/shunting from configuration file */
-    rc = pfring_ft_load_configuration(ft, configuration_file);
-
-    if (rc < 0) {
-      fprintf(stderr, "Failure loading rules from %s\n", configuration_file);
-      return -1;
-    }
-  }
-
   /* Example of L7 packet filtering rules
   pfring_ft_set_filter_protocol_by_name(ft, "MDNS", PFRING_FT_ACTION_DISCARD);
   pfring_ft_set_filter_protocol_by_name(ft, "UPnP", PFRING_FT_ACTION_DISCARD);
@@ -445,6 +435,16 @@ int main(int argc, char* argv[]) {
 
     if (rc < 0) {
       fprintf(stderr, "Failure loading categories from %s\n", categories_file);
+      return -1;
+    }
+  }
+
+  if (configuration_file) {
+    /* Loading L7 filtering/shunting from configuration file */
+    rc = pfring_ft_load_configuration(ft, configuration_file);
+
+    if (rc < 0) {
+      fprintf(stderr, "Failure loading rules from %s\n", configuration_file);
       return -1;
     }
   }

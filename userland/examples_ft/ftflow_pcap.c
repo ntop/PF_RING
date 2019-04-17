@@ -197,6 +197,7 @@ void print_help(void) {
   printf("-h              Print help\n");
   printf("-i <device>     Device name or PCAP file\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-F <file>       Load filtering/shunting rules from file\n");
   printf("-p <file>       Load nDPI custom protocols from file\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-f <filter>     BPF filter\n");
@@ -212,6 +213,7 @@ void print_help(void) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c, *bpfFilter = NULL;
+  char *configuration_file = NULL;
   char errbuf[PCAP_ERRBUF_SIZE];
   char *protocols_file = NULL;
   int promisc, snaplen = DEFAULT_SNAPLEN;
@@ -222,7 +224,7 @@ int main(int argc, char* argv[]) {
  
   startTime.tv_sec = 0;
 
-  while ((c = getopt(argc,argv,"c:hi:vf:p:q7")) != '?') {
+  while ((c = getopt(argc,argv,"c:hi:vf:p:q7F:")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -252,6 +254,10 @@ int main(int argc, char* argv[]) {
     case '7':
       enable_l7 = 1;
       break;
+    case 'F':
+      enable_l7 = 1;
+      configuration_file = strdup(optarg);
+      break;
     }
   }
 
@@ -274,7 +280,6 @@ int main(int argc, char* argv[]) {
 
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
-
   if (protocols_file) {
     rc = pfring_ft_load_ndpi_protocols(ft, protocols_file);
 
@@ -296,7 +301,17 @@ int main(int argc, char* argv[]) {
       return -1;
     }
   }
-    
+ 
+  if (configuration_file) {
+    /* Loading L7 filtering/shunting from configuration file */
+    rc = pfring_ft_load_configuration(ft, configuration_file);
+
+    if (rc < 0) {
+      fprintf(stderr, "Failure loading rules from %s\n", configuration_file);
+      return -1;
+    }
+  }
+   
   promisc = 1;
 
   if ((pd = pcap_open_live(device, snaplen, promisc, 500, errbuf)) == NULL) {
