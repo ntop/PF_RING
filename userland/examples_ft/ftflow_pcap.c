@@ -201,6 +201,7 @@ void print_help(void) {
   printf("-p <file>       Load nDPI custom protocols from file\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-f <filter>     BPF filter\n");
+  printf("-d              Debug mode\n");
   printf("-q              Quiet mode\n");
   printf("-v              Verbose\n");
 
@@ -224,12 +225,15 @@ int main(int argc, char* argv[]) {
  
   startTime.tv_sec = 0;
 
-  while ((c = getopt(argc,argv,"c:hi:vf:p:q7F:")) != '?') {
+  while ((c = getopt(argc,argv,"c:dhi:vf:p:q7F:")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
     case 'c':
       categories_file = strdup(optarg);
+      break;
+    case 'd':
+      pfring_ft_debug();
       break;
     case 'h':
       print_help();
