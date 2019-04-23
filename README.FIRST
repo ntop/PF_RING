@@ -9,6 +9,7 @@ userland/lib/			User space library
 userland/libpcap/		Libpcap enhanced with PF_RING support
 userland/examples/		PF_RING sample applications
 userland/examples_zc/		PF_RING ZC sample applications
+userland/examples_ft/		PF_RING FT sample applications
 userland/snort/			Snort DAQ module for using snort over PF_RING
 
 
