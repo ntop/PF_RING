@@ -138,6 +138,12 @@
 #define PDE_DATA(a) PDE(a)->data
 #endif
 
+#if(LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0))
+#ifndef NETDEV_PRE_UP
+#define NETDEV_PRE_UP  0x000D
+#endif
+#endif
+
 /* ************************************************* */
 
 static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t port)

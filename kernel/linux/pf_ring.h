@@ -124,12 +124,6 @@
 #define IN6ADDR_ANY_INIT { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } }
 #endif
 
-#if(LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0))
-#ifndef NETDEV_PRE_UP
-#define NETDEV_PRE_UP  0x000D
-#endif
-#endif
-
 /* *********************************** */
 
 /*
