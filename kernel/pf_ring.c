@@ -4940,7 +4940,11 @@ static void set_netdev_promisc(struct net_device *netdev) {
   if_flags = (short) dev_get_flags(netdev);
   if(!(if_flags & IFF_PROMISC)) {
     if_flags |= IFF_PROMISC;
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
     dev_change_flags(netdev, if_flags);
+#else
+    dev_change_flags(netdev, if_flags, NULL);
+#endif
   }
 
   rtnl_unlock();
@@ -4958,7 +4962,11 @@ static void unset_netdev_promisc(struct net_device *netdev) {
   if_flags = (short) dev_get_flags(netdev);
   if(if_flags & IFF_PROMISC) {
     if_flags &= ~IFF_PROMISC;
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
     dev_change_flags(netdev, if_flags);
+#else
+    dev_change_flags(netdev, if_flags, NULL);
+#endif
   }
 
   rtnl_unlock();
