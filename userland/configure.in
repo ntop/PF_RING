@@ -42,7 +42,17 @@ AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 AC_CHECK_LIB( [dl], [dlopen, dlsym],   [SYSLIBS="$SYSLIBS -ldl"],
 		   [AC_CHECK_LIB([c], [dlopen, dlsym], [SYSLIBS="$SYSLIBS -lc"],
 		   [AC_MSG_ERROR([unable to find the dlopen(), dlsym() functions]) ]) ])
-AC_CHECK_LIB(nl-3, nl_socket_alloc,    [SYSLIBS="$SYSLIBS -lnl-genl-3 -lnl-3"]) #libnl-3.0
+have_nl_3="no"
+AC_CHECK_LIB(nl-3, nl_socket_alloc, [
+  have_nl_3="yes"
+]) #libnl-3.0
+if test x$have_nl_3 = xyes ; then
+  AC_CHECK_LIB(nl-genl-3, genl_connect, [
+    SYSLIBS="$SYSLIBS -lnl-genl-3 -lnl-3"
+  ], [
+    AC_MSG_ERROR([unable to find nl-genl-3 please install libnl-genl-3-dev])
+  ]) #libnl-genl-3.0
+fi
 
 AR_X=
 
