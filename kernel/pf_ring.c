@@ -2363,8 +2363,9 @@ static int parse_pkt(struct sk_buff *skb,
     if(__vlan_hwaccel_get_tag(skb, &vlan_id) == 0) {
       vlan_id &= VLAN_VID_MASK;
 
-      if(hdr->extended_hdr.parsed_pkt.vlan_id != 0)
+      if(hdr->extended_hdr.parsed_pkt.vlan_id != 0) {
 	hdr->extended_hdr.parsed_pkt.qinq_vlan_id = hdr->extended_hdr.parsed_pkt.vlan_id;
+      }
 
       hdr->extended_hdr.parsed_pkt.vlan_id = vlan_id;
 
@@ -2778,9 +2779,10 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
       u16 vlan_tci = 0;
 
       if(__vlan_hwaccel_get_tag(skb, &vlan_tci) == 0 && vlan_tci != 0 /* The packet is tagged (hw offload)... */
-	 && ((hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0 /* but we have seen no tag -> it has been stripped */
-              || hdr->extended_hdr.parsed_pkt.vlan_id != (vlan_tci & VLAN_VID_MASK)  /* multiple tags -> just first one has been stripped */)
-             || (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL /* in case of multiple destination rings */))) {
+	 && ((hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0 /* but we have seen no tag -> it has been stripped */ ||
+              hdr->extended_hdr.parsed_pkt.vlan_id != (vlan_tci & VLAN_VID_MASK)  /* multiple tags -> just first one has been stripped */ ||
+              (hdr->extended_hdr.parsed_pkt.qinq_vlan_id && hdr->extended_hdr.parsed_pkt.qinq_vlan_id != (vlan_tci & VLAN_VID_MASK))) ||
+             (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL /* in case of multiple destination rings */))) {
 	/* VLAN-tagged packet with stripped VLAN tag */
         u_int16_t *b;
         struct vlan_ethhdr *v = vlan_eth_hdr(skb);
