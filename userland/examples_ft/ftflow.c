@@ -292,6 +292,8 @@ void print_version(void) {
               
   if (!rc) {
     printf("License:       Invalid license\n");
+    if (license_expiration)
+      printf("Demo Duration: Until %s\n", ctime_nonl(license_expiration));
   } else {
     printf("License:       Valid license\n");  
 
