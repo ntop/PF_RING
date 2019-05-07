@@ -188,6 +188,7 @@ typedef struct pfring_if {
   } bus_id;
   int status; /* 1: up, 0: down*/
   int license; /* 1: valid, 0: invalid or not installed */
+  time_t license_expiration; /* expiration epoch */
   struct pfring_if *next;
 } pfring_if_t;
 

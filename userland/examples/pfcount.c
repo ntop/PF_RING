@@ -618,7 +618,7 @@ void printDevs() {
   dev = pfring_findalldevs();
 
   if (verbose)
-    printf("Name\tSystemName\tModule\tMAC\tBusID\tNumaNode\tStatus\tLicense\n");
+    printf("Name\tSystemName\tModule\tMAC\tBusID\tNumaNode\tStatus\tLicense\tExpiration\n");
   else
     printf("Available devices (-i):\n");
 
@@ -634,10 +634,10 @@ void printDevs() {
           dev->mac[0] & 0xFF, dev->mac[1] & 0xFF, dev->mac[2] & 0xFF, 
           dev->mac[3] & 0xFF, dev->mac[4] & 0xFF, dev->mac[5] & 0xFF);
 
-      printf("\t%04X:%02X:%02X.%X\t%d\t%s\t%s\n",
+      printf("\t%04X:%02X:%02X.%X\t%d\t%s\t%s\t%ld\n",
         dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
         busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
-        dev->status ? "Up" : "Down", dev->license ? "Valid" : "NotFound");
+        dev->status ? "Up" : "Down", dev->license ? "Valid" : "NotFound", dev->license_expiration);
     } else {
       printf(" %d. %s\n", i++, dev->name);
     }
