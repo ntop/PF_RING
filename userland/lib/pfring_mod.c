@@ -1218,6 +1218,7 @@ pfring_if_t *pfring_mod_findalldevs() {
         tmp->module = strdup("pf_ring-zc");
 #ifdef HAVE_PF_RING_ZC
         tmp->license = pfring_zc_check_device_license_by_name(name, &expiration_epoch);
+        tmp->license_expiration = expiration_epoch;
 #endif
       }
 
