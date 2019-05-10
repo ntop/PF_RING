@@ -2347,29 +2347,45 @@ static int parse_pkt(struct sk_buff *skb,
 		     struct pfring_pkthdr *hdr,
 		     u_int16_t *ip_id)
 {
-  int rc;
   u_char buffer[128]; /* Enough for standard and tunneled headers */
   int data_len = min((u_int16_t)(skb->len + skb_displ), (u_int16_t)sizeof(buffer));
+  u_int16_t vlan_id;
+  int rc;
 
   skb_copy_bits(skb, -skb_displ, buffer, data_len);
 
   rc = parse_raw_pkt(buffer, data_len, hdr, ip_id);
 
-  if((hdr->extended_hdr.parsed_pkt.vlan_id == 0)
-     || (hdr->extended_hdr.parsed_pkt.qinq_vlan_id == 0)) {
-    /* check for stripped vlan id */
-    u_int16_t vlan_id;
+  if (hdr->extended_hdr.parsed_pkt.vlan_id == 0 ||
+      hdr->extended_hdr.parsed_pkt.qinq_vlan_id == 0) {
 
-    if(__vlan_hwaccel_get_tag(skb, &vlan_id) == 0) {
+    /* Check for stripped vlan id (hw offload) */
+
+    if(__vlan_hwaccel_get_tag(skb, &vlan_id) == 0 && vlan_id != 0 &&
+       !(hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL)) { 
+
+      hdr->extended_hdr.flags |= PKT_FLAGS_VLAN_HWACCEL;
+
       vlan_id &= VLAN_VID_MASK;
 
-      if(hdr->extended_hdr.parsed_pkt.vlan_id != 0) {
-	hdr->extended_hdr.parsed_pkt.qinq_vlan_id = hdr->extended_hdr.parsed_pkt.vlan_id;
-      }
+      if (hdr->extended_hdr.parsed_pkt.vlan_id != 0)
+        hdr->extended_hdr.parsed_pkt.qinq_vlan_id = hdr->extended_hdr.parsed_pkt.vlan_id;
 
       hdr->extended_hdr.parsed_pkt.vlan_id = vlan_id;
 
       hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE); /* force hash recomputation */
+
+      if (hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0)
+        hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+      else /* QinQ */
+        hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
+
+      hdr->extended_hdr.parsed_pkt.offset.l3_offset += sizeof(struct eth_vlan_hdr);
+      if (hdr->extended_hdr.parsed_pkt.offset.l4_offset)
+        hdr->extended_hdr.parsed_pkt.offset.l4_offset += sizeof(struct eth_vlan_hdr);
+
+      if (hdr->extended_hdr.parsed_pkt.offset.payload_offset)
+        hdr->extended_hdr.parsed_pkt.offset.payload_offset += sizeof(struct eth_vlan_hdr);
     }
   }
 
@@ -2776,42 +2792,31 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 #endif
 
     if(hdr->caplen > 0) {
-      u16 vlan_tci = 0;
 
-      if(__vlan_hwaccel_get_tag(skb, &vlan_tci) == 0 && vlan_tci != 0 /* The packet is tagged (hw offload)... */
-	 && ((hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0 /* but we have seen no tag -> it has been stripped */ ||
-              hdr->extended_hdr.parsed_pkt.vlan_id != (vlan_tci & VLAN_VID_MASK)  /* multiple tags -> just first one has been stripped */ ||
-              (hdr->extended_hdr.parsed_pkt.qinq_vlan_id && hdr->extended_hdr.parsed_pkt.qinq_vlan_id != (vlan_tci & VLAN_VID_MASK))) ||
-             (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL /* in case of multiple destination rings */))) {
+      if (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL) {
 	/* VLAN-tagged packet with stripped VLAN tag */
         u_int16_t *b;
         struct vlan_ethhdr *v = vlan_eth_hdr(skb);
+        u16 vlan_tci = 0;
 
-	if(!(hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL)) {
-          hdr->extended_hdr.parsed_pkt.vlan_id = vlan_tci & VLAN_VID_MASK;
-          if(hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0)
-            hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
-          else /* QinQ */
-            hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
-          hdr->extended_hdr.parsed_pkt.offset.l3_offset += sizeof(struct eth_vlan_hdr);
-          if(hdr->extended_hdr.parsed_pkt.offset.l4_offset)
-            hdr->extended_hdr.parsed_pkt.offset.l4_offset += sizeof(struct eth_vlan_hdr);
-          if(hdr->extended_hdr.parsed_pkt.offset.payload_offset)
-            hdr->extended_hdr.parsed_pkt.offset.payload_offset += sizeof(struct eth_vlan_hdr);
-          hdr->extended_hdr.flags |= PKT_FLAGS_VLAN_HWACCEL;
-        }
+        /* Reading vlan_tci from skb again as we need the tci including priority */
+        __vlan_hwaccel_get_tag(skb, &vlan_tci);
+
         /* len/caplen reset outside, we can increment all the time */
 	hdr->len += sizeof(struct eth_vlan_hdr);
 	hdr->caplen = min_val(pfr->bucket_len - offset, hdr->caplen + sizeof(struct eth_vlan_hdr));
 
         skb_copy_bits(skb, -displ, &ring_bucket[pfr->slot_header_len + offset], 12 /* MAC src/dst */);
+
         b = (u_int16_t*) &ring_bucket[pfr->slot_header_len + offset + 12 /* MAC src/dst */];
         b[0] = ntohs(ETH_P_8021Q), b[1] = htons(vlan_tci /* including priority */), b[2] = v->h_vlan_proto;
+
         if(skb_copy_bits(skb, -displ + sizeof(struct ethhdr),
              &ring_bucket[pfr->slot_header_len + offset + sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr)],
              (int) hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr))) < 0)
           printk("[PF_RING] %s: vlan reinjection error [skb->len=%u][caplen=%u]\n", __FUNCTION__,
 		 skb->len, (unsigned int) (hdr->caplen - (sizeof(struct ethhdr) + sizeof(struct eth_vlan_hdr))));
+
       } else {
         skb_copy_bits(skb, -displ, &ring_bucket[pfr->slot_header_len + offset], (int) hdr->caplen);
       }
