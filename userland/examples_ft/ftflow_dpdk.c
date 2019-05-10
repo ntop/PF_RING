@@ -62,6 +62,7 @@ static u_int8_t compute_flows = 1;
 static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
 static u_int8_t test_tx = 0;
+static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
 
 static struct lcore_stats {
@@ -219,8 +220,8 @@ static void tx_test(u_int16_t queue_id) {
     if (stats[queue_id].tx_num_pkts < num_mbufs_per_lcore) { /* optimization */
       for (i = 0; i < BURST_SIZE &&  num_mbufs_per_lcore; i++) {
         forge_udp_packet_fast((u_char *) rte_pktmbuf_mtod(tx_bufs[i], char *), 
-          TX_TEST_PKT_LEN, stats[queue_id].tx_num_pkts + i);
-        tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = TX_TEST_PKT_LEN;
+          tx_test_pkt_len, stats[queue_id].tx_num_pkts + i);
+        tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = tx_test_pkt_len;
       }
     }
 
@@ -339,6 +340,7 @@ static void print_help(void) {
   printf("-n <num cores>  Enable multiple cores/queues (default: 1)\n");
   printf("-0              Do not compute flows (packet capture only)\n");
   printf("-t              Test TX\n");
+  printf("-T <size>       TX test packet size\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-h              Print this help\n");
 }
@@ -356,7 +358,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "hn:p:tv07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "hn:p:tvT:07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'n':
       if (optarg) {
@@ -391,6 +393,10 @@ static int parse_args(int argc, char **argv) {
       break;
     case '7':
       ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+      break;
+    case 'T':
+      tx_test_pkt_len = atoi(optarg);
+      if (tx_test_pkt_len < 60) tx_test_pkt_len = 60; 
       break;
 
     default:
@@ -444,8 +450,10 @@ static void print_stats(void) {
      * n_pkts  += q_n_pkts;
      * n_bytes += q_n_bytes; */
 
-    if (test_tx)
+    if (test_tx) {
       q_n_pkts = stats[q].tx_num_pkts;
+      q_n_bytes = q_n_pkts * (tx_test_pkt_len + 24);
+    }
 
     // if (num_queues > 1) {
       len = snprintf(buf, sizeof(buf), "[Q#%u]   ", q);
@@ -466,12 +474,9 @@ static void print_stats(void) {
             "Throughput: %.3f Mpps",
             ((double) diff / (double)(delta_last/1000)) / 1000000);
 
-	if (!test_tx)
-          len += snprintf(&buf[len], sizeof(buf) - len,
-              " (%.3f Gbps)\t",
-              ((double) bytes_diff / (double)(delta_last/1000)));
-	else
-          len += snprintf(&buf[len], sizeof(buf) - len, "\t");
+        len += snprintf(&buf[len], sizeof(buf) - len,
+          " (%.3f Gbps)\t",
+          ((double) bytes_diff / (double)(delta_last/1000)));
       }
       stats[q].last_pkts = q_n_pkts;
       stats[q].last_bytes = q_n_bytes;
