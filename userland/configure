@@ -732,6 +732,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+enable_archopt
 enable_redis
 enable_zmq
 enable_ft_dl
@@ -1366,6 +1367,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-archopt       Disable march and mtune optimization flags
   --enable-redis          Enable Redis support in PF_RING
   --enable-zmq            Enable ZMQ support in PF_RING
   --disable-ft-dl         Disable dlopen support in FT to link nDPI
@@ -3306,6 +3308,21 @@ VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f
 MAJOR_VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1`
 
 NATIVE=`$CC -c -Q -march=native --help=target| grep "march" | xargs | cut -d ' ' -f 2`
+if test "$NATIVE" = haswell; then
+  NATIVE="core-avx2"
+fi
+
+# Check whether --enable-archopt was given.
+if test "${enable_archopt+set}" = set; then :
+  enableval=$enable_archopt;
+fi
+
+if test "x$enable_archopt" != "xno"; then :
+
+else
+  NATIVE=""
+fi
+
 if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   CFLAGS="-march=native -mtune=native $CFLAGS"
   LIBARCH="_$NATIVE"
