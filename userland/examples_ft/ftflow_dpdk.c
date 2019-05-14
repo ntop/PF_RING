@@ -64,6 +64,7 @@ static u_int8_t verbose = 0;
 static u_int8_t test_tx = 0;
 static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
+static u_int32_t pps = 0;
 
 static struct lcore_stats {
   u_int64_t num_pkts;
@@ -203,6 +204,29 @@ static void tx_test(u_int16_t queue_id) {
   u_int32_t i;
   u_int16_t sent;
   int rc;
+#if !(defined(__arm__) || defined(__mips__))
+  ticks tick_start = 0, tick_delta = 0;
+
+  if (pps != 0) {
+    double td;
+    ticks hz = 0;
+
+    /* computing usleep delay */
+    tick_start = getticks();
+    usleep(1);
+    tick_delta = getticks() - tick_start;
+
+    /* computing CPU freq */
+    tick_start = getticks();
+    usleep(1001);
+    hz = (getticks() - tick_start - tick_delta) * 1000 /*kHz -> Hz*/;
+    printf("Estimated CPU freq: %lu Hz\n", (long unsigned int)hz);
+
+    td = (double) (hz / pps);
+    tick_delta = (ticks) td;
+    printf("Rate set to %u pps\n", pps);
+  }
+#endif
 
   printf("Generating traffic on port %u queue %u...\n", port, queue_id);
 
@@ -232,6 +256,14 @@ static void tx_test(u_int16_t queue_id) {
 
     if (sent < BURST_SIZE)
       rte_mempool_put_bulk(mbuf_pool[queue_id], (void **) &tx_bufs[sent], BURST_SIZE - sent);
+
+#if !(defined(__arm__) || defined(__mips__))
+    if (pps > 0) {
+      while ((getticks() - tick_start) < (stats[queue_id].tx_num_pkts * tick_delta))
+        if (unlikely(!do_loop)) break;
+    }
+#endif
+
   }
 }
 
@@ -341,6 +373,7 @@ static void print_help(void) {
   printf("-0              Do not compute flows (packet capture only)\n");
   printf("-t              Test TX\n");
   printf("-T <size>       TX test packet size\n");
+  printf("-P <pps>        TX test packet rate (pps)\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-h              Print this help\n");
 }
@@ -358,7 +391,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "hn:p:tvT:07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "hn:p:tvP:T:07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'n':
       if (optarg) {
@@ -398,7 +431,9 @@ static int parse_args(int argc, char **argv) {
       tx_test_pkt_len = atoi(optarg);
       if (tx_test_pkt_len < 60) tx_test_pkt_len = 60; 
       break;
-
+    case 'P':
+      pps = atoi(optarg);
+      break;
     default:
       print_help();
       return -1;
