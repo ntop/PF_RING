@@ -240,9 +240,9 @@ static void tx_test(u_int16_t queue_id) {
       fprintf(stderr, "rte_mempool_get_bulk error (%d)\n", rc);
       return;
     }
-  
-    if (stats[queue_id].tx_num_pkts < num_mbufs_per_lcore) { /* optimization */
-      for (i = 0; i < BURST_SIZE &&  num_mbufs_per_lcore; i++) {
+
+    for (i = 0; i < BURST_SIZE; i++) {
+      if (tx_bufs[i]->data_len != tx_test_pkt_len) {
         forge_udp_packet_fast((u_char *) rte_pktmbuf_mtod(tx_bufs[i], char *), 
           tx_test_pkt_len, stats[queue_id].tx_num_pkts + i);
         tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = tx_test_pkt_len;
