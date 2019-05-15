@@ -53,6 +53,9 @@
 #define PREFETCH_OFFSET     3
 #define TX_TEST_PKT_LEN    60
 
+#define print_mac_addr(addr) printf("%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8, \
+  addr.addr_bytes[0], addr.addr_bytes[1], addr.addr_bytes[2], addr.addr_bytes[3], addr.addr_bytes[4], addr.addr_bytes[5])
+
 static struct rte_mempool *mbuf_pool[RTE_MAX_LCORE] = { NULL };
 static pfring_ft_table *fts[RTE_MAX_LCORE] = { NULL };
 static u_int32_t ft_flags = 0;
@@ -241,8 +244,8 @@ static void tx_test(u_int16_t queue_id) {
       return;
     }
   
-    if (stats[queue_id].tx_num_pkts < num_mbufs_per_lcore) { /* optimization */
-      for (i = 0; i < BURST_SIZE &&  num_mbufs_per_lcore; i++) {
+    for (i = 0; i < BURST_SIZE; i++) {
+      if (tx_bufs[i]->data_len != tx_test_pkt_len) {
         forge_udp_packet_fast((u_char *) rte_pktmbuf_mtod(tx_bufs[i], char *), 
           tx_test_pkt_len, stats[queue_id].tx_num_pkts + i);
         tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = tx_test_pkt_len;
@@ -632,7 +635,8 @@ void my_sigalarm(int sig) {
 int main(int argc, char *argv[]) {
   int q, ret;
   unsigned lcore_id;
-  
+  struct ether_addr mac_addr;
+ 
   ret = rte_eal_init(argc, argv);
 
   if (ret < 0)
@@ -672,6 +676,11 @@ int main(int argc, char *argv[]) {
       pfring_ft_set_flow_export_callback(fts[q], processFlow, fts[q]);
     }
   }
+
+  rte_eth_macaddr_get(port, &mac_addr);
+  printf("Port %u MAC address: ", port);
+  print_mac_addr(mac_addr);
+  printf("\n");
 
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
