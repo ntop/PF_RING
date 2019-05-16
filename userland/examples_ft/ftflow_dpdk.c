@@ -64,6 +64,7 @@ static u_int8_t num_queues = 1;
 static u_int8_t compute_flows = 1;
 static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
+static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
 static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
@@ -281,7 +282,8 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
   struct rte_mbuf *bufs[BURST_SIZE];
   struct rte_mbuf *tx_bufs[BURST_SIZE];
   u_int16_t num, tx_num, sent;
-  u_int32_t i;
+  u_int32_t num_ports, i;
+  u_int8_t ports[2];
 
   if (queue_id >= num_queues)
     return 0;
@@ -291,6 +293,16 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
     return 0;
   }
 
+  ports[0] = port;
+  num_ports = 1;
+
+  if (twin_port != 0xFF) {
+    ports[1] = twin_port;
+    num_ports = 2;
+  } else {
+    fwd = 0;
+  }
+
   ft = fts[queue_id];
 
   printf("Capturing from port %u queue %u...\n", port, queue_id);
@@ -298,13 +310,11 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
   while (do_loop) {
     u_int32_t idx;
     
-    for (idx = 0; idx < 2; idx++) {
-      u_int8_t port_id      = (idx == 0) ? port      : twin_port;
-      u_int8_t twin_port_id = (idx == 0) ? twin_port : port;
+    for (idx = 0; idx < num_ports; idx++) {
+      u_int8_t in_port      = ports[idx];
+      u_int8_t out_port_id = ports[idx^1];
       
-      if(port_id == 0xFF) continue;
-
-      num = rte_eth_rx_burst(port_id, queue_id, bufs, BURST_SIZE);
+      num = rte_eth_rx_burst(in_port, queue_id, bufs, BURST_SIZE);
 
       if (unlikely(num == 0)) {
         if (likely(compute_flows))
@@ -344,7 +354,7 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 	  printf("\n");
 	}
 
-	if ((twin_port_id != 0xFF) && (action != PFRING_FT_ACTION_DISCARD)) {
+	if (fwd && action != PFRING_FT_ACTION_DISCARD) {
           tx_bufs[tx_num++] = bufs[i];
         } else {
           rte_pktmbuf_free(bufs[i]);
@@ -352,7 +362,7 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
       }
 
       if (tx_num > 0) {        
-        sent = rte_eth_tx_burst(twin_port_id, queue_id, tx_bufs, tx_num);
+        sent = rte_eth_tx_burst(out_port_id, queue_id, tx_bufs, tx_num);
         stats[queue_id].tx_num_pkts += sent;
         stats[queue_id].tx_drops += (tx_num - sent);
         for (i = sent; i < tx_num; i++)
@@ -370,10 +380,11 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 static void print_help(void) {
   printf("ftflow_dpdk - (C) 2018 ntop.org\n");
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
-  printf("-p <id>[,<id>]  Port id. Use -p <id>,<id> for bridge mode\n");
+  printf("-p <id>[,<id>]  Port id (up to 2 ports are supported)\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
   printf("-n <num cores>  Enable multiple cores/queues (default: 1)\n");
   printf("-0              Do not compute flows (packet capture only)\n");
+  printf("-F              Enable forwarding when 2 ports are specified in -p\n");
   printf("-t              Test TX\n");
   printf("-T <size>       TX test packet size\n");
   printf("-P <pps>        TX test packet rate (pps)\n");
@@ -394,8 +405,11 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "hn:p:tvP:T:07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "Fhn:p:tvP:T:07", lgopts, &option_index)) != EOF) {
     switch (opt) {
+    case 'F':
+      fwd = 1;
+      break;
     case 'n':
       if (optarg) {
         num_queues = atoi(optarg);
