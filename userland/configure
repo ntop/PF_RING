@@ -663,6 +663,9 @@ MOD_ACCOLADE_LIB
 ACCOLADE_DEP
 ACCOLADE_OBJS
 HAVE_ACCOLADE
+AF_XDP_OBJS
+HAVE_AF_XDP
+AF_XDP_LIB
 NPCAP_H
 NPCAP_DEP
 NPCAP_OBJS
@@ -736,6 +739,7 @@ enable_archopt
 enable_redis
 enable_zmq
 enable_ft_dl
+enable_xdp
 enable_bpf
 '
       ac_precious_vars='build_alias
@@ -1371,6 +1375,7 @@ Optional Features:
   --enable-redis          Enable Redis support in PF_RING
   --enable-zmq            Enable ZMQ support in PF_RING
   --disable-ft-dl         Disable dlopen support in FT to link nDPI
+  --enable-xdp            Enable XDP/AF_XDP support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
 
 Some influential environment variables:
@@ -3848,6 +3853,28 @@ fi
 
 fi
 
+# Check whether --enable-xdp was given.
+if test "${enable_xdp+set}" = set; then :
+  enableval=$enable_xdp;
+fi
+
+if test "x$enable_xdp" = xyes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING AF_XDP support" >&5
+$as_echo_n "checking PF_RING AF_XDP support... " >&6; }
+  if test -f /usr/local/include/bpf/xsk.h; then
+    BUILD_KERNEL=`uname -r`
+    AF_XDP_LIB="-lbpf"
+    HAVE_AF_XDP="-D HAVE_AF_XDP"
+    AF_XDP_OBJS="pfring_mod_af_xdp.o"
+    CFLAGS="$CFLAGS -I/usr/src/linux-headers-${BUILD_KERNEL}/include/uapi -I/usr/src/linux-headers-${BUILD_KERNEL}/include"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+fi
+
 MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
 HAVE_ACCOLADE="-D HAVE_ACCOLADE"
 ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
@@ -3957,6 +3984,10 @@ fi
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
+
+
+
+
 
 
 

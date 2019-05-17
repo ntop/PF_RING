@@ -32,6 +32,11 @@
 #include "pfring_mod_stack.h"
 #include "pfring_mod_sysdig.h"
 
+#ifdef HAVE_AF_XDP
+/* AF_XDP */
+#include "pfring_mod_af_xdp.h"
+#endif
+
 #ifdef HAVE_NT
 /* Napatech */
 #include "pfring_mod_nt.h"
@@ -107,6 +112,15 @@ static pfring_module_info pfring_module_list[] = {
     .open = pfring_mod_sysdig_open,
     .findalldevs = NULL
   },
+
+#ifdef HAVE_AF_XDP
+  {
+    .name = "xdp",
+    .open = pfring_mod_af_xdp_open,
+    .findalldevs = NULL
+  },
+#endif
+
 #ifdef HAVE_DAG
   {
     .name = "dag",

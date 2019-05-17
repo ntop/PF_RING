@@ -131,6 +131,22 @@ fi
 dnl> end of pthread_setaffinity_np check
 fi
 
+dnl> AF_XDP - disabled by default
+AC_ARG_ENABLE([xdp], AS_HELP_STRING([--enable-xdp], [Enable XDP/AF_XDP support in PF_RING]))
+if test "x$enable_xdp" = xyes; then
+  AC_MSG_CHECKING([PF_RING AF_XDP support])
+  if test -f /usr/local/include/bpf/xsk.h; then
+    BUILD_KERNEL=`uname -r`
+    AF_XDP_LIB="-lbpf"
+    HAVE_AF_XDP="-D HAVE_AF_XDP"
+    AF_XDP_OBJS="pfring_mod_af_xdp.o"
+    CFLAGS="$CFLAGS -I/usr/src/linux-headers-${BUILD_KERNEL}/include/uapi -I/usr/src/linux-headers-${BUILD_KERNEL}/include"
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
+fi
+
 dnl> Accolade
 MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
 HAVE_ACCOLADE="-D HAVE_ACCOLADE"
@@ -228,6 +244,10 @@ AC_SUBST(NPCAP_LIB)
 AC_SUBST(NPCAP_OBJS)
 AC_SUBST(NPCAP_DEP)
 AC_SUBST(NPCAP_H)
+
+AC_SUBST(AF_XDP_LIB)
+AC_SUBST(HAVE_AF_XDP)
+AC_SUBST(AF_XDP_OBJS)
 
 AC_SUBST(HAVE_ACCOLADE)
 AC_SUBST(ACCOLADE_OBJS)
