@@ -11,12 +11,6 @@
  *
  */
 
-#include "pfring.h"
-#include "pfring_utils.h"
-#include "pfring_hw_filtering.h"
-#include "pfring_mod.h"
-#include "pfring_mod_af_xdp.h"
-
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/time.h>
@@ -37,6 +31,14 @@
 #include <linux/if_xdp.h>
 #include <linux/if_link.h>
 
+#ifndef likely
+#define likely(x)       __builtin_expect((x),1)
+#endif
+
+#ifndef unlikely
+#define unlikely(x)     __builtin_expect((x),0)
+#endif
+
 #ifndef min
 #define min(a, b) (a <= b ? a : b)
 #endif
@@ -50,6 +52,12 @@
 #ifndef SOL_XDP
 #define SOL_XDP 283
 #endif
+
+#include "pfring.h"
+#include "pfring_utils.h"
+#include "pfring_hw_filtering.h"
+#include "pfring_mod.h"
+#include "pfring_mod_af_xdp.h"
 
 #define AF_XDP_DEV_PKT_BUFF_SIZE   2048
 #define AF_XDP_DEV_MAX_QUEUES      16

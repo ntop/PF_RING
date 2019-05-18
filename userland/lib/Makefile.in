@@ -3,10 +3,13 @@
 #
 #
 
+BUILD_KERNEL=$(shell uname -r)
+PF_RING_KERNEL=../../kernel
+
 #
 # Search directories
 #
-INCLUDE   = -I../../kernel @BPF_INCLUDE@
+INCLUDE   = -I$(PF_RING_KERNEL) @BPF_INCLUDE@
 
 #
 # Installation directories
@@ -107,18 +110,18 @@ SYSLIBS   = -lpthread @SYSLIBS@ @AF_XDP_LIB@ @DAG_LIB@ @FIBERBLAZE_LIB@ @EXABLAZ
 STATICLIB  = libpfring.a
 DYNAMICLIB = libpfring.so
 TARGETS    = ${STATICLIB} ${DYNAMICLIB}
-RING_H     = ../../kernel/linux/pf_ring.h
+RING_H     = $(PF_RING_KERNEL)/linux/pf_ring.h
 AR ?= ar
 RANLIB ?= ranlib
 
 all: ${TARGETS}
 
-${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
+${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
 	$(AR) rs $@ ${OBJS} ${NBPF_OBJS}
 	$(RANLIB) $@
 
-${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
+${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
 	${CC} -Wl,-soname,$@.1 ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
 
@@ -155,6 +158,9 @@ extract_npcap_lib:
 extract_nbpf: ${NBPF_LIB}
 	$(AR) x ${NBPF_LIB}
 	cp ${NBPF_HDR} .
+
+copy_if_xdp:
+	cp /usr/src/linux-headers-$(BUILD_KERNEL)/include/uapi/linux/if_xdp.h $(PF_RING_KERNEL)/linux/
 
 ${NBPF_LIB}:
 	$(MAKE) -C ../nbpf

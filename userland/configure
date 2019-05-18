@@ -663,6 +663,7 @@ MOD_ACCOLADE_LIB
 ACCOLADE_DEP
 ACCOLADE_OBJS
 HAVE_ACCOLADE
+AF_XDP_DEP
 AF_XDP_OBJS
 HAVE_AF_XDP
 AF_XDP_LIB
@@ -3866,7 +3867,7 @@ $as_echo_n "checking PF_RING AF_XDP support... " >&6; }
     AF_XDP_LIB="-lbpf"
     HAVE_AF_XDP="-D HAVE_AF_XDP"
     AF_XDP_OBJS="pfring_mod_af_xdp.o"
-    CFLAGS="$CFLAGS -I/usr/src/linux-headers-${BUILD_KERNEL}/include/uapi -I/usr/src/linux-headers-${BUILD_KERNEL}/include"
+    AF_XDP_DEP="copy_if_xdp"
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
   else
@@ -3984,6 +3985,7 @@ fi
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
+
 
 
 

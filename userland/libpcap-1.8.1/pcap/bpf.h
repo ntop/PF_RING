@@ -69,7 +69,7 @@
  *
  * This also provides our own multiple-include protection.
  */
-#if !defined(_NET_BPF_H_) && !defined(_NET_BPF_H_INCLUDED) && !defined(_BPF_H_) && !defined(_H_BPF) && !defined(lib_pcap_bpf_h)
+#if !defined(_NET_BPF_H_) && !defined(_NET_BPF_H_INCLUDED) && !defined(_BPF_H_) && !defined(_H_BPF) && !defined(lib_pcap_bpf_h) && !defined(__LINUX_BPF_H__)
 #define lib_pcap_bpf_h
 
 #include <pcap/export-defs.h>

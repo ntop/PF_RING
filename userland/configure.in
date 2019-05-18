@@ -140,7 +140,7 @@ if test "x$enable_xdp" = xyes; then
     AF_XDP_LIB="-lbpf"
     HAVE_AF_XDP="-D HAVE_AF_XDP"
     AF_XDP_OBJS="pfring_mod_af_xdp.o"
-    CFLAGS="$CFLAGS -I/usr/src/linux-headers-${BUILD_KERNEL}/include/uapi -I/usr/src/linux-headers-${BUILD_KERNEL}/include"
+    AF_XDP_DEP="copy_if_xdp"
     AC_MSG_RESULT(yes)
   else
     AC_MSG_RESULT(no)
@@ -248,6 +248,7 @@ AC_SUBST(NPCAP_H)
 AC_SUBST(AF_XDP_LIB)
 AC_SUBST(HAVE_AF_XDP)
 AC_SUBST(AF_XDP_OBJS)
+AC_SUBST(AF_XDP_DEP)
 
 AC_SUBST(HAVE_ACCOLADE)
 AC_SUBST(ACCOLADE_OBJS)

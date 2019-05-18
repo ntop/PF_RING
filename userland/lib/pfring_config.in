@@ -10,7 +10,7 @@
 #
 
 include=""
-libs="@SYSLIBS@"
+libs="@SYSLIBS@ @AF_XDP_LIB@"
 
 
 usage () {
