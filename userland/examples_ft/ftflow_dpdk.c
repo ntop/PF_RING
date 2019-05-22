@@ -53,6 +53,13 @@
 #define PREFETCH_OFFSET     3
 #define TX_TEST_PKT_LEN    60
 
+//#define SCATTERED_RX_TEST
+#ifdef SCATTERED_RX_TEST
+#define MBUF_BUF_SIZE     512
+#else
+#define MBUF_BUF_SIZE    RTE_MBUF_DEFAULT_BUF_SIZE
+#endif
+
 #define print_mac_addr(addr) printf("%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8, \
   addr.addr_bytes[0], addr.addr_bytes[1], addr.addr_bytes[2], addr.addr_bytes[3], addr.addr_bytes[4], addr.addr_bytes[5])
 
@@ -96,13 +103,20 @@ static int port_init(void) {
   if (twin_port == 0xFF || twin_port == port) num_ports = 1;
   else num_ports = 2;
 
-  num_mbufs_per_lcore = (RX_RING_SIZE + TX_RING_SIZE + 2*BURST_SIZE) * 2;
+  num_mbufs_per_lcore = 2 * (
+    RX_RING_SIZE + 
+    TX_RING_SIZE + 
+    BURST_SIZE * 2) 
+#ifdef SCATTERED_RX_TEST
+    * 4
+#endif
+  ;
 
   for (q = 0; q < num_queues; q++) {
     snprintf(name, sizeof(name), "MBUF_POOL_%u", q);
 
     mbuf_pool[q] = rte_pktmbuf_pool_create(name, num_mbufs_per_lcore, MBUF_CACHE_SIZE, 0, 
-      RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+      MBUF_BUF_SIZE, rte_socket_id());
 
     if (mbuf_pool[q] == NULL)
       rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
@@ -281,6 +295,7 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
   pfring_ft_ext_pkthdr ext_hdr = { 0 };
   struct rte_mbuf *bufs[BURST_SIZE];
   struct rte_mbuf *tx_bufs[BURST_SIZE];
+  struct rte_mbuf *mseg;
   u_int16_t num, tx_num, sent;
   u_int32_t num_ports, i;
   u_int8_t ports[2];
@@ -331,9 +346,6 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 	int len = rte_pktmbuf_pkt_len(bufs[i]);
 	pfring_ft_action action = PFRING_FT_ACTION_DEFAULT;
 	
-        stats[queue_id].num_pkts++;
-        stats[queue_id].num_bytes += len + 24;
-
 	if (likely(compute_flows)) {
           h.len = h.caplen = len;
           gettimeofday(&h.ts, NULL);
@@ -341,15 +353,25 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
 	  action = pfring_ft_process(ft, (const u_char *) data, &h, &ext_hdr);
         }
  
+        stats[queue_id].num_pkts++;
+        stats[queue_id].num_bytes += len + 24;
+
 	if (unlikely(verbose)) {
 	  int j;
 
-	  printf("[Q#%u][Packet] len: %u hex: ", queue_id, len);
-	  for (j = 0; j < len; j++)
-	    printf("%02X ", data[j] & 0xFF);
+	  printf("[Q#%u][Packet] len: %u segs: %u", queue_id, len, bufs[i]->nb_segs);
 
-	  if (action == PFRING_FT_ACTION_DISCARD)
+ 	  if (action == PFRING_FT_ACTION_DISCARD)
 	    printf(" [discard]");
+         
+          mseg = bufs[i];
+          while (mseg && mseg->data_len) {
+            printf("\n[data] len: %u hex: ", mseg->data_len);
+	    data = rte_pktmbuf_mtod(mseg, char *);
+  	    for (j = 0; j < mseg->data_len; j++)
+	      printf("%02X ", data[j] & 0xFF);
+            mseg = mseg->next;
+          }
 
 	  printf("\n");
 	}
