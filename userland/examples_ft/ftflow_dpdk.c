@@ -1,5 +1,5 @@
 /*
- * (C) 2018 - ntop
+ * (C) 2018-19 - ntop
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -213,7 +213,7 @@ static void packet_consumer(void) {
 /* ************************************ */
 
 static void print_help(void) {
-  printf("ftflow_dpdk - (C) 2018 ntop.org\n");
+  printf("ftflow_dpdk - (C) 2018-19 ntop.org\n");
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
   printf("-p <id>[,<id>]  Port id. Use -p <id>,<id> for bridge mode\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");

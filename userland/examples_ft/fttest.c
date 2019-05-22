@@ -1,5 +1,5 @@
 /*
- * (C) 2018 - ntop
+ * (C) 2018-19 - ntop
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -246,7 +246,7 @@ void packet_consumer() {
 /* *************************************** */
 
 void print_help(void) {
-  printf("fttest - (C) 2018 ntop.org\n");
+  printf("fttest - (C) 2018-19 ntop.org\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
   printf("-h              Print this help\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
