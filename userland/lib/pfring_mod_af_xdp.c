@@ -230,7 +230,7 @@ static inline int refill_queue(struct xsk_umem_info *umem, u_int16_t reserve_siz
 
 int pfring_mod_af_xdp_is_pkt_available(pfring *ring) {
   struct af_xdp_handle *handle = (struct af_xdp_handle *) ring->priv_data;
-  struct rx_queue *rxq = &handle->rx_queues[0];
+  struct rx_queue *rxq = &handle->rx_queues[handle->queue_idx];
   struct xsk_ring_cons *rx = &rxq->rx;
 
   return xsk_cons_nb_avail(rx, 1);
@@ -240,7 +240,7 @@ int pfring_mod_af_xdp_is_pkt_available(pfring *ring) {
 
 int pfring_mod_af_xdp_get_selectable_fd(pfring *ring) {
   struct af_xdp_handle *handle = (struct af_xdp_handle *) ring->priv_data;
-  struct rx_queue *rxq = &handle->rx_queues[0];
+  struct rx_queue *rxq = &handle->rx_queues[handle->queue_idx];
 
   return xsk_socket__fd(rxq->xsk);
 }
@@ -249,7 +249,7 @@ int pfring_mod_af_xdp_get_selectable_fd(pfring *ring) {
 
 int pfring_mod_af_xdp_poll(pfring *ring, u_int wait_duration) {
   struct af_xdp_handle *handle = (struct af_xdp_handle *) ring->priv_data;
-  struct rx_queue *rxq = &handle->rx_queues[0];
+  struct rx_queue *rxq = &handle->rx_queues[handle->queue_idx];
   struct pollfd fds[1];
   int ret, timeout, nfds = 1;
 
@@ -310,7 +310,7 @@ static u_int16_t pfring_mod_af_xdp_recv_multi(void *queue, struct pkt *pkts, u_i
 
 int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet) {
   struct af_xdp_handle *handle = (struct af_xdp_handle *) ring->priv_data;
-  struct rx_queue *queue = &handle->rx_queues[0];
+  struct rx_queue *queue = &handle->rx_queues[handle->queue_idx];
   struct pkt p[1];
   u_int32_t duration = 1;
 
@@ -485,7 +485,7 @@ static u_int16_t pfring_mod_af_xdp_send_multi(void *queue, struct pkt *pkts, u_i
 
 int pfring_mod_af_xdp_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet) {
   struct af_xdp_handle *handle = (struct af_xdp_handle *) ring->priv_data;
-  struct tx_queue *queue = &handle->tx_queues[0];
+  struct tx_queue *queue = &handle->tx_queues[handle->queue_idx];
   struct pkt p[1];
 
   p[0].buf = pkt;
@@ -504,12 +504,12 @@ int pfring_mod_af_xdp_stats(pfring *ring, pfring_stat *stats) {
   struct xdp_statistics xdp_stats;
   struct rx_queue *rxq;
   socklen_t slen;
-  int i, ret;
-  int nb_rx_queues = 1; /* Only 1 queue supported for the time being */
+  int i = handle->queue_idx, ret;
+  //int nb_rx_queues = TODO - Only 1 queue supported for the time being */
 
   memset(stats, 0, sizeof(*stats));
 
-  for (i = 0; i < nb_rx_queues; i++) {
+  //for (i = 0; i < nb_rx_queues; i++) {
     slen = sizeof(struct xdp_statistics);
     rxq = &handle->rx_queues[i];
     stats->recv += handle->rx_queues[i].stats.rx_pkts;
@@ -526,7 +526,7 @@ int pfring_mod_af_xdp_stats(pfring *ring, pfring_stat *stats) {
     handle->tx_queues[i].stats.tx_bytes;
     handle->tx_queues[i].stats.err_pkts;
     */
-  }
+  //}
 
   return 0;
 }
@@ -898,6 +898,10 @@ int pfring_mod_af_xdp_open(pfring *ring) {
   if (at != NULL) {
     at[0] = '\0';
     channel_id = atoi(&at[1]);
+    if (channel_id >= AF_XDP_DEV_MAX_QUEUES) {
+      rc = -1;
+      goto close_fd;
+    }
   }
 
   if ((handle = calloc(1, sizeof(struct af_xdp_handle))) == NULL) {
