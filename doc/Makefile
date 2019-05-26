@@ -3,13 +3,14 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+SPHINXBIN     = sphinx-build
+SPHINXBUILD   = sphinx-build -Q
 PAPER         =
 BUILDDIR      = _build
 
 # User-friendly check for sphinx-build
-ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
-$(error The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
+ifeq ($(shell which $(SPHINXBIN) >/dev/null 2>&1; echo $$?), 1)
+$(error The '$(SPHINXBIN)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBIN environment variable to point to the full path of the '$(SPHINXBIN)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
 endif
 
 # Internal variables.

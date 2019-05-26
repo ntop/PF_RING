@@ -236,7 +236,7 @@ int rrc_remove_mirror(rrc_port_t *out_port);
  * Sets a load balancer, for traffic matching the specified rule, with the specified destination ports.
  * @param out_ports     The destination ports
  * @param num_out_ports The number of destination ports
- * @param rule          The RRC rule to match
+ * @param r             The RRC rule to match
  * @return 0 on success, -1 otherwise
  */
 int rrc_set_load_balancer(rrc_port_t *out_ports, int num_out_ports, rrc_match_t *r);

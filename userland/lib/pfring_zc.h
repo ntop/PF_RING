@@ -303,11 +303,11 @@ pfring_zc_send_pkt(
 
 /**
  * Send a burst of packets to the queue.
- * @param queue        The queue handle.
- * @param pkt_handles  The array with the buffer handles for the buffers to send.
- * @param num_packets  The number of packets to send to the queue.
- * @param flush_packet The flag indicating whether this call should flush the enqueued packets, and older packets if any.
- * @return             The number of packets successfully sent, a negative value in case of error.
+ * @param queue         The queue handle.
+ * @param pkt_handles   The array with the buffer handles for the buffers to send.
+ * @param num_packets   The number of packets to send to the queue.
+ * @param flush_packets The flag indicating whether this call should flush the enqueued packets, and older packets if any.
+ * @return              The number of packets successfully sent, a negative value in case of error.
  */
 int 
 pfring_zc_send_pkt_burst(
@@ -433,9 +433,8 @@ pfring_zc_get_queue_id(
 );
 
 /**
- * Read queue settings, including queue len, buffers len, metadata len.
+ * Read queue queue id.
  * @param queue The queue handle.
- * @param info  The queue settings (out).
  */
 u_int32_t
 pfring_zc_get_queue_id(
@@ -596,7 +595,7 @@ pfring_zc_run_balancer(
 /**
  * Run a fan-out worker. 
  * @param in_queues        The ingress queues handles array. 
- * @param out_multi_queues The egress multi-queue handle.
+ * @param out_multi_queue  The egress multi-queue handle.
  * @param num_in_queues    The number of ingress queues.
  * @param working_set_pool The pool handle for working set buffers allocation. The worker uses 8 buffers in burst mode, 1 otherwise.
  * @param recv_policy      The receive policy.
@@ -845,7 +844,7 @@ pfring_zc_builtin_gre_hash(
 /* **************************************************************************************** */
 
 /**
- * Write custom stats under /proc/net/pf_ring/stats/<cluster file>
+ * Write custom stats under /proc/net/pf_ring/stats/CLUSTER-FILE
  * @param cluster The cluster handle.
  * @param stats   The stats string to write.
  * @return        0 on success, a negative value otherwise.
@@ -857,8 +856,9 @@ pfring_zc_set_proc_stats(
 );
 
 /**
- * Write application name under /proc/net/pf_ring/<socket>
- * @param name  The application name.
+ * Write application name under /proc/net/pf_ring/SOCKET
+ * @param cluster The cluster handle.
+ * @param name    The application name.
  * @return      0 on success, a negative value otherwise.
  */
 int
@@ -870,7 +870,7 @@ pfring_zc_set_app_name(
 /* **************************************************************************************** */
 
 /**
- * Write custom device stats under /proc/net/pf_ring/stats/<device file>
+ * Write custom device stats under /proc/net/pf_ring/stats/DEVICE-FILE
  * @param queue The queue handle for the device.
  * @param stats The stats string to write.
  * @return      0 on success, a negative value otherwise.
@@ -882,7 +882,7 @@ pfring_zc_set_device_proc_stats(
 );
 
 /**
- * Write application name under /proc/net/pf_ring/<socket>
+ * Write application name under /proc/net/pf_ring/SOCKET
  * @param queue The queue handle for the device.
  * @param name  The application name.
  * @return      0 on success, a negative value otherwise.

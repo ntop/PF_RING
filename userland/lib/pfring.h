@@ -392,7 +392,7 @@ struct __pfring {
 #define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Do not send flow updates with PF_RING_FLOW_OFFLOAD (enable support for flows shunting only) */
 #define PF_RING_FLOW_OFFLOAD_NORAWDATA (1 << 19) /**< pfring_open() flag: Do not send raw packets with PF_RING_FLOW_OFFLOAD */
 #define PF_RING_L7_FILTERING	       (1 << 20) /**< pfring_open() flag: Enable L7 filtering support based on PF_RING FT (Flow Table with nDPI support) */
-#define PF_RING_DO_NOT_STRIP_FCS       (1 << 21) /**< pfring_open() flag: Do not strip the FCS (CRC), when not stripped out by the adapter (on standard adapters use this in combination with 'ethtool -K <dev> rx-fcs on rx-all on') */
+#define PF_RING_DO_NOT_STRIP_FCS       (1 << 21) /**< pfring_open() flag: Do not strip the FCS (CRC), when not stripped out by the adapter (on standard adapters use this in combination with 'ethtool -K DEV rx-fcs on rx-all on') */
 
 /* ********************************* */
 
@@ -405,18 +405,18 @@ struct __pfring {
 /**
  * This call is used to initialize a PF_RING socket hence obtain a handle of type struct pfring 
  * that can be used in subsequent calls. Note that: 
- * 1. you can use physical (e.g. ethX) and virtual (e.g. tapX) devices, RX-queues (e.g. ethX@Y), 
- *    and additional modules (e.g. zc:ethX@Y, dag:dagX:Y, "multi:ethA@X;ethB@Y;ethC@Z", "stack:ethX").
+ * 1. you can use physical (e.g. ethX) and virtual (e.g. tapX) devices, RX-queues (e.g. ethX\@Y), 
+ *    and additional modules (e.g. zc:ethX\@Y, dag:dagX:Y, "multi:ethA\@X;ethB\@Y;ethC\@Z", "stack:ethX").
  * 2. you need super-user capabilities in order to open a device.
  * @param device_name Symbolic name of the PF_RING-aware device we are attempting to open.
  * Syntax:
  *  - eth0           interface eth0, all channels
- *  - eth0@1         interface eth0, channel 1
+ *  - eth0\@1         interface eth0, channel 1
  *  - eth0,eth1      interface eth0 and eth1, all channels
- *  - eth0,eth1@1    interface eth0 and eth1, channel 1
- *  - eth0@1,5       interface eth0, channel 1 and 5
- *  - eth0@1-5       interface eth0, channel 1,2...5
- *  - eth0@1-3,5-7   interface eth0, channel 1,2,3,5,6,7
+ *  - eth0,eth1\@1    interface eth0 and eth1, channel 1
+ *  - eth0\@1,5       interface eth0, channel 1 and 5
+ *  - eth0\@1-5       interface eth0, channel 1,2...5
+ *  - eth0\@1-3,5-7   interface eth0, channel 1,2,3,5,6,7
  * Note: 
  *  - ',' and '-' are supported with standard kernel capture / drivers only
  *  - in case of multiple interfaces, the channels are same for all interfaces
@@ -466,7 +466,7 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
  * Break a receive loop (pfring_loop() or blocking pfring_recv()).
  * @param ring The PF_RING handle.
  */
-void pfring_breakloop(pfring *);
+void pfring_breakloop(pfring *ring);
 
 /**
  * This call is used to terminate an PF_RING device previously open. 
@@ -519,6 +519,7 @@ int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
  * Get metadata for the last captured packet, if any. This is usually used with ZC SPSC queues for reading packet metadata.
  * @param ring
  * @param metadata Ptr to a variable that will contain the packet metadata (out).
+ * @param metadata_len Length of returned metadata (out).
  * @return 0 if this is supported by the actual module and metadata is found, a negative error value otherwise.
  */
 int pfring_get_metadata(pfring *ring, u_char **metadata, u_int32_t *metadata_len);
@@ -579,7 +580,7 @@ int pfring_add_hw_rule(pfring *ring, hw_filtering_rule *rule);
 /**
  * Remove the specified filtering rule from the NIC. 
  * @param ring The PF_RING handle on which the rule will be removed. 
- * @param rule The filtering rule to be removed from the NIC.
+ * @param rule_id The filtering rule id to be removed from the NIC.
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_remove_hw_rule(pfring *ring, u_int16_t rule_id);
@@ -749,7 +750,6 @@ int pfring_set_cluster(pfring *ring, u_int clusterId, cluster_type the_type);
 /**
  * This call allows a ring to be removed from a previous joined cluster. 
  * @param ring      The PF_RING handle to be cluster.
- * @param clusterId A numeric identifier of the cluster to which the ring will be bound.
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_remove_from_cluster(pfring *ring);
@@ -757,7 +757,7 @@ int pfring_remove_from_cluster(pfring *ring);
 /**
  * Set the master ring using the id (vanilla PF_RING only)
  * @param ring   The PF_RING handle.
- * @param master The master socket id.
+ * @param master_id The master socket id.
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_set_master_id(pfring *ring, u_int32_t master_id);
@@ -780,7 +780,6 @@ u_int32_t pfring_get_ring_id(pfring *ring);
 /**
  * Return an estimation of the enqueued packets.
  * @param ring The PF_RING handle.
- * @param  
  * @return 0 on success, a negative value otherwise.
  */
 u_int32_t pfring_get_num_queued_pkts(pfring *ring);
@@ -988,11 +987,10 @@ int pfring_set_virtual_device(pfring *ring, virtual_filtering_device_info *info)
 /**
  * This call processes packets until pfring_breakloop() is called or an error occurs. 
  * @param ring            The PF_RING handle.
- * @param looper          A callback to be called for each received packet. The parameters passed to this routine are: 
- *                        a pointer to a struct pfring_pkthdr, a pointer to the packet memory, and a pointer to user_bytes.
- * @param user_bytes      A pointer to user’s data which is passed to the callback.
- * @param wait_for_packet If 0 active wait is used to check the packet availability.
- * @return A non-negative number if pfring_breakloop() is called. A negative number in case of error.
+ * @param buffer
+ * @param buffer_len
+ * @param test_len
+ * @return A non-negative number on success. A negative number in case of error.
  */
 int pfring_loopback_test(pfring *ring, char *buffer, u_int buffer_len, u_int test_len);
 
@@ -1085,7 +1083,6 @@ int pfring_get_link_status(pfring *ring);
 /**
  * Synchronizes the egress ring indexes/registers flushing enqueued packets.
  * @param ring The PF_RING handle.
- * @param  
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_flush_tx_packets(pfring *ring);
@@ -1179,7 +1176,8 @@ int pfring_print_parsed_pkt(char *buff, u_int buff_len, const u_char *p, const s
  * @param buff     The destination buffer.
  * @param buff_len The destination buffer length.
  * @param p        The packet.
- * @param caplen   The packet length.
+ * @param len      The packet length.
+ * @param caplen   The captured packet length.
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_print_pkt(char *buff, u_int buff_len, const u_char *p, u_int len, u_int caplen);

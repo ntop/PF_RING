@@ -200,7 +200,7 @@ nbroker_rc_t nbroker_remove_rule_by_match(nbroker_t *bkr, const char *port,
  * List the active rules of the specified type and port
  * @param bkr The broker handler
  * @param port The target port number or interface name 
- * @param filter type The filter type to filter rules by type 
+ * @param filter_type The filter type to filter rules by type 
  * @param num_rules The number of rules (out)
  * @param rules The rules list (out)
  * @return The error code

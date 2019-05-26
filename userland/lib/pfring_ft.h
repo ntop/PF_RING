@@ -402,8 +402,7 @@ pfring_ft_flow_free(
  * setting the default to PFRING_FT_ACTION_DISCARD and filter actions to PFRING_FT_ACTION_FORWARD
  * Default: PFRING_FT_ACTION_DEFAULT
  * @param table The flow table handle. 
- * @param protocol_name The nDPI protocol name.
- * @param action The action returned by pfring_ft_process() for all packets matching the protocol.
+ * @param action The action returned by pfring_ft_process() by default.
  */
 void 
 pfring_ft_set_default_action(
@@ -471,6 +470,7 @@ pfring_ft_l7_protocol_name(
  * as FT already creates a nDPI instance internally when using PFRING_FT_TABLE_FLAGS_DPI.
  * FT takes care of releasing the nDPI instance on pfring_ft_destroy_table.
  * @param table The flow table handle. 
+ * @param ndpi  The nDPI handle.
  * @return 0 on success, a negative number on failures.
  */
 int
@@ -509,7 +509,7 @@ pfring_ft_load_ndpi_categories(
 
 /**
  * Check if nDPI is available.
- * #return 1 if nDPI is available, 0 otherwise.
+ * @return 1 if nDPI is available, 0 otherwise.
  */
 int
 pfring_ft_is_ndpi_available();
