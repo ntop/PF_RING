@@ -8,6 +8,7 @@ Below you can find a comparison of NIC features supported by PF_RING.
     :maxdepth: 1
     :numbered:
 
+    af_xdp
     accolade
     dag
     exablaze
