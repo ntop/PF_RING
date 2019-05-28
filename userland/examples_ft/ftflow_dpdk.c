@@ -73,9 +73,11 @@ static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
 static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
+static u_int8_t set_if_mac = 0;
 static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
 static u_int32_t pps = 0;
+static struct ether_addr if_mac = { 0 };
 
 static struct lcore_stats {
   u_int64_t num_pkts;
@@ -157,7 +159,13 @@ static int port_init(void) {
 
     rte_eth_promiscuous_enable(port_id);
   }
-  
+ 
+  if (set_if_mac) {
+    retval = rte_eth_dev_default_mac_addr_set(port, &if_mac);
+    if (retval != 0)
+      printf("Unable to set the interface MAC address (%d)\n", retval);
+  }
+ 
   return 0;
 }
 
@@ -407,6 +415,7 @@ static void print_help(void) {
   printf("-n <num cores>  Enable multiple cores/queues (default: 1)\n");
   printf("-0              Do not compute flows (packet capture only)\n");
   printf("-F              Enable forwarding when 2 ports are specified in -p\n");
+  printf("-M <addr>       Set the port MAC address\n");
   printf("-t              Test TX\n");
   printf("-T <size>       TX test packet size\n");
   printf("-P <pps>        TX test packet rate (pps)\n");
@@ -421,25 +430,35 @@ static int parse_args(int argc, char **argv) {
   char **argvopt;
   int option_index;
   char *prgname = argv[0];
+  u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
   static struct option lgopts[] = {
     { NULL, 0, 0, 0 }
   };
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "Fhn:p:tvP:T:07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "FhM:n:p:tvP:T:07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
+      break;
+    case 'h':
+      print_help();
+      exit(0);
+      break;
+    case 'M':
+      if(sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &mac_a, &mac_b, &mac_c, &mac_d, &mac_e, &mac_f) != 6) {
+	printf("Invalid MAC address format (XX:XX:XX:XX:XX:XX)\n");
+	exit(0);
+      }
+      if_mac.addr_bytes[0] = mac_a, if_mac.addr_bytes[1] = mac_b, if_mac.addr_bytes[2] = mac_c,
+      if_mac.addr_bytes[3] = mac_d, if_mac.addr_bytes[4] = mac_e, if_mac.addr_bytes[5] = mac_f;
+      set_if_mac = 1;
       break;
     case 'n':
       if (optarg) {
         num_queues = atoi(optarg);
       }
-      break;
-    case 'h':
-      print_help();
-      exit(0);
       break;
     case 'p':
       if(optarg) {
