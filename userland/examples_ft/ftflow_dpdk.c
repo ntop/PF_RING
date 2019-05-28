@@ -157,7 +157,8 @@ static int port_init(void) {
     if (retval < 0)
       return retval;
 
-    rte_eth_promiscuous_enable(port_id);
+    if (!set_if_mac)
+      rte_eth_promiscuous_enable(port_id);
   }
  
   if (set_if_mac) {
