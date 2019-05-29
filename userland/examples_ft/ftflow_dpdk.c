@@ -74,6 +74,7 @@ static u_int8_t verbose = 0;
 static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
 static u_int8_t set_if_mac = 0;
+static u_int8_t promisc = 1;
 static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
 static u_int32_t pps = 0;
@@ -157,7 +158,7 @@ static int port_init(void) {
     if (retval < 0)
       return retval;
 
-    if (!set_if_mac)
+    if (promisc && !set_if_mac)
       rte_eth_promiscuous_enable(port_id);
   }
  
@@ -417,6 +418,7 @@ static void print_help(void) {
   printf("-0              Do not compute flows (packet capture only)\n");
   printf("-F              Enable forwarding when 2 ports are specified in -p\n");
   printf("-M <addr>       Set the port MAC address\n");
+  printf("-U              Do not set promisc\n");
   printf("-t              Test TX\n");
   printf("-T <size>       TX test packet size\n");
   printf("-P <pps>        TX test packet rate (pps)\n");
@@ -438,7 +440,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "FhM:n:p:tvP:T:07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "FhM:n:p:tUvP:T:07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
@@ -489,6 +491,9 @@ static int parse_args(int argc, char **argv) {
     case 'T':
       tx_test_pkt_len = atoi(optarg);
       if (tx_test_pkt_len < 60) tx_test_pkt_len = 60; 
+      break;
+    case 'U':
+      promisc = 0;
       break;
     case 'P':
       pps = atoi(optarg);
