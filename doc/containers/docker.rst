@@ -71,3 +71,9 @@ proper capabilities.
 
    sudo docker run -v /dev/hugepages:/dev/hugepages --cap-add ipc_lock ubuntu16 pfcount -i zc:99@0
 
+Instead, if we need to create a ZC cluster in the container, for instance in case we 
+want to run zbalance_ipc itself, the application needs to translate virtual addresses 
+to physical addresses for providing DMA buffers to the adapter. For this reason it needs 
+to access /proc/self/pagemap, however, depending on the kernel version, opening this 
+file is not allowed to unprivileged processes, leading to failures (-EPERM). Setting 
+the SYS_ADMIN capability is usually enough on latest kernels to make it work.
