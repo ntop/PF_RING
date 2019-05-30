@@ -11,7 +11,7 @@ LIBPFRING  = ${PFRINGDIR}/libpfring.a
 #
 # PF_RING aware libpcap
 #
-O_FLAG     = -O2 -DHAVE_PF_RING
+O_FLAG     = -DHAVE_PF_RING -O2 #-g
 EXTRA_LIBS =
 PCAPDIR    = ../libpcap
 LIBPCAP    = ${PCAPDIR}/libpcap.a  ${EXTRA_LIBS}
@@ -29,7 +29,7 @@ INCLUDE    = -I${PFRING_KERNEL} -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../li
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC         = ${CROSS_COMPILE}gcc #--platform=native
-CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_PF_RING_FT@ -O2 # -g
+CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall ${INCLUDE} @HAVE_PF_RING_FT@
 
 #
 # User and System libraries
