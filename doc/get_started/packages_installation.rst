@@ -34,6 +34,7 @@ to improve the performance and absorbe traffic bursts:
 
 .. code-block:: console
 
+   apt-get install pfring-dkms
    mkdir -p /etc/pf_ring
    echo "min_num_slots=65536" > /etc/pf_ring/pf_ring.conf
    sudo systemctl restart pf_ring
