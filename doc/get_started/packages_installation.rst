@@ -28,14 +28,15 @@ The init script acts as follows:
 
    node=<NUMA node id> hugepagenumber=<number of pages> [gid=<GID>]
 
-Below you can find a *basic configuration* example for using PF_RING with *standard drivers*.
-In this example we tune the kernel buffer size (min_num_slots parameter) to improve 
-the performance and absorbe traffic bursts:
+Below you can find a **basic configuration** example for using PF_RING with **standard drivers**
+on Ubuntu using systemd. In this example we tune the kernel buffer size (min_num_slots parameter) 
+to improve the performance and absorbe traffic bursts:
 
 .. code-block:: console
 
    mkdir -p /etc/pf_ring
    echo "min_num_slots=65536" > /etc/pf_ring/pf_ring.conf
+   sudo systemctl restart pf_ring
 
 In order to use pf_ring with ZC drivers, you need first of all to figure out what is 
 the driver model of your network card. Please use ethtool -i <interface> for that. 
@@ -46,7 +47,7 @@ Example:
    ethtool -i eth1 | grep driver
    driver: ixgbe
 
-Below you can find a *basic configuration* example for a dual-port *ixgbe* card with *ZC drivers* 
+Below you can find a **basic configuration** example for a dual-port **ixgbe** card with **ZC drivers** 
 on Ubuntu using systemd, the configuration for other card models is similar (replace ixgbe with 
 your actual driver family).
 
