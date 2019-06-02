@@ -28,14 +28,16 @@ The init script acts as follows:
 
    node=<NUMA node id> hugepagenumber=<number of pages> [gid=<GID>]
 
-Below you can find a configuration example for using PF_RING with standard drivers.
-In this example we tune the kernel buffer size (min_num_slots parameter) to improve 
-the performance and absorbe traffic bursts:
+Below you can find a **basic configuration** example for using PF_RING with **standard drivers**
+on Ubuntu using systemd. In this example we tune the kernel buffer size (min_num_slots parameter) 
+to improve the performance and absorbe traffic bursts:
 
 .. code-block:: console
 
+   apt-get install pfring-dkms
    mkdir -p /etc/pf_ring
    echo "min_num_slots=65536" > /etc/pf_ring/pf_ring.conf
+   sudo systemctl restart pf_ring
 
 In order to use pf_ring with ZC drivers, you need first of all to figure out what is 
 the driver model of your network card. Please use ethtool -i <interface> for that. 
@@ -46,16 +48,30 @@ Example:
    ethtool -i eth1 | grep driver
    driver: ixgbe
 
-Below you can find a configuration example for a dual-port ixgbe card with ZC drivers, 
-the configuration for other card models is similar (replace ixgbe with your actual driver family).
+Below you can find a **basic configuration** example for a dual-port **ixgbe** card with **ZC drivers** 
+on Ubuntu using systemd, the configuration for other card models is similar (replace ixgbe with 
+your actual driver family).
 
 .. code-block:: console
 
-   sudo mkdir -p /etc/pf_ring/zc/ixgbe
+   apt-get install pfring-dkms pfring-drivers-zc-dkms
    sudo touch /etc/pf_ring/pf_ring.conf
    echo "node=0 hugepagenumber=1024" | sudo tee /etc/pf_ring/hugepages.conf 
+   sudo mkdir -p /etc/pf_ring/zc/ixgbe
    echo "RSS=1,1" | sudo tee /etc/pf_ring/zc/ixgbe/ixgbe.conf 
    sudo touch /etc/pf_ring/zc/ixgbe/ixgbe.start
+   sudo systemctl restart pf_ring
+
+Please note that in this configuration RSS is disabled (RSS=1 means single queue). 
+For learning more about RSS and enable multiple queues for hw traffic distribution 
+please read the `RSS <http://www.ntop.org/guides/pf_ring/rss.html#rss-receive-side-scaling>`_
+section.
+
+Below you can find what the /etc/pf_ring folder is supposed to contain after creating
+the configuration as described in the example above.
+
+.. code-block:: console
+
    tree /etc/pf_ring/
    |-- hugepages.conf
    |-- pf_ring.conf
@@ -64,17 +80,12 @@ the configuration for other card models is similar (replace ixgbe with your actu
            |-- ixgbe.conf
            `-- ixgbe.start
 
-Please note that in this configuration RSS is disabled (RSS=1 means single queue). 
-For learning more about RSS and enable multiple queues for hw traffic distribution 
-please read the `RSS <http://www.ntop.org/guides/pf_ring/rss.html#rss-receive-side-scaling>`_
-section.
-
 In order to run the init script, after all the files have been configured,
 if your system is using systemd run:
 
 .. code-block:: console
 
-   sudo systemctl start pf_ring
+   sudo systemctl restart pf_ring
    
 Otherwise you can use the init.d script:
 
