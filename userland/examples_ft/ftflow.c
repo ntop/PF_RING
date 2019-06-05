@@ -212,7 +212,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
   printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
-         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, action: %s\n",
+         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, action: %s",
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes,
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec,
@@ -221,6 +221,32 @@ void processFlow(pfring_ft_flow *flow, void *user){
          (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec,
          (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec,
          action_to_string(pfring_ft_flow_get_action(flow)));
+
+  switch(v->l7_protocol.master_protocol) {
+    case 5:
+      if (v->l7_metadata.dns.query != NULL)
+        printf(", query: %s", v->l7_metadata.dns.query);
+      printf(", queryType: %u, replyCode: %u",
+        v->l7_metadata.dns.queryType,
+        v->l7_metadata.dns.replyCode);
+      break;
+
+    case 7:
+      if (v->l7_metadata.http.serverName != NULL)
+        printf(", hostName: %s", v->l7_metadata.http.serverName);
+      if (v->l7_metadata.http.url != NULL)
+        printf(", url: %s", v->l7_metadata.http.url);
+      if (v->l7_metadata.http.responseCode)
+        printf(", responseCode: %u", v->l7_metadata.http.responseCode);
+      break;
+
+    case 91:
+      if (v->l7_metadata.ssl.serverName != NULL)
+        printf(", hostName: %s", v->l7_metadata.ssl.serverName);
+      break;
+  }
+
+  printf("\n");
 
   pfring_ft_flow_free(flow);
 }
