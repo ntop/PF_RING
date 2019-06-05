@@ -103,14 +103,14 @@ pfring_ft_udphdr;
 
 /*** packet metadata structs ***/
 
-typedef struct { /* pfring_pkthdr / pcap_pkthdr common struct */
+typedef struct {     /* pfring_pkthdr / pcap_pkthdr common struct */
   struct timeval ts; /**< time stamp */
   u_int32_t caplen;  /**< length of captured portion */
   u_int32_t len;     /**< length original packet (off wire) */
 } pfring_ft_pcap_pkthdr;
 
-typedef struct { /* additional packet metadata not available in pcap_pkthdr */
-  u_int32_t hash;  /**< packet hash */
+typedef struct {     /* additional packet metadata not available in pcap_pkthdr */
+  u_int32_t hash;    /**< packet hash */
 } pfring_ft_ext_pkthdr;
 
 typedef struct {
@@ -158,14 +158,34 @@ typedef struct {
 
 typedef struct {
   struct {
-    u_int64_t pkts;                    /**< Number of packets per direction */
-    u_int64_t bytes;                   /**< Number of bytes per direction */
-    struct timeval first;              /**< Time of first packet seen per direction */
-    struct timeval last;               /**< Time of last packet seen per direction */
-    u_int8_t tcp_flags;                /**< TCP flags per direction */
-  } direction[NUM_DIRECTIONS];         /**< Metadata per flow direction */
+    u_int64_t pkts;           /**< Number of packets per direction */
+    u_int64_t bytes;          /**< Number of bytes per direction */
+    struct timeval first;     /**< Time of first packet seen per direction */
+    struct timeval last;      /**< Time of last packet seen per direction */
+    u_int8_t tcp_flags;       /**< TCP flags per direction */
+  } direction[NUM_DIRECTIONS]; /**< Metadata per flow direction */
+
   pfring_ft_ndpi_protocol l7_protocol; /**< nDPI protocol */
-  void *user;                          /**< User metadata */
+
+  union {
+    struct {
+      char *query;            /**< DNS query */
+      u_int16_t queryType;    /**< DNS query type */
+      u_int16_t replyCode;    /**< DNS reply code */
+    } dns;
+
+    struct {
+      char *serverName;       /**< SSL Server Name */
+    } ssl;
+
+    struct {
+      char *serverName;       /**< HTTP Server Name */
+      char *url;              /**< HTTP URL */
+      u_int16_t responseCode; /**< HTTP response code */
+    } http;
+  } l7_metadata;
+
+  void *user;                 /**< User metadata */
 } pfring_ft_flow_value;
 
 /*** stats struct ***/
