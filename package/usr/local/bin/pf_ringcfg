@@ -6,11 +6,12 @@
 SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
 
 PF_RING_CONFIG_DIR="/etc/pf_ring"
-HUGEPAGES_CONFIG="${PF_RING_CONFIG_DIR}/hugepages.conf"
 ZC_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'fm10k')
 
 CONF_DRIVER_NAME=""
 CONF_RSS_QUEUES=1
+CONF_HUGEPAGES=1024
+CONF_KERNEL_BUFFER_SLOTS=65536
 
 DISTRO="unknown"
 if [ -f /lib/lsb/init-functions ]; then
@@ -27,7 +28,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-function zc_driver_installed {
+zc_driver_installed() {
 	if [ ${DISTRO} == "debian" ]; then
 		if [ `dpkg -l | grep $1-zc-dkms | wc -l` -gt 0 ]; then
 			return 0
@@ -40,7 +41,7 @@ function zc_driver_installed {
 	return 1
 }
 
-function install_zc_driver {
+install_zc_driver() {
 	if [ ${DISTRO} == "debian" ]; then
 		apt-get clean all
 		apt-get update
@@ -51,6 +52,11 @@ function install_zc_driver {
 		yum install pfring-dkms pfring-drivers-zc-dkms
 	fi
 	return 1
+}
+
+number_of_nodes() {
+	NODES=$(cat /proc/cpuinfo | grep "physical id" | uniq | wc -l)
+	return $NODES
 }
 
 restart_pfring() {
@@ -177,11 +183,19 @@ configure_driver() {
 	
 	echo "[>] Configuring PF_RING"
 
-	echo "min_num_slots=65536" > /etc/pf_ring/pf_ring.conf
+	echo "min_num_slots=${CONF_KERNEL_BUFFER_SLOTS}" > ${PF_RING_CONFIG_DIR}/pf_ring.conf
 
 	echo "[>] Configuring hugepages"
 
-	echo "node=0 hugepagenumber=1024" > /etc/pf_ring/hugepages.conf
+	number_of_nodes
+	NUM_NODES=$?
+
+	INDEX=0
+	rm ${PF_RING_CONFIG_DIR}/hugepages.conf
+	while [ "$INDEX" -ne "$NUM_NODES" ]; do
+		echo "node=${INDEX} hugepagenumber=${CONF_HUGEPAGES}" >> ${PF_RING_CONFIG_DIR}/hugepages.conf
+		let INDEX=INDEX+1 
+	done
 
 	echo "[>] Detecting interfaces using $CONF_DRIVER_NAME"
 
@@ -195,7 +209,7 @@ configure_driver() {
 
 	echo "[>] Configuring $CONF_DRIVER_NAME driver with $CONF_RSS_QUEUES RSS queues"
 
-	mkdir -p /etc/pf_ring/zc/${CONF_DRIVER_NAME}
+	mkdir -p ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}
 
 	INDEX=1
 	RSS_LIST="${NQ}"
@@ -204,8 +218,8 @@ configure_driver() {
 		let INDEX=INDEX+1
 	done
 
-	echo "RSS=${RSS_LIST}" > /etc/pf_ring/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
-	touch /etc/pf_ring/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.start
+	echo "RSS=${RSS_LIST}" > ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
+	touch ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.start
 
 	echo "[>] Restarting PF_RING"
 
