@@ -133,6 +133,8 @@ static int port_init(void) {
     printf("Configuring port %u...\n", port_id);
 
     if (port_speed) {
+      struct rte_eth_fc_conf fc_conf = { 0 };
+
       switch (port_speed) {
       case   1: port_conf.link_speeds = ETH_LINK_SPEED_1G;   break;
       case  10: port_conf.link_speeds = ETH_LINK_SPEED_10G;  break;
@@ -143,6 +145,12 @@ static int port_init(void) {
       default: break;
       }
       port_conf.link_speeds |= ETH_LINK_SPEED_FIXED;
+
+      fc_conf.mode = RTE_FC_NONE;
+      fc_conf.autoneg = 0;
+
+      if (rte_eth_dev_flow_ctrl_set(port_id, &fc_conf) != 0)
+        printf("Unable to disable autoneg and flow control\n");
     }
 
     retval = rte_eth_dev_configure(port_id, num_queues /* RX */, num_queues /* TX */, &port_conf);
