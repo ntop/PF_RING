@@ -69,6 +69,7 @@ cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so
   cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 %endif
 cp $HOME/PF_RING/package/usr/local/bin/pf_ringctl $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/package/usr/local/bin/pf_ringcfg $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/package/usr/local/bin/clusterctl $RPM_BUILD_ROOT/usr/local/bin
 # DAQ
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
