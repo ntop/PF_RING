@@ -68,9 +68,10 @@ pcap_dumper_t *dumper = NULL;
 u_int string_id = 1;
 char *out_pcap_file = NULL;
 FILE *match_dumper = NULL;
-u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0, check_ts;
+u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0, check_ts = 0;
 int num_packets = 0;
 time_t last_ts = 0;
+u_int16_t min_len = 0;
 
 struct app_stats {
   u_int64_t numPkts[MAX_NUM_THREADS];
@@ -514,7 +515,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
 	     h->caplen, h->len);     
   }
 
-  if(verbose) printf("%s\n", dump_str);
+  if(verbose && h->len > min_len) printf("%s\n", dump_str);
   if(unlikely(dump_match)) {
     /* I need to find out which string matched */
     struct strmatch *m = matching_strings;
@@ -543,7 +544,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
     dumpMatch(dump_str);
   }
   
-  if(verbose == 2) {
+  if(verbose == 2 && h->len > min_len) {
     int i, len = h->caplen;
 
     for(i = 0; i < len; i++)
@@ -702,6 +703,7 @@ void printHelp(void) {
   printf("-o <path>       Dump packets on the specified pcap (in case of -x this dumps only matching packets)\n");
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
+  printf("-K <len>        Print only packets with length > <len> with -v\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
 	 "                ixia\tTimestamped packets by ixiacom.com hardware devices\n");
   printf("-L              List all interfaces and exit (use -v for more info)\n");
@@ -939,7 +941,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:H:l:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MT")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:H:l:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MTK:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1073,6 +1075,9 @@ int main(int argc, char* argv[]) {
       else
 	fprintf(stderr, "WARNING: unknown -z option, it has been ignored\n");
       break;      
+    case 'K':
+      min_len = atoi(optarg);
+      break;
     }
   }
 
