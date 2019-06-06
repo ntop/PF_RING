@@ -129,6 +129,7 @@ rm -fr $RPM_BUILD_ROOT
 /etc/init.d/cluster
 %endif
 /usr/local/bin/pf_ringctl
+/usr/local/bin/pf_ringcfg
 /usr/local/bin/clusterctl
 
 # Set the default attributes of all of the files specified to have an
