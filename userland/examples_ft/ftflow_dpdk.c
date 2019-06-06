@@ -75,6 +75,7 @@ static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
 static u_int8_t set_if_mac = 0;
 static u_int8_t promisc = 1;
+static u_int16_t port_speed = 0;
 static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
 static u_int32_t pps = 0;
@@ -131,6 +132,19 @@ static int port_init(void) {
     
     printf("Configuring port %u...\n", port_id);
 
+    if (port_speed) {
+      switch (port_speed) {
+      case   1: port_conf.link_speeds = ETH_LINK_SPEED_1G;   break;
+      case  10: port_conf.link_speeds = ETH_LINK_SPEED_10G;  break;
+      case  25: port_conf.link_speeds = ETH_LINK_SPEED_25G;  break;
+      case  40: port_conf.link_speeds = ETH_LINK_SPEED_40G;  break;
+      case  50: port_conf.link_speeds = ETH_LINK_SPEED_50G;  break;
+      case 100: port_conf.link_speeds = ETH_LINK_SPEED_100G; break;
+      default: break;
+      }
+      port_conf.link_speeds |= ETH_LINK_SPEED_FIXED;
+    }
+
     retval = rte_eth_dev_configure(port_id, num_queues /* RX */, num_queues /* TX */, &port_conf);
     
     if (retval != 0)
@@ -160,6 +174,9 @@ static int port_init(void) {
 
     if (promisc && !set_if_mac)
       rte_eth_promiscuous_enable(port_id);
+
+    if (rte_eth_dev_set_link_up(port_id) < 0)
+      printf("Unable to set link up\n");
   }
  
   if (set_if_mac) {
@@ -419,6 +436,7 @@ static void print_help(void) {
   printf("-F              Enable forwarding when 2 ports are specified in -p\n");
   printf("-M <addr>       Set the port MAC address\n");
   printf("-U              Do not set promisc\n");
+  printf("-S <speed>      Set the port speed in Gbit/s (1/10/25/40/50/100)\n");
   printf("-t              Test TX\n");
   printf("-T <size>       TX test packet size\n");
   printf("-P <pps>        TX test packet rate (pps)\n");
@@ -440,7 +458,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "FhM:n:p:tUvP:T:07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "FhM:n:p:tUvP:S:T:07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
@@ -497,6 +515,9 @@ static int parse_args(int argc, char **argv) {
       break;
     case 'P':
       pps = atoi(optarg);
+      break;
+    case 'S':
+      port_speed = atoi(optarg);
       break;
     default:
       print_help();
