@@ -791,9 +791,15 @@ int main(int argc, char* argv[]) {
 
 #if !(defined(__arm__) || defined(__mips__))
     if(pps > 0) {
+      int tx_syncronized = 0;
       /* rate set */
-      while((getticks() - tick_start) < (num_pkt_good_sent * tick_delta))
+      while((getticks() - tick_start) < (num_pkt_good_sent * tick_delta)) {
+        if (!tx_syncronized) {
+          pfring_flush_tx_packets(pd);
+          tx_syncronized = 1;
+        }
         if (unlikely(do_shutdown)) break;
+      }
     } else if (pps < 0) {
       /* real pcap rate */
       if (tosend->ticks_from_beginning == 0)
