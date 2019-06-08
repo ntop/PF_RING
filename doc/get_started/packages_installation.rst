@@ -10,8 +10,48 @@ on Intel adapters.
 This section guides you through the PF_RING configuration using the init scripts
 (init.d or systemctl according to your linux distribution) contained in the *pfring* 
 package, to automate the kernel module and drivers loading. Alternatively please
-note that it is possible to automatically configure PF_RING and drivers through the 
-nBox GUI.
+note that it is possible to automatically configure PF_RING and drivers using the
+*pf_ringcfg* script (since PF_RING 7.5) or through the nBox GUI.
+
+Configuration Wizard
+--------------------
+
+Since PF_RING 7.5, the pfring package includes the *pf_ringcfg* script that can be
+used to automatically create a configuration for the PF_RING kernel module and drivers.
+This is supposed to work in most cases, however for specific/custom configurations please
+refer to the *Manual Configuration* settings.
+
+Configuring and loading the ZC driver for an interface with *pf_ringcfg* is straightforward,
+it can be done in 3 steps:
+
+1. List the interfaces and check the driver model:
+
+.. code-block:: console
+
+   pf_ringcfg --list-interfaces               
+   Name: em1                  Driver: igb        [Supported by ZC]                 
+   Name: p1p2                 Driver: ixgbe      [Supported by ZC]                     
+   Name: p1p1                 Driver: ixgbe      [Supported by ZC]                     
+   Name: em2                  Driver: e1000e     [Supported by ZC]
+
+2. Configure and load the driver specifying the driver model and (optionally) the number of RSS queues per interface:
+
+.. code-block:: console
+
+   pf_ringcfg --configure-driver ixgbe --rss-queues 1
+
+3. Check that the driver has been successfully loaded by looking for 'Running ZC':
+
+.. code-block:: console
+
+   pf_ringcfg --list-interfaces               
+   Name: em1                  Driver: igb        [Supported by ZC]                 
+   Name: p1p2                 Driver: ixgbe      [Running ZC]                     
+   Name: p1p1                 Driver: ixgbe      [Running ZC]                     
+   Name: em2                  Driver: e1000e     [Supported by ZC]
+
+Manual Configuration
+--------------------
 
 The init script acts as follows:
 
