@@ -75,6 +75,7 @@ static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
 static u_int8_t set_if_mac = 0;
 static u_int8_t promisc = 1;
+static u_int16_t mtu = 0;
 static u_int16_t port_speed = 0;
 static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
@@ -114,6 +115,7 @@ static int port_init(void) {
 #ifdef SCATTERED_RX_TEST
     * 4
 #endif
+    * (mtu ? (((mtu + ETHER_MAX_LEN - 1500) / MBUF_BUF_SIZE) + 1) : 1)
   ;
 
   for (q = 0; q < num_queues; q++) {
@@ -157,6 +159,13 @@ static int port_init(void) {
     
     if (retval != 0)
       return retval;    
+
+    if (mtu) {
+      if (rte_eth_dev_set_mtu(port_id, mtu) != 0)
+        printf("Unable to set the MTU\n");
+      else
+        printf("MTU set to %u on port %u\n", mtu, port_id);
+    }
 
     numa_socket_id = rte_eth_dev_socket_id(port_id);
     
@@ -445,6 +454,7 @@ static void print_help(void) {
   printf("-M <addr>       Set the port MAC address\n");
   printf("-U              Do not set promisc\n");
   printf("-S <speed>      Set the port speed in Gbit/s (1/10/25/40/50/100)\n");
+  printf("-m <mtu>        Set the MTU\n");
   printf("-t              Test TX\n");
   printf("-T <size>       TX test packet size\n");
   printf("-P <pps>        TX test packet rate (pps)\n");
@@ -466,7 +476,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "FhM:n:p:tUvP:S:T:07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "Fhm:M:n:p:tUvP:S:T:07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
@@ -483,6 +493,9 @@ static int parse_args(int argc, char **argv) {
       if_mac.addr_bytes[0] = mac_a, if_mac.addr_bytes[1] = mac_b, if_mac.addr_bytes[2] = mac_c,
       if_mac.addr_bytes[3] = mac_d, if_mac.addr_bytes[4] = mac_e, if_mac.addr_bytes[5] = mac_f;
       set_if_mac = 1;
+      break;
+    case 'm':
+      mtu = atoi(optarg);
       break;
     case 'n':
       if (optarg) {
