@@ -200,6 +200,7 @@ static void forge_udp_packet_fast(u_char *buffer, u_int packet_len, u_int idx) {
 static int ip_offset = 0;
 static int reforge_src_mac = 0, reforge_dst_mac = 0;
 static int forge_vlan = 0, num_vlan = 1;
+static int forge_payload = 0;
 static char srcmac[6] = { 0 }, dstmac[6] = { 0 };
 static struct in_addr srcaddr = { 0 }, dstaddr = { 0 };
 
@@ -209,7 +210,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
   struct compact_ipv6_hdr *ip6;
   struct compact_udp_hdr *udp;
   u_char *addr;
-  int l2_len, ip_len, addr_len, i;
+  int l2_len, ip_len, addr_len, i, payload_off;
 
   /* Reset packet */
   memset(buffer, 0, buffer_len);
@@ -239,6 +240,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     ip6->daddr[0] = dstaddr.s_addr;
     addr = (u_char *) ip6->saddr;
     addr_len = sizeof(ip6->saddr);
+    payload_off = l2_len + sizeof(struct compact_ipv6_hdr);
   } else {
     buffer[l2_len-2] = 0x08, buffer[l2_len-1] = 0x00;
     ip = (struct compact_ip_hdr *) &buffer[l2_len];
@@ -256,6 +258,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     ip->check = wrapsum(in_cksum((unsigned char *) ip, ip_len, 0));
     addr = (u_char *) &ip->saddr;
     addr_len = sizeof(ip->saddr);
+    payload_off = l2_len + sizeof(struct compact_ip_hdr);
   }
 
   udp = (struct compact_udp_hdr *)(buffer + l2_len + ip_len);
@@ -263,6 +266,11 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
   udp->dport = htons(3000);
   udp->len = htons(buffer_len - l2_len - ip_len);
   udp->check = 0; /* It must be 0 to compute the checksum */
+
+  payload_off += sizeof(struct compact_udp_hdr);
+  if (forge_payload)
+    for (i = payload_off; i < buffer_len; i++)
+      buffer[i] = i;
 
   /*
     http://www.cs.nyu.edu/courses/fall01/G22.2262-001/class11.htm
