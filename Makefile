@@ -1,6 +1,6 @@
 all:
 	cd kernel; make
-	cd userland; make
+	cd userland; ./configure; make
 	cd drivers; make
 
 install:
