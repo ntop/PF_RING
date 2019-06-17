@@ -69,6 +69,7 @@ cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so
   cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 %endif
 cp $HOME/PF_RING/package/usr/local/bin/pf_ringctl $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/package/usr/local/bin/pf_ringcfg $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/package/usr/local/bin/clusterctl $RPM_BUILD_ROOT/usr/local/bin
 # DAQ
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
@@ -128,6 +129,7 @@ rm -fr $RPM_BUILD_ROOT
 /etc/init.d/cluster
 %endif
 /usr/local/bin/pf_ringctl
+/usr/local/bin/pf_ringcfg
 /usr/local/bin/clusterctl
 
 # Set the default attributes of all of the files specified to have an
@@ -157,8 +159,7 @@ case "$1" in
     # install
     %if 0%{?centos_ver} == 7
       /bin/systemctl daemon-reload
-      /bin/systemctl enable pf_ring
-      /bin/systemctl enable cluster
+      %systemd_post pf_ring.service cluster.service
     %else
       /sbin/chkconfig --add pf_ring
       /sbin/chkconfig --add cluster
@@ -175,10 +176,10 @@ fi
 
 /sbin/ldconfig > /dev/null 2>&1
 
+%postun
 if [ ! -f /.dockerenv ]; then
 %if 0%{?centos_ver} == 7
-  /bin/systemctl restart pf_ring
-  /bin/systemctl restart cluster
+  %systemd_postun_with_restart pf_ring.service cluster.service "cluster@*.service"
 %else
   /etc/init.d/pf_ring restart
   /etc/init.d/cluster restart
@@ -191,12 +192,7 @@ case "$1" in
   0)
     # un-install
     %if 0%{?centos_ver} == 7
-      /bin/systemctl disable "cluster"
-      /bin/systemctl disable "cluster@*"
-      /bin/systemctl disable pf_ring
-      /bin/systemctl stop "cluster"
-      /bin/systemctl stop "cluster@*"
-      /bin/systemctl stop pf_ring
+      %systemd_preun pf_ring.service "cluster.service" "cluster@*.service"
     %else
       /etc/init.d/cluster stop
       /etc/init.d/pf_ring stop

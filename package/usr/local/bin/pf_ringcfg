@@ -1,0 +1,288 @@
+#!/bin/bash
+#
+# Configure the PF_RING kernel module and drivers
+#
+
+SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
+
+PF_RING_CONFIG_DIR="/etc/pf_ring"
+ZC_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'fm10k')
+
+CONF_DRIVER_NAME=""
+CONF_RSS_QUEUES=1
+CONF_HUGEPAGES=1024
+CONF_KERNEL_BUFFER_SLOTS=65536
+
+DISTRO="unknown"
+if [ -f /lib/lsb/init-functions ]; then
+	DISTRO="debian"
+	. /lib/lsb/init-functions
+fi
+if [ -f /etc/init.d/functions ]; then
+	DISTRO="centos"
+	. /etc/init.d/functions
+fi
+
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+zc_driver_installed() {
+	MODEL=$1
+	if [ ${DISTRO} == "debian" ]; then
+		if [ `dpkg -l | grep ${MODEL}-zc-dkms | wc -l` -gt 0 ]; then
+			return 0
+		fi
+	elif [ ${DISTRO} == "centos" ]; then
+		if [ `rpm -qa | grep ${MODEL}-zc | wc -l` -gt 0 ]; then
+			return 0
+		fi
+	fi
+	return 1
+}
+
+install_zc_driver() {
+	MODEL=$1
+	if [ ${DISTRO} == "debian" ]; then
+		apt-get clean all
+		apt-get update
+		apt-get install pfring-dkms ${MODEL}-zc-dkms
+	elif [ ${DISTRO} == "centos" ]; then
+		yum clean all
+		yum update
+		yum install pfring-dkms ${MODEL}-zc
+	fi
+	return 1
+}
+
+number_of_nodes() {
+	NODES=$(cat /proc/cpuinfo | grep "physical id" | uniq | wc -l)
+	return $NODES
+}
+
+restart_pfring() {
+	if hash systemctl 2>/dev/null; then
+		/bin/systemctl restart pf_ring
+	else
+		/etc/init.d/pf_ring restart
+	fi
+}
+
+print_usage() {
+	echo "Usage: ${1} [options]"
+	echo ""
+	echo "Options:"
+	echo " --list-zc-drivers"
+	echo " --list-interfaces"
+	echo " --configure-driver <name> [--rss-queues <number>]"
+	exit 1
+}
+
+is_supported_by_zc() {
+	local IN=1
+	DRIVER=$1
+
+	for D in ${ZC_DRIVERS[@]} ; do
+		if [[ "${D}" == "${DRIVER}" || "${D}_zc" == "${DRIVER}" ]]; then
+			IN=0
+			break
+		fi
+	done
+	return $IN
+}
+
+get_interface_driver() {
+	IF=$1
+	DRIVER=$(ethtool -i ${IF} | grep "driver:" | cut -d' ' -f 2)
+}
+
+is_interface_running_zc() {
+	IF=$1
+
+	if [ `cat /proc/net/pf_ring/dev/${IF}/info | grep ZC | wc -l` -gt 0 ]; then
+		return 0
+	fi
+
+	return 1
+}
+
+print_drivers() {
+	for D in ${ZC_DRIVERS[@]} ; do
+		echo "${D}"
+	done
+}
+
+print_interfaces() {
+	INTERFACES=($(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g'))
+	for D in ${INTERFACES[@]} ; do
+		IF=$D
+
+		# Check if this is a VLAN interface
+		if [ -f /proc/net/vlan/config ]; then
+			IF=$(eval "cat /proc/net/vlan/config | awk '/^${D} / {print \$5}'")
+			if [ -z $IF ]; then
+				IF=$D
+				continue
+			fi
+		fi
+
+		get_interface_driver ${IF}
+
+		INFO=""
+		if is_interface_running_zc ${IF}; then
+			INFO="[Running ZC]"
+		elif is_supported_by_zc ${DRIVER}; then
+			INFO="[Supported by ZC]"
+		fi
+
+		printf "Name: %-20s Driver: %-10s %-15s" "${IF}" "${DRIVER}" "${INFO}"
+		echo ""
+	done
+}
+
+count_by_driver() {
+	MATCH_DRIVER=$1
+	INTERFACES=($(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g'))
+	INTERFACE_COUNT=0
+	for D in ${INTERFACES[@]} ; do
+		IF=$D
+
+		# Check if this is a VLAN interface
+		if [ -f /proc/net/vlan/config ]; then
+			IF=$(eval "cat /proc/net/vlan/config | awk '/^${D} / {print \$5}'")
+			if [ -z $IF ]; then
+				IF=$D
+				continue
+			fi
+		fi
+
+		get_interface_driver ${IF}
+
+		if [[ "${MATCH_DRIVER}" == "${DRIVER}" || "${MATCH_DRIVER}_zc" == "${DRIVER}" ]]; then
+			INTERFACE_COUNT=$[$INTERFACE_COUNT +1]
+			echo ${IF}
+		fi
+	done
+	return $INTERFACE_COUNT
+}
+
+configure_driver() {
+	NQ=$CONF_RSS_QUEUES
+
+	if is_supported_by_zc ${CONF_DRIVER_NAME}; then
+		# supported
+		:
+	else
+		# not supported
+		echo "Please provide a supported driver with --configure-driver <name> (please check --list-zc-drivers)"
+		exit 1
+	fi
+
+	echo "[>] Installing drivers"
+	
+	install_zc_driver ${CONF_DRIVER_NAME}
+	
+	echo "[>] Configuring PF_RING"
+
+	echo "min_num_slots=${CONF_KERNEL_BUFFER_SLOTS}" > ${PF_RING_CONFIG_DIR}/pf_ring.conf
+
+	echo "[>] Configuring hugepages"
+
+	number_of_nodes
+	NUM_NODES=$?
+
+	INDEX=0
+	rm ${PF_RING_CONFIG_DIR}/hugepages.conf
+	while [ "$INDEX" -ne "$NUM_NODES" ]; do
+		echo "node=${INDEX} hugepagenumber=${CONF_HUGEPAGES}" >> ${PF_RING_CONFIG_DIR}/hugepages.conf
+		let INDEX=INDEX+1 
+	done
+
+	echo "[>] Detecting interfaces using $CONF_DRIVER_NAME"
+
+	count_by_driver $CONF_DRIVER_NAME
+	NUM_INTERFACES=$?
+
+	if [ "$NUM_INTERFACES" -lt "1" ]; then
+		echo "No $CONF_DRIVER_NAME interface found"
+		exit 1
+	fi
+
+	echo "[>] Configuring $CONF_DRIVER_NAME driver with $CONF_RSS_QUEUES RSS queues"
+
+	mkdir -p ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}
+
+	INDEX=1
+	RSS_LIST="${NQ}"
+	while [ "$INDEX" -ne "$NUM_INTERFACES" ]; do
+		RSS_LIST="${RSS_LIST},${NQ}"
+		let INDEX=INDEX+1
+	done
+
+	echo "RSS=${RSS_LIST}" > ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
+	touch ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.start
+
+	echo "[>] Restarting PF_RING"
+
+	restart_pfring
+
+	echo "[>] Configuration completed"
+}
+
+ACTION=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+KEY="$1"
+
+case $KEY in
+--list-zc-drivers)
+	ACTION="list-zc-drivers"
+	shift
+	shift
+	;;
+--list-interfaces)
+	ACTION="list-interfaces"
+	shift
+	shift
+	;;
+--configure-driver)
+	ACTION="configure-driver"
+	CONF_DRIVER_NAME="$2"
+	shift
+	shift
+	;;
+--rss-queues)
+	CONF_RSS_QUEUES="$2"
+	shift
+	shift
+	;;
+-v|--verbose)
+	QUIET=false
+	shift
+	;;
+*)
+	POSITIONAL+=("$1")
+	shift
+	;;
+esac
+done
+set -- "${POSITIONAL[@]}" # restore positional parameters
+
+case "$ACTION" in
+list-zc-drivers)
+	print_drivers;
+	;;
+list-interfaces)
+	print_interfaces;
+	;;
+configure-driver)
+	configure_driver;
+	;;
+*)
+	print_usage ${0};
+	;;
+esac
+
+exit 0
