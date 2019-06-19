@@ -1,6 +1,6 @@
 PACKAGE_NAME="@I40E@_zc"
 PACKAGE_VERSION="@I40E_VERSION@"
-MAKE[0]="make"
+MAKE[0]="make BUILD_KERNEL=${kernelver}"
 CLEAN="make clean"
 BUILT_MODULE_NAME[0]="@I40E@_zc"
 DEST_MODULE_LOCATION[0]="/updates"
