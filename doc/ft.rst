@@ -164,7 +164,10 @@ It is also possible to specify filtering and shunting rules using a configuratio
    YouTube = discard
    Netflix = discard
 
-Where supported protocol actions are *forward* and *discard*.
+Where:
+
+- supported entries for the *shunt* section include all the nDPI application protocols, *tcp*/*udp* for L4 protocols when there is no application protocol match, *default* for all traffic matching none of the application or L4 rules (default for *default* is 0, which means that shunting is disabled).
+- supported protocol actions for the *filter* section are *forward* and *discard*.
 
 It is also possible to set specify the default action for detected protocols adding the global default:
 
