@@ -7441,6 +7441,7 @@ static int ring_getsockopt(struct socket *sock,
 	return(-EFAULT);
     } else if((pfr->ring_dev != NULL)
 	      && (pfr->ring_dev->dev != NULL)) {
+      char empty_mac[ETH_ALEN] = { 0 };
       char lowest_if_mac[ETH_ALEN] = { 0 };
       char magic_if_mac[ETH_ALEN];
       memset(magic_if_mac, RING_MAGIC_VALUE, sizeof(magic_if_mac));
@@ -7468,7 +7469,12 @@ static int ring_getsockopt(struct socket *sock,
 	if(copy_to_user(optval, lowest_if_mac, ETH_ALEN))
 	  return(-EFAULT);
       } else {
-	if(copy_to_user(optval, pfr->ring_dev->dev->dev_addr, ETH_ALEN))
+        char *dev_addr = pfr->ring_dev->dev->dev_addr;
+
+        if (dev_addr == NULL) /* e.g. 'any' device */
+          dev_addr = empty_mac;
+
+	if(copy_to_user(optval, dev_addr, ETH_ALEN))
 	  return(-EFAULT);
       }
     } else
