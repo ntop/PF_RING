@@ -26,6 +26,15 @@ if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
   LIBARCH="_$NATIVE"
 fi
 
+dnl> Debug - disabled by default
+AC_ARG_ENABLE([debug], AS_HELP_STRING([--enable-debug], [Enable debug mode]))
+if test "x$enable_debug" = xyes; then
+  DEBUG=1
+  CFLAGS="-g $CFLAGS"
+else
+  CFLAGS="-O2 $CFLAGS"
+fi
+
 dnl> Redis - disabled by default
 AC_ARG_ENABLE([redis], AS_HELP_STRING([--enable-redis], [Enable Redis support in PF_RING]))
 if test "x$enable_redis" = xyes; then
@@ -80,6 +89,7 @@ if test -f lib/$PF_RING_ZC_LIB; then
   PF_RING_ZC_DEP="extract_pfring_zc_lib"
   PF_RING_ZC_H="pfring_zc.h"
   AC_MSG_RESULT(yes)
+  
 else
   AC_MSG_RESULT(no)
 fi
@@ -91,7 +101,7 @@ AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
 
 AC_MSG_CHECKING([PF_RING FT support])
 PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
-if test -f lib/$PF_RING_FT_LIB; then
+if test -f "lib/$PF_RING_FT_LIB"; then
   HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
   PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
   PF_RING_FT_DEP="extract_pfring_ft_lib"
@@ -99,6 +109,20 @@ if test -f lib/$PF_RING_FT_LIB; then
   AC_MSG_RESULT(yes)
 else
   AC_MSG_RESULT(no)
+fi
+
+if test -f "lib/$PF_RING_FT_LIB"; then
+  if test ! -z "$DEBUG" ; then
+    AC_MSG_CHECKING([FT debug library])
+    PF_RING_FT_LIB_DBG="libs/libpfring_ft_${MACHINE}_dbg${PF_RING_FT_LIB_EXT}.a" 
+    if test -f "lib/${PF_RING_FT_LIB_DBG}"; then
+      PF_RING_FT_LIB=${PF_RING_FT_LIB_DBG}
+      PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+  fi
 fi
 
 AC_MSG_CHECKING([PF_RING NPCAP support])

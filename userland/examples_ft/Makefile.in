@@ -11,7 +11,7 @@ LIBPFRING  = ${PFRINGDIR}/libpfring.a
 #
 # PF_RING aware libpcap
 #
-O_FLAG     = -DHAVE_PF_RING -O2
+O_FLAG     = -DHAVE_PF_RING
 EXTRA_LIBS =
 PCAPDIR    = ../libpcap
 LIBPCAP    = ${PCAPDIR}/libpcap.a  ${EXTRA_LIBS}
