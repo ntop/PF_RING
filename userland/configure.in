@@ -89,9 +89,22 @@ if test -f lib/$PF_RING_ZC_LIB; then
   PF_RING_ZC_DEP="extract_pfring_zc_lib"
   PF_RING_ZC_H="pfring_zc.h"
   AC_MSG_RESULT(yes)
-  
-else
+  else
   AC_MSG_RESULT(no)
+fi
+
+if test -f "lib/$PF_RING_ZC_LIB"; then
+  if test ! -z "$DEBUG" ; then
+    AC_MSG_CHECKING([ZC debug library])
+    PF_RING_ZC_LIB_DBG="libs/libpfring_zc_${MACHINE}_dbg.a" 
+    if test -f "lib/${PF_RING_ZC_LIB_DBG}"; then
+      PF_RING_ZC_LIB=${PF_RING_ZC_LIB_DBG}
+      PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB_DBG} | grep -F .o | tr '\n' ' '`
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+  fi
 fi
 
 dnl> FT dlopen - Default enabled
