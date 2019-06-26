@@ -1173,6 +1173,9 @@ pfring_if_t *pfring_mod_findalldevs() {
   const char *str_mode = "Polling Mode:";
   char path[256], name[256];
   int is_zc;
+#ifdef HAVE_PF_RING_ZC
+  u_int32_t expiration_epoch;
+#endif
 
   if (getifaddrs(&ifap) != 0)
     return NULL;
@@ -1209,18 +1212,16 @@ pfring_if_t *pfring_mod_findalldevs() {
         tmp->name = strdup(ifa->ifa_name);
         tmp->module = strdup("pf_ring");
       } else {
-#ifdef HAVE_PF_RING_ZC
-        u_int32_t expiration_epoch;
-#endif
-	
         snprintf(name, sizeof(name), "zc:%s", ifa->ifa_name);
         tmp->name = strdup(name);
         tmp->module = strdup("pf_ring-zc");
-#ifdef HAVE_PF_RING_ZC
-        tmp->license = pfring_zc_check_device_license_by_name(name, &expiration_epoch);
-        tmp->license_expiration = expiration_epoch;
-#endif
       }
+
+#ifdef HAVE_PF_RING_ZC
+      /* Note: check license in any case as the ZC driver could have been unloaded */
+      tmp->license = pfring_zc_check_device_license_by_name(tmp->name, &expiration_epoch);
+      tmp->license_expiration = expiration_epoch;
+#endif
 
       tmp->system_name = strdup(ifa->ifa_name);
       tmp->status = !!(ifa->ifa_flags & IFF_UP);
