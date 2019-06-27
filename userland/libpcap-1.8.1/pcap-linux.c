@@ -1478,6 +1478,7 @@ pcap_activate_linux(pcap_t *handle)
 
 	device = handle->opt.device;
 
+#ifndef HAVE_PF_RING
 	/*
 	 * Make sure the name we were handed will fit into the ioctls we
 	 * might perform on the device; if not, return a "No such device"
@@ -1493,6 +1494,7 @@ pcap_activate_linux(pcap_t *handle)
 		status = PCAP_ERROR_NO_SUCH_DEVICE;
 		goto fail;
 	}
+#endif
 
 	handle->inject_op = pcap_inject_linux;
 	handle->setfilter_op = pcap_setfilter_linux;
