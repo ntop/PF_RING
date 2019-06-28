@@ -13,6 +13,9 @@ CONF_RSS_QUEUES=1
 CONF_HUGEPAGES=1024
 CONF_KERNEL_BUFFER_SLOTS=65536
 
+QUIET=true
+FORCE=false
+
 DISTRO="unknown"
 if [ -f /lib/lsb/init-functions ]; then
 	DISTRO="debian"
@@ -75,7 +78,7 @@ print_usage() {
 	echo "Options:"
 	echo " --list-zc-drivers"
 	echo " --list-interfaces"
-	echo " --configure-driver <name> [--rss-queues <number>]"
+	echo " --configure-driver <name> [--rss-queues <number>] [--force]"
 	exit 1
 }
 
@@ -195,6 +198,12 @@ configure_driver() {
 
 	echo "min_num_slots=${CONF_KERNEL_BUFFER_SLOTS}" > ${PF_RING_CONFIG_DIR}/pf_ring.conf
 
+	if [ "$FORCE" = true ] ; then
+		touch ${PF_RING_CONFIG_DIR}/forcestart
+	else
+		rm ${PF_RING_CONFIG_DIR}/forcestart 2>/dev/null
+	fi
+
 	echo "[>] Configuring hugepages"
 
 	number_of_nodes
@@ -264,6 +273,10 @@ case $KEY in
 --rss-queues)
 	CONF_RSS_QUEUES="$2"
 	shift
+	shift
+	;;
+--force)
+	FORCE=true
 	shift
 	;;
 -v|--verbose)
