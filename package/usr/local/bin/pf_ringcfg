@@ -13,6 +13,9 @@ CONF_RSS_QUEUES=1
 CONF_HUGEPAGES=1024
 CONF_KERNEL_BUFFER_SLOTS=65536
 
+QUIET=true
+FORCE=false
+
 DISTRO="unknown"
 if [ -f /lib/lsb/init-functions ]; then
 	DISTRO="debian"
@@ -75,7 +78,7 @@ print_usage() {
 	echo "Options:"
 	echo " --list-zc-drivers"
 	echo " --list-interfaces"
-	echo " --configure-driver <name> [--rss-queues <number>]"
+	echo " --configure-driver <name> [--rss-queues <number>] [--force]"
 	exit 1
 }
 
@@ -94,7 +97,7 @@ is_supported_by_zc() {
 
 get_interface_driver() {
 	IF=$1
-	DRIVER=$(ethtool -i ${IF} | grep "driver:" | cut -d' ' -f 2)
+	DRIVER=$(ethtool -i ${IF} 2>/dev/null | grep "driver:" | cut -d' ' -f 2)
 }
 
 is_interface_running_zc() {
@@ -179,13 +182,27 @@ configure_driver() {
 		exit 1
 	fi
 
-	echo "[>] Installing drivers"
+	if ! zc_driver_installed ${CONF_DRIVER_NAME}; then
+		echo "[>] Installing ${CONF_DRIVER_NAME} Zero-Copy driver"
+
+		read -p "Continue (y/n)?" choice
+		case "$choice" in 
+		  y|Y ) ;;
+		  * ) echo "Aborting"; exit 1;;
+		esac
 	
-	install_zc_driver ${CONF_DRIVER_NAME}
+		install_zc_driver ${CONF_DRIVER_NAME}
+	fi
 	
 	echo "[>] Configuring PF_RING"
 
 	echo "min_num_slots=${CONF_KERNEL_BUFFER_SLOTS}" > ${PF_RING_CONFIG_DIR}/pf_ring.conf
+
+	if [ "$FORCE" = true ] ; then
+		touch ${PF_RING_CONFIG_DIR}/forcestart
+	else
+		rm ${PF_RING_CONFIG_DIR}/forcestart 2>/dev/null
+	fi
 
 	echo "[>] Configuring hugepages"
 
@@ -193,7 +210,7 @@ configure_driver() {
 	NUM_NODES=$?
 
 	INDEX=0
-	rm ${PF_RING_CONFIG_DIR}/hugepages.conf
+	rm ${PF_RING_CONFIG_DIR}/hugepages.conf 2>/dev/null
 	while [ "$INDEX" -ne "$NUM_NODES" ]; do
 		echo "node=${INDEX} hugepagenumber=${CONF_HUGEPAGES}" >> ${PF_RING_CONFIG_DIR}/hugepages.conf
 		let INDEX=INDEX+1 
@@ -256,6 +273,10 @@ case $KEY in
 --rss-queues)
 	CONF_RSS_QUEUES="$2"
 	shift
+	shift
+	;;
+--force)
+	FORCE=true
 	shift
 	;;
 -v|--verbose)
