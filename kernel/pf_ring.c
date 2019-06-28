@@ -1087,8 +1087,8 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     seq_printf(m, "Polling Mode: %s\n", dev_ptr->is_zc_device ? "NAPI/ZC" : "NAPI");
 
     switch(dev->type) {
-    case 1:   strcpy(dev_buf, "Ethernet"); break;
-    case 772: strcpy(dev_buf, "Loopback"); break;
+    case ARPHRD_ETHER    /*   1 */: strcpy(dev_buf, "Ethernet"); break;
+    case ARPHRD_LOOPBACK /* 772 */: strcpy(dev_buf, "Loopback"); break;
     default: sprintf(dev_buf, "%d", dev->type); break;
     }
 
@@ -2719,6 +2719,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
   u_char *ring_bucket;
   u_int64_t off;
   u_short do_lock = (
+    (skb->dev->type == ARPHRD_LOOPBACK) ||
     (enable_tx_capture && pfr->direction != rx_only_direction) ||
     (pfr->num_channels_per_ring > 1) ||
     (pfr->channel_id_mask == RING_ANY_CHANNEL && lock_rss_queues(skb->dev)) ||
