@@ -94,7 +94,7 @@ is_supported_by_zc() {
 
 get_interface_driver() {
 	IF=$1
-	DRIVER=$(ethtool -i ${IF} | grep "driver:" | cut -d' ' -f 2)
+	DRIVER=$(ethtool -i ${IF} 2>/dev/null | grep "driver:" | cut -d' ' -f 2)
 }
 
 is_interface_running_zc() {
@@ -179,9 +179,17 @@ configure_driver() {
 		exit 1
 	fi
 
-	echo "[>] Installing drivers"
+	if ! zc_driver_installed ${CONF_DRIVER_NAME}; then
+		echo "[>] Installing ${CONF_DRIVER_NAME} Zero-Copy driver"
+
+		read -p "Continue (y/n)?" choice
+		case "$choice" in 
+		  y|Y ) ;;
+		  * ) echo "Aborting"; exit 1;;
+		esac
 	
-	install_zc_driver ${CONF_DRIVER_NAME}
+		install_zc_driver ${CONF_DRIVER_NAME}
+	fi
 	
 	echo "[>] Configuring PF_RING"
 
@@ -193,7 +201,7 @@ configure_driver() {
 	NUM_NODES=$?
 
 	INDEX=0
-	rm ${PF_RING_CONFIG_DIR}/hugepages.conf
+	rm ${PF_RING_CONFIG_DIR}/hugepages.conf 2>/dev/null
 	while [ "$INDEX" -ne "$NUM_NODES" ]; do
 		echo "node=${INDEX} hugepagenumber=${CONF_HUGEPAGES}" >> ${PF_RING_CONFIG_DIR}/hugepages.conf
 		let INDEX=INDEX+1 
