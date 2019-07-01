@@ -22,9 +22,15 @@ This is supposed to work in most cases, however for specific/custom configuratio
 refer to the *Manual Configuration* settings.
 
 Configuring and loading the ZC driver for an interface with *pf_ringcfg* is straightforward,
-it can be done in 3 steps:
+it can be done in a few steps:
 
-1. List the interfaces and check the driver model:
+1. Configure the repository as explained at http://packages.ntop.org and install the *pfring* package which includes the pf_ringcfg script (example for Ubuntu below):
+
+.. code-block:: console
+
+   apt-get install pfring
+
+2. List the interfaces and check the driver model:
 
 .. code-block:: console
 
@@ -34,13 +40,13 @@ it can be done in 3 steps:
    Name: p1p1                 Driver: ixgbe      [Supported by ZC]                     
    Name: em2                  Driver: e1000e     [Supported by ZC]
 
-2. Configure and load the driver specifying the driver model and (optionally) the number of RSS queues per interface:
+3. Configure and load the driver specifying the driver model and (optionally) the number of RSS queues per interface:
 
 .. code-block:: console
 
    pf_ringcfg --configure-driver ixgbe --rss-queues 1
 
-3. Check that the driver has been successfully loaded by looking for 'Running ZC':
+4. Check that the driver has been successfully loaded by looking for 'Running ZC':
 
 .. code-block:: console
 
