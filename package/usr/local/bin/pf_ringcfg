@@ -146,14 +146,12 @@ count_by_driver() {
 	MATCH_DRIVER=$1
 	INTERFACES=($(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g'))
 	INTERFACE_COUNT=0
-	for D in ${INTERFACES[@]} ; do
-		IF=$D
+	for IF in ${INTERFACES[@]} ; do
 
 		# Check if this is a VLAN interface
 		if [ -f /proc/net/vlan/config ]; then
-			IF=$(eval "cat /proc/net/vlan/config | awk '/^${D} / {print \$5}'")
-			if [ -z $IF ]; then
-				IF=$D
+			PIF=$(eval "cat /proc/net/vlan/config | awk '/^${IF} / {print \$5}'")
+			if [ ! -z $PIF ]; then
 				continue
 			fi
 		fi
