@@ -8,7 +8,7 @@ Napatech module at runtime.
 Prerequisite
 ------------
 
-Napatech drivers and SDK installed.
+Napatech drivers and SDK installed. Latest Napatech SDK is available for download at https://www.napatech.com/downloads/.
 
 Note: as of PF_RING 6.6 dynamic linking is used and you are able to use
 any ntanl driver version.
