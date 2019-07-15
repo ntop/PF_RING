@@ -12,18 +12,19 @@ SYS_LIBS=""
 VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MAJOR_VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1`
 
-dnl> Checking for supported libraries (corei7, corei7-avx, core-avx2)
-NATIVE=`$CC -c -Q -march=native --help=target| grep "march" | xargs | cut -d ' ' -f 2`
-if test "$NATIVE" = haswell; then
-  NATIVE="core-avx2"
-fi
-
 AC_ARG_ENABLE([archopt], AS_HELP_STRING([--disable-archopt], [Disable march and mtune optimization flags]))
-AS_IF([test "x$enable_archopt" != "xno"], , [NATIVE=""])
+if test "x$enable_archopt" != "xno"; then
+  dnl> Checking for supported libraries (corei7, corei7-avx, core-avx2)
+  NATIVE=`$CC -c -Q -march=native --help=target| grep "march" | xargs | cut -d ' ' -f 2`
 
-if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
-  CFLAGS="-march=native -mtune=native $CFLAGS"
-  LIBARCH="_$NATIVE"
+  if test "$NATIVE" = haswell; then
+    NATIVE="core-avx2"
+  fi
+
+  if test -f "lib/libs/libpfring_zc_x86_64_$NATIVE.a"; then
+    CFLAGS="-march=native -mtune=native $CFLAGS"
+    LIBARCH="_$NATIVE"
+  fi
 fi
 
 dnl> Debug - disabled by default
