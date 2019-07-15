@@ -2738,7 +2738,11 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
   u_int64_t off;
   u_short do_lock = (
     (skb->dev->type == ARPHRD_LOOPBACK) ||
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(4,3,0))
     (netif_is_bridge_master(skb->dev)) ||
+#else
+    (skb->dev->priv_flags & IFF_EBRIDGE) ||
+#endif
     (enable_tx_capture && pfr->direction != rx_only_direction) ||
     (pfr->num_channels_per_ring > 1) ||
     (pfr->channel_id_mask == RING_ANY_CHANNEL && lock_rss_queues(skb->dev)) ||
