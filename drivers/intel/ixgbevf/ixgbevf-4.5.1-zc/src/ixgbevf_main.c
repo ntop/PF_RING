@@ -5540,7 +5540,9 @@ static int ixgbevf_xdp(struct net_device *dev, struct netdev_xdp *xdp)
 	case XDP_SETUP_PROG:
 		return ixgbevf_xdp_setup(dev, xdp->prog);
 	case XDP_QUERY_PROG:
-		xdp->prog_attached = !!(adapter->xdp_prog);
+#ifndef NO_NETDEV_BPF_PROG_ATTACHED
+                xdp->prog_attached = !!(adapter->xdp_prog);
+#endif /* !NO_NETDEV_BPF_PROG_ATTACHED */
 		xdp->prog_id = adapter->xdp_prog ?
 			       adapter->xdp_prog->aux->id : 0;
 		return 0;
