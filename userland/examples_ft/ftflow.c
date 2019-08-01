@@ -190,7 +190,7 @@ const char *action_to_string(pfring_ft_action action) {
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
-  char buf1[32], buf2[32], buf3[32];
+  char buf1[32], buf2[32], buf3[32], buf4[32], buf5[32];
   char *ip1, *ip2;
 
   k = pfring_ft_flow_get_key(flow);
@@ -210,9 +210,10 @@ void processFlow(pfring_ft_flow *flow, void *user){
     printf("l7: %s, category: %u, ",
 	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category);
 
-  printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
+  printf("srcMac: %s, dstMac: %s, srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, action: %s",
+         etheraddr2string(k->smac, buf4), etheraddr2string(k->dmac, buf5),
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes,
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec,
