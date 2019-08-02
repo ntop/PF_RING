@@ -147,6 +147,8 @@ typedef struct {
 } pfring_ft_ndpi_protocol;
 
 typedef struct {
+  u_int8_t smac[6];           /**< Source MAC */
+  u_int8_t dmac[6];           /**< Destination MAC */
   pfring_ft_ip_address saddr; /**< Source IP address */
   pfring_ft_ip_address daddr; /**< Destination IP address */
   u_int8_t ip_version;        /**< IP version */
