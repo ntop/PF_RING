@@ -44,6 +44,14 @@ typedef enum {
   NUM_DIRECTIONS
 } pfring_ft_direction;
 
+typedef enum {
+  PFRING_FT_FLOW_STATUS_ACTIVE = 0,     /**< Active flow */
+  PFRING_FT_FLOW_STATUS_IDLE_TIMEOUT,   /**< Idle timeout */
+  PFRING_FT_FLOW_STATUS_ACTIVE_TIMEOUT, /**< Terminated after the maximum lifetime */
+  PFRING_FT_FLOW_STATUS_END_DETECTED,   /**< Terminated for end of flow (e.g. FIN) */
+  PFRING_FT_FLOW_STATUS_FORCED_END      /**< Terminated for external event (shutdown) */
+} pfring_ft_flow_status;
+
 /*** packet header structs ***/
 
 typedef u_int32_t pfring_ft_in4_addr;
@@ -186,6 +194,8 @@ typedef struct {
       u_int16_t responseCode; /**< HTTP response code */
     } http;
   } l7_metadata;
+
+  pfring_ft_flow_status status;
 
   void *user;                 /**< User metadata */
 } pfring_ft_flow_value;
