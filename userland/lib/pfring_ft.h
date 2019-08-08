@@ -469,6 +469,18 @@ pfring_ft_set_shunt_protocol_by_name(
 );
 
 /**
+ * Set a default action for all L7 protocols. This is usually used to reset all filtering rules
+ * by passing PFRING_FT_ACTION_DEFAULT as action.
+ * @param table The flow table handle. 
+ * @param action The action to set for all protocols.
+ */
+void 
+pfring_ft_set_filter_all_protocols(
+  pfring_ft_table *table,
+  pfring_ft_action action
+);
+
+/**
  * Set a filtering rule for a L7 protocol.
  * @param table The flow table handle. 
  * @param protocol_name The nDPI protocol name.
