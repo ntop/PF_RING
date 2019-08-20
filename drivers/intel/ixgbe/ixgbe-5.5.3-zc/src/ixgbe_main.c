@@ -1361,10 +1361,15 @@ int ring_is_not_empty(struct ixgbe_ring *rx_ring) {
 
 int wait_packet_function_ptr(void *data, int mode)
 {
-	struct ixgbe_ring *rx_ring = (struct ixgbe_ring*)data;
+	struct ixgbe_ring *rx_ring = (struct ixgbe_ring *) data;
 	struct ixgbe_adapter *adapter = netdev_priv(rx_ring->netdev);
 	struct ixgbe_q_vector *q_vector = rx_ring->q_vector;
 	int new_packets;
+
+	if(q_vector == NULL) {
+		printk("%s() failure: rx_ring->q_vector is NOT set\n", __FUNCTION__);
+		return (mode == 1) ? 1 : 0;
+	}
 
 	if(unlikely(enable_debug))
 		printk("%s(): enter [mode=%d/%s][queueId=%d]\n",
