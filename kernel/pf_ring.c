@@ -5717,13 +5717,25 @@ unsigned int ring_poll(struct file *file,
 
 /* ************************************* */
 
-int add_sock_to_cluster_list(ring_cluster_element * el, struct sock *sock)
+int add_sock_to_cluster_list(ring_cluster_element *el, struct sock *sk)
 {
+  struct pf_ring_socket *pfr = ring_sk(sk);
+
   if(el->cluster.num_cluster_elements == CLUSTER_LEN)
     return(-1);	/* Cluster full */
 
-  ring_sk(sock)->cluster_id = el->cluster.cluster_id;
-  el->cluster.sk[el->cluster.num_cluster_elements] = sock;
+  if (el->cluster.num_cluster_elements > 0) {
+    struct sock *first_sk = el->cluster.sk[0];
+    struct pf_ring_socket *first_pfr = ring_sk(first_sk);
+    if (!bitmap_equal(first_pfr->netdev_mask, pfr->netdev_mask, MAX_NUM_DEVICES_ID)) {
+      printk("[PF_RING] Error: adding sockets with different interfaces to cluster %u\n", 
+        el->cluster.cluster_id);
+      return(-EINVAL);
+    }
+  }
+
+  ring_sk(sk)->cluster_id = el->cluster.cluster_id;
+  el->cluster.sk[el->cluster.num_cluster_elements] = sk;
   el->cluster.num_cluster_elements++;
   return(0);
 }
