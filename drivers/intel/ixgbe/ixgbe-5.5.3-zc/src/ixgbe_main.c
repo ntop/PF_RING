@@ -1443,9 +1443,22 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct ixgbe_adapter *adapter;
 	int i;
   
-	if (xx_ring == NULL) return; /* safety check*/
+	if (xx_ring == NULL) { /* safety check*/
+		printk("%s() failure: xx_ring is NOT set\n", __FUNCTION__);
+		return;
+	}
 
 	adapter = netdev_priv(xx_ring->netdev);
+
+	if (adapter == NULL) { /* safety check*/
+		printk("%s() failure: adapter is NOT set\n", __FUNCTION__);
+		return;
+	}
+
+	if (rx_ring != NULL && rx_ring->q_vector == NULL) { /* safety check*/
+		printk("%s() failure: rx_ring->q_vector is NOT set\n", __FUNCTION__);
+		return;
+	}
 
 	if(device_in_use) { /* free all memory */
 
@@ -1487,7 +1500,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rxctrl = IXGBE_READ_REG(&adapter->hw, IXGBE_RXCTRL);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RXCTRL, rxctrl & ~IXGBE_RXCTRL_RXEN);
    
-			for (i=0; i<rx_ring->count; i++) {
+			for (i = 0; i < rx_ring->count; i++) {
 				union ixgbe_adv_rx_desc *rx_desc = IXGBE_RX_DESC(rx_ring, i);
 				rx_desc->read.pkt_addr = 0;
 				rx_desc->read.hdr_addr = 0;
@@ -1512,7 +1525,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			/* Restore TX */
 			tx_ring->next_to_clean = IXGBE_READ_REG(&adapter->hw, IXGBE_TDT(tx_ring->reg_idx));
        
-			for(i=0; i<tx_ring->count; i++) {
+			for(i = 0; i < tx_ring->count; i++) {
 				struct ixgbe_tx_buffer *tx_buffer = &tx_ring->tx_buffer_info[i];
 				tx_buffer->next_to_watch = NULL;
 				tx_buffer->skb = NULL;
