@@ -19,8 +19,8 @@ Load the driver:
    echo 2048 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
    export PATH=/opt/fiberblaze/bin:$PATH
    echo "/opt/fiberblaze/lib" > /etc/ld.so.conf.d/fiberblaze.conf; ldconfig
-   cd /opt/fiberblaze/driver; make; ./load_driver.sh hugepages='2G'
-   cd /opt/fiberblaze/bin; ./configurecard --device fbcard0 --configuration ../fbcard.cfg
+   cd /opt/fiberblaze/driver; make; ./load_driver.sh hugepages='2G'; cd -
+   cd /opt/fiberblaze/bin; ./configurecard --device fbcard0 --configuration ../fbcard.cfg; cd -
 
 Receive Traffic
 ---------------
