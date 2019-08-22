@@ -3743,7 +3743,7 @@ static int i40e_control_rxq(struct i40e_vsi *vsi, int pf_q, bool enable)
 	return ret;
 }
 
-void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
 	struct i40e_ring  *rx_ring = (struct i40e_ring *) rx_data;
 	struct i40e_ring  *tx_ring = (struct i40e_ring *) tx_data;
@@ -3754,7 +3754,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s %s\n", __FUNCTION__, device_in_use ? "open" : "close");
 
-	if (xx_ring == NULL) return; /* safety check */
+	if (xx_ring == NULL) return -1; /* safety check */
 
 	adapter = i40e_netdev_to_pf(xx_ring->netdev);
 
@@ -3854,10 +3854,11 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		printk("[PF_RING-ZC] %s %s@%d is %sIN use (%p counter: %u)\n", __FUNCTION__,
 			xx_ring->netdev->name, xx_ring->queue_index, device_in_use ? "" : "NOT ", 
 			adapter, atomic_read(&adapter->pfring_zc.usage_counter));
+
+	return 0;
 }
 
 #endif
-
 
 /**
  * i40e_vsi_configure - Set up the VSI for action

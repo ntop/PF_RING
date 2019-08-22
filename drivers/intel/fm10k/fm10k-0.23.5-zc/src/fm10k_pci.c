@@ -1963,7 +1963,7 @@ int wait_packet_function_ptr(void *data, int mode)
  	}
 }
 
-void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
 	struct fm10k_ring  *rx_ring = (struct fm10k_ring *) rx_data;
 	struct fm10k_ring  *tx_ring = (struct fm10k_ring *) tx_data;
@@ -1974,7 +1974,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	u8 enable_debug = 0;
 	int i;
   
-	if (xx_ring == NULL) return; /* safety check*/
+	if (xx_ring == NULL) return -1; /* safety check*/
 
 	interface = netdev_priv(xx_ring->netdev);
 	hw = &interface->hw;
@@ -2058,6 +2058,8 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s %s@%d is %sIN use\n", __FUNCTION__,
 		       xx_ring->netdev->name, xx_ring->queue_index, device_in_use ? "" : "NOT ");
+
+	return 0;
 }
 
 zc_dev_model pfring_zc_dev_model(struct fm10k_hw *hw)

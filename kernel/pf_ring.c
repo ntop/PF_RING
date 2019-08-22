@@ -5962,7 +5962,7 @@ static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapp
 static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   struct list_head *ptr, *tmp_ptr;
   zc_dev_list *entry;
-  int i, dev_found = 0, found;
+  int i, dev_found = 0, found, rc;
 
   debug_printk(1, "%s@%d\n", pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
 
@@ -6019,7 +6019,13 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   debug_printk(1, "added mapping %s@%u [num_bound_sockets=%u]\n",
            pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id, entry->num_bound_sockets);
 
-  pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 1 /* lock */);
+  rc = pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 1 /* lock */);
+
+  if (rc != 0) {
+    printk("[PF_RING] %s:%d something went wrong detaching %s@%u\n", __FUNCTION__, __LINE__,
+           pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+    return -1;
+  }
 
   ring_proc_add(pfr);
 
@@ -6031,7 +6037,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
 static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
 {
   zc_dev_list *entry = pfr->zc_device_entry;
-  int i, found;
+  int i, found, rc;
 
   debug_printk(1, "releasing %s@%d\n",
 	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
@@ -6067,9 +6073,16 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
            pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id, entry->num_bound_sockets);
 
   if(pfr->zc_dev != NULL) {
-    pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 0 /* unlock */);
+    rc = pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 0 /* unlock */);
+
     pfr->zc_device_entry = NULL;
     pfr->zc_dev = NULL;
+
+    if (rc != 0) {
+      printk("[PF_RING] %s:%d something went wrong reattaching %s@%u\n", __FUNCTION__, __LINE__,
+             pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+      return -1;
+    }
   }
 
   return 0;

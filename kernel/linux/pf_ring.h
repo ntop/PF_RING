@@ -805,7 +805,7 @@ struct ring_sock {
 /* *********************************** */
 
 typedef int (*zc_dev_wait_packet)(void *adapter, int mode);
-typedef void (*zc_dev_notify)(void *rx_adapter_ptr, void *tx_adapter_ptr, u_int8_t device_in_use);
+typedef int (*zc_dev_notify)(void *rx_adapter_ptr, void *tx_adapter_ptr, u_int8_t device_in_use);
 
 typedef enum {
   add_device_mapping = 0, remove_device_mapping

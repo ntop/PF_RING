@@ -4452,7 +4452,7 @@ void enable_receives(struct e1000_adapter *adapter) {
 	usleep_range(10000, 20000);
 }
 
-void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) {
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) {
 	struct e1000_ring    *rx_ring = (struct e1000_ring*)rx_data;
 	struct e1000_ring    *tx_ring = (struct e1000_ring*)tx_data;
 	struct e1000_ring    *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
@@ -4461,7 +4461,7 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) {
   
 	if (xx_ring == NULL) { /* safety check */
 		printk("[PF_RING-ZC][e1000e] %s ???\n", __FUNCTION__);
-		return;
+		return -1;
 	}
 
 	if (debug_notify) printk("[PF_RING-ZC][e1000e] %s(rx_ring=%p, tx_ring=%p)\n", __FUNCTION__, rx_ring, tx_ring);
@@ -4576,6 +4576,8 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) {
 		if (unlikely(enable_debug))
 			printk("[PF_RING-ZC][e1000e] %s (2) %s is NOT IN use\n", __FUNCTION__, xx_ring->name);
 	}
+
+	return 0;
 }
 
 #endif
