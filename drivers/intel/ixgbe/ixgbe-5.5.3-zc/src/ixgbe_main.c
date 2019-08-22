@@ -1440,17 +1440,25 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct ixgbe_ring    *rx_ring = (struct ixgbe_ring *) rx_data;
 	struct ixgbe_ring    *tx_ring = (struct ixgbe_ring *) tx_data;
 	struct ixgbe_ring    *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
+	struct net_device    *netdev;
 	struct ixgbe_adapter *adapter;
 	int i;
   
-	if (xx_ring == NULL) { /* safety check*/
+	if (xx_ring == NULL) {
 		printk("%s() failure: xx_ring is NOT set\n", __FUNCTION__);
+		return;
+	}
+
+	netdev = xx_ring->netdev;
+
+	if (netdev == NULL) {
+		printk("%s() failure: xx_ring->netdev is NOT set\n", __FUNCTION__);
 		return;
 	}
 
 	adapter = netdev_priv(xx_ring->netdev);
 
-	if (adapter == NULL) { /* safety check*/
+	if (adapter == NULL) {
 		printk("%s() failure: adapter is NOT set\n", __FUNCTION__);
 		return;
 	}
@@ -1496,6 +1504,11 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			u32 rxctrl;
 
+			if (rx_ring->desc == NULL) {
+				printk("%s() failure: rx_ring->desc is NOT set\n", __FUNCTION__);
+				return;
+			}
+
 			/* disable receives while setting up the descriptors */
 			rxctrl = IXGBE_READ_REG(&adapter->hw, IXGBE_RXCTRL);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RXCTRL, rxctrl & ~IXGBE_RXCTRL_RXEN);
@@ -1522,6 +1535,12 @@ void notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		}
 
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
+
+			if (tx_ring->tx_buffer_info == NULL) {
+				printk("%s() failure: tx_ring->tx_buffer_info is NOT set\n", __FUNCTION__);
+				return;
+			}
+
 			/* Restore TX */
 			tx_ring->next_to_clean = IXGBE_READ_REG(&adapter->hw, IXGBE_TDT(tx_ring->reg_idx));
        
