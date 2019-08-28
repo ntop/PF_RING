@@ -29,6 +29,7 @@ typedef void pfring_ft_list;
 typedef void pfring_ft_flow;
 
 struct ndpi_detection_module_struct;
+struct ndpi_flow_struct;
 
 /*** enums ***/
 
@@ -395,6 +396,16 @@ pfring_ft_flow_get_key(
  */
 pfring_ft_flow_value *
 pfring_ft_flow_get_value(
+  pfring_ft_flow *flow
+);
+
+/**
+ * Get the nDPI flow handle.
+ * @param flow The flow handle.
+ * @return The flow value.
+ */
+struct ndpi_flow_struct *
+pfring_ft_flow_get_ndpi_handle(
   pfring_ft_flow *flow
 );
 
