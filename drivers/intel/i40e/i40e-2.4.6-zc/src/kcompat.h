@@ -34,6 +34,19 @@
 #include <linux/ethtool.h>
 #include <linux/if_vlan.h>
 
+#ifdef HAVE_PF_RING
+#define I40E_32BYTE_RX
+#ifdef CONFIG_DCB
+#undef CONFIG_DCB
+#ifdef CONFIG_FCOE
+#undef CONFIG_FCOE
+#endif
+#ifdef CONFIG_FCOE_MODULE
+#undef CONFIG_FCOE_MODULE
+#endif
+#endif
+#endif
+
 #ifndef GCC_VERSION
 #define GCC_VERSION (__GNUC__ * 10000		\
 		     + __GNUC_MINOR__ * 100	\
