@@ -41,8 +41,13 @@ inline int i40e_allocate_dma_mem_d(struct i40e_hw *hw,
 	struct i40e_pf *nf = (struct i40e_pf *)hw->back;
 
 	mem->size = ALIGN(size, alignment);
+#ifdef HAVE_DMA_ALLOC_COHERENT_ZEROES_MEM
+	mem->va = dma_alloc_coherent(&nf->pdev->dev, mem->size,
+				     &mem->pa, GFP_KERNEL);
+#else
 	mem->va = dma_zalloc_coherent(&nf->pdev->dev, mem->size,
 				      &mem->pa, GFP_KERNEL);
+#endif
 	if (!mem->va)
 		return -ENOMEM;
 

@@ -10541,14 +10541,19 @@ static int i40e_ndo_fdb_dump(struct sk_buff *skb,
  *
  * Note: expects to be called while under rtnl_lock()
  **/
-#ifdef HAVE_NDO_BRIDGE_SET_DEL_LINK_FLAGS
+#if defined(HAVE_NDO_BRIDGE_SETLINK_EXTACK)
+static int i40e_ndo_bridge_setlink(struct net_device *dev,
+				   struct nlmsghdr *nlh,
+				   u16 flags,
+				   struct netlink_ext_ack *extack)
+#elif defined(HAVE_NDO_BRIDGE_SET_DEL_LINK_FLAGS)
 static int i40e_ndo_bridge_setlink(struct net_device *dev,
 				   struct nlmsghdr *nlh,
 				   u16 flags)
 #else
 static int i40e_ndo_bridge_setlink(struct net_device *dev,
 				   struct nlmsghdr *nlh)
-#endif /* HAVE_NDO_BRIDGE_SET_DEL_LINK_FLAGS */
+#endif
 {
 	struct i40e_netdev_priv *np = netdev_priv(dev);
 	struct i40e_vsi *vsi = np->vsi;
