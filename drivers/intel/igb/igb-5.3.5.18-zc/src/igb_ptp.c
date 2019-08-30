@@ -1,26 +1,5 @@
-/*******************************************************************************
-
-  Intel(R) Gigabit Ethernet Linux Driver
-  Copyright(c) 2007 - 2018 Intel Corporation.
-
-  This program is free software; you can redistribute it and/or modify it
-  under the terms and conditions of the GNU General Public License,
-  version 2, as published by the Free Software Foundation.
-
-  This program is distributed in the hope it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-  more details.
-
-  The full GNU General Public License is included in this distribution in
-  the file called "COPYING".
-
-  Contact Information:
-  Linux NICS <linux.nics@intel.com>
-  e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
-  Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
-
-*******************************************************************************/
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright(c) 2007 - 2019 Intel Corporation. */
 
 /******************************************************************************
  Copyright(c) 2011 Richard Cochran <richardcochran@gmail.com> for some of the
@@ -84,9 +63,9 @@
 
 #define IGB_SYSTIM_OVERFLOW_PERIOD	(HZ * 60 * 9)
 #define IGB_PTP_TX_TIMEOUT		(HZ * 15)
-#define INCPERIOD_82576			(1 << E1000_TIMINCA_16NS_SHIFT)
-#define INCVALUE_82576_MASK		((1 << E1000_TIMINCA_16NS_SHIFT) - 1)
-#define INCVALUE_82576			(16 << IGB_82576_TSYNC_SHIFT)
+#define INCPERIOD_82576			BIT(E1000_TIMINCA_16NS_SHIFT)
+#define INCVALUE_82576_MASK		GENMASK(E1000_TIMINCA_16NS_SHIFT - 1, 0)
+#define INCVALUE_82576			(16u << IGB_82576_TSYNC_SHIFT)
 #define IGB_NBITS_82580			40
 
 /*
@@ -138,7 +117,8 @@ static u64 igb_ptp_read_82580(const struct cyclecounter *cc)
  * SYSTIM read access for I210/I211
  */
 
-static void igb_ptp_read_i210(struct igb_adapter *adapter, struct timespec *ts)
+static void igb_ptp_read_i210(struct igb_adapter *adapter,
+			      struct timespec64 *ts)
 {
 	struct e1000_hw *hw = &adapter->hw;
 	u32 sec, nsec;
@@ -156,7 +136,7 @@ static void igb_ptp_read_i210(struct igb_adapter *adapter, struct timespec *ts)
 }
 
 static void igb_ptp_write_i210(struct igb_adapter *adapter,
-			       const struct timespec *ts)
+			       const struct timespec64 *ts)
 {
 	struct e1000_hw *hw = &adapter->hw;
 
@@ -314,21 +294,21 @@ static int igb_ptp_adjtime_i210(struct ptp_clock_info *ptp, s64 delta)
 	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
 					       ptp_caps);
 	unsigned long flags;
-	struct timespec now, then = ns_to_timespec(delta);
+	struct timespec64 now, then = ns_to_timespec64(delta);
 
 	spin_lock_irqsave(&igb->tmreg_lock, flags);
 
 	igb_ptp_read_i210(igb, &now);
-	now = timespec_add(now, then);
-	igb_ptp_write_i210(igb, (const struct timespec *)&now);
+	now = timespec64_add(now, then);
+	igb_ptp_write_i210(igb, (const struct timespec64 *)&now);
 
 	spin_unlock_irqrestore(&igb->tmreg_lock, flags);
 
 	return 0;
 }
 
-static int igb_ptp_gettime64_82576(struct ptp_clock_info *ptp,
-				   struct timespec64 *ts64)
+static int igb_ptp_gettime_82576(struct ptp_clock_info *ptp,
+				 struct timespec64 *ts)
 {
 	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
 					       ptp_caps);
@@ -341,109 +321,36 @@ static int igb_ptp_gettime64_82576(struct ptp_clock_info *ptp,
 
 	spin_unlock_irqrestore(&igb->tmreg_lock, flags);
 
-	*ts64 = ns_to_timespec64(ns);
-
-	return 0;
-}
-
-static int igb_ptp_gettime64_i210(struct ptp_clock_info *ptp,
-				  struct timespec64 *ts64)
-{
-	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
-					       ptp_caps);
-	struct timespec ts;
-	unsigned long flags;
-
-	spin_lock_irqsave(&igb->tmreg_lock, flags);
-
-	igb_ptp_read_i210(igb, &ts);
-	*ts64 = timespec_to_timespec64(ts);
-
-	spin_unlock_irqrestore(&igb->tmreg_lock, flags);
-
-	return 0;
-}
-
-#ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
-static int igb_ptp_settime64_82576(struct ptp_clock_info *ptp,
-				   const struct timespec64 *ts64)
-{
-	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
-					       ptp_caps);
-	unsigned long flags;
-	u64 ns;
-
-	ns = timespec64_to_ns(ts64);
-
-	spin_lock_irqsave(&igb->tmreg_lock, flags);
-
-	timecounter_init(&igb->tc, &igb->cc, ns);
-
-	spin_unlock_irqrestore(&igb->tmreg_lock, flags);
-
-	return 0;
-}
-
-#endif
-static int igb_ptp_settime64_i210(struct ptp_clock_info *ptp,
-				  const struct timespec64 *ts64)
-{
-	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
-					       ptp_caps);
-	struct timespec ts;
-	unsigned long flags;
-
-	ts = timespec64_to_timespec(*ts64);
-	spin_lock_irqsave(&igb->tmreg_lock, flags);
-
-	igb_ptp_write_i210(igb, &ts);
-
-	spin_unlock_irqrestore(&igb->tmreg_lock, flags);
-
-	return 0;
-}
-
-#ifndef HAVE_PTP_CLOCK_INFO_GETTIME64
-static int igb_ptp_gettime_82576(struct ptp_clock_info *ptp,
-				 struct timespec *ts)
-{
-	struct timespec64 ts64;
-	int err;
-
-	err = igb_ptp_gettime64_82576(ptp, &ts64);
-	if (err)
-		return err;
-
-	*ts = timespec64_to_timespec(ts64);
+	*ts = ns_to_timespec64(ns);
 
 	return 0;
 }
 
 static int igb_ptp_gettime_i210(struct ptp_clock_info *ptp,
-				struct timespec *ts)
+				struct timespec64 *ts)
 {
-	struct timespec64 ts64;
-	int err;
+	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
+					       ptp_caps);
+	unsigned long flags;
 
-	err = igb_ptp_gettime64_i210(ptp, &ts64);
-	if (err)
-		return err;
+	spin_lock_irqsave(&igb->tmreg_lock, flags);
 
-	*ts = timespec64_to_timespec(ts64);
+	igb_ptp_read_i210(igb, ts);
+
+	spin_unlock_irqrestore(&igb->tmreg_lock, flags);
 
 	return 0;
 }
 
 static int igb_ptp_settime_82576(struct ptp_clock_info *ptp,
-				 const struct timespec *ts)
+				 const struct timespec64 *ts)
 {
 	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
 					       ptp_caps);
 	unsigned long flags;
 	u64 ns;
 
-	ns = ts->tv_sec * 1000000000ULL;
-	ns += ts->tv_nsec;
+	ns = timespec64_to_ns(ts);
 
 	spin_lock_irqsave(&igb->tmreg_lock, flags);
 
@@ -455,7 +362,7 @@ static int igb_ptp_settime_82576(struct ptp_clock_info *ptp,
 }
 
 static int igb_ptp_settime_i210(struct ptp_clock_info *ptp,
-				const struct timespec *ts)
+				const struct timespec64 *ts)
 {
 	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
 					       ptp_caps);
@@ -470,7 +377,54 @@ static int igb_ptp_settime_i210(struct ptp_clock_info *ptp,
 	return 0;
 }
 
-#endif
+#ifndef HAVE_PTP_CLOCK_INFO_GETTIME64
+static int igb_ptp_gettime32_82576(struct ptp_clock_info *ptp,
+				   struct timespec *ts)
+{
+	struct timespec64 ts64;
+	int err;
+
+	err = igb_ptp_gettime_82576(ptp, &ts64);
+	if (err)
+		return err;
+
+	*ts = timespec64_to_timespec(ts64);
+
+	return 0;
+}
+
+static int igb_ptp_gettime32_i210(struct ptp_clock_info *ptp,
+				  struct timespec *ts)
+{
+	struct timespec64 ts64;
+	int err;
+
+	err = igb_ptp_gettime_i210(ptp, &ts64);
+	if (err)
+		return err;
+
+	*ts = timespec64_to_timespec(ts64);
+
+	return 0;
+}
+
+static int igb_ptp_settime32_82576(struct ptp_clock_info *ptp,
+				   const struct timespec *ts)
+{
+	struct timespec64 ts64 = timespec_to_timespec64(*ts);
+
+	return igb_ptp_settime_82576(ptp, &ts64);
+}
+
+static int igb_ptp_settime32_i210(struct ptp_clock_info *ptp,
+				  const struct timespec *ts)
+{
+	struct timespec64 ts64 = timespec_to_timespec64(*ts);
+
+	return igb_ptp_settime_i210(ptp, &ts64);
+}
+#endif /* HAVE_PTP_CLOCK_INFO_GETTIME64 */
+
 static int igb_ptp_enable(struct ptp_clock_info *ptp,
 			  struct ptp_clock_request *rq, int on)
 {
@@ -518,7 +472,7 @@ static void igb_ptp_overflow_check_82576(struct work_struct *work)
 		container_of(work, struct igb_adapter, ptp_overflow_work.work);
 	struct timespec64 ts64;
 
-	igb_ptp_gettime64_82576(&igb->ptp_caps, &ts64);
+	igb_ptp_gettime_82576(&igb->ptp_caps, &ts64);
 
 	pr_debug("igb overflow check at %lld.%09lu\n",
 		 (long long)ts64.tv_sec, ts64.tv_nsec);
@@ -801,30 +755,6 @@ static int igb_ptp_set_timestamp_mode(struct igb_adapter *adapter,
 	/* define which PTP packets are time stamped */
 	E1000_WRITE_REG(hw, E1000_TSYNCRXCFG, tsync_rx_cfg);
 
-#ifdef HAVE_PF_RING /* PER PACKET HW TIMESTAMP (ns) */ 
-        if (hw->mac.type >= e1000_82580) {
-		int i, reg_idx;
-		u32 reg;
-
-        	for (i = 0; i < adapter->num_q_vectors; i++) {
-			reg_idx = adapter->q_vector[i]->rx.ring->reg_idx;
-			reg = E1000_READ_REG(hw, E1000_SRRCTL(reg_idx));
-
-        		/* Enable Timestamp Received packet
-			 * Timestamp is placed only in buffers of received packets that meet 
-			 * the criteria defined in the TSYNCRXCTL.Type field, 2-tuple filters 
-			 * or ETQF registers. A 40 bit timestamp generated from the value in 
-			 * SYSTIMH and SYSTIML registers is placed in the receive buffer. */
-			if (tsync_rx_ctl != 0) /* enabling rx ts (Timestamp Reserved bit) */
-				reg |= 0x40000000;
-			else /* disabling rx ts */
-				reg &= ~0x40000000;
-				  
-  			E1000_WRITE_REG(hw, E1000_SRRCTL(reg_idx), reg);
-		}
-        }
-#endif
-
 	/* define ethertype filter for timestamped packets */
 	if (is_l2)
 		E1000_WRITE_REG(hw, E1000_ETQF(3),
@@ -906,11 +836,11 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82576;
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_82576;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
-		adapter->ptp_caps.gettime64 = igb_ptp_gettime64_82576;
-		adapter->ptp_caps.settime64 = igb_ptp_settime64_82576;
+		adapter->ptp_caps.gettime64 = igb_ptp_gettime_82576;
+		adapter->ptp_caps.settime64 = igb_ptp_settime_82576;
 #else
-		adapter->ptp_caps.gettime = igb_ptp_gettime_82576;
-		adapter->ptp_caps.settime = igb_ptp_settime_82576;
+		adapter->ptp_caps.gettime = igb_ptp_gettime32_82576;
+		adapter->ptp_caps.settime = igb_ptp_settime32_82576;
 #endif
 		adapter->ptp_caps.enable = igb_ptp_enable;
 		adapter->cc.read = igb_ptp_read_82576;
@@ -932,11 +862,11 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82580;
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_82576;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
-		adapter->ptp_caps.gettime64 = igb_ptp_gettime64_82576;
-		adapter->ptp_caps.settime64 = igb_ptp_settime64_82576;
+		adapter->ptp_caps.gettime64 = igb_ptp_gettime_82576;
+		adapter->ptp_caps.settime64 = igb_ptp_settime_82576;
 #else
-		adapter->ptp_caps.gettime = igb_ptp_gettime_82576;
-		adapter->ptp_caps.settime = igb_ptp_settime_82576;
+		adapter->ptp_caps.gettime = igb_ptp_gettime32_82576;
+		adapter->ptp_caps.settime = igb_ptp_settime32_82576;
 #endif
 		adapter->ptp_caps.enable = igb_ptp_enable;
 		adapter->cc.read = igb_ptp_read_82580;
@@ -956,11 +886,11 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82580;
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_i210;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
-		adapter->ptp_caps.gettime64 = igb_ptp_gettime64_i210;
-		adapter->ptp_caps.settime64 = igb_ptp_settime64_i210;
+		adapter->ptp_caps.gettime64 = igb_ptp_gettime_i210;
+		adapter->ptp_caps.settime64 = igb_ptp_settime_i210;
 #else
-		adapter->ptp_caps.gettime = igb_ptp_gettime_i210;
-		adapter->ptp_caps.settime = igb_ptp_settime_i210;
+		adapter->ptp_caps.gettime = igb_ptp_gettime32_i210;
+		adapter->ptp_caps.settime = igb_ptp_settime32_i210;
 #endif
 		adapter->ptp_caps.enable = igb_ptp_enable;
 		/* Enable the timer functions by clearing bit 31. */
@@ -980,7 +910,7 @@ void igb_ptp_init(struct igb_adapter *adapter)
 	if ((hw->mac.type == e1000_i210) || (hw->mac.type == e1000_i211)) {
 		struct timespec64 ts = ktime_to_timespec64(ktime_get_real());
 
-		igb_ptp_settime64_i210(&adapter->ptp_caps, &ts);
+		igb_ptp_settime_i210(&adapter->ptp_caps, &ts);
 	} else {
 		timecounter_init(&adapter->tc, &adapter->cc,
 				 ktime_to_ns(ktime_get_real()));
@@ -1092,7 +1022,7 @@ void igb_ptp_reset(struct igb_adapter *adapter)
 	if ((hw->mac.type == e1000_i210) || (hw->mac.type == e1000_i211)) {
 		struct timespec64 ts64 = ktime_to_timespec64(ktime_get_real());
 
-		igb_ptp_settime64_i210(&adapter->ptp_caps, &ts64);
+		igb_ptp_settime_i210(&adapter->ptp_caps, &ts64);
 	} else {
 		timecounter_init(&adapter->tc, &adapter->cc,
 				 ktime_to_ns(ktime_get_real()));
