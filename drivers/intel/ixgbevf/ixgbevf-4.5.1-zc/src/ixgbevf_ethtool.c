@@ -1032,7 +1032,7 @@ static void ixgbevf_diag_test(struct net_device *netdev,
 
 		clear_bit(__IXGBEVF_TESTING, &adapter->state);
 		if (if_running)
-			dev_open(netdev);
+			ixgbevf_open(netdev);
 	} else {
 		DPRINTK(HW, INFO, "online testing starting\n");
 		/* Online tests */
