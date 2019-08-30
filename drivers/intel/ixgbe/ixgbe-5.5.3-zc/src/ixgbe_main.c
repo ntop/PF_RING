@@ -1761,7 +1761,7 @@ static void ixgbe_receive_skb(struct ixgbe_q_vector *q_vector,
 static void ixgbe_set_rsc_gso_size(struct ixgbe_ring __maybe_unused *ring,
 				   struct sk_buff *skb)
 {
-	u16 hdr_len = eth_get_headlen(skb->data, skb_headlen(skb));
+	u16 hdr_len = eth_get_headlen(skb->dev, skb->data, skb_headlen(skb));
 
 	/* set gso_size to avoid messing up TCP MSS */
 	skb_shinfo(skb)->gso_size = DIV_ROUND_UP((skb->len - hdr_len),
@@ -8222,7 +8222,7 @@ static int ixgbe_change_mtu(struct net_device *netdev, int new_mtu)
  * handler is registered with the OS, the watchdog timer is started,
  * and the stack is notified that the interface is ready.
  **/
-static int ixgbe_open(struct net_device *netdev)
+int ixgbe_open(struct net_device *netdev)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	int err;
@@ -8330,7 +8330,7 @@ static void ixgbe_close_suspend(struct ixgbe_adapter *adapter)
  * needs to be disabled.  A global MAC reset is issued to stop the
  * hardware, and all transmit and receive resources are freed.
  **/
-static int ixgbe_close(struct net_device *netdev)
+int ixgbe_close(struct net_device *netdev)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 
@@ -11491,14 +11491,19 @@ static int ixgbe_ndo_fdb_add(struct ndmsg *ndm,
 }
 
 #ifdef HAVE_BRIDGE_ATTRIBS
-#ifdef HAVE_NDO_BRIDGE_SET_DEL_LINK_FLAGS
+#ifdef HAVE_NDO_BRIDGE_SETLINK_EXTACK
+static int ixgbe_ndo_bridge_setlink(struct net_device *dev,
+				    struct nlmsghdr *nlh,
+				    __always_unused u16 flags,
+				    struct netlink_ext_ack __always_unused *ext)
+#elif defined(HAVE_NDO_BRIDGE_SET_DEL_LINK_FLAGS)
 static int ixgbe_ndo_bridge_setlink(struct net_device *dev,
 				    struct nlmsghdr *nlh,
 				    __always_unused u16 flags)
 #else
 static int ixgbe_ndo_bridge_setlink(struct net_device *dev,
 				    struct nlmsghdr *nlh)
-#endif /* HAVE_NDO_BRIDGE_SET_DEL_LINK_FLAGS */
+#endif /* HAVE_NDO_BRIDGE_SETLINK_EXTACK */
 {
 	struct ixgbe_adapter *adapter = netdev_priv(dev);
 	struct nlattr *attr, *br_spec;
