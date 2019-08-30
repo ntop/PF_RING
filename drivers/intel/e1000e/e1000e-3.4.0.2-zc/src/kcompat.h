@@ -5347,7 +5347,7 @@ void __kc_skb_complete_tx_timestamp(struct sk_buff *skb,
 #define skb_clone_sk __kc_skb_clone_sk
 #define skb_complete_tx_timestamp __kc_skb_complete_tx_timestamp
 #endif
-u32 __kc_eth_get_headlen(const struct net_device *dev, unsigned char *data,
+u32 __kc_eth_get_headlen(unsigned char *data,
 			 unsigned int max_len);
 #define eth_get_headlen __kc_eth_get_headlen
 #ifndef ETH_P_XDSA
@@ -6590,13 +6590,13 @@ static inline bool flow_rule_match_key(const struct flow_rule *rule,
 
 #ifndef eth_get_headlen
 static inline u32
-__kc_eth_get_headlen(const struct net_device __always_unused *dev, void *data,
+__kc_eth_get_headlen(void *data,
 		     unsigned int len)
 {
 	return eth_get_headlen(data, len);
 }
 
-#define eth_get_headlen(dev, data, len) __kc_eth_get_headlen(dev, data, len)
+#define eth_get_headlen(data, len) __kc_eth_get_headlen(data, len)
 #endif /* !eth_get_headlen */
 
 #ifndef mmiowb
