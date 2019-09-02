@@ -8227,6 +8227,11 @@ int ixgbe_open(struct net_device *netdev)
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	int err;
 
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		return IXGBE_SUCCESS;
+	}
+
 	/* disallow open during test */
 	if (test_bit(__IXGBE_TESTING, &adapter->state))
 		return -EBUSY;
@@ -8333,6 +8338,11 @@ static void ixgbe_close_suspend(struct ixgbe_adapter *adapter)
 int ixgbe_close(struct net_device *netdev)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
+
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		return 0;
+	}
 
 #ifdef HAVE_PTP_1588_CLOCK
 	ixgbe_ptp_stop(adapter);
