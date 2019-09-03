@@ -624,6 +624,7 @@ struct i40e_pf {
 	struct {
 		atomic_t usage_counter;
 		u8 interrupts_required;
+		bool zombie; /* interface brought down while running */
 	} pfring_zc;
 #endif
 };

@@ -6421,6 +6421,16 @@ int i40e_open(struct net_device *netdev)
 	struct i40e_pf *pf = vsi->back;
 	int err;
 
+#ifdef HAVE_PF_RING
+	struct i40e_pf *adapter = i40e_netdev_to_pf(netdev);
+
+	if (adapter->pfring_zc.zombie) {
+		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = false;
+		return 0;
+	}
+#endif
+
 	/* disallow open during test or if eeprom is broken */
 	if (test_bit(__I40E_TESTING, pf->state) ||
 	    test_bit(__I40E_BAD_EEPROM, pf->state))
@@ -6636,6 +6646,16 @@ int i40e_close(struct net_device *netdev)
 {
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
 	struct i40e_vsi *vsi = np->vsi;
+
+#ifdef HAVE_PF_RING
+	struct i40e_pf *adapter = i40e_netdev_to_pf(netdev);
+
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = true;
+		return 0;
+	}
+#endif
 
 	i40e_vsi_close(vsi);
 
