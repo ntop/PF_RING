@@ -4492,6 +4492,14 @@ int ixgbevf_open(struct net_device *netdev)
 	struct ixgbe_hw *hw = &adapter->hw;
 	int err;
 
+#ifdef HAVE_PF_RING
+	if (adapter->pfring_zc.zombie) {
+		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = false;
+		return 0;
+	}
+#endif
+
 	/* A previous failure to open the device because of a lack of
 	 * available MSIX vector resources may have reset the number
 	 * of q vectors variable to zero.  The only way to recover
@@ -4590,6 +4598,14 @@ static void ixgbevf_close_suspend(struct ixgbevf_adapter *adapter)
 int ixgbevf_close(struct net_device *netdev)
 {
 	struct ixgbevf_adapter *adapter = netdev_priv(netdev);
+
+#ifdef HAVE_PF_RING
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = true;
+		return 0;
+	}
+#endif
 
 	if (netif_device_present(netdev))
 		ixgbevf_close_suspend(adapter);
