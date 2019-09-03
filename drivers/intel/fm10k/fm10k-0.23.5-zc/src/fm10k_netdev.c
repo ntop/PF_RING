@@ -661,6 +661,14 @@ int fm10k_open(struct net_device *netdev)
 	struct fm10k_intfc *interface = netdev_priv(netdev);
 	int err;
 
+#ifdef HAVE_PF_RING
+	if (interface->pfring_zc.zombie) {
+		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		interface->pfring_zc.zombie = false;
+		return 0;
+	}
+#endif
+
 	/* allocate transmit descriptors */
 	err = fm10k_setup_all_tx_resources(interface);
 	if (err)
@@ -729,6 +737,14 @@ err_setup_tx:
 int fm10k_close(struct net_device *netdev)
 {
 	struct fm10k_intfc *interface = netdev_priv(netdev);
+
+#ifdef HAVE_PF_RING
+	if (atomic_read(&interface->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		interface->pfring_zc.zombie = true;
+		return 0;
+	}
+#endif
 
 	fm10k_down(interface);
 
