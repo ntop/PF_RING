@@ -3798,6 +3798,16 @@ err_setup_tx:
 
 int igb_open(struct net_device *netdev)
 {
+#ifdef HAVE_PF_RING
+	struct igb_adapter *adapter = netdev_priv(netdev);
+
+	if (adapter->pfring_zc.zombie) {
+		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = false;
+		return E1000_SUCCESS;
+	}
+#endif
+
 	return __igb_open(netdev, false);
 }
 
@@ -3846,6 +3856,16 @@ static int __igb_close(struct net_device *netdev, bool suspending)
 
 int igb_close(struct net_device *netdev)
 {
+#ifdef HAVE_PF_RING
+	struct igb_adapter *adapter = netdev_priv(netdev);
+
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = true;
+		return 0;
+	}
+#endif
+
 	return __igb_close(netdev, false);
 }
 

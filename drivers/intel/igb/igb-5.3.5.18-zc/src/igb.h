@@ -705,6 +705,7 @@ struct igb_adapter {
 #ifdef HAVE_PF_RING
 	struct {
 		atomic_t usage_counter;
+		bool zombie; /* interface brought down while running */
 	} pfring_zc;
 #endif
 };
