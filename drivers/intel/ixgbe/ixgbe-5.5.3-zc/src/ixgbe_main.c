@@ -8227,10 +8227,13 @@ int ixgbe_open(struct net_device *netdev)
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	int err;
 
-	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+#ifdef HAVE_PF_RING
+	if (adapter->pfring_zc.zombie) {
 		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = false;
 		return IXGBE_SUCCESS;
 	}
+#endif
 
 	/* disallow open during test */
 	if (test_bit(__IXGBE_TESTING, &adapter->state))
@@ -8339,10 +8342,13 @@ int ixgbe_close(struct net_device *netdev)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 
+#ifdef HAVE_PF_RING
 	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
 		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = true;
 		return 0;
 	}
+#endif
 
 #ifdef HAVE_PTP_1588_CLOCK
 	ixgbe_ptp_stop(adapter);
