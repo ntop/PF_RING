@@ -428,6 +428,7 @@ struct e1000_adapter {
 		wait_queue_head_t packet_waitqueue;
 		u_int8_t interrupt_received, interrupt_enabled;
 		atomic_t usage_counter;
+		bool zombie; /* interface brought down while running */
 	} pfring_zc;
 #endif
 };

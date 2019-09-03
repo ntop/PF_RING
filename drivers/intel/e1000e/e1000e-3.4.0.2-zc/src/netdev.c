@@ -5557,6 +5557,14 @@ int e1000e_open(struct net_device *netdev)
 	struct pci_dev *pdev = adapter->pdev;
 	int err;
 
+#ifdef HAVE_PF_RING
+	if (adapter->pfring_zc.zombie) {
+		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = false;
+		return 0;
+	}
+#endif
+
 	adapter->pdev = pdev;
 	/* disallow open during test */
 	if (test_bit(__E1000_TESTING, &adapter->state))
@@ -5683,6 +5691,14 @@ int e1000e_close(struct net_device *netdev)
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct pci_dev *pdev = adapter->pdev;
 	int count = E1000_CHECK_RESET_COUNT;
+
+#ifdef HAVE_PF_RING
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = true;
+		return 0;
+	}
+#endif
 
 	adapter->pdev = pdev;
 
