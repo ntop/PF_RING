@@ -384,9 +384,11 @@ ixgbe_check_remove(struct ixgbe_hw *hw, u32 reg)
 		mdelay(3);
 	}
 
-	if (value == IXGBE_FAILED_READ_REG)
+	if (value == IXGBE_FAILED_READ_REG) {
+		if (unlikely(enable_debug))
+			printk("%s(): IXGBE_FAILED_READ_REG, removing adapter\n", __FUNCTION__);
 		ixgbe_remove_adapter(hw);
-	else
+	} else
 		value = readl(reg_addr + reg);
 	return value;
 }
@@ -435,6 +437,8 @@ u32 ixgbe_read_reg(struct ixgbe_hw *hw, u32 reg, bool quiet)
 			if (likely(!value))
 				goto writes_completed;
 			if (value == IXGBE_FAILED_READ_REG) {
+				if (unlikely(enable_debug))
+					printk("%s(): IXGBE_FAILED_READ_REG, removing adapter\n", __FUNCTION__);
 				ixgbe_remove_adapter(hw);
 				return IXGBE_FAILED_READ_REG;
 			}
@@ -12955,6 +12959,8 @@ static bool ixgbe_check_cfg_remove(struct ixgbe_hw *hw, struct pci_dev *pdev)
 
 	pci_read_config_word(pdev, PCI_VENDOR_ID, &value);
 	if (value == IXGBE_FAILED_READ_CFG_WORD) {
+		if (unlikely(enable_debug))
+			printk("%s(): IXGBE_FAILED_READ_CFG_WORD, removing adapter\n", __FUNCTION__);
 		ixgbe_remove_adapter(hw);
 		return true;
 	}
