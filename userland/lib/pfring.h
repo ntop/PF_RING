@@ -547,7 +547,7 @@ int pfring_set_poll_watermark(pfring *ring, u_int16_t watermark);
 int pfring_set_poll_watermark_timeout(pfring *ring, u_int16_t poll_watermark_timeout);
 
 /**
- * Set the poll timeout when passive wait is used. 
+ * Set the poll timeout when passive wait is used. Default timeout is 500 msec. 
  * @param ring     The PF_RING handle to enable.
  * @param duration The poll timeout in msec.
  * @return 0 on success, a negative value otherwise.
