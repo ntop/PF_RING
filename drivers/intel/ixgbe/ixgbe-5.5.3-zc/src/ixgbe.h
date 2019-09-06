@@ -1105,7 +1105,12 @@ static inline u8 ixgbe_max_rss_indices(struct ixgbe_adapter *adapter)
 	case ixgbe_mac_X550:
 	case ixgbe_mac_X550EM_x:
 	case ixgbe_mac_X550EM_a:
+#ifdef HAVE_PF_RING
+		/* Setting max to 16 in any case until we support more queues on X550 */
+		return IXGBE_MAX_RSS_INDICES;
+#else
 		return IXGBE_MAX_RSS_INDICES_X550;
+#endif
 		break;
 	default:
 		return 0;
