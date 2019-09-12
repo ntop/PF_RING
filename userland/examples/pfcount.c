@@ -69,7 +69,7 @@ u_int string_id = 1;
 char *out_pcap_file = NULL;
 FILE *match_dumper = NULL;
 u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0, check_ts = 0;
-u_int8_t check_seq_ip = 0;
+u_int8_t check_seq_ip = 0, asymm_rss = 0;
 int num_packets = 0;
 time_t last_ts = 0;
 u_int32_t last_ip = 0;
@@ -717,6 +717,7 @@ void printHelp(void) {
   printf("-o <path>       Dump packets on the specified pcap (in case of -x this dumps only matching packets)\n");
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
   printf("-J              Do not enable promiscuous mode\n");
+  printf("-R              Do not reprogram RSS indirection table (Intel ZC only)\n");
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-K <len>        Print only packets with length > <len> with -v\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
@@ -956,7 +957,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:H:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MTUK:")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:d:H:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1098,6 +1099,9 @@ int main(int argc, char* argv[]) {
     case 'K':
       min_len = atoi(optarg);
       break;
+    case 'R':
+      asymm_rss = 1;
+      break;
     }
   }
 
@@ -1148,7 +1152,8 @@ int main(int argc, char* argv[]) {
   if(!dont_strip_timestamps)  flags |= PF_RING_STRIP_HW_TIMESTAMP;
   if(chunk_mode)              flags |= PF_RING_CHUNK_MODE;
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
-  flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
+  if(asymm_rss)               flags |= PF_RING_ZC_NOT_REPROGRAM_RSS;
+  else                        flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   /* flags |= PF_RING_FLOW_OFFLOAD | PF_RING_FLOW_OFFLOAD_NOUPDATES;  to receive FlowID on supported adapters*/
   /* flags |= PF_RING_USERSPACE_BPF; to force userspace BPF even with kernel capture  */
 
