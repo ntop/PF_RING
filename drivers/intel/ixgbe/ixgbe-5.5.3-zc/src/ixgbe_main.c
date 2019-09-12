@@ -1581,7 +1581,7 @@ zc_dev_model pfring_zc_dev_model(struct ixgbe_hw *hw)
 		case ixgbe_mac_X550:	
 		case ixgbe_mac_X550EM_x:
 		case ixgbe_mac_X550EM_a:
-					return intel_ixgbe_X550;
+					return intel_ixgbe_x550;
 		default:		return intel_ixgbe;
 	}
 }
