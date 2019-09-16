@@ -222,18 +222,25 @@ configure_driver() {
 		exit 1
 	fi
 
-	echo "[>] Configuring $CONF_DRIVER_NAME driver with $CONF_RSS_QUEUES RSS queues"
-
 	mkdir -p ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}
 
-	INDEX=1
-	RSS_LIST="${NQ}"
-	while [ "$INDEX" -ne "$NUM_INTERFACES" ]; do
-		RSS_LIST="${RSS_LIST},${NQ}"
-		let INDEX=INDEX+1
-	done
+	if [ ${CONF_DRIVER_NAME} == "e1000e" ]; then
+		echo "[>] Configuring $CONF_DRIVER_NAME driver with $CONF_RSS_QUEUES RSS queues"
 
-	echo "RSS=${RSS_LIST}" > ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
+		echo "" > ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
+	else
+		echo "[>] Configuring $CONF_DRIVER_NAME driver with $CONF_RSS_QUEUES RSS queues"
+
+		INDEX=1
+		RSS_LIST="${NQ}"
+		while [ "$INDEX" -ne "$NUM_INTERFACES" ]; do
+			RSS_LIST="${RSS_LIST},${NQ}"
+			let INDEX=INDEX+1
+		done
+
+		echo "RSS=${RSS_LIST}" > ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
+	fi
+
 	touch ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.start
 
 	echo "[>] Restarting PF_RING"
