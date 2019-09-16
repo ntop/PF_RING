@@ -115,8 +115,10 @@ gtp	return GTP;
 		}
 	}
 {B}:+({B}:+)+ { nbpf_syntax_error("bogus ethernet address %s", yytext); }
-[A-Za-z]+ { yylval.s = yystrdup((char *)yytext); return ID; } // l7proto name
+[A-Za-z0-9_]+ { yylval.s = yystrdup((char *)yytext); return ID; } // l7proto or custom name
 [0-9]*(-[0-9]*)? { yylval.s = yystrdup((char *)yytext); return ID; } // portrange
+"\""[^\"]*"\"" { yytext[strlen(yytext)-1] = '\0'; yylval.s = yystrdup((char *)yytext + 1); return QUOTED; }
+"\'"[^\']*"\'" { yytext[strlen(yytext)-1] = '\0'; yylval.s = yystrdup((char *)yytext + 1); return QUOTED; }
 [^ \[\]\t\n\-_.A-Za-z0-9!<>()&|=]+ { nbpf_syntax_error("illegal token: %s", yytext); }
 .	{ nbpf_syntax_error("illegal char '%c'", *yytext); }
 %%

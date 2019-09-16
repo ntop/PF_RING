@@ -52,6 +52,7 @@ static char *addr_to_string(int addrq) {
     case NBPF_Q_MPLS:      return "MPLS";
     case NBPF_Q_L7PROTO:   return "L7Proto";
     case NBPF_Q_HOST:      return "Host";
+    case NBPF_Q_CUSTOM:    return "Custom";
     default:
       snprintf(__addr, sizeof(__addr), "(%d)", addrq);
       return __addr;
@@ -162,6 +163,9 @@ static void dump_tree(nbpf_node_t *n, int level) {
 
       } else if(n->qualifiers.address == NBPF_Q_L7PROTO) {
         printf(" L7Proto:%d", n->l7protocol);
+
+      } else if(n->qualifiers.address == NBPF_Q_CUSTOM) {
+        printf(" Custom:%s=%s", n->custom_key, n->custom_value);
 
       } else if(n->protocol) {
         printf(" L4Proto:%d", n->protocol);

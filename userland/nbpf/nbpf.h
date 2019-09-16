@@ -102,6 +102,7 @@ nbpf_ip_addr;
 #define NBPF_Q_MPLS		9
 #define NBPF_Q_L7PROTO		10
 #define NBPF_Q_PROTO_REL	11
+#define NBPF_Q_CUSTOM		12
 
 /* Common qualifiers */
 #define NBPF_Q_DEFAULT		0
@@ -166,14 +167,23 @@ PACKED_ON typedef struct nbpf_node {
     u_int8_t value;
   } byte_match;
 
+  char *custom_key;
+  char *custom_value;
+
   struct nbpf_node *l;
   struct nbpf_node *r;
 } PACKED_OFF
 nbpf_node_t;
 
+typedef int (*nbpf_custom_node_callback)(const char *key, const char *value, void *user);
+
 PACKED_ON typedef struct {
   nbpf_node_t *root;
   int compatibility_level; /* external use */
+ 
+  /* Callback for custom primitive node match 
+   * Return 1 in case of match, 0 otherwise */ 
+  nbpf_custom_node_callback custom_callback;
 } PACKED_OFF
 nbpf_tree_t;
 
@@ -217,6 +227,9 @@ void nbpf_toggle_l7_proto_match(nbpf_tree_t *tree, u_int8_t enable);
 void nbpf_toggle_inner_header_match(nbpf_tree_t *tree, u_int8_t enable);
 
 int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h);
+
+void nbpf_set_custom_callback(nbpf_tree_t *tree, nbpf_custom_node_callback c);
+int nbpf_match_custom(nbpf_tree_t *tree, nbpf_pkt_info_t *h, void *user);
 
 /***************************************************************************/
 

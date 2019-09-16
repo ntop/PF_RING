@@ -58,11 +58,13 @@ static void yyerror(const char *msg) {
 %token IPV6
 %token VLAN MPLS GTP
 %token L7PROTO
+%token QUOTED
 
 %type	<s> ID
 %type	<e> EID
 %type	<s> HID HID6
 %type	<i> NUM
+%type	<s> QUOTED
 
 %left OR AND
 %nonassoc  '!'
@@ -136,6 +138,7 @@ rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
 	| narth relop pnum	{ $$.n = nbpf_create_relation_node($2, $1, $3); $$.q = qerr; }
 	| narth irelop pnum	{ $$.n = nbpf_create_relation_node($2, $1, $3); $$.q = qerr; }
 	| other			{ $$.n = $1.n; $$.q = qerr; }
+	| ID QUOTED		{ $$.n = nbpf_create_custom_node((char *)$1, (char *)$2); }
 	;
 /* header level qualifiers */
 hqual:	  OUTER			{ $$ = NBPF_Q_OUTER; }

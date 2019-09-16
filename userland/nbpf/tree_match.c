@@ -306,7 +306,7 @@ static /* inline */ int packet_match_vlan(nbpf_node_t *n, nbpf_pkt_info_t *h) {
 
 /* ********************************************************************** */
 
-static /* inline */ int packet_match_primitive(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+static /* inline */ int packet_match_primitive(nbpf_tree_t *tree, nbpf_node_t *n, nbpf_pkt_info_t *h, void *user) {
   switch(n->qualifiers.address) {
     case NBPF_Q_DEFAULT:
     case NBPF_Q_HOST: 
@@ -321,6 +321,9 @@ static /* inline */ int packet_match_primitive(nbpf_node_t *n, nbpf_pkt_info_t *
       return 0; /* TODO packet_match_proto_rel(n, h, pkt); note this requires packet data */
     case NBPF_Q_L7PROTO:
       return packet_match_l7_proto(n, h);
+    case NBPF_Q_CUSTOM:
+      if (tree->custom_callback)
+        return tree->custom_callback(n->custom_key, n->custom_value, user);
     case NBPF_Q_VLAN:
       return packet_match_vlan(n, h);
     default:
@@ -332,14 +335,14 @@ static /* inline */ int packet_match_primitive(nbpf_node_t *n, nbpf_pkt_info_t *
 
 /* ********************************************************************** */
 
-static int packet_match_filter(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+static int packet_match_filter(nbpf_tree_t *t, nbpf_node_t *n, nbpf_pkt_info_t *h, void *u) {
   if(n == NULL)
     return 1;
 
   switch(n->type) {
-    case N_PRIMITIVE: return !!(n->not_rule- packet_match_primitive(n, h));
-    case N_AND:       return !!(n->not_rule- (packet_match_filter(n->l, h) && packet_match_filter(n->r, h)));
-    case N_OR:        return !!(n->not_rule- (packet_match_filter(n->l, h) || packet_match_filter(n->r, h)));
+    case N_PRIMITIVE: return !!(n->not_rule- packet_match_primitive(t, n, h, u));
+    case N_AND:       return !!(n->not_rule- (packet_match_filter(t, n->l, h, u) && packet_match_filter(t, n->r, h, u)));
+    case N_OR:        return !!(n->not_rule- (packet_match_filter(t, n->l, h, u) || packet_match_filter(t, n->r, h, u)));
     case N_EMPTY:     return 1;
     default:          DEBUG_PRINTF("Unexpected node type\n");
   }
@@ -372,7 +375,13 @@ void nbpf_toggle_inner_header_match(nbpf_tree_t *tree, u_int8_t enable) {
 /***************************************************************************/ 
 
 int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h) {
-  return packet_match_filter(tree->root, h);
+  return packet_match_filter(tree, tree->root, h, NULL);
+}
+
+/***************************************************************************/ 
+
+int nbpf_match_custom(nbpf_tree_t *tree, nbpf_pkt_info_t *h, void *user) {
+  return packet_match_filter(tree, tree->root, h, user);
 }
 
 /* *********************************************************** */

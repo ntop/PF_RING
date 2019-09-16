@@ -132,6 +132,8 @@ nbpf_tree_t* tree_clone(nbpf_tree_t *t) {
 /* ****************************************** */
 
 static void node_purge(nbpf_node_t *n) {
+  if (n->custom_key) free(n->custom_key);
+  if (n->custom_key) free(n->custom_value);
   if (n->l) node_purge(n->l);
   if (n->r) node_purge(n->r);
   free(n);
@@ -633,6 +635,23 @@ nbpf_node_t *nbpf_create_l7_node(u_int32_t id, const char *name) {
 #endif
     n->l7protocol = p;
   }
+
+  return n;
+}
+
+/* ****************************************************** */
+
+nbpf_node_t *nbpf_create_custom_node(const char *key, const char *value) {
+  nbpf_node_t *n = alloc_node();
+
+  n->type = N_PRIMITIVE;
+  n->qualifiers.address = NBPF_Q_CUSTOM;
+
+  if (key != NULL)
+    n->custom_key = strdup(key);
+
+  if (value != NULL)
+    n->custom_value = strdup(value);
 
   return n;
 }
