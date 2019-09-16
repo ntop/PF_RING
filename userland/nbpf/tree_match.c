@@ -374,6 +374,12 @@ void nbpf_toggle_inner_header_match(nbpf_tree_t *tree, u_int8_t enable) {
 
 /***************************************************************************/ 
 
+void nbpf_set_custom_callback(nbpf_tree_t *tree, nbpf_custom_node_callback callback) {
+  tree->custom_callback = callback;
+}
+
+/***************************************************************************/ 
+
 int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h) {
   return packet_match_filter(tree, tree->root, h, NULL);
 }
