@@ -583,7 +583,7 @@ void trace(int trace_level, char *file, int line, char * format, ...) {
 /* *************************************** */
 
 static char *etheraddr2string(const u_char *ep, char *buf) {
-  char *hex = "0123456789ABCDEF";
+  const char *hex = "0123456789ABCDEF";
   u_int i, j;
   char *cp;
 
