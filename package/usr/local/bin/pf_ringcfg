@@ -276,16 +276,13 @@ case $KEY in
 --list-zc-drivers)
 	ACTION="list-zc-drivers"
 	shift
-	shift
 	;;
 --list-interfaces)
 	ACTION="list-interfaces"
 	shift
-	shift
 	;;
 --configure)
 	ACTION="configure"
-	shift
 	shift
 	;;
 --configure-driver)
