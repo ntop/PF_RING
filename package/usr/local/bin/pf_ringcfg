@@ -192,6 +192,7 @@ configure_driver() {
 	
 	echo "[>] Configuring PF_RING"
 
+	mkdir ${PF_RING_CONFIG_DIR}
 	echo "min_num_slots=${CONF_KERNEL_BUFFER_SLOTS}" > ${PF_RING_CONFIG_DIR}/pf_ring.conf
 
 	if [ "$FORCE" = true ] ; then
