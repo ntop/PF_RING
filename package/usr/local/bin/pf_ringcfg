@@ -76,9 +76,10 @@ print_usage() {
 	echo "Usage: ${1} [options]"
 	echo ""
 	echo "Options:"
-	echo " --list-zc-drivers"
 	echo " --list-interfaces"
-	echo " --configure-driver <name> [--rss-queues <number>] [--force]"
+	echo " --list-zc-drivers"
+	echo " --configure [--buffer-size <number of packets>]"
+	echo " --configure-driver <driver name> [--rss-queues <number of queues>] [--force]"
 	exit 1
 }
 
@@ -166,6 +167,20 @@ count_by_driver() {
 	return $INTERFACE_COUNT
 }
 
+configure_kernel_module() {
+
+	echo "[>] Configuring PF_RING"
+
+	mkdir -p ${PF_RING_CONFIG_DIR}
+	echo "min_num_slots=${CONF_KERNEL_BUFFER_SLOTS}" > ${PF_RING_CONFIG_DIR}/pf_ring.conf
+
+	echo "[>] Restarting PF_RING"
+
+	restart_pfring
+
+	echo "[>] Configuration completed"
+}
+
 configure_driver() {
 	NQ=$CONF_RSS_QUEUES
 
@@ -192,7 +207,7 @@ configure_driver() {
 	
 	echo "[>] Configuring PF_RING"
 
-	mkdir ${PF_RING_CONFIG_DIR}
+	mkdir -p ${PF_RING_CONFIG_DIR}
 	echo "min_num_slots=${CONF_KERNEL_BUFFER_SLOTS}" > ${PF_RING_CONFIG_DIR}/pf_ring.conf
 
 	if [ "$FORCE" = true ] ; then
@@ -268,9 +283,19 @@ case $KEY in
 	shift
 	shift
 	;;
+--configure)
+	ACTION="configure"
+	shift
+	shift
+	;;
 --configure-driver)
 	ACTION="configure-driver"
 	CONF_DRIVER_NAME="$2"
+	shift
+	shift
+	;;
+--buffer-size)
+	CONF_KERNEL_BUFFER_SLOTS="$2"
 	shift
 	shift
 	;;
@@ -301,6 +326,9 @@ list-zc-drivers)
 	;;
 list-interfaces)
 	print_interfaces;
+	;;
+configure)
+	configure_kernel_module;
 	;;
 configure-driver)
 	configure_driver;
