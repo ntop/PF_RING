@@ -556,6 +556,66 @@ static int parse_args(int argc, char **argv) {
 
 /* ************************************ */
 
+static void print_hw_stats(int port_id) {
+  struct rte_eth_xstat *xstats;
+  struct rte_eth_xstat_name *xstats_names;
+  int len, ret, i;
+
+  len = rte_eth_xstats_get(port_id, NULL, 0);
+
+  if (len < 0) {
+    fprintf(stderr, "rte_eth_xstats_get(%u) failed: %d\n", port_id, len);
+    return;
+  }
+
+  xstats = calloc(len, sizeof(*xstats));
+
+  if (xstats == NULL) {
+    fprintf(stderr, "Failed to calloc memory for xstats\n");
+    return;
+  }
+
+  ret = rte_eth_xstats_get(port_id, xstats, len);
+
+  if (ret < 0 || ret > len) {
+    free(xstats);
+    fprintf(stderr, "rte_eth_xstats_get(%u) len%i failed: %d\n", port_id, len, ret);
+    return;
+  }
+
+  xstats_names = calloc(len, sizeof(*xstats_names));
+
+  if (xstats_names == NULL) {
+    free(xstats);
+    fprintf(stderr, "Failed to calloc memory for xstats_names\n");
+    return;
+  }
+
+  ret = rte_eth_xstats_get_names(port_id, xstats_names, len);
+
+  if (ret < 0 || ret > len) {
+    free(xstats);
+    free(xstats_names);
+    fprintf(stderr, "rte_eth_xstats_get_names(%u) len%i failed: %d\n", port_id, len, ret);
+    return;
+  }
+
+  fprintf(stderr, "Port %u hw stats:\n", port_id);
+
+  for (i = 0; i < len; i++) {
+    fprintf(stderr, "%s:\t%"PRIu64"\n",
+      xstats_names[i].name,
+      xstats[i].value);
+  }
+
+  fprintf(stderr, "---\n");
+
+  free(xstats);
+  free(xstats_names);
+}
+
+/* ************************************ */
+
 static void print_stats(void) {
   pfring_ft_stats fstat_sum = { 0 };
   pfring_ft_stats *fstat;
@@ -709,6 +769,12 @@ static void print_stats(void) {
         tx_n_drops);
 
   fprintf(stderr, "%s\n---\n", buf);
+
+  if (verbose) {
+    print_hw_stats(port);
+    if (twin_port != 0xFF)
+      print_hw_stats(twin_port);
+  }
 }
 
 /* ************************************ */
