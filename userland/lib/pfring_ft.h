@@ -521,6 +521,18 @@ pfring_ft_l7_protocol_name(
 );
 
 /**
+ * Return the nDPI L7 protocol ID providing the L7 protocol name.
+ * @param table The flow table handle. 
+ * @param name The L7 protocol name.
+ * @return The nDPI protocol ID.
+ */
+u_int16_t
+pfring_ft_l7_protocol_id(
+  pfring_ft_table *table,
+  const char *name
+);
+
+/**
  * Set the nDPI handle. This is meant to be used for custom nDPI settings only,
  * as FT already creates a nDPI instance internally when using PFRING_FT_TABLE_FLAGS_DPI.
  * FT takes care of releasing the nDPI instance on pfring_ft_destroy_table.
@@ -532,6 +544,16 @@ int
 pfring_ft_set_ndpi_handle(
   pfring_ft_table *table,
   struct ndpi_detection_module_struct *ndpi
+);
+
+/**
+ * Return the nDPI handle.
+ * @param table The flow table handle. 
+ * @return The nDPI handle, NULL if there is no handle.
+ */
+struct ndpi_detection_module_struct *
+pfring_ft_get_ndpi_handle(
+  pfring_ft_table *table
 );
 
 /**
