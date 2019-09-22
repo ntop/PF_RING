@@ -1,6 +1,6 @@
 [Unit]
 Description=PF_RING service
-After=network.target syslog.target
+After=network.target syslog.target dev-hugepages.mount
 
 [Service]
 Type=oneshot
