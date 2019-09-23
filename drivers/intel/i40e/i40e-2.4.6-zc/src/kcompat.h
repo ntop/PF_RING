@@ -4811,6 +4811,13 @@ static inline bool __kc_is_link_local_ether_addr(const u8 *addr)
 	hlist_for_each_entry_safe(obj, tmp,\
 		&name[hash_min(key, HASH_BITS(name))], member)
 
+#ifdef CONFIG_XPS
+extern int __kc_netif_set_xps_queue(struct net_device *, const struct cpumask *, u16);
+#define netif_set_xps_queue(_dev, _mask, _idx) __kc_netif_set_xps_queue((_dev), (_mask), (_idx))
+#else /* CONFIG_XPS */
+#define netif_set_xps_queue(_dev, _mask, _idx) do {} while (0)
+#endif /* CONFIG_XPS */
+
 #else
 #define HAVE_BRIDGE_FILTER
 #define HAVE_FDB_DEL_NLATTR
