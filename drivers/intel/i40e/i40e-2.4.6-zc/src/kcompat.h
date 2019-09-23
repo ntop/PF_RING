@@ -2930,7 +2930,9 @@ void __kc_warn_slowpath(const char *file, const int line,
 #endif /* WARN */
 #undef HAVE_IXGBE_DEBUG_FS
 #undef HAVE_IGB_DEBUG_FS
+#define qdisc_reset_all_tx(a)
 #else /* < 2.6.27 */
+#include <net/sch_generic.h>
 #define ethtool_cmd_speed_set _kc_ethtool_cmd_speed_set
 static inline void _kc_ethtool_cmd_speed_set(struct ethtool_cmd *ep,
 					     __u32 speed)
