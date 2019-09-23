@@ -9,30 +9,31 @@
 #else
 #define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 #endif
-#include <linux/init.h>
-#include <linux/types.h>
-#include <linux/errno.h>
-#include <linux/module.h>
-#include <linux/pci.h>
-#include <linux/string.h>
-#include <linux/netdevice.h>
-#include <linux/etherdevice.h>
-#include <linux/skbuff.h>
-#include <linux/ioport.h>
-#include <linux/slab.h>
-#include <linux/list.h>
+#include <linux/io.h>
 #include <linux/delay.h>
-#include <linux/sched.h>
-#include <linux/in.h>
-#include <linux/ip.h>
-#include <linux/ipv6.h>
-#include <linux/tcp.h>
-#include <linux/udp.h>
-#include <linux/mii.h>
-#include <linux/vmalloc.h>
-#include <asm/io.h>
+#include <linux/errno.h>
+#include <linux/etherdevice.h>
 #include <linux/ethtool.h>
 #include <linux/if_vlan.h>
+#include <linux/in.h>
+#include <linux/if_link.h>
+#include <linux/init.h>
+#include <linux/ioport.h>
+#include <linux/ip.h>
+#include <linux/ipv6.h>
+#include <linux/list.h>
+#include <linux/mii.h>
+#include <linux/module.h>
+#include <linux/netdevice.h>
+#include <linux/pci.h>
+#include <linux/sched.h>
+#include <linux/skbuff.h>
+#include <linux/slab.h>
+#include <linux/string.h>
+#include <linux/tcp.h>
+#include <linux/types.h>
+#include <linux/udp.h>
+#include <linux/vmalloc.h>
 
 #ifndef GCC_VERSION
 #define GCC_VERSION (__GNUC__ * 10000		\
@@ -1676,7 +1677,7 @@ size_t _kc_strlcpy(char *dest, const char *src, size_t size);
 
 #ifndef do_div
 #if BITS_PER_LONG == 64
-# define do_div(n,base) ({					\
+#define do_div(n,base) ({					\
 	uint32_t __base = (base);				\
 	uint32_t __rem;						\
 	__rem = ((uint64_t)(n)) % __base;			\
@@ -1685,7 +1686,7 @@ size_t _kc_strlcpy(char *dest, const char *src, size_t size);
  })
 #elif BITS_PER_LONG == 32
 uint32_t _kc__div64_32(uint64_t * dividend, uint32_t divisor);
-# define do_div(n,base) ({				\
+#define do_div(n,base) ({				\
 	uint32_t __base = (base);			\
 	uint32_t __rem;					\
 	if (likely(((n) >> 32) == 0)) {			\
@@ -1696,7 +1697,7 @@ uint32_t _kc__div64_32(uint64_t * dividend, uint32_t divisor);
 	__rem;						\
  })
 #else /* BITS_PER_LONG == ?? */
-# error do_div() does not yet support the C64
+#error do_div() does not yet support the C64
 #endif /* BITS_PER_LONG */
 #endif /* do_div */
 
@@ -4942,6 +4943,12 @@ int __kc_pcie_get_minimum_link(struct pci_dev *dev, enum pci_bus_speed *speed,
 #ifndef pcie_get_minimum_link
 #define pcie_get_minimum_link(_p, _s, _w) __kc_pcie_get_minimum_link(_p, _s, _w)
 #endif
+
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6,7))
+int _kc_pci_wait_for_pending_transaction(struct pci_dev *dev);
+#define pci_wait_for_pending_transaction _kc_pci_wait_for_pending_transaction
+#endif /* <RHEL6.7 */
+
 #else /* >= 3.12.0 */
 #if ( SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(12,0,0))
 #define HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK
@@ -5125,6 +5132,10 @@ static inline __u32 skb_get_hash_raw(const struct sk_buff *skb)
 #endif /* NETIF_F_RXHASH */
 }
 #endif /* !RHEL > 5.9 && !SLES >= 10.4 */
+
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,5))
+#define request_firmware_direct	request_firmware
+#endif /* !RHEL || RHEL < 7.5 */
 
 #else /* >= 3.14.0 */
 
@@ -5321,9 +5332,24 @@ static inline struct timespec timespec64_to_timespec(const struct timespec64
 #define timespec64_to_ns timespec_to_ns
 #define ns_to_timespec64 ns_to_timespec
 #define ktime_to_timespec64 ktime_to_timespec
+#define ktime_get_ts64 ktime_get_ts
+#define ktime_get_real_ts64 ktime_get_real_ts
 #define timespec64_add_ns timespec_add_ns
 #endif /* timespec64 */
 #endif /* !(RHEL6.8<RHEL7.0) && !RHEL7.2+ */
+
+#if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,8) && \
+     RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0))
+static inline void ktime_get_real_ts64(struct timespec64 *ts)
+{
+	*ts = ktime_to_timespec64(ktime_get_real());
+}
+
+static inline void ktime_get_ts64(struct timespec64 *ts)
+{
+	*ts = ktime_to_timespec64(ktime_get());
+}
+#endif
 
 #if !(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4))
 #define hlist_add_behind(_a, _b) hlist_add_after(_b, _a)
@@ -5331,6 +5357,23 @@ static inline struct timespec timespec64_to_timespec(const struct timespec64
 
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,5))
 #endif /* RHEL_RELEASE_CODE < RHEL7.5 */
+
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,3))
+static inline u64 ktime_get_ns(void)
+{
+	return ktime_to_ns(ktime_get());
+}
+
+static inline u64 ktime_get_real_ns(void)
+{
+	return ktime_to_ns(ktime_get_real());
+}
+
+static inline u64 ktime_get_boot_ns(void)
+{
+	return ktime_to_ns(ktime_get_boottime());
+}
+#endif /* RHEL < 7.3 */
 
 #else
 #define HAVE_DCBNL_OPS_SETAPP_RETURN_INT
@@ -5347,7 +5390,7 @@ void __kc_skb_complete_tx_timestamp(struct sk_buff *skb,
 #define skb_clone_sk __kc_skb_clone_sk
 #define skb_complete_tx_timestamp __kc_skb_complete_tx_timestamp
 #endif
-u32 __kc_eth_get_headlen(unsigned char *data,
+u32 __kc_eth_get_headlen(const struct net_device *dev, unsigned char *data,
 			 unsigned int max_len);
 #define eth_get_headlen __kc_eth_get_headlen
 #ifndef ETH_P_XDSA
@@ -5656,6 +5699,7 @@ static inline bool pci_ari_enabled(struct pci_bus *bus)
 #endif /* 2.6.27 */
 #else
 #define HAVE_NDO_DFLT_BRIDGE_GETLINK_VLAN_SUPPORT
+#define HAVE_VF_STATS
 #endif /* 4.2.0 */
 
 /*****************************************************************************/
@@ -5778,6 +5822,11 @@ static inline void page_ref_inc(struct page *page)
 #define HAVE_TC_FLOWER_ENC
 #endif
 
+#if ((RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,7)) || \
+     (SLE_VERSION_CODE >= SLE_VERSION(12,2,0)))
+#define HAVE_TC_SETUP_CLSU32
+#endif
+
 #if (SLE_VERSION_CODE >= SLE_VERSION(12,2,0))
 #define HAVE_TC_SETUP_CLSFLOWER
 #endif
@@ -5787,6 +5836,7 @@ static inline void page_ref_inc(struct page *page)
 #define HAVE_ETHTOOL_FLOW_UNION_IP6_SPEC
 #define HAVE_PTP_CROSSTIMESTAMP
 #define HAVE_TC_SETUP_CLSFLOWER
+#define HAVE_TC_SETUP_CLSU32
 #endif /* 4.6.0 */
 
 /*****************************************************************************/
@@ -6216,13 +6266,13 @@ const char *_kc_phy_speed_to_str(int speed);
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
-#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,6))) && \
-     !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,1,0))))
+#if ((RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,6))) || \
+     (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,1,0))))
+#define HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
+#define HAVE_TCF_BLOCK
+#else /* RHEL >= 7.6 || SLES >= 15.1 */
 #define TC_SETUP_QDISC_MQPRIO TC_SETUP_MQPRIO
 #endif /* !(RHEL >= 7.6) && !(SLES >= 15.1) */
-#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,6)))
-#define HAVE_TCF_BLOCK
-#endif
 void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
 				      struct ethtool_link_ksettings *src);
 #define ethtool_intersect_link_masks _kc_ethtool_intersect_link_masks
@@ -6271,6 +6321,8 @@ static inline unsigned long _kc_array_index_mask_nospec(unsigned long index,
 	(typeof(_i)) (_i & _mask);					\
 })
 #endif /* array_index_nospec */
+#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,6))) && \
+     !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,1,0))))
 #ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
 #include <net/pkt_cls.h>
 static inline bool
@@ -6285,11 +6337,13 @@ tc_cls_can_offload_and_chain0(const struct net_device *dev,
 	return true;
 }
 #endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
+#endif /* !(RHEL >= 7.6) && !(SLES >= 15.1) */
 #else /* >= 4.16 */
 #include <linux/nospec.h>
 #define HAVE_XDP_BUFF_RXQ
 #define HAVE_TC_FLOWER_OFFLOAD_COMMON_EXTACK
 #define HAVE_TCF_MIRRED_DEV
+#define HAVE_VF_STATS_DROPPED
 #endif /* 4.16.0 */
 
 /*****************************************************************************/
@@ -6347,8 +6401,8 @@ static inline int _kc_macvlan_release_l2fw_offload(struct net_device *dev)
 #endif /* NETIF_F_HW_L2FW_DOFFLOAD */
 #include "kcompat_overflow.h"
 
-#if (!SLE_VERSION_CODE || (SLE_VERSION_CODE < SLE_VERSION(15,1,0)))
-#define firmware_request_nowarn	request_firmware
+#if (SLE_VERSION_CODE < SLE_VERSION(15,1,0))
+#define firmware_request_nowarn	request_firmware_direct
 #endif /* !SLES || SLES < 15.1 */
 
 #else
@@ -6396,7 +6450,6 @@ static inline dma_addr_t __kc_xdp_umem_get_dma(struct xdp_umem *umem, u64 addr)
 #define HAVE_NETPOLL_CONTROLLER
 #define REQUIRE_PCI_CLEANUP_AER_ERROR_STATUS
 #if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,1,0)))
-#define HAVE_TCF_BLOCK
 #define HAVE_TCF_MIRRED_DEV
 #define HAVE_NDO_SELECT_QUEUE_SB_DEV
 #define HAVE_TCF_BLOCK_CB_REGISTER_EXTACK
@@ -6443,10 +6496,36 @@ static inline bool __kc_napi_if_scheduled_mark_missed(struct napi_struct *n)
 #endif /* HAVE_AF_XDP_SUPPORT */
 #else /* >= 4.20.0 */
 #define HAVE_AF_XDP_ZC_SUPPORT
+#define HAVE_VXLAN_TYPE
 #endif /* 4.20.0 */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0))
+#if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(8,0)))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0))
+#define NETLINK_MAX_COOKIE_LEN	20
+struct netlink_ext_ack {
+	const char *_msg;
+	const struct nlattr *bad_attr;
+	u8 cookie[NETLINK_MAX_COOKIE_LEN];
+	u8 cookie_len;
+};
+
+#endif /* < 4.12 */
+static inline int _kc_dev_open(struct net_device *netdev,
+			       struct netlink_ext_ack __always_unused *extack)
+{
+	return dev_open(netdev);
+}
+
+#define dev_open _kc_dev_open
+#endif /* !(RHEL_RELEASE_CODE && RHEL > RHEL(8,0)) */
+#if (RHEL_RELEASE_CODE && \
+     (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,7) && \
+      RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,0)) || \
+     (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,1)))
+#define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
+#else /* RHEL >= 7.7 && RHEL < 8.0 || RHEL >= 8.1 */
 struct ptp_system_timestamp {
 	struct timespec64 pre_ts;
 	struct timespec64 post_ts;
@@ -6463,15 +6542,23 @@ ptp_read_system_postts(struct ptp_system_timestamp __always_unused *sts)
 {
 	;
 }
+#endif /* !(RHEL >= 7.7 && RHEL != 8.0) */
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,1)))
+#define HAVE_NDO_BRIDGE_SETLINK_EXTACK
+#endif /* RHEL 8.1 */
 #else /* >= 5.0.0 */
 #define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
 #define HAVE_NDO_BRIDGE_SETLINK_EXTACK
 #define HAVE_DMA_ALLOC_COHERENT_ZEROES_MEM
+#define HAVE_GENEVE_TYPE
+#define HAVE_TC_INDIR_BLOCK
 #endif /* 5.0.0 */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,1,0))
-
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,1)))
+#define HAVE_NDO_FDB_ADD_EXTACK
+#else /* RHEL < 8.1 */
 #ifdef HAVE_TC_SETUP_CLSFLOWER
 #include <net/pkt_cls.h>
 
@@ -6573,6 +6660,7 @@ static inline bool flow_rule_match_key(const struct flow_rule *rule,
 }
 #endif /* HAVE_TC_SETUP_CLSFLOWER */
 
+#endif /* RHEL < 8.1 */
 #else /* >= 5.1.0 */
 #define HAVE_NDO_FDB_ADD_EXTACK
 #define NO_XDP_QUERY_XSK_UMEM
@@ -6590,13 +6678,13 @@ static inline bool flow_rule_match_key(const struct flow_rule *rule,
 
 #ifndef eth_get_headlen
 static inline u32
-__kc_eth_get_headlen(void *data,
+__kc_eth_get_headlen(const struct net_device __always_unused *dev, void *data,
 		     unsigned int len)
 {
 	return eth_get_headlen(data, len);
 }
 
-#define eth_get_headlen(data, len) __kc_eth_get_headlen(data, len)
+#define eth_get_headlen(dev, data, len) __kc_eth_get_headlen(dev, data, len)
 #endif /* !eth_get_headlen */
 
 #ifndef mmiowb
@@ -6608,6 +6696,61 @@ __kc_eth_get_headlen(void *data,
 #endif /* mmiowb */
 
 #else /* >= 5.2.0 */
+#define HAVE_NDO_SELECT_QUEUE_FALLBACK_REMOVED
 #define SPIN_UNLOCK_IMPLIES_MMIOWB
 #endif /* 5.2.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0))
+#define flow_block_offload tc_block_offload
+#define flow_block_command tc_block_command
+#define flow_block_binder_type tcf_block_binder_type
+#define flow_cls_offload tc_cls_flower_offload
+#define flow_cls_common_offload tc_cls_common_offload
+#define flow_cls_offload_flow_rule tc_cls_flower_offload_flow_rule
+#define FLOW_CLS_REPLACE TC_CLSFLOWER_REPLACE
+#define FLOW_CLS_DESTROY TC_CLSFLOWER_DESTROY
+#define FLOW_CLS_STATS TC_CLSFLOWER_STATS
+#define FLOW_CLS_TMPLT_CREATE TC_CLSFLOWER_TMPLT_CREATE
+#define FLOW_CLS_TMPLT_DESTROY TC_CLSFLOWER_TMPLT_DESTROY
+#define FLOW_BLOCK_BINDER_TYPE_CLSACT_INGRESS \
+		TCF_BLOCK_BINDER_TYPE_CLSACT_INGRESS
+#define FLOW_BLOCK_BIND TC_BLOCK_BIND
+#define FLOW_BLOCK_UNBIND TC_BLOCK_UNBIND
+
+#ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
+#include <net/pkt_cls.h>
+
+int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
+				   struct list_head *driver_list,
+				   tc_setup_cb_t * cb,
+				   void *cb_ident, void *cb_priv,
+				   bool ingress_only);
+
+#define flow_block_cb_setup_simple(f, driver_list, cb, cb_ident, cb_priv, \
+				   ingress_only) \
+	_kc_flow_block_cb_setup_simple(f, driver_list, cb, cb_ident, cb_priv, \
+				       ingress_only)
+#endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
+#else /* >= 5.3.0 */
+#define XSK_UMEM_RETURNS_XDP_DESC
+#define HAVE_FLOW_BLOCK_API
+#endif /* 5.3.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0))
+static inline unsigned int skb_frag_off(const skb_frag_t * frag)
+{
+	return frag->page_offset;
+}
+
+static inline void skb_frag_off_add(skb_frag_t * frag, int delta)
+{
+	frag->page_offset += delta;
+}
+
+#define __flow_indr_block_cb_register __tc_indr_block_cb_register
+#define __flow_indr_block_cb_unregister __tc_indr_block_cb_unregister
+#endif /* 5.4.0 */
+
 #endif /* _KCOMPAT_H_ */
