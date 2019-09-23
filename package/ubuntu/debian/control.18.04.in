@@ -6,7 +6,7 @@ Standards-Version: @PFRING_VERS@-@REVISION@
 Build-Depends: 
 Build-Conflicts:
 
-Depends: @NDPI_DEP@, net-tools, kmod, dkms, ethtool
+Depends: @NDPI_DEP@, net-tools, kmod, ethtool, pciutils
 Package: pfring
 Architecture: @EXTN@
 Recommends: pfring-dkms (=@PFRING_VERS@)
