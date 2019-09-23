@@ -2243,6 +2243,7 @@ static struct sk_buff *i40e_construct_skb(struct i40e_ring *rx_ring,
 #endif
 	unsigned int headlen;
 	struct sk_buff *skb;
+	struct net_device *netdev = rx_ring->netdev;
 
 	/* prefetch first cache line of first page */
 	prefetch(va);
@@ -2260,7 +2261,7 @@ static struct sk_buff *i40e_construct_skb(struct i40e_ring *rx_ring,
 	/* Determine available headroom for copy */
 	headlen = size;
 	if (headlen > I40E_RX_HDR_SIZE)
-		headlen = eth_get_headlen(va, I40E_RX_HDR_SIZE);
+		headlen = eth_get_headlen(netdev, va, I40E_RX_HDR_SIZE);
 
 	/* align pull length to size of long to optimize memcpy performance */
 	memcpy(__skb_put(skb, headlen), va, ALIGN(headlen, sizeof(long)));
