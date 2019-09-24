@@ -42,6 +42,7 @@ nbpf_node_t *nbpf_create_mpls_node(int);
 nbpf_node_t *nbpf_create_gtp_node();
 nbpf_node_t *nbpf_create_l7_node(u_int32_t, const char *);
 nbpf_node_t *nbpf_create_custom_node(const char *, const char *);
+nbpf_node_t *nbpf_create_custom_node_int(const char *, int);
 void nbpf_create_not(nbpf_node_t *);
 
 nbpf_node_t *nbpf_create_relation_node(int relation, nbpf_arth_t l, int r);

@@ -656,6 +656,24 @@ nbpf_node_t *nbpf_create_custom_node(const char *key, const char *value) {
   return n;
 }
 
+/* ****************************************************** */
+
+nbpf_node_t *nbpf_create_custom_node_int(const char *key, int value) {
+  nbpf_node_t *n = alloc_node();
+  char value_str[16];
+
+  n->type = N_PRIMITIVE;
+  n->qualifiers.address = NBPF_Q_CUSTOM;
+
+  if (key != NULL)
+    n->custom_key = strdup(key);
+
+  snprintf(value_str, sizeof(value_str), "%d", value);
+  n->custom_value = strdup(value_str);
+
+  return n;
+}
+
 /* *********************************************************** */
 
 int is_emptyv6(struct nbpf_in6_addr *a) {

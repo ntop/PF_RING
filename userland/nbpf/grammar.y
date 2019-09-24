@@ -139,6 +139,7 @@ rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
 	| narth irelop pnum	{ $$.n = nbpf_create_relation_node($2, $1, $3); $$.q = qerr; }
 	| other			{ $$.n = $1.n; $$.q = qerr; }
 	| ID QUOTED		{ $$.n = nbpf_create_custom_node((char *)$1, (char *)$2); }
+	| ID NUM		{ $$.n = nbpf_create_custom_node_int((char *)$1, $2); }
 	;
 /* header level qualifiers */
 hqual:	  OUTER			{ $$ = NBPF_Q_OUTER; }
