@@ -4205,22 +4205,17 @@ EXPORT_SYMBOL(pf_ring_skb_ring_handler);
 static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 		      struct packet_type *pt, struct net_device *orig_dev)
 {
-  int rc;
+  int rc = 0;
 
-  if(skb->pkt_type == PACKET_LOOPBACK) {
-    kfree_skb(skb);
-    return 0;
+  if(!(skb->pkt_type == PACKET_LOOPBACK) &&
+     /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
+     !(skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)) {
+    rc = pf_ring_skb_ring_handler(skb,
+			          skb->pkt_type != PACKET_OUTGOING,
+			          1 /* real_skb */,
+			          1 /* unknown: any channel */,
+                	          UNKNOWN_NUM_RX_CHANNELS);
   }
-
-  /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
-  if(skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)
-    return 0;
-
-  rc = pf_ring_skb_ring_handler(skb,
-			        skb->pkt_type != PACKET_OUTGOING,
-			        1 /* real_skb */,
-			        1 /* unknown: any channel */,
-                	        UNKNOWN_NUM_RX_CHANNELS);
 
   kfree_skb(skb);
 
