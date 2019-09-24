@@ -4207,8 +4207,10 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 {
   int rc;
 
-  if(skb->pkt_type == PACKET_LOOPBACK)
+  if(skb->pkt_type == PACKET_LOOPBACK) {
+    kfree_skb(skb);
     return 0;
+  }
 
   /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
   if(skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)
