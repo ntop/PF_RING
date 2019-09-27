@@ -404,7 +404,7 @@ u_int8_t pfring_open_multichannel(const char *device_name, u_int32_t caplen,
 
   /* Now do the real job */
   for(i=0; i<num_channels; i++) {
-    char dev[32];
+    char dev[64];
 
     snprintf(dev, sizeof(dev), "%s@%d", base_device_name, i);
     ring[i] = pfring_open(dev, caplen, flags);
