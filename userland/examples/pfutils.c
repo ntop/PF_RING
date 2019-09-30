@@ -582,6 +582,7 @@ void trace(int trace_level, char *file, int line, char * format, ...) {
 
 /* *************************************** */
 
+#if !defined(HAVE_DPDK)
 static char *etheraddr2string(const u_char *ep, char *buf) {
   const char *hex = "0123456789ABCDEF";
   u_int i, j;
@@ -608,6 +609,7 @@ static char *etheraddr2string(const u_char *ep, char *buf) {
   *cp = '\0';
   return (buf);
 }
+#endif
 
 /* *************************************** */
 

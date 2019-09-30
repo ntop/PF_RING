@@ -38,10 +38,11 @@
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
 
+#define ether_header rte_ether_hdr
+#define ether_addr   rte_ether_addr
+
 #define ALARM_SLEEP        1
 
-/* NOTE: ether_hdr is defined in rte_ether.h */
-#define ether_header ether_hdr
 #include "ftutils.c"
 
 #include "pfring_ft.h"
@@ -93,7 +94,7 @@ static struct lcore_stats {
 } stats[RTE_MAX_LCORE];
 
 static const struct rte_eth_conf port_conf_default = {
-  .rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
+  .rxmode = { .max_rx_pkt_len = RTE_ETHER_MAX_LEN }
 };
 
 /* ************************************ */
@@ -115,7 +116,7 @@ static int port_init(void) {
 #ifdef SCATTERED_RX_TEST
     * 4
 #endif
-    * (mtu ? (((mtu + ETHER_MAX_LEN - 1500) / MBUF_BUF_SIZE) + 1) : 1)
+    * (mtu ? (((mtu + RTE_ETHER_MAX_LEN - 1500) / MBUF_BUF_SIZE) + 1) : 1)
   ;
 
   for (q = 0; q < num_queues; q++) {
