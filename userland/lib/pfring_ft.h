@@ -234,7 +234,8 @@ typedef void
   void *user
 );
 
-#define PFRING_FT_TABLE_FLAGS_DPI (1 << 0) /**< pfring_ft_create_table() flag: enable nDPI support for L7 protocol detection */
+#define PFRING_FT_TABLE_FLAGS_DPI       (1 << 0) /**< pfring_ft_create_table() flag: enable nDPI support for L7 protocol detection */
+#define PFRING_FT_TABLE_FLAGS_DPI_EXTRA (1 << 1) /**< pfring_ft_create_table() flag: enable nDPI extra dissection (more flow metadata) */
 
 /**
  * Create a new flow table.
