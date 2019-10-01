@@ -198,7 +198,7 @@ typedef struct {
 
   pfring_ft_flow_status status;
 
-  void *user;                 /**< User metadata */
+  u_char user[];                /**< User metadata */
 } pfring_ft_flow_value;
 
 /*** stats struct ***/
@@ -243,6 +243,7 @@ typedef void
  * @param max_flows Maximum number of concurrent flows the table should be able to handle (use 0 if not sure to use default settings).
  * @param flow_idle_timeout Maximum flow idle time (seconds) before expiration (use 0 if not sure to use default: 30s).
  * @param flow_lifetime_timeout Maximum flow duration (seconds) before expiration (use 0 if not sure to use default: 2m).
+ * @param user_metadata_size Size of the user metadata in pfring_ft_flow_value->user
  * @return The flow table on success, NULL on failure.
  */
 pfring_ft_table *
@@ -250,7 +251,8 @@ pfring_ft_create_table(
   u_int32_t flags,
   u_int32_t max_flows,
   u_int32_t flow_idle_timeout,
-  u_int32_t flow_lifetime_timeout
+  u_int32_t flow_lifetime_timeout,
+  u_int32_t user_metadata_size
 );
 
 /**

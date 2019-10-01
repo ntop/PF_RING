@@ -836,7 +836,7 @@ int main(int argc, char *argv[]) {
 
   if (compute_flows) {
     for (q = 0; q < num_queues; q++) {
-      fts[q] = pfring_ft_create_table(ft_flags, 0, 0, 0);
+      fts[q] = pfring_ft_create_table(ft_flags, 0, 0, 0, 0);
 
       if (fts[q] == NULL) {
         fprintf(stderr, "pfring_ft_create_table error\n");
