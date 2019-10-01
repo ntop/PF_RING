@@ -3965,51 +3965,18 @@ if test "x$enable_bpf" != "xno"; then :
   HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ndpi_get_api_version in -lndpi" >&5
-$as_echo_n "checking for ndpi_get_api_version in -lndpi... " >&6; }
-if ${ac_cv_lib_ndpi_ndpi_get_api_version+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lndpi  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ndpi_get_api_version ();
-int
-main ()
-{
-return ndpi_get_api_version ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_ndpi_ndpi_get_api_version=yes
-else
-  ac_cv_lib_ndpi_ndpi_get_api_version=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ndpi_ndpi_get_api_version" >&5
-$as_echo "$ac_cv_lib_ndpi_ndpi_get_api_version" >&6; }
-if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then :
-  LDFLAGS="${LDFLAGS} -lndpi"
-fi
-
-if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support for FT" >&5
+$as_echo_n "checking nDPI support for FT... " >&6; }
+ndpi_installed=`pkg-config --exists libndpi && echo yes`
+if test x$ndpi_installed = xyes ; then
   NDPI_LIB=`pkg-config --libs libndpi`
   NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I^ \t*\)/\1\/libndpi/g'`
   HAVE_NDPI="-D HAVE_NDPI"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI" >&5
 $as_echo "$as_me: WARNING: nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI" >&2;}
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support for nBPF - static linking" >&5

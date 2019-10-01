@@ -236,12 +236,15 @@ dnl> BPF - Default enabled
 AC_ARG_ENABLE([bpf], AS_HELP_STRING([--disable-bpf], [Disable BPF support in PF_RING]))
 AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
 
-AC_CHECK_LIB([ndpi], [ndpi_get_api_version], [LDFLAGS="${LDFLAGS} -lndpi"])
-if test "x$ac_cv_lib_ndpi_ndpi_get_api_version" = xyes; then
+AC_MSG_CHECKING([nDPI support for FT])
+ndpi_installed=`pkg-config --exists libndpi && echo yes`
+if test x$ndpi_installed = xyes ; then
   NDPI_LIB=`pkg-config --libs libndpi`
   NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I[^ \t]*\)/\1\/libndpi/g'`
   HAVE_NDPI="-D HAVE_NDPI"
+  AC_MSG_RESULT(yes)
 else
+  AC_MSG_RESULT(no)
   AC_MSG_WARN([nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI])
   AC_MSG_CHECKING([nDPI support for nBPF - static linking])
   NDPI_HOME="../../nDPI"
