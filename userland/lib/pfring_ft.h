@@ -36,7 +36,9 @@ struct ndpi_flow_struct;
 typedef enum {
   PFRING_FT_ACTION_DEFAULT = 0,
   PFRING_FT_ACTION_FORWARD,
-  PFRING_FT_ACTION_DISCARD
+  PFRING_FT_ACTION_DISCARD,
+  PFRING_FT_ACTION_USER_1,
+  PFRING_FT_ACTION_USER_2
 } pfring_ft_action;
 
 typedef enum { 
