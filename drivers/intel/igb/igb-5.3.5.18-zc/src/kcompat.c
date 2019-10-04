@@ -1362,6 +1362,10 @@ int __kc_pcie_capability_clear_word(struct pci_dev *dev, int pos, u16 clear)
 
 /*****************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) )
+static inline int pci_vfs_assigned(struct pci_dev *dev)
+{
+	return 0;
+}
 #endif /* 3.10.0 */
 
 static const unsigned char __maybe_unused pcie_link_speed[] = {
