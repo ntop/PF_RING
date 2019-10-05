@@ -4803,6 +4803,14 @@ static inline bool __kc_is_link_local_ether_addr(const u8 *addr)
 
 /*****************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) )
+
+#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0))))
+static inline int pci_vfs_assigned(struct pci_dev *dev)
+{
+       return 0;
+}
+#endif
+
 #ifndef NAPI_POLL_WEIGHT
 #define NAPI_POLL_WEIGHT 64
 #endif
