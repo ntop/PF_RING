@@ -74,6 +74,7 @@ static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
 static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
+static u_int8_t tx_csum_offload = 0;
 static u_int8_t set_if_mac = 0;
 static u_int8_t promisc = 1;
 static u_int16_t mtu = 0;
@@ -155,6 +156,9 @@ static int port_init(void) {
       if (rte_eth_dev_flow_ctrl_set(port_id, &fc_conf) != 0)
         printf("Unable to disable autoneg and flow control\n");
     }
+
+    if (tx_csum_offload)
+      port_conf.txmode.offloads = DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM;
 
     retval = rte_eth_dev_configure(port_id, num_queues /* RX */, num_queues /* TX */, &port_conf);
     
@@ -309,6 +313,8 @@ static void tx_test(u_int16_t queue_id) {
         forge_udp_packet_fast((u_char *) rte_pktmbuf_mtod(tx_bufs[i], char *), 
           tx_test_pkt_len, stats[queue_id].tx_num_pkts + i);
         tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = tx_test_pkt_len;
+        if (tx_csum_offload)
+          tx_bufs[i]->ol_flags |= PKT_TX_IP_CKSUM | PKT_TX_UDP_CKSUM;
       }
     }
 
@@ -457,8 +463,9 @@ static void print_help(void) {
   printf("-S <speed>      Set the port speed in Gbit/s (1/10/25/40/50/100)\n");
   printf("-m <mtu>        Set the MTU\n");
   printf("-t              Test TX\n");
-  printf("-T <size>       TX test packet size\n");
-  printf("-P <pps>        TX test packet rate (pps)\n");
+  printf("-T <size>       TX test - packet size\n");
+  printf("-K              TX test - enable checksum offload\n");
+  printf("-P <pps>        TX test - packet rate (pps)\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-h              Print this help\n");
 }
@@ -477,7 +484,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "Fhm:M:n:p:tUvP:S:T:07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "Fhm:M:n:p:tUvP:S:T:K07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
@@ -540,6 +547,9 @@ static int parse_args(int argc, char **argv) {
       break;
     case 'S':
       port_speed = atoi(optarg);
+      break;
+    case 'K':
+      tx_csum_offload = 1;
       break;
     default:
       print_help();
