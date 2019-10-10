@@ -180,6 +180,8 @@ const char *action_to_string(pfring_ft_action action) {
     case PFRING_FT_ACTION_FORWARD: return "forward";
     case PFRING_FT_ACTION_DISCARD: return "discard";
     case PFRING_FT_ACTION_DEFAULT: return "default";
+    case PFRING_FT_ACTION_USER_1:  return "user1";
+    case PFRING_FT_ACTION_USER_2:  return "user2";
   }
   return "";
 }
