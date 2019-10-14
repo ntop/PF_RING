@@ -15,7 +15,11 @@ Requires: @NDPI_DEP@, net-tools, ethtool @EXTRA_REQUIRES@
 AutoReq: no
 # 
 # As dependecies are disabled (AutoReqProv: no) we must report them manually
+%if 0%{?centos_ver} != 8
 Provides: daq_pfring_zc.so, daq_pfring.so, libpfring.so
+%else
+Provides: libpfring.so
+%endif
 
 %description
 PF_RING kernel module and drivers for high-speed RX/TX package processing
@@ -71,6 +75,7 @@ cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so
 cp $HOME/PF_RING/package/usr/local/bin/pf_ringctl $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/package/usr/local/bin/pf_ringcfg $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/package/usr/local/bin/clusterctl $RPM_BUILD_ROOT/usr/local/bin
+%if 0%{?centos_ver} != 8
 # DAQ
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
 cp $HOME/PF_RING/userland/snort/pfring-daq-module/daq_pfring.la $RPM_BUILD_ROOT/usr/local/lib/daq
@@ -78,6 +83,7 @@ cp $HOME/PF_RING/userland/snort/pfring-daq-module/.libs/daq_pfring.so $RPM_BUILD
 cp $HOME/PF_RING/userland/snort/pfring-daq-module-zc/daq_pfring_zc.la $RPM_BUILD_ROOT/usr/local/lib/daq
 cp $HOME/PF_RING/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.so $RPM_BUILD_ROOT/usr/local/lib/daq
 cp -a $HOME/daq-2.?.?/sfbpf/.libs/libsfbpf.so.0 $HOME/daq-2.?.?/sfbpf/.libs/libsfbpf.so.0.0.1 $RPM_BUILD_ROOT/usr/local/lib
+%endif
 %if %nozc == 0
 cp $HOME/PF_RING/userland/examples_zc/zbalance_ipc $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples_zc/zsend $RPM_BUILD_ROOT/usr/bin
@@ -100,12 +106,14 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/include/pfring.h
 /usr/local/include/pfring_zc.h
 /usr/local/include/nbpf.h
+%if 0%{?centos_ver} != 8
 /usr/local/lib/daq/daq_pfring.la
 /usr/local/lib/daq/daq_pfring.so
 /usr/local/lib/daq/daq_pfring_zc.la
 /usr/local/lib/daq/daq_pfring_zc.so
 /usr/local/lib/libsfbpf.so.0
 /usr/local/lib/libsfbpf.so.0.0.1
+%endif
 /usr/lib64/wireshark/extcap
 %if %nozc == 0
 /usr/bin/zbalance_ipc
