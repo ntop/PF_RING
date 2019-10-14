@@ -58,7 +58,7 @@ cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d
-%if 0%{?centos_ver} == 7
+%if 0%{?centos_ver} != 6
   mkdir -p $RPM_BUILD_ROOT/usr/lib/systemd/system/
   cp $HOME/PF_RING/package/etc/systemd/system/pf_ring.service $RPM_BUILD_ROOT/usr/lib/systemd/system/
   cp $HOME/PF_RING/package/etc/systemd/system/cluster.service $RPM_BUILD_ROOT/usr/lib/systemd/system/
@@ -120,7 +120,7 @@ rm -fr $RPM_BUILD_ROOT
 /usr/bin/n2if
 /usr/local/pfring/README.FIRST
 /etc/ld.so.conf.d/pf_ring.conf
-%if 0%{?centos_ver} == 7
+%if 0%{?centos_ver} != 6
 /usr/lib/systemd/system/pf_ring.service
 /usr/lib/systemd/system/cluster.service
 /usr/lib/systemd/system/cluster@.service
@@ -157,7 +157,7 @@ if [ ! -f /.dockerenv ]; then
 case "$1" in
   1)
     # install
-    %if 0%{?centos_ver} == 7
+    %if 0%{?centos_ver} != 6
       /bin/systemctl daemon-reload
       %systemd_post pf_ring.service cluster.service
     %else
@@ -167,7 +167,7 @@ case "$1" in
   ;;
   2)
     # upgrade
-    %if 0%{?centos_ver} == 7
+    %if 0%{?centos_ver} != 6
       /bin/systemctl daemon-reload
     %endif
   ;;
@@ -178,7 +178,7 @@ fi
 
 %postun
 if [ ! -f /.dockerenv ]; then
-%if 0%{?centos_ver} == 7
+%if 0%{?centos_ver} != 6
   %systemd_postun_with_restart pf_ring.service cluster.service "cluster@*.service"
 %else
   /etc/init.d/pf_ring restart
@@ -191,7 +191,7 @@ if [ ! -f /.dockerenv ]; then
 case "$1" in
   0)
     # un-install
-    %if 0%{?centos_ver} == 7
+    %if 0%{?centos_ver} != 6
       %systemd_preun pf_ring.service "cluster.service" "cluster@*.service"
     %else
       /etc/init.d/cluster stop
