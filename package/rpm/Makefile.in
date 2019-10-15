@@ -12,8 +12,7 @@ PACKAGE_PATH=$(HOME)/rpmbuild/RPMS/$(PLATFORM)/$(PACKAGE)
 package: all cleanup-rpm build-rpm dkms
 
 all:
-	cd ../..; make all; make snort
-
+	cd ../..; make all; @MAKE_SNORT@
 
 dkms:
 	cd ../../kernel; ./configure; make dkms-rpm

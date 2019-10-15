@@ -19,11 +19,10 @@ else
    EXTN="i386"
 fi
 
+NDPI_DEP=""
 if [ test -d $HOME/nDPI ]; then
   NDPI_VERSION=`$HOME/nDPI/packages/version.sh --version`
   NDPI_DEP="ndpi = $NDPI_VERSION"
-else
-  NDPI_DEP=""
 fi
 
 dnl> The step below is necessary to make sure the package will work on the
@@ -32,12 +31,20 @@ dnl> if test -d /opt/snf/lib/;       then sudo cp /opt/snf/lib/libsnf.so        
 
 DATE=`date -R`
 KERNEL=`uname -r`
-CENTOS_RELEASE=`cat /etc/centos-release | cut -d ' ' -f 3|cut -d '.' -f 1`
 
+CENTOS_RELEASE=`cat /etc/centos-release | cut -d ' ' -f 3|cut -d '.' -f 1`
+if test $CENTOS_RELEASE = "release"; then
+  CENTOS_RELEASE=`cat /etc/centos-release | cut -d ' ' -f 4|cut -d '.' -f 1`
+fi
+
+EXTRA_REQUIRES=""
 if test "$CENTOS_RELEASE" -eq 6; then
-  EXTRA_REQUIRES=""
-else
   EXTRA_REQUIRES=", kmod"
+fi
+
+MAKE_SNORT=""
+if test "$CENTOS_RELEASE" -ne 8; then
+  MAKE_SNORT="make snort"
 fi
 
 AC_SUBST(VERS)
@@ -50,6 +57,7 @@ AC_SUBST(GIT_BRANCH)
 AC_SUBST(GIT_HASH)
 AC_SUBST(EXTRA_REQUIRES)
 AC_SUBST(NDPI_DEP)
+AC_SUBST(MAKE_SNORT)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(pfring.spec)

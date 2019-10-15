@@ -583,6 +583,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+MAKE_SNORT
 NDPI_DEP
 EXTRA_REQUIRES
 GIT_HASH
@@ -1703,23 +1704,31 @@ else
    EXTN="i386"
 fi
 
+NDPI_DEP=""
 if  test -d $HOME/nDPI ; then
   NDPI_VERSION=`$HOME/nDPI/packages/version.sh --version`
   NDPI_DEP="ndpi = $NDPI_VERSION"
-else
-  NDPI_DEP=""
 fi
 
 
 DATE=`date -R`
 KERNEL=`uname -r`
-CENTOS_RELEASE=`cat /etc/centos-release | cut -d ' ' -f 3|cut -d '.' -f 1`
 
+CENTOS_RELEASE=`cat /etc/centos-release | cut -d ' ' -f 3|cut -d '.' -f 1`
+if test $CENTOS_RELEASE = "release"; then
+  CENTOS_RELEASE=`cat /etc/centos-release | cut -d ' ' -f 4|cut -d '.' -f 1`
+fi
+
+EXTRA_REQUIRES=""
 if test "$CENTOS_RELEASE" -eq 6; then
-  EXTRA_REQUIRES=""
-else
   EXTRA_REQUIRES=", kmod"
 fi
+
+MAKE_SNORT=""
+if test "$CENTOS_RELEASE" -ne 8; then
+  MAKE_SNORT="make snort"
+fi
+
 
 
 
