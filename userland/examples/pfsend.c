@@ -234,6 +234,7 @@ void printHelp(void) {
   printf("-b <cpu %%>      CPU pergentage priority (0-99)\n");
 #endif
   printf("-f <.pcap file> Send packets as read from a pcap file\n");
+  printf("-B <BPF>        Send packets matching the provided BPF filter only\n");
   printf("-g <core_id>    Bind this app to a core\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use device\n");
@@ -340,13 +341,16 @@ int main(int argc, char* argv[]) {
   int stdin_packet_len = 0;
   u_int ip_v = 4;
   int flush = 0;
+  char *bpfFilter = NULL;
+  u_int32_t flags = 0;
+  int rc;
 
   srandom(time(NULL));
 
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z8:")) != -1) {
+  while((c = getopt(argc, argv, "b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z8:")) != -1) {
     switch(c) {
     case 'b':
       num_ips = atoi(optarg);
@@ -354,6 +358,9 @@ int main(int argc, char* argv[]) {
       if (num_uniq_pkts < num_ips)
         num_uniq_pkts = num_ips;
       reforge_ip = 1;
+      break;
+    case 'B':
+      bpfFilter = strdup(optarg);
       break;
     case 'D':
       inet_aton(optarg, &dstaddr);
@@ -471,7 +478,10 @@ int main(int argc, char* argv[]) {
 
   printf("Sending packets on %s\n", device);
 
-  pd = pfring_open(device, 1500, 0 /* PF_RING_PROMISC */);
+  if(bpfFilter != NULL)
+    flags |= PF_RING_TX_BPF;
+
+  pd = pfring_open(device, 1500, flags);
   if(pd == NULL) {
     printf("pfring_open error [%s] (pf_ring not loaded or interface %s is down ?)\n", 
            strerror(errno), device);
@@ -716,6 +726,12 @@ int main(int argc, char* argv[]) {
     printf("Unable to enable ring :-(\n");
     pfring_close(pd);
     return(-1);
+  }
+
+  if(bpfFilter != NULL) {
+    rc = pfring_set_bpf_filter(pd, bpfFilter);
+    if(rc != 0)
+      fprintf(stderr, "pfring_set_bpf_filter(%s) returned %d\n", bpfFilter, rc);
   }
 
   tosend = pkt_head;

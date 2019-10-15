@@ -393,6 +393,7 @@ struct __pfring {
 #define PF_RING_FLOW_OFFLOAD_NORAWDATA (1 << 19) /**< pfring_open() flag: Do not send raw packets with PF_RING_FLOW_OFFLOAD */
 #define PF_RING_L7_FILTERING	       (1 << 20) /**< pfring_open() flag: Enable L7 filtering support based on PF_RING FT (Flow Table with nDPI support) */
 #define PF_RING_DO_NOT_STRIP_FCS       (1 << 21) /**< pfring_open() flag: Do not strip the FCS (CRC), when not stripped out by the adapter (on standard adapters use this in combination with 'ethtool -K DEV rx-fcs on rx-all on') */
+#define PF_RING_TX_BPF	               (1 << 22) /**< pfring_open() flag: Evaluate bpf also for transmitted packets (this also force userspace bpf). */
 
 /* ********************************* */
 

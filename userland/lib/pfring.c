@@ -262,7 +262,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->chunk_mode_enabled  = !!(flags & PF_RING_CHUNK_MODE);
   ring->ixia_timestamp_enabled = !!(flags & PF_RING_IXIA_TIMESTAMP);
   ring->vss_apcon_timestamp_enabled = !!(flags & PF_RING_VSS_APCON_TIMESTAMP);
-  ring->force_userspace_bpf = !!(flags & PF_RING_USERSPACE_BPF);
+  ring->force_userspace_bpf = !!(flags & (PF_RING_USERSPACE_BPF|PF_RING_TX_BPF));
   ring->ft_enabled          = !!(flags & PF_RING_L7_FILTERING);
 
   ft_conf_file = getenv("PF_RING_FT_CONF");
@@ -784,6 +784,12 @@ int pfring_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet) {
 	    && (!ring->is_shutting_down)
 	    && ring->send
 	    && (ring->mode != recv_only_mode))) {
+
+#ifdef ENABLE_BPF
+    if (unlikely(ring->userspace_bpf && (ring->flags & PF_RING_TX_BPF) &&
+        bpf_filter(ring->userspace_bpf_filter.bf_insns, (u_char *)pkt, pkt_len, pkt_len) == 0))
+      return 0;
+#endif
 
     if(unlikely(ring->reentrant))
       pfring_rwlock_wrlock(&ring->tx_lock);
