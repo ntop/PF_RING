@@ -189,6 +189,7 @@ typedef struct {
 
     struct {
       char *serverName;       /**< SSL Server Name */
+      u_int8_t *sha1_certificate_fingerprint; /**< SHA-1 Certificate Fingerprint (20-bytes) */
     } ssl;
 
     struct {
