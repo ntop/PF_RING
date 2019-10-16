@@ -176,6 +176,7 @@ void printHelp(void) {
   printf("-R              Test hw filters adding a rule (Intel 82599)\n");
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
+  printf("-T              Capture also TX (standard kernel drivers only)\n");
   printf("-D              Debug mode\n");
   printf("-C              Check license\n");
   printf("-M              Print maintenance\n");
@@ -261,11 +262,12 @@ int main(int argc, char* argv[]) {
   pthread_t my_thread;
   struct timeval timeNow, lastTime;
   pthread_t time_thread;
+  u_int32_t flags = 0;
 
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:g:hi:vCDMRHS:")) != '?') {
+  while((c = getopt(argc,argv,"ac:g:hi:vCDMRHS:T")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -294,6 +296,9 @@ int main(int argc, char* argv[]) {
     case 'S':
       time_pulse = 1;
       bind_time_pulse_core = atoi(optarg);
+      break;
+    case 'T':
+      flags |= PF_RING_ZC_DEVICE_CAPTURE_TX;
       break;
     case 'v':
       verbose = 1;
@@ -333,7 +338,7 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  zq = pfring_zc_open_device(zc, device, rx_only, 0);
+  zq = pfring_zc_open_device(zc, device, rx_only, flags);
 
   if(zq == NULL) {
     fprintf(stderr, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
