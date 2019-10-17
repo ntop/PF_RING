@@ -44,7 +44,7 @@ typedef enum {
 typedef enum { 
   s2d_direction = 0, /**< Source to destination */
   d2s_direction,     /**< Destination to source */
-  NUM_DIRECTIONS
+  PF_RING_FT_FLOW_NUM_DIRECTIONS
 } pfring_ft_direction;
 
 typedef enum {
@@ -170,13 +170,15 @@ typedef struct {
 } pfring_ft_flow_key;
 
 typedef struct {
-  struct {
     u_int64_t pkts;           /**< Number of packets per direction */
     u_int64_t bytes;          /**< Number of bytes per direction */
     struct timeval first;     /**< Time of first packet seen per direction */
     struct timeval last;      /**< Time of last packet seen per direction */
     u_int8_t tcp_flags;       /**< TCP flags per direction */
-  } direction[NUM_DIRECTIONS]; /**< Metadata per flow direction */
+} pfring_ft_flow_dir_value;
+
+typedef struct {
+  pfring_ft_flow_dir_value direction[PF_RING_FT_FLOW_NUM_DIRECTIONS]; /**< Metadata per flow direction */
 
   pfring_ft_ndpi_protocol l7_protocol; /**< nDPI protocol */
 
