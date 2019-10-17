@@ -38,7 +38,7 @@ if test $CENTOS_RELEASE = "release"; then
 fi
 
 EXTRA_REQUIRES=""
-if test "$CENTOS_RELEASE" -eq 6; then
+if test "$CENTOS_RELEASE" -ne 6; then
   EXTRA_REQUIRES=", kmod"
 fi
 
