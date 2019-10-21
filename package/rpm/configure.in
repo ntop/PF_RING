@@ -47,6 +47,11 @@ if test "$CENTOS_RELEASE" -ne 8; then
   MAKE_SNORT="make snort"
 fi
 
+RPM_SIGN_CMD="rpm --addsign"
+if test "$CENTOS_RELEASE" -ne 8; then
+  RPM_SIGN_CMD="./rpm-sign.exp"
+fi
+
 AC_SUBST(VERS)
 AC_SUBST(EXTN)
 AC_SUBST(DATE)
@@ -58,6 +63,7 @@ AC_SUBST(GIT_HASH)
 AC_SUBST(EXTRA_REQUIRES)
 AC_SUBST(NDPI_DEP)
 AC_SUBST(MAKE_SNORT)
+AC_SUBST(RPM_SIGN_CMD)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(pfring.spec)
