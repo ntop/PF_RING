@@ -60,7 +60,7 @@ install_zc_driver() {
 }
 
 number_of_nodes() {
-	NODES=$(cat /proc/cpuinfo | grep "physical id" | uniq | wc -l)
+	NODES=$(cat /proc/cpuinfo | grep "physical id" | sort -u | wc -l)
 	return $NODES
 }
 
