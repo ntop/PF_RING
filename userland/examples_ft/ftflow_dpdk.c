@@ -47,12 +47,12 @@
 
 #include "pfring_ft.h"
 
-#define RX_RING_SIZE     8192
-#define TX_RING_SIZE     1024
-#define MBUF_CACHE_SIZE   256
-#define BURST_SIZE         32
-#define PREFETCH_OFFSET     3
-#define TX_TEST_PKT_LEN    60
+#define RX_RING_SIZE      (8*1024)
+#define TX_RING_SIZE      (8*1024)
+#define MBUF_CACHE_SIZE       256
+#define BURST_SIZE             32
+#define PREFETCH_OFFSET         3
+#define TX_TEST_PKT_LEN        60
 
 //#define SCATTERED_RX_TEST
 #ifdef SCATTERED_RX_TEST
@@ -72,6 +72,7 @@ static u_int8_t num_queues = 1;
 static u_int8_t compute_flows = 1;
 static u_int8_t do_loop = 1;
 static u_int8_t verbose = 0;
+static u_int8_t hw_stats = 0;
 static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
 static u_int8_t tx_csum_offload = 0;
@@ -466,7 +467,8 @@ static void print_help(void) {
   printf("-T <size>       TX test - packet size\n");
   printf("-K              TX test - enable checksum offload\n");
   printf("-P <pps>        TX test - packet rate (pps)\n");
-  printf("-v              Verbose (print also raw packets)\n");
+  printf("-H              Print hardware stats\n");
+  printf("-v              Verbose (print raw packets)\n");
   printf("-h              Print this help\n");
 }
 
@@ -484,7 +486,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "Fhm:M:n:p:tUvP:S:T:K07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "FhHm:M:n:p:tUvP:S:T:K07", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
@@ -492,6 +494,9 @@ static int parse_args(int argc, char **argv) {
     case 'h':
       print_help();
       exit(0);
+      break;
+    case 'H':
+      hw_stats = 1;
       break;
     case 'M':
       if(sscanf(optarg, "%02X:%02X:%02X:%02X:%02X:%02X", &mac_a, &mac_b, &mac_c, &mac_d, &mac_e, &mac_f) != 6) {
@@ -611,9 +616,12 @@ static void print_hw_stats(int port_id) {
     return;
   }
 
-  fprintf(stderr, "Port %u hw stats:\n", port_id);
+  fprintf(stderr, "---\nPort %u hw stats:\n", port_id);
 
   for (i = 0; i < len; i++) {
+    if (test_tx && xstats_names[i].name[0] != 't')
+      continue;
+
     fprintf(stderr, "%s:\t%"PRIu64"\n",
       xstats_names[i].name,
       xstats[i].value);
@@ -643,6 +651,12 @@ static void print_stats(void) {
   double delta_last = 0;
   char buf[512];
   int len, q;
+
+  if (hw_stats) {
+    print_hw_stats(port);
+    if (twin_port != 0xFF)
+      print_hw_stats(twin_port);
+  }
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
@@ -780,12 +794,6 @@ static void print_stats(void) {
         tx_n_drops);
 
   fprintf(stderr, "%s\n---\n", buf);
-
-  if (verbose) {
-    print_hw_stats(port);
-    if (twin_port != 0xFF)
-      print_hw_stats(twin_port);
-  }
 }
 
 /* ************************************ */
