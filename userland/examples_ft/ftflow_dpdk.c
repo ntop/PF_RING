@@ -103,6 +103,7 @@ static const struct rte_eth_conf port_conf_default = {
 
 static int port_init(void) {
   struct rte_eth_conf port_conf = port_conf_default;
+  struct rte_eth_fc_conf fc_conf = { 0 };
   int retval, i;
   u_int16_t q;
   char name[64];
@@ -137,9 +138,13 @@ static int port_init(void) {
     
     printf("Configuring port %u...\n", port_id);
 
-    if (port_speed) {
-      struct rte_eth_fc_conf fc_conf = { 0 };
+    fc_conf.mode = RTE_FC_NONE;
+    fc_conf.autoneg = 0;
 
+    if (rte_eth_dev_flow_ctrl_set(port_id, &fc_conf) != 0)
+      printf("Unable to disable autoneg and flow control\n");
+
+    if (port_speed) {
       switch (port_speed) {
       case   1: port_conf.link_speeds = ETH_LINK_SPEED_1G;   break;
       case  10: port_conf.link_speeds = ETH_LINK_SPEED_10G;  break;
@@ -150,12 +155,6 @@ static int port_init(void) {
       default: break;
       }
       port_conf.link_speeds |= ETH_LINK_SPEED_FIXED;
-
-      fc_conf.mode = RTE_FC_NONE;
-      fc_conf.autoneg = 0;
-
-      if (rte_eth_dev_flow_ctrl_set(port_id, &fc_conf) != 0)
-        printf("Unable to disable autoneg and flow control\n");
     }
 
     if (tx_csum_offload)
@@ -645,8 +644,6 @@ static void print_stats(void) {
   unsigned long long n_bytes = 0, n_pkts = 0, n_drops = 0;
   unsigned long long tx_n_bytes = 0, tx_n_pkts = 0, tx_n_drops = 0;
   unsigned long long q_n_bytes = 0, q_n_pkts = 0;
-  static u_int64_t last_pkts = 0;
-  static u_int64_t last_bytes = 0;
   double diff, bytes_diff;
   double delta_last = 0;
   char buf[512];
@@ -766,19 +763,6 @@ static void print_stats(void) {
       "Bytes: %llu\t",
       n_pkts,
       n_bytes);
-
-  if (delta_last) {
-    diff = n_pkts - last_pkts;
-    bytes_diff = n_bytes - last_bytes;
-    bytes_diff /= (1000*1000*1000)/8;
-
-    len += snprintf(&buf[len], sizeof(buf) - len,
-        "Throughput: %.3f Mpps (%.3f Gbps)\t",
-        ((double) diff / (double)(delta_last/1000)) / 1000000,
-        ((double) bytes_diff / (double)(delta_last/1000)));
-  }
-  last_pkts = n_pkts;
-  last_bytes = n_bytes;
 
   len += snprintf(&buf[len], sizeof(buf) - len,
       "Drops: %llu\t",
