@@ -1966,7 +1966,9 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
       hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
       displ += sizeof(struct eth_vlan_hdr);
 
-      while (hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_8021Q /* 802.1q (VLAN) */ && displ <= data_len) { /* More QinQ */
+      while (hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_8021Q /* 802.1q (VLAN) */) { /* More QinQ */
+	if ((displ + sizeof(struct eth_vlan_hdr)) >= data_len)
+          return(0);
         hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
         vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
         hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
@@ -1980,7 +1982,10 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
     u_int32_t tag;
     u_int16_t iph_start;
 
-    for (i = 0; i < max_tags && !last_tag && displ <= data_len; i++) {
+    for (i = 0; i < max_tags && !last_tag; i++) {
+      if ((displ + 4) >= data_len)
+        return(0);
+
       tag = htonl(*((u_int32_t *) (&data[displ])));
 
       if(tag & 0x00000100) /* Found last MPLS tag */
