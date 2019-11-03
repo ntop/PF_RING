@@ -306,8 +306,12 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if (enable_l7)
+  if (enable_l7) {
     ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+#ifdef PRINT_NDPI_INFO
+    ft_flags |= PFRING_FT_TABLE_FLAGS_DPI_EXTRA;
+#endif
+  }
 
   ft = pfring_ft_create_table(ft_flags, 0, 0, 0, 0);
 
