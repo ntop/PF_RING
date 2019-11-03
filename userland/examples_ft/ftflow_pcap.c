@@ -47,6 +47,11 @@
 #define ALARM_SLEEP       1
 #define DEFAULT_SNAPLEN 256
 
+#ifdef HAVE_NDPI
+//#define PRINT_NDPI_INFO
+#include "ndpi_api.h"
+#endif
+
 pcap_t *pd = NULL;
 pfring_ft_table *ft = NULL;
 u_int8_t quiet = 0, verbose = 0, do_shutdown = 0, enable_l7 = 0;
@@ -162,7 +167,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
   
   printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
-         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }\n",
+         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }",
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,         
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes, 
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec, 
@@ -170,6 +175,35 @@ void processFlow(pfring_ft_flow *flow, void *user){
          v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes, 
          (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec, 
          (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec);
+
+#ifdef PRINT_NDPI_INFO
+  if (enable_l7) {
+    struct ndpi_detection_module_struct *ndpi_struct = pfring_ft_get_ndpi_handle(ft);
+    struct ndpi_flow_struct *ndpi_flow = pfring_ft_flow_get_ndpi_handle(flow);
+    ndpi_protocol ndpi_proto;
+    ndpi_serializer serializer;
+    u_int buffer_len;
+ 
+    ndpi_proto.master_protocol = v->l7_protocol.master_protocol;
+    ndpi_proto.app_protocol = v->l7_protocol.app_protocol;
+    ndpi_proto.category = v->l7_protocol.category;
+ 
+    ndpi_flow2json(ndpi_struct, ndpi_flow,
+		   k->ip_version, k->protocol, k->vlan_id,
+		   ntohl(k->saddr.v4), ntohl(k->daddr.v4),
+		   (struct ndpi_in6_addr*)&k->saddr.v6,
+		   (struct ndpi_in6_addr*)&k->daddr.v6,
+		   k->sport, k->dport,
+		   ndpi_proto,
+		   &serializer);
+
+    printf(", ndpiInfo: %s", ndpi_serializer_get_buffer(&serializer, &buffer_len));
+
+    ndpi_term_serializer(&serializer);
+  }
+#endif
+
+  printf("\n");
 
   pfring_ft_flow_free(flow);
 }

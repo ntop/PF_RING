@@ -11,8 +11,8 @@ LIBPFRING  = ${PFRINGDIR}/libpfring.a
 #
 # PF_RING aware libpcap
 #
-O_FLAG     = -DHAVE_PF_RING
-EXTRA_LIBS =
+O_FLAG     = -DHAVE_PF_RING @HAVE_NDPI@
+EXTRA_LIBS = @NDPI_LIB@
 PCAPDIR    = ../libpcap
 LIBPCAP    = ${PCAPDIR}/libpcap.a  ${EXTRA_LIBS}
 
@@ -20,7 +20,7 @@ LIBPCAP    = ${PCAPDIR}/libpcap.a  ${EXTRA_LIBS}
 # Search directories
 #
 PFRING_KERNEL=../../kernel
-INCLUDE    = -I${PFRING_KERNEL} -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../lib/pfring_config --include`
+INCLUDE    = -I${PFRING_KERNEL} -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../lib/pfring_config --include` @NDPI_INC@
 
 #
 # C compiler and flags
@@ -34,7 +34,7 @@ CFLAGS     = @CFLAGS@ ${O_FLAG} -Wall -Wno-unused-function -Wno-format-truncatio
 #
 # User and System libraries
 #
-LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_config --libs` `../libpcap/pcap-config --additional-libs --static` -lpthread @SYSLIBS@ -lrt
+LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_config --libs` `../libpcap/pcap-config --additional-libs --static` -lpthread @SYSLIBS@ -lrt -lm
 
 #
 # Object files
