@@ -9,21 +9,24 @@ case "$1" in
     echo "Stopping pf_ring.."
     if hash systemctl 2>/dev/null; then
       if hash deb-systemd-invoke 2>/dev/null; then
-        deb-systemd-invoke stop pf_ring.service
-        deb-systemd-invoke stop "cluster.service"
+        deb-systemd-invoke stop pf_ring
+        deb-systemd-invoke disable pf_ring
+        deb-systemd-invoke stop cluster
+        deb-systemd-invoke disable cluster
+        deb-systemd-invoke stop 'cluster@*'
+        # Note: disable doesn't require * after @
+        deb-systemd-invoke disable 'cluster@'
       else
-        /bin/systemctl stop pf_ring.service
-        /bin/systemctl stop "cluster.service"
+        systemctl stop pf_ring
+        systemctl disable pf_ring
+        systemctl stop cluster
+        systemctl disable cluster
+        systemctl stop 'cluster@*' --all
+        # Note: disable doesn't require * after @
+        systemctl disable 'cluster@' --all
       fi
-      /bin/systemctl stop "cluster@*.service" --all
-      if hash deb-systemd-invoke 2>/dev/null; then
-        deb-systemd-invoke disable pf_ring.service
-        deb-systemd-invoke disable "cluster.service"
-      else
-        /bin/systemctl disable pf_ring.service
-        /bin/systemctl disable "cluster.service"
-      fi
-      /bin/systemctl disable "cluster@*.service" --all
+      systemctl daemon-reload
+      systemctl reset-failed
     else
       /etc/init.d/pf_ring stop
       /etc/init.d/cluster stop

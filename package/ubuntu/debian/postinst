@@ -21,18 +21,12 @@ if [ -f /.dockerenv ]; then exit 0; fi
 
 echo "Adding the pf_ring startup script"
 if hash systemctl 2>/dev/null; then    
-  # Migration from old-style .start
-  if ls /etc/pf_ring/pf_ring.start 1> /dev/null 2>&1;
-  then
-    /bin/systemctl enable pf_ring
-  fi
-
   if hash deb-systemd-invoke 2>/dev/null; then
-    deb-systemd-invoke enable pf_ring.service > /dev/null
+    deb-systemd-invoke enable pf_ring > /dev/null
     deb-systemd-invoke restart pf_ring
   else
-    /bin/systemctl enable pf_ring.service > /dev/null
-    /bin/systemctl restart pf_ring
+    systemctl enable pf_ring > /dev/null
+    systemctl restart pf_ring
   fi
 else
   update-rc.d pf_ring defaults 30 >/dev/null
