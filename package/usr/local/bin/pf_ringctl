@@ -30,6 +30,7 @@ DRIVER_FORCESTART_FILE="${PF_RING_CONFIG_DIR}/forcestart" # touch to load zc eve
 DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
 LOAD_HUGEPAGES=0
 INTERFACES_CONFIG="${PF_RING_CONFIG_DIR}/interfaces.conf"
+MEM_AVAIL=1048576 # 1GB Hugepages (this avoids consuming all memory at boot time, causing kernel panic)
 
 # Including interfaces conf containing MANAGEMENT_INTERFACES, CAPTURE_INTERFACES
 [ -f ${INTERFACES_CONFIG} ] && . ${INTERFACES_CONFIG}
@@ -119,7 +120,17 @@ rebuild_dkms() {
 }
 
 check_hugepages() {
-	if [ `cat /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages` -gt 0 ] && [ `cat /proc/mounts | grep ${HUGEPAGES_MOUNTPOINT} | wc -l` -gt 0 ]; then # hugepages already loaded
+	HUGEPAGES_TOTAL=0
+	if [ -f ${HUGEPAGES_CONFIG} ]; then
+		while IFS=" " read HUGEPAGES_NODE HUGEPAGES_NUMBER HUGEPAGES_GID; do
+			HUGEPAGES_TOTAL=$(( HUGEPAGES_TOTAL + ${HUGEPAGES_NUMBER/hugepagenumber=/} ))
+		done < ${HUGEPAGES_CONFIG}
+	else
+		HUGEPAGES_TOTAL=$(( MEM_AVAIL / HUGEPAGES_SIZE ))
+	fi
+
+	#check if huge pages are already loaded and the number of pages are greater than defined or minimum value
+	if [ `cat /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages` -gt ${HUGEPAGES_TOTAL} ] && [ `grep ${HUGEPAGES_MOUNTPOINT} /proc/mounts | wc -l` -gt 0 ]; then
 		LOAD_HUGEPAGES=0
 		return
 	fi
@@ -158,16 +169,17 @@ load_hugepages() {
 		# Computing max available
 		#MEM_AVAIL=`grep MemFree /proc/meminfo | cut -d ':' -f 2|sed 's/kB//g'|sed 's/ //g'`;
 		#MEM_AVAIL=$(( MEM_AVAIL - 524288 ))
-		MEM_AVAIL=1048576 # 1GB Hugepages (this avoids consuming all memory at boot time, causing kernel panic)
 		HUGEPAGES_NUMBER=$(( MEM_AVAIL / HUGEPAGES_SIZE ))
 		if [[ ${HUGEPAGES_NUMBER} -gt 0 ]]; then
 			echo ${HUGEPAGES_NUMBER} > /sys/kernel/mm/hugepages/hugepages-${HUGEPAGES_SIZE}kB/nr_hugepages
 		fi
 	fi
-	if [ ! -d ${HUGEPAGES_MOUNTPOINT} ]; then
-		mkdir ${HUGEPAGES_MOUNTPOINT}
+	if [ `grep ${HUGEPAGES_MOUNTPOINT} /proc/mounts | wc -l` -eq 0 ]; then
+		if [ ! -d ${HUGEPAGES_MOUNTPOINT} ]; then
+			mkdir ${HUGEPAGES_MOUNTPOINT}
+		fi
+		mount -t hugetlbfs ${MOUNT_OPTION} none ${HUGEPAGES_MOUNTPOINT}
 	fi
-	mount -t hugetlbfs ${MOUNT_OPTION} none ${HUGEPAGES_MOUNTPOINT}
 }
 
 set_interface_mtu() {
