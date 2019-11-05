@@ -170,17 +170,18 @@ typedef struct {
 } pfring_ft_flow_key;
 
 typedef struct {
-    u_int64_t pkts;           /**< Number of packets per direction */
-    u_int64_t bytes;          /**< Number of bytes per direction */
-    struct timeval first;     /**< Time of first packet seen per direction */
-    struct timeval last;      /**< Time of last packet seen per direction */
-    u_int8_t tcp_flags;       /**< TCP flags per direction */
+  u_int64_t pkts;           /**< Number of packets per direction */
+  u_int64_t bytes;          /**< Number of bytes per direction */
+  struct timeval first;     /**< Time of first packet seen per direction */
+  struct timeval last;      /**< Time of last packet seen per direction */
+  u_int8_t tcp_flags;       /**< TCP flags per direction */
 } pfring_ft_flow_dir_value;
 
 typedef struct {
   pfring_ft_flow_dir_value direction[PF_RING_FT_FLOW_NUM_DIRECTIONS]; /**< Metadata per flow direction */
 
   pfring_ft_ndpi_protocol l7_protocol; /**< nDPI protocol */
+  u_int32_t tunnel_type; /**< nDPI tunnel type (ndpi_packet_tunnel) */
 
   union {
     struct {
@@ -241,6 +242,7 @@ typedef void
 
 #define PFRING_FT_TABLE_FLAGS_DPI       (1 << 0) /**< pfring_ft_create_table() flag: enable nDPI support for L7 protocol detection */
 #define PFRING_FT_TABLE_FLAGS_DPI_EXTRA (1 << 1) /**< pfring_ft_create_table() flag: enable nDPI extra dissection (more flow metadata) */
+#define PFRING_FT_DECODE_TUNNELS        (1 << 2) /**< pfring_ft_create_table() flag: decode tunnels (GTP, L2TP, CAPWAP) */
 
 /**
  * Create a new flow table.
