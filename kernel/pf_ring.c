@@ -2247,6 +2247,8 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
       struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       int gre_offset;
 
+      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct gre_header)) return(1);
+
       gre->flags_and_version = ntohs(gre->flags_and_version);
       gre->proto = ntohs(gre->proto);
       gre_offset = sizeof(struct gre_header);
