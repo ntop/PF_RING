@@ -17,22 +17,6 @@ esac
 
 /sbin/ldconfig > /dev/null 2>&1
 
-if [ -f /.dockerenv ]; then exit 0; fi
-
-echo "Adding the pf_ring startup script"
-if hash systemctl 2>/dev/null; then    
-  if hash deb-systemd-invoke 2>/dev/null; then
-    deb-systemd-invoke enable pf_ring > /dev/null
-    deb-systemd-invoke restart pf_ring
-  else
-    systemctl enable pf_ring > /dev/null
-    systemctl restart pf_ring
-  fi
-else
-  update-rc.d pf_ring defaults 30 >/dev/null
-  update-rc.d cluster defaults 40 >/dev/null
-
-  /etc/init.d/pf_ring restart
-fi
+# Service restart (driver reload) happens in pfring-dkms postinst
 
 exit 0
