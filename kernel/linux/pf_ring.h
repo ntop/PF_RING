@@ -1022,6 +1022,16 @@ typedef struct {
   struct list_head list;
 } virtual_filtering_device_element;
 
+/* ************************************************* */
+
+typedef struct {
+  u_int8_t set;
+  u_int8_t direct_mapping;
+  int32_t ifindex;
+} ifindex_map_item;
+
+/* ************************************************* */
+
 typedef struct {
   struct net_device *dev;
 

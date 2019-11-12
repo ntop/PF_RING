@@ -271,7 +271,7 @@ static rwlock_t ring_cluster_lock =
 static struct list_head ring_aware_device_list; /* List of pf_ring_device */
 
 /* Map ifindex to pf device idx (used for device_rings, active_zc_socket, num_rings_per_device) */
-static int32_t ifindex_map[MAX_NUM_DEV_IDX];
+static ifindex_map_item ifindex_map[MAX_NUM_DEV_IDX];
 
 /* quick mode <ifindex, channel> to <ring> table */
 static struct pf_ring_socket* device_rings[MAX_NUM_DEV_IDX][MAX_NUM_RX_CHANNELS] = { { NULL } };
@@ -520,8 +520,14 @@ static void ifindex_map_init(void) {
 static inline int32_t ifindex_to_pf_index(int32_t ifindex) {
   int i;
 
+  if (ifindex < MAX_NUM_DEV_IDX &&
+      ifindex_map[ifindex].set &&
+      ifindex_map[ifindex].direct_mapping)
+    return ifindex;
+
   for (i = 0; i < MAX_NUM_DEV_IDX; i++)
-    if (ifindex_map[i] == ifindex)
+    if (ifindex_map[i].set &&
+        ifindex_map[i].ifindex == ifindex)
       return i;
 
   return -1;
@@ -530,8 +536,8 @@ static inline int32_t ifindex_to_pf_index(int32_t ifindex) {
 /* ************************************************** */
 
 static inline int32_t pf_index_to_ifindex(int32_t pf_index) {
-  if (ifindex_map[pf_index])
-    return ifindex_map[pf_index];
+  if (ifindex_map[pf_index].set)
+    return ifindex_map[pf_index].ifindex;
 
   return -1;
 }
@@ -544,9 +550,19 @@ static int32_t map_ifindex(int32_t ifindex) {
   if (i >= 0)
     return i;
 
+  if (ifindex < MAX_NUM_DEV_IDX &&
+      !ifindex_map[ifindex].set) {
+    ifindex_map[ifindex].ifindex = ifindex;
+    ifindex_map[ifindex].direct_mapping = 1;
+    ifindex_map[ifindex].set = 1;
+    return ifindex;
+  }
+
   for (i = 0; i < MAX_NUM_DEV_IDX; i++)
-    if (!(ifindex_map[i])) {
-      ifindex_map[i] = ifindex;
+    if (!ifindex_map[i].set) {
+      ifindex_map[i].ifindex = ifindex;
+      ifindex_map[i].direct_mapping = 0;
+      ifindex_map[i].set = 1;
       return i;
     }
 
@@ -556,8 +572,12 @@ static int32_t map_ifindex(int32_t ifindex) {
 /* ************************************************** */
 
 static void unmap_ifindex(int32_t ifindex) {
-  int32_t i = ifindex_to_pf_index(ifindex); 
-  ifindex_map[i] = 0;
+  int32_t i = ifindex_to_pf_index(ifindex);
+  if (i >= 0) {
+    ifindex_map[i].ifindex = 0;
+    ifindex_map[i].direct_mapping = 0;
+    ifindex_map[i].set = 0;
+  }
 }
 
 /* ************************************************** */
