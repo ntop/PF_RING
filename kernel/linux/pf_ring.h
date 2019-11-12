@@ -1011,7 +1011,8 @@ typedef struct {
   rwlock_t lock;
 } zc_dev_list;
 
-#define MAX_NUM_IFIDX 2048
+#define MAX_NUM_IFINDEX 0x7FFFFFFF
+#define MAX_NUM_DEV_IDX 1024
 
 /*
  * Linked-list of virtual filtering devices
@@ -1030,6 +1031,7 @@ typedef struct {
   char device_name[IFNAMSIZ];
 
   pfring_device_type device_type; /* Device Type */
+  int32_t dev_index;
 
   u_int8_t do_not_remove_promisc; /* promisc was set before any socket */
   atomic_t promisc_users; /* number of rings with promisc set bound to this device */
@@ -1123,7 +1125,6 @@ struct hash_fragment_node {
 
 /* ************************************************* */
 
-#define MAX_NUM_DEVICES_ID    MAX_NUM_IFIDX
 /*
  * Ring options
  */
@@ -1135,7 +1136,7 @@ struct pf_ring_socket {
    * devices are used with quick-mode */
   pf_ring_device *last_bind_dev; 
 
-  DECLARE_BITMAP(netdev_mask, MAX_NUM_DEVICES_ID /* bits */);
+  DECLARE_BITMAP(pf_dev_mask, MAX_NUM_DEV_IDX /* bits */);
   int ring_pid;
   u_int32_t ring_id;
   char *appl_name; /* String that identifies the application bound to the socket */
@@ -1308,61 +1309,6 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
 			    void *rx_adapter_ptr, void *tx_adapter_ptr,
 			    zc_dev_wait_packet wait_packet_function_ptr,
 			    zc_dev_notify dev_notify_function_ptr);
-
-/* *************************************************************** */
-
-#ifdef REDBORDER_PATCH
-typedef enum {
-  IF_SCAN,
-  GET_DEV_NUM,
-  IS_BYPASS,
-  GET_BYPASS_SLAVE,
-  GET_BYPASS_CAPS,
-  GET_WD_SET_CAPS,
-  SET_BYPASS,
-  GET_BYPASS
-  /* ... */
-} BPCTL_COMPACT_CMND_TYPE_SD;
-
-struct bpctl_cmd {
-  int status;
-  int data[8];
-  int in_param[8];
-  int out_param[8];
-};
-
-#define BPCTL_MAGIC_NUM 'J'
-#define BPCTL_IOCTL_TX_MSG(cmd) _IOWR(BPCTL_MAGIC_NUM, cmd, struct bpctl_cmd)
-
-extern int bpctl_kernel_ioctl(unsigned int ioctl_num, void *ioctl_param);
-#endif
-
-/* *************************************************************** */
-
-extern void pf_ring_add_module_dependency(void);
-extern int pf_ring_inject_packet_to_ring(int if_index, int channel_id, u_char *data, int data_len, struct pfring_pkthdr *hdr);
-
-/* *********************************** */
-
-/* pcap header */
-struct pcaplike_file_header {
-  int32_t magic;
-  u_int16_t version_major, version_minor;
-  int32_t thiszone;     /* gmt to local correction */
-  u_int32_t sigfigs;    /* accuracy of timestamps */
-  u_int32_t snaplen;    /* max length saved portion of each pkt */
-  u_int32_t linktype;   /* data link type (LINKTYPE_*) */
-};
-
-struct pcaplike_timeval {
-  u_int32_t tv_sec, tv_usec;
-};
-
-struct pcaplike_pkthdr {
-  struct pcaplike_timeval ts;  /* time stamp */
-  u_int32_t caplen;            /* length of portion present */
-  u_int32_t len;               /* length this packet (off wire) */
-};
 
 #endif /* __KERNEL__  */
 

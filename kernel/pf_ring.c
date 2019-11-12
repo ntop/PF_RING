@@ -270,14 +270,17 @@ static rwlock_t ring_cluster_lock =
 /* List of all devices on which PF_RING has been registered */
 static struct list_head ring_aware_device_list; /* List of pf_ring_device */
 
-/* quick mode <if_index, channel> to <ring> table */
-static struct pf_ring_socket* device_rings[MAX_NUM_IFIDX][MAX_NUM_RX_CHANNELS] = { { NULL } };
+/* Map ifindex to pf device idx (used for device_rings, active_zc_socket, num_rings_per_device) */
+static int32_t ifindex_map[MAX_NUM_DEV_IDX];
 
-/* active ZC sockets <if_index> to bool */
-static u_int8_t active_zc_socket[MAX_NUM_IFIDX] = { 0 };
+/* quick mode <ifindex, channel> to <ring> table */
+static struct pf_ring_socket* device_rings[MAX_NUM_DEV_IDX][MAX_NUM_RX_CHANNELS] = { { NULL } };
+
+/* active ZC sockets <ifindex> to bool */
+static u_int8_t active_zc_socket[MAX_NUM_DEV_IDX] = { 0 };
 
 /* Keep track of number of rings per device (plus any) */
-static u_int8_t num_rings_per_device[MAX_NUM_IFIDX] = { 0 };
+static u_int8_t num_rings_per_device[MAX_NUM_DEV_IDX] = { 0 };
 static u_int8_t num_any_rings = 0;
 
 /*
@@ -505,6 +508,57 @@ void msleep(unsigned int msecs)
 }
 #endif
 #endif
+
+/* ************************************************** */
+
+static void ifindex_map_init(void) {
+  memset(ifindex_map, 0, sizeof(ifindex_map));
+}
+
+/* ************************************************** */
+
+static inline int32_t ifindex_to_pf_index(int32_t ifindex) {
+  int i;
+
+  for (i = 0; i < MAX_NUM_DEV_IDX; i++)
+    if (ifindex_map[i] == ifindex)
+      return i;
+
+  return -1;
+}
+
+/* ************************************************** */
+
+static inline int32_t pf_index_to_ifindex(int32_t pf_index) {
+  if (ifindex_map[pf_index])
+    return ifindex_map[pf_index];
+
+  return -1;
+}
+
+/* ************************************************** */
+
+static int32_t map_ifindex(int32_t ifindex) {
+  int32_t i = ifindex_to_pf_index(ifindex);
+
+  if (i >= 0)
+    return i;
+
+  for (i = 0; i < MAX_NUM_DEV_IDX; i++)
+    if (!(ifindex_map[i])) {
+      ifindex_map[i] = ifindex;
+      return i;
+    }
+
+  return -1;
+}
+
+/* ************************************************** */
+
+static void unmap_ifindex(int32_t ifindex) {
+  int32_t i = ifindex_to_pf_index(ifindex); 
+  ifindex_map[i] = 0;
+}
 
 /* ************************************************** */
 
@@ -1101,10 +1155,10 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     seq_printf(m, "Family:       %s\n", dev_family);
 
     if(!dev_ptr->is_zc_device) {
-      if(dev->ifindex < MAX_NUM_IFIDX) {
+      int dev_index = ifindex_to_pf_index(dev->ifindex);
+      if(dev_index >= 0)
 	seq_printf(m, "# Bound Sockets:  %d\n",
-		   num_rings_per_device[dev->ifindex]);
-      }
+		   num_rings_per_device[dev_index]);
     }
 
     seq_printf(m, "TX Queues:    %d\n", dev->real_num_tx_queues);
@@ -1489,7 +1543,6 @@ pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-
     if(((strcmp(dev_ptr->device_name, name) == 0)
 	/*
 	  The problem is that pfring_mod_bind() needs to specify the interface
@@ -1545,13 +1598,13 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       if(pfr->custom_bound_device_name[0] != '\0') {
 	seq_printf(m, pfr->custom_bound_device_name);
       } else {
-	list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-	  pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-
-	  if(test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask)) {
+        list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+ 	  pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+          int32_t dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
+	  if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
 	    seq_printf(m, "%s%s", (num > 0) ? "," : "", dev_ptr->dev->name);
 	    num++;
-	  }
+          }
 	}
       }
 
@@ -1791,7 +1844,7 @@ static inline int ring_insert(struct sock *sk)
   atomic_inc(&ring_table_size);
 
   pfr = (struct pf_ring_socket *) ring_sk(sk);
-  bitmap_zero(pfr->netdev_mask, MAX_NUM_DEVICES_ID);
+  bitmap_zero(pfr->pf_dev_mask, MAX_NUM_DEV_IDX);
   pfr->num_bound_devices = 0;
 
   return 0;
@@ -2687,8 +2740,8 @@ success:
 
   *behaviour = rule->rule.rule_action;
 
-  debug_printk(2, "MATCH (if_index=%d, vlan=%u, proto=%u, sip=%u, sport=%u, dip=%u, dport=%u)\n"
-                  "      [rule(if_index=%d, vlan=%u, proto=%u, ip=%u:%u, port=%u:%u-%u:%u)(behaviour=%d)]\n",
+  debug_printk(2, "MATCH (ifindex=%d, vlan=%u, proto=%u, sip=%u, sport=%u, dip=%u, dport=%u)\n"
+                  "      [rule(ifindex=%d, vlan=%u, proto=%u, ip=%u:%u, port=%u:%u-%u:%u)(behaviour=%d)]\n",
            hdr->extended_hdr.if_index,
 	   hdr->extended_hdr.parsed_pkt.vlan_id, hdr->extended_hdr.parsed_pkt.l3_proto,
 	   hdr->extended_hdr.parsed_pkt.ipv4_src, hdr->extended_hdr.parsed_pkt.l4_src_port,
@@ -3903,6 +3956,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   u_int16_t ip_id = 0;
   u_int32_t skb_hash = 0;
   u_int8_t skb_hash_set = 0;
+  int dev_index;
   
   /* Check if there's at least one PF_RING ring defined that
      could receive the packet: if none just stop here */
@@ -3911,7 +3965,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
     return(0);
 
   /* this should not happen, if this is not the case we should create a dummy
-   * interface with if_index = UNKNOWN_INTERFACE to be assigned to skb->dev */
+   * interface with ifindex = UNKNOWN_INTERFACE to be assigned to skb->dev */
   if(skb->dev == NULL) {
     printk("[PF_RING] skb->dev is not set\n");
     return 0;
@@ -3926,11 +3980,13 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
     displ = 14;
 #endif
 
-  if(num_any_rings == 0 &&
-      (skb->dev->ifindex < MAX_NUM_IFIDX &&
-       num_rings_per_device[skb->dev->ifindex] == 0)) {
+  dev_index = ifindex_to_pf_index(skb->dev->ifindex);
+
+  if(dev_index < 0)
     return 0;
-  }
+
+  if(num_any_rings == 0 && num_rings_per_device[dev_index] == 0)
+    return 0;
 
 #ifdef PROFILING
   uint64_t rdt = _rdtsc(), rdt1, rdt2;
@@ -3957,13 +4013,13 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   hdr.extended_hdr.flags = 0;
 
   if(quick_mode) {
-    pfr = device_rings[skb->dev->ifindex][channel_id];
+    pfr = device_rings[dev_index][channel_id];
 
     if(pfr != NULL) {
       if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
         channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
-        pfr = device_rings[skb->dev->ifindex][channel_id];
+        pfr = device_rings[dev_index][channel_id];
       }
 
       if(is_valid_skb_direction(pfr->direction, recv_packet)) {
@@ -4016,7 +4072,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
              || (pfr->ring_dev == &any_device_element /* any */ && net_eq(&init_net, sock_net(sk))) /* on host */)
 	 && (pfr->ring_slots != NULL)
 	 && (
-	     test_bit(skb->dev->ifindex, pfr->netdev_mask)
+	     test_bit(dev_index, pfr->pf_dev_mask)
 	     || (pfr->ring_dev == &any_device_element /* any */)
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
 	     || ((skb->dev->flags & IFF_SLAVE) && (pfr->ring_dev->dev == skb->dev->master))
@@ -4123,7 +4179,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 		if(pfr != NULL
 		   && net_eq(dev_net(skb->dev), sock_net(skElement)) /* same namespace */
 		   && pfr->ring_slots != NULL
-		   && (test_bit(skb->dev->ifindex, pfr->netdev_mask)
+		   && (test_bit(dev_index, pfr->pf_dev_mask)
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
 		       || ((skb->dev->flags & IFF_SLAVE) && (pfr->ring_dev->dev == skb->dev->master))
 #endif
@@ -4213,15 +4269,18 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 		      struct packet_type *pt, struct net_device *orig_dev)
 {
   int rc = 0;
+  int32_t dev_index;
 
-  if(!(skb->pkt_type == PACKET_LOOPBACK) &&
+  if(skb->pkt_type != PACKET_LOOPBACK) {
+    dev_index = ifindex_to_pf_index(dev->ifindex);
      /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
-     !(skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev->ifindex] == 2)) {
-    rc = pf_ring_skb_ring_handler(skb,
-			          skb->pkt_type != PACKET_OUTGOING,
-			          1 /* real_skb */,
-			          1 /* unknown: any channel */,
-                	          UNKNOWN_NUM_RX_CHANNELS);
+    if (!(skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev_index] == 2)) {
+      rc = pf_ring_skb_ring_handler(skb,
+			            skb->pkt_type != PACKET_OUTGOING,
+			            1 /* real_skb */,
+			            1 /* unknown: any channel */,
+                	            UNKNOWN_NUM_RX_CHANNELS);
+    }
   }
 
   kfree_skb(skb);
@@ -5037,23 +5096,25 @@ static int ring_release(struct socket *sock)
   if(pfr->ring_dev->dev && pfr->ring_dev == &any_device_element)
     num_any_rings--;
   else {
-    if(pfr->ring_dev
-       && (pfr->ring_dev->dev->ifindex < MAX_NUM_IFIDX)) {
-      int i;
+    if(pfr->ring_dev) {
+      int32_t dev_index = ifindex_to_pf_index(pfr->ring_dev->dev->ifindex);
+      if (dev_index >= 0) {
+        int i;
 
-      if(num_rings_per_device[pfr->ring_dev->dev->ifindex] > 0)
-	num_rings_per_device[pfr->ring_dev->dev->ifindex]--;
+        if(num_rings_per_device[dev_index] > 0)
+	  num_rings_per_device[dev_index]--;
 
-      for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
-	u_int64_t channel_id_bit = 1 << i;
+        for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
+          u_int64_t channel_id_bit = 1 << i;
 
-	if(pfr->channel_id_mask & channel_id_bit) {
-	  if(device_rings[pfr->ring_dev->dev->ifindex][i] == pfr) {
-	    /*
-	      We must make sure that this is really us and not that by some chance
-	      (e.g. bind failed) another ring
-	    */
-	    device_rings[pfr->ring_dev->dev->ifindex][i] = NULL;
+	  if(pfr->channel_id_mask & channel_id_bit) {
+	    if(device_rings[dev_index][i] == pfr) {
+	      /*
+	        We must make sure that this is really us and not that by some chance
+	        (e.g. bind failed) another ring
+	      */
+	      device_rings[dev_index][i] = NULL;
+            }
 	  }
 	}
       }
@@ -5157,8 +5218,9 @@ static int ring_release(struct socket *sock)
         /* managing promisc for additional devices */
         list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
           pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+          int32_t dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
           if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
-              test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
+              test_bit(dev_index, pfr->pf_dev_mask))
             unset_netdev_promisc(dev_ptr->dev);
         }
       }
@@ -5193,31 +5255,40 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
   struct pf_ring_socket *pfr = ring_sk(sk);
   pf_ring_device *dev = NULL;
   struct net *net;
+  int32_t dev_index;
 
   if(dev_name == NULL)
     return -EINVAL;
 
   if(strcmp(dev_name, "none") == 0 ||
-      strcmp(dev_name, "any") == 0)
+     strcmp(dev_name, "any") == 0)
     net = NULL; /* any namespace*/
   else
     net = sock_net(sk);
 
   dev = pf_ring_device_name_lookup(net, dev_name);
 
-  if(dev == NULL)
+  if(dev == NULL) {
+    printk("[PF_RING] bind: %s not found\n", dev_name);
     return -EINVAL;
+  }
 
-  if(dev->dev->type != ARPHRD_ETHER && dev->dev->type != ARPHRD_LOOPBACK)
+  if(dev->dev->type != ARPHRD_ETHER && dev->dev->type != ARPHRD_LOOPBACK) {
+    printk("[PF_RING] bind: %s has unsupported type\n", dev_name);
     return -EINVAL;
+  }
 
-  if(dev->dev->ifindex >= MAX_NUM_IFIDX)
+  dev_index = ifindex_to_pf_index(dev->dev->ifindex);
+
+  if(dev_index < 0) {
+    printk("[PF_RING] bind: %s dev index not found\n", dev_name);
     return -EINVAL;
+  }
 
   if(strcmp(dev->dev->name, "none") != 0 &&
       strcmp(dev->dev->name, "any") != 0 &&
       !(dev->dev->flags & IFF_UP)) {
-    debug_printk(2, "packet_ring_bind(%s): down\n", dev->dev->name);
+    printk("[PF_RING] bind: %s dev index is down\n", dev_name);
     return -ENETDOWN;
   }
 
@@ -5225,7 +5296,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
                dev->dev->name, pfr->bucket_len);
 
   /* Set for all devices */
-  set_bit(dev->dev->ifindex, pfr->netdev_mask);
+  set_bit(dev_index, pfr->pf_dev_mask);
   pfr->num_bound_devices++;
 
   /* We set the master device only when we have not yet set a device */
@@ -5250,11 +5321,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
   if(dev == &any_device_element && !quick_mode) {
     num_any_rings++;
   } else {
-    if(dev->dev->ifindex < MAX_NUM_IFIDX)
-      num_rings_per_device[dev->dev->ifindex]++;
-    else
-      printk("[PF_RING] INTERNAL ERROR: ifindex %d for %s is > than MAX_NUM_IFIDX\n",
-	     dev->dev->ifindex, dev->dev->name);
+    num_rings_per_device[dev_index]++;
   }
 
   return 0;
@@ -5738,7 +5805,7 @@ int add_sock_to_cluster_list(ring_cluster_element *el, struct sock *sk)
   if (el->cluster.num_cluster_elements > 0) {
     struct sock *first_sk = el->cluster.sk[0];
     struct pf_ring_socket *first_pfr = ring_sk(first_sk);
-    if (!bitmap_equal(first_pfr->netdev_mask, pfr->netdev_mask, MAX_NUM_DEVICES_ID)) {
+    if (!bitmap_equal(first_pfr->pf_dev_mask, pfr->pf_dev_mask, MAX_NUM_DEV_IDX)) {
       printk("[PF_RING] Error: adding sockets with different interfaces to cluster %u\n", 
         el->cluster.cluster_id);
       return(-EINVAL);
@@ -5970,6 +6037,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   struct list_head *ptr, *tmp_ptr;
   zc_dev_list *entry;
   int i, dev_found = 0, found, rc;
+  int32_t dev_index;
 
   debug_printk(1, "%s@%d\n", pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
 
@@ -5992,6 +6060,14 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
     return -1;
   }
 
+  dev_index = ifindex_to_pf_index(entry->zc_dev.dev->ifindex);
+
+  if (dev_index < 0) {
+    printk("[PF_RING] %s:%d %s@%u mapping failed, dev index not found\n", __FUNCTION__, __LINE__,
+	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+    return -1;
+  }
+
   ring_proc_remove(pfr);
 
   debug_printk(1, "%s@%d [num_bound_sockets=%d][%p]\n",
@@ -6005,9 +6081,9 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
       entry->bound_sockets[i] = pfr;
       entry->num_bound_sockets++;
       if(entry->zc_dev.mem_info.rx.descr_packet_memory_tot_len == 0)
-        active_zc_socket[entry->zc_dev.dev->ifindex] = 2; /* 1-copy ZC mode */
+        active_zc_socket[dev_index] = 2; /* 1-copy ZC mode */
       else
-        active_zc_socket[entry->zc_dev.dev->ifindex] = 1; /* ZC mode */
+        active_zc_socket[dev_index] = 1; /* ZC mode */
       found = 1;
       break;
     }
@@ -6045,12 +6121,22 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
 {
   zc_dev_list *entry = pfr->zc_device_entry;
   int i, found, rc;
+  int32_t dev_index;
 
   debug_printk(1, "releasing %s@%d\n",
 	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
 
   if(entry == NULL) {
     printk("[PF_RING] %s:%d %s@%u unmapping failed\n", __FUNCTION__, __LINE__,
+	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
+    return -1;
+  }
+
+  dev_index = ifindex_to_pf_index(entry->zc_dev.dev->ifindex);
+
+  if (dev_index < 0) {
+    printk("[PF_RING] %s:%d %s@%u unmapping failed, dev index not found\n",
+           __FUNCTION__, __LINE__,
 	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
     return -1;
   }
@@ -6062,7 +6148,7 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
       entry->bound_sockets[i] = NULL;
       entry->num_bound_sockets--;
       if(entry->num_bound_sockets == 0)
-        active_zc_socket[entry->zc_dev.dev->ifindex] = 0;
+        active_zc_socket[dev_index] = 0;
       found = 1;
       break;
     }
@@ -6575,6 +6661,7 @@ static int ring_setsockopt(struct socket *sock,
   {
     u_int64_t channel_id_mask;
     u_int16_t num_channels = 0;
+    int32_t dev_index = ifindex_to_pf_index(pfr->last_bind_dev->dev->ifindex);
 
     if(optlen != sizeof(channel_id_mask))
       return(-EINVAL);
@@ -6583,6 +6670,11 @@ static int ring_setsockopt(struct socket *sock,
       return(-EFAULT);
 
     num_channels = 0;
+
+    if (dev_index < 0) {
+      printk("[PF_RING] SO_SET_CHANNEL_ID failure, dev index not found\n");
+      return(-EFAULT);
+    }
 
     /*
       We need to set the device_rings[] for all channels set
@@ -6594,7 +6686,7 @@ static int ring_setsockopt(struct socket *sock,
         u_int64_t channel_id_bit = 1 << i;
 
         if(channel_id_mask & channel_id_bit) {
-	  if(device_rings[pfr->last_bind_dev->dev->ifindex][i] != NULL)
+	  if(device_rings[dev_index][i] != NULL)
 	    return(-EINVAL); /* Socket already bound on this device */
         }
       }
@@ -6609,7 +6701,7 @@ static int ring_setsockopt(struct socket *sock,
         debug_printk(2, "Setting channel %d\n", i);
 
 	if(quick_mode) {
-	  device_rings[pfr->last_bind_dev->dev->ifindex][i] = pfr;
+	  device_rings[dev_index][i] = pfr;
 	}
 
 	num_channels++;
@@ -7186,8 +7278,9 @@ static int ring_setsockopt(struct socket *sock,
                 /* managing promisc for additional devices */
                 list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
                   pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+                  int32_t dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
                   if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
-                      test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
+                     dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask))
                     set_netdev_promisc(dev_ptr->dev);
                 }
               }
@@ -7200,8 +7293,9 @@ static int ring_setsockopt(struct socket *sock,
               /* managing promisc for additional devices */
               list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
                 pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+                int32_t dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
                 if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
-                    test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
+                   dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask))
                   unset_netdev_promisc(dev_ptr->dev);
               }
             }
@@ -8004,7 +8098,7 @@ void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr) {
 
 /* ************************************ */
 
-int add_device_to_ring_list(struct net_device *dev)
+int add_device_to_ring_list(struct net_device *dev, int32_t dev_index)
 {
   pf_ring_device *dev_ptr;
   pf_ring_net *netns;
@@ -8022,6 +8116,7 @@ int add_device_to_ring_list(struct net_device *dev)
   dev_ptr->dev = dev;
   strcpy(dev_ptr->device_name, dev->name);
   dev_ptr->device_type = standard_nic_family; /* Default */
+  dev_ptr->dev_index = dev_index;
 
   if(netns != NULL) {
     debug_printk(1, "adding dev=%s ifindex=%d (1)\n", dev->name, dev->ifindex);
@@ -8070,55 +8165,6 @@ int add_device_to_ring_list(struct net_device *dev)
   return(0);
 }
 
-/* ************************************ */
-
-#if 0 /* Obsolete - to be removed */
-
-void pf_ring_add_module_dependency(void)
-{
-  /* Don't actually do anything */
-}
-EXPORT_SYMBOL(pf_ring_add_module_dependency);
-
-/* ************************************ */
-
-int pf_ring_inject_packet_to_ring(int if_index, int channel_id, u_char *data, int data_len, struct pfring_pkthdr *hdr)
-{
-  struct sock* sk = NULL;
-  u_int32_t last_list_idx;
-  struct pf_ring_socket *pfr;
-  u_int64_t channel_id_bit = 1 << channel_id;
-  int rc = -2; /* -2 == socket not found */
-
-  if(quick_mode) {
-    if(if_index < MAX_NUM_IFIDX && channel_id < MAX_NUM_RX_CHANNELS && device_rings[if_index][channel_id] != NULL)
-      /* 0  == success, -1 == no room available */
-      rc = add_raw_packet_to_ring(device_rings[if_index][channel_id], hdr, data, data_len, 0);
-  } else {
-    sk = (struct sock*)lockless_list_get_first(&ring_table, &last_list_idx);
-    while (NULL != sk) {
-      pfr = ring_sk( sk);
-
-      if(pfr != NULL
-          && (test_bit(if_index, pfr->netdev_mask) /* || pfr->ring_dev == &any_device_element */ )
-          && ((pfr->channel_id_mask & channel_id_bit) || channel_id == -1 /* any channel */)) {
-        /* 0  == success, -1 == no room available */
-        rc = add_raw_packet_to_ring(pfr, hdr, data, data_len, 0);
-      }
-
-      sk = (struct sock*)lockless_list_get_next(&ring_table, &last_list_idx);
-    }
-  }
-
-  if(debug_on(2) && rc == -2)
-    debug_printk(2, "Error: no ring found for if_index=%d, channel_id=%d\n", if_index, channel_id);
-
-  return rc;
-}
-EXPORT_SYMBOL(pf_ring_inject_packet_to_ring);
-
-#endif
-
 /* ********************************** */
 
 #ifdef ENABLE_PROC_WRITE_RULE
@@ -8144,6 +8190,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
   pf_ring_device *dev_ptr;
   struct list_head *ptr, *tmp_ptr;
   int if_name_clash = 0;
+  int32_t dev_index;
 
   if(debug_on(2)) {
     char _what[32], *what = _what;
@@ -8225,9 +8272,11 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     return NOTIFY_DONE;
   }
 
-  if(dev->ifindex >= MAX_NUM_IFIDX) {
-    printk("[PF_RING] %s %s: interface index %d > max index %d\n", __FUNCTION__,
-           dev->name, dev->ifindex, MAX_NUM_IFIDX);
+  dev_index = map_ifindex(dev->ifindex);
+
+  if(dev_index < 0) {
+    printk("[PF_RING] %s %s: unable to map interface index %d\n", __FUNCTION__,
+           dev->name, dev->ifindex);
     return NOTIFY_DONE;
   }
 
@@ -8251,7 +8300,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       }
 
       if(!if_name_clash) {
-	if(add_device_to_ring_list(dev) != 0) {
+	if(add_device_to_ring_list(dev, dev_index) != 0) {
 	  printk("[PF_RING] Error in add_device_to_ring_list(%s)\n", dev->name);
 	}
       }
@@ -8266,6 +8315,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 	 we set a rule with reflection, we do dev_put() so such device is
 	 busy until we remove the rule
       */
+
+      unmap_ifindex(dev->ifindex);
       break;
 
     case NETDEV_CHANGE:     /* Interface state change */
@@ -8484,25 +8535,32 @@ static int __init ring_init(void)
 
   init_ring_readers();
 
+  ifindex_map_init();
+
   memset(&any_dev, 0, sizeof(any_dev));
   strcpy(any_dev.name, "any");
-  any_dev.ifindex = MAX_NUM_IFIDX-1;
+  any_dev.ifindex = MAX_NUM_IFINDEX-1;
   any_dev.type = ARPHRD_ETHER;
   memset(&any_device_element, 0, sizeof(any_device_element));
   any_device_element.dev = &any_dev;
   any_device_element.device_type = standard_nic_family;
+  any_device_element.dev_index = MAX_NUM_DEV_IDX-1;
   strcpy(any_device_element.device_name, "any");
+  map_ifindex(any_dev.ifindex);
 
   INIT_LIST_HEAD(&any_device_element.device_list);
   list_add(&any_device_element.device_list, &ring_aware_device_list);
 
   memset(&none_dev, 0, sizeof(none_dev));
   strcpy(none_dev.name, "none");
-  none_dev.ifindex = MAX_NUM_IFIDX-2;
+  none_dev.ifindex = MAX_NUM_IFINDEX-2;
   none_dev.type = ARPHRD_ETHER;
   memset(&none_device_element, 0, sizeof(none_device_element));
   none_device_element.dev = &none_dev;
   none_device_element.device_type = standard_nic_family;
+  none_device_element.dev_index = MAX_NUM_DEV_IDX-2;
+  strcpy(none_device_element.device_name, "none");
+  map_ifindex(none_dev.ifindex);
 
   sock_register(&ring_family_ops);
   register_pernet_subsys(&ring_net_ops);
