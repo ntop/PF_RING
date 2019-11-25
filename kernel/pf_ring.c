@@ -8370,7 +8370,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 
 	/* Remove old entry */
         if(netns != NULL) {
-          printk("[PF_RING] removing dev=%s ifindex=%d (it changed name)\n", dev->name, dev->ifindex);
+          printk("[PF_RING] removing dev=%s ifindex=%d (it changed name to %s)\n",
+            dev_ptr->device_name, dev->ifindex, dev->name);
           remove_device_from_proc(netns, dev_ptr);
         }
 
