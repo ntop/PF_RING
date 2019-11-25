@@ -481,6 +481,8 @@ int i40e_lan_del_device(struct i40e_pf *pf)
 	return ret;
 }
 
+#ifndef HAVE_PF_RING
+
 /**
  * i40e_client_release - release client specific resources
  * @client: pointer to the registered client
@@ -543,6 +545,8 @@ static void i40e_client_prepare(struct i40e_client *client)
 	}
 	mutex_unlock(&i40e_device_mutex);
 }
+
+#endif
 
 /**
  * i40e_client_virtchnl_send - TBD
@@ -744,6 +748,8 @@ static int i40e_client_update_vsi_ctxt(struct i40e_info *ldev,
 	return err;
 }
 
+#ifndef HAVE_PF_RING
+
 /**
  * i40e_register_client - Register a i40e client driver with the L2 driver
  * @client: pointer to the i40e_client struct
@@ -822,3 +828,5 @@ out:
 	return ret;
 }
 EXPORT_SYMBOL(i40e_unregister_client);
+
+#endif
