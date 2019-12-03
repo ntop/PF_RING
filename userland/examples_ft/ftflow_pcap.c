@@ -162,8 +162,8 @@ void processFlow(pfring_ft_flow *flow, void *user){
   printf("[Flow] ");
 
   if(enable_l7)
-    printf("l7: %s, category: %u, ",
-	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category);
+    printf("l7: %s, category: %u, tunnelType: %u, ",
+	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category, v->tunnel_type);
   
   printf("srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
@@ -308,6 +308,7 @@ int main(int argc, char* argv[]) {
 
   if (enable_l7) {
     ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+    ft_flags |= PFRING_FT_DECODE_TUNNELS;
 #ifdef PRINT_NDPI_INFO
     ft_flags |= PFRING_FT_TABLE_FLAGS_DPI_EXTRA;
 #endif

@@ -55,6 +55,23 @@ typedef enum {
   PFRING_FT_FLOW_STATUS_FORCED_END      /**< Terminated for external event (shutdown) */
 } pfring_ft_flow_status;
 
+typedef struct {
+  u_int32_t num_protocols; /**< Number of supported L7 protocols */
+
+  /* Filtering */
+  struct {
+    pfring_ft_action *protocol_to_action; /**< Action per L7 protocol */
+  } match;
+
+  /* Shunting */
+  struct {
+    u_int8_t default_npkts;      /**< Default number of packets to forward */
+    u_int8_t tcp_npkts;          /**< Number of packets to forward in case of TCP */
+    u_int8_t udp_npkts;          /**< Number of packets to forward in case of UDP */
+    u_int8_t *protocol_to_npkts; /**< Number of packets to forward per L7 protocol */
+  } shunt;
+} pfring_ft_flow_filter;
+
 /*** packet header structs ***/
 
 typedef u_int32_t pfring_ft_in4_addr;
@@ -474,6 +491,22 @@ int
 pfring_ft_load_configuration(
   pfring_ft_table *table, 
   const char *path
+);
+
+/**
+ * Load filtering/shunting rules from a configuration file
+ * to an external pfring_ft_flow_filter handle.
+ * Please refer to the documentation for the file format.
+ * @param table The flow table handle. 
+ * @param path The configuration file path.
+ * @param filter The destination pfring_ft_flow_filter handle.
+ * @return 0 on success, a negative number on failures.
+ */
+int
+pfring_ft_load_configuration_ext(
+  pfring_ft_table *table, 
+  const char *path,
+  pfring_ft_flow_filter *filter
 );
 
 /**
