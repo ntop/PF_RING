@@ -55,7 +55,7 @@
 #define RX_RING_SIZE      (8*1024)
 #define TX_RING_SIZE      (8*1024)
 #define MBUF_CACHE_SIZE       256
-#define BURST_SIZE             32
+#define BURST_SIZE             64
 #define PREFETCH_OFFSET         3
 #define TX_TEST_PKT_LEN        60
 
@@ -729,8 +729,11 @@ static void print_stats(void) {
     }
   }
 
-  if (test_tx)
+  if (test_tx) {
+    /* Calling rte_eth_stats_get just to print perf stats */
+    rte_eth_stats_get(port, &pstats);
     return;
+  }
 
   if (rte_eth_stats_get(port, &pstats) == 0) {
     n_pkts  = pstats.ipackets;
