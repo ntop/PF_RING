@@ -61,7 +61,8 @@ all: Makefile pf_ring.c linux/pf_ring.h
 #		echo "*"; \
 #		echo "*********************************************"; \
 #	fi
-	make -C /lib/modules/$(BUILD_KERNEL)/build SUBDIRS=${HERE} EXTRA_CFLAGS='${EXTRA_CFLAGS}' modules
+	#make -C /lib/modules/$(BUILD_KERNEL)/build SUBDIRS=${HERE} EXTRA_CFLAGS='${EXTRA_CFLAGS}' modules
+	make -C /lib/modules/$(BUILD_KERNEL)/build M=${HERE} EXTRA_CFLAGS='${EXTRA_CFLAGS}' modules
 
 dkms-deb:
 	sudo make -f Makefile.dkms deb
