@@ -207,11 +207,16 @@ corresponding configuration file that is located under */etc/cluster/cluster-<in
 
 For example, to start a *cluster* instance, one can create the following 
 configuration file containing all the command line options (see -h) one
-per line:
+per line. Example:
 
-.. code-block:: text
+.. code-block:: console
 
-   /etc/cluster/cluster-10.conf
+   cat /etc/cluster/cluster-10.conf
+   -i=zc:eth1
+   -n=2,1
+   -m=1
+   -c=10
+   -g=1
 
 And then start the services with:
 
