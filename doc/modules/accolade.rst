@@ -88,7 +88,7 @@ Opening a port this way, the full card is initialised, causing issues when openi
 other ports later (previous ports may stop working), this can be avoided using the 
 port-to-ring binding as explained later on.
 
-The anic_rx_block_mfl tool included in the Accolade SDK can be used to aggregate 
+The anic_mfl_config tool included in the Accolade SDK can be used to aggregate 
 traffic from multiple ports and setup the card for load-balancing (similar to RSS)
 and multi-process applications. 
 
@@ -96,13 +96,13 @@ Example of ports aggregation and load-balancing to 2 rings:
 
 .. code-block:: console
 
-   anic_rx_block_mfl -i 0 --mode=2 
+   anic_mfl_config -i 0 --mode=2 
 
 Example of port-to-ring (ring 0 is port 0) binding:
 
 .. code-block:: console
 
-   anic_rx_block_mfl -i 0 --mode=port
+   anic_mfl_config -i 0 --mode=port
 
 In order to open ring 0 from adapter 0 you should specify anic:DEV@RING, example:
 
@@ -114,14 +114,14 @@ Note: on SDK version >1.2.26.20180510 the default Accolade 'blocks' setting has
 been changed and you might get errors like "ANIC_block_add(ring:0 buf:16) failed, oversubscribed?"
 There are two options for setting the number of blocks and solve this error:
 
-1. run anic_rx_block_mfl with --blocks=64 (old default)
-2. set the ACCOLADE_RING_BLOCKS env var to 16 (new default) when running pf_ring as anic_rx_block_mfl consumer
+1. run anic_mfl_config with --blocks=64 (old default)
+2. set the ACCOLADE_RING_BLOCKS env var to 16 (new default) when running pf_ring as anic_mfl_config consumer
 
 Example:
 
 .. code-block:: console
 
-   anic_rx_block_mfl -i 0 --mode=port --blocks=64
+   anic_mfl_config -i 0 --mode=port --blocks=64
 
 Accolade and Packet Copy
 ------------------------
