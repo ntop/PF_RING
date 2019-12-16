@@ -394,7 +394,8 @@ struct __pfring {
 #define PF_RING_L7_FILTERING	       (1 << 20) /**< pfring_open() flag: Enable L7 filtering support based on PF_RING FT (Flow Table with nDPI support) */
 #define PF_RING_DO_NOT_STRIP_FCS       (1 << 21) /**< pfring_open() flag: Do not strip the FCS (CRC), when not stripped out by the adapter (on standard adapters use this in combination with 'ethtool -K DEV rx-fcs on rx-all on') */
 #define PF_RING_TX_BPF	               (1 << 22) /**< pfring_open() flag: Evaluate bpf also for transmitted packets (this also force userspace bpf). */
-
+#define PF_RING_FLOW_OFFLOAD_TUNNEL    (1 << 23) /**< pfring_open() flag: Enable tunnel dissection with flow offload */
+  
 /* ********************************* */
 
 /* backward compatibility */
@@ -411,9 +412,9 @@ struct __pfring {
  * 2. you need super-user capabilities in order to open a device.
  * @param device_name Symbolic name of the PF_RING-aware device we are attempting to open.
  * Syntax:
- *  - eth0           interface eth0, all channels
+ *  - eth0            interface eth0, all channels
  *  - eth0\@1         interface eth0, channel 1
- *  - eth0,eth1      interface eth0 and eth1, all channels
+ *  - eth0,eth1       interface eth0 and eth1, all channels
  *  - eth0,eth1\@1    interface eth0 and eth1, channel 1
  *  - eth0\@1,5       interface eth0, channel 1 and 5
  *  - eth0\@1-5       interface eth0, channel 1,2...5
