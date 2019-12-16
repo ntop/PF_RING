@@ -10,23 +10,19 @@ case "$1" in
     if hash systemctl 2>/dev/null; then
       if hash deb-systemd-invoke 2>/dev/null; then
         deb-systemd-invoke stop pf_ring
-        deb-systemd-invoke disable pf_ring
+        deb-systemd-invoke disable pf_ring > /dev/null
         deb-systemd-invoke stop cluster
-        deb-systemd-invoke disable cluster
-        deb-systemd-invoke stop 'cluster@*'
-        # Note: disable doesn't require * after @
-        deb-systemd-invoke disable 'cluster@'
+        deb-systemd-invoke disable cluster > /dev/null
       else
-        systemctl stop pf_ring
-        systemctl disable pf_ring
-        systemctl stop cluster
-        systemctl disable cluster
-        systemctl stop 'cluster@*' --all
-        # Note: disable doesn't require * after @
-        systemctl disable 'cluster@' --all
+        /bin/systemctl stop pf_ring
+        /bin/systemctl disable pf_ring > /dev/null
+        /bin/systemctl stop cluster
+        /bin/systemctl disable cluster > /dev/null
       fi
-      systemctl daemon-reload
-      systemctl reset-failed
+      /bin/systemctl stop 'cluster@*' --all
+      /bin/systemctl disable 'cluster@' --all > /dev/null
+      /bin/systemctl daemon-reload
+      /bin/systemctl reset-failed
     else
       /etc/init.d/pf_ring stop
       /etc/init.d/cluster stop
