@@ -96,17 +96,20 @@ u_int8_t flow_table = 0;
 pfring_ft_table *ft = NULL;
 
 void flow_init(pfring_ft_flow *flow, void *user) {
+  // Enable this by uncommenting pfring_ft_set_new_flow_callback()
   // Here you can initialise user data in value->user
   // pfring_ft_flow_value *value = pfring_ft_flow_get_value(flow);
   // value->user = ..
 }
 
 void flow_packet_process(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
+  // Enable this by uncommenting pfring_ft_set_flow_packet_callback
   // Here you can process the packet and set the action to discard or forward packets for this flow:
   // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
 }
 
 void flow_free(pfring_ft_flow *flow, void *user) {
+  // Enable this by uncommenting pfring_ft_set_flow_export_callback
   // Here you can free user data stored in value->user
   // pfring_ft_flow_value *value = pfring_ft_flow_get_value(flow);
   // free(value->user);
@@ -422,7 +425,9 @@ void printHelp(void) {
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
 #ifdef HAVE_PF_RING_FT
-  printf("-T               Enable Flow Table support for flow filtering\n");
+  printf("-T               Enable FT (Flow Table) support for flow filtering\n");
+  printf("-C <path>        FT configuration file\n");
+  printf("-O <path>        FT custom protocols (nDPI) configuration file\n");
 #endif
 #ifdef HAVE_ZMQ
   printf("-Z               Enable IP-based filtering with ZMQ support for dynamic rules injection\n");
@@ -700,14 +705,18 @@ int main(int argc, char* argv[]) {
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
-  const char *opt_string = "ab:c:dD:Eg:hi:l:m:n:pr:Q:q:N:P:R:S:zu:wv"
+  const char *opt_string = "ab:c:dD:Eg:hi:l:m:n:N:pr:Q:q:P:R:S:zu:wv"
 #ifdef HAVE_PF_RING_FT
-    "T"
+    "TC:O:"
 #endif
 #ifdef HAVE_ZMQ 
     "A:E:Z"
 #endif
   ;
+#ifdef HAVE_PF_RING_FT
+  char *ft_rules_conf = NULL;
+  char *ft_proto_conf = NULL;
+#endif
 #ifdef HAVE_ZMQ
   pthread_t zmq_thread;
 #endif
@@ -803,6 +812,12 @@ int main(int argc, char* argv[]) {
     case 'T':
       flow_table = 1;
       time_pulse = 1; /* forcing time-pulse to handle flows expiration */
+    break;
+    case 'C':
+      ft_rules_conf = strdup(optarg);
+    break;
+    case 'O':
+      ft_proto_conf = strdup(optarg);
     break;
 #endif
 #ifdef HAVE_ZMQ
@@ -1091,17 +1106,22 @@ int main(int argc, char* argv[]) {
 
 #ifdef HAVE_PF_RING_FT
   if (flow_table) {
-    ft = pfring_ft_create_table(0, 0, 0, 0, 0);
+    ft = pfring_ft_create_table(PFRING_FT_TABLE_FLAGS_DPI, 0, 0, 0, 0);
 
     if (ft == NULL) {
       trace(TRACE_ERROR, "pfring_ft_create_table error");
       return -1;
     }
 
-    pfring_ft_set_new_flow_callback(ft, flow_init, NULL);
-    pfring_ft_set_flow_packet_callback(ft, flow_packet_process, NULL);
-    pfring_ft_set_flow_export_callback(ft, flow_free, NULL);
-    
+    if (ft_rules_conf != NULL) 
+      pfring_ft_load_configuration(ft, ft_rules_conf);
+
+    if (ft_proto_conf != NULL)
+      pfring_ft_load_ndpi_protocols(ft, ft_proto_conf);
+
+    //pfring_ft_set_new_flow_callback(ft, flow_init, NULL);
+    //pfring_ft_set_flow_packet_callback(ft, flow_packet_process, NULL);
+    //pfring_ft_set_flow_export_callback(ft, flow_free, NULL);
   }
 #endif
 
