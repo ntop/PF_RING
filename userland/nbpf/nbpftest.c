@@ -347,6 +347,7 @@ int main(int argc, char *argv[]) {
   nbpf_rule_list_item_t *pun;
   int dump_napatech = 0, dump_fiberblaze = 0;
   char *filter = NULL, c;
+  char tmp1[32], tmp2[32];
 
   while((c = getopt(argc, argv, "hFf:n")) != '?') {
     if(c == -1) break;
@@ -402,12 +403,20 @@ int main(int argc, char *argv[]) {
   memset(&pkt, 0, sizeof(pkt));
 
   pkt.vlan_id = 34;
+  pkt.tuple.eth_type = 0x0800;
+  pkt.tuple.ip_version = 4;
+  pkt.tuple.ip_src.v4 = 0x0100000A; /* 10.0.0.1 */
+  pkt.tuple.ip_dst.v4 = 0x0100A8C0; /* 192.168.0.1 */
   pkt.tuple.l3_proto = 17;
   pkt.tuple.l4_src_port = htons(34);
   pkt.tuple.l4_dst_port = htons(345);
   pkt.l7_proto = 7;
-  printf("VlanID=%u Proto=%u SrcPort=%u DstPort=%u L7Proto=%u -> %s\n",
+
+  printf("VlanID=%u IPv%u Src=%s Dst=%s Proto=%u SrcPort=%u DstPort=%u L7Proto=%u -> %s\n",
     pkt.vlan_id,
+    pkt.tuple.ip_version,
+    bpf_intoaV4(ntohl(pkt.tuple.ip_src.v4), tmp1, sizeof(tmp1)),
+    bpf_intoaV4(ntohl(pkt.tuple.ip_dst.v4), tmp2, sizeof(tmp2)),
     pkt.tuple.l3_proto,
     ntohs(pkt.tuple.l4_src_port),
     ntohs(pkt.tuple.l4_dst_port),
