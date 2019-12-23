@@ -17,7 +17,7 @@ Group:		System/Kernel
 Requires: 	dkms >= 1.95, pfring = @VERS@
 AutoReqProv: 	no
 BuildRequires: 	dkms, kernel-devel
-Requires:       kernel-devel
+Requires:       kernel-devel, make
 BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-root/
 
 %description
