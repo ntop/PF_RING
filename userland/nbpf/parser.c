@@ -423,6 +423,7 @@ nbpf_node_t *nbpf_create_net6_node(const char *net, int masklen, nbpf_qualifiers
 
   switch (q.protocol) {
     case NBPF_Q_DEFAULT:
+      q.protocol = NBPF_Q_IPV6; /* otherwise this is treated as IPv4 when matching */
     case NBPF_Q_IPV6:
       /* Ok */
       break;
