@@ -190,6 +190,18 @@ discarded according to the filtering or shunting policies.
 In addition to the built-in filtering engine, the application can mark flows for filtering or shunting 
 them based on custom policies using the *pfring_ft_flow_set_action* API.
 
+The configuration file can also be used to configure advanced settings for nDPI detection and flow table,
+including the flow idleness and lifetime timeouts. Example:
+
+.. code-block:: text
+
+   [global]
+   default = forward
+   dpi_min_num_tcp_packets = 12
+   dpi_min_num_udp_packets = 5
+   flow_idle_timeout = 30
+   flow_lifetime_timeout = 120
+
 IDS Acceleration
 ----------------
 
