@@ -4294,7 +4294,8 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
   if(skb->pkt_type != PACKET_LOOPBACK) {
     dev_index = ifindex_to_pf_index(dev->ifindex);
      /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
-    if (!(skb->pkt_type == PACKET_OUTGOING && active_zc_socket[dev_index] == 2)) {
+    if (!((skb->pkt_type == PACKET_OUTGOING || skb->queue_mapping == 0xffff /* stack injected */) 
+          && active_zc_socket[dev_index] == 2)) {
       rc = pf_ring_skb_ring_handler(skb,
 			            skb->pkt_type != PACKET_OUTGOING,
 			            1 /* real_skb */,
@@ -5579,19 +5580,27 @@ static int pf_ring_inject_packet_to_stack(struct net_device *netdev, struct msgh
 {
   int err = 0;
   struct sk_buff *skb = __netdev_alloc_skb(netdev, len, GFP_KERNEL);
+
   if(skb == NULL)
     return -ENOBUFS;
+
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(3,19,0))
   err = memcpy_from_msg(skb_put(skb,len), msg, len);
 #else
   err = memcpy_fromiovec(skb_put(skb,len), msg->msg_iov, len);
 #endif
+
   if(err)
     return err;
+
   skb->protocol = eth_type_trans(skb, netdev);
+  skb->queue_mapping = 0xffff;
+
   err = netif_rx_ni(skb);
+
   if(unlikely(debug_on(2) && err == NET_RX_SUCCESS))
     debug_printk(2, "Packet injected into the linux kernel!\n");
+
   return err;
 }
 
