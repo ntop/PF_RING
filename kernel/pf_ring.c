@@ -270,14 +270,11 @@ static rwlock_t ring_cluster_lock =
 /* List of all devices on which PF_RING has been registered */
 static struct list_head ring_aware_device_list; /* List of pf_ring_device */
 
-/* Map ifindex to pf device idx (used for device_rings, active_zc_socket, num_rings_per_device) */
+/* Map ifindex to pf device idx (used for device_rings, num_rings_per_device) */
 static ifindex_map_item ifindex_map[MAX_NUM_DEV_IDX];
 
 /* quick mode <ifindex, channel> to <ring> table */
 static struct pf_ring_socket* device_rings[MAX_NUM_DEV_IDX][MAX_NUM_RX_CHANNELS] = { { NULL } };
-
-/* active ZC sockets <ifindex> to bool */
-static u_int8_t active_zc_socket[MAX_NUM_DEV_IDX] = { 0 };
 
 /* Keep track of number of rings per device (plus any) */
 static u_int8_t num_rings_per_device[MAX_NUM_DEV_IDX] = { 0 };
@@ -4035,7 +4032,11 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   if(quick_mode) {
     pfr = device_rings[dev_index][channel_id];
 
-    if(pfr != NULL) {
+    if (pfr != NULL /* socket present */
+        && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
+             && (skb->pkt_type == PACKET_OUTGOING /* sent by     the stack */
+                 || skb->queue_mapping == 0xffff  /* injected to the stack */))) {
+
       if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
         channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
@@ -4108,7 +4109,9 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.vlan_id)
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.qinq_vlan_id)
             )
-	 ) {
+        && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
+             && (skb->pkt_type == PACKET_OUTGOING /* sent by     the stack */
+                 || skb->queue_mapping == 0xffff  /* injected to the stack */))) {
 	/* We've found the ring where the packet can be stored */
 	int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
 
@@ -4289,20 +4292,13 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 		      struct packet_type *pt, struct net_device *orig_dev)
 {
   int rc = 0;
-  int32_t dev_index;
 
-  if(skb->pkt_type != PACKET_LOOPBACK) {
-    dev_index = ifindex_to_pf_index(dev->ifindex);
-     /* avoid loops (e.g. "stack" injected packets captured from kernel) in 1-copy-mode ZC */
-    if (!((skb->pkt_type == PACKET_OUTGOING || skb->queue_mapping == 0xffff /* stack injected */) 
-          && active_zc_socket[dev_index] == 2)) {
-      rc = pf_ring_skb_ring_handler(skb,
-			            skb->pkt_type != PACKET_OUTGOING,
-			            1 /* real_skb */,
-			            1 /* unknown: any channel */,
-                	            UNKNOWN_NUM_RX_CHANNELS);
-    }
-  }
+  if(skb->pkt_type != PACKET_LOOPBACK)
+    rc = pf_ring_skb_ring_handler(skb,
+			          skb->pkt_type != PACKET_OUTGOING,
+			          1 /* real_skb */,
+			          1 /* unknown: any channel */,
+                	          UNKNOWN_NUM_RX_CHANNELS);
 
   kfree_skb(skb);
 
@@ -6111,10 +6107,6 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
     if(entry->bound_sockets[i] == NULL) {
       entry->bound_sockets[i] = pfr;
       entry->num_bound_sockets++;
-      if(entry->zc_dev.mem_info.rx.descr_packet_memory_tot_len == 0)
-        active_zc_socket[dev_index] = 2; /* 1-copy ZC mode */
-      else
-        active_zc_socket[dev_index] = 1; /* ZC mode */
       found = 1;
       break;
     }
@@ -6178,8 +6170,6 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
     if(entry->bound_sockets[i] == pfr) {
       entry->bound_sockets[i] = NULL;
       entry->num_bound_sockets--;
-      if(entry->num_bound_sockets == 0)
-        active_zc_socket[dev_index] = 0;
       found = 1;
       break;
     }
