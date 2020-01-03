@@ -4034,8 +4034,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
     if (pfr != NULL /* socket present */
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
-             && (skb->pkt_type == PACKET_OUTGOING /* sent by     the stack */
-                 || skb->queue_mapping == 0xffff  /* injected to the stack */))) {
+             && skb->pkt_type == PACKET_OUTGOING /* sent by the stack */)){
 
       if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
@@ -4110,8 +4109,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.qinq_vlan_id)
             )
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
-             && (skb->pkt_type == PACKET_OUTGOING /* sent by     the stack */
-                 || skb->queue_mapping == 0xffff  /* injected to the stack */))) {
+             && skb->pkt_type == PACKET_OUTGOING /* sent by the stack */)) {
 	/* We've found the ring where the packet can be stored */
 	int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
 
@@ -4293,7 +4291,8 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 {
   int rc = 0;
 
-  if(skb->pkt_type != PACKET_LOOPBACK)
+  if(skb->pkt_type != PACKET_LOOPBACK 
+     && skb->queue_mapping != 0xffff /* skip packets injected to the stack */)
     rc = pf_ring_skb_ring_handler(skb,
 			          skb->pkt_type != PACKET_OUTGOING,
 			          1 /* real_skb */,
