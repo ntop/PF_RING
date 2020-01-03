@@ -4034,7 +4034,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
     if (pfr != NULL /* socket present */
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
-             && skb->pkt_type == PACKET_OUTGOING /* sent by the stack */)){
+             && !recv_packet /* sent by the stack */)){
 
       if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
@@ -4109,7 +4109,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.qinq_vlan_id)
             )
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
-             && skb->pkt_type == PACKET_OUTGOING /* sent by the stack */)) {
+             && !recv_packet /* sent by the stack */)) {
 	/* We've found the ring where the packet can be stored */
 	int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
 
