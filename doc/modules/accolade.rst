@@ -57,6 +57,9 @@ run the following commands:
    sudo ./anic_fwupdate --id 0 --script fpga_*.rbt
    sudo reboot
 
+Note: if you get a "Device or resource busy" failure message running
+anic_fwupdate, please try killing the mm_tmon process.
+
 Now you are ready to compile and run PF_RING with Accolade support.
 Note that if you are installing pfring from packages, Accolade support
 is already enabled.
