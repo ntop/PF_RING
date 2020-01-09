@@ -1,5 +1,5 @@
 --
--- (C) 2017 - ntop.org
+-- (C) 2017-2020 - ntop.org
 --
 -- This program is free software; you can redistribute it and/or modify
 -- it under the terms of the GNU Lessed General Public License as published by

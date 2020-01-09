@@ -1,5 +1,5 @@
 /*
- * (C) 2003-2019 - ntop 
+ * (C) 2003-2020 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -134,7 +134,7 @@ static void forge_udp_packet_fast(u_char *buffer, u_int packet_len, u_int idx) {
   struct compact_udp_hdr *udp_header;
   u_int32_t src_ip = 0x0A000000; /* 10.0.0.0 */ 
   u_int32_t dst_ip =  0xC0A80001; /* 192.168.0.1 */
-  u_int16_t src_port = 2014-2019, dst_port = 3000;
+  u_int16_t src_port = 2012, dst_port = 3000;
 
   if (num_ips == 0) {
     src_ip |= idx & 0xFFFFFF;

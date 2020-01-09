@@ -1,5 +1,5 @@
 /*
- * (C) 2003-2019 - ntop 
+ * (C) 2003-2020 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -386,7 +386,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance_ipc - (C) 2014-2019 ntop.org\n");
+  printf("zbalance_ipc - (C) 2014-2020 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process balancing packets to multiple consumer processes.\n\n");
   printf("Usage: zbalance_ipc -i <device> -c <cluster id> -n <num inst>\n"
