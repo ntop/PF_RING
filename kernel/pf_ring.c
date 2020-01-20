@@ -405,7 +405,7 @@ extern int ip_defrag(struct net *net, struct sk_buff *skb, u32 user);
 /* ********************************** */
 
 /* Defaults */
-static unsigned int min_num_slots = 4096;
+static unsigned int min_num_slots = DEFAULT_NUM_SLOTS;
 static unsigned int perfect_rules_hash_size = DEFAULT_RING_HASH_SIZE;
 static unsigned int enable_tx_capture = 1;
 static unsigned int enable_frag_coherence = 1;
@@ -1758,15 +1758,39 @@ static u_char *allocate_shared_memory(u_int64_t *mem_len)
   return shared_mem;
 }
 
+static u_int32_t compute_ring_slot_len(struct pf_ring_socket *pfr, u_int32_t bucket_len) {
+  u_int32_t slot_len;
+
+  slot_len = pfr->slot_header_len + bucket_len;
+  slot_len = ALIGN(slot_len + sizeof(u_int16_t) /* RING_MAGIC_VALUE */, sizeof(u_int64_t));
+
+  return slot_len;
+}
+
+static u_int64_t compute_ring_tot_mem(u_int32_t min_num_slots, u_int32_t slot_len) {
+  return (u_int64_t) sizeof(FlowSlotInfo) + ((u_int64_t) min_num_slots * slot_len);
+}
+
+static u_int32_t compute_ring_actual_min_num_slots(u_int64_t tot_mem, u_int32_t slot_len) {
+  u_int64_t actual_min_num_slots;
+
+  actual_min_num_slots = tot_mem - sizeof(FlowSlotInfo);
+  do_div(actual_min_num_slots, slot_len);
+
+  return actual_min_num_slots;
+}
+
 /*
  * Allocate ring memory used later on for
  * mapping it to userland
  */
 static int ring_alloc_mem(struct sock *sk)
 {
-  u_int the_slot_len;
-  u_int64_t tot_mem, actual_min_num_slots;
+  u_int slot_len;
+  u_int64_t tot_mem;
   struct pf_ring_socket *pfr = ring_sk(sk);
+  u_int32_t bucket_len;
+  u_int32_t num_slots = min_num_slots;
 
   /* Check if the memory has been already allocated */
   if(pfr->ring_memory != NULL) return(0);
@@ -1796,14 +1820,32 @@ static int ring_alloc_mem(struct sock *sk)
   else
     pfr->slot_header_len = sizeof(struct pfring_pkthdr);
 
-  the_slot_len = pfr->slot_header_len + pfr->bucket_len;
-  the_slot_len = ALIGN(the_slot_len + sizeof(u_int16_t) /* RING_MAGIC_VALUE */, sizeof(u_int64_t));
+  bucket_len = pfr->bucket_len;
 
-  tot_mem = (u_int64_t) sizeof(FlowSlotInfo) + ((u_int64_t) min_num_slots * the_slot_len);
+  /* In case of jumbo MTU (9K) or lo (65K), compute the ring size
+   * assuming a standard MTU to limit the ring size */
+  if (bucket_len > 1518) {
+    u_int64_t actual_min_num_slots;
 
-  if(unlikely(tot_mem > UINT_MAX)) {
-    printk("[PF_RING] Warning: ring size (min_num_slots = %u x slot_len = %u) exceeds max, resizing..\n",
-      min_num_slots, the_slot_len);
+    bucket_len = 1518;
+
+    /* Ensure a min num slots = MIN_NUM_SLOTS */
+    slot_len = compute_ring_slot_len(pfr, bucket_len);
+    tot_mem = compute_ring_tot_mem(min_num_slots, slot_len);
+    actual_min_num_slots = compute_ring_actual_min_num_slots(tot_mem, slot_len);
+    if (actual_min_num_slots < MIN_NUM_SLOTS) {
+      /* Use the real bucket len, but limit the number of slots */
+      bucket_len = pfr->bucket_len;
+      num_slots = MIN_NUM_SLOTS;
+    }
+  }
+  
+  slot_len = compute_ring_slot_len(pfr, bucket_len);
+  tot_mem = compute_ring_tot_mem(num_slots, slot_len);
+
+  if(tot_mem > UINT_MAX) {
+    printk("[PF_RING] Warning: ring size (num_slots = %u x slot_len = %u) exceeds max, resizing..\n",
+      num_slots, slot_len);
     tot_mem = UINT_MAX;
   }
 
@@ -1822,11 +1864,9 @@ static int ring_alloc_mem(struct sock *sk)
   pfr->ring_slots = (u_char *) (pfr->ring_memory + sizeof(FlowSlotInfo));
 
   pfr->slots_info->version = RING_FLOWSLOT_VERSION;
-  pfr->slots_info->slot_len = the_slot_len;
+  pfr->slots_info->slot_len = slot_len;
   pfr->slots_info->data_len = pfr->bucket_len;
-  actual_min_num_slots = tot_mem - sizeof(FlowSlotInfo);
-  do_div(actual_min_num_slots, the_slot_len);
-  pfr->slots_info->min_num_slots = actual_min_num_slots;
+  pfr->slots_info->min_num_slots = compute_ring_actual_min_num_slots(tot_mem, slot_len);
   pfr->slots_info->tot_mem = tot_mem;
   pfr->slots_info->sample_rate = 1;
 

@@ -22,12 +22,18 @@
 #include <netinet/in.h>
 #endif /* __KERNEL__ */
 
-#define RING_MAGIC
-#define RING_MAGIC_VALUE             0x88
+/* Versioning */
+#define RING_VERSION                "7.5.0"
+#define RING_VERSION_NUM           0x070500
 
 /* Increment whenever we change slot or packet header layout (e.g. we add/move a field) */
 #define RING_FLOWSLOT_VERSION          17
 
+#define RING_MAGIC
+#define RING_MAGIC_VALUE             0x88
+
+#define MIN_NUM_SLOTS                 512
+#define DEFAULT_NUM_SLOTS            4096
 #define DEFAULT_BUCKET_LEN            128
 #define MAX_NUM_DEVICES               256
 
@@ -38,10 +44,6 @@
 #define DEFAULT_POLL_WATERMARK_TIMEOUT  0
 
 #define FILTERING_SAMPLING_RATIO       10
-
-/* Versioning */
-#define RING_VERSION                "7.5.0"
-#define RING_VERSION_NUM           0x070500
 
 /* Set */
 #define SO_ADD_TO_CLUSTER                 99
