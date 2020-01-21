@@ -3888,6 +3888,13 @@ static inline int is_valid_skb_direction(packet_direction direction, u_char recv
 
 /* ********************************** */
 
+static inline int is_stack_injected_skb(struct sk_buff *skb)
+{
+  return skb->queue_mapping == 0xffff;
+}
+
+/* ********************************** */
+
 static struct sk_buff* defrag_skb(struct sk_buff *skb,
 				  u_int16_t displ,
 				  struct pfring_pkthdr *hdr,
@@ -4074,7 +4081,9 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
     if (pfr != NULL /* socket present */
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
-             && !recv_packet /* sent by the stack */)){
+             && !recv_packet /* sent by the stack */)
+        && !(pfr->discard_injected_pkts 
+             && is_stack_injected_skb(skb))){
 
       if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
@@ -4149,7 +4158,9 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	     || (pfr->vlan_id == hdr.extended_hdr.parsed_pkt.qinq_vlan_id)
             )
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
-             && !recv_packet /* sent by the stack */)) {
+             && !recv_packet /* sent by the stack */)
+        && !(pfr->discard_injected_pkts 
+             && is_stack_injected_skb(skb))){
 	/* We've found the ring where the packet can be stored */
 	int old_len = hdr.len, old_caplen = hdr.caplen;  /* Keep old lenght */
 
@@ -4331,8 +4342,7 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 {
   int rc = 0;
 
-  if(skb->pkt_type != PACKET_LOOPBACK 
-     && skb->queue_mapping != 0xffff /* skip packets injected to the stack */)
+  if(skb->pkt_type != PACKET_LOOPBACK) 
     rc = pf_ring_skb_ring_handler(skb,
 			          skb->pkt_type != PACKET_OUTGOING,
 			          1 /* real_skb */,
@@ -7022,6 +7032,12 @@ static int ring_setsockopt(struct socket *sock,
       pfr->ring_active = 1;
     }
 
+    break;
+
+  case SO_DISCARD_INJECTED_PKTS:
+    debug_printk(2, "* SO_DISCARD_INJECTED_PKTS *\n");
+
+    pfr->discard_injected_pkts = 1;
     break;
 
   case SO_DEACTIVATE_RING:

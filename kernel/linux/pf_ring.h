@@ -62,6 +62,7 @@
 #define SO_SET_MASTER_RING               112
 #define SO_ADD_HW_FILTERING_RULE         113
 #define SO_DEL_HW_FILTERING_RULE         114
+#define SO_DISCARD_INJECTED_PKTS         115 /* discard stack injected packets */
 #define SO_DEACTIVATE_RING               116
 #define SO_SET_POLL_WATERMARK            117
 #define SO_SET_VIRTUAL_FILTERING_DEVICE  118
@@ -1159,7 +1160,9 @@ struct pf_ring_socket {
   socket_mode mode; /* Specify the link direction to enable (RX, TX, both) */
   pkt_header_len header_len;
   u_int8_t stack_injection_mode;
+  u_int8_t discard_injected_pkts;
   u_int8_t promisc_enabled;
+  u_int8_t __padding;
 
   struct sock *sk;
 

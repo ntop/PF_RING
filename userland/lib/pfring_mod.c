@@ -169,6 +169,11 @@ int pfring_mod_open_setup(pfring *ring) {
 	 ring->slots_info->remove_off, ring->slots_info->tot_lost);
 #endif
 
+  if(ring->flags & PF_RING_DISCARD_INJECTED_PKTS) {
+    char dummy;
+    setsockopt(ring->fd, 0, SO_DISCARD_INJECTED_PKTS, &dummy, sizeof(dummy));
+  }
+
   if(ring->promisc)
     pfring_set_promisc(ring, 1);
 
