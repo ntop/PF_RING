@@ -46,6 +46,7 @@
 #define MAX_PACKET_SIZE 16018
 
 struct packet {
+  u_int32_t id;
   u_int16_t len;
   u_int64_t ticks_from_beginning;
   u_char *pkt;
@@ -104,7 +105,7 @@ pfring  *pd;
 pfring_stat pfringStats;
 char *device = NULL;
 u_int8_t wait_for_packet = 1, do_shutdown = 0;
-u_int32_t pkt_loop = 0, pkt_loop_sent = 0;
+u_int32_t pkt_loop = 0, pkt_loop_sent = 0, uniq_pkts_per_sec = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 struct timeval lastTime, startTime;
@@ -251,6 +252,7 @@ void printHelp(void) {
   printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
   printf("-V <version>    Generate IP version <version> packets (default: 4, mixed: 0)\n");
   printf("-8 <num>        Send the same packets <num> times before moving to the next\n");
+  printf("-A <num>        Add <num> different packets (e.g. -b) every second\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
@@ -327,8 +329,9 @@ int main(int argc, char* argv[]) {
   double pps = 0;
 #if !(defined(__arm__) || defined(__mips__))
   double gbit_s = 0, td;
-  ticks tick_start = 0, tick_delta = 0;
+  ticks tick_start = 0, tick_delta = 0, tick_prev = 0;
 #endif
+  u_int32_t uniq_pkts_limit = 0;
   ticks hz = 0;
   struct packet *tosend;
   int num_uniq_pkts = 1, watermark = 0;
@@ -350,8 +353,11 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z8:")) != -1) {
+  while((c = getopt(argc, argv, "A:b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z8:")) != -1) {
     switch(c) {
+    case 'A':
+      uniq_pkts_per_sec = atoi(optarg);
+      break;
     case 'b':
       num_ips = atoi(optarg);
       if(num_ips == 0) num_ips = 1;
@@ -518,7 +524,7 @@ int main(int argc, char* argv[]) {
     send_len = 62; /* min len with IPv6 */
 
 #if !(defined(__arm__) || defined(__mips__))
-  if(gbit_s != 0 || pps != 0) {
+  if(gbit_s != 0 || pps != 0 || uniq_pkts_per_sec) {
     /* computing usleep delay */
     tick_start = getticks();
     usleep(1);
@@ -566,6 +572,7 @@ int main(int argc, char* argv[]) {
 
 	p = (struct packet *) malloc(sizeof(struct packet));
 	if(p) {
+          p->id = num_pcap_pkts;
 	  p->len = h->caplen;
           if (datalink == DLT_LINUX_SLL) p->len -= 2;
 	  p->ticks_from_beginning = (((h->ts.tv_sec - beginning.tv_sec) * 1000000) + (h->ts.tv_usec - beginning.tv_usec)) * hz / 1000000;
@@ -619,6 +626,7 @@ int main(int argc, char* argv[]) {
 	     num_pcap_pkts, pcap_in);
       last->next = pkt_head; /* Loop */
       send_len = avg_send_len;
+      num_uniq_pkts = num_pcap_pkts;
 
       if (send_full_pcap_once)
         num_to_send = num_pcap_pkts;
@@ -653,6 +661,7 @@ int main(int argc, char* argv[]) {
 
       if (i == 0) pkt_head = p;
 
+      p->id = i;
       p->len = send_len;
       p->ticks_from_beginning = 0;
       p->next = pkt_head;
@@ -693,7 +702,7 @@ int main(int argc, char* argv[]) {
     pps = -1;
   } /* else use pps */
 
-  if (pps > 0) {
+  if (pps > 0 || uniq_pkts_per_sec) {
     td = (double) (hz / pps);
     tick_delta = (ticks)td;
 
@@ -738,13 +747,16 @@ int main(int argc, char* argv[]) {
   i = 0;
   reforging_idx = 0;
 
+  if (uniq_pkts_per_sec) /* init limit */
+    uniq_pkts_limit = uniq_pkts_per_sec;
+
   pfring_set_application_stats(pd, "Statistics not yet computed: please try again...");
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
     fprintf(stderr, "Dumping statistics on %s\n", path);
 
 #if !(defined(__arm__) || defined(__mips__))
-  if(pps != 0)
-    tick_start = getticks();
+  if(pps != 0 || uniq_pkts_per_sec)
+    tick_start = tick_prev = getticks();
 #endif
 
   if (pps < 0) /* flush for sending at the exact original pcap speed only, otherwise let pf_ring flush when needed) */
@@ -822,6 +834,20 @@ int main(int argc, char* argv[]) {
         tick_start = getticks(); /* first packet, resetting time */
       while((getticks() - tick_start) < tosend->ticks_from_beginning)
         if (unlikely(do_shutdown)) break;
+    }
+
+    /* add N uniq packets per second */
+    if (uniq_pkts_per_sec) {
+      if (uniq_pkts_limit < num_uniq_pkts) {
+        if (getticks() - tick_prev > hz) {
+          /* 1s elapsed, add N uniq packets */
+          uniq_pkts_limit += uniq_pkts_per_sec;
+          tick_prev = getticks();
+        }
+      }
+      /* check the uniq packets limit */
+      if (tosend->id >= uniq_pkts_limit)
+        tosend = pkt_head;
     }
 #endif
 
