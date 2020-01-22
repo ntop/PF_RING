@@ -1789,7 +1789,6 @@ static int ring_alloc_mem(struct sock *sk)
   u_int slot_len;
   u_int64_t tot_mem;
   struct pf_ring_socket *pfr = ring_sk(sk);
-  u_int32_t bucket_len;
   u_int32_t num_slots = min_num_slots;
 
   /* Check if the memory has been already allocated */
@@ -1820,28 +1819,28 @@ static int ring_alloc_mem(struct sock *sk)
   else
     pfr->slot_header_len = sizeof(struct pfring_pkthdr);
 
-  bucket_len = pfr->bucket_len;
+  slot_len = compute_ring_slot_len(pfr, pfr->bucket_len);
+  tot_mem = compute_ring_tot_mem(num_slots, slot_len);
 
-  /* In case of jumbo MTU (9K) or lo (65K), compute the ring size
-   * assuming a standard MTU to limit the ring size */
-  if (bucket_len > 1518) {
-    u_int64_t actual_min_num_slots;
-
-    bucket_len = 1518;
+  /* In case of jumbo MTU (9K) or lo (65K), recompute the ring size */
+  if (pfr->bucket_len > 1600) {
+    /* Compute the ring size assuming a standard MTU to limit the ring size */
+    u_int32_t virtual_bucket_len = 1600, virtual_slot_len;
+    virtual_slot_len = compute_ring_slot_len(pfr, virtual_bucket_len);
+    tot_mem = compute_ring_tot_mem(num_slots, virtual_slot_len);
+    num_slots = compute_ring_actual_min_num_slots(tot_mem, slot_len);
 
     /* Ensure a min num slots = MIN_NUM_SLOTS */
-    slot_len = compute_ring_slot_len(pfr, bucket_len);
-    tot_mem = compute_ring_tot_mem(min_num_slots, slot_len);
-    actual_min_num_slots = compute_ring_actual_min_num_slots(tot_mem, slot_len);
-    if (actual_min_num_slots < MIN_NUM_SLOTS) {
+    if (num_slots < MIN_NUM_SLOTS) {
       /* Use the real bucket len, but limit the number of slots */
-      bucket_len = pfr->bucket_len;
       num_slots = MIN_NUM_SLOTS;
+      tot_mem = compute_ring_tot_mem(num_slots, slot_len);
     }
+
+    printk("[PF_RING] Warning: jumbo mtu or snaplen (%u), resizing slots.. "
+           "(num_slots = %u x slot_len = %u)\n",
+      pfr->bucket_len, num_slots, slot_len);
   }
-  
-  slot_len = compute_ring_slot_len(pfr, bucket_len);
-  tot_mem = compute_ring_tot_mem(num_slots, slot_len);
 
   if(tot_mem > UINT_MAX) {
     printk("[PF_RING] Warning: ring size (num_slots = %u x slot_len = %u) exceeds max, resizing..\n",
