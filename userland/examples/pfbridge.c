@@ -120,8 +120,11 @@ int main(int argc, char* argv[]) {
 
 
   /* Device A */
-  if((a_ring = pfring_open(a_dev, MAX_PKT_LEN, PF_RING_PROMISC | PF_RING_LONG_HEADER |
-                           (use_pfring_send ? 0 : PF_RING_RX_PACKET_BOUNCE))
+  if((a_ring = pfring_open(a_dev, MAX_PKT_LEN, 
+                 PF_RING_PROMISC |
+                 PF_RING_LONG_HEADER |
+                 PF_RING_DISCARD_INJECTED_PKTS |
+                 (use_pfring_send ? 0 : PF_RING_RX_PACKET_BOUNCE))
     ) == NULL) {
     printf("pfring_open error for %s [%s]\n", a_dev, strerror(errno));
     return(-1);
@@ -144,7 +147,9 @@ int main(int argc, char* argv[]) {
 
   /* Device B */
 
-  if((b_ring = pfring_open(b_dev, MAX_PKT_LEN, PF_RING_PROMISC|PF_RING_LONG_HEADER)) == NULL) {
+  if((b_ring = pfring_open(b_dev, MAX_PKT_LEN, 
+                 PF_RING_PROMISC | 
+                 PF_RING_LONG_HEADER)) == NULL) {
     printf("pfring_open error for %s [%s]\n", b_dev, strerror(errno));
     pfring_close(a_ring);
     return(-1);
