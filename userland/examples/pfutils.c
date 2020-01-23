@@ -262,7 +262,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
   }
 
   udp = (struct compact_udp_hdr *)(buffer + l2_len + ip_len);
-  udp->sport = htons(2012);
+  udp->sport = htons(2012 + (idx / num_ips));
   udp->dport = htons(3000);
   udp->len = htons(buffer_len - l2_len - ip_len);
   udp->check = 0; /* It must be 0 to compute the checksum */

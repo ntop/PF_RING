@@ -248,6 +248,7 @@ void printHelp(void) {
   printf("-M <src MAC>    Reforge source MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
+  printf("-t <num>        Reforge source port with <num> different ports per IP (-b)\n");
   printf("-S <ip>         Use <ip> as base source IP for -b (default: 10.0.0.1)\n");
   printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
   printf("-V <version>    Generate IP version <version> packets (default: 4, mixed: 0)\n");
@@ -342,6 +343,7 @@ int main(int argc, char* argv[]) {
   int randomize = 0;
   int reforging_idx;
   int stdin_packet_len = 0;
+  int num_ports = 1;
   u_int ip_v = 4;
   int flush = 0;
   char *bpfFilter = NULL;
@@ -353,7 +355,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "A:b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:w:V:z8:")) != -1) {
+  while((c = getopt(argc, argv, "A:b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:t:w:V:z8:")) != -1) {
     switch(c) {
     case 'A':
       uniq_pkts_per_sec = atoi(optarg);
@@ -361,8 +363,8 @@ int main(int argc, char* argv[]) {
     case 'b':
       num_ips = atoi(optarg);
       if(num_ips == 0) num_ips = 1;
-      if (num_uniq_pkts < num_ips)
-        num_uniq_pkts = num_ips;
+      if (num_uniq_pkts < num_ips * num_ports)
+        num_uniq_pkts = num_ips * num_ports;
       reforge_ip = 1;
       break;
     case 'B':
@@ -454,6 +456,13 @@ int main(int argc, char* argv[]) {
       break;
     case 'V':
       ip_v = atoi(optarg);
+      break;
+    case 't':
+      num_ports = atoi(optarg);
+      if(num_ports == 0) num_ports = 1;
+      if (num_uniq_pkts < num_ips * num_ports)
+        num_uniq_pkts = num_ips * num_ports;
+      reforge_ip = 1;
       break;
     case 'z':
       randomize = 1;
