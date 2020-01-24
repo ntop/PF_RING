@@ -55,6 +55,8 @@ typedef enum {
   PFRING_FT_FLOW_STATUS_FORCED_END      /**< Terminated for external event (shutdown) */
 } pfring_ft_flow_status;
 
+#define PF_RING_FT_FLOW_FLAGS_L7_GUESS (1 <<  0) /**< pfring_ft_flow_value.flags: detected L7 protocol is a guess. */
+
 typedef struct {
   u_int32_t num_protocols; /**< Number of supported L7 protocols */
 
@@ -220,6 +222,7 @@ typedef struct {
   } l7_metadata;
 
   pfring_ft_flow_status status;
+  u_int32_t flags;            /**< See PFRING_FT_FLOW_STATUS_* */
 
   u_char user[];                /**< User metadata */
 } pfring_ft_flow_value;
