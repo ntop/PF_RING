@@ -188,6 +188,21 @@ const char *action_to_string(pfring_ft_action action) {
 
 /* ******************************** */
 
+const char *status_to_string(pfring_ft_flow_status status) {
+  switch (status) {
+    case PFRING_FT_FLOW_STATUS_ACTIVE:         return "active";
+    case PFRING_FT_FLOW_STATUS_IDLE_TIMEOUT:   return "idle-timeout";
+    case PFRING_FT_FLOW_STATUS_ACTIVE_TIMEOUT: return "active-timeout";
+    case PFRING_FT_FLOW_STATUS_END_DETECTED:   return "end-of-flow";
+    case PFRING_FT_FLOW_STATUS_FORCED_END:     return "forced-end";
+    case PFRING_FT_FLOW_STATUS_SLICE_TIMEOUT:  return "slice-timeout";
+    case PFRING_FT_FLOW_STATUS_OVERFLOW:       return "table-overflow";
+  }
+  return "";
+}
+
+/* ******************************** */
+
 /* This callback is called when a flow expires */
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
@@ -214,7 +229,8 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
   printf("srcMac: %s, dstMac: %s, srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
-         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, action: %s",
+         "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
+         "status: %s, action: %s",
          etheraddr2string(k->smac, buf4), etheraddr2string(k->dmac, buf5),
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes,
@@ -223,6 +239,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
          v->direction[d2s_direction].pkts, v->direction[d2s_direction].bytes,
          (u_int) v->direction[d2s_direction].first.tv_sec, (u_int) v->direction[d2s_direction].first.tv_usec,
          (u_int) v->direction[d2s_direction].last.tv_sec,  (u_int) v->direction[d2s_direction].last.tv_usec,
+         status_to_string(v->status),
          action_to_string(pfring_ft_flow_get_action(flow)));
 
   switch(v->l7_protocol.master_protocol) {
@@ -352,6 +369,7 @@ void print_help(void) {
   printf("-c <file>       Load nDPI categories by host from file\n");
   printf("-g <core>       CPU core affinity\n");
   printf("-S <core>       Enable timer thread and set CPU core affinity\n");
+  printf("-s <duration>   Enable flow slicing (set timeout to <duration> seconds\n");
   printf("-q              Quiet mode\n");
   printf("-d              Debug mode\n");
   printf("-v              Verbose (print also raw packets)\n");
@@ -369,11 +387,11 @@ int main(int argc, char* argv[]) {
   char *categories_file = NULL;
   char *protocols_file = NULL;
   int promisc, snaplen = 1518, rc;
-  u_int32_t flags = 0, ft_flags = 0;
+  u_int32_t flags = 0, ft_flags = 0, slice_duration = 0;
   packet_direction direction = rx_and_tx_direction;
   pthread_t time_thread;
 
-  while ((c = getopt(argc,argv,"c:dg:hi:p:qvF:S:V7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dg:hi:p:qvF:s:S:V7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -400,6 +418,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'q':
       quiet = 1;
+      break;
+    case 's':
+      slice_duration = atoi(optarg);
       break;
     case 'v':
       verbose = 1;
@@ -434,6 +455,9 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "pfring_ft_create_table error\n");
     return -1;
   }
+
+  if (slice_duration > 0)
+    pfring_ft_flow_set_flow_slicing(ft, slice_duration);
 
   /* Example of L7 packet filtering rules
   pfring_ft_set_filter_protocol_by_name(ft, "MDNS", PFRING_FT_ACTION_DISCARD);

@@ -52,7 +52,9 @@ typedef enum {
   PFRING_FT_FLOW_STATUS_IDLE_TIMEOUT,   /**< Idle timeout */
   PFRING_FT_FLOW_STATUS_ACTIVE_TIMEOUT, /**< Terminated after the maximum lifetime */
   PFRING_FT_FLOW_STATUS_END_DETECTED,   /**< Terminated for end of flow (e.g. FIN) */
-  PFRING_FT_FLOW_STATUS_FORCED_END      /**< Terminated for external event (shutdown) */
+  PFRING_FT_FLOW_STATUS_FORCED_END,     /**< Terminated for external event (shutdown) */
+  PFRING_FT_FLOW_STATUS_SLICE_TIMEOUT,  /**< Flow slice timeout */
+  PFRING_FT_FLOW_STATUS_OVERFLOW        /**< Exported from those with higher inactivity to make room */
 } pfring_ft_flow_status;
 
 #define PF_RING_FT_FLOW_FLAGS_L7_GUESS (1 <<  0) /**< pfring_ft_flow_value.flags: detected L7 protocol is a guess. */
@@ -294,6 +296,18 @@ pfring_ft_create_table(
 void
 pfring_ft_destroy_table(
   pfring_ft_table *table
+);
+
+/**
+ * Enable flow slicing to peridiocally export flow updates, even when the 
+ * configured flow_lifetime_timeout is not reached.
+ * @param table The flow table handle.
+ * @param flow_slice_timeout Maximum flow slice duration (seconds). This should be lower then flow_lifetime_timeout
+ */
+void
+pfring_ft_flow_set_flow_slicing(
+  pfring_ft_table *table,
+  u_int32_t flow_slice_timeout
 );
 
 /**
