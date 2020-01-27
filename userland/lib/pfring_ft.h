@@ -219,6 +219,11 @@ typedef struct {
       char *url;              /**< HTTP URL */
       u_int16_t responseCode; /**< HTTP response code */
     } http;
+
+    struct {
+      u_int8_t type;          /**< ICMP Type */
+      u_int8_t code;          /**< ICMP Code */
+    } icmp;
   } l7_metadata;
 
   pfring_ft_flow_status status;
