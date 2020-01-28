@@ -120,6 +120,11 @@ else
 		cd $NBROKER_PATH
 		./configure && make
 	fi
+	if [ ! -e /usr/local/lib/librrc.so ]; then
+		cd $NBROKER_PATH
+		make install
+		ldconfig
+	fi
 	echo "FM10K switch initialization.."
 	nohup $NBROKER_PATH/nbrokerd/nbrokerd -c $NBROKER_PATH/rrclib/etc/rrc/fm_platform_attributes.cfg &
 	sleep 12 # It takes a while to initialize the switch
