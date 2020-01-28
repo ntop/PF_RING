@@ -4419,6 +4419,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
     goto free_sk;
 
   memset(pfr, 0, sizeof(*pfr));
+  rwlock_init(&pfr->ring_config_lock);
   pfr->sk = sk;
   pfr->ring_shutdown = 0;
   pfr->ring_active = 0;	/* We activate as soon as somebody waits for packets */
@@ -5129,13 +5130,15 @@ static void unset_netdev_promisc(struct net_device *netdev) {
 static int ring_release(struct socket *sock)
 {
   struct sock *sk = sock->sk;
-  struct pf_ring_socket *pfr = ring_sk(sk);
+  struct pf_ring_socket *pfr;
   struct list_head *ptr, *tmp_ptr;
   void *ring_memory_ptr;
   int free_ring_memory = 1;
 
   if(!sk)
     return 0;
+
+  pfr = ring_sk(sk);
 
   pfr->ring_active = 0;
 
@@ -5258,6 +5261,8 @@ static int ring_release(struct socket *sock)
   sock_put(sk);
   ring_write_unlock();
 
+  write_lock(&pfr->ring_config_lock);
+
   if(pfr->appl_name != NULL)
     kfree(pfr->appl_name);
 
@@ -5293,6 +5298,8 @@ static int ring_release(struct socket *sock)
       }
     }
   }
+
+  write_unlock(&pfr->ring_config_lock);
 
   /*
      Wait long enough so that other threads using ring_table
@@ -7575,6 +7582,7 @@ static int ring_getsockopt(struct socket *sock,
 
   case SO_GET_EXTRA_DMA_MEMORY:
     {
+      struct dma_memory_info *extra_dma_memory;
       u_int64_t num_slots, slot_len, chunk_len;
 
       if(pfr->zc_dev == NULL || pfr->zc_dev->hwdev == NULL)
@@ -7592,24 +7600,31 @@ static int ring_getsockopt(struct socket *sock,
       if(copy_from_user(&chunk_len, optval+sizeof(num_slots)+sizeof(slot_len), sizeof(chunk_len)))
         return(-EFAULT);
 
-      //if(num_slots > MAX_EXTRA_DMA_SLOTS)
-      //  num_slots = MAX_EXTRA_DMA_SLOTS;
-
       if(len < (sizeof(u_int64_t) * num_slots))
         return(-EINVAL);
 
-      if(pfr->extra_dma_memory) /* already called */
+      write_lock(&pfr->ring_config_lock);
+
+      if(pfr->extra_dma_memory) { /* already called */
+        write_unlock(&pfr->ring_config_lock);
         return(-EINVAL);
+      }
 
-      if((pfr->extra_dma_memory = allocate_extra_dma_memory(pfr->zc_dev->hwdev,
-                                    num_slots, slot_len, chunk_len)) == NULL)
-        return(-EFAULT);
-
-      if(copy_to_user(optval, pfr->extra_dma_memory->dma_addr, (sizeof(u_int64_t) * num_slots))) {
-        free_extra_dma_memory(pfr->extra_dma_memory);
-	pfr->extra_dma_memory = NULL;
+      if((extra_dma_memory = allocate_extra_dma_memory(pfr->zc_dev->hwdev,
+                                    num_slots, slot_len, chunk_len)) == NULL) {
+        write_unlock(&pfr->ring_config_lock);
         return(-EFAULT);
       }
+
+      if(copy_to_user(optval, extra_dma_memory->dma_addr, (sizeof(u_int64_t) * num_slots))) {
+        free_extra_dma_memory(extra_dma_memory);
+        write_unlock(&pfr->ring_config_lock);
+        return(-EFAULT);
+      }
+
+      pfr->extra_dma_memory = extra_dma_memory;
+
+      write_unlock(&pfr->ring_config_lock);
 
       break;
     }
