@@ -59,7 +59,6 @@
 #include "pfring_mod.h"
 #include "pfring_mod_af_xdp.h"
 
-#define AF_XDP_DEV_PKT_BUFF_SIZE   2048
 #define AF_XDP_DEV_MAX_QUEUES      16
 #define AF_XDP_DEV_NUM_BUFFERS     4096
 #define AF_XDP_DEV_NUM_DESC        XSK_RING_CONS__DEFAULT_NUM_DESCS
@@ -696,7 +695,6 @@ static void queue_reset(struct af_xdp_handle *handle, u_int16_t queue_idx) {
 /* **************************************************** */
 
 static int eth_rx_queue_setup(struct af_xdp_handle *handle, u_int16_t queue_id, u_int16_t nb_rx_desc) {
-  u_int32_t buf_size, data_size;
   struct rx_queue *rxq;
   struct tx_queue *txq;
   int ret;
@@ -708,15 +706,6 @@ static int eth_rx_queue_setup(struct af_xdp_handle *handle, u_int16_t queue_id, 
   txq = &handle->tx_queues[queue_id];
 
   queue_reset(handle, queue_id);
-
-  buf_size = AF_XDP_DEV_PKT_BUFF_SIZE;
-
-  data_size = AF_XDP_DEV_FRAME_SIZE - AF_XDP_DEV_DATA_HEADROOM;
-
-  if (data_size > buf_size) {
-    ret = -ENOMEM;
-    goto err;
-  }
 
   if (xsk_configure(handle, rxq, txq, nb_rx_desc)) {
     fprintf(stderr, "Failed to configure xdp socket\n");
