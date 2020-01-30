@@ -1145,6 +1145,8 @@ struct hash_fragment_node {
  * Ring options
  */
 struct pf_ring_socket {
+  rwlock_t ring_config_lock;
+
   u_int8_t ring_active, ring_shutdown, num_rx_channels, num_bound_devices;
   pf_ring_device *ring_dev;
 
