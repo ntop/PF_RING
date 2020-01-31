@@ -11,7 +11,7 @@ ExecStartPre=/bin/sh -c '/bin/echo "$(/bin/date) cluster %i StartPre" >> /var/lo
 
 ExecStart=/usr/bin/zbalance_ipc /run/cluster-%i.conf
 
-ExecStartPost=/bin/sh -c 'T=10; until [ $(/bin/cat /proc/net/pf_ring/*-none* 2>/dev/null|/bin/grep "pfring-zc-cluster-%i$"|/usr/bin/wc -l) -gt 0 ] || [ $T -eq 0 ]; do /bin/sleep 1; T=$[$T-1]; done'
+ExecStartPost=/bin/sh -c 'T=10; until [ $(/bin/cat /proc/net/pf_ring/*-none* 2>/dev/null|/bin/grep "pfring-zc-cluster-%i$"|/usr/bin/wc -l) -gt 0 ] || [ $T -eq 0 ]; do /bin/sleep 1; T=$((T-1)); done'
 ExecStartPost=/bin/sh -c '/bin/echo "$(/bin/date) cluster %i StartPost" >> /var/log/ntop-systemd.log'
 
 ExecStopPost=/usr/local/bin/clusterctl stop-deps %i
