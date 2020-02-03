@@ -10362,38 +10362,35 @@ static int i40e_get_phys_port_id(struct net_device *netdev,
 }
 
 #endif /* HAVE_NDO_GET_PHYS_PORT_ID */
-#ifdef HAVE_FDB_OPS
-#ifdef USE_CONST_DEV_UC_CHAR
 /**
  * i40e_ndo_fdb_add - add an entry to the hardware database
  * @ndm: the input from the stack
  * @tb: pointer to array of nladdr (unused)
  * @dev: the net device pointer
  * @addr: the MAC address entry being added
+ * @vid: VLAN ID
  * @flags: instructions from stack about fdb operation
+ * @extack: netdev extended ack structure
  */
+#ifdef HAVE_FDB_OPS
+#if defined(HAVE_NDO_FDB_ADD_EXTACK)
 static int i40e_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
-			    struct net_device *dev,
-			    const unsigned char *addr,
-#ifdef HAVE_NDO_FDB_ADD_VID
-			    u16 vid,
-#endif
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags, struct netlink_ext_ack *extack)
+#elif defined(HAVE_NDO_FDB_ADD_VID)
+static int i40e_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags)
+#elif defined(HAVE_NDO_FDB_ADD_NLATTR)
+static int i40e_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
 			    u16 flags)
+#elif defined(USE_CONST_DEV_UC_CHAR)
+static int i40e_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    const unsigned char *addr, u16 flags)
 #else
-/**
- * i40e_ndo_fdb_add - add an entry to the hardware database
- * @ndm: the input from the stack
- * @dev: the net device pointer
- * @addr: the MAC address entry being added
- * @flags: instructions from stack about fdb operation
- */
-static int i40e_ndo_fdb_add(struct ndmsg *ndm,
-			    struct net_device *dev,
-			    unsigned char *addr,
-#ifdef HAVE_NDO_FDB_ADD_VID
-			    u16 vid,
-#endif
-			    u16 flags)
+static int i40e_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    unsigned char *addr, u16 flags)
 #endif
 {
 	struct i40e_netdev_priv *np = netdev_priv(dev);

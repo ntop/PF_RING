@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright(c) 1999 - 2019 Intel Corporation. */
+/* Copyright(c) 2013 - 2019 Intel Corporation. */
 
 /* SPDX-License-Identifier: GPL-2.0 OR MIT */
 #ifndef __LINUX_OVERFLOW_H
@@ -46,6 +46,7 @@
 #define type_max(T) ((T)((__type_half_max(T) - 1) + __type_half_max(T)))
 #define type_min(T) ((T)((T)-type_max(T)-(T)1))
 
+
 #ifdef COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW
 /*
  * For simplicity and code hygiene, the fallback code below insists on
@@ -83,6 +84,7 @@
 })
 
 #else
+
 
 /* Checking for unsigned overflow is relatively easy without causing UB. */
 #define __unsigned_add_overflow(a, b, d) ({	\
@@ -191,6 +193,7 @@
 	(__b == (typeof(__b))-1 && __a == __tmin);			\
 })
 
+
 #define check_add_overflow(a, b, d)					\
 	__builtin_choose_expr(_kc_is_signed_type(typeof(a)),		\
 			__signed_add_overflow(a, b, d),			\
@@ -205,6 +208,7 @@
 	__builtin_choose_expr(_kc_is_signed_type(typeof(a)),		\
 			__signed_mul_overflow(a, b, d),			\
 			__unsigned_mul_overflow(a, b, d))
+
 
 #endif /* COMPILER_HAS_GENERIC_BUILTIN_OVERFLOW */
 
