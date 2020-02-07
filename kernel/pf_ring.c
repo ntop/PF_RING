@@ -4992,6 +4992,79 @@ static void unset_netdev_promisc(struct net_device *netdev) {
 
 /* *********************************************** */
 
+static void set_ringdev_promisc(pf_ring_device *ring_dev) {
+  if(atomic_inc_return(&ring_dev->promisc_users) != 1) 
+    return; /* not the first user (promisc already set) */
+
+  if(is_netdev_promisc(ring_dev->dev)) {
+    /* promisc already set via ifconfig */
+    ring_dev->do_not_remove_promisc = 1;
+    return;
+  } 
+ 
+  ring_dev->do_not_remove_promisc = 0;
+  set_netdev_promisc(ring_dev->dev);
+}
+
+/* *********************************************** */
+
+static void unset_ringdev_promisc(pf_ring_device *ring_dev) {
+  if(!atomic_read(&ring_dev->promisc_users)) /*safety check */
+    return; /* no users */
+
+  if(atomic_dec_return(&ring_dev->promisc_users) != 0)
+    return; /* not the last user (keep promisc) */
+
+  if(ring_dev->do_not_remove_promisc)
+    return; /* promisc set via ifconfig (keep promisc) */
+
+  unset_netdev_promisc(ring_dev->dev);
+}
+
+/* *********************************************** */
+
+static void set_socket_promisc(struct pf_ring_socket *pfr) {
+  struct list_head *ptr, *tmp_ptr;
+
+  if (pfr->promisc_enabled)
+    return;
+
+  set_ringdev_promisc(pfr->ring_dev);
+
+  /* managing promisc for additional devices */
+  list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+    pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+    if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
+        test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
+      set_ringdev_promisc(dev_ptr);
+  }
+
+  pfr->promisc_enabled = 1;
+}
+
+/* *********************************************** */
+
+static void unset_socket_promisc(struct pf_ring_socket *pfr) {
+  struct list_head *ptr, *tmp_ptr;
+
+  if (!pfr->promisc_enabled)
+    return;
+
+  unset_ringdev_promisc(pfr->ring_dev);
+
+  /* managing promisc for additional devices */
+  list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+    pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+    if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
+        test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
+      unset_ringdev_promisc(dev_ptr);
+  }
+
+  pfr->promisc_enabled = 0;
+}
+
+/* *********************************************** */
+
 static int ring_release(struct socket *sock)
 {
   struct sock *sk = sock->sk;
@@ -5146,20 +5219,8 @@ static int ring_release(struct socket *sock)
     pfr->extra_dma_memory = NULL;
   }
 
-  if(pfr->promisc_enabled) {
-    if(atomic_dec_return(&pfr->ring_dev->promisc_users) == 0) {
-      if(!pfr->ring_dev->do_not_remove_promisc) {
-        unset_netdev_promisc(pfr->ring_dev->dev);
-        /* managing promisc for additional devices */
-        list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-          pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-          if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
-              test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
-            unset_netdev_promisc(dev_ptr->dev);
-        }
-      }
-    }
-  }
+  if(pfr->promisc_enabled)
+    unset_socket_promisc(pfr);
 
   write_unlock(&pfr->ring_config_lock);
 
@@ -7159,39 +7220,10 @@ static int ring_setsockopt(struct socket *sock,
       if(!pfr->ring_dev || pfr->ring_dev == &none_device_element || pfr->ring_dev == &any_device_element) {
         debug_printk(1, "SO_SET_IFF_PROMISC: not a real device\n");
       } else {
-        if(enable_promisc) {
-          if(!pfr->promisc_enabled) {
-            pfr->promisc_enabled = 1;
-            if(atomic_inc_return(&pfr->ring_dev->promisc_users) == 1) { /* first user */
-              if(is_netdev_promisc(pfr->ring_dev->dev)) { /* promisc already set via ifconfig */
-                pfr->ring_dev->do_not_remove_promisc = 1;
-              } else {
-                pfr->ring_dev->do_not_remove_promisc = 0;
-                set_netdev_promisc(pfr->ring_dev->dev);
-                /* managing promisc for additional devices */
-                list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-                  pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-                  if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
-                      test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
-                    set_netdev_promisc(dev_ptr->dev);
-                }
-              }
-            }
-          }
-        } else {
-          if(!atomic_read(&pfr->ring_dev->promisc_users)) { /* no users (otherwise keep promisc) */
-            if(!pfr->ring_dev->do_not_remove_promisc) {
-              unset_netdev_promisc(pfr->ring_dev->dev);
-              /* managing promisc for additional devices */
-              list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-                pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-                if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
-                    test_bit(dev_ptr->dev->ifindex, pfr->netdev_mask))
-                  unset_netdev_promisc(dev_ptr->dev);
-              }
-            }
-          }
-        }
+        if(enable_promisc)
+          set_socket_promisc(pfr);
+        else
+          unset_socket_promisc(pfr);
       }
 
     }
