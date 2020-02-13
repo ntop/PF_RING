@@ -231,7 +231,10 @@ typedef struct {
   pfring_ft_flow_status status;
   u_int32_t flags;            /**< See PFRING_FT_FLOW_STATUS_* */
 
-  u_char user[];                /**< User metadata */
+  u_char *user;               /**< User metadata: this points to the end of
+                               * the same struct usually. In case of flow
+                               * slice this points to the original flow's
+                               * user data. */
 } pfring_ft_flow_value;
 
 /*** stats struct ***/
