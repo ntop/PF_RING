@@ -1,3 +1,111 @@
+---------------------------------------                                                                                                                                                                             
+2020-02-18 PF_RING 7.6
+
+* PF_RING Library
+ - New pfring_open flag PF_RING_TX_BPF to evaluate the BPF filter also for TX
+ - New pfring_open flag PF_RING_FLOW_OFFLOAD_TUNNEL to dissect tunneled traffic in flow-offload mode
+ - New pfring_open flag PF_RING_DISCARD_INJECTED_PKTS to discard stack-injected packets
+
+* ZC Library
+ - New API call pfring_zc_close_device to close a ZC interface
+ - New 'flags' parameter to pfring_zc_create_cluster
+ - Fixed memory allocation in case of more than 4GB of buffer size
+
+* FT Library
+ - New API call pfring_ft_set_filter_all_protocols to reset all filtering rules
+ - New API call pfring_ft_set_license to set a license at runtime
+ - New API call pfring_ft_flow_get_ndpi_handle to access the flow nDPI handle
+ - New pfring_ft_l7_protocol_id, pfring_ft_get_ndpi_handle to access the nDPI handle
+ - New pfring_ft_flow_value status field to get flow termination reason
+ - New PFRING_FT_TABLE_FLAGS_DPI_EXTRA flag to enable extra metadata extraction
+ - New PFRING_FT_DECODE_TUNNELS flag to decode tunnels, new tunnel_type item in the flow value
+ - New flow slicing support (pfring_ft_flow_set_flow_slicing API)
+ - Added CAPWAP support
+ - Added flow metadata for HTTP/DNS/SSL
+ - Added global 'default' section to the rules configuration file
+ - Added dpi_min_num_tcp_packets / dpi_min_num_udp_packets to the configuration file
+ - Added flow_idle_timeout / flow_lifetime_timeout to the configuration file
+ - Added src/dst mac to the exported flow key
+ - Added ICMP type/code to flow metadata
+ - Added flags to flow metadata
+ - Added custom flow actions to be defined by the user
+ - Added pfring_ft_load_configuration_ext API
+ - Improved protocol detection for some protocols like Skype
+ - Improved metadata extraction for some protocols like Telnet
+ - Improved pfring_ft_license to return the duration also in demo mode
+ - Changed l7_detected callback: this is called before the flow_packet callback now
+ - Changed pfring_ft_create_table and pfring_ft_flow_value to allocate user metadata as part of the flow structure
+ - Fixed filtering/shunting of custom protocols
+ - Fixed protocol detection in case of guess
+ - Fixed pfring_ft_set_l7_detected_callback user parameter handling
+
+* PF_RING-aware Libpcap
+
+ - Fixed device name check during socket initialization to handle long interface names
+ - Fixed loop break
+
+* PF_RING Kernel Module
+ - Added new clustering mode cluster_per_flow_ip_with_dup_tuple
+ - Allow any to capture from any namespace (on the host only)
+ - Remapping ifindex to an internal device index to handle ifindex growing indefinitely
+ - Fixed kernel crash parsing malformed packets (12 nested QinQ VLAN headers with GRE)
+ - Fixed possible race condition
+ - Fixed QinQ VLAN and VLAN offload support
+ - Fixed concurrent access to the ring in case of loopback device and bridge
+ - Compilation fixes for kernel 5.x
+ - Reworked max ring size check to handle cases like jumbo frames
+ - Improved promisc management
+
+* PF_RING Capture Modules
+ - New AF_XDP capture module
+ - Napatech library update, fixed findalldev
+ - Accolade library update, fixed caplen vs orig len, new env var ACCOLADE_FLOW_IDLE_TIMEOUT
+ - Myricom library update, license fix with port aggregation
+ - DAG library update
+
+* ZC Drivers
+ - New ixgbe-zc driver v.5.5.3
+ - Support for Intel X550
+ - Compilation fixes for kernel 5.x
+ - Handling if up/down when the interface is in use by ZC
+
+* nBPF 
+ - Added support to match custom fields through a callback (nbpf_set_custom_callback)
+
+* Examples
+ - zcount improvements:
+   - Added -T option to capture TX
+ - zbalance_ipc improvements:
+   - Fixed -m 4/5/6 with multiple applications and more than 32 queues
+   - New -E option to enable debug mode
+   - New -C <FT config file> and -O <nDPI proto file> options
+ - ftflow_dpdk improvements:
+   - More stats: drops, hw stats, per-queue throughput
+   - New options to control the link status, flow control, autoneg, port speed, checksum offload
+   - New -P option to set the TX rate
+   - New TX test mode and -T option to set the packet len
+   - New -F option to enable forwarding
+   - New -m <len> option to set the mtu
+   - Capture-only mode
+   - Forward optimizations
+ - ftflow_pcap improvements:
+   - Support for processing a PCAP file
+   - New -p <proto.txt> option
+   - New -F <file> option to configure filtering/shunting rules
+ - pfsend improvements:
+   - New -8 <num> option to send the same packets <num> times before moving to the next
+   - New -B <bpf> option to set a BPF filter
+   - New -t option to forge N different source port
+   - New -A option to generate increasing number of flows
+ - pfcount improvements:
+   - New -R option to disable RSS reprogramming
+ - pfbridge now discards injected packets
+
+* Misc
+ - New pf_ringcfg script to automatically configure pf_ring and drivers
+ - New pre/post scripts executed by systemd before/after loading pf_ring and drivers
+ - Improved hugepages configuration with multiple nodes
+ - npcap lib update, storage utility functions fix for NFS
 
 ---------------------------------------                                                                                                                                                                             
 2018-12-19 PF_RING 7.4
