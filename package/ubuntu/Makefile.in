@@ -19,7 +19,7 @@ pre-drivers: pre-zc
 pre-kernel-nodrivers:
 	cd ../../kernel; ./configure; sudo make -f Makefile.dkms deb
 
-pre-kernel: pre-drivers pre-kernel-nodrivers
+pre-kernel: pre-kernel-nodrivers pre-drivers
 
 pre-zc:
 	cd ../../drivers/intel/; ./configure; make dkms-deb
