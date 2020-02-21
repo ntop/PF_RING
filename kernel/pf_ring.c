@@ -2199,6 +2199,9 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
     return(0); /* No IP */
   }
 
+  if (ip_len == 0)
+    return(0); /* Bogus IP */
+
   hdr->extended_hdr.parsed_pkt.offset.l4_offset = hdr->extended_hdr.parsed_pkt.offset.l3_offset+ip_len;
 
   if(!fragment_offset) {
@@ -2318,8 +2321,12 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	      } /* while */
 
 	      tunnel_offset += ip_len;
-	    } else
+	    } else {
 	      return(1);
+            }
+
+            if (ip_len == 0)
+              return(1); /* Bogus IP */
 
 	  parse_tunneled_packet:
 	    if(!fragment_offset) {
@@ -2421,8 +2428,12 @@ static int parse_raw_pkt(u_char *data, u_int data_len,
 	  } /* while */
 
 	  tunnel_offset += ip_len;
-        } else
+        } else {
 	  return(1);
+        }
+
+        if (ip_len == 0)
+          return(1); /* Bogus IP */
 
 	goto parse_tunneled_packet; /* Parse tunneled ports */
       } else { /* TODO handle other GRE versions */
