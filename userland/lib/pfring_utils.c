@@ -175,8 +175,12 @@ static int __pfring_parse_tunneled_pkt(u_char *data, struct pfring_pkthdr *hdr, 
 
     tunnel_offset += ip_len;
 
-  } else
+  } else {
     return 0;
+  }
+
+  if (ip_len == 0)
+    return 0; /* Bogus IP */
 
   if (fragment_offset)
     return 1;
@@ -340,6 +344,9 @@ int pfring_parse_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int8_t level /* 
     hdr->extended_hdr.parsed_pkt.l3_proto = 0;
     goto TIMESTAMP;
   }
+
+  if (ip_len == 0)
+    goto TIMESTAMP; /* Bogus IP */
 
   hdr->extended_hdr.parsed_pkt.offset.l4_offset = hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len;
 
