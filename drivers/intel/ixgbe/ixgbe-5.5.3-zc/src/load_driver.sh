@@ -36,7 +36,7 @@ insmod ./ixgbe.ko RSS=1,1,1,1
 
 sleep 1
 
-killall irqbalance 
+pkill irqbalance 
 
 INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
 for IF in $INTERFACES ; do
