@@ -813,7 +813,7 @@ int pfring_mod_enable_ring(pfring *ring) {
 /* **************************************************** */
 
 int pfring_mod_disable_ring(pfring *ring) {
-  char dummy;
+  char dummy = '\0';
 
   return(setsockopt(ring->fd, 0, SO_DEACTIVATE_RING, &dummy, sizeof(dummy)));
 }
