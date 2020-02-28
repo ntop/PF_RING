@@ -170,7 +170,7 @@ int pfring_mod_open_setup(pfring *ring) {
 #endif
 
   if(ring->flags & PF_RING_DISCARD_INJECTED_PKTS) {
-    char dummy;
+    char dummy = '\0';
     setsockopt(ring->fd, 0, SO_DISCARD_INJECTED_PKTS, &dummy, sizeof(dummy));
   }
 
