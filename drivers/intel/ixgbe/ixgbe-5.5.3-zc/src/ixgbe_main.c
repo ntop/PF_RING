@@ -65,6 +65,10 @@ module_param_array(numa_cpu_affinity, int, NULL, 0444);
 MODULE_PARM_DESC(numa_cpu_affinity,
                  "Comma separated list of core ids where per-adapter memory will be allocated");
 
+static unsigned int disable_vlan_strip = 0;
+module_param(disable_vlan_strip, uint, 0644);
+MODULE_PARM_DESC(disable_vlan_strip, "Set to 1 to disable VLAN stripping (use 'ethtool -K $IF rxvlan off' when available)");
+
 static unsigned int low_latency_tx = 0;
 module_param(low_latency_tx, uint, 0644);
 MODULE_PARM_DESC(low_latency_tx, "Set to 1 to reduce transmission latency, minimize PCIe overhead otherwise");
@@ -5994,6 +5998,14 @@ void ixgbe_set_rx_mode(struct net_device *netdev)
 	IXGBE_WRITE_REG(hw, IXGBE_FCTRL, fctrl);
 
 #ifdef HAVE_8021P_SUPPORT
+#ifdef HAVE_PF_RING
+	if (disable_vlan_strip)
+#ifdef NETIF_F_HW_VLAN_CTAG_RX
+		features &= ~NETIF_F_HW_VLAN_CTAG_RX;
+#else
+		features &= ~NETIF_F_HW_VLAN_RX;
+#endif
+#endif
 #ifdef NETIF_F_HW_VLAN_CTAG_RX
 	if (features & NETIF_F_HW_VLAN_CTAG_RX)
 #else
