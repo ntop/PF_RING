@@ -20,7 +20,7 @@ modprobe dca
 #insmod ./ixgbe.ko RSS=0,0,0,0
 
 # Disable multiqueue
-insmod ./ixgbe.ko RSS=1,1,1,1
+insmod ./ixgbe.ko RSS=1,1,1,1 disable_vlan_strip=1
 
 # Low-latency precise transmission rate
 #insmod ./ixgbe.ko RSS=1,1,1,1 low_latency_tx=1
