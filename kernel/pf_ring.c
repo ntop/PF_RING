@@ -8404,14 +8404,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     return NOTIFY_DONE;
   }
 
-  dev_index = map_ifindex(dev->ifindex);
-
-  if(dev_index < 0) {
-    printk("[PF_RING] %s %s: unable to map interface index %d\n", __FUNCTION__,
-           dev->name, dev->ifindex);
-    return NOTIFY_DONE;
-  }
-
   switch (msg) {
     case NETDEV_POST_INIT:
     case NETDEV_PRE_UP:
@@ -8420,6 +8412,13 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       break;
     case NETDEV_REGISTER:
       debug_printk(2, "%s: [REGISTER][ifindex: %u]\n", dev->name, dev->ifindex);
+
+      dev_index = map_ifindex(dev->ifindex);
+      if(dev_index < 0) {
+        printk("[PF_RING] %s %s: unable to map interface index %d\n", __FUNCTION__,
+          dev->name, dev->ifindex);
+        break;
+      }
 
       /* safety check */
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
