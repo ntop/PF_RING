@@ -649,11 +649,11 @@ int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
   }
 
   if (gtpc_fwd_version) {
-    consumers_mask &= ~((int64_t) gtpc_fwd_queue); /* do not balance traffic to -G queue */
+    consumers_mask &= ~((int64_t) 1 << gtpc_fwd_queue); /* do not balance traffic to -G queue */
     if (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPC) {
       if ((gtpc_fwd_version == 1 && (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V1)) ||
           (gtpc_fwd_version == 2 && (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V2)))
-        consumers_mask |= (1 << gtpc_fwd_queue);
+        consumers_mask |= ((int64_t) 1 << gtpc_fwd_queue);
     }
   }
 
@@ -945,6 +945,7 @@ int main(int argc, char* argv[]) {
           gtpc_fwd_queue = q_idx;
           v_ptr = strchr(optarg, ':');
           if (v_ptr != NULL) gtpc_fwd_version = atoi(&v_ptr[1]);
+          trace(TRACE_NORMAL, "Forwarding GTP-C v%u to queue %u", gtpc_fwd_version, gtpc_fwd_queue);
         }
       break;
       case 'r':
@@ -1196,9 +1197,9 @@ int main(int argc, char* argv[]) {
       break;
     case 1: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else if (time_pulse) func = ip_distribution_func; /* else built-in IP-based */
       break;
-    case 4: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func =  gtp_distribution_func;
+    case 4: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func = gtp_distribution_func;
       break;
-    case 5: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func =  gre_distribution_func;
+    case 5: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func = gre_distribution_func;
       break;
     case 6: func =  direct_distribution_func;
       break;
