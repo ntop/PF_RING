@@ -504,12 +504,13 @@ int64_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 int64_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
+  u_int32_t flags;
 #ifdef HAVE_PACKET_FILTER
   if (!packet_filter(pkt_handle, in_queue))
     return -1;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
-  return pfring_zc_builtin_gtp_hash(pkt_handle, in_queue) % num_out_queues;
+  return pfring_zc_builtin_gtp_hash(pkt_handle, in_queue, &flags) % num_out_queues;
 }
 
 /* *************************************** */
@@ -617,6 +618,7 @@ int64_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_
 int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   int32_t i, offset = 0, app_instance, hash;
   int64_t consumers_mask = 0;
+  u_int32_t flags;
 
 #ifdef HAVE_PACKET_FILTER
   if (!packet_filter(pkt_handle, in_queue))
@@ -625,7 +627,7 @@ int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
-  hash = pfring_zc_builtin_gtp_hash(pkt_handle, in_queue);
+  hash = pfring_zc_builtin_gtp_hash(pkt_handle, in_queue, &flags);
 
   for (i = 0; i < num_apps; i++) {
     app_instance = hash % instances_per_app[i];

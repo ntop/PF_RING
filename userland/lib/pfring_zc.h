@@ -47,6 +47,11 @@
 #define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_PACKET (1 << 7) /**< pfring_zc_pkt_buff.flags: buffer contains a raw packet */ 
 #define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_MARKER (1 << 8) /**< pfring_zc_pkt_buff.flags: buffer belongs to a flow that has been marked */ 
 
+#define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V1   (1 << 0) /**< pfring_zc_builtin_gtp_hash flags: GTP v1 */ 
+#define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V2   (1 << 1) /**< pfring_zc_builtin_gtp_hash flags: GTP v2 */
+#define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPC (1 << 2) /**< pfring_zc_builtin_gtp_hash flags: GTP-C */
+#define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPU (1 << 3) /**< pfring_zc_builtin_gtp_hash flags: GTP-U */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -818,12 +823,14 @@ pfring_zc_builtin_5tuple_hash(
  * - <src ip, dst ip, src port, dst port> for non GTP packets
  * @param pkt_handle The pointer to the buffer handle.
  * @param queue      The queue from which the packet is arrived or destined.
+ * @param flags      Flags with info about the GTP content (version, GTP-c/GTP-u, etc)
  * @return           The packet hash.
  */
 u_int32_t
 pfring_zc_builtin_gtp_hash(
   pfring_zc_pkt_buff *pkt_handle,
-  pfring_zc_queue *queue
+  pfring_zc_queue *queue,
+  u_int32_t *flags /* out */
 );
 
 /**
