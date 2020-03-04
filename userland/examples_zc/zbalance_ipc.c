@@ -71,6 +71,9 @@ u_int32_t instances_per_app[MAX_NUM_APP];
 char **devices = NULL;
 char **outdevs;
 
+int gtpc_fwd_queue = -1;
+int gtpc_fwd_version = 0;
+
 int cluster_id = DEFAULT_CLUSTER_ID+4;
 int metadata_len = 0;
 
@@ -434,6 +437,7 @@ void printHelp(void) {
   printf("-E <endpoint>    Set the ZMQ endpoint to be used with -Z (default: %s)\n", DEFAULT_ENDPOINT);
   printf("-A <policy>      Set default policy (0: drop, 1: accept) to be used with -Z (default: accept)\n");
 #endif
+  printf("-G <queue>:<ver> Forward GTP-C version <ver> to queue <queue> (with -m 4)\n");
   printf("-E               Debug mode\n");
   printf("-v               Verbose\n");
   exit(-1);
@@ -504,13 +508,22 @@ int64_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 int64_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-  u_int32_t flags;
+  u_int32_t hash, flags;
 #ifdef HAVE_PACKET_FILTER
   if (!packet_filter(pkt_handle, in_queue))
     return -1;
 #endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
-  return pfring_zc_builtin_gtp_hash(pkt_handle, in_queue, &flags) % num_out_queues;
+
+  hash = pfring_zc_builtin_gtp_hash(pkt_handle, in_queue, &flags) % num_out_queues;
+
+  if (gtpc_fwd_version && (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPC)) {
+    if ((gtpc_fwd_version == 1 && (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V1)) ||
+        (gtpc_fwd_version == 2 && (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V2)))
+      hash = gtpc_fwd_queue;
+  }
+
+  return hash;
 }
 
 /* *************************************** */
@@ -635,6 +648,15 @@ int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
     offset += instances_per_app[i];
   }
 
+  if (gtpc_fwd_version) {
+    consumers_mask &= ~((int64_t) gtpc_fwd_queue); /* do not balance traffic to -G queue */
+    if (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPC) {
+      if ((gtpc_fwd_version == 1 && (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V1)) ||
+          (gtpc_fwd_version == 2 && (flags & PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V2)))
+        consumers_mask |= (1 << gtpc_fwd_queue);
+    }
+  }
+
   return consumers_mask;
 }
 
@@ -707,7 +729,7 @@ int main(int argc, char* argv[]) {
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
-  const char *opt_string = "ab:c:dD:Eg:hi:l:m:n:N:pr:Q:q:P:R:S:zu:wv"
+  const char *opt_string = "ab:c:dD:EG:g:hi:l:m:n:N:pr:Q:q:P:R:S:zu:wv"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -914,14 +936,23 @@ int main(int argc, char* argv[]) {
   optind = 1;
   while ((c = getopt(opt_argc, opt_argv, opt_string)) != '?') {
     int q_idx;
+    char *v_ptr;
     if ((c == 255) || (c == -1)) break;
     switch (c) {
-    case 'r':
-      q_idx = atoi(optarg);
-      if (q_idx < num_consumer_queues) {
-        outdevs[q_idx] = strchr(optarg, ':');
-        if (outdevs[q_idx] != NULL) outdevs[q_idx]++;
-      }
+      case 'G':
+        q_idx = atoi(optarg);
+        if (q_idx < num_consumer_queues) {
+          gtpc_fwd_queue = q_idx;
+          v_ptr = strchr(optarg, ':');
+          if (v_ptr != NULL) gtpc_fwd_version = atoi(&v_ptr[1]);
+        }
+      break;
+      case 'r':
+        q_idx = atoi(optarg);
+        if (q_idx < num_consumer_queues) {
+          outdevs[q_idx] = strchr(optarg, ':');
+          if (outdevs[q_idx] != NULL) outdevs[q_idx]++;
+        }
       break;
     }
   }
