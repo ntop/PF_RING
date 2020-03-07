@@ -31,6 +31,7 @@
 #include "pfring_mod.h"
 #include "pfring_mod_stack.h"
 #include "pfring_mod_sysdig.h"
+#include "pfring_mod_pcap.h"
 
 #ifdef HAVE_AF_XDP
 /* AF_XDP */
@@ -110,6 +111,11 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "sysdig",
     .open = pfring_mod_sysdig_open,
+    .findalldevs = NULL
+  },
+  {
+    .name = "pcap",
+    .open = pfring_mod_pcap_open,
     .findalldevs = NULL
   },
 

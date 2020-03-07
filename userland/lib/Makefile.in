@@ -86,7 +86,7 @@ NBPF_OBJS = `$(AR) t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 # Object files
 #
 OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
-	    pfring_hw_timestamp.o pfring_mod_sysdig.o ${PF_RING_ZC_OBJS} ${PF_RING_FT_OBJS} ${AF_XDP_OBJS} ${DAG_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${ACCOLADE_OBJS} ${MYRICOM_OBJS} ${NETCOPE_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
+	    pfring_hw_timestamp.o pfring_mod_sysdig.o pfring_mod_pcap.o ${PF_RING_ZC_OBJS} ${PF_RING_FT_OBJS} ${AF_XDP_OBJS} ${DAG_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${ACCOLADE_OBJS} ${MYRICOM_OBJS} ${NETCOPE_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
 
 #
 # C compiler and flags
@@ -169,7 +169,7 @@ install: install-static install-shared
 
 install-includes:
 	mkdir -p $(DESTDIR)$(includedir)
-	cp pfring.h pfring_mod_sysdig.h @PF_RING_ZC_H@ @PF_RING_FT_H@ @NPCAP_H@ ${NBPF_HDR} $(DESTDIR)$(includedir)/
+	cp pfring.h pfring_mod_sysdig.h pfring_mod_pcap.h @PF_RING_ZC_H@ @PF_RING_FT_H@ @NPCAP_H@ ${NBPF_HDR} $(DESTDIR)$(includedir)/
 
 install-static: ${STATICLIB} install-includes
 	mkdir -p $(DESTDIR)$(libdir)

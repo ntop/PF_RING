@@ -17,6 +17,7 @@ Below you can find a comparison of NIC features supported by PF_RING.
     myricom
     napatech
     netcope
+    pcap
     stack
     timeline
     sysdig

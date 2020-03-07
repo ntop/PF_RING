@@ -666,6 +666,7 @@ void printHelp(void) {
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"
 	 "                - zc:ethX for ZC devices\n"
+	 "                - pcap:ethX or pcap:example.pcap for pcap devices/files\n"
 	 "                - sysdig: for capturing sysdig events\n"
 #ifdef HAVE_DAG
 	 "                - dag:dagX:Y for Endace DAG cards\n"

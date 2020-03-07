@@ -1185,8 +1185,7 @@ pfring_if_t *pfring_mod_findalldevs() {
   if (getifaddrs(&ifap) != 0)
     return NULL;
 
-  for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
- 
+  for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) { 
     tmp = list; /* check if it's already in the list */
     while (tmp != NULL) {
       if (strcmp(tmp->system_name, ifa->ifa_name) == 0)
