@@ -251,6 +251,12 @@ load_driver() {
 
 		# unload old module if needed
 		if [ `lsmod |grep -w ^${1} | wc -l` -eq 1 ]; then
+
+			# Unload dependencies, if any
+			if [ ${1} == "i40e" ]; then
+				/sbin/modprobe -r i40iw 2>/dev/null
+			fi
+
 			/sbin/modprobe -r ${1}
 			if [ `echo $?` -gt 0 ]; then
 				echo "Error unloading driver ${1}"
@@ -337,6 +343,7 @@ unload_driver() {
 		echo "Error unloading driver ${1}"
 		return
 	fi
+
 	# Restore vanilla driver
 	/sbin/modprobe ${1}
 }
