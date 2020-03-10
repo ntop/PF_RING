@@ -31,6 +31,19 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+pfring_installed() {
+	if [ ${DISTRO} == "debian" ]; then
+		if [ `dpkg -l | grep pfring-dkms | wc -l` -gt 0 ]; then
+			return 0
+		fi
+	elif [ ${DISTRO} == "centos" ]; then
+		if [ `rpm -qa | grep pfring-dkms | wc -l` -gt 0 ]; then
+			return 0
+		fi
+	fi
+	return 1
+}
+
 zc_driver_installed() {
 	MODEL=$1
 	if [ ${DISTRO} == "debian" ]; then
@@ -41,6 +54,19 @@ zc_driver_installed() {
 		if [ `rpm -qa | grep ${MODEL}-zc | wc -l` -gt 0 ]; then
 			return 0
 		fi
+	fi
+	return 1
+}
+
+install_pfring() {
+	if [ ${DISTRO} == "debian" ]; then
+		apt-get clean all
+		apt-get update
+		apt-get install pfring-dkms
+	elif [ ${DISTRO} == "centos" ]; then
+		yum clean all
+		yum update
+		yum install pfring-dkms
 	fi
 	return 1
 }
@@ -169,6 +195,12 @@ count_by_driver() {
 
 configure_kernel_module() {
 
+	if ! pfring_installed; then
+		echo "[>] Installing PF_RING.ko"
+
+		install_pfring
+	fi
+
 	echo "[>] Configuring PF_RING"
 
 	mkdir -p ${PF_RING_CONFIG_DIR}
@@ -191,6 +223,12 @@ configure_driver() {
 		# not supported
 		echo "Please provide a supported driver with --configure-driver <name> (please check --list-zc-drivers)"
 		exit 1
+	fi
+
+	if ! pfring_installed; then
+		echo "[>] Installing PF_RING.ko"
+
+		install_pfring
 	fi
 
 	if ! zc_driver_installed ${CONF_DRIVER_NAME}; then
