@@ -1610,7 +1610,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       struct list_head *ptr, *tmp_ptr;
       fsi = pfr->slots_info;
 
-      seq_printf(m, "Bound Device(s)    : ");
+      seq_printf(m, "Bound Device(s)        : ");
 
       if(pfr->custom_bound_device_name[0] != '\0') {
 	seq_printf(m, pfr->custom_bound_device_name);
