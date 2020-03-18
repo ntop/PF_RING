@@ -4069,7 +4069,8 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   if(channel_id == -1 /* unknown: any channel */)
     channel_id = skb_get_rx_queue(skb);
 
-  if(channel_id > MAX_NUM_RX_CHANNELS) channel_id = 0 /* MAX_NUM_RX_CHANNELS */;
+  if(channel_id > MAX_NUM_RX_CHANNELS)
+    channel_id = channel_id % MAX_NUM_RX_CHANNELS;
 
   if((!skb) /* Invalid skb */ ||((!enable_tx_capture) && (!recv_packet))) {
     /* An outgoing packet is about to be sent out but we decided not to handle transmitted packets. */
