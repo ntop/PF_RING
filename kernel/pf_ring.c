@@ -3022,7 +3022,7 @@ static inline int add_pkt_to_ring(struct sk_buff *skb,
 				  int offset)
 {
   struct pf_ring_socket *pfr = (_pfr->master_ring != NULL) ? _pfr->master_ring : _pfr;
-  u_int64_t channel_id_bit = 1 << channel_id;
+  u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << channel_id);
 
   if((!pfr->ring_active) || (!skb))
     return(0);
@@ -6833,7 +6833,7 @@ static int ring_setsockopt(struct socket *sock,
 
     if(quick_mode) {
       for (i = 0; i < pfr->num_rx_channels; i++) {
-        u_int64_t channel_id_bit = 1 << i;
+        u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << i);
 
         if(channel_id_mask & channel_id_bit) {
 	  if(device_rings[dev_index][i] != NULL)
@@ -6845,7 +6845,7 @@ static int ring_setsockopt(struct socket *sock,
     /* Everything seems to work thus let's set the values */
 
     for (i = 0; i < pfr->num_rx_channels; i++) {
-      u_int64_t channel_id_bit = 1 << i;
+      u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << i);
 
       if(channel_id_mask & channel_id_bit) {
         debug_printk(2, "Setting channel %d\n", i);

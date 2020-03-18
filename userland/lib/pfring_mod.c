@@ -271,7 +271,7 @@ int pfring_mod_set_channel_mask(pfring *ring, u_int64_t channel_mask64) {
 /* ******************************* */
 
 int pfring_mod_set_channel_id(pfring *ring, u_int32_t channel_id) {
-  return pfring_set_channel_mask(ring, 1 << channel_id);
+  return pfring_set_channel_mask(ring, ((u_int64_t) ((u_int64_t) 1) << channel_id));
 }
 
 /* ******************************* */
@@ -350,7 +350,7 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
 	min_val = max_val = atoi(tok);
 
       for(i = min_val; i <= max_val; i++)
-	channel_mask |= 1 << i;
+	channel_mask |= ((u_int64_t) ((u_int64_t) 1) << i);
 
       tok = strtok_r(NULL, ",", &pos);
     }
