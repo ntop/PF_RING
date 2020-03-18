@@ -4356,7 +4356,7 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
     rc = pf_ring_skb_ring_handler(skb,
 			          skb->pkt_type != PACKET_OUTGOING,
 			          1 /* real_skb */,
-			          1 /* unknown: any channel */,
+			          -1 /* unknown: any channel */,
                 	          UNKNOWN_NUM_RX_CHANNELS);
 
   kfree_skb(skb);
