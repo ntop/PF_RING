@@ -4289,7 +4289,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
 		  } else if((cluster_ptr->cluster.hashing_mode != cluster_round_robin)
 		            /* We're the last element of the cluster so no further cluster element to check */
-		            || ((num_iterations + 1) > num_cluster_elements)) {
+		            || ((num_iterations + 1) >= num_cluster_elements)) {
 		    pfr->slots_info->tot_pkts++, pfr->slots_info->tot_lost++;
 		  }
 		}
