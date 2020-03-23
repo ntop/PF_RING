@@ -73,8 +73,7 @@
 /* NAPI enable/disable flags here */
 #define NAPI
 
-#define adapter_struct i40e_pf
-#define adapter_q_vector i40e_q_vector
+#define adapter_q_vector igb_q_vector
 
 /* and finally set defines so that the code sees the changes */
 #ifdef NAPI

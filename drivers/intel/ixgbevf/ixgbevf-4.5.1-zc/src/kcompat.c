@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 1999 - 2018 Intel Corporation. */
+/* Copyright(c) 1999 - 2019 Intel Corporation. */
 
 #include "ixgbevf.h"
 #include "kcompat.h"
@@ -702,8 +702,7 @@ free_skb:
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(5,4)))
 int _kc_pci_save_state(struct pci_dev *pdev)
 {
-	struct net_device *netdev = pci_get_drvdata(pdev);
-	struct adapter_struct *adapter = netdev_priv(netdev);
+	struct adapter_struct *adapter = pci_get_drvdata(pdev);
 	int size = PCI_CONFIG_SPACE_LEN, i;
 	u16 pcie_cap_offset, pcie_link_status;
 
@@ -1176,6 +1175,73 @@ int _kc_ethtool_op_set_flags(struct net_device *dev, u32 data, u32 supported)
 /******************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39) )
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)))
+#ifdef HAVE_NETDEV_SELECT_QUEUE
+#include <net/ip.h>
+#include <linux/pkt_sched.h>
+
+u16 ___kc_skb_tx_hash(struct net_device *dev, const struct sk_buff *skb,
+		      u16 num_tx_queues)
+{
+	u32 hash;
+	u16 qoffset = 0;
+	u16 qcount = num_tx_queues;
+
+	if (skb_rx_queue_recorded(skb)) {
+		hash = skb_get_rx_queue(skb);
+		while (unlikely(hash >= num_tx_queues))
+			hash -= num_tx_queues;
+		return hash;
+	}
+
+	if (skb->sk && skb->sk->sk_hash)
+		hash = skb->sk->sk_hash;
+	else
+#ifdef NETIF_F_RXHASH
+		hash = (__force u16) skb->protocol ^ skb->rxhash;
+#else
+		hash = skb->protocol;
+#endif
+
+	hash = jhash_1word(hash, _kc_hashrnd);
+
+	return (u16) (((u64) hash * qcount) >> 32) + qoffset;
+}
+#endif /* HAVE_NETDEV_SELECT_QUEUE */
+
+u8 _kc_netdev_get_num_tc(struct net_device *dev)
+{
+	struct i40e_netdev_priv *np = netdev_priv(dev);
+	struct i40e_vsi *vsi = np->vsi;
+	struct i40e_pf *pf = vsi->back;
+	if (pf->flags & I40E_FLAG_DCB_ENABLED)
+		return vsi->tc_config.numtc;
+
+	return 0;
+}
+
+int _kc_netdev_set_num_tc(struct net_device *dev, u8 num_tc)
+{
+	struct i40e_netdev_priv *np = netdev_priv(dev);
+	struct i40e_vsi *vsi = np->vsi;
+
+	if (num_tc > I40E_MAX_TRAFFIC_CLASS)
+		return -EINVAL;
+
+	vsi->tc_config.numtc = num_tc;
+
+	return 0;
+}
+
+u8 _kc_netdev_get_prio_tc_map(struct net_device *dev, u8 up)
+{
+	struct i40e_netdev_priv *np = netdev_priv(dev);
+	struct i40e_vsi *vsi = np->vsi;
+	struct i40e_pf *pf = vsi->back;
+	struct i40e_hw *hw = &pf->hw;
+	struct i40e_dcbx_config *dcbcfg = &hw->local_dcbx_config;
+
+	return dcbcfg->etscfg.prioritytable[up];
+}
 
 #endif /* !(RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)) */
 #endif /* < 2.6.39 */
@@ -1397,6 +1463,147 @@ int __kc_pcie_capability_clear_word(struct pci_dev *dev, int pos,
 
 /******************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0) )
+#ifdef CONFIG_XPS
+#if NR_CPUS < 64
+#define _KC_MAX_XPS_CPUS	NR_CPUS
+#else
+#define _KC_MAX_XPS_CPUS	64
+#endif
+
+/*
+ * netdev_queue sysfs structures and functions.
+ */
+struct _kc_netdev_queue_attribute {
+	struct attribute attr;
+	ssize_t (*show)(struct netdev_queue *queue,
+	    struct _kc_netdev_queue_attribute *attr, char *buf);
+	ssize_t (*store)(struct netdev_queue *queue,
+	    struct _kc_netdev_queue_attribute *attr, const char *buf, size_t len);
+};
+
+#define to_kc_netdev_queue_attr(_attr) container_of(_attr,		\
+    struct _kc_netdev_queue_attribute, attr)
+
+int __kc_netif_set_xps_queue(struct net_device *dev, const struct cpumask *mask,
+			     u16 index)
+{
+	struct netdev_queue *txq = netdev_get_tx_queue(dev, index);
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) )
+	/* Redhat requires some odd extended netdev structures */
+	struct netdev_tx_queue_extended *txq_ext =
+					netdev_extended(dev)->_tx_ext + index;
+	struct kobj_type *ktype = txq_ext->kobj.ktype;
+#else
+	struct kobj_type *ktype = txq->kobj.ktype;
+#endif
+	struct _kc_netdev_queue_attribute *xps_attr;
+	struct attribute *attr = NULL;
+	int i, len, err;
+#define _KC_XPS_BUFLEN	(DIV_ROUND_UP(_KC_MAX_XPS_CPUS, 32) * 9)
+	char buf[_KC_XPS_BUFLEN];
+
+	if (!ktype)
+		return -ENOMEM;
+
+	/* attempt to locate the XPS attribute in the Tx queue */
+	for (i = 0; (attr = ktype->default_attrs[i]); i++) {
+		if (!strcmp("xps_cpus", attr->name))
+			break;
+	}
+
+	/* if we did not find it return an error */
+	if (!attr)
+		return -EINVAL;
+
+	/* copy the mask into a string */
+	len = bitmap_scnprintf(buf, _KC_XPS_BUFLEN,
+			       cpumask_bits(mask), _KC_MAX_XPS_CPUS);
+	if (!len)
+		return -ENOMEM;
+
+	xps_attr = to_kc_netdev_queue_attr(attr);
+
+	/* Store the XPS value using the SYSFS store call */
+	err = xps_attr->store(txq, xps_attr, buf, len);
+
+	/* we only had an error on err < 0 */
+	return (err < 0) ? err : 0;
+}
+#endif /* CONFIG_XPS */
+#ifdef HAVE_NETDEV_SELECT_QUEUE
+static inline int kc_get_xps_queue(struct net_device *dev, struct sk_buff *skb)
+{
+#ifdef CONFIG_XPS
+	struct xps_dev_maps *dev_maps;
+	struct xps_map *map;
+	int queue_index = -1;
+
+	rcu_read_lock();
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) )
+	/* Redhat requires some odd extended netdev structures */
+	dev_maps = rcu_dereference(netdev_extended(dev)->xps_maps);
+#else
+	dev_maps = rcu_dereference(dev->xps_maps);
+#endif
+	if (dev_maps) {
+		map = rcu_dereference(
+		    dev_maps->cpu_map[raw_smp_processor_id()]);
+		if (map) {
+			if (map->len == 1)
+				queue_index = map->queues[0];
+			else {
+				u32 hash;
+				if (skb->sk && skb->sk->sk_hash)
+					hash = skb->sk->sk_hash;
+				else
+					hash = (__force u16) skb->protocol ^
+					    skb->rxhash;
+				hash = jhash_1word(hash, _kc_hashrnd);
+				queue_index = map->queues[
+				    ((u64)hash * map->len) >> 32];
+			}
+			if (unlikely(queue_index >= dev->real_num_tx_queues))
+				queue_index = -1;
+		}
+	}
+	rcu_read_unlock();
+
+	return queue_index;
+#else
+	return -1;
+#endif
+}
+
+u16 __kc_netdev_pick_tx(struct net_device *dev, struct sk_buff *skb)
+{
+	struct sock *sk = skb->sk;
+	int queue_index = sk_tx_queue_get(sk);
+	int new_index;
+
+	if (queue_index >= 0 && queue_index < dev->real_num_tx_queues) {
+#ifdef CONFIG_XPS
+		if (!skb->ooo_okay)
+#endif
+			return queue_index;
+	}
+
+	new_index = kc_get_xps_queue(dev, skb);
+	if (new_index < 0)
+		new_index = skb_tx_hash(dev, skb);
+
+	if (queue_index != new_index && sk) {
+		struct dst_entry *dst =
+			    rcu_dereference(sk->sk_dst_cache);
+
+		if (dst && skb_dst(skb) == dst)
+			sk_tx_queue_set(sk, new_index);
+
+	}
+
+	return new_index;
+}
+
+#endif /* HAVE_NETDEV_SELECT_QUEUE */
 #endif /* 3.9.0 */
 
 /*****************************************************************************/
@@ -1564,7 +1771,27 @@ int __kc_pcie_get_minimum_link(struct pci_dev *dev, enum pci_bus_speed *speed,
 	return 0;
 }
 
-#endif
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6,7))
+int _kc_pci_wait_for_pending_transaction(struct pci_dev *dev)
+{
+	int i;
+	u16 status;
+
+	/* Wait for Transaction Pending bit clean */
+	for (i = 0; i < 4; i++) {
+		if (i)
+			msleep((1 << (i - 1)) * 100);
+
+		pcie_capability_read_word(dev, PCI_EXP_DEVSTA, &status);
+		if (!(status & PCI_EXP_DEVSTA_TRPND))
+			return 1;
+	}
+
+	return 0;
+}
+#endif /* <RHEL6.7 */
+
+#endif /* <3.12 */
 
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) )
 int __kc_dma_set_mask_and_coherent(struct device *dev, u64 mask)
@@ -1901,8 +2128,9 @@ void *__kc_devm_kmemdup(struct device *dev, const void *src, size_t len,
 #endif /* 3.16.0 */
 
 /******************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0) )
-#endif /* 3.17.0 */
+#if ((LINUX_VERSION_CODE < KERNEL_VERSION(3,17,0)) && \
+     (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,5)))
+#endif /* <3.17.0 && RHEL_RELEASE_CODE < RHEL7.5 */
 
 /******************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0) )
@@ -1964,7 +2192,8 @@ void __kc_skb_complete_tx_timestamp(struct sk_buff *skb,
 #include <linux/sctp.h>
 #endif
 
-unsigned int __kc_eth_get_headlen(unsigned char *data, unsigned int max_len)
+u32 __kc_eth_get_headlen(const struct net_device __always_unused *dev,
+			 unsigned char *data, unsigned int max_len)
 {
 	union {
 		unsigned char *network;
@@ -2197,6 +2426,49 @@ int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
 #endif /* !(RHEL_RELEASE >= 7.3) */
 #endif /* < 4.5.0 */
 
+/*****************************************************************************/
+#if ((LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)) || \
+     (SLE_VERSION_CODE && (SLE_VERSION_CODE <= SLE_VERSION(12,3,0))) || \
+     (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE <= RHEL_RELEASE_VERSION(7,5))))
+const char *_kc_phy_speed_to_str(int speed)
+{
+	switch (speed) {
+	case SPEED_10:
+		return "10Mbps";
+	case SPEED_100:
+		return "100Mbps";
+	case SPEED_1000:
+		return "1Gbps";
+	case SPEED_2500:
+		return "2.5Gbps";
+	case SPEED_5000:
+		return "5Gbps";
+	case SPEED_10000:
+		return "10Gbps";
+	case SPEED_14000:
+		return "14Gbps";
+	case SPEED_20000:
+		return "20Gbps";
+	case SPEED_25000:
+		return "25Gbps";
+	case SPEED_40000:
+		return "40Gbps";
+	case SPEED_50000:
+		return "50Gbps";
+	case SPEED_56000:
+		return "56Gbps";
+#ifdef SPEED_100000
+	case SPEED_100000:
+		return "100Gbps";
+#endif
+	case SPEED_UNKNOWN:
+		return "Unknown";
+	default:
+		return "Unsupported (update phy-core.c)";
+	}
+}
+#endif /* (LINUX < 4.14.0) || (SLES <= 12.3.0) || (RHEL <= 7.5) */
+
 /******************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0) )
 void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
@@ -2361,3 +2633,127 @@ void _kc_pcie_print_link_status(struct pci_dev *dev) {
 			 PCIE_SPEED2STR(speed_cap), width_cap);
 }
 #endif /* 4.17.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,1,0))
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,1)))
+#define HAVE_NDO_FDB_ADD_EXTACK
+#else /* !RHEL || RHEL < 8.1 */
+#ifdef HAVE_TC_SETUP_CLSFLOWER
+#define FLOW_DISSECTOR_MATCH(__rule, __type, __out)				\
+	const struct flow_match *__m = &(__rule)->match;			\
+	struct flow_dissector *__d = (__m)->dissector;				\
+										\
+	(__out)->key = skb_flow_dissector_target(__d, __type, (__m)->key);	\
+	(__out)->mask = skb_flow_dissector_target(__d, __type, (__m)->mask);	\
+
+void flow_rule_match_basic(const struct flow_rule *rule,
+			   struct flow_match_basic *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_BASIC, out);
+}
+
+void flow_rule_match_control(const struct flow_rule *rule,
+			     struct flow_match_control *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_CONTROL, out);
+}
+
+void flow_rule_match_eth_addrs(const struct flow_rule *rule,
+			       struct flow_match_eth_addrs *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_ETH_ADDRS, out);
+}
+
+#ifdef HAVE_TC_FLOWER_ENC
+void flow_rule_match_enc_keyid(const struct flow_rule *rule,
+			       struct flow_match_enc_keyid *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_ENC_KEYID, out);
+}
+
+void flow_rule_match_enc_ports(const struct flow_rule *rule,
+			       struct flow_match_ports *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_ENC_PORTS, out);
+}
+
+void flow_rule_match_enc_control(const struct flow_rule *rule,
+				 struct flow_match_control *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_ENC_CONTROL, out);
+}
+
+void flow_rule_match_enc_ipv4_addrs(const struct flow_rule *rule,
+				    struct flow_match_ipv4_addrs *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_ENC_IPV4_ADDRS, out);
+}
+
+void flow_rule_match_enc_ipv6_addrs(const struct flow_rule *rule,
+				    struct flow_match_ipv6_addrs *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_ENC_IPV6_ADDRS, out);
+}
+#endif
+
+#ifndef HAVE_TC_FLOWER_VLAN_IN_TAGS
+void flow_rule_match_vlan(const struct flow_rule *rule,
+			  struct flow_match_vlan *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_VLAN, out);
+}
+#endif
+
+void flow_rule_match_ipv4_addrs(const struct flow_rule *rule,
+				struct flow_match_ipv4_addrs *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_IPV4_ADDRS, out);
+}
+
+void flow_rule_match_ipv6_addrs(const struct flow_rule *rule,
+				struct flow_match_ipv6_addrs *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_IPV6_ADDRS, out);
+}
+
+void flow_rule_match_ports(const struct flow_rule *rule,
+			   struct flow_match_ports *out)
+{
+	FLOW_DISSECTOR_MATCH(rule, FLOW_DISSECTOR_KEY_PORTS, out);
+}
+#endif /* HAVE_TC_SETUP_CLSFLOWER */
+#endif /* !RHEL || RHEL < 8.1 */
+#endif /* 5.1.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0))
+#ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
+int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
+				   struct list_head __always_unused *driver_list,
+				   tc_setup_cb_t *cb,
+				   void *cb_ident, void *cb_priv,
+				   bool ingress_only)
+{
+	if (ingress_only &&
+	    f->binder_type != TCF_BLOCK_BINDER_TYPE_CLSACT_INGRESS)
+		return -EOPNOTSUPP;
+
+	/* Note: Upstream has driver_block_list, but older kernels do not */
+	switch (f->command) {
+	case TC_BLOCK_BIND:
+#ifdef HAVE_TCF_BLOCK_CB_REGISTER_EXTACK
+		return tcf_block_cb_register(f->block, cb, cb_ident, cb_priv,
+					     f->extack);
+#else
+		return tcf_block_cb_register(f->block, cb, cb_ident, cb_priv);
+#endif
+	case TC_BLOCK_UNBIND:
+		tcf_block_cb_unregister(f->block, cb, cb_ident);
+		return 0;
+	default:
+		return -EOPNOTSUPP;
+	}
+}
+#endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
+#endif /* 5.3.0 */
