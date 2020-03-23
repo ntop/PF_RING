@@ -2456,20 +2456,25 @@ static int igb_set_features(struct net_device *netdev,
 #endif /* HAVE_NDO_SET_FEATURES */
 
 #ifdef HAVE_FDB_OPS
-#ifdef USE_CONST_DEV_UC_CHAR
+#if defined(HAVE_NDO_FDB_ADD_EXTACK)
 static int igb_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
-			   struct net_device *dev,
-			   const unsigned char *addr,
-#ifdef HAVE_NDO_FDB_ADD_VID
-			   u16 vid,
-#endif /* HAVE_NDO_FDB_ADD_VID */
-			   u16 flags)
-#else /* USE_CONST_DEV_UC_CHAR */
-static int igb_ndo_fdb_add(struct ndmsg *ndm,
-			   struct net_device *dev,
-			   unsigned char *addr,
-			   u16 flags)
-#endif /* USE_CONST_DEV_UC_CHAR */
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags, struct netlink_ext_ack *extack)
+#elif defined(HAVE_NDO_FDB_ADD_VID)
+static int igb_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags)
+#elif defined(HAVE_NDO_FDB_ADD_NLATTR)
+static int igb_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 flags)
+#elif defined(USE_CONST_DEV_UC_CHAR)
+static int igb_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    const unsigned char *addr, u16 flags)
+#else
+static int igb_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    unsigned char *addr, u16 flags)
+#endif
 {
 	struct igb_adapter *adapter = netdev_priv(dev);
 	struct e1000_hw *hw = &adapter->hw;
@@ -3015,7 +3020,9 @@ static int igb_probe(struct pci_dev *pdev,
 	if (!netdev)
 		goto err_alloc_etherdev;
 
+#ifdef SET_MODULE_OWNER
 	SET_MODULE_OWNER(netdev);
+#endif
 	SET_NETDEV_DEV(netdev, &pdev->dev);
 
 	pci_set_drvdata(pdev, netdev);
