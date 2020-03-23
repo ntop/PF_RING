@@ -1,5 +1,23 @@
-// SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 1999 - 2018 Intel Corporation. */
+/* Intel PRO/1000 Linux driver
+ * Copyright(c) 1999 - 2017 Intel Corporation.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * The full GNU General Public License is included in this distribution in
+ * the file called "COPYING".
+ *
+ * Contact Information:
+ * Linux NICS <linux.nics@intel.com>
+ * e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
+ * Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+ */
 
 /*
  * net/core/ethtool.c - Ethtool ioctl handler
@@ -37,49 +55,48 @@
 #undef ADVERTISED_10000baseT_Full
 #define ADVERTISED_10000baseT_Full	(1 << 12)
 #undef SPEED_10000
-#define SPEED_10000		10000
 
 #undef ethtool_ops
 #define ethtool_ops _kc_ethtool_ops
 
 struct _kc_ethtool_ops {
-	int  (*get_settings)(struct net_device *, struct ethtool_cmd *);
-	int  (*set_settings)(struct net_device *, struct ethtool_cmd *);
-	void (*get_drvinfo)(struct net_device *, struct ethtool_drvinfo *);
-	int  (*get_regs_len)(struct net_device *);
-	void (*get_regs)(struct net_device *, struct ethtool_regs *, void *);
-	void (*get_wol)(struct net_device *, struct ethtool_wolinfo *);
-	int  (*set_wol)(struct net_device *, struct ethtool_wolinfo *);
-	u32  (*get_msglevel)(struct net_device *);
-	void (*set_msglevel)(struct net_device *, u32);
-	int  (*nway_reset)(struct net_device *);
-	u32  (*get_link)(struct net_device *);
-	int  (*get_eeprom_len)(struct net_device *);
-	int  (*get_eeprom)(struct net_device *, struct ethtool_eeprom *, u8 *);
-	int  (*set_eeprom)(struct net_device *, struct ethtool_eeprom *, u8 *);
-	int  (*get_coalesce)(struct net_device *, struct ethtool_coalesce *);
-	int  (*set_coalesce)(struct net_device *, struct ethtool_coalesce *);
-	void (*get_ringparam)(struct net_device *, struct ethtool_ringparam *);
-	int  (*set_ringparam)(struct net_device *, struct ethtool_ringparam *);
-	void (*get_pauseparam)(struct net_device *,
-	                       struct ethtool_pauseparam*);
-	int  (*set_pauseparam)(struct net_device *,
-	                       struct ethtool_pauseparam*);
-	u32  (*get_rx_csum)(struct net_device *);
-	int  (*set_rx_csum)(struct net_device *, u32);
-	u32  (*get_tx_csum)(struct net_device *);
-	int  (*set_tx_csum)(struct net_device *, u32);
-	u32  (*get_sg)(struct net_device *);
-	int  (*set_sg)(struct net_device *, u32);
-	u32  (*get_tso)(struct net_device *);
-	int  (*set_tso)(struct net_device *, u32);
-	int  (*self_test_count)(struct net_device *);
-	void (*self_test)(struct net_device *, struct ethtool_test *, u64 *);
-	void (*get_strings)(struct net_device *, u32 stringset, u8 *);
-	int  (*phys_id)(struct net_device *, u32);
-	int  (*get_stats_count)(struct net_device *);
-	void (*get_ethtool_stats)(struct net_device *, struct ethtool_stats *,
-	                          u64 *);
+	int (*get_settings) (struct net_device *, struct ethtool_cmd *);
+	int (*set_settings) (struct net_device *, struct ethtool_cmd *);
+	void (*get_drvinfo) (struct net_device *, struct ethtool_drvinfo *);
+	int (*get_regs_len) (struct net_device *);
+	void (*get_regs) (struct net_device *, struct ethtool_regs *, void *);
+	void (*get_wol) (struct net_device *, struct ethtool_wolinfo *);
+	int (*set_wol) (struct net_device *, struct ethtool_wolinfo *);
+	u32 (*get_msglevel) (struct net_device *);
+	void (*set_msglevel) (struct net_device *, u32);
+	int (*nway_reset) (struct net_device *);
+	u32 (*get_link) (struct net_device *);
+	int (*get_eeprom_len) (struct net_device *);
+	int (*get_eeprom) (struct net_device *, struct ethtool_eeprom *, u8 *);
+	int (*set_eeprom) (struct net_device *, struct ethtool_eeprom *, u8 *);
+	int (*get_coalesce) (struct net_device *, struct ethtool_coalesce *);
+	int (*set_coalesce) (struct net_device *, struct ethtool_coalesce *);
+	void (*get_ringparam) (struct net_device *, struct ethtool_ringparam *);
+	int (*set_ringparam) (struct net_device *, struct ethtool_ringparam *);
+	void (*get_pauseparam) (struct net_device *,
+				struct ethtool_pauseparam *);
+	int (*set_pauseparam) (struct net_device *,
+			       struct ethtool_pauseparam *);
+	u32 (*get_rx_csum) (struct net_device *);
+	int (*set_rx_csum) (struct net_device *, u32);
+	u32 (*get_tx_csum) (struct net_device *);
+	int (*set_tx_csum) (struct net_device *, u32);
+	u32 (*get_sg) (struct net_device *);
+	int (*set_sg) (struct net_device *, u32);
+	u32 (*get_tso) (struct net_device *);
+	int (*set_tso) (struct net_device *, u32);
+	int (*self_test_count) (struct net_device *);
+	void (*self_test) (struct net_device *, struct ethtool_test *, u64 *);
+	void (*get_strings) (struct net_device *, u32 stringset, u8 *);
+	int (*phys_id) (struct net_device *, u32);
+	int (*get_stats_count) (struct net_device *);
+	void (*get_ethtool_stats) (struct net_device *, struct ethtool_stats *,
+				   u64 *);
 } *ethtool_ops = NULL;
 
 #undef SET_ETHTOOL_OPS
@@ -758,7 +775,7 @@ out:
 int ethtool_ioctl(struct ifreq *ifr)
 {
 	struct net_device *dev = __dev_get_by_name(ifr->ifr_name);
-	void *useraddr = (void *) ifr->ifr_data;
+	void *useraddr = (void *)ifr->ifr_data;
 	u32 ethcmd;
 
 	/*
@@ -771,7 +788,7 @@ int ethtool_ioctl(struct ifreq *ifr)
 	if (!dev || !netif_device_present(dev))
 		return -ENODEV;
 
-	if (copy_from_user(&ethcmd, useraddr, sizeof (ethcmd)))
+	if (copy_from_user(&ethcmd, useraddr, sizeof(ethcmd)))
 		return -EFAULT;
 
 	switch (ethcmd) {
@@ -849,12 +866,13 @@ struct _kc_mii_if_info {
 	int phy_id_mask;
 	int reg_num_mask;
 
-	unsigned int full_duplex : 1;	/* is full duplex? */
-	unsigned int force_media : 1;	/* is autoneg. disabled? */
+	unsigned int full_duplex:1;	/* is full duplex? */
+	unsigned int force_media:1;	/* is autoneg. disabled? */
 
 	struct net_device *dev;
-	int (*mdio_read) (struct net_device *dev, int phy_id, int location);
-	void (*mdio_write) (struct net_device *dev, int phy_id, int location, int val);
+	int (*mdio_read) (struct net_device * dev, int phy_id, int location);
+	void (*mdio_write) (struct net_device * dev, int phy_id, int location,
+			    int val);
 };
 
 struct ethtool_cmd;
@@ -870,21 +888,20 @@ struct mii_ioctl_data;
 #define mii_ethtool_sset _kc_mii_ethtool_sset
 #undef mii_check_link
 #define mii_check_link _kc_mii_check_link
-extern int _kc_mii_link_ok (struct mii_if_info *mii);
-extern int _kc_mii_nway_restart (struct mii_if_info *mii);
+extern int _kc_mii_link_ok(struct mii_if_info *mii);
+extern int _kc_mii_nway_restart(struct mii_if_info *mii);
 extern int _kc_mii_ethtool_gset(struct mii_if_info *mii,
-                                struct ethtool_cmd *ecmd);
+				struct ethtool_cmd *ecmd);
 extern int _kc_mii_ethtool_sset(struct mii_if_info *mii,
-                                struct ethtool_cmd *ecmd);
-extern void _kc_mii_check_link (struct mii_if_info *mii);
+				struct ethtool_cmd *ecmd);
+extern void _kc_mii_check_link(struct mii_if_info *mii);
 #if ( LINUX_VERSION_CODE > KERNEL_VERSION(2,4,6) )
 #undef generic_mii_ioctl
 #define generic_mii_ioctl _kc_generic_mii_ioctl
 extern int _kc_generic_mii_ioctl(struct mii_if_info *mii_if,
-                                 struct mii_ioctl_data *mii_data, int cmd,
-                                 unsigned int *duplex_changed);
+				 struct mii_ioctl_data *mii_data, int cmd,
+				 unsigned int *duplex_changed);
 #endif /* > 2.4.6 */
-
 
 struct _kc_pci_dev_ext {
 	struct pci_dev *dev;
@@ -896,7 +913,6 @@ struct _kc_net_dev_ext {
 	struct net_device *dev;
 	unsigned int carrier;
 };
-
 
 /**************************************/
 /* mii support */
@@ -953,7 +969,8 @@ int _kc_mii_ethtool_gset(struct mii_if_info *mii, struct ethtool_cmd *ecmd)
 		ecmd->autoneg = AUTONEG_DISABLE;
 
 		ecmd->speed = (bmcr & BMCR_SPEED100) ? SPEED_100 : SPEED_10;
-		ecmd->duplex = (bmcr & BMCR_FULLDPLX) ? DUPLEX_FULL : DUPLEX_HALF;
+		ecmd->duplex =
+		    (bmcr & BMCR_FULLDPLX) ? DUPLEX_FULL : DUPLEX_HALF;
 	}
 
 	/* ignore maxtxpkt, maxrxpkt for now */
@@ -1032,7 +1049,7 @@ int _kc_mii_ethtool_sset(struct mii_if_info *mii, struct ethtool_cmd *ecmd)
 	return 0;
 }
 
-int _kc_mii_link_ok (struct mii_if_info *mii)
+int _kc_mii_link_ok(struct mii_if_info *mii)
 {
 	/* first, a dummy read, needed to latch some MII phys */
 	mii->mdio_read(mii->dev, mii->phy_id, MII_BMSR);
@@ -1041,7 +1058,7 @@ int _kc_mii_link_ok (struct mii_if_info *mii)
 	return 0;
 }
 
-int _kc_mii_nway_restart (struct mii_if_info *mii)
+int _kc_mii_nway_restart(struct mii_if_info *mii)
 {
 	int bmcr;
 	int r = -EINVAL;
@@ -1058,7 +1075,7 @@ int _kc_mii_nway_restart (struct mii_if_info *mii)
 	return r;
 }
 
-void _kc_mii_check_link (struct mii_if_info *mii)
+void _kc_mii_check_link(struct mii_if_info *mii)
 {
 	int cur_link = mii_link_ok(mii);
 	int prev_link = netif_carrier_ok(mii->dev);
@@ -1071,8 +1088,8 @@ void _kc_mii_check_link (struct mii_if_info *mii)
 
 #if ( LINUX_VERSION_CODE > KERNEL_VERSION(2,4,6) )
 int _kc_generic_mii_ioctl(struct mii_if_info *mii_if,
-                          struct mii_ioctl_data *mii_data, int cmd,
-                          unsigned int *duplex_chg_out)
+			  struct mii_ioctl_data *mii_data, int cmd,
+			  unsigned int *duplex_chg_out)
 {
 	int rc = 0;
 	unsigned int duplex_changed = 0;
@@ -1083,56 +1100,60 @@ int _kc_generic_mii_ioctl(struct mii_if_info *mii_if,
 	mii_data->phy_id &= mii_if->phy_id_mask;
 	mii_data->reg_num &= mii_if->reg_num_mask;
 
-	switch(cmd) {
+	switch (cmd) {
 	case SIOCDEVPRIVATE:	/* binary compat, remove in 2.5 */
 	case SIOCGMIIPHY:
 		mii_data->phy_id = mii_if->phy_id;
 		/* fall through */
 
-	case SIOCDEVPRIVATE + 1:/* binary compat, remove in 2.5 */
+	case SIOCDEVPRIVATE + 1:	/* binary compat, remove in 2.5 */
 	case SIOCGMIIREG:
 		mii_data->val_out =
-			mii_if->mdio_read(mii_if->dev, mii_data->phy_id,
-					  mii_data->reg_num);
+		    mii_if->mdio_read(mii_if->dev, mii_data->phy_id,
+				      mii_data->reg_num);
 		break;
 
-	case SIOCDEVPRIVATE + 2:/* binary compat, remove in 2.5 */
-	case SIOCSMIIREG: {
-		u16 val = mii_data->val_in;
+	case SIOCDEVPRIVATE + 2:	/* binary compat, remove in 2.5 */
+	case SIOCSMIIREG:{
+			u16 val = mii_data->val_in;
 
-		if (!capable(CAP_NET_ADMIN))
-			return -EPERM;
+			if (!capable(CAP_NET_ADMIN))
+				return -EPERM;
 
-		if (mii_data->phy_id == mii_if->phy_id) {
-			switch(mii_data->reg_num) {
-			case MII_BMCR: {
-				unsigned int new_duplex = 0;
-				if (val & (BMCR_RESET|BMCR_ANENABLE))
-					mii_if->force_media = 0;
-				else
-					mii_if->force_media = 1;
-				if (mii_if->force_media &&
-				    (val & BMCR_FULLDPLX))
-					new_duplex = 1;
-				if (mii_if->full_duplex != new_duplex) {
-					duplex_changed = 1;
-					mii_if->full_duplex = new_duplex;
+			if (mii_data->phy_id == mii_if->phy_id) {
+				switch (mii_data->reg_num) {
+				case MII_BMCR:{
+						unsigned int new_duplex = 0;
+						if (val &
+						    (BMCR_RESET |
+						     BMCR_ANENABLE))
+							mii_if->force_media = 0;
+						else
+							mii_if->force_media = 1;
+						if (mii_if->force_media &&
+						    (val & BMCR_FULLDPLX))
+							new_duplex = 1;
+						if (mii_if->full_duplex !=
+						    new_duplex) {
+							duplex_changed = 1;
+							mii_if->full_duplex =
+							    new_duplex;
+						}
+						break;
+					}
+				case MII_ADVERTISE:
+					mii_if->advertising = val;
+					break;
+				default:
+					/* do nothing */
+					break;
 				}
-				break;
 			}
-			case MII_ADVERTISE:
-				mii_if->advertising = val;
-				break;
-			default:
-				/* do nothing */
-				break;
-			}
-		}
 
-		mii_if->mdio_write(mii_if->dev, mii_data->phy_id,
-				   mii_data->reg_num, val);
-		break;
-	}
+			mii_if->mdio_write(mii_if->dev, mii_data->phy_id,
+					   mii_data->reg_num, val);
+			break;
+		}
 
 	default:
 		rc = -EOPNOTSUPP;
@@ -1145,4 +1166,3 @@ int _kc_generic_mii_ioctl(struct mii_if_info *mii_if,
 	return rc;
 }
 #endif /* > 2.4.6 */
-

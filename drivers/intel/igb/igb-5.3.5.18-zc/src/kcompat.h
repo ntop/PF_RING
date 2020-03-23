@@ -78,19 +78,19 @@
 
 /* and finally set defines so that the code sees the changes */
 #ifdef NAPI
-#ifndef CONFIG_I40E_NAPI
-#define CONFIG_I40E_NAPI
+#ifndef CONFIG_IGB_NAPI
+#define CONFIG_IGB_NAPI
 #endif
 #else
-#undef CONFIG_I40E_NAPI
+#undef CONFIG_IGB_NAPI
 #endif /* NAPI */
 
 /* Dynamic LTR and deeper C-State support disable/enable */
 
 /* packet split disable/enable */
 #ifdef DISABLE_PACKET_SPLIT
-#ifndef CONFIG_I40E_DISABLE_PACKET_SPLIT
-#define CONFIG_I40E_DISABLE_PACKET_SPLIT
+#ifndef CONFIG_IGB_DISABLE_PACKET_SPLIT
+#define CONFIG_IGB_DISABLE_PACKET_SPLIT
 #endif
 #endif /* DISABLE_PACKET_SPLIT */
 

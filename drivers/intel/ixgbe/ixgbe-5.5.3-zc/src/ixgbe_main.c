@@ -1770,10 +1770,12 @@ static void ixgbe_receive_skb(struct ixgbe_q_vector *q_vector,
 
 #endif /* HAVE_VLAN_RX_REGISTER */
 #ifdef NETIF_F_GSO
-static void ixgbe_set_rsc_gso_size(struct ixgbe_ring __maybe_unused *ring,
+static void ixgbe_set_rsc_gso_size(struct ixgbe_ring *ring,
 				   struct sk_buff *skb)
 {
-	u16 hdr_len = eth_get_headlen(skb->data, skb_headlen(skb));
+	struct ixgbe_adapter *adapter = netdev_priv(ring->netdev);
+	struct net_device *netdev = adapter->netdev;
+	u16 hdr_len = eth_get_headlen(netdev, skb->data, skb_headlen(skb));
 
 	/* set gso_size to avoid messing up TCP MSS */
 	skb_shinfo(skb)->gso_size = DIV_ROUND_UP((skb->len - hdr_len),
@@ -1975,7 +1977,7 @@ static void ixgbe_pull_tail(struct sk_buff *skb)
 	 * we need the header to contain the greater of either ETH_HLEN or
 	 * 60 bytes if the skb->len is less than 60 for skb_pad.
 	 */
-	pull_len = eth_get_headlen(va, IXGBE_RX_HDR_SIZE);
+	pull_len = eth_get_headlen(skb->dev, va, IXGBE_RX_HDR_SIZE);
 
 	/* align pull length to size of long to optimize memcpy performance */
 	skb_copy_to_linear_data(skb, va, ALIGN(pull_len, sizeof(long)));
@@ -11491,20 +11493,25 @@ ixgbe_gso_check(struct sk_buff *skb, __always_unused struct net_device *dev)
 #endif /* HAVE_NDO_GSO_CHECK */
 
 #ifdef HAVE_FDB_OPS
-#ifdef USE_CONST_DEV_UC_CHAR
+#if defined(HAVE_NDO_FDB_ADD_EXTACK)
 static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
-			     struct net_device *dev,
-			     const unsigned char *addr,
-#ifdef HAVE_NDO_FDB_ADD_VID
-			     u16 vid,
-#endif
-			     u16 flags)
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags, struct netlink_ext_ack *extack)
+#elif defined(HAVE_NDO_FDB_ADD_VID)
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags)
+#elif defined(HAVE_NDO_FDB_ADD_NLATTR)
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 flags)
+#elif defined(USE_CONST_DEV_UC_CHAR)
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    const unsigned char *addr, u16 flags)
 #else
-static int ixgbe_ndo_fdb_add(struct ndmsg *ndm,
-			     struct net_device *dev,
-			     unsigned char *addr,
-			     u16 flags)
-#endif /* USE_CONST_DEV_UC_CHAR */
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    unsigned char *addr, u16 flags)
+#endif
 {
 	/* guarantee we can provide a unique filter for the unicast address */
 	if (is_unicast_ether_addr(addr) || is_link_local_ether_addr(addr)) {
@@ -12307,7 +12314,9 @@ static int ixgbe_probe(struct pci_dev *pdev,
 		goto err_alloc_etherdev;
 	}
 
+#ifdef SET_MODULE_OWNER
 	SET_MODULE_OWNER(netdev);
+#endif
 	SET_NETDEV_DEV(netdev, pci_dev_to_dev(pdev));
 
 	adapter = netdev_priv(netdev);
