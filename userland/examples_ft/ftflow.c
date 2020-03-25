@@ -261,8 +261,8 @@ void processFlow(pfring_ft_flow *flow, void *user){
       break;
 
     case 91:
-      if (v->l7_metadata.ssl.serverName != NULL)
-        printf(", hostName: %s", v->l7_metadata.ssl.serverName);
+      if (v->l7_metadata.tls.serverName != NULL)
+        printf(", hostName: %s", v->l7_metadata.tls.serverName);
       break;
   }
 
