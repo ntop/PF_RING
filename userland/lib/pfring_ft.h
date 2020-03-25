@@ -212,9 +212,9 @@ typedef struct {
     } dns;
 
     struct {
-      char *serverName;       /**< SSL Server Name */
+      char *serverName;       /**< TLS Server Name */
       u_int8_t *sha1_certificate_fingerprint; /**< SHA-1 Certificate Fingerprint (20-bytes) */
-    } ssl;
+    } tls;
 
     struct {
       char *serverName;       /**< HTTP Server Name */
