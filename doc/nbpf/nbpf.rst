@@ -12,8 +12,8 @@ This library has been designed to be efficient, and easy to embed in application
 (e.g. n2disk uses it to filter traffic). 
 
 Currently it is used by selected PF_RING modules to convert BPF filtering expressions 
-onto hardware filters supported by popular network adapters such as Napatech, Intel FM10K, 
-and Exablaze.
+onto hardware filters supported by popular network adapters such as Accolade, Exablaze,
+Fiberblaze (Silicom FPGA), Intel FM10K (RRC) and Napatech.
 
 Expressions
 -----------
