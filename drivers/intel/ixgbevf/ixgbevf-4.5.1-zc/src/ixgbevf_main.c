@@ -5001,22 +5001,12 @@ static void ixgbevf_tx_map(struct ixgbevf_ring *tx_ring,
 	ixgbevf_maybe_stop_tx(tx_ring, DESC_NEEDED);
 
 #ifdef HAVE_SKB_XMIT_MORE
-	if (!skb->xmit_more || netif_xmit_stopped(txring_txq(tx_ring))) {
+	if (!netdev_xmit_more() || netif_xmit_stopped(txring_txq(tx_ring))) {
 		writel(i, tx_ring->tail);
-
-		/* we need this if more than one processor can write to our tail
-		 * at a time, it synchronizes IO on IA64/Altix systems
-		 */
-		mmiowb();
 	}
 #else
 	/* notify HW of packet */
 	writel(i, tx_ring->tail);
-
-	/* we need this if more than one processor can write to our tail
-	 * at a time, it synchronizes IO on IA64/Altix systems
-	 */
-	mmiowb();
 #endif /* HAVE_SKB_XMIT_MORE */
 
 	return;

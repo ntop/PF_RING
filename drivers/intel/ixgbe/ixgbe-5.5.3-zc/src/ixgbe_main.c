@@ -7478,9 +7478,9 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 	/* Disable Rx */
 	ixgbe_disable_rx_queue(adapter);
 
-	/* synchronize_sched() needed for pending XDP buffers to drain */
+	/* synchronize_rcu() needed for pending XDP buffers to drain */
 	if (adapter->xdp_ring[0])
-		synchronize_sched();
+		synchronize_rcu();
 
 	ixgbe_irq_disable(adapter);
 
@@ -10221,22 +10221,13 @@ static int ixgbe_tx_map(struct ixgbe_ring *tx_ring,
 	ixgbe_maybe_stop_tx(tx_ring, DESC_NEEDED);
 
 #ifdef HAVE_SKB_XMIT_MORE
-	if (netif_xmit_stopped(txring_txq(tx_ring)) || !skb->xmit_more) {
+	if (netif_xmit_stopped(txring_txq(tx_ring)) || !netdev_xmit_more()) {
 		writel(i, tx_ring->tail);
-
-		/* we need this if more than one processor can write to our tail
-		 * at a time, it synchronizes IO on IA64/Altix systems
-		 */
-		mmiowb();
 	}
 #else
 	/* notify HW of packet */
 	writel(i, tx_ring->tail);
 
-	/* we need this if more than one processor can write to our tail
-	 * at a time, it synchronizes IO on IA64/Altix systems
-	 */
-	mmiowb();
 #endif /* HAVE_SKB_XMIT_MORE */
 
 	return 0;
@@ -10424,17 +10415,20 @@ static void ixgbe_atr(struct ixgbe_ring *ring,
 #ifdef HAVE_NETDEV_SELECT_QUEUE
 #if IS_ENABLED(CONFIG_FCOE)
 
-#if defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
+#if defined(HAVE_NDO_SELECT_QUEUE_FALLBACK_REMOVED)
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
-			      __always_unused struct net_device *sb_dev,
-			      select_queue_fallback_t fallback)
+                              struct net_device *sb_dev)
+#elif defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
+static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
+                              __always_unused struct net_device *sb_dev,
+                              select_queue_fallback_t fallback)
 #elif defined(HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK)
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
-			      __always_unused void *accel,
-			      select_queue_fallback_t fallback)
+                              __always_unused void *accel,
+                              select_queue_fallback_t fallback)
 #elif defined(HAVE_NDO_SELECT_QUEUE_ACCEL)
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
-			      __always_unused void *accel)
+                              __always_unused void *accel)
 #else
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb)
 #endif /* HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK */
@@ -10456,12 +10450,14 @@ static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb)
 			break;
 		/* fall through */
 	default:
-#if defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
-		return fallback(dev, skb, sb_dev);
+#if defined(HAVE_NDO_SELECT_QUEUE_FALLBACK_REMOVED)
+                return netdev_pick_tx(dev, skb, sb_dev);
+#elif defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
+                return fallback(dev, skb, sb_dev);
 #elif defined(HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK)
-		return fallback(dev, skb);
+                return fallback(dev, skb);
 #else
-		return __netdev_pick_tx(dev, skb);
+                return __netdev_pick_tx(dev, skb);
 #endif
 	}
 

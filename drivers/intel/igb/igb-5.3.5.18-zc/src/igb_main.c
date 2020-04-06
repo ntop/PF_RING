@@ -5940,11 +5940,6 @@ static void igb_tx_map(struct igb_ring *tx_ring,
 
 	writel(i, tx_ring->tail);
 
-	/* we need this if more than one processor can write to our tail
-	 * at a time, it syncronizes IO on IA64/Altix systems
-	 */
-	mmiowb();
-
 	return;
 
 dma_error:
