@@ -46,6 +46,8 @@ ifneq (1,$(test_no_fnopie))
   EXTRA_CFLAGS += -fno-pie
 endif
 
+EXTRA_CFLAGS += -Wno-implicit-fallthrough
+
 HERE=${PWD}
 
 # set the install path
