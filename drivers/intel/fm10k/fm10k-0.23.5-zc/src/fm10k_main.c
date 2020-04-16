@@ -1216,11 +1216,6 @@ static void fm10k_tx_map(struct fm10k_ring *tx_ring,
 	if (netif_xmit_stopped(txring_txq(tx_ring)) || !netdev_xmit_more()) {
 #endif /* HAVE_SKB_XMIT_MORE */
 		writel(i, tx_ring->tail);
-
-		/* we need this if more than one processor can write to our tail
-		 * at a time, it synchronizes IO on IA64/Altix systems
-		 */
-		mmiowb();
 #ifdef HAVE_SKB_XMIT_MORE
 	}
 #endif /* HAVE_SKB_XMIT_MORE */
