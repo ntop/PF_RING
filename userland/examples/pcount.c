@@ -316,12 +316,13 @@ void printHelp(void) {
   pcap_if_t *devpointer;
 
   printf("pcount\n(C) 2003-2020 Deri Luca <deri@ntop.org>\n");
-  printf("-h              [Print help]\n");
-  printf("-i <device>     [Device name]\n");
-  printf("-f <filter>     [pcap filter]\n");
-  printf("-l <len>        [Capture length]\n");
-  printf("-S              [Do not strip hw timestamps (if present)]\n");
-  printf("-v <mode>       [Verbose [1: verbose, 2: very verbose (print packet payload)]]\n");
+  printf("-h              Print help\n");
+  printf("-i <device>     Device name\n");
+  printf("-f <filter>     pcap filter\n");
+  printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
+  printf("-l <len>        Capture length\n");
+  printf("-S              Do not strip hw timestamps (if present)\n");
+  printf("-v <mode>       Verbose (1: verbose, 2: very verbose)\n");
 
   if(pcap_findalldevs(&devpointer, errbuf) == 0) {
     int i = 0;
@@ -342,6 +343,7 @@ int main(int argc, char* argv[]) {
   int promisc, snaplen = DEFAULT_SNAPLEN;
   struct bpf_program fcode;
   u_int8_t dont_strip_hw_ts = 0;
+  int direction = PCAP_D_INOUT;
 
 #if 0
   struct sched_param schedparam;
@@ -381,13 +383,26 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:l:v:f:S")) != '?') {
+  while((c = getopt(argc,argv,"e:hi:l:v:f:S")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
     case 'h':
       printHelp();
       exit(0);
+      break;
+    case 'e':
+      switch(atoi(optarg)) {
+        case 0:
+          direction = PCAP_D_INOUT;
+        break;
+        case 1:
+          direction = PCAP_D_IN;
+        break;
+        case 2:
+          direction = PCAP_D_OUT;
+        break;
+      }
       break;
     case 'i':
       device = strdup(optarg);
@@ -425,6 +440,9 @@ int main(int argc, char* argv[]) {
     printf("pcap_open_live: %s\n", errbuf);
     return(-1);
   }
+
+  if(pcap_setdirection(pd, direction) != 0)
+    printf("pcap_setdirection error: '%s'\n", pcap_geterr(pd));
 
   if(bpfFilter != NULL) {
     if(pcap_compile(pd, &fcode, bpfFilter, 1, 0xFFFFFF00) < 0) {
