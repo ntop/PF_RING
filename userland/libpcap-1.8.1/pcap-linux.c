@@ -2377,7 +2377,7 @@ pcap_stats_linux(pcap_t *handle, struct pcap_stat *stats)
 		pfring_stat ring_stats;
 
 		if (pfring_stats(handle->ring, &ring_stats) == 0) {
-			handlep->stat.ps_recv = ring_stats.recv;
+			handlep->stat.ps_recv = ring_stats.recv + ring_stats.drop;
 #if 0
 			/* tcpdump reports ps_drop as "packets dropped by kernel",
 			 * that is wrong with ZC, so we should set ps_ifdrop. 
