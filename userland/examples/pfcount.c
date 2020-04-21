@@ -93,7 +93,7 @@ struct strmatch {
 struct strmatch *matching_strings = NULL;
 
 u_int8_t wait_for_packet = 1, do_shutdown = 0, add_drop_rule = 0, use_extended_pkt_header = 0;
-u_int8_t touch_payload = 0, enable_hw_timestamp = 0, dont_strip_timestamps = 0, dont_strip_crc;
+u_int8_t touch_payload = 0, enable_hw_timestamp = 0, dont_strip_timestamps = 0, dont_strip_crc = 0;
 u_int8_t memcpy_test = 0;
 
 volatile char memcpy_test_buffer[9216];
@@ -1155,7 +1155,7 @@ int main(int argc, char* argv[]) {
   if(promisc)                 flags |= PF_RING_PROMISC;
   if(enable_hw_timestamp)     flags |= PF_RING_HW_TIMESTAMP;
   if(!dont_strip_timestamps)  flags |= PF_RING_STRIP_HW_TIMESTAMP;
-  if(!dont_strip_crc)         flags |= PF_RING_DO_NOT_STRIP_FCS;
+  if(dont_strip_crc)          flags |= PF_RING_DO_NOT_STRIP_FCS;
   if(chunk_mode)              flags |= PF_RING_CHUNK_MODE;
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
   if(asymm_rss)               flags |= PF_RING_ZC_NOT_REPROGRAM_RSS;
