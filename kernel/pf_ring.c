@@ -146,6 +146,43 @@
 
 /* ************************************************* */
 
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0))
+
+/* From linux 5.4.34 */
+
+struct timespec ns_to_timespec(const s64 nsec)
+{
+	struct timespec ts;
+	s32 rem;
+
+	if (!nsec)
+		return (struct timespec) {0, 0};
+
+	ts.tv_sec = div_s64_rem(nsec, NSEC_PER_SEC, &rem);
+	if (unlikely(rem < 0)) {
+		ts.tv_sec--;
+		rem += NSEC_PER_SEC;
+	}
+	ts.tv_nsec = rem;
+
+	return ts;
+}
+
+struct timeval ns_to_timeval(const s64 nsec)
+{
+	struct timespec ts = ns_to_timespec(nsec);
+	struct timeval tv;
+
+	tv.tv_sec = ts.tv_sec;
+	tv.tv_usec = (suseconds_t) ts.tv_nsec / 1000;
+
+	return tv;
+}
+
+#endif
+
+/* ************************************************* */
+
 static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t port)
 {
   if(!addr) {
