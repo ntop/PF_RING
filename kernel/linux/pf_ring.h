@@ -129,6 +129,32 @@
 
 /* *********************************** */
 
+#ifdef __KERNEL__
+
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0))
+
+/* From linux 5.4.34 */
+typedef long __kernel_time_t;
+
+struct timeval {
+	__kernel_time_t		tv_sec;		/* seconds */
+	__kernel_suseconds_t	tv_usec;	/* microseconds */
+};
+
+struct timespec {
+	__kernel_time_t	tv_sec;			/* seconds */
+	long		tv_nsec;		/* nanoseconds */
+};
+
+struct timespec ns_to_timespec(const s64 nsec);
+struct timeval ns_to_timeval(const s64 nsec);
+
+#define ktime_to_timeval(kt)		ns_to_timeval((kt))
+
+#endif
+
+#endif
+
 /*
   Note that as offsets *can* be negative,
   please do not change them to unsigned
