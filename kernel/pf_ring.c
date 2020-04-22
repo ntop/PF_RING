@@ -1031,6 +1031,7 @@ static int ring_proc_open(struct inode *inode, struct file *file) {
   return single_open(file, ring_proc_get_info, PDE_DATA(inode));
 }
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
 static const struct file_operations ring_proc_fops = {
   .owner = THIS_MODULE,
   .open = ring_proc_open,
@@ -1038,6 +1039,14 @@ static const struct file_operations ring_proc_fops = {
   .llseek = seq_lseek,
   .release = single_release,
 };
+#else
+static const struct proc_ops ring_proc_fops = {
+  .proc_open = ring_proc_open,
+  .proc_read = seq_read,
+  .proc_lseek = seq_lseek,
+  .proc_release = single_release,
+};
+#endif
 
 /* ********************************** */
 
