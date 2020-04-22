@@ -92,8 +92,9 @@ struct strmatch {
 
 struct strmatch *matching_strings = NULL;
 
-u_int8_t wait_for_packet = 1, do_shutdown = 0, add_drop_rule = 0;
-u_int8_t use_extended_pkt_header = 0, touch_payload = 0, enable_hw_timestamp = 0, dont_strip_timestamps = 0, memcpy_test = 0;
+u_int8_t wait_for_packet = 1, do_shutdown = 0, add_drop_rule = 0, use_extended_pkt_header = 0;
+u_int8_t touch_payload = 0, enable_hw_timestamp = 0, dont_strip_timestamps = 0, dont_strip_crc = 0;
+u_int8_t memcpy_test = 0;
 
 volatile char memcpy_test_buffer[9216];
 
@@ -709,6 +710,7 @@ void printHelp(void) {
 	 cluster_round_robin, cluster_per_flow_ip_with_dup_tuple);
   printf("-s              Enable hw timestamping\n");
   printf("-S              Do not strip hw timestamps (if present)\n");
+  printf("-F              Do not strip CRC/FCS (when not stripped by the adapter)\n");
   printf("-t              Touch payload (to force packet load on cache)\n");
   printf("-M              Packet memcpy (to test memcpy speed)\n");
   printf("-C <mode>       Work with the adapter in chunk mode (1=chunk API, 2=packet API)\n");
@@ -960,7 +962,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"hi:c:C:d:H:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
+  while((c = getopt(argc,argv,"hi:c:C:Fd:H:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -994,6 +996,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'f':
       bpfFilter = strdup(optarg);
+      break;
+    case 'F':
+      dont_strip_crc = 1;
       break;
     case 'g':
       bind_core = atoi(optarg);
@@ -1153,6 +1158,7 @@ int main(int argc, char* argv[]) {
   if(promisc)                 flags |= PF_RING_PROMISC;
   if(enable_hw_timestamp)     flags |= PF_RING_HW_TIMESTAMP;
   if(!dont_strip_timestamps)  flags |= PF_RING_STRIP_HW_TIMESTAMP;
+  if(dont_strip_crc)          flags |= PF_RING_DO_NOT_STRIP_FCS;
   if(chunk_mode)              flags |= PF_RING_CHUNK_MODE;
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
   if(asymm_rss)               flags |= PF_RING_ZC_NOT_REPROGRAM_RSS;
