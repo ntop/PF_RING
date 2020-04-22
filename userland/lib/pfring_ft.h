@@ -483,6 +483,17 @@ pfring_ft_flow_get_action(
 );
 
 /**
+ * Return the number of users for the flow (value of the reference counter).
+ * This is usually 1, unless slicing is enabled (+1 for each slice not yet released).
+ * Calling this on the slice, returns the reference counter of the master flow.
+ * @param flow The flow handle.
+ */
+int
+pfring_ft_flow_get_users(
+  pfring_ft_flow *flow
+);
+
+/**
  * Release a flow.
  * @param flow The flow handle.
  */
