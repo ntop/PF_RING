@@ -4518,6 +4518,7 @@ static int ring_proc_virtual_filtering_open(struct inode *inode, struct file *fi
   return single_open(file, ring_proc_virtual_filtering_dev_get_info, PDE_DATA(inode));
 }
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
 static const struct file_operations ring_proc_virtual_filtering_fops = {
   .owner = THIS_MODULE,
   .open = ring_proc_virtual_filtering_open,
@@ -4525,6 +4526,14 @@ static const struct file_operations ring_proc_virtual_filtering_fops = {
   .llseek = seq_lseek,
   .release = single_release,
 };
+#else
+static const struct proc_ops ring_proc_virtual_filtering_fops = {
+  .proc_open = ring_proc_virtual_filtering_open,
+  .proc_read = seq_read,
+  .proc_lseek = seq_lseek,
+  .proc_release = single_release,
+};
+#endif
 
 /* ************************************* */
 
@@ -6597,6 +6606,7 @@ static int ring_proc_stats_open(struct inode *inode, struct file *file)
   return single_open(file, ring_proc_stats_read, PDE_DATA(inode));
 }
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
 static const struct file_operations ring_proc_stats_fops = {
   .owner = THIS_MODULE,
   .open = ring_proc_stats_open,
@@ -6604,6 +6614,14 @@ static const struct file_operations ring_proc_stats_fops = {
   .llseek = seq_lseek,
   .release = single_release,
 };
+#else
+static const struct proc_ops ring_proc_stats_fops = {
+  .proc_open = ring_proc_stats_open,
+  .proc_read = seq_read,
+  .proc_lseek = seq_lseek,
+  .proc_release = single_release,
+};
+#endif
 
 /* ************************************* */
 
@@ -8200,6 +8218,7 @@ static int ring_proc_dev_open(struct inode *inode, struct file *file)
   return single_open(file, ring_proc_dev_get_info, PDE_DATA(inode));
 }
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
 static const struct file_operations ring_proc_dev_fops = {
   .owner = THIS_MODULE,
   .open = ring_proc_dev_open,
@@ -8207,6 +8226,14 @@ static const struct file_operations ring_proc_dev_fops = {
   .llseek = seq_lseek,
   .release = single_release,
 };
+#else
+static const struct proc_ops ring_proc_dev_fops = {
+  .proc_open = ring_proc_dev_open,
+  .proc_read = seq_read,
+  .proc_lseek = seq_lseek,
+  .proc_release = single_release,
+};
+#endif
 
 /* ************************************ */
 
@@ -8315,6 +8342,7 @@ static int ring_proc_dev_ruleopen(struct inode *inode, struct file *file)
   return single_open(file, ring_proc_dev_rule_read, PDE_DATA(inode));
 }
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
 static const struct file_operations ring_proc_dev_rulefops = {
   .owner = THIS_MODULE,
   .open = ring_proc_dev_ruleopen,
@@ -8322,6 +8350,14 @@ static const struct file_operations ring_proc_dev_rulefops = {
   .llseek = seq_lseek,
   .release = single_release,
 };
+#else
+static const struct proc_ops ring_proc_dev_rulefops = {
+  .proc_open = ring_proc_dev_ruleopen,
+  .proc_read = seq_read,
+  .proc_lseek = seq_lseek,
+  .proc_release = single_release,
+};
+#endif
 #endif
 
 /* ************************************ */
