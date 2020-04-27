@@ -1837,7 +1837,7 @@ static int ring_alloc_mem(struct sock *sk)
       tot_mem = compute_ring_tot_mem(num_slots, slot_len);
     }
 
-    printk("[PF_RING] Warning: jumbo mtu or snaplen (%u), resizing slots.. "
+    debug_printk(1, "[PF_RING] Warning: jumbo mtu or snaplen (%u), resizing slots.. "
            "(num_slots = %u x slot_len = %u)\n",
       pfr->bucket_len, num_slots, slot_len);
   }
