@@ -6,11 +6,20 @@ GIT_HASH=`../package/version.sh --hash`
 VERS=`../package/version.sh --release`
 GIT_RELEASE=`../package/version.sh --revision`
 
+KERNEL_HEADERS="linux-headers-generic"
+if test -f "/usr/bin/lsb_release"; then
+  OS=`/usr/bin/lsb_release -i|cut -f 2`
+  if test "$OS" = "Debian"; then
+    KERNEL_HEADERS="linux-headers-amd64"
+  fi
+fi
+
 AC_SUBST(VERS)
 AC_SUBST(GIT_COMMIT_COUNT)
 AC_SUBST(GIT_BRANCH)
 AC_SUBST(GIT_HASH)
 AC_SUBST(GIT_RELEASE)
+AC_SUBST(KERNEL_HEADERS)
 
 AC_CONFIG_FILES(Makefile.dkms)
 AC_CONFIG_FILES(dkms.conf)
