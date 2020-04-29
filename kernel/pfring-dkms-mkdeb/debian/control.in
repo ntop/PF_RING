@@ -7,6 +7,6 @@ Standards-Version: 3.8.1
 
 Package: DEBIAN_PACKAGE-dkms
 Architecture: all
-Depends: pfring (=@VERS@-@GIT_RELEASE@), dkms (>= 1.95), ${misc:Depends}
+Depends: pfring (=@VERS@-@GIT_RELEASE@), dkms (>= 1.95), @KERNEL_HEADERS@, ${misc:Depends}
 Description: PF_RING driver in DKMS format. GIT info: @GIT_BRANCH@:@GIT_HASH@
 

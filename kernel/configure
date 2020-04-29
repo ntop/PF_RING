@@ -583,6 +583,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+KERNEL_HEADERS
 GIT_RELEASE
 GIT_HASH
 GIT_BRANCH
@@ -1684,6 +1685,15 @@ GIT_BRANCH=`git branch | grep \* | cut -d ' ' -f2`
 GIT_HASH=`../package/version.sh --hash`
 VERS=`../package/version.sh --release`
 GIT_RELEASE=`../package/version.sh --revision`
+
+KERNEL_HEADERS="linux-headers-generic"
+if test -f "/usr/bin/lsb_release"; then
+  OS=`/usr/bin/lsb_release -i|cut -f 2`
+  if test "$OS" = "Debian"; then
+    KERNEL_HEADERS="linux-headers-amd64"
+  fi
+fi
+
 
 
 
