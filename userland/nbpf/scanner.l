@@ -84,8 +84,8 @@ proto	return PROTO;
 l7proto	return L7PROTO;
 
 direction|dir return DIR;
-and|"&&" return AND;
-or|"||" return OR;
+and|AND|"&&" return AND;
+or|OR|"||" return OR;
 not	return '!';
 
 vlan	return VLAN;
