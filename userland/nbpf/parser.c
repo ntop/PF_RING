@@ -607,6 +607,19 @@ nbpf_node_t *nbpf_create_gtp_node() {
 
 /* ****************************************************** */
 
+nbpf_node_t *nbpf_create_locality_node(int locality, int direction) { 
+  nbpf_node_t *n = alloc_node();
+
+  n->type = N_PRIMITIVE;
+  n->qualifiers.protocol = NBPF_Q_IP;
+  n->qualifiers.address = locality;
+  n->qualifiers.direction = direction;
+
+  return n;
+}
+
+/* ****************************************************** */
+
 nbpf_node_t *nbpf_create_l7_node(u_int32_t id, const char *name) {
   nbpf_node_t *n = alloc_node();
 

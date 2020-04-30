@@ -103,6 +103,8 @@ nbpf_ip_addr;
 #define NBPF_Q_L7PROTO		10
 #define NBPF_Q_PROTO_REL	11
 #define NBPF_Q_CUSTOM		12
+#define NBPF_Q_LOCAL            13
+#define NBPF_Q_REMOTE           14
 
 /* Common qualifiers */
 #define NBPF_Q_DEFAULT		0
@@ -176,6 +178,7 @@ PACKED_ON typedef struct nbpf_node {
 nbpf_node_t;
 
 typedef int (*nbpf_custom_node_callback)(const char *key, const char *value, void *user);
+typedef int (*nbpf_ip_locality_callback)(nbpf_ip_addr *ip, u_int8_t ip_version, void *user);
 
 PACKED_ON typedef struct {
   nbpf_node_t *root;
@@ -184,6 +187,10 @@ PACKED_ON typedef struct {
   /* Callback for custom primitive node match 
    * Return 1 in case of match, 0 otherwise */ 
   nbpf_custom_node_callback custom_callback;
+
+  /* Callback for Local/Remote match
+   * Return 1 on local, 0 on remote */
+  nbpf_ip_locality_callback locality_callback;
 } PACKED_OFF
 nbpf_tree_t;
 
