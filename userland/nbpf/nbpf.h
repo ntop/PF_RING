@@ -235,6 +235,7 @@ void nbpf_toggle_inner_header_match(nbpf_tree_t *tree, u_int8_t enable);
 
 int nbpf_match(nbpf_tree_t *tree, nbpf_pkt_info_t *h);
 
+void nbpf_set_locality_callback(nbpf_tree_t *tree, nbpf_ip_locality_callback callback);
 void nbpf_set_custom_callback(nbpf_tree_t *tree, nbpf_custom_node_callback c);
 int nbpf_match_custom(nbpf_tree_t *tree, nbpf_pkt_info_t *h, void *user);
 
