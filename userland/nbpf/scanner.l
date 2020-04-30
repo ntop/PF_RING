@@ -92,6 +92,9 @@ vlan	return VLAN;
 mpls	return MPLS;
 gtp	return GTP;
 
+local	return LOCAL;
+remote	return REMOTE;
+
 [ \r\n\t] ;
 [+\-*/:\[\]!<>()&|=] return yytext[0];
 ">="	return GEQ;

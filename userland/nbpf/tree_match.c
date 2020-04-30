@@ -54,6 +54,7 @@ static /* inline */ int packet_match_mac(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     default:
       DEBUG_PRINTF("Unexpected direction qualifier (%d)\n", __LINE__);
   }
+
   DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
@@ -87,6 +88,7 @@ static /* inline */ int packet_match_ip(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     default:
       DEBUG_PRINTF("Unexpected direction qualifier (%d)\n", __LINE__);
   }
+
   //DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
@@ -137,6 +139,7 @@ static /* inline */ int packet_match_ip6(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     default:
       DEBUG_PRINTF("Unexpected direction qualifier (%d)\n", __LINE__);
   }
+
   DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
@@ -213,8 +216,62 @@ static /* inline */ int packet_match_host(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     default:
       DEBUG_PRINTF("Unexpected address qualifier: %d\n", n->qualifiers.protocol); 
   }  
-  DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
 
+  DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
+  return 0;
+}
+
+/* ********************************************************************** */
+
+static /* inline */ int packet_match_locality(nbpf_tree_t *tree, nbpf_node_t *n, nbpf_pkt_info_t *h, void *user) {
+  nbpf_pkt_info_tuple_t *t = &h->tuple;
+  int is_src_local = 0, is_dst_local = 0;
+  int ip_version;
+
+  if (!tree->locality_callback)
+    return 1; /* No way to check, return true */
+
+  if(n->qualifiers.header == NBPF_Q_INNER) {
+    if(ignore_inner_header) return 1;
+    t = &h->tunneled_tuple;
+  }
+
+  if(t->eth_type == 0x0800)
+    ip_version = 4;
+  else if(t->eth_type == 0x86DD)
+    ip_version = 6;
+  else
+    return 0; /* Not IP, return false */
+
+  switch(n->qualifiers.direction) {
+    case NBPF_Q_SRC:
+      is_src_local = tree->locality_callback(&t->ip_src, ip_version, user);
+      return (n->qualifiers.address == NBPF_Q_LOCAL ? is_src_local : !is_src_local);
+      break;
+    case NBPF_Q_DST:
+      is_dst_local = tree->locality_callback(&t->ip_dst, ip_version, user);
+      return (n->qualifiers.address == NBPF_Q_LOCAL ? is_dst_local : !is_dst_local);
+      break;
+    case NBPF_Q_DEFAULT:
+    case NBPF_Q_OR:
+      is_src_local = tree->locality_callback(&t->ip_src, ip_version, user);
+      is_dst_local = tree->locality_callback(&t->ip_dst, ip_version, user);
+      return (n->qualifiers.address == NBPF_Q_LOCAL ? 
+        (is_src_local || is_dst_local) :
+        (!is_src_local || !is_dst_local));
+      break;
+    case NBPF_Q_AND:
+      is_src_local = tree->locality_callback(&t->ip_src, ip_version, user);
+      is_dst_local = tree->locality_callback(&t->ip_dst, ip_version, user);
+      return (n->qualifiers.address == NBPF_Q_LOCAL ?
+        (is_src_local && is_dst_local) :
+        (!is_src_local && !is_dst_local));
+      break;
+    default:
+      DEBUG_PRINTF("Unexpected direction qualifier (%d)\n", __LINE__);
+  }
+
+  DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
 
@@ -247,6 +304,7 @@ static /* inline */ int packet_match_l4(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     default:
       DEBUG_PRINTF("Unexpected protocol qualifier (%d)\n", __LINE__);
   }
+
   DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
@@ -275,6 +333,7 @@ static /* inline */ int packet_match_proto(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     default:
       DEBUG_PRINTF("Unexpected protocol qualifier (%d)\n", __LINE__);
   }
+
   DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
@@ -300,6 +359,7 @@ static /* inline */ int packet_match_vlan(nbpf_node_t *n, nbpf_pkt_info_t *h) {
     default:
       DEBUG_PRINTF("Unexpected vlan qualifier (%d)\n", __LINE__);
   }
+
   DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
@@ -326,9 +386,13 @@ static /* inline */ int packet_match_primitive(nbpf_tree_t *tree, nbpf_node_t *n
         return tree->custom_callback(n->custom_key, n->custom_value, user);
     case NBPF_Q_VLAN:
       return packet_match_vlan(n, h);
+    case NBPF_Q_LOCAL:
+    case NBPF_Q_REMOTE:
+      return packet_match_locality(tree, n, h, user);
     default:
       DEBUG_PRINTF("Unexpected address qualifier (%d)\n", __LINE__);
   }
+
   DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
   return 0;
 }
@@ -376,6 +440,12 @@ void nbpf_toggle_inner_header_match(nbpf_tree_t *tree, u_int8_t enable) {
 
 void nbpf_set_custom_callback(nbpf_tree_t *tree, nbpf_custom_node_callback callback) {
   tree->custom_callback = callback;
+}
+
+/***************************************************************************/ 
+
+void nbpf_set_locality_callback(nbpf_tree_t *tree, nbpf_ip_locality_callback callback) {
+  tree->locality_callback = callback;
 }
 
 /***************************************************************************/ 

@@ -59,6 +59,7 @@ static void yyerror(const char *msg) {
 %token VLAN MPLS GTP
 %token L7PROTO
 %token QUOTED
+%token LOCAL REMOTE
 
 %type	<s> ID
 %type	<e> EID
@@ -176,6 +177,10 @@ other:	  VLAN pnum		{ $$.n = nbpf_create_vlan_node($2); }
 	| MPLS pnum		{ $$.n = nbpf_create_mpls_node($2); }
 	| MPLS			{ $$.n = nbpf_create_mpls_node(-1); }
 	| GTP			{ $$.n = nbpf_create_gtp_node(); }
+	| LOCAL			{ $$.n = nbpf_create_locality_node(NBPF_Q_LOCAL, NBPF_Q_DEFAULT); }
+	| REMOTE		{ $$.n = nbpf_create_locality_node(NBPF_Q_REMOTE, NBPF_Q_DEFAULT); }
+	| dqual LOCAL		{ $$.n = nbpf_create_locality_node(NBPF_Q_LOCAL, $1); }
+	| dqual REMOTE		{ $$.n = nbpf_create_locality_node(NBPF_Q_REMOTE, $1); }
 	;
 relop:    '>'                   { $$ = NBPF_R_GT; }
         | GEQ                   { $$ = NBPF_R_GE; }

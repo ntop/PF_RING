@@ -53,6 +53,8 @@ static char *addr_to_string(int addrq) {
     case NBPF_Q_L7PROTO:   return "L7Proto";
     case NBPF_Q_HOST:      return "Host";
     case NBPF_Q_CUSTOM:    return "Custom";
+    case NBPF_Q_LOCAL:    return "Local";
+    case NBPF_Q_REMOTE:    return "Remote";
     default:
       snprintf(__addr, sizeof(__addr), "(%d)", addrq);
       return __addr;
