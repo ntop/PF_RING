@@ -5,8 +5,8 @@ add: remove
 	mkdir /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
 	cd @IGB@/@IGB@-@IGB_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
 	cp ../../kernel/linux/pf_ring.h /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
-	#sed -i -e 's|DRIVER_NAME=@IGB@|DRIVER_NAME=@IGB@_zc|g' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
-	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IGB@_zc' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
+	sed -i -e 's/igb\.o/igb_zc.o/' -e 's/igb-/igb_zc-/' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Kbuild
+	mv /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Kbuild /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
 	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@IGB@ /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/dkms.conf
 	dkms add -m @IGB@-zc -v @IGB_VERSION@.@REVISION@
