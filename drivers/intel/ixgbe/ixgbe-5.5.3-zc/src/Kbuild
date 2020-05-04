@@ -24,7 +24,8 @@ ixgbe-objs := ixgbe_main.o \
 	ixgbe_ptp.o	\
 	ixgbe_fcoe.o	\
 	ixgbe_dcb_nl.o	\
-	ixgbe_debugfs.o
+	ixgbe_debugfs.o	\
+	kcompat.o
 
 CFLAGS_ixgbe_main.o := -I$(src)
 

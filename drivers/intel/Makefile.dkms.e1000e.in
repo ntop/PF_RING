@@ -5,8 +5,8 @@ add: veryclean
 	mkdir /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@
 	cd @E1000E@/@E1000E@-@E1000E_VERSION@-zc/src ; make clean; cp -r * /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@
 	cp ../../kernel/linux/pf_ring.h /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@
-	#sed -i -e 's|DRIVER_NAME = @E1000E@|DRIVER_NAME = @E1000E@_zc|g' /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Makefile
-	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@E1000E@_zc' /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Makefile
+	sed -i -e 's/e1000e\.o/e1000e_zc.o/' -e 's/e1000e-/e1000e_zc-/' /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Kbuild
+	mv /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Kbuild /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Makefile
 	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@E1000E@ /usr/src/@E1000E@-zc-@E1000E_VERSION@.@REVISION@/dkms.conf
 	dkms add -m @E1000E@-zc -v @E1000E_VERSION@.@REVISION@
