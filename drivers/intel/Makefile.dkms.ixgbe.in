@@ -5,8 +5,8 @@ add: veryclean
 	mkdir /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
 	cd @IXGBE@/@IXGBE@-@IXGBE_VERSION@-zc/src ; make clean; cp -r * /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
 	cp ../../kernel/linux/pf_ring.h /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@
-	#sed -i -e 's|DRIVER_NAME=@IXGBE@|DRIVER_NAME=@IXGBE@_zc|g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Makefile
-	sed -i '/EXTRA_CFLAGS += -DDRIVER_\$$/a DRIVER_NAME=@IXGBE@_zc' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Makefile
+	sed -i -e 's/ixgbe\.o/ixgbe_zc.o/' -e 's/ixgbe-/ixgbe_zc-/' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Kbuild
+	mv /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Kbuild /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Makefile
 	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@IXGBE@ /usr/src/@IXGBE@-zc-@IXGBE_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @IXGBE@-zc -v @IXGBE_VERSION@.@REVISION@
