@@ -607,13 +607,13 @@ nbpf_node_t *nbpf_create_gtp_node() {
 
 /* ****************************************************** */
 
-nbpf_node_t *nbpf_create_locality_node(int locality, int direction) { 
+nbpf_node_t *nbpf_create_locality_node(int locality, nbpf_qualifiers_t q) { 
   nbpf_node_t *n = alloc_node();
 
   n->type = N_PRIMITIVE;
   n->qualifiers.protocol = NBPF_Q_IP;
   n->qualifiers.address = locality;
-  n->qualifiers.direction = direction;
+  n->qualifiers.direction = q.direction;
 
   return n;
 }

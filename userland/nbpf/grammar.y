@@ -132,6 +132,8 @@ head:	  hqual pqual dqual aqual	{ QSET($$.q, $1,        $2, $3,        $4); }
 	| pqual PROTO			{ QSET($$.q, NBPF_Q_DEFAULT, $1, NBPF_Q_DEFAULT, NBPF_Q_PROTO); }
 	;
 rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
+	| head LOCAL		{ $$.n = nbpf_create_locality_node(NBPF_Q_LOCAL, $1.q); }
+	| head REMOTE		{ $$.n = nbpf_create_locality_node(NBPF_Q_REMOTE, $1.q); }
 	| L7PROTO ID		{ $$.n = nbpf_create_l7_node(0, (char *)$2); }
 	| L7PROTO pnum		{ $$.n = nbpf_create_l7_node($2, NULL); }
 	| paren expr ')'	{ $$.n = $2.n; $$.q = $1.q; /* TODO check this */ }
@@ -177,10 +179,6 @@ other:	  VLAN pnum		{ $$.n = nbpf_create_vlan_node($2); }
 	| MPLS pnum		{ $$.n = nbpf_create_mpls_node($2); }
 	| MPLS			{ $$.n = nbpf_create_mpls_node(-1); }
 	| GTP			{ $$.n = nbpf_create_gtp_node(); }
-	| LOCAL			{ $$.n = nbpf_create_locality_node(NBPF_Q_LOCAL, NBPF_Q_DEFAULT); }
-	| REMOTE		{ $$.n = nbpf_create_locality_node(NBPF_Q_REMOTE, NBPF_Q_DEFAULT); }
-	| dqual LOCAL		{ $$.n = nbpf_create_locality_node(NBPF_Q_LOCAL, $1); }
-	| dqual REMOTE		{ $$.n = nbpf_create_locality_node(NBPF_Q_REMOTE, $1); }
 	;
 relop:    '>'                   { $$ = NBPF_R_GT; }
         | GEQ                   { $$ = NBPF_R_GE; }
