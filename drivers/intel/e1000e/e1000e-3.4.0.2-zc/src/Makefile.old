@@ -1,7 +1,7 @@
 ################################################################################
 #
 # Intel PRO/1000 Linux driver
-# Copyright(c) 1999 - 2017 Intel Corporation.
+# Copyright(c) 1999 - 2015 Intel Corporation.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -121,6 +121,16 @@ ifeq (,$(CC))
   $(error Compiler not found)
 endif
 
+# Set no-pie for compilers that enable pie by default
+test_no_nopie = $(shell echo "" | $(CC) -fsyntax-only -no-pie -xc - 2>&1 | grep unrecognized | wc -l)
+ifneq (1,$(test_no_nopie))
+  EXTRA_CFLAGS += -no-pie
+endif
+test_no_fnopie = $(shell echo "" | $(CC) -fsyntax-only -fno-pie -xc - 2>&1 | grep unrecognized | wc -l)
+ifneq (1,$(test_no_fnopie))
+  EXTRA_CFLAGS += -fno-pie
+endif
+
 # we need to know what platform the driver is being built on
 # some additional features are only built on Intel platforms
 ARCH := $(shell uname -m | sed 's/i.86/i386/')
@@ -149,6 +159,8 @@ EXTRA_CFLAGS += $(shell [ -f $(KSRC)/include/linux/modversions.h ] && \
             echo "-DMODVERSIONS -DEXPORT_SYMTAB \
                   -include $(KSRC)/include/linux/modversions.h")
 
+EXTRA_CFLAGS += -DHAVE_PF_RING
+
 EXTRA_CFLAGS += $(CFLAGS_EXTRA)
 
 RHC := $(KSRC)/include/linux/rhconfig.h
@@ -176,24 +188,6 @@ KVER_CODE := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VSP) 2>/dev/null |\
 RHEL_CODE := $(shell $(CC) $(EXTRA_CFLAGS) -E -dM $(VSP) 2>/dev/null |\
 	grep -m 1 RHEL_RELEASE_CODE | awk '{ print $$3 }')
 
-# Determine SLE_LOCALVERSION_CODE for SuSE SLE (needed by kcompat)
-# This assumes SuSE will continue setting CONFIG_LOCALVERSION to the string
-# appended to the stable kernel version on which their kernel is based with
-# additional versioning information (up to 3 numbers) and a kernel type,
-# e.g. CONFIG_LOCALVERSION=-1.2.3-default
-ifeq (1,$(shell ${CC} -E -dM ${CONFIG_FILE} 2> /dev/null |\
-          grep -m 1 CONFIG_SUSE_KERNEL | awk '{ print $$3 }'))
-  LOCALVERSION := $(shell ${CC} -E -dM ${CONFIG_FILE} 2> /dev/null |\
-                    grep -m 1 CONFIG_LOCALVERSION | awk '{ print $$3 }' |\
-                    cut -d'-' -f2)
-  LOCALVER_A := $(shell echo ${LOCALVERSION} | cut -d'.' -f1)
-  LOCALVER_B := $(shell echo ${LOCALVERSION} | cut -d'.' -f2)
-  LOCALVER_C := $(shell echo ${LOCALVERSION} | cut -d'.' -f3)
-  SLE_LOCALVERSION_CODE := $(shell expr ${LOCALVER_A} \* 65536 + \
-                                        0${LOCALVER_B} \* 256 + 0${LOCALVER_C})
-  EXTRA_CFLAGS += -DSLE_LOCALVERSION_CODE=${SLE_LOCALVERSION_CODE}
-endif
-
 # abort the build on kernels older than 2.4.0
 ifneq (1,$(shell [ $(KVER_CODE) -ge 132096 ] && echo 1 || echo 0))
   $(error *** Aborting the build. \
@@ -213,9 +207,9 @@ endif # NO_PTP_SUPPORT
 
 # set the install path
 ifeq (1,$(shell [ $(KVER_CODE) -lt 197120 ] && echo 1 || echo 0))
-INSTDIR := /lib/modules/$(KVER)/updates/drivers/net/$(DRIVER_NAME)
+INSTDIR := /lib/modules/$(KVER)/kernel/drivers/net/$(DRIVER_NAME)
 else
-INSTDIR := /lib/modules/$(KVER)/updates/drivers/net/ethernet/intel/$(DRIVER_NAME)
+INSTDIR := /lib/modules/$(KVER)/kernel/drivers/net/ethernet/intel/$(DRIVER_NAME)
 endif
 
 # look for SMP in config.h
@@ -243,14 +237,6 @@ ifeq ($(SMP),1)
   EXTRA_CFLAGS += -D__SMP__
 endif
 
-# Don't set gcc-i-sys.sh until after our $(shell) invocations of ${CC}
-ifneq ($(wildcard ./gcc-i-sys.sh),)
-GCC_I_SYS := $(shell readlink -f ./gcc-i-sys.sh)
-$(shell chmod +x ${GCC_I_SYS})
-export REAL_CC := ${CC}
-export CC := ${GCC_I_SYS}
-endif
-
 ###########################################################################
 # Kernel Version Specific rules
 
@@ -269,10 +255,12 @@ obj-m += $(DRIVER_NAME).o
 $(DRIVER_NAME)-objs := $(CFILES:.c=.o)
 else
 default:
+	cd ../../../../../kernel/; make
+	cp ../../../../../kernel/Module.symvers .
 ifeq ($(KOBJ),$(KSRC))
-	$(MAKE) -C $(KSRC) CC=${CC} SUBDIRS=$(shell pwd) modules
+	$(MAKE) -C $(KSRC) SUBDIRS=$(shell pwd) modules
 else
-	$(MAKE) -C $(KSRC) CC=${CC} O=$(KOBJ) SUBDIRS=$(shell pwd) modules
+	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) modules
 endif
 endif
 
@@ -310,7 +298,7 @@ $(TARGET): $(filter-out $(TARGET), $(CFILES:.c=.o))
 
 $(CFILES:.c=.o): $(HFILES) Makefile
 default:
-	$(MAKE) CC=${CC}
+	$(MAKE)
 
 endif # ifeq (1,$(shell [ $(KVER_CODE) -ge 132352 ] && echo 1 || echo 0))
 
@@ -383,5 +371,3 @@ else
 	$(MAKE) -C $(KSRC) O=$(KOBJ) SUBDIRS=$(shell pwd) clean
 endif
 	rm -rf $(TARGET) $(TARGET:.ko=.o) $(TARGET:.ko=.mod.c) $(TARGET:.ko=.mod.o) $(CFILES:.c=.o) $(MANFILE).gz .*cmd .tmp_versions Module.markers Module.symvers modules.order
-
-.NOTPARALLEL:
