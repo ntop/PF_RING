@@ -678,7 +678,8 @@ typedef struct {
   ip_addr dst_ip;
 
   u_int16_t vlan_id;
-  u_int16_t reserved; /* padding */
+  u_int8_t start_of_flow;
+  u_int8_t reserved; /* padding */
 
   u_int16_t src_port;
   u_int16_t dst_port;
