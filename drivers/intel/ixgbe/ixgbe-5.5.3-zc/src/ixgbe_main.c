@@ -65,6 +65,10 @@ module_param_array(numa_cpu_affinity, int, NULL, 0444);
 MODULE_PARM_DESC(numa_cpu_affinity,
                  "Comma separated list of core ids where per-adapter memory will be allocated");
 
+static unsigned int disable_vlan_strip = 0;
+module_param(disable_vlan_strip, uint, 0644);
+MODULE_PARM_DESC(disable_vlan_strip, "Set to 1 to disable VLAN stripping (use 'ethtool -K $IF rxvlan off' when available)");
+
 static unsigned int low_latency_tx = 0;
 module_param(low_latency_tx, uint, 0644);
 MODULE_PARM_DESC(low_latency_tx, "Set to 1 to reduce transmission latency, minimize PCIe overhead otherwise");
@@ -1766,10 +1770,12 @@ static void ixgbe_receive_skb(struct ixgbe_q_vector *q_vector,
 
 #endif /* HAVE_VLAN_RX_REGISTER */
 #ifdef NETIF_F_GSO
-static void ixgbe_set_rsc_gso_size(struct ixgbe_ring __maybe_unused *ring,
+static void ixgbe_set_rsc_gso_size(struct ixgbe_ring *ring,
 				   struct sk_buff *skb)
 {
-	u16 hdr_len = eth_get_headlen(skb->data, skb_headlen(skb));
+	struct ixgbe_adapter *adapter = netdev_priv(ring->netdev);
+	struct net_device *netdev = adapter->netdev;
+	u16 hdr_len = eth_get_headlen(netdev, skb->data, skb_headlen(skb));
 
 	/* set gso_size to avoid messing up TCP MSS */
 	skb_shinfo(skb)->gso_size = DIV_ROUND_UP((skb->len - hdr_len),
@@ -1956,7 +1962,7 @@ static bool ixgbe_is_non_eop(struct ixgbe_ring *rx_ring,
  */
 static void ixgbe_pull_tail(struct sk_buff *skb)
 {
-	struct skb_frag_struct *frag = &skb_shinfo(skb)->frags[0];
+	skb_frag_t *frag = &skb_shinfo(skb)->frags[0];
 	unsigned char *va;
 	unsigned int pull_len;
 
@@ -1971,14 +1977,14 @@ static void ixgbe_pull_tail(struct sk_buff *skb)
 	 * we need the header to contain the greater of either ETH_HLEN or
 	 * 60 bytes if the skb->len is less than 60 for skb_pad.
 	 */
-	pull_len = eth_get_headlen(va, IXGBE_RX_HDR_SIZE);
+	pull_len = eth_get_headlen(skb->dev, va, IXGBE_RX_HDR_SIZE);
 
 	/* align pull length to size of long to optimize memcpy performance */
 	skb_copy_to_linear_data(skb, va, ALIGN(pull_len, sizeof(long)));
 
 	/* update all of the pointers */
 	skb_frag_size_sub(frag, pull_len);
-	frag->page_offset += pull_len;
+	skb_frag_off_add(frag, pull_len);
 	skb->data_len -= pull_len;
 	skb->tail += pull_len;
 }
@@ -2022,11 +2028,11 @@ static void ixgbe_dma_sync_frag(struct ixgbe_ring *rx_ring,
 					      skb_headlen(skb),
 					      DMA_FROM_DEVICE);
 	} else {
-		struct skb_frag_struct *frag = &skb_shinfo(skb)->frags[0];
+		skb_frag_t *frag = &skb_shinfo(skb)->frags[0];
 
 		dma_sync_single_range_for_cpu(rx_ring->dev,
 					      IXGBE_CB(skb)->dma,
-					      frag->page_offset,
+					      skb_frag_off(frag),
 					      skb_frag_size(frag),
 					      DMA_FROM_DEVICE);
 	}
@@ -5994,6 +6000,14 @@ void ixgbe_set_rx_mode(struct net_device *netdev)
 	IXGBE_WRITE_REG(hw, IXGBE_FCTRL, fctrl);
 
 #ifdef HAVE_8021P_SUPPORT
+#ifdef HAVE_PF_RING
+	if (disable_vlan_strip)
+#ifdef NETIF_F_HW_VLAN_CTAG_RX
+		features &= ~NETIF_F_HW_VLAN_CTAG_RX;
+#else
+		features &= ~NETIF_F_HW_VLAN_RX;
+#endif
+#endif
 #ifdef NETIF_F_HW_VLAN_CTAG_RX
 	if (features & NETIF_F_HW_VLAN_CTAG_RX)
 #else
@@ -7464,9 +7478,9 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 	/* Disable Rx */
 	ixgbe_disable_rx_queue(adapter);
 
-	/* synchronize_sched() needed for pending XDP buffers to drain */
+	/* synchronize_rcu() needed for pending XDP buffers to drain */
 	if (adapter->xdp_ring[0])
-		synchronize_sched();
+		synchronize_rcu();
 
 	ixgbe_irq_disable(adapter);
 
@@ -10084,7 +10098,7 @@ static int ixgbe_tx_map(struct ixgbe_ring *tx_ring,
 	struct sk_buff *skb = first->skb;
 	struct ixgbe_tx_buffer *tx_buffer;
 	union ixgbe_adv_tx_desc *tx_desc;
-	struct skb_frag_struct *frag;
+	skb_frag_t *frag;
 	dma_addr_t dma;
 	unsigned int data_len, size;
 	u32 tx_flags = first->tx_flags;
@@ -10207,22 +10221,13 @@ static int ixgbe_tx_map(struct ixgbe_ring *tx_ring,
 	ixgbe_maybe_stop_tx(tx_ring, DESC_NEEDED);
 
 #ifdef HAVE_SKB_XMIT_MORE
-	if (netif_xmit_stopped(txring_txq(tx_ring)) || !skb->xmit_more) {
+	if (netif_xmit_stopped(txring_txq(tx_ring)) || !netdev_xmit_more()) {
 		writel(i, tx_ring->tail);
-
-		/* we need this if more than one processor can write to our tail
-		 * at a time, it synchronizes IO on IA64/Altix systems
-		 */
-		mmiowb();
 	}
 #else
 	/* notify HW of packet */
 	writel(i, tx_ring->tail);
 
-	/* we need this if more than one processor can write to our tail
-	 * at a time, it synchronizes IO on IA64/Altix systems
-	 */
-	mmiowb();
 #endif /* HAVE_SKB_XMIT_MORE */
 
 	return 0;
@@ -10410,17 +10415,20 @@ static void ixgbe_atr(struct ixgbe_ring *ring,
 #ifdef HAVE_NETDEV_SELECT_QUEUE
 #if IS_ENABLED(CONFIG_FCOE)
 
-#if defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
+#if defined(HAVE_NDO_SELECT_QUEUE_FALLBACK_REMOVED)
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
-			      __always_unused struct net_device *sb_dev,
-			      select_queue_fallback_t fallback)
+                              struct net_device *sb_dev)
+#elif defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
+static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
+                              __always_unused struct net_device *sb_dev,
+                              select_queue_fallback_t fallback)
 #elif defined(HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK)
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
-			      __always_unused void *accel,
-			      select_queue_fallback_t fallback)
+                              __always_unused void *accel,
+                              select_queue_fallback_t fallback)
 #elif defined(HAVE_NDO_SELECT_QUEUE_ACCEL)
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb,
-			      __always_unused void *accel)
+                              __always_unused void *accel)
 #else
 static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb)
 #endif /* HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK */
@@ -10442,12 +10450,14 @@ static u16 ixgbe_select_queue(struct net_device *dev, struct sk_buff *skb)
 			break;
 		/* fall through */
 	default:
-#if defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
-		return fallback(dev, skb, sb_dev);
+#if defined(HAVE_NDO_SELECT_QUEUE_FALLBACK_REMOVED)
+                return netdev_pick_tx(dev, skb, sb_dev);
+#elif defined(HAVE_NDO_SELECT_QUEUE_SB_DEV)
+                return fallback(dev, skb, sb_dev);
 #elif defined(HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK)
-		return fallback(dev, skb);
+                return fallback(dev, skb);
 #else
-		return __netdev_pick_tx(dev, skb);
+                return __netdev_pick_tx(dev, skb);
 #endif
 	}
 
@@ -10567,7 +10577,7 @@ netdev_tx_t ixgbe_xmit_frame_ring(struct sk_buff *skb,
 	 * otherwise try next time
 	 */
 	for (f = 0; f < skb_shinfo(skb)->nr_frags; f++)
-		count += TXD_USE_COUNT(skb_shinfo(skb)->frags[f].size);
+		count += TXD_USE_COUNT(skb_frag_size(&skb_shinfo(skb)->frags[f]));
 
 	if (ixgbe_maybe_stop_tx(tx_ring, count + 3)) {
 		tx_ring->tx_stats.tx_busy++;
@@ -11479,20 +11489,25 @@ ixgbe_gso_check(struct sk_buff *skb, __always_unused struct net_device *dev)
 #endif /* HAVE_NDO_GSO_CHECK */
 
 #ifdef HAVE_FDB_OPS
-#ifdef USE_CONST_DEV_UC_CHAR
+#if defined(HAVE_NDO_FDB_ADD_EXTACK)
 static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
-			     struct net_device *dev,
-			     const unsigned char *addr,
-#ifdef HAVE_NDO_FDB_ADD_VID
-			     u16 vid,
-#endif
-			     u16 flags)
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags, struct netlink_ext_ack *extack)
+#elif defined(HAVE_NDO_FDB_ADD_VID)
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags)
+#elif defined(HAVE_NDO_FDB_ADD_NLATTR)
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 flags)
+#elif defined(USE_CONST_DEV_UC_CHAR)
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    const unsigned char *addr, u16 flags)
 #else
-static int ixgbe_ndo_fdb_add(struct ndmsg *ndm,
-			     struct net_device *dev,
-			     unsigned char *addr,
-			     u16 flags)
-#endif /* USE_CONST_DEV_UC_CHAR */
+static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct net_device *dev,
+			    unsigned char *addr, u16 flags)
+#endif
 {
 	/* guarantee we can provide a unique filter for the unicast address */
 	if (is_unicast_ether_addr(addr) || is_link_local_ether_addr(addr)) {
@@ -12295,7 +12310,9 @@ static int ixgbe_probe(struct pci_dev *pdev,
 		goto err_alloc_etherdev;
 	}
 
+#ifdef SET_MODULE_OWNER
 	SET_MODULE_OWNER(netdev);
+#endif
 	SET_NETDEV_DEV(netdev, pci_dev_to_dev(pdev));
 
 	adapter = netdev_priv(netdev);

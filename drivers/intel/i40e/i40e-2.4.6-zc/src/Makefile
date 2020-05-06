@@ -103,6 +103,7 @@ kernelbuild = ${MAKE} $(if ${GCC_I_SYS},CC:="${GCC_I_SYS}") \
 
 # Standard compilation, with regular output
 default:
+	# PF_RING
 	cd ../../../../../kernel/; make
 	cp ../../../../../kernel/Module.symvers .
 	@+$(call kernelbuild,modules)

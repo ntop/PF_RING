@@ -4724,7 +4724,7 @@ static void e1000_flush_tx_ring(struct e1000_adapter *adapter)
 	if (tx_ring->next_to_use == tx_ring->count)
 		tx_ring->next_to_use = 0;
 	ew32(TDT(0), tx_ring->next_to_use);
-	mmiowb();
+	barrier();
 	usleep_range(200, 250);
 }
 
@@ -6694,7 +6694,7 @@ static int e1000_tx_map(struct e1000_ring *tx_ring, struct sk_buff *skb,
 	}
 
 	for (f = 0; f < nr_frags; f++) {
-		const struct skb_frag_struct *frag;
+		const skb_frag_t *frag;
 
 		frag = &skb_shinfo(skb)->frags[f];
 		len = skb_frag_size(frag);
@@ -6828,7 +6828,7 @@ static void e1000_tx_queue(struct e1000_ring *tx_ring, int tx_flags, int count)
 		e1000e_update_tdt_wa(tx_ring, i);
 	else
 		writel(i, tx_ring->tail);
-	mmiowb();
+	barrier();
 #endif
 }
 
@@ -7081,19 +7081,13 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
 						  adapter->tx_fifo_limit) + 2));
 
 #ifdef HAVE_SKB_XMIT_MORE
-		if (!skb->xmit_more ||
+		if (!netdev_xmit_more() ||
 		    netif_xmit_stopped(netdev_get_tx_queue(netdev, 0))) {
 			if (adapter->flags2 & FLAG2_PCIM2PCI_ARBITER_WA)
 				e1000e_update_tdt_wa(tx_ring,
 						     tx_ring->next_to_use);
 			else
 				writel(tx_ring->next_to_use, tx_ring->tail);
-
-			/* we need this if more than one processor can write
-			 * to our tail at a time, it synchronizes IO on
-			 *IA64/Altix systems
-			 */
-			mmiowb();
 		}
 #endif
 	} else {

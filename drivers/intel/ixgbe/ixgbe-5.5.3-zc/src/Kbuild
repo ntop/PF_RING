@@ -1,0 +1,43 @@
+#
+# Makefile for the Intel(R) 10GbE PCI Express Linux Network Driver
+#
+
+obj-m += ixgbe.o
+
+ixgbe-objs := ixgbe_main.o \
+	ixgbe_api.o	\
+	ixgbe_common.o	\
+	ixgbe_dcb.o	\
+	ixgbe_dcb_82598.o	\
+	ixgbe_dcb_82599.o	\
+	ixgbe_ethtool.o	\
+	ixgbe_lib.o	\
+	ixgbe_mbx.o	\
+	ixgbe_sriov.o	\
+	ixgbe_param.o	\
+	ixgbe_phy.o	\
+	ixgbe_procfs.o	\
+	ixgbe_82598.o	\
+	ixgbe_82599.o	\
+	ixgbe_x540.o	\
+	ixgbe_x550.o	\
+	ixgbe_ptp.o	\
+	ixgbe_fcoe.o	\
+	ixgbe_dcb_nl.o	\
+	ixgbe_debugfs.o	\
+	kcompat.o
+
+CFLAGS_ixgbe_main.o := -I$(src)
+
+EXTRA_CFLAGS += -DHAVE_PF_RING -DIXGBE_NO_HW_RSC -DDISABLE_PACKET_SPLIT
+
+KVER=$(shell uname -r)
+
+all:
+	cd ../../../../../kernel/; make
+	cp ../../../../../kernel/Module.symvers .
+	$(MAKE) -C /lib/modules/${KVER}/build M=$(PWD) modules
+
+clean:
+	$(MAKE) -C /lib/modules/${KVER}/build M=$(PWD) clean
+
