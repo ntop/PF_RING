@@ -339,6 +339,7 @@ struct pfring_extended_pkthdr {
 #define PKT_FLAGS_FLOW_OFFLOAD_UPDATE 1 << 6 /* Flow update metadata, see generic_flow_update struct (keep flag compatible with ZC) */
 #define PKT_FLAGS_FLOW_OFFLOAD_PACKET 1 << 7 /* Flow raw packet, pkt_hash contains the flow_id (keep flag compatible with ZC) */
 #define PKT_FLAGS_FLOW_OFFLOAD_MARKER 1 << 8 /* Flow raw packet belongs to a flow that has been marked (keep flag compatible with ZC) */
+#define PKT_FLAGS_FLOW_OFFLOAD_1ST    1 << 9 /* Flow raw packet, this is the 1st one (Start of Flow) (keep flag compatible with ZC) */
   u_int32_t flags;
 
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
