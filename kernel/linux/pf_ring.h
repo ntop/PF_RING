@@ -686,9 +686,9 @@ typedef struct {
   u_int16_t dst_port;
 
   u_int32_t fwd_packets;
-  u_int32_t fwd_bytes;
   u_int32_t rev_packets;
-  u_int32_t rev_bytes;
+  u_int64_t fwd_bytes;
+  u_int64_t rev_bytes;
   
   struct pfring_timespec fwd_ts_first;
   struct pfring_timespec fwd_ts_last;
