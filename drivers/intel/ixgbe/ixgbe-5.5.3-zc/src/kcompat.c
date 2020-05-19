@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 1999 - 2019 Intel Corporation. */
+/* Copyright(c) 1999 - 2020 Intel Corporation. */
 
 #include "ixgbe.h"
 #include "kcompat.h"
@@ -916,6 +916,24 @@ void _kc_print_hex_dump(const char *level,
 #endif /* < 2.6.22 */
 
 /*****************************************************************************/
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23) )
+int ixgbe_dcb_netlink_register(void)
+{
+	return 0;
+}
+
+int ixgbe_dcb_netlink_unregister(void)
+{
+	return 0;
+}
+
+int ixgbe_copy_dcb_cfg(struct ixgbe_adapter __always_unused *adapter, int __always_unused tc_max)
+{
+	return 0;
+}
+#endif /* < 2.6.23 */
+
+/*****************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24) )
 #ifdef NAPI
 struct net_device *napi_to_poll_dev(const struct napi_struct *napi)
@@ -1193,6 +1211,21 @@ u16 ___kc_skb_tx_hash(struct net_device *dev, const struct sk_buff *skb,
 		return hash;
 	}
 
+	if (netdev_get_num_tc(dev)) {
+		struct adapter_struct *kc_adapter = netdev_priv(dev);
+
+		if (skb->priority == TC_PRIO_CONTROL) {
+			qoffset = kc_adapter->dcb_tc - 1;
+		} else {
+			qoffset = skb->vlan_tci;
+			qoffset &= IXGBE_TX_FLAGS_VLAN_PRIO_MASK;
+			qoffset >>= 13;
+		}
+
+		qcount = kc_adapter->ring_feature[RING_F_RSS].indices;
+		qoffset *= qcount;
+	}
+
 	if (skb->sk && skb->sk->sk_hash)
 		hash = skb->sk->sk_hash;
 	else
@@ -1210,37 +1243,30 @@ u16 ___kc_skb_tx_hash(struct net_device *dev, const struct sk_buff *skb,
 
 u8 _kc_netdev_get_num_tc(struct net_device *dev)
 {
-	struct i40e_netdev_priv *np = netdev_priv(dev);
-	struct i40e_vsi *vsi = np->vsi;
-	struct i40e_pf *pf = vsi->back;
-	if (pf->flags & I40E_FLAG_DCB_ENABLED)
-		return vsi->tc_config.numtc;
-
-	return 0;
+	struct adapter_struct *kc_adapter = netdev_priv(dev);
+	if (kc_adapter->flags & IXGBE_FLAG_DCB_ENABLED)
+		return kc_adapter->dcb_tc;
+	else
+		return 0;
 }
 
 int _kc_netdev_set_num_tc(struct net_device *dev, u8 num_tc)
 {
-	struct i40e_netdev_priv *np = netdev_priv(dev);
-	struct i40e_vsi *vsi = np->vsi;
+	struct adapter_struct *kc_adapter = netdev_priv(dev);
 
-	if (num_tc > I40E_MAX_TRAFFIC_CLASS)
+	if (num_tc > IXGBE_DCB_MAX_TRAFFIC_CLASS)
 		return -EINVAL;
 
-	vsi->tc_config.numtc = num_tc;
+	kc_adapter->dcb_tc = num_tc;
 
 	return 0;
 }
 
-u8 _kc_netdev_get_prio_tc_map(struct net_device *dev, u8 up)
+u8 _kc_netdev_get_prio_tc_map(struct net_device __maybe_unused *dev, u8 __maybe_unused up)
 {
-	struct i40e_netdev_priv *np = netdev_priv(dev);
-	struct i40e_vsi *vsi = np->vsi;
-	struct i40e_pf *pf = vsi->back;
-	struct i40e_hw *hw = &pf->hw;
-	struct i40e_dcbx_config *dcbcfg = &hw->local_dcbx_config;
+	struct adapter_struct *kc_adapter = netdev_priv(dev);
 
-	return dcbcfg->etscfg.prioritytable[up];
+	return ixgbe_dcb_get_tc_from_up(&kc_adapter->dcb_cfg, 0, up);
 }
 
 #endif /* !(RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)) */
@@ -1570,6 +1596,18 @@ static inline int kc_get_xps_queue(struct net_device *dev, struct sk_buff *skb)
 
 	return queue_index;
 #else
+	struct adapter_struct *kc_adapter = netdev_priv(dev);
+	int queue_index = -1;
+
+	if (kc_adapter->flags & IXGBE_FLAG_FDIR_HASH_CAPABLE) {
+		queue_index = skb_rx_queue_recorded(skb) ?
+					   skb_get_rx_queue(skb) :
+					   smp_processor_id();
+		while (unlikely(queue_index >= dev->real_num_tx_queues))
+			queue_index -= dev->real_num_tx_queues;
+		return queue_index;
+	}
+
 	return -1;
 #endif
 }
@@ -2728,6 +2766,7 @@ void flow_rule_match_ports(const struct flow_rule *rule,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0))
+#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2))))
 #ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
 int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 				   struct list_head __always_unused *driver_list,
@@ -2756,4 +2795,5 @@ int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 	}
 }
 #endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
+#endif /* !RHEL >= 8.2 */
 #endif /* 5.3.0 */
