@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 1999 - 2019 Intel Corporation. */
+/* Copyright(c) 2007 - 2020 Intel Corporation. */
 
 #include "igb.h"
 #include "kcompat.h"
@@ -702,7 +702,8 @@ free_skb:
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(5,4)))
 int _kc_pci_save_state(struct pci_dev *pdev)
 {
-	struct adapter_struct *adapter = pci_get_drvdata(pdev);
+	struct net_device *netdev = pci_get_drvdata(pdev);
+	struct adapter_struct *adapter = netdev_priv(netdev);
 	int size = PCI_CONFIG_SPACE_LEN, i;
 	u16 pcie_cap_offset, pcie_link_status;
 
@@ -735,7 +736,8 @@ int _kc_pci_save_state(struct pci_dev *pdev)
 
 void _kc_pci_restore_state(struct pci_dev *pdev)
 {
-	struct adapter_struct *adapter = pci_get_drvdata(pdev);
+	struct net_device *netdev = pci_get_drvdata(pdev);
+	struct adapter_struct *adapter = netdev_priv(netdev);
 	int size = PCI_CONFIG_SPACE_LEN, i;
 	u16 pcie_cap_offset;
 	u16 pcie_link_status;
@@ -913,6 +915,50 @@ void _kc_print_hex_dump(const char *level,
 	}
 }
 
+#ifdef HAVE_I2C_SUPPORT
+struct i2c_client *
+_kc_i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
+{
+	struct i2c_client	*client;
+	int			status;
+
+	client = kzalloc(sizeof *client, GFP_KERNEL);
+	if (!client)
+		return NULL;
+
+	client->adapter = adap;
+
+	client->dev.platform_data = info->platform_data;
+
+	client->flags = info->flags;
+	client->addr = info->addr;
+
+	strlcpy(client->name, info->type, sizeof(client->name));
+
+	/* Check for address business */
+	status = i2c_check_addr(adap, client->addr);
+	if (status)
+		goto out_err;
+
+	client->dev.parent = &client->adapter->dev;
+	client->dev.bus = &i2c_bus_type;
+
+	status = i2c_attach_client(client);
+	if (status)
+		goto out_err;
+
+	dev_dbg(&adap->dev, "client [%s] registered with bus id %s\n",
+		client->name, dev_name(&client->dev));
+
+	return client;
+
+out_err:
+	dev_err(&adap->dev, "Failed to register i2c client %s at 0x%02x "
+		"(%d)\n", client->name, client->addr, status);
+	kfree(client);
+	return NULL;
+}
+#endif /* HAVE_I2C_SUPPORT */
 #endif /* < 2.6.22 */
 
 /*****************************************************************************/
@@ -1175,73 +1221,6 @@ int _kc_ethtool_op_set_flags(struct net_device *dev, u32 data, u32 supported)
 /******************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39) )
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)))
-#ifdef HAVE_NETDEV_SELECT_QUEUE
-#include <net/ip.h>
-#include <linux/pkt_sched.h>
-
-u16 ___kc_skb_tx_hash(struct net_device *dev, const struct sk_buff *skb,
-		      u16 num_tx_queues)
-{
-	u32 hash;
-	u16 qoffset = 0;
-	u16 qcount = num_tx_queues;
-
-	if (skb_rx_queue_recorded(skb)) {
-		hash = skb_get_rx_queue(skb);
-		while (unlikely(hash >= num_tx_queues))
-			hash -= num_tx_queues;
-		return hash;
-	}
-
-	if (skb->sk && skb->sk->sk_hash)
-		hash = skb->sk->sk_hash;
-	else
-#ifdef NETIF_F_RXHASH
-		hash = (__force u16) skb->protocol ^ skb->rxhash;
-#else
-		hash = skb->protocol;
-#endif
-
-	hash = jhash_1word(hash, _kc_hashrnd);
-
-	return (u16) (((u64) hash * qcount) >> 32) + qoffset;
-}
-#endif /* HAVE_NETDEV_SELECT_QUEUE */
-
-u8 _kc_netdev_get_num_tc(struct net_device *dev)
-{
-	struct i40e_netdev_priv *np = netdev_priv(dev);
-	struct i40e_vsi *vsi = np->vsi;
-	struct i40e_pf *pf = vsi->back;
-	if (pf->flags & I40E_FLAG_DCB_ENABLED)
-		return vsi->tc_config.numtc;
-
-	return 0;
-}
-
-int _kc_netdev_set_num_tc(struct net_device *dev, u8 num_tc)
-{
-	struct i40e_netdev_priv *np = netdev_priv(dev);
-	struct i40e_vsi *vsi = np->vsi;
-
-	if (num_tc > I40E_MAX_TRAFFIC_CLASS)
-		return -EINVAL;
-
-	vsi->tc_config.numtc = num_tc;
-
-	return 0;
-}
-
-u8 _kc_netdev_get_prio_tc_map(struct net_device *dev, u8 up)
-{
-	struct i40e_netdev_priv *np = netdev_priv(dev);
-	struct i40e_vsi *vsi = np->vsi;
-	struct i40e_pf *pf = vsi->back;
-	struct i40e_hw *hw = &pf->hw;
-	struct i40e_dcbx_config *dcbcfg = &hw->local_dcbx_config;
-
-	return dcbcfg->etscfg.prioritytable[up];
-}
 
 #endif /* !(RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)) */
 #endif /* < 2.6.39 */
@@ -1463,147 +1442,6 @@ int __kc_pcie_capability_clear_word(struct pci_dev *dev, int pos,
 
 /******************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0) )
-#ifdef CONFIG_XPS
-#if NR_CPUS < 64
-#define _KC_MAX_XPS_CPUS	NR_CPUS
-#else
-#define _KC_MAX_XPS_CPUS	64
-#endif
-
-/*
- * netdev_queue sysfs structures and functions.
- */
-struct _kc_netdev_queue_attribute {
-	struct attribute attr;
-	ssize_t (*show)(struct netdev_queue *queue,
-	    struct _kc_netdev_queue_attribute *attr, char *buf);
-	ssize_t (*store)(struct netdev_queue *queue,
-	    struct _kc_netdev_queue_attribute *attr, const char *buf, size_t len);
-};
-
-#define to_kc_netdev_queue_attr(_attr) container_of(_attr,		\
-    struct _kc_netdev_queue_attribute, attr)
-
-int __kc_netif_set_xps_queue(struct net_device *dev, const struct cpumask *mask,
-			     u16 index)
-{
-	struct netdev_queue *txq = netdev_get_tx_queue(dev, index);
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) )
-	/* Redhat requires some odd extended netdev structures */
-	struct netdev_tx_queue_extended *txq_ext =
-					netdev_extended(dev)->_tx_ext + index;
-	struct kobj_type *ktype = txq_ext->kobj.ktype;
-#else
-	struct kobj_type *ktype = txq->kobj.ktype;
-#endif
-	struct _kc_netdev_queue_attribute *xps_attr;
-	struct attribute *attr = NULL;
-	int i, len, err;
-#define _KC_XPS_BUFLEN	(DIV_ROUND_UP(_KC_MAX_XPS_CPUS, 32) * 9)
-	char buf[_KC_XPS_BUFLEN];
-
-	if (!ktype)
-		return -ENOMEM;
-
-	/* attempt to locate the XPS attribute in the Tx queue */
-	for (i = 0; (attr = ktype->default_attrs[i]); i++) {
-		if (!strcmp("xps_cpus", attr->name))
-			break;
-	}
-
-	/* if we did not find it return an error */
-	if (!attr)
-		return -EINVAL;
-
-	/* copy the mask into a string */
-	len = bitmap_scnprintf(buf, _KC_XPS_BUFLEN,
-			       cpumask_bits(mask), _KC_MAX_XPS_CPUS);
-	if (!len)
-		return -ENOMEM;
-
-	xps_attr = to_kc_netdev_queue_attr(attr);
-
-	/* Store the XPS value using the SYSFS store call */
-	err = xps_attr->store(txq, xps_attr, buf, len);
-
-	/* we only had an error on err < 0 */
-	return (err < 0) ? err : 0;
-}
-#endif /* CONFIG_XPS */
-#ifdef HAVE_NETDEV_SELECT_QUEUE
-static inline int kc_get_xps_queue(struct net_device *dev, struct sk_buff *skb)
-{
-#ifdef CONFIG_XPS
-	struct xps_dev_maps *dev_maps;
-	struct xps_map *map;
-	int queue_index = -1;
-
-	rcu_read_lock();
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,38) )
-	/* Redhat requires some odd extended netdev structures */
-	dev_maps = rcu_dereference(netdev_extended(dev)->xps_maps);
-#else
-	dev_maps = rcu_dereference(dev->xps_maps);
-#endif
-	if (dev_maps) {
-		map = rcu_dereference(
-		    dev_maps->cpu_map[raw_smp_processor_id()]);
-		if (map) {
-			if (map->len == 1)
-				queue_index = map->queues[0];
-			else {
-				u32 hash;
-				if (skb->sk && skb->sk->sk_hash)
-					hash = skb->sk->sk_hash;
-				else
-					hash = (__force u16) skb->protocol ^
-					    skb->rxhash;
-				hash = jhash_1word(hash, _kc_hashrnd);
-				queue_index = map->queues[
-				    ((u64)hash * map->len) >> 32];
-			}
-			if (unlikely(queue_index >= dev->real_num_tx_queues))
-				queue_index = -1;
-		}
-	}
-	rcu_read_unlock();
-
-	return queue_index;
-#else
-	return -1;
-#endif
-}
-
-u16 __kc_netdev_pick_tx(struct net_device *dev, struct sk_buff *skb)
-{
-	struct sock *sk = skb->sk;
-	int queue_index = sk_tx_queue_get(sk);
-	int new_index;
-
-	if (queue_index >= 0 && queue_index < dev->real_num_tx_queues) {
-#ifdef CONFIG_XPS
-		if (!skb->ooo_okay)
-#endif
-			return queue_index;
-	}
-
-	new_index = kc_get_xps_queue(dev, skb);
-	if (new_index < 0)
-		new_index = skb_tx_hash(dev, skb);
-
-	if (queue_index != new_index && sk) {
-		struct dst_entry *dst =
-			    rcu_dereference(sk->sk_dst_cache);
-
-		if (dst && skb_dst(skb) == dst)
-			sk_tx_queue_set(sk, new_index);
-
-	}
-
-	return new_index;
-}
-
-#endif /* HAVE_NETDEV_SELECT_QUEUE */
 #endif /* 3.9.0 */
 
 /*****************************************************************************/
@@ -2185,9 +2023,6 @@ void __kc_skb_complete_tx_timestamp(struct sk_buff *skb,
 #endif
 
 /* include headers needed for get_headlen function */
-#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
-#include <scsi/fc/fc_fcoe.h>
-#endif
 #ifdef HAVE_SCTP
 #include <linux/sctp.h>
 #endif
@@ -2258,11 +2093,6 @@ again:
 		hdr.network += sizeof(struct ipv6hdr);
 		break;
 #endif /* NETIF_F_TSO6 */
-#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
-	case __constant_htons(ETH_P_FCOE):
-		hdr.network += FCOE_HEADER_LEN;
-		break;
-#endif
 	default:
 		return hdr.network - data;
 	}
@@ -2376,6 +2206,100 @@ unsigned int _kc_cpumask_local_spread(unsigned int i, int node)
 }
 #endif
 #endif
+
+/******************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0))
+#if (!(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,4)) && \
+     !(SLE_VERSION_CODE >= SLE_VERSION(12,2,0)))
+/**
+ * _kc_skb_flow_dissect_flow_keys - parse SKB to fill _kc_flow_keys
+ * @skb: SKB used to fille _kc_flow_keys
+ * @flow: _kc_flow_keys to set with SKB fields
+ * @flags: currently unused flags
+ *
+ * The purpose of using kcompat for this function is so the caller doesn't have
+ * to care about which kernel version they are on, which prevents a larger than
+ * normal #ifdef mess created by using a HAVE_* flag for this case. This is also
+ * done for 4.2 kernels to simplify calling skb_flow_dissect_flow_keys()
+ * because in 4.2 kernels skb_flow_dissect_flow_keys() exists, but only has 2
+ * arguments. Recent kernels have skb_flow_dissect_flow_keys() that has 3
+ * arguments.
+ *
+ * The caller needs to understand that this function was only implemented as a
+ * bare-minimum replacement for recent versions of skb_flow_dissect_flow_keys()
+ * and this function is in no way similar to skb_flow_dissect_flow_keys(). An
+ * example use can be found in the ice driver, specifically ice_arfs.c.
+ *
+ * This function is treated as a whitelist of supported fields the SKB can
+ * parse. If new functionality is added make sure to keep this format (i.e. only
+ * check for fields that are explicity wanted).
+ *
+ * Current whitelist:
+ *
+ * TCPv4, TCPv6, UDPv4, UDPv6
+ *
+ * If any unexpected protocol or other field is found this function memsets the
+ * flow passed in back to 0 and returns false. Otherwise the flow is populated
+ * and returns true.
+ */
+bool
+_kc_skb_flow_dissect_flow_keys(const struct sk_buff *skb,
+			       struct _kc_flow_keys *flow,
+			       unsigned int __always_unused flags)
+{
+	memset(flow, 0, sizeof(*flow));
+
+	flow->basic.n_proto = skb->protocol;
+	switch (flow->basic.n_proto) {
+	case htons(ETH_P_IP):
+		flow->basic.ip_proto = ip_hdr(skb)->protocol;
+		flow->addrs.v4addrs.src = ip_hdr(skb)->saddr;
+		flow->addrs.v4addrs.dst = ip_hdr(skb)->daddr;
+		break;
+	case htons(ETH_P_IPV6):
+		flow->basic.ip_proto = ipv6_hdr(skb)->nexthdr;
+		memcpy(&flow->addrs.v6addrs.src, &ipv6_hdr(skb)->saddr,
+		       sizeof(struct in6_addr));
+		memcpy(&flow->addrs.v6addrs.dst, &ipv6_hdr(skb)->daddr,
+		       sizeof(struct in6_addr));
+		break;
+	default:
+		netdev_dbg(skb->dev, "%s: Unsupported/unimplemented layer 3 protocol %04x\n", __func__, htons(flow->basic.n_proto));
+		goto unsupported;
+	}
+
+	switch (flow->basic.ip_proto) {
+	case IPPROTO_TCP:
+	{
+		struct tcphdr *tcph;
+
+		tcph = tcp_hdr(skb);
+		flow->ports.src = tcph->source;
+		flow->ports.dst = tcph->dest;
+		break;
+	}
+	case IPPROTO_UDP:
+	{
+		struct udphdr *udph;
+
+		udph = udp_hdr(skb);
+		flow->ports.src = udph->source;
+		flow->ports.dst = udph->dest;
+		break;
+	}
+	default:
+		netdev_dbg(skb->dev, "%s: Unsupported/unimplemented layer 4 protocol %02x\n", __func__, flow->basic.ip_proto);
+		return false;
+	}
+
+	return true;
+
+unsupported:
+	memset(flow, 0, sizeof(*flow));
+	return false;
+}
+#endif /* ! >= RHEL7.4 && ! >= SLES12.2 */
+#endif /* 4.3.0 */
 
 /******************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0) )
@@ -2728,6 +2652,7 @@ void flow_rule_match_ports(const struct flow_rule *rule,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0))
+#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2))))
 #ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
 int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 				   struct list_head __always_unused *driver_list,
@@ -2756,4 +2681,5 @@ int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 	}
 }
 #endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
+#endif /* !RHEL >= 8.2 */
 #endif /* 5.3.0 */
