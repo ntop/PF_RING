@@ -5,6 +5,7 @@ FAMILY=i40e
 #service udev start
 
 # Remove old modules (if loaded)
+rmmod i40iw >/dev/null 2>&1
 rmmod i40e
 rmmod pf_ring
 
