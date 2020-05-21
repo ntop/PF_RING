@@ -52,7 +52,7 @@ function is_management_interface {
 function is_management_interface_driver {
 	local e
 	for e in "${MGMT_INTERFACES[@]}" ; do
-		DRIVER="$(/sbin/ethtool -i $e | grep driver | cut -d ' ' -f 2)"
+		DRIVER="$(/sbin/ethtool -i "${e}" | grep driver | cut -d ' ' -f 2)"
 		[[ "$DRIVER" == "$1" ]] && return 0
 	done
 	return 1
@@ -188,7 +188,7 @@ set_interface_mtu() {
 		HWADDR=`ip link show ${1} | grep -w link/ether | awk '{print $2}'`
 		MTU=`grep -w "${HWADDR}" ${MTU_CONFIG} | cut -d ' ' -f 2`
 		if [ $((MTU)) -ne 0 ]; then
-			/sbin/ifconfig ${1} mtu ${MTU} > /dev/null 2>&1
+			/sbin/ifconfig "${1}" mtu ${MTU} > /dev/null 2>&1
 		fi
 	fi
 }
@@ -207,7 +207,7 @@ start_interfaces() {
 
 		# Check if this is a VLAN interface
 		if [ -f /proc/net/vlan/config ]; then
-			D_PHYSIF=$(eval "cat /proc/net/vlan/config | awk '/^${D} / {print \$5}'")
+			D_PHYSIF=`cat /proc/net/vlan/config | awk '/^${D} / {print $5}'`
 			if [ -z $D_PHYSIF ]; then
 				D_PHYSIF=$D
 			fi
@@ -215,26 +215,26 @@ start_interfaces() {
 
 		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D_PHYSIF ; then
 			# Disabling offloads
-			/sbin/ethtool -K $D sg off tso off gso off gro off > /dev/null 2>&1
+			/sbin/ethtool -K "${D}" sg off tso off gso off gro off > /dev/null 2>&1
 
 			# Disabling VLAN stripping
-			/sbin/ethtool -K $D rxvlan off > /dev/null 2>&1
+			/sbin/ethtool -K "${D}" rxvlan off > /dev/null 2>&1
 
 			# Disabling Flow Control
-			/sbin/ethtool -A $D rx off > /dev/null 2>&1
-			/sbin/ethtool -A $D tx off > /dev/null 2>&1
+			/sbin/ethtool -A "${D}" rx off > /dev/null 2>&1
+			/sbin/ethtool -A "${D}" tx off > /dev/null 2>&1
 
 			# Setting max number of RX/TX slots
-			MAX_RX_SLOTS=$(/sbin/ethtool -g $D 2>/dev/null | grep "RX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
-			MAX_TX_SLOTS=$(/sbin/ethtool -g $D 2>/dev/null | grep "TX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
+			MAX_RX_SLOTS=$(/sbin/ethtool -g "${D}" 2>/dev/null | grep "RX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
+			MAX_TX_SLOTS=$(/sbin/ethtool -g "${D}" 2>/dev/null | grep "TX" | head -n 1 | cut -d ':' -f 2 | tr -d '\t')
 			if [ ! -z $MAX_RX_SLOTS ]; then
-				/sbin/ethtool -G $D rx $MAX_RX_SLOTS 2>/dev/null
-				/sbin/ethtool -G $D tx $MAX_TX_SLOTS 2>/dev/null
+				/sbin/ethtool -G "${D}" rx ${MAX_RX_SLOTS} 2>/dev/null
+				/sbin/ethtool -G "${D}" tx ${MAX_TX_SLOTS} 2>/dev/null
 			fi
 
 			set_interface_mtu ${D}
 		fi
-		/sbin/ifconfig $D up
+		/sbin/ifconfig "${D}" up
 	done
 }
 

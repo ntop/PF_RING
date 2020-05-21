@@ -124,7 +124,7 @@ is_supported_by_zc() {
 
 get_interface_driver() {
 	IF=$1
-	DRIVER=$(ethtool -i ${IF} 2>/dev/null | grep "driver:" | cut -d' ' -f 2)
+	DRIVER=$(ethtool -i "${IF}" 2>/dev/null | grep "driver:" | cut -d' ' -f 2)
 }
 
 is_interface_running_zc() {
@@ -149,7 +149,7 @@ print_interfaces() {
 
 		# Check if this is a VLAN interface
 		if [ -f /proc/net/vlan/config ]; then
-			PIF=$(eval "cat /proc/net/vlan/config | awk '/^${IF} / {print \$5}'")
+			PIF=`cat /proc/net/vlan/config | awk '/^${IF} / {print $5}'`
 			if [ ! -z $PIF ]; then
 				continue
 			fi
@@ -177,7 +177,7 @@ count_by_driver() {
 
 		# Check if this is a VLAN interface
 		if [ -f /proc/net/vlan/config ]; then
-			PIF=$(eval "cat /proc/net/vlan/config | awk '/^${IF} / {print \$5}'")
+			PIF=`cat /proc/net/vlan/config | awk '/^${IF} / {print $5}'`
 			if [ ! -z $PIF ]; then
 				continue
 			fi
@@ -187,7 +187,7 @@ count_by_driver() {
 
 		if [[ "${MATCH_DRIVER}" == "${DRIVER}" || "${MATCH_DRIVER}_zc" == "${DRIVER}" ]]; then
 			INTERFACE_COUNT=$[$INTERFACE_COUNT +1]
-			echo ${IF}
+			echo "${IF}"
 		fi
 	done
 	return $INTERFACE_COUNT
