@@ -872,7 +872,15 @@ static inline u_int64_t get_next_slot_offset(struct pf_ring_socket *pfr, u_int64
 
 static inline u_int64_t num_queued_pkts(struct pf_ring_socket *pfr)
 {
+  u_int64_t tot_insert, tot_read;
+
   if(pfr->ring_slots == NULL)
+    return 0;
+
+  tot_insert = pfr->slots_info->tot_insert;
+  tot_read = pfr->slots_info->tot_read;
+
+  if (tot_read > tot_insert) /* safety check */
     return 0;
 
   return pfr->slots_info->tot_insert - pfr->slots_info->tot_read;
