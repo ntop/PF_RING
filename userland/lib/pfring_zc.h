@@ -46,6 +46,7 @@
 #define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_UPDATE (1 << 6) /**< pfring_zc_pkt_buff.flags: buffer contains flow metadata */ 
 #define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_PACKET (1 << 7) /**< pfring_zc_pkt_buff.flags: buffer contains a raw packet */ 
 #define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_MARKER (1 << 8) /**< pfring_zc_pkt_buff.flags: buffer belongs to a flow that has been marked */ 
+#define PF_RING_ZC_PKT_FLAGS_FLOW_OFFLOAD_1ST    (1 << 9) /**< pfring_zc_pkt_buff.flags: buffer belongs to a flow and it's the first one (start of flow) */ 
 
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V1   (1 << 0) /**< pfring_zc_builtin_gtp_hash flags: GTP v1 */ 
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_V2   (1 << 1) /**< pfring_zc_builtin_gtp_hash flags: GTP v2 */
