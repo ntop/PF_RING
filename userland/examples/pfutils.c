@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#ifdef HAVE_PF_RING
+#if defined(HAVE_PF_RING) || defined(HAVE_PF_RING_ZC)
 #include "../lib/config.h"
 #endif
 
