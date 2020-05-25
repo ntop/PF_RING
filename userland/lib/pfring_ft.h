@@ -181,13 +181,13 @@ typedef struct {
 typedef struct {
   u_int8_t smac[6];           /**< Source MAC */
   u_int8_t dmac[6];           /**< Destination MAC */
-  pfring_ft_ip_address saddr; /**< Source IP address */
-  pfring_ft_ip_address daddr; /**< Destination IP address */
+  pfring_ft_ip_address saddr; /**< Source IP address (HBO) */
+  pfring_ft_ip_address daddr; /**< Destination IP address (HBO) */
   u_int8_t ip_version;        /**< IP version */
   u_int8_t protocol;          /**< L4 protocol */
-  u_int16_t sport;            /**< Source port */
-  u_int16_t dport;            /**< Destination port */
-  u_int16_t vlan_id;          /**< VLAN ID */
+  u_int16_t sport;            /**< Source port (HBO) */
+  u_int16_t dport;            /**< Destination port (HBO) */
+  u_int16_t vlan_id;          /**< VLAN ID (HBO) */
 } pfring_ft_flow_key;
 
 typedef struct {
