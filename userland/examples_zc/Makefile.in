@@ -25,7 +25,7 @@ LIBS       = ${LIBPFRING} `../lib/pfring_config --libs` ../libpcap/libpcap.a `..
 # C compiler and flags
 #
 CC         = ${CROSS_COMPILE}gcc
-CFLAGS     = -Wall -Wno-unused-function -Wno-format-truncation @CFLAGS@ ${INCLUDE} @HAVE_ZMQ@ @HAVE_PF_RING_FT@
+CFLAGS     = -Wall -Wno-unused-function -Wno-format-truncation @CFLAGS@ ${INCLUDE} @HAVE_ZMQ@ @HAVE_PF_RING_FT@ @HAVE_PF_RING_ZC@
 
 %.o: %.c zutils.c
 	${CC} ${CFLAGS} -c $< -o $@
@@ -86,7 +86,7 @@ zsanitycheck: zsanitycheck.o ${LIBPFRING} Makefile
 	${CC} ${CFLAGS} zsanitycheck.o ${LIBS} -o $@
 
 install:
-ifneq (-D HAVE_PF_RING_ZC,)
+ifneq (@HAVE_PF_RING_ZC@,)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp $(TARGETS) $(DESTDIR)/usr/bin/
 endif
