@@ -108,8 +108,8 @@ void processFlow(generic_flow_update *flow){
   if (!quiet) {
     printf("Flow Update: flowID = %u "
            "srcIp = %s dstIp = %s srcPort = %u dstPort = %u protocol = %u tcpFlags = 0x%02X "
-           "fwd: Packets = %u Bytes = %u FirstTime = %u.%u LastTime = %u.%u "
-           "rev: Packets = %u Bytes = %u FirstTime = %u.%u LastTime = %u.%u\n",
+           "fwd: Packets = %u Bytes = %ju FirstTime = %u.%u LastTime = %u.%u "
+           "rev: Packets = %u Bytes = %ju FirstTime = %u.%u LastTime = %u.%u\n",
 	   flow->flow_id, ip1, ip2, flow->src_port, flow->dst_port, flow->l4_protocol, flow->tcp_flags,
            flow->fwd_packets, flow->fwd_bytes, flow->fwd_ts_first.tv_sec, flow->fwd_ts_first.tv_nsec, flow->fwd_ts_last.tv_sec, flow->fwd_ts_last.tv_nsec,
            flow->rev_packets, flow->rev_bytes, flow->rev_ts_first.tv_sec, flow->rev_ts_first.tv_nsec, flow->rev_ts_last.tv_sec, flow->rev_ts_last.tv_nsec);
