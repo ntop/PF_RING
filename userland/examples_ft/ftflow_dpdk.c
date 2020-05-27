@@ -69,7 +69,8 @@
 #define print_mac_addr(addr) printf("%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8":%02"PRIx8, \
   addr.addr_bytes[0], addr.addr_bytes[1], addr.addr_bytes[2], addr.addr_bytes[3], addr.addr_bytes[4], addr.addr_bytes[5])
 
-static struct rte_mempool *mbuf_pool[RTE_MAX_LCORE] = { NULL };
+static struct rte_mempool *rx_mbuf_pool[RTE_MAX_LCORE] = { NULL };
+static struct rte_mempool *tx_mbuf_pool[RTE_MAX_LCORE] = { NULL };
 static pfring_ft_table *fts[RTE_MAX_LCORE] = { NULL };
 static u_int32_t ft_flags = 0;
 static u_int8_t port = 0, twin_port = 0xFF;
@@ -80,6 +81,7 @@ static u_int8_t verbose = 0;
 static u_int8_t hw_stats = 0;
 static u_int8_t fwd = 0;
 static u_int8_t test_tx = 0;
+static u_int8_t test_loop = 0;
 static u_int8_t tx_csum_offload = 0;
 static u_int8_t set_if_mac = 0;
 static u_int8_t promisc = 1;
@@ -130,12 +132,18 @@ static int port_init(void) {
   ;
 
   for (q = 0; q < num_queues; q++) {
-    snprintf(name, sizeof(name), "MBUF_POOL_%u", q);
-
-    mbuf_pool[q] = rte_pktmbuf_pool_create(name, num_mbufs_per_lcore, MBUF_CACHE_SIZE, 0, 
+    snprintf(name, sizeof(name), "RX_MBUF_POOL_%u", q);
+    rx_mbuf_pool[q] = rte_pktmbuf_pool_create(name, num_mbufs_per_lcore, MBUF_CACHE_SIZE, 0, 
       MBUF_BUF_SIZE, rte_socket_id());
 
-    if (mbuf_pool[q] == NULL)
+    if (rx_mbuf_pool[q] == NULL)
+      rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
+
+    snprintf(name, sizeof(name), "TX_MBUF_POOL_%u", q);
+    tx_mbuf_pool[q] = rte_pktmbuf_pool_create(name, num_mbufs_per_lcore, MBUF_CACHE_SIZE, 0, 
+      MBUF_BUF_SIZE, rte_socket_id());
+
+    if (tx_mbuf_pool[q] == NULL)
       rte_exit(EXIT_FAILURE, "Cannot create mbuf pool: %s\n", rte_strerror(rte_errno));
   }
 
@@ -185,7 +193,7 @@ static int port_init(void) {
 
       printf("Configuring queue %u...\n", q);
 
-      retval = rte_eth_rx_queue_setup(port_id, q, rx_ring_size, numa_socket_id, NULL, mbuf_pool[q]);
+      retval = rte_eth_rx_queue_setup(port_id, q, rx_ring_size, numa_socket_id, NULL, rx_mbuf_pool[q]);
 
       if (retval < 0)
 	return retval;
@@ -273,14 +281,19 @@ void processFlow(pfring_ft_flow *flow, void *user) {
 
 /* ************************************ */
 
-static void tx_test(u_int16_t queue_id) {
+static void tx_test(u_int8_t port_id, u_int16_t queue_id) {
   struct rte_mbuf *tx_bufs[BURST_SIZE];
   u_int32_t i;
   u_int16_t sent;
   int rc;
 #if !(defined(__arm__) || defined(__mips__))
   ticks tick_start = 0, tick_delta = 0;
+#endif
 
+  if (queue_id >= num_queues)
+    return;
+
+#if !(defined(__arm__) || defined(__mips__))
   if (pps != 0) {
     double td;
     ticks hz = 0;
@@ -302,13 +315,13 @@ static void tx_test(u_int16_t queue_id) {
   }
 #endif
 
-  printf("Generating traffic on port %u queue %u...\n", port, queue_id);
+  printf("Generating traffic on port %u queue %u...\n", port_id, queue_id);
 
   num_ips = tx_ring_size;
 
   while (do_loop) {
 
-    rc = rte_mempool_get_bulk(mbuf_pool[queue_id], (void **) tx_bufs, BURST_SIZE);
+    rc = rte_mempool_get_bulk(tx_mbuf_pool[queue_id], (void **) tx_bufs, BURST_SIZE);
 
     if (rc) {
       fprintf(stderr, "rte_mempool_get_bulk error (%d)\n", rc);
@@ -325,13 +338,13 @@ static void tx_test(u_int16_t queue_id) {
       }
     }
 
-    sent = rte_eth_tx_burst(port, queue_id, tx_bufs, BURST_SIZE);
+    sent = rte_eth_tx_burst(port_id, queue_id, tx_bufs, BURST_SIZE);
 
     stats[queue_id].tx_num_pkts += sent;
     stats[queue_id].tx_drops += (BURST_SIZE - sent);
 
     if (sent < BURST_SIZE)
-      rte_mempool_put_bulk(mbuf_pool[queue_id], (void **) &tx_bufs[sent], BURST_SIZE - sent);
+      rte_mempool_put_bulk(tx_mbuf_pool[queue_id], (void **) &tx_bufs[sent], BURST_SIZE - sent);
 
 #if !(defined(__arm__) || defined(__mips__))
     if (pps > 0) {
@@ -345,7 +358,7 @@ static void tx_test(u_int16_t queue_id) {
 
 /* ************************************ */
 
-static int packet_consumer(__attribute__((unused)) void *arg) {
+static int processing_thread(__attribute__((unused)) void *arg) {
   unsigned lcore_id = rte_lcore_id();
   u_int16_t queue_id = lcore_id;
   pfring_ft_table *ft;
@@ -358,18 +371,21 @@ static int packet_consumer(__attribute__((unused)) void *arg) {
   u_int32_t num_ports, i;
   u_int8_t ports[2];
 
-  if (queue_id >= num_queues)
+  if (lcore_id >= num_queues) {
+    if (test_loop && twin_port != 0xFF)
+      tx_test(twin_port, lcore_id - num_queues);
     return 0;
+  }
 
   if (test_tx) {
-    tx_test(queue_id);
+    tx_test(port, queue_id);
     return 0;
   }
 
   ports[0] = port;
   num_ports = 1;
 
-  if (twin_port != 0xFF) {
+  if (!test_loop && twin_port != 0xFF) {
     ports[1] = twin_port;
     num_ports = 2;
   } else {
@@ -469,6 +485,7 @@ static void print_help(void) {
   printf("-U              Do not set promisc\n");
   printf("-S <speed>      Set the port speed in Gbit/s (1/10/25/40/50/100)\n");
   printf("-m <mtu>        Set the MTU\n");
+  printf("-l              Test TX+RX (requires -p <id>,<id> cross connected)\n");
   printf("-t              Test TX\n");
   printf("-T <size>       TX test - packet size\n");
   printf("-K              TX test - enable checksum offload\n");
@@ -494,7 +511,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "FhHm:M:n:p:tUvP:S:T:K01:2:7", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "FhHlm:M:n:p:tUvP:S:T:K01:2:7", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
@@ -514,6 +531,11 @@ static int parse_args(int argc, char **argv) {
       if_mac.addr_bytes[0] = mac_a, if_mac.addr_bytes[1] = mac_b, if_mac.addr_bytes[2] = mac_c,
       if_mac.addr_bytes[3] = mac_d, if_mac.addr_bytes[4] = mac_e, if_mac.addr_bytes[5] = mac_f;
       set_if_mac = 1;
+      break;
+    case 'l':
+      test_loop = 1;
+      compute_csum = 0;
+      compute_flows = 0;
       break;
     case 'm':
       mtu = atoi(optarg);
@@ -878,7 +900,7 @@ int main(int argc, char *argv[]) {
   signal(SIGALRM, my_sigalarm);
   alarm(ALARM_SLEEP);
 
-  rte_eal_mp_remote_launch(packet_consumer, NULL, CALL_MASTER);
+  rte_eal_mp_remote_launch(processing_thread, NULL, CALL_MASTER);
 
   RTE_LCORE_FOREACH_SLAVE(lcore_id) {
     rte_eal_wait_lcore(lcore_id);
