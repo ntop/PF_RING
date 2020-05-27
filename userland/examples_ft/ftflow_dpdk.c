@@ -89,6 +89,8 @@ static u_int16_t tx_test_pkt_len = TX_TEST_PKT_LEN;
 static u_int32_t num_mbufs_per_lcore = 0;
 static u_int32_t pps = 0;
 static struct ether_addr if_mac = { 0 };
+static u_int32_t rx_ring_size = RX_RING_SIZE;
+static u_int32_t tx_ring_size = TX_RING_SIZE;
 
 static struct lcore_stats {
   u_int64_t num_pkts;
@@ -118,8 +120,8 @@ static int port_init(void) {
   else num_ports = 2;
 
   num_mbufs_per_lcore = 2 * (
-    RX_RING_SIZE + 
-    TX_RING_SIZE + 
+    rx_ring_size + 
+    tx_ring_size + 
     BURST_SIZE * 2) 
 #ifdef SCATTERED_RX_TEST
     * 4
@@ -183,12 +185,12 @@ static int port_init(void) {
 
       printf("Configuring queue %u...\n", q);
 
-      retval = rte_eth_rx_queue_setup(port_id, q, RX_RING_SIZE, numa_socket_id, NULL, mbuf_pool[q]);
+      retval = rte_eth_rx_queue_setup(port_id, q, rx_ring_size, numa_socket_id, NULL, mbuf_pool[q]);
 
       if (retval < 0)
 	return retval;
 
-      retval = rte_eth_tx_queue_setup(port_id, q, TX_RING_SIZE, numa_socket_id, NULL);
+      retval = rte_eth_tx_queue_setup(port_id, q, tx_ring_size, numa_socket_id, NULL);
 
       if (retval < 0)
 	return retval;
@@ -302,7 +304,7 @@ static void tx_test(u_int16_t queue_id) {
 
   printf("Generating traffic on port %u queue %u...\n", port, queue_id);
 
-  num_ips = TX_RING_SIZE;
+  num_ips = tx_ring_size;
 
   while (do_loop) {
 
@@ -471,6 +473,8 @@ static void print_help(void) {
   printf("-T <size>       TX test - packet size\n");
   printf("-K              TX test - enable checksum offload\n");
   printf("-P <pps>        TX test - packet rate (pps)\n");
+  printf("-1 <size>       RX ring size\n");
+  printf("-2 <size>       TX ring size\n");
   printf("-H              Print hardware stats\n");
   printf("-v              Verbose (print raw packets)\n");
   printf("-h              Print this help\n");
@@ -490,7 +494,7 @@ static int parse_args(int argc, char **argv) {
 
   argvopt = argv;
 
-  while ((opt = getopt_long(argc, argvopt, "FhHm:M:n:p:tUvP:S:T:K07", lgopts, &option_index)) != EOF) {
+  while ((opt = getopt_long(argc, argvopt, "FhHm:M:n:p:tUvP:S:T:K01:2:7", lgopts, &option_index)) != EOF) {
     switch (opt) {
     case 'F':
       fwd = 1;
@@ -540,6 +544,12 @@ static int parse_args(int argc, char **argv) {
       break;
     case '0':
       compute_flows = 0;
+      break;
+    case '1':
+      rx_ring_size = atoi(optarg);
+      break;
+    case '2':
+      tx_ring_size = atoi(optarg);
       break;
     case '7':
       ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
