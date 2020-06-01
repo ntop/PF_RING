@@ -883,7 +883,7 @@ static inline u_int64_t num_queued_pkts(struct pf_ring_socket *pfr)
   if (tot_read > tot_insert) /* safety check */
     return 0;
 
-  return pfr->slots_info->tot_insert - pfr->slots_info->tot_read;
+  return tot_insert - tot_read;
 }
 
 /* ************************************* */
