@@ -31,6 +31,7 @@ DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
 LOAD_HUGEPAGES=0
 INTERFACES_CONFIG="${PF_RING_CONFIG_DIR}/interfaces.conf"
 MEM_AVAIL=1048576 # 1GB Hugepages (this avoids consuming all memory at boot time, causing kernel panic)
+PF_RING_DKMS_VERSION=""
 
 # Including interfaces conf containing MANAGEMENT_INTERFACES, CAPTURE_INTERFACES
 [ -f ${INTERFACES_CONFIG} ] && . ${INTERFACES_CONFIG}
@@ -71,6 +72,14 @@ function dkms_installed {
 	return 1
 }
 
+function read_pfring_dkms_version {
+	if [ ${DISTRO} == "debian" ]; then
+		PF_RING_DKMS_VERSION=`dpkg -l | grep pfring-dkms | awk '{print $3}'`
+	elif [ ${DISTRO} == "centos" ]; then
+		PF_RING_DKMS_VERSION=`rpm -q pfring-dkms | cut -d'-' -f3`
+	fi
+}
+
 check_pf_ring() {
 	# check the module status
 	ERROR=0
@@ -108,15 +117,18 @@ check_pf_ring() {
 
 rebuild_dkms() {
 	# Get module version
-	MOD_VERSION=`ls -1d /usr/src/${1}* | tail -1 | cut -d '/' -f 4 | sed -e "s/${1}-//"`
+	read_pfring_dkms_version
+
 	echo "Uninstalling old ${1} version"
-	/usr/sbin/dkms uninstall -m ${1} -v ${MOD_VERSION} > /dev/null
-	#/usr/sbin/dkms remove -m ${1} -v ${MOD_VERSION} -k `uname -r` > /dev/null
-	/usr/sbin/dkms remove -m ${1} -v ${MOD_VERSION} --all > /dev/null
+	/usr/sbin/dkms uninstall -m ${1} -v ${PF_RING_DKMS_VERSION} > /dev/null
+	#/usr/sbin/dkms remove -m ${1} -v ${PF_RING_DKMS_VERSION} -k `uname -r` > /dev/null
+	/usr/sbin/dkms remove -m ${1} -v ${PF_RING_DKMS_VERSION} --all > /dev/null
+
 	echo "Compiling new ${1} driver"
-	/usr/sbin/dkms build -m ${1} -v ${MOD_VERSION} > /dev/null
+	/usr/sbin/dkms build -m ${1} -v ${PF_RING_DKMS_VERSION} > /dev/null
+
 	echo "Installing new ${1} driver"
-	/usr/sbin/dkms install -m ${1} -v ${MOD_VERSION} > /dev/null
+	/usr/sbin/dkms install -m ${1} -v ${PF_RING_DKMS_VERSION} > /dev/null
 }
 
 check_hugepages() {
