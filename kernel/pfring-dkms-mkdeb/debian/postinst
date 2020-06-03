@@ -30,14 +30,14 @@ dkms_configure () {
 service_restart () {
 	if hash deb-systemd-invoke 2>/dev/null; then
 		deb-systemd-invoke enable pf_ring > /dev/null
-		deb-systemd-invoke restart pf_ring
+		deb-systemd-invoke restart pf_ring || echo "Failure restarting pf_ring"
 	elif hash systemctl 2>/dev/null; then    
 		systemctl enable pf_ring > /dev/null
-		systemctl restart pf_ring
+		systemctl restart pf_ring || echo "Failure restarting pf_ring"
 	else
 		update-rc.d pf_ring defaults 30 >/dev/null
 		update-rc.d cluster defaults 40 >/dev/null
-		/etc/init.d/pf_ring restart
+		/etc/init.d/pf_ring restart || echo "Failure restarting pf_ring"
 	fi
 }
 
