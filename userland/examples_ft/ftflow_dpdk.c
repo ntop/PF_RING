@@ -100,7 +100,10 @@ static struct lcore_stats {
   u_int64_t last_pkts;
   u_int64_t last_bytes;
   u_int64_t tx_num_pkts;
-  u_int64_t tx_drops;
+  u_int64_t tx_num_drops;
+  u_int64_t tx_num_bytes;
+  u_int64_t tx_last_pkts;
+  u_int64_t tx_last_bytes;
   u_int64_t padding[2];
 } stats[RTE_MAX_LCORE];
 
@@ -341,7 +344,8 @@ static void tx_test(u_int8_t port_id, u_int16_t queue_id) {
     sent = rte_eth_tx_burst(port_id, queue_id, tx_bufs, BURST_SIZE);
 
     stats[queue_id].tx_num_pkts += sent;
-    stats[queue_id].tx_drops += (BURST_SIZE - sent);
+    stats[queue_id].tx_num_drops += (BURST_SIZE - sent);
+    stats[queue_id].tx_num_bytes += sent * (tx_test_pkt_len + 24);
 
     if (sent < BURST_SIZE)
       rte_mempool_put_bulk(tx_mbuf_pool[queue_id], (void **) &tx_bufs[sent], BURST_SIZE - sent);
@@ -460,7 +464,7 @@ static int processing_thread(__attribute__((unused)) void *arg) {
       if (tx_num > 0) {        
         sent = rte_eth_tx_burst(out_port_id, queue_id, tx_bufs, tx_num);
         stats[queue_id].tx_num_pkts += sent;
-        stats[queue_id].tx_drops += (tx_num - sent);
+        stats[queue_id].tx_num_drops += (tx_num - sent);
         for (i = sent; i < tx_num; i++)
           rte_pktmbuf_free(tx_bufs[i]);
       }
@@ -681,7 +685,9 @@ static void print_stats(void) {
   unsigned long long n_bytes = 0, n_pkts = 0, n_drops = 0;
   unsigned long long tx_n_bytes = 0, tx_n_pkts = 0, tx_n_drops = 0;
   unsigned long long q_n_bytes = 0, q_n_pkts = 0;
+  unsigned long long tx_q_n_bytes = 0, tx_q_n_pkts = 0, tx_q_n_drops = 0;
   double diff, bytes_diff;
+  double tx_diff, tx_bytes_diff;
   double delta_last = 0;
   char buf[512];
   int len, q;
@@ -706,49 +712,66 @@ static void print_stats(void) {
     q_n_pkts = stats[q].num_pkts;
     q_n_bytes = stats[q].num_bytes;
 
+    tx_q_n_pkts = stats[q].tx_num_pkts;
+    tx_q_n_bytes = stats[q].tx_num_bytes;
+    tx_q_n_drops = stats[q].tx_num_drops;
+
     /* Reading port packets/bytes with rte_eth_stats_get
      * n_pkts  += q_n_pkts;
      * n_bytes += q_n_bytes; */
 
-    if (test_tx) {
-      q_n_pkts = stats[q].tx_num_pkts;
-      q_n_bytes = q_n_pkts * (tx_test_pkt_len + 24);
-    }
-
     // if (num_queues > 1) {
       len = snprintf(buf, sizeof(buf), "[Q#%u]   ", q);
 
-      if (!test_tx)
+      if (!test_tx) {
         len += snprintf(&buf[len], sizeof(buf) - len,
             "Packets: %llu\t"
             "Bytes: %llu\t", 
             q_n_pkts, 
             q_n_bytes);
 
-      if (delta_last) {
-        diff = q_n_pkts - stats[q].last_pkts;
-        bytes_diff = q_n_bytes - stats[q].last_bytes;
-        bytes_diff /= (1000*1000*1000)/8;
+        if (delta_last) {
+          diff = q_n_pkts - stats[q].last_pkts;
+          bytes_diff = q_n_bytes - stats[q].last_bytes;
+          bytes_diff /= (1000*1000*1000)/8;
 
-        len += snprintf(&buf[len], sizeof(buf) - len,
-            "Throughput: %.3f Mpps",
-            ((double) diff / (double)(delta_last/1000)) / 1000000);
+          len += snprintf(&buf[len], sizeof(buf) - len,
+              "Throughput: %.3f Mpps",
+              ((double) diff / (double)(delta_last/1000)) / 1000000);
 
-        len += snprintf(&buf[len], sizeof(buf) - len,
-          " (%.3f Gbps)\t",
-          ((double) bytes_diff / (double)(delta_last/1000)));
+          len += snprintf(&buf[len], sizeof(buf) - len,
+            " (%.3f Gbps)\t",
+            ((double) bytes_diff / (double)(delta_last/1000)));
+        }
+        stats[q].last_pkts = q_n_pkts;
+        stats[q].last_bytes = q_n_bytes;
       }
-      stats[q].last_pkts = q_n_pkts;
-      stats[q].last_bytes = q_n_bytes;
 
-      if (twin_port != 0xFF || test_tx)
+      if (test_tx || test_loop || twin_port != 0xFF) {
         len += snprintf(&buf[len], sizeof(buf) - len,
-            "            \t"
-            "TXPackets: %ju\t"
-            "            \t"
-            "TXDrops: %ju\t",
-            stats[q].tx_num_pkts,
-            stats[q].tx_drops);
+            "TXPackets: %llu\t"
+            "TXBytes: %llu\t"
+            "TXDrops: %llu\t", 
+            tx_q_n_pkts, 
+            tx_q_n_bytes,
+            tx_q_n_drops);
+
+        if (delta_last) {
+          tx_diff = tx_q_n_pkts - stats[q].tx_last_pkts;
+          tx_bytes_diff = tx_q_n_bytes - stats[q].tx_last_bytes;
+          tx_bytes_diff /= (1000*1000*1000)/8;
+
+          len += snprintf(&buf[len], sizeof(buf) - len,
+              "TXThroughput: %.3f Mpps",
+              ((double) tx_diff / (double)(delta_last/1000)) / 1000000);
+
+          len += snprintf(&buf[len], sizeof(buf) - len,
+            " (%.3f Gbps)\t",
+            ((double) tx_bytes_diff / (double)(delta_last/1000)));
+        }
+        stats[q].tx_last_pkts = tx_q_n_pkts;
+        stats[q].tx_last_bytes = tx_q_n_bytes;
+      }
 
       fprintf(stderr, "%s\n", buf);
     //}
@@ -812,7 +835,7 @@ static void print_stats(void) {
     len += snprintf(&buf[len], sizeof(buf) - len,
         "TXPackets: %llu\t"
         "TXBytes: %llu\t"
-        "TXDrop: %llu\t",
+        "TXDrops: %llu\t",
         tx_n_pkts,
         tx_n_bytes,
         tx_n_drops);
