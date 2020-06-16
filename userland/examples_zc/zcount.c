@@ -173,6 +173,7 @@ void printHelp(void) {
   printf("-c <cluster id> Cluster id\n");
   printf("-g <core id>    Bind this app to a core\n");
   printf("-a              Active packet wait\n");
+  printf("-f <bpf>        Set a BPF filter\n");
   printf("-R              Test hw filters adding a rule (Intel 82599)\n");
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
@@ -263,11 +264,12 @@ int main(int argc, char* argv[]) {
   struct timeval timeNow, lastTime;
   pthread_t time_thread;
   u_int32_t flags = 0;
+  char *filter = NULL;
 
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:g:hi:vCDMRHS:T")) != '?') {
+  while((c = getopt(argc,argv,"ac:f:g:hi:vCDMRHS:T")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -280,6 +282,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'c':
       cluster_id = atoi(optarg);
+      break;
+    case 'f':
+      filter = strdup(optarg);
       break;
     case 'i':
       device = strdup(optarg);
@@ -370,6 +375,13 @@ int main(int argc, char* argv[]) {
       fprintf(stderr, "pfring_zc_get_packet_handle error\n");
       rc = -1;
       goto cleanup;
+    }
+  }
+
+  if (filter != NULL) {
+    if (pfring_zc_set_bpf_filter(zq, filter) != 0) {
+      fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", filter);
+      return -1;
     }
   }
 
