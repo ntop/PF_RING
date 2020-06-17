@@ -795,7 +795,7 @@ int main(int argc, char* argv[]) {
     if (rc == PF_RING_ERROR_INVALID_ARGUMENT) {
       if (send_error_once) {
         printf("Attempting to send invalid packet [len: %u][MTU: %u]\n",
-	       tosend->len, pd->mtu);
+	       tosend->len, pfring_get_mtu_size(pd));
         send_error_once = 0;
       }
     } else if (rc < 0) {
