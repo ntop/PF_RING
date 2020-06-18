@@ -547,6 +547,20 @@ typedef enum {
 } pfring_zc_recv_policy;
 
 /**
+ * The filtering function prototype.
+ * @param pkt_handle The received buffer handle.
+ * @param in_queue   The ingress queues handle from which the packet arrived.
+ * @param user       The pointer to the user data.
+ * @return           0 to drop the packet, 1 to pass the packet.
+ */
+typedef int64_t
+(*pfring_zc_filtering_func) (
+  pfring_zc_pkt_buff *pkt_handle,
+  pfring_zc_queue *in_queue,
+  void *user
+);
+
+/**
  * The distribution function prototype.
  * @param pkt_handle The received buffer handle.
  * @param in_queue   The ingress queues handle from which the packet arrived.
@@ -569,19 +583,41 @@ typedef void
 
 
 /**
- * Run a balancer worker. 
+ * Run a balancer worker.
  * @param in_queues        The ingress queues handles array. 
  * @param out_queues       The egress queues handles array.
  * @param num_in_queues    The number of ingress queues.
  * @param num_out_queues   The number of egress queues.
  * @param working_set_pool The pool handle for working set buffers allocation. The worker uses 8 buffers in burst mode, 1 otherwise.
  * @param recv_policy      The receive policy.
- * @param callback         The function called when there is no incoming packet.
- * @param func             The distribution function, or NULL for the defualt IP-based distribution function.
- * @param user_data        The user data passed to distribution function.
+ * @param idle_func        The function called when there is no incoming packet.
+ * @param filter_func      The filtering function, or NULL for no filtering.
+ * @param filter_user_data The user data passed to the filtering function.
+ * @param distr_func       The distribution function, or NULL for the defualt IP-based distribution function.
+ * @param distr_user_data  The user data passed to distribution function.
  * @param active_wait      The flag indicating whether the worker should use active or passive wait for incoming packets.
  * @param core_id_affinity The core affinity for the worker thread.
  * @return                 The worker handle on success, NULL otherwise (errno is set appropriately). 
+ */
+pfring_zc_worker * 
+pfring_zc_run_balancer_v2(
+  pfring_zc_queue *in_queues[],
+  pfring_zc_queue *out_queues[], 
+  u_int32_t num_in_queues,
+  u_int32_t num_out_queues,
+  pfring_zc_buffer_pool *working_set_pool,
+  pfring_zc_recv_policy recv_policy,
+  pfring_zc_idle_callback callback,
+  pfring_zc_distribution_func filter_func,
+  void *filter_user_data,
+  pfring_zc_distribution_func distr_func,
+  void *distr_user_data,
+  u_int32_t active_wait,
+  int32_t core_id_affinity
+);
+
+/**
+ * Same as pfring_zc_run_balancer_v2 but without a filtering function. (deprecated)
  */
 pfring_zc_worker * 
 pfring_zc_run_balancer(
@@ -591,9 +627,9 @@ pfring_zc_run_balancer(
   u_int32_t num_out_queues,
   pfring_zc_buffer_pool *working_set_pool,
   pfring_zc_recv_policy recv_policy,
-  pfring_zc_idle_callback callback,
-  pfring_zc_distribution_func func,
-  void *user_data,
+  pfring_zc_idle_callback idle_func,
+  pfring_zc_distribution_func distr_func,
+  void *distr_user_data,
   u_int32_t active_wait,
   int32_t core_id_affinity
 );
@@ -605,12 +641,33 @@ pfring_zc_run_balancer(
  * @param num_in_queues    The number of ingress queues.
  * @param working_set_pool The pool handle for working set buffers allocation. The worker uses 8 buffers in burst mode, 1 otherwise.
  * @param recv_policy      The receive policy.
- * @param callback         The function called when there is no incoming packet.
- * @param func             The distribution function, or NULL to send all the packets to all the egress queues.
- * @param user_data        The user data passed to distribution function.
+ * @param idle_func        The function called when there is no incoming packet.
+ * @param filter_func      The filtering function, or NULL for no filtering.
+ * @param filter_user_data The user data passed to the filtering function.
+ * @param distr_func       The distribution function, or NULL to send all the packets to all the egress queues.
+ * @param distr_user_data  The user data passed to distribution function.
  * @param active_wait      The flag indicating whether the worker should use active or passive wait for incoming packets.
  * @param core_id_affinity The core affinity for the worker thread.
  * @return                 The worker handle on success, NULL otherwise (errno is set appropriately). 
+ */
+pfring_zc_worker * 
+pfring_zc_run_fanout_v2(
+  pfring_zc_queue *in_queues[],
+  pfring_zc_multi_queue *out_multi_queue, 
+  u_int32_t num_in_queues,
+  pfring_zc_buffer_pool *working_set_pool,
+  pfring_zc_recv_policy recv_policy,
+  pfring_zc_idle_callback idle_func,
+  pfring_zc_distribution_func filter_func,
+  void *filter_user_data,
+  pfring_zc_distribution_func distr_func,
+  void *distr_user_data,
+  u_int32_t active_wait,
+  int32_t core_id_affinity
+);
+
+/**
+ * Same as pfring_zc_run_fanout_v2 but without a filtering function. (deprecated)
  */
 pfring_zc_worker * 
 pfring_zc_run_fanout(
@@ -619,9 +676,9 @@ pfring_zc_run_fanout(
   u_int32_t num_in_queues,
   pfring_zc_buffer_pool *working_set_pool,
   pfring_zc_recv_policy recv_policy,
-  pfring_zc_idle_callback callback,
-  pfring_zc_distribution_func func,
-  void *user_data,
+  pfring_zc_idle_callback idle_func,
+  pfring_zc_distribution_func distr_func,
+  void *distr_user_data,
   u_int32_t active_wait,
   int32_t core_id_affinity
 );
