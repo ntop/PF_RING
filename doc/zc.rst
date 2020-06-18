@@ -11,7 +11,9 @@ the network interface by simultaneously bypassing both the Linux kernel and the 
 module in a zero-copy fashion.
 
 In ZC both RX and TX operations are supported. As the kernel is bypassed, some PF_RING 
-functionality are missing, including in kernel packet filtering (BPF and PF_RING filters).
+functionality may be missing, including in kernel packet filtering (PF_RING filters).
+BPF filters instead are evaluated in userspace, adding overhead to the application and
+should be avoided when processing high rate traffic.
 
 With PF_RING ZC you can achieve 1/10G wire-rate at any packet size and create 
 inter-process and inter-VM clusters (PF_RING ZC is not just a driver, it provides a 
