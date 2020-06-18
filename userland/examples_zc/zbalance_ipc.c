@@ -427,6 +427,7 @@ void printHelp(void) {
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
+  printf("-f <bpf>         Set a BPF filter (this may affect the performance!)\n");
 #ifdef HAVE_PF_RING_FT
   printf("-T               Enable FT (Flow Table) support for flow filtering\n");
   printf("-C <path>        FT configuration file\n");
@@ -729,7 +730,8 @@ int main(int argc, char* argv[]) {
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
-  const char *opt_string = "ab:c:dD:EG:g:hi:l:m:n:N:pr:Q:q:P:R:S:zu:wv"
+  char *filter = NULL;
+  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:n:N:pr:Q:q:P:R:S:zu:wv"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -778,6 +780,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'E':
       pfring_zc_debug();
+      break;
+    case 'f':
+      filter = strdup(optarg);
       break;
     case 'm':
       hash_mode = atoi(optarg);
@@ -1028,6 +1033,13 @@ int main(int argc, char* argv[]) {
         return -1;
       }
 
+    }
+
+    if (filter != NULL) {
+      if (pfring_zc_set_bpf_filter(inzqs[i], filter) != 0) {
+        fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", filter);
+        return -1;
+      }
     }
   }
 
