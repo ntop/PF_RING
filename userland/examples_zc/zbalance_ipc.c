@@ -447,7 +447,7 @@ void printHelp(void) {
 /* *************************************** */
 
 #ifdef HAVE_PACKET_FILTER
-static inline int packet_filter(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue) {
+int64_t ft_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
 #ifdef HAVE_PF_RING_FT
   if (flow_table) {
     pfring_ft_pcap_pkthdr hdr;
@@ -497,10 +497,6 @@ static inline int packet_filter(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue 
 
 int64_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return -1;
-#endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   return pfring_zc_builtin_ip_hash(pkt_handle, in_queue) % num_out_queues;
 }
@@ -510,10 +506,7 @@ int64_t ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 int64_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
   u_int32_t hash, flags;
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return -1;
-#endif
+
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
   hash = pfring_zc_builtin_gtp_hash(pkt_handle, in_queue, &flags) % num_out_queues;
@@ -531,10 +524,7 @@ int64_t gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
 
 int64_t gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return -1;
-#endif
+
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   return pfring_zc_builtin_gre_hash(pkt_handle, in_queue) % num_out_queues;
 }
@@ -544,10 +534,7 @@ int64_t gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
 int64_t direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
   u_int32_t ingress_id;
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return -1;
-#endif
+
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   for (ingress_id = 0; ingress_id < num_devices; ingress_id++)
     if (in_queue == inzqs[ingress_id]) break;
@@ -560,10 +547,7 @@ static int rr = -1;
 
 int64_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return -1;
-#endif
+
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   if (++rr == num_out_queues) rr = 0;
   return rr;
@@ -582,10 +566,6 @@ int64_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
 /* *************************************** */
 
 int64_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return 0x0;
-#endif
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   return 0xffffffffffffffff; 
 }
@@ -594,10 +574,7 @@ int64_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 int64_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return 0x0;
-#endif
+
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   if (++rr == (num_out_queues - 1)) rr = 0;
   return (1 << 0 /* full traffic on 1st slave */ ) | (1 << (1 + rr) /* round-robin on other slaves */ );
@@ -608,11 +585,6 @@ int64_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue 
 int64_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   int32_t i, offset = 0, app_instance, hash;
   int64_t consumers_mask = 0; 
-
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return 0x0;
-#endif
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
@@ -633,11 +605,6 @@ int64_t fo_multiapp_gtp_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
   int32_t i, offset = 0, app_instance, hash;
   int64_t consumers_mask = 0;
   u_int32_t flags;
-
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return 0x0;
-#endif
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
@@ -667,11 +634,6 @@ int64_t fo_multiapp_gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
   int32_t i, offset = 0, app_instance, hash;
   int64_t consumers_mask = 0;
 
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return 0x0;
-#endif
-
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
   hash = pfring_zc_builtin_gre_hash(pkt_handle, in_queue);
@@ -690,11 +652,6 @@ int64_t fo_multiapp_gre_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring
 int64_t fo_multiapp_direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   int32_t i, offset = 0, app_instance, ingress_id;
   int64_t consumers_mask = 0;
-
-#ifdef HAVE_PACKET_FILTER
-  if (!packet_filter(pkt_handle, in_queue))
-    return 0x0;
-#endif
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
@@ -746,6 +703,8 @@ int main(int argc, char* argv[]) {
 #ifdef HAVE_ZMQ
   pthread_t zmq_thread;
 #endif
+  pfring_zc_distribution_func distr_func = NULL;
+  pfring_zc_filtering_func filter_func = NULL;
 
   start_time.tv_sec = 0;
 
@@ -871,6 +830,10 @@ int main(int argc, char* argv[]) {
   if (device == NULL) printHelp();
   if (cluster_id < 0) printHelp();
   if (applications == NULL) printHelp();
+
+#ifdef HAVE_PACKET_FILTER
+  filter_func = ft_filtering_func;
+#endif
 
   if (n2disk_producer) {
     if (n2disk_threads < 1) printHelp();
@@ -1202,38 +1165,50 @@ int main(int argc, char* argv[]) {
   }
 
   if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4 || hash_mode == 5 || hash_mode == 6) && num_apps == 1)) { /* balancer */
-    pfring_zc_distribution_func func = NULL;
 
     switch (hash_mode) {
-    case 0: func = rr_distribution_func;
+      case 0: distr_func = rr_distribution_func;
       break;
-    case 1: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else if (time_pulse) func = ip_distribution_func; /* else built-in IP-based */
+      case 1: 
+        if (strcmp(device, "sysdig") == 0) 
+          distr_func = sysdig_distribution_func; 
+        else if (time_pulse) 
+          distr_func = ip_distribution_func; /* else built-in IP-based */
       break;
-    case 4: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func = gtp_distribution_func;
+      case 4: 
+        if (strcmp(device, "sysdig") == 0) 
+          distr_func = sysdig_distribution_func; 
+        else 
+          distr_func = gtp_distribution_func;
       break;
-    case 5: if (strcmp(device, "sysdig") == 0) func = sysdig_distribution_func; else func = gre_distribution_func;
+      case 5: 
+        if (strcmp(device, "sysdig") == 0) 
+          distr_func = sysdig_distribution_func;  
+        else 
+          distr_func = gre_distribution_func;
       break;
-    case 6: func =  direct_distribution_func;
+      case 6: 
+        distr_func =  direct_distribution_func;
       break;
     }
 
-    zw = pfring_zc_run_balancer(
+    zw = pfring_zc_run_balancer_v2(
       inzqs, 
       outzqs, 
       num_devices, 
       num_consumer_queues,
       wsp,
       round_robin_bursts_policy,
+      NULL /* idle callback */,
+      filter_func,
       NULL,
-      func,
+      distr_func,
       (void *) ((long) num_consumer_queues),
       !wait_for_packet, 
       bind_worker_core
     );
 
   } else { /* fanout */
-    pfring_zc_distribution_func func = NULL;
-    
     outzmq = pfring_zc_create_multi_queue(outzqs, num_consumer_queues);
 
     if (outzmq == NULL) {
@@ -1243,28 +1218,37 @@ int main(int argc, char* argv[]) {
     }
 
     switch (hash_mode) {
-    case 1: func = fo_multiapp_ip_distribution_func;
+      case 1: 
+        distr_func = fo_multiapp_ip_distribution_func;
       break;
-    case 2: if (time_pulse) func = fo_distribution_func; /* else built-in send-to-all */
+      case 2: 
+        if (time_pulse) 
+          distr_func = fo_distribution_func; /* else built-in send-to-all */
       break;
-    case 3: func = fo_rr_distribution_func;
+      case 3: 
+        distr_func = fo_rr_distribution_func;
       break;
-    case 4: func = fo_multiapp_gtp_distribution_func;
+      case 4: 
+        distr_func = fo_multiapp_gtp_distribution_func;
       break;
-    case 5: func = fo_multiapp_gre_distribution_func;
+      case 5:
+        distr_func = fo_multiapp_gre_distribution_func;
       break;
-    case 6: func = fo_multiapp_direct_distribution_func;
+      case 6: 
+        distr_func = fo_multiapp_direct_distribution_func;
       break;
     }
 
-    zw = pfring_zc_run_fanout(
+    zw = pfring_zc_run_fanout_v2(
       inzqs, 
       outzmq, 
       num_devices,
       wsp,
       round_robin_bursts_policy, 
       NULL /* idle callback */,
-      func,
+      filter_func,
+      NULL,
+      distr_func,
       (void *) ((long) num_consumer_queues),
       !wait_for_packet, 
       bind_worker_core
