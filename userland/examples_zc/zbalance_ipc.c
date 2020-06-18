@@ -42,8 +42,13 @@
 
 #include "zutils.c"
 
-#if defined(HAVE_PF_RING_FT) || defined(HAVE_ZMQ)
-#define HAVE_PACKET_FILTER
+#define bitmap64_t(name, n) u_int64_t name[n / 64]
+#define bitmap64_reset(b) memset(b, 0, sizeof(b))
+#define bitmap64_set_bit(b, i)   b[i >> 6] |=  ((u_int64_t) 1 << (i & 0x3F))
+#define bitmap64_isset_bit(b, i) !!(b[i >> 6] &   ((u_int64_t) 1 << (i & 0x3F)))  
+
+#ifndef VLAN_VID_MASK
+#define VLAN_VID_MASK 0x0fff
 #endif
 
 #define ALARM_SLEEP             1
@@ -89,6 +94,9 @@ volatile u_int8_t do_shutdown = 0;
 
 u_int8_t n2disk_producer = 0;
 u_int32_t n2disk_threads;
+
+char *vlan_filter = NULL;
+bitmap64_t(allowed_vlans, 1024);
 
 /* ******************************** */
 
@@ -428,6 +436,7 @@ void printHelp(void) {
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
   printf("-f <bpf>         Set a BPF filter (this may affect the performance!)\n");
+  printf("-x <vlans>       Set a VLAN filter (comma-separated list of VLAN ID)\n");
 #ifdef HAVE_PF_RING_FT
   printf("-T               Enable FT (Flow Table) support for flow filtering\n");
   printf("-C <path>        FT configuration file\n");
@@ -446,8 +455,33 @@ void printHelp(void) {
 
 /* *************************************** */
 
-#ifdef HAVE_PACKET_FILTER
-int64_t ft_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+int64_t packet_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+
+  if (vlan_filter) {
+    int rc = 0;
+    u_char *data = pfring_zc_pkt_buff_data(pkt_handle, in_queue);
+    struct ethhdr *eh = (struct ethhdr*) data;
+    u_int16_t eth_type = ntohs(eh->h_proto);
+    u_int32_t vlan_offset = sizeof(struct ethhdr);
+
+    while (eth_type == ETH_P_8021Q /* 802.1q (VLAN) */ && 
+           (vlan_offset + sizeof(struct eth_vlan_hdr)) < pkt_handle->len) {
+      struct eth_vlan_hdr *vh = (struct eth_vlan_hdr *) &data[vlan_offset];
+      u_int16_t vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK /* 0x0fff */;
+
+      if (bitmap64_isset_bit(allowed_vlans, vlan_id)) {
+        rc = 1;
+        break;
+      }
+
+      eth_type = ntohs(vh->h_proto);
+      vlan_offset += sizeof(struct eth_vlan_hdr);
+    }
+
+    if (!rc)
+      return 0; /* drop */
+  }
+
 #ifdef HAVE_PF_RING_FT
   if (flow_table) {
     pfring_ft_pcap_pkthdr hdr;
@@ -464,6 +498,7 @@ int64_t ft_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_qu
       return 0; /* drop */
   }
 #endif
+
 #ifdef HAVE_ZMQ
   if (zmq_server) {
     inplace_key_t src_key, dst_key;
@@ -489,9 +524,9 @@ int64_t ft_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_qu
       return 0; /* drop */
   }
 #endif
+
   return 1; /* pass */
 }
-#endif
 
 /* *************************************** */
 
@@ -671,7 +706,7 @@ int64_t fo_multiapp_direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfr
 
 int main(int argc, char* argv[]) {
   char c;
-  char *device = NULL, *dev; 
+  char *device = NULL;
   char *applications = NULL, *app, *app_pos = NULL;
   char *vm_sockets = NULL, *vm_sock; 
   long i, j, off;
@@ -688,7 +723,7 @@ int main(int argc, char* argv[]) {
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
   char *filter = NULL;
-  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:n:N:pr:Q:q:P:R:S:zu:wv"
+  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:n:N:pr:Q:q:P:R:S:u:wvx:z"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -824,6 +859,9 @@ int main(int argc, char* argv[]) {
     case 'v':
       trace_verbosity = 3;    
     break;
+    case 'x':
+      vlan_filter = strdup(optarg);
+    break;
     }
   }
   
@@ -831,9 +869,29 @@ int main(int argc, char* argv[]) {
   if (cluster_id < 0) printHelp();
   if (applications == NULL) printHelp();
 
-#ifdef HAVE_PACKET_FILTER
-  filter_func = ft_filtering_func;
+  if (vlan_filter
+#ifdef HAVE_PF_RING_FT
+      || flow_table
 #endif
+#ifdef HAVE_ZMQ
+      || zmq_server
+#endif
+     )
+    filter_func = packet_filtering_func;
+
+  if (vlan_filter != NULL) {
+    char *vlan;
+    bitmap64_reset(allowed_vlans);
+    vlan = strtok(vlan_filter, ",");
+    while(vlan != NULL) {
+      u_int16_t vlan_id = atoi(vlan);
+      if (vlan_id < 1024) {
+        trace(TRACE_NORMAL, "Allow VLAN = %u", vlan_id);
+        bitmap64_set_bit(allowed_vlans, vlan_id);
+      }
+      vlan = strtok(NULL, ",");
+    }
+  }
 
   if (n2disk_producer) {
     if (n2disk_threads < 1) printHelp();
@@ -842,6 +900,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (!hw_aggregation) {
+    char *dev; 
     dev = strtok(device, ",");
     while(dev != NULL) {
       devices = realloc(devices, sizeof(char *) * (num_devices+1));
