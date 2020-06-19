@@ -98,6 +98,9 @@ u_int32_t n2disk_threads;
 char *vlan_filter = NULL;
 bitmap64_t(allowed_vlans, 1024);
 
+static char *bpf_filter = NULL;
+static char *bpf_filename = NULL;
+
 /* ******************************** */
 
 #ifdef HAVE_PF_RING_FT
@@ -396,6 +399,33 @@ void sigproc(int sig) {
 
 /* *************************************** */
 
+static char* read_bpf_filter_from_file(const char* filename) {
+  // signal-safety function only
+  static char buf[256];
+  int fd;
+  buf[0] = '\0';
+  if ((fd = open(filename, O_RDONLY)) > 0) {
+    int n;
+    if ((n = read(fd, buf, sizeof(buf))) > 0) {
+      buf[n] = '\0';
+    }
+    close(fd);
+  }
+  return buf;
+}
+
+void reload_bpf_filter(int sig) {
+  if (bpf_filename != NULL) {
+    bpf_filter = read_bpf_filter_from_file(bpf_filename);
+  }
+}
+
+static int is_bpf_filename(const char* str) {
+  return str && strstr(str, ".bpf") != NULL;
+}
+
+/* *************************************** */
+
 void printHelp(void) {
   printf("zbalance_ipc - (C) 2014-2020 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
@@ -436,6 +466,7 @@ void printHelp(void) {
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
   printf("-f <bpf>         Set a BPF filter (this may affect the performance!)\n");
+  printf("                 bpf can be expression or filename(must end with .bpf) which can be update in runtime by SIGUSR1\n");
   printf("-x <vlans>       Set a VLAN filter (comma-separated list of VLAN ID)\n");
 #ifdef HAVE_PF_RING_FT
   printf("-T               Enable FT (Flow Table) support for flow filtering\n");
@@ -454,6 +485,25 @@ void printHelp(void) {
 }
 
 /* *************************************** */
+void update_bpf_filter() {
+  // updating bpf filter should in packet_process thread
+  // but not in filter_func/distr_func
+  // because if bpf doesn't match at all, they are not called any more.
+  // then idle_func is the only func left.
+  if (bpf_filter != NULL) {
+    int i;
+    for (i = 0; i < num_devices; i++) {
+      if (pfring_zc_remove_bpf_filter(inzqs[i]) != 0) {
+        fprintf(stderr, "pfring_zc_remove_bpf_filter error\n");
+      }
+      if (pfring_zc_set_bpf_filter(inzqs[i], bpf_filter) != 0) {
+        fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", bpf_filter);
+      }
+    }
+    trace(TRACE_NORMAL, "bpf updated : %s", bpf_filter);
+    bpf_filter = NULL;
+  }
+}
 
 int64_t packet_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
 
@@ -722,7 +772,6 @@ int main(int argc, char* argv[]) {
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
-  char *filter = NULL;
   const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:n:N:pr:Q:q:P:R:S:u:wvx:z"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
@@ -738,6 +787,7 @@ int main(int argc, char* argv[]) {
 #ifdef HAVE_ZMQ
   pthread_t zmq_thread;
 #endif
+  pfring_zc_idle_callback idle_func = NULL;
   pfring_zc_distribution_func distr_func = NULL;
   pfring_zc_filtering_func filter_func = NULL;
 
@@ -776,7 +826,11 @@ int main(int argc, char* argv[]) {
       pfring_zc_debug();
       break;
     case 'f':
-      filter = strdup(optarg);
+      if (is_bpf_filename(optarg)) {
+        bpf_filename = strdup(optarg);
+        bpf_filter = read_bpf_filter_from_file(bpf_filename);
+      } else
+        bpf_filter = strdup(optarg);
       break;
     case 'm':
       hash_mode = atoi(optarg);
@@ -878,6 +932,9 @@ int main(int argc, char* argv[]) {
 #endif
      )
     filter_func = packet_filtering_func;
+
+  if (bpf_filename != NULL)
+    idle_func = update_bpf_filter;
 
   if (vlan_filter != NULL) {
     char *vlan;
@@ -1057,13 +1114,14 @@ int main(int argc, char* argv[]) {
 
     }
 
-    if (filter != NULL) {
-      if (pfring_zc_set_bpf_filter(inzqs[i], filter) != 0) {
-        fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", filter);
+    if (bpf_filter != NULL) {
+      if (pfring_zc_set_bpf_filter(inzqs[i], bpf_filter) != 0) {
+        fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", bpf_filter);
         return -1;
       }
     }
   }
+  bpf_filter = NULL;
 
   for (i = 0; i < num_consumer_queues; i++) {
     if (outdevs[i] == NULL) { /* Egress queue */
@@ -1165,6 +1223,7 @@ int main(int argc, char* argv[]) {
 #ifdef HAVE_ZMQ
   signal(SIGHUP, print_filter);
 #endif
+  signal(SIGUSR1, reload_bpf_filter);
 
   if (time_pulse) {
     pulse_timestamp_ns = calloc(CACHE_LINE_LEN/sizeof(u_int64_t), sizeof(u_int64_t));
@@ -1258,7 +1317,7 @@ int main(int argc, char* argv[]) {
       num_consumer_queues,
       wsp,
       round_robin_bursts_policy,
-      NULL /* idle callback */,
+      idle_func,
       filter_func,
       NULL,
       distr_func,
@@ -1304,7 +1363,7 @@ int main(int argc, char* argv[]) {
       num_devices,
       wsp,
       round_robin_bursts_policy, 
-      NULL /* idle callback */,
+      idle_func,
       filter_func,
       NULL,
       distr_func,
