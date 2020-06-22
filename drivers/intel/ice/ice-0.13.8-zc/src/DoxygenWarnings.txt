@@ -1,0 +1,13 @@
+/sandbox/811243/ice-0.13.8/src/ice_flex_pipe.c:322: warning: Invalid or missing section label
+/sandbox/811243/ice-0.13.8/src/ice_flex_pipe.c:395: warning: Invalid or missing section label
+/sandbox/811243/ice-0.13.8/src/ice_flex_pipe.c:1495: warning: Invalid or missing section label
+/sandbox/811243/ice-0.13.8/src/ice_flex_pipe.c:1832: warning: Invalid or missing section label
+/sandbox/811243/ice-0.13.8/src/ice_flow.c:954: warning: No matching directory found for command \dir flow/
+
+/sandbox/811243/ice-0.13.8/src/ice_flow.c:1004: warning: No matching directory found for command \dir flow/
+
+/sandbox/811243/ice-0.13.8/src/ice_flow.c:1089: warning: No matching directory found for command \dir flow/
+
+/sandbox/811243/ice-0.13.8/src/ice_flow.c:1394: warning: No matching directory found for command \dir flow/
+
+/sandbox/811243/ice-0.13.8/src/ice_idc.c:329: warning: documented symbol `:pointer to function to call for each peer' was not declared or defined.
