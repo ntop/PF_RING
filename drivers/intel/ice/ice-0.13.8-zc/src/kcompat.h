@@ -35,6 +35,30 @@
 #include <linux/udp.h>
 #include <linux/vmalloc.h>
 
+#ifdef HAVE_PF_RING
+
+#define PCI_DEVICE_CACHE_LINE_SIZE		0x0C
+#define PCI_DEVICE_CACHE_LINE_SIZE_BYTES	8
+#define ICE_MAX_NIC				64
+
+#ifdef HAVE_XDP_SUPPORT
+#undef HAVE_XDP_SUPPORT
+#endif
+
+#ifdef CONFIG_DCB
+#undef CONFIG_DCB
+#endif
+
+#ifdef CONFIG_FCOE
+#undef CONFIG_FCOE
+#endif
+
+#ifdef CONFIG_FCOE_MODULE
+#undef CONFIG_FCOE_MODULE
+#endif
+
+#endif
+
 #ifndef GCC_VERSION
 #define GCC_VERSION (__GNUC__ * 10000		\
 		     + __GNUC_MINOR__ * 100	\

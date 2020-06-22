@@ -929,6 +929,15 @@ struct ice_pf {
 	struct hlist_head tc_flower_fltr_list;
 	u16 num_tc_flower_fltrs;
 #endif /* HAVE_TC_SETUP_CLSFLOWER */
+
+#ifdef HAVE_PF_RING
+	u16 instance; /* A unique number per ice_pf instance in the system */
+	struct {
+		atomic_t usage_counter;
+		u8 interrupts_required;
+		bool zombie; /* interface brought down while running */
+	} pfring_zc;
+#endif
 };
 
 struct ice_netdev_priv {

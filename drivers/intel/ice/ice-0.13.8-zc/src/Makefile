@@ -1,11 +1,32 @@
-#
-# Makefile for the Intel(R) Ethernet Connection Columbiaville (ice.ko) driver
-#
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2018-2019, Intel Corporation.
+
+# When the make command line has the goal 'all' or no goal specified (i.e.
+# when compiling the driver) a sub-make of the kernel's Makefile includes
+# the kernel configuration (include/config/auto.conf), but if any other
+# goal is specified (e.g. install) the kernel configuration does not get
+# included.  Set a variable and export it to track over sub-makes.
+ifeq ($(MAKELEVEL),0)
+  ifeq ($(filter-out all, $(MAKECMDGOALS)),)
+    export KERNEL_CONFIG_INCLUDED=1
+  endif
+endif
+
+# Explicitly set shell to bash, to avoid issues on distros with a different
+# default shell. Looking at you, Ubuntu.
+SHELL=/bin/bash
 
 ifneq ($(KERNELRELEASE),)
 # kbuild part of makefile
+
+ifeq ($(KERNEL_CONFIG_INCLUDED),1)
+  ifndef CONFIG_MFD_CORE
+    $(warning NOTE: CONFIG_MFD_CORE is not enabled in the kernel configuration; peer driver support is disabled)
+  endif # CONFIG_MFD_CORE
+endif # KERNEL_CONFIG_INCLUDED
+
 #
-# Makefile for the Intel(R) 40-10 Gigabit Ethernet Connection Network Driver
+# Makefile for the Intel(R) Ethernet Connection E800 Series Linux Driver
 #
 
 # PF_RING
@@ -44,137 +65,116 @@ else	# ifneq($(KERNELRELEASE),)
 
 DRIVER := ice
 
-ifeq (,$(wildcard common.mk))
+COMMON_MK ?= $(wildcard common.mk)
+ifeq (${COMMON_MK},)
   $(error Cannot find common.mk build rules)
 else
-  include common.mk
+  include ${COMMON_MK}
 endif
 
 # ice does not support building on kernels older than 3.10.0
 $(call minimum_kver_check,3,10,0)
 
-############################
-# Module Install Directory #
-############################
-
-# Default to using updates/drivers/net/ethernet/intel/ path, since depmod since
-# v3.1 defaults to checking updates folder first, and only checking kernels/
-# and extra afterwards. We use updates instead of kernel/* due to desire to
-# prevent over-writing built-in modules files.
-INSTALL_MOD_DIR ?= updates/drivers/net/ethernet/intel/${DRIVER}
-
-######################
-# Kernel Build Macro #
-######################
+# Command to update initramfs or display a warning message
+ifeq (${cmd_initrd},)
+define cmd_initramfs
+@echo "Unable to update initramfs. You may need to do this manually."
+endef
+else
+define cmd_initramfs
+@echo "Updating initramfs..."
+$(call cmd_initrd)
+endef
+endif
 
 # PF_RING
 DEBUG_CFLAGS += -g -DDEBUG
 CFLAGS_EXTRA += -D HAVE_PF_RING ${DEBUG_CFLAGS}
 
-# kernel build function
-# ${1} is the kernel build target
-# ${2] may contain any extra rules to pass directly to the sub-make process
-kernelbuild = ${MAKE} $(if ${GCC_I_SYS},CC:="${GCC_I_SYS}") \
-                      $(if ${EXTRA_CFLAGS},ccflags-y:="${EXTRA_CFLAGS}") \
-                      -C ${KSRC} \
-                      $(if ${KOBJ},O:=${KOBJ}) \
-                      CONFIG_${DRIVER_UPPERCASE}=m \
-                      M:=$(call readlink,.) \
-                      $(if ${INSTALL_MOD_PATH},INSTALL_MOD_PATH:=${INSTALL_MOD_PATH}) \
-                      INSTALL_MOD_DIR:=${INSTALL_MOD_DIR} \
-                      ${2} ${1};
-
-###############
-# Build rules #
-###############
-
-# Standard compilation, with regular output
-default:
+all:
 	# PF_RING
 	cd ../../../../../kernel/; make
 	cp ../../../../../kernel/Module.symvers .
-	@+$(call kernelbuild,modules)
-
-# Noisy output, for extra debugging
-noisy:
-	@+$(call kernelbuild,modules,V=1)
-
-# Silence any output generated
-silent:
-	@+$(call kernelbuild,modules,>/dev/null)
-
-# Enable higher warning level
-checkwarnings: clean
-	@+$(call kernelbuild,modules,W=1)
-
-# Run sparse static analyzer
-sparse: clean
-	@+$(call kernelbuild,modules,C=2 CF="-D__CHECK_ENDIAN__ -Wbitwise -Wcontext")
-
-# Run coccicheck static analyzer
-ccc: clean
-	@+$(call kernelbuild,modules,coccicheck MODE=report)
-
-# Build manfiles
-manfile:
+	+$(call kernelbuild,modules)
 	@gzip -c ../${DRIVER}.${MANSECTION} > ${DRIVER}.${MANSECTION}.gz
 
-# Clean the module subdirectories
 clean:
-	@+$(call kernelbuild,clean)
+	+$(call kernelbuild,clean)
 	@-rm -rf *.${MANSECTION}.gz *.ko
 
-# Install the modules and manpage
-install: default manfile
-	@echo "Copying manpages..."
-	@install -D -m 644 ${DRIVER}.${MANSECTION}.gz ${INSTALL_MOD_PATH}${MANDIR}/man${MANSECTION}/${DRIVER}.${MANSECTION}.gz
-	@echo "Installing modules..."
-	@$(call kernelbuild,modules_install)
-	@echo "Running depmod..."
-	@$(call cmd_depmod)
-ifeq (${cmd_initrd},)
-	@echo "Unable to update initrd. You may need to do this manually."
-else
-	@echo "Updating initrd..."
-	-@$(call cmd_initrd)
+# Install kernel module files. This target is called by the RPM specfile when
+# generating binary RPMs, and is not expected to modify files outside of the
+# build root. Thus, it must not update initramfs, or run depmod.
+DDP_PKG_ORIGIN := $(shell ls ../ddp/${DRIVER}-[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*\.pkg 2>/dev/null)
+DDP_PKG_NAME := $(shell basename ${DDP_PKG_ORIGIN} 2>/dev/null)
+DDP_PKG_DEST_PATH := ${INSTALL_MOD_PATH}/lib/firmware/updates/intel/${DRIVER}/ddp
+DDP_PKG_DEST := ${DDP_PKG_DEST_PATH}/${DDP_PKG_NAME}
+DDP_PKG_LINK := ${DRIVER}.pkg
+modules_install: all
+	+$(call kernelbuild,modules_install)
+ifneq (${DDP_PKG_ORIGIN},)
+	@# Install DDP package file if provided/required with ice module
+	install -D -m 644 ${DDP_PKG_ORIGIN} ${DDP_PKG_DEST}
+	(cd ${DDP_PKG_DEST_PATH} && ln -sf ${DDP_PKG_NAME} ${DDP_PKG_LINK})
+	install -D -m 644 ../ddp/LICENSE ${DDP_PKG_DEST_PATH}/LICENSE \
+		2>/dev/null || true
 endif
 
-uninstall:
-	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_MOD_DIR}/${DRIVER}.ko;
+mandocs_install: all
+	install -D -m 644 ${DRIVER}.${MANSECTION}.gz ${INSTALL_MOD_PATH}${MANDIR}/man${MANSECTION}/${DRIVER}.${MANSECTION}.gz
+
+# After installing all the files, perform necessary work to ensure the system
+# will use the new modules. This includes running depmod to update module
+# dependencies and updating the initramfs image in case the module is loaded
+# during early boot.
+install: modules_install mandocs_install
 	$(call cmd_depmod)
-	if [ -e ${INSTALL_MOD_PATH}${MANDIR}/man${MANSECTION}/${DRIVER}.${MANSECTION}.gz ] ; then \
-		rm -f ${INSTALL_MOD_PATH}${MANDIR}/man${MANSECTION}/${DRIVER}.${MANSECTION}.gz ; \
-	fi;
+	$(call cmd_initramfs)
 
-########
-# Help #
-########
+# Remove installed module files. This target is called by the RPM specfile when
+# generating binary RPMs, and is not expected to modify files outside of the
+# build root. Thus, it must not update the initramfs image or run depmod.
+modules_uninstall:
+	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_MOD_DIR}/${DRIVER}.ko
+ifneq (${DDP_PKG_ORIGIN},)
+	@# Uninstall DDP package file if provided/required with ice module
+	(cd ${DDP_PKG_DEST_PATH} && \
+	 [ `readlink ${DDP_PKG_LINK}` == ${DDP_PKG_NAME} ] && \
+	 rm -f ${DDP_PKG_LINK} || true)
+	rm -f ${DDP_PKG_DEST} ${DDP_PKG_DEST_PATH}/LICENSE
+endif
+
+mandocs_uninstall:
+	rm -f ${INSTALL_MOD_PATH}${MANDIR}/man${MANSECTION}/${DRIVER}.${MANSECTION}.gz 2>/dev/null
+
+# After uninstalling all the files, perform necessary work to restore the
+# system back to using the default kernel modules. This includes running depmod
+# to update module dependencies and updating the initramfs image.
+uninstall: modules_uninstall mandocs_uninstall
+	$(call cmd_depmod)
+	$(call cmd_initramfs)
+
 help:
-	@echo 'Cleaning targets:'
-	@echo '  clean               - Clean files generated by kernel module build'
-	@echo 'Build targets:'
-	@echo '  default             - Build module(s) with standard verbosity'
-	@echo '  noisy               - Build module(s) with V=1 verbosity -- very noisy'
-	@echo '  silent              - Build module(s), squelching all output'
-	@echo 'Static Analysis:'
-	@echo '  checkwarnings       - Clean, then build module(s) with W=1 warnings enabled'
-	@echo '  sparse              - Clean, then check module(s) using sparse'
-	@echo '  ccc                 - Clean, then check module(s) using coccicheck'
-	@echo 'Other targets:'
-	@echo '  manfile             - Generate a gzipped manpage'
-	@echo '  install             - Build then install the module(s) and manpage'
-	@echo '  uninstall           - Uninstall the module(s) and manpage'
-	@echo '  help                - Display this help message'
-	@echo 'Variables:'
-	@echo '  LINUX_VERSION       - Debug tool to force kernel LINUX_VERSION_CODE. Use at your own risk.'
-	@echo '  W=N                 - Kernel variable for setting warning levels'
-	@echo '  V=N                 - Kernel variable for setting output verbosity'
-	@echo '  INSTALL_MOD_PATH    - Add prefix for the module and manpage installation path'
-	@echo '  INSTALL_MOD_DIR     - Use module directory other than updates/drivers/net/ethernet/intel/${DRIVER}'
-	@echo '  KSRC                - Specifies the full path to the kernel tree to build against'
-	@echo ' Other variables may be available for tuning make process, see'
-	@echo ' Kernel Kbuild documentation for more information'
+	@echo 'Building external (out-of-tree) modules:'
+	@echo '  all               - default target, build the module(s) and manpage'
+	@echo '  clean             - remove generated files'
+	@echo '  modules_install   - install the module(s) only'
+	@echo '  mandocs_install   - install the manpage only'
+	@echo '  install           - install the module(s) and manpage, and update initramfs'
+	@echo '  modules_uninstall - uninstall the module(s) only'
+	@echo '  mandocs_uninstall - uninstall the manpage only'
+	@echo '  uninstall         - uninstall the module(s) and manpage, and update initramfs'
+	@echo ''
+	@echo 'Command-line options:'
+	@echo '  KSRC=<path>     - Path to kernel source (defaults to running kernel)'
+	@echo '  LINUX_VERSION=<x.y.z> - Debug tool to force kernel LINUX_VERSION_CODE for'
+	@echo '                          external module(s). *** Use at your own risk! ***'
+	@echo '  INSTALL_MOD_PATH=<path> - Prefix added to default module(s) installation path'
+	@echo '                            (/lib/modules/$$(KERNELRELEASE)/)'
+	@echo '  INSTALL_MOD_DIR=<path> - Install module(s) in subdirectory other than default'
+	@echo '                           (.../updates/drivers/net/ethernet/intel/${DRIVER}/)'
+	@echo ''
 
-.PHONY: default noisy clean manfile silent sparse ccc install uninstall help
+.PHONY: all clean modules_install mandocs_install install modules_uninstall mandocs_uninstall uninstall help
 
 endif	# ifneq($(KERNELRELEASE),)

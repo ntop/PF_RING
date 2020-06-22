@@ -11,6 +11,20 @@
 #include "ice_dcb_lib.h"
 #include "ice_dcb_nl.h"
 
+#ifdef HAVE_PF_RING
+#include "pf_ring.h"
+
+int RSS[ICE_MAX_NIC] = 
+  { [0 ... (ICE_MAX_NIC - 1)] = 0 };
+module_param_array_named(RSS, RSS, int, NULL, 0444);
+MODULE_PARM_DESC(RSS,
+                 "Number of Receive-Side Scaling Descriptor Queues, default 0=number of cpus");
+
+int enable_debug = 0;
+module_param(enable_debug, int, 0644);
+MODULE_PARM_DESC(debug, "PF_RING debug (0=none, 1=enabled)");
+#endif
+
 #define DRV_VERSION_MAJOR 0
 #define DRV_VERSION_MINOR 13
 #define DRV_VERSION_BUILD 8
@@ -968,6 +982,11 @@ static void ice_do_reset(struct ice_pf *pf, enum ice_reset_req reset_type)
 {
 	struct device *dev = ice_pf_to_dev(pf);
 	struct ice_hw *hw = &pf->hw;
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug)) 
+		printk("[PF_RING-ZC] %s\n", __FUNCTION__);
+#endif
 
 	dev_dbg(dev, "reset_type 0x%x requested\n", reset_type);
 	WARN_ON(in_interrupt());
@@ -3716,6 +3735,10 @@ static int ice_ena_msix_range(struct ice_pf *pf)
 	needed = min_t(int, num_online_cpus(), v_left);
 	if (v_left < needed)
 		goto no_hw_vecs_left_err;
+#ifdef HAVE_PF_RING
+	if (RSS[pf->instance] != 0)
+		needed = min_t(int, needed, RSS[pf->instance]);
+#endif
 	pf->num_lan_msix = needed;
 	v_budget += needed;
 	v_left -= needed;
@@ -4357,6 +4380,9 @@ ice_probe(struct pci_dev *pdev, const struct pci_device_id __always_unused *ent)
 	struct ice_pf *pf;
 	struct ice_hw *hw;
 	int err;
+#ifdef HAVE_PF_RING
+	static u16 pfs_found;
+#endif
 
 	/* this driver uses devres, see Documentation/driver-model/devres.txt */
 	err = pcim_enable_device(pdev);
@@ -4405,6 +4431,11 @@ ice_probe(struct pci_dev *pdev, const struct pci_device_id __always_unused *ent)
 	hw->bus.device = PCI_SLOT(pdev->devfn);
 	hw->bus.func = PCI_FUNC(pdev->devfn);
 	ice_set_ctrlq_len(hw);
+
+#ifdef HAVE_PF_RING
+	pf->instance = pfs_found;
+	pfs_found++;
+#endif
 
 	pf->msg_enable = netif_msg_init(debug, ICE_DFLT_NETIF_M);
 
@@ -6069,6 +6100,213 @@ static int ice_vsi_vlan_setup(struct ice_vsi *vsi)
 	return ret;
 }
 
+#ifdef HAVE_PF_RING
+
+int ring_is_not_empty(struct ice_ring *rx_ring) {
+	//TODO check if ring is empty
+
+	return 0;
+}
+
+void ice_update_enable_itr(struct ice_vsi *vsi, struct ice_q_vector *q_vector) {
+	//TODO
+}
+
+int wait_packet_function_ptr(void *data, int mode)
+{
+	struct ice_ring *rx_ring = (struct ice_ring*) data;
+	int new_packets;
+
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d]\n",
+		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
+		       rx_ring->q_index, rx_ring->next_to_clean, rx_ring->next_to_use);
+
+	if (mode == 1 /* Enable interrupt */) {
+
+		new_packets = ring_is_not_empty(rx_ring);
+
+		if (!new_packets) {
+			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 0;
+
+			if (!rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled) {
+				/* Enabling interrupts on demand, this has been disabled with napi in ZC mode */
+				ice_update_enable_itr(rx_ring->vsi, rx_ring->q_vector);
+
+				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
+
+				//if (unlikely(enable_debug)) 
+				//	printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+      			} else {
+				//if (unlikely(enable_debug)) 
+				//	printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+			}
+    		} else {
+			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
+
+			//if (unlikely(enable_debug))
+			//	printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
+		}
+
+		return new_packets;
+	} else {
+		/* No Need to disable interrupts here, the standard napi mechanism will do it */
+
+		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
+
+		//if (unlikely(enable_debug))
+		//	printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+		
+		return 0;
+	}
+}
+
+int wake_up_pfring_zc_socket(struct ice_ring *rx_ring)
+{
+	if (atomic_read(&rx_ring->pfring_zc.queue_in_use)) {
+		if (waitqueue_active(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue)) {
+			if (ring_is_not_empty(rx_ring)) {
+				rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
+				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0; /* napi disables them */
+				wake_up_interruptible(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
+				if (unlikely(enable_debug))
+					printk("[PF_RING-ZC] %s: Waking up socket [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+				return 1;
+			}
+		}
+		if (!ring_is_not_empty(rx_ring)) {
+			/* Note: in case of multiple sockets (RSS), if ice_clean_*x_irq is called
+			 * for some queue, interrupts are disabled, preventing packets from arriving 
+			 * on other active queues, in order to avoid this we need to enable interrupts */
+					
+			struct ice_pf *adapter = ice_netdev_to_pf(rx_ring->netdev);
+			adapter->pfring_zc.interrupts_required = 1;
+
+			/* Enabling interrupts in ice_napi_poll()
+			 * ice_update_enable_itr(rx_ring->vsi, rx_ring->q_vector); */
+		}
+	}
+
+	return 0;
+}
+
+static void ice_control_rxq(struct ice_vsi *vsi, int q_index, bool enable)
+{
+	//TODO enable/disable queue
+}
+
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
+{
+	struct ice_ring  *rx_ring = (struct ice_ring *) rx_data;
+	struct ice_ring  *tx_ring = (struct ice_ring *) tx_data;
+	struct ice_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
+	struct ice_pf    *adapter;
+	int i, n;
+ 
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s %s\n", __FUNCTION__, device_in_use ? "open" : "close");
+
+	if (xx_ring == NULL) return -1; /* safety check */
+
+	adapter = ice_netdev_to_pf(xx_ring->netdev);
+
+	if (device_in_use) { /* free all memory */
+
+		if ((n = atomic_inc_return(&adapter->pfring_zc.usage_counter)) == 1 /* first user */) {
+			try_module_get(THIS_MODULE); /* ++ */
+
+			/* wait for ice_clean_rx_irq to complete the current receive if any */
+			usleep_range(100, 200);  
+		}
+
+    
+		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
+			struct ice_vsi *vsi = rx_ring->vsi;
+
+			if (unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
+
+			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
+		}
+
+		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
+			/* nothing to do besides increasing the counter */
+
+			if(unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
+		}
+
+		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
+ 		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
+ 		 * in order to avoid this we need to enable interrupts */
+		ice_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
+
+	} else { /* restore card memory */
+		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
+			struct ice_vsi *vsi = rx_ring->vsi;
+			//struct ice_hw *hw = &vsi->back->hw;
+      
+			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
+
+			for (i = 0; i<rx_ring->count; i++) {
+				union ice_32b_rx_flex_desc *rx_desc = ICE_RX_DESC(rx_ring, i);
+	
+				rx_desc->read.pkt_addr = 0, rx_desc->read.hdr_addr = 0;
+			}
+			rmb();
+
+			//TODO
+			/*
+			rx_ring->tail = hw->hw_addr + ICE_QRX_TAIL(pf_q);
+			writel(0, rx_ring->tail);
+			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
+			ice_alloc_rx_buffers(rx_ring, ICE_DESC_UNUSED(rx_ring));
+			*/
+
+			ice_control_rxq(vsi, rx_ring->q_index, true /* start */);
+		}
+		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
+			/* Restore TX */
+
+			tx_ring->next_to_use = tx_ring->next_to_clean = readl(tx_ring->tail);
+
+			if (unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s:%d Restoring TX Tail=%u\n", __FUNCTION__, __LINE__, tx_ring->next_to_use);
+       
+			for (i = 0; i < tx_ring->count; i++) {
+				struct ice_tx_buf *tx_buffer = &tx_ring->tx_buf[i];
+				tx_buffer->next_to_watch = NULL;
+				tx_buffer->skb = NULL;
+			}
+
+			rmb();
+		}
+		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */) {
+			module_put(THIS_MODULE);  /* -- */
+
+		}
+
+		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
+ 		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
+ 		 * in order to avoid this we need to enable interrupts even if this is not the last user */
+		//if (n == 0) { /* last user */
+			/* Enabling interrupts in case they've been disabled by napi and never enabled in ZC mode */
+			ice_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
+		//}
+
+	}
+
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s %s@%d is %sIN use (%p counter: %u)\n", __FUNCTION__,
+			xx_ring->netdev->name, xx_ring->q_index, device_in_use ? "" : "NOT ", 
+			adapter, atomic_read(&adapter->pfring_zc.usage_counter));
+
+	return 0;
+}
+
+#endif
+
+
 /**
  * ice_vsi_cfg - Setup the VSI
  * @vsi: the VSI being configured
@@ -6114,6 +6352,9 @@ static void ice_napi_enable_all(struct ice_vsi *vsi)
 	ice_for_each_q_vector(vsi, q_idx) {
 		struct ice_q_vector *q_vector = vsi->q_vectors[q_idx];
 
+#ifdef HAVE_PF_RING
+		if (test_bit(NAPI_STATE_SCHED, &q_vector->napi.state)) /* safety check */
+#endif
 		if (q_vector->rx.ring || q_vector->tx.ring)
 			napi_enable(&q_vector->napi);
 	}
@@ -6129,6 +6370,11 @@ static int ice_up_complete(struct ice_vsi *vsi)
 {
 	struct ice_pf *pf = vsi->back;
 	int err;
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
+#endif
 
 	ice_vsi_cfg_msix(vsi);
 
@@ -6158,6 +6404,65 @@ static int ice_up_complete(struct ice_vsi *vsi)
 	if (vsi->type == ICE_VSI_PF)
 		ice_service_task_schedule(pf);
 
+#ifdef HAVE_PF_RING
+	if (vsi->netdev) {
+		int i;
+		u16 cache_line_size;
+		struct ice_pf *pf = vsi->back;
+
+		pci_read_config_word(pf->pdev, PCI_DEVICE_CACHE_LINE_SIZE, &cache_line_size);
+		cache_line_size &= 0x00FF;
+		cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
+		if (cache_line_size == 0) cache_line_size = 64;
+
+		if (unlikely(enable_debug))  
+			printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u]\n", __FUNCTION__,
+				vsi->netdev->name, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0), cache_line_size);
+
+		ice_for_each_rxq(vsi, i) {
+			struct ice_ring *rx_ring = vsi->rx_rings[i];
+			struct ice_ring *tx_ring = vsi->tx_rings[i];
+			mem_ring_info rx_info = { 0 };
+			mem_ring_info tx_info = { 0 };
+
+			init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
+
+			rx_info.num_queues = vsi->num_rxq;
+			rx_info.packet_memory_num_slots     = rx_ring->count;
+			rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
+			rx_info.descr_packet_memory_tot_len = rx_ring->size;
+			rx_info.registers_index		    = rx_ring->reg_idx;
+			rx_info.stats_index		    = i; //TODO vsi->info.stat_counter_idx;
+			rx_info.vector			    = rx_ring->q_vector->v_idx + vsi->base_vector;
+ 
+			tx_info.num_queues = vsi->num_txq;
+			tx_info.packet_memory_num_slots     = tx_ring->count;
+			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
+			tx_info.descr_packet_memory_tot_len = tx_ring->size;
+			tx_info.registers_index		    = tx_ring->reg_idx;
+
+			pf_ring_zc_dev_handler(add_device_mapping,
+				&rx_info,
+				&tx_info,
+				rx_ring->desc, /* rx packet descriptors */
+				tx_ring->desc, /* tx packet descriptors */
+				(void *) pci_resource_start(pf->pdev, 0),
+				pci_resource_len(pf->pdev, 0),
+				rx_ring->q_index, /* channel id */
+				rx_ring->netdev,
+				rx_ring->dev, /* for DMA mapping */
+				intel_ice,
+				rx_ring->netdev->dev_addr,
+				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
+				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
+				(void *) rx_ring,
+				(void *) tx_ring,
+				wait_packet_function_ptr,
+				notify_function_ptr);
+		}
+	}
+#endif
+
 	return 0;
 }
 
@@ -6168,6 +6473,11 @@ static int ice_up_complete(struct ice_vsi *vsi)
 int ice_up(struct ice_vsi *vsi)
 {
 	int err;
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
+#endif
 
 	err = ice_vsi_cfg(vsi);
 	if (!err)
@@ -6264,6 +6574,10 @@ void ice_update_vsi_stats(struct ice_vsi *vsi)
 	if (test_bit(__ICE_DOWN, vsi->state) ||
 	    test_bit(__ICE_CFG_BUSY, pf->state))
 		return;
+
+#ifdef HAVE_PF_RING
+	//TODO handle stats
+#endif
 
 	/* get stats as recorded by Tx/Rx rings */
 	ice_update_vsi_ring_stats(vsi);
@@ -6492,6 +6806,10 @@ ice_get_stats64(struct net_device *netdev, struct rtnl_link_stats64 *stats)
 		return stats;
 #endif
 
+#ifdef HAVE_PF_RING
+	//TODO handle stats
+#endif
+
 	/* netdev packet/byte stats come from ring counter. These are obtained
 	 * by summing up ring counters (done by ice_update_vsi_ring_stats).
 	 * But, only call the update routine and read the registers if VSI is
@@ -6572,6 +6890,11 @@ int ice_down(struct ice_vsi *vsi)
 {
 	int i, tx_err, rx_err, link_err = 0;
 
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
+#endif
+
 	/* Caller of this function is expected to set the
 	 * vsi->state __ICE_DOWN bit
 	 */
@@ -6621,6 +6944,44 @@ int ice_down(struct ice_vsi *vsi)
 			   vsi->vsi_num, vsi->vsw->sw_id);
 		return -EIO;
 	}
+
+#ifdef HAVE_PF_RING
+	if (vsi->netdev) {
+		struct ice_pf *pf = vsi->back;
+		struct ice_pf    *adapter = ice_netdev_to_pf(vsi->netdev);
+		int i;
+
+		if (unlikely(enable_debug))
+	      		printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, vsi->netdev->name);
+
+		if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
+			printk("[PF_RING-ZC] %s: detaching %s while in use\n", __FUNCTION__, vsi->netdev->name); 
+
+		ice_for_each_rxq(vsi, i) {
+			struct ice_ring *rx_ring = vsi->rx_rings[i];
+			struct ice_ring *tx_ring = vsi->tx_rings[i];
+			pf_ring_zc_dev_handler(remove_device_mapping,
+				NULL, // rx_info,
+				NULL, // tx_info,
+				NULL, /* Packet descriptors */
+				NULL, /* Packet descriptors */
+				(void*)pci_resource_start(pf->pdev, 0),
+				pci_resource_len(pf->pdev, 0),
+				rx_ring->q_index, /* Channel Id */
+				rx_ring->netdev,
+				rx_ring->dev, /* for DMA mapping */
+				intel_ice,
+				rx_ring->netdev->dev_addr,
+				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
+				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
+				(void*)rx_ring,
+				(void*)tx_ring,
+				NULL, // wait_packet_function_ptr
+				NULL // notify_function_ptr
+			);
+		}
+	}
+#endif
 
 	return 0;
 }
@@ -6796,6 +7157,11 @@ int ice_vsi_open(struct ice_vsi *vsi)
 		if (err)
 			goto err_set_qs;
 	}
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug)) 
+		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
+#endif
 
 	err = ice_up_complete(vsi);
 	if (err)
@@ -7718,6 +8084,11 @@ static void ice_tx_timeout(struct net_device *netdev)
 					break;
 				}
 	}
+
+#ifdef HAVE_PF_RING
+	if (tx_ring && atomic_read(&tx_ring->pfring_zc.queue_in_use)) /* tx hang detected && queue in use from userspace: expected behaviour */
+		return; /* avoid card reset while application is running on top of ZC */
+#endif	
 
 	/* Reset recovery level if enough time has elapsed after last timeout.
 	 * Also ensure no new reset action happens before next timeout period.
@@ -10413,6 +10784,12 @@ config_tcf:
 				     num_online_cpus());
 		vsi->req_rxq = min_t(int, ice_get_avail_rxq_count(pf),
 				     num_online_cpus());
+#ifdef HAVE_PF_RING
+		if (RSS[pf->instance] != 0) {
+			vsi->req_txq = min_t(int, vsi->req_txq, RSS[pf->instance]);
+			vsi->req_rxq = min_t(int, vsi->req_rxq, RSS[pf->instance]);
+		}
+#endif
 	} else {
 		/* logic to rebuild VSI, same like ethtool -L */
 		u16 offset = 0, qcount_tx = 0, qcount_rx = 0;
@@ -10795,6 +11172,16 @@ int ice_open(struct net_device *netdev)
 	struct ice_port_info *pi;
 	int err;
 
+#ifdef HAVE_PF_RING
+	struct ice_pf *adapter = ice_netdev_to_pf(netdev);
+
+	if (adapter->pfring_zc.zombie) {
+		printk("%s() bringing up interface previously brought down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = false;
+		return 0;
+	}
+#endif
+
 	/* disallow open if eeprom is corrupted */
 	if (test_bit(__ICE_BAD_EEPROM, vsi->back->state))
 		return -EOPNOTSUPP;
@@ -10871,6 +11258,15 @@ int ice_stop(struct net_device *netdev)
 {
 	struct ice_netdev_priv *np = netdev_priv(netdev);
 	struct ice_vsi *vsi = np->vsi;
+#ifdef HAVE_PF_RING
+	struct ice_pf *adapter = ice_netdev_to_pf(netdev);
+
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("%s() bringing interface down while in use by ZC, ignoring\n", __FUNCTION__);
+		adapter->pfring_zc.zombie = true;
+		return 0;
+	}
+#endif
 
 	ice_vsi_close(vsi);
 

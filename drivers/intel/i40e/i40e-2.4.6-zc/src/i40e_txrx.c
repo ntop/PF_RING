@@ -29,7 +29,7 @@
 #ifdef HAVE_PF_RING
 int wake_up_pfring_zc_socket(struct i40e_ring *rx_ring); /* i40e_main.c */
 
-extern u8 enable_debug;
+extern int enable_debug;
 #endif
 
 static inline __le64 build_ctob(u32 td_cmd, u32 td_offset, unsigned int size,

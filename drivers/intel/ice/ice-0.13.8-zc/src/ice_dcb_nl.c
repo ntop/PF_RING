@@ -9,6 +9,8 @@
 
 #define ICE_APP_PROT_ID_ROCE	0x8915
 
+#ifdef CONFIG_DCB /* HAVE_PF_RING */
+
 /**
  * ice_dcbnl_devreset - perform enough of a ifdown/ifup to sync DCBNL info
  * @netdev: device associated with interface that needs reset
@@ -1023,3 +1025,5 @@ void ice_dcbnl_setup(struct ice_vsi *vsi)
 	netdev->dcbnl_ops = &dcbnl_ops;
 	ice_dcbnl_set_all(vsi);
 }
+
+#endif

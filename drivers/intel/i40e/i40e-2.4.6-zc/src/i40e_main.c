@@ -62,7 +62,9 @@ module_param_array_named(RSS, RSS, int, NULL, 0444);
 MODULE_PARM_DESC(RSS,
                  "Number of Receive-Side Scaling Descriptor Queues, default 0=number of cpus");
 
-u8 enable_debug = 0;
+int enable_debug = 0;
+module_param(enable_debug, int, 0644);
+MODULE_PARM_DESC(debug, "PF_RING debug (0=none, 1=enabled)");
 #endif
 
 char i40e_driver_name[] = "i40e";

@@ -5,6 +5,8 @@
 #include "ice_sched.h"
 #include "ice_dcb.h"
 
+#ifdef CONFIG_DCB /* HAVE_PF_RING */
+
 /**
  * ice_aq_get_lldp_mib
  * @hw: pointer to the HW struct
@@ -1667,3 +1669,5 @@ ice_query_port_ets(struct ice_port_info *pi,
 	mutex_unlock(&pi->sched_lock);
 	return status;
 }
+
+#endif

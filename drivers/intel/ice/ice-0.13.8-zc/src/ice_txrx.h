@@ -369,6 +369,20 @@ struct ice_ring {
 #ifdef ADQ_PERF_COUNTERS
 	struct ice_ch_q_stats ch_q_stats;
 #endif /* ADQ_PERF_COUNTERS */
+
+#ifdef HAVE_PF_RING
+	struct {
+		atomic_t queue_in_use;
+    
+		union {
+			struct {
+				wait_queue_head_t packet_waitqueue;
+				u8 interrupt_received;
+				u8 interrupt_enabled;
+			} rx;
+		} rx_tx;
+	} pfring_zc;
+#endif
 } ____cacheline_internodealigned_in_smp;
 
 static inline bool ice_ring_uses_build_skb(struct ice_ring *ring)

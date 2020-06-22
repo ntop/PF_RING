@@ -26,6 +26,13 @@
 
 #define ICE_FDIR_CLEAN_DELAY 10
 
+#ifdef HAVE_PF_RING
+extern int RSS[ICE_MAX_NIC];
+extern int enable_debug;
+
+int wake_up_pfring_zc_socket(struct ice_ring *rx_ring); /* ice_main.c */
+#endif
+
 /**
  * ice_prgm_fdir_fltr - Program a Flow Director filter
  * @vsi: VSI to send dummy packet
@@ -224,6 +231,16 @@ static bool ice_clean_tx_irq(struct ice_ring *tx_ring, int napi_budget)
 	s16 i = tx_ring->next_to_clean;
 	struct ice_tx_desc *tx_desc;
 	struct ice_tx_buf *tx_buf;
+
+#ifdef HAVE_PF_RING	
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", 
+	        	__FUNCTION__, tx_ring->netdev->name,
+	        	atomic_read(&ice_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter));
+
+	if (atomic_read(&ice_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter) > 0)
+		return true;
+#endif
 
 	tx_buf = &tx_ring->tx_buf[i];
 	tx_desc = ICE_TX_DESC(tx_ring, i);
@@ -489,6 +506,12 @@ int ice_setup_rx_ring(struct ice_ring *rx_ring)
 
 	if (!dev)
 		return -ENOMEM;
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s:%d allocating %u %lu bytes descriptors\n", 
+        	       __FUNCTION__, __LINE__, rx_ring->count, sizeof(union ice_32byte_rx_desc));
+#endif
 
 	/* warn if we are about to overwrite the pointer */
 	WARN_ON(rx_ring->rx_buf);
@@ -764,6 +787,13 @@ bool ice_alloc_rx_bufs(struct ice_ring *rx_ring, u16 cleaned_count)
 			ice_release_rx_desc(rx_ring, cleaned_count);
 		return false;
 	}
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",
+			__FUNCTION__, rx_ring->netdev->name,
+			cleaned_count, rx_ring->count);
+#endif
 
 	/* get the Rx descriptor and buffer based on next_to_use */
 	rx_desc = ICE_RX_DESC(rx_ring, ntu);
@@ -1416,6 +1446,19 @@ int ice_clean_rx_irq(struct ice_ring *rx_ring, int budget)
 #endif /* HAVE_XDP_SUPPORT */
 	struct xdp_buff xdp;
 	bool failure;
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", __FUNCTION__, rx_ring->netdev->name,
+        		atomic_read(&ice_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter));
+
+	if (atomic_read(&ice_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter) > 0) {
+		wake_up_pfring_zc_socket(rx_ring);
+		/* Note: returning budget napi will call us again (keeping interrupts disabled),
+		 * returning budget-1 will tell napi that we are done (this usually also reenable interrupts, not with ZC) */
+		return budget-1;
+	}
+#endif
 
 #ifdef HAVE_XDP_SUPPORT
 #ifdef HAVE_XDP_BUFF_RXQ
@@ -2114,7 +2157,15 @@ int ice_napi_poll(struct napi_struct *napi, int budget)
 	int work_done = 0;
 #ifdef ADQ_PERF
 	bool ch_enabled;
+#endif
+#ifdef HAVE_PF_RING
+	struct ice_vsi *vsi = q_vector->vsi;
+	struct ice_pf *adapter = ice_netdev_to_pf(vsi->netdev);
 
+	adapter->pfring_zc.interrupts_required = 0;
+#endif
+
+#ifdef ADQ_PERF
 	/* determine once if vector needs to be processed differently */
 	ch_enabled = ice_vector_ch_enabled(q_vector);
 	if (ch_enabled) {
@@ -2276,6 +2327,15 @@ bypass:
 	}
 #endif /* ADQ_PERF */
 
+#ifdef HAVE_PF_RING
+	/* Note: we should not enable interrupts here, as wait_packet_function_ptr should 
+	 * do it when needed, however make sure that on when interrupts disabled packets 
+         * are delivered if #queued < 4 (this was an issue on X710 adapters where we have
+         * to always enable interrupts to avoid race conditions in case of multiple sockets (RSS) */
+	 if (atomic_read(&ice_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0 || 
+             adapter->pfring_zc.interrupts_required) {
+#endif
+
 	/* Work is done so exit the polling mode and re-enable the interrupt */
 	if (likely(napi_complete_done(napi, work_done))) {
 #ifdef ADQ_PERF
@@ -2313,6 +2373,10 @@ bypass:
 	} else {
 		ice_set_wb_on_itr(q_vector);
 	}
+
+#ifdef HAVE_PF_RING
+	}
+#endif
 
 	return min_t(int, work_done, budget - 1);
 }
@@ -3369,6 +3433,14 @@ netdev_tx_t ice_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 	struct ice_ring *tx_ring;
 
 	tx_ring = vsi->tx_rings[skb->queue_mapping];
+
+#ifdef HAVE_PF_RING
+	/* We don't allow legacy send when in zc mode */
+	if (atomic_read(&ice_netdev_to_pf(netdev)->pfring_zc.usage_counter) > 0) {
+		dev_kfree_skb_any(skb);
+		return NETDEV_TX_OK;
+	}
+#endif
 
 	/* hardware can't handle really short frames, hardware padding works
 	 * beyond this point

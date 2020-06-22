@@ -6,6 +6,11 @@
 #include "ice_lib.h"
 #include "ice_dcb_lib.h"
 
+#ifdef HAVE_PF_RING
+extern int RSS[ICE_MAX_NIC];
+extern int enable_debug;
+#endif
+
 /**
  * ice_vsi_type_str - maps VSI type enum to string equivalents
  * @type: VSI type enum
@@ -168,6 +173,10 @@ static void ice_vsi_set_num_qs(struct ice_vsi *vsi, u16 vf_id)
 	case ICE_VSI_PF:
 		vsi->alloc_txq = min_t(int, ice_get_avail_txq_count(pf),
 				       num_online_cpus());
+#ifdef HAVE_PF_RING
+		if (RSS[pf->instance] != 0)
+			vsi->alloc_txq = min_t(int, vsi->alloc_txq, RSS[pf->instance]);
+#endif
 		if (vsi->req_txq) {
 			vsi->alloc_txq = vsi->req_txq;
 			vsi->num_txq = vsi->req_txq;
@@ -181,6 +190,10 @@ static void ice_vsi_set_num_qs(struct ice_vsi *vsi, u16 vf_id)
 		} else {
 			vsi->alloc_rxq = min_t(int, ice_get_avail_rxq_count(pf),
 					       num_online_cpus());
+#ifdef HAVE_PF_RING
+			if (RSS[pf->instance] != 0)
+				vsi->alloc_rxq = min_t(int, vsi->alloc_rxq, RSS[pf->instance]);
+#endif
 			if (vsi->req_rxq) {
 				vsi->alloc_rxq = vsi->req_rxq;
 				vsi->num_rxq = vsi->req_rxq;
@@ -785,8 +798,17 @@ static void ice_vsi_set_rss_params(struct ice_vsi *vsi)
 			vsi->rss_size = min_t(int, vsi->num_rxq,
 					      BIT(cap->rss_table_entry_width));
 		else
+#ifdef HAVE_PF_RING
+		{
+#endif
 			vsi->rss_size = min_t(int, num_online_cpus(),
 					      BIT(cap->rss_table_entry_width));
+#ifdef HAVE_PF_RING
+			if (RSS[pf->instance] != 0)
+				vsi->rss_size = min_t(int, vsi->rss_size, RSS[pf->instance]);
+		}
+#endif
+
 		vsi->rss_lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_PF;
 		break;
 	case ICE_VSI_OFFLOAD_MACVLAN:
@@ -794,6 +816,10 @@ static void ice_vsi_set_rss_params(struct ice_vsi *vsi)
 		vsi->rss_table_size = ICE_VSIQF_HLUT_ARRAY_SIZE;
 		vsi->rss_size = min_t(int, num_online_cpus(),
 				      BIT(cap->rss_table_entry_width));
+#ifdef HAVE_PF_RING
+		if (RSS[pf->instance] != 0)
+			vsi->rss_size = min_t(int, vsi->rss_size, RSS[pf->instance]);
+#endif
 		vsi->rss_lut_type = ICE_AQC_GSET_RSS_LUT_TABLE_TYPE_VSI;
 		break;
 	case ICE_VSI_VF:
@@ -2807,7 +2833,15 @@ void ice_vsi_close(struct ice_vsi *vsi)
 	}
 
 	if (!test_and_set_bit(__ICE_DOWN, vsi->state))
+#ifdef HAVE_PF_RING
+	{
+		if (unlikely(enable_debug))
+			printk("[PF_RING-ZC] %s: called on %s -> ice_down\n", __FUNCTION__, vsi->netdev->name);
+#endif
 		ice_down(vsi);
+#ifdef HAVE_PF_RING
+	}
+#endif
 	ice_vsi_free_irq(vsi);
 	ice_vsi_free_tx_rings(vsi);
 	ice_vsi_free_rx_rings(vsi);

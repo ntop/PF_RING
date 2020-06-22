@@ -4,6 +4,8 @@
 #include "ice_dcb_lib.h"
 #include "ice_dcb_nl.h"
 
+#ifdef CONFIG_DCB /* HAVE_PF_RING */
+
 /**
  * ice_is_pfc_causing_hung_q
  * @pf: pointer to PF structure
@@ -1098,3 +1100,5 @@ ice_dcb_process_lldp_set_mib_change(struct ice_pf *pf,
 	rtnl_unlock();
 	mutex_unlock(&pf->tc_mutex);
 }
+
+#endif

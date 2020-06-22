@@ -4,6 +4,10 @@
 #include "ice_base.h"
 #include "ice_dcb_lib.h"
 
+#ifdef HAVE_PF_RING
+extern int enable_debug;
+#endif
+
 /**
  * __ice_vsi_get_qs_contig - Assign a contiguous chunk of queues to VSI
  * @qs_cfg: gathered variables needed for PF->VSI queues assignment
@@ -335,6 +339,13 @@ int ice_setup_rx_ctx(struct ice_ring *ring)
 
 	/* what is Rx queue number in global space of 2K Rx queues */
 	pf_q = vsi->rxq_map[ring->q_index];
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s:%d %s queue-index=%u\n", 
+        		__FUNCTION__, __LINE__, vsi->netdev? vsi->netdev->name : "null", 
+        		ring->q_index);
+#endif
 
 	/* clear the context structure first */
 	memset(&rlan_ctx, 0, sizeof(rlan_ctx));
