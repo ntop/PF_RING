@@ -6465,8 +6465,8 @@ static int ice_up_complete(struct ice_vsi *vsi)
 				&tx_info,
 				rx_ring->desc, /* rx packet descriptors */
 				tx_ring->desc, /* tx packet descriptors */
-				(void *) pci_resource_start(pf->pdev, 0),
-				pci_resource_len(pf->pdev, 0),
+				(void *) pci_resource_start(pf->pdev, ICE_BAR0), /* pcim_iomap_table(pf->pdev)[ICE_BAR0] */
+				pci_resource_len(pf->pdev, ICE_BAR0),
 				rx_ring->q_index, /* channel id */
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
@@ -6984,8 +6984,8 @@ int ice_down(struct ice_vsi *vsi)
 				NULL, // tx_info,
 				NULL, /* Packet descriptors */
 				NULL, /* Packet descriptors */
-				(void*)pci_resource_start(pf->pdev, 0),
-				pci_resource_len(pf->pdev, 0),
+				(void*)pci_resource_start(pf->pdev, ICE_BAR0),
+				pci_resource_len(pf->pdev, ICE_BAR0),
 				rx_ring->q_index, /* Channel Id */
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
@@ -8063,6 +8063,9 @@ static void ice_tx_timeout(struct net_device *netdev)
 	struct ice_pf *pf = vsi->back;
 	int hung_queue = -1;
 	u32 i;
+#ifdef HAVE_PF_RING
+	struct ice_pf *adapter = ice_netdev_to_pf(netdev);
+#endif
 
 	pf->tx_timeout_count++;
 
@@ -8105,9 +8108,14 @@ static void ice_tx_timeout(struct net_device *netdev)
 	}
 
 #ifdef HAVE_PF_RING
-	if (tx_ring && atomic_read(&tx_ring->pfring_zc.queue_in_use)) /* tx hang detected && queue in use from userspace: expected behaviour */
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		if (tx_ring && atomic_read(&tx_ring->pfring_zc.queue_in_use))
+			printk("[PF_RING-ZC] %s: queue in use\n", __FUNCTION__);
+		else
+			printk("[PF_RING-ZC] %s: device in use\n", __FUNCTION__);
 		return; /* avoid card reset while application is running on top of ZC */
-#endif	
+	}
+#endif
 
 	/* Reset recovery level if enough time has elapsed after last timeout.
 	 * Also ensure no new reset action happens before next timeout period.

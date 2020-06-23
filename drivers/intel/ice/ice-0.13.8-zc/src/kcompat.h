@@ -57,6 +57,14 @@
 #undef CONFIG_FCOE_MODULE
 #endif
 
+#ifdef ADQ_PERF
+#undef ADQ_PERF
+#endif
+
+#ifdef ADQ_PERF_COUNTERS
+#undef ADQ_PERF_COUNTERS
+#endif
+
 #endif
 
 #ifndef GCC_VERSION

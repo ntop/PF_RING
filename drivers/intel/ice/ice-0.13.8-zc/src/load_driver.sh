@@ -2,8 +2,6 @@
 
 FAMILY=ice
 
-#service udev start
-
 # Remove old modules (if loaded)
 rmmod ice
 rmmod pf_ring
@@ -12,22 +10,16 @@ rmmod pf_ring
 insmod ../../../../../kernel/pf_ring.ko
 
 # Required by ice
-modprobe ptp
-modprobe vxlan
-modprobe configfs
+#modprobe ptp
+#modprobe vxlan
+#modprobe configfs
 
 # Load the driver
-insmod ./ice.ko
-
-# Enable debugging
-#find /sys/kernel/debug/ice/ -name command -exec sh -c 'echo  "msg_enable 16" > {}' {} ';'
-
-# Disable multiqueue
-#find /sys/kernel/debug/ice/ -name command -exec sh -c 'echo  "set rss_size 1" > {}' {} ';'
+insmod ./ice.ko enable_debug=1 RSS=1,1
 
 sleep 1
 
-pkill irqbalance 
+#pkill irqbalance 
 
 INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
 for IF in $INTERFACES ; do
@@ -35,20 +27,11 @@ for IF in $INTERFACES ; do
         if [ "$TOCONFIG" -eq 1 ]; then
 		printf "Configuring %s\n" "$IF"
 
-		# Set number of RSS queues
-		ethtool -L $IF combined 1
-
-		# Max number of RX slots
-		ethtool -G $IF rx 4096
-
-		# Max number of TX slots
-		ethtool -G $IF tx 4096
-
 		# Disabling offloads
-		ethtool -K $IF sg off tso off gso off gro off > /dev/null 2>&1
+		#ethtool -K $IF sg off tso off gso off gro off > /dev/null 2>&1
 
 		# Disabling VLAN stripping
-		ethtool -K $IF rxvlan off
+		#ethtool -K $IF rxvlan off
 
 		#ethtool -A $IF autoneg off
 		#ethtool -A $IF rx off
@@ -56,8 +39,9 @@ for IF in $INTERFACES ; do
 		#ethtool -s $IF speed 100000
 
 		ifconfig $IF up
-		sleep 1
-		bash ../scripts/set_irq_affinity $IF
+
+		#sleep 1
+		#bash ../scripts/set_irq_affinity $IF
 	fi
 done
 

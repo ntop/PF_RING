@@ -101,8 +101,13 @@ extern const char ice_drv_ver[];
 #define ICE_MIN_NUM_DESC	64
 #define ICE_MAX_NUM_DESC	8160
 #define ICE_DFLT_MIN_RX_DESC	512
+#ifdef HAVE_PF_RING
+#define ICE_DFLT_NUM_TX_DESC	4096
+#define ICE_DFLT_NUM_RX_DESC	4096
+#else
 #define ICE_DFLT_NUM_TX_DESC	256
 #define ICE_DFLT_NUM_RX_DESC	2048
+#endif
 
 #define ICE_DFLT_TXQ_VMDQ_VSI	1
 #define ICE_DFLT_RXQ_VMDQ_VSI	1
