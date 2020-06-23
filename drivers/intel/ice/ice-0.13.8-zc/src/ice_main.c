@@ -12,6 +12,7 @@
 #include "ice_dcb_nl.h"
 
 #ifdef HAVE_PF_RING
+#include "ice_txrx_lib.h"
 #include "pf_ring.h"
 
 int RSS[ICE_MAX_NIC] = 
@@ -6102,14 +6103,27 @@ static int ice_vsi_vlan_setup(struct ice_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 
+void ice_update_ena_itr(struct ice_q_vector *q_vector);
+
 int ring_is_not_empty(struct ice_ring *rx_ring) {
-	//TODO check if ring is empty
+	union ice_32b_rx_flex_desc *rx_desc;
+	u16 stat_err_bits;
+	int i;
+
+	/* Tail is write-only, checking all descriptors (or we need a shadow tail from userspace) */
+	for (i = 0; i < rx_ring->count; i++) {
+		rx_desc = ICE_RX_DESC(rx_ring, i);    
+		if (rx_desc == NULL) {
+			printk("[PF_RING-ZC] %s: RX descriptor #%u NULL, this should not happen\n", 
+			       __FUNCTION__, i);
+ 			break;
+		}
+		stat_err_bits = BIT(ICE_RX_FLEX_DESC_STATUS0_DD_S);
+		if (ice_test_staterr(rx_desc, stat_err_bits))
+			return 1;
+	}
 
 	return 0;
-}
-
-void ice_update_enable_itr(struct ice_vsi *vsi, struct ice_q_vector *q_vector) {
-	//TODO
 }
 
 int wait_packet_function_ptr(void *data, int mode)
@@ -6131,21 +6145,21 @@ int wait_packet_function_ptr(void *data, int mode)
 
 			if (!rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled) {
 				/* Enabling interrupts on demand, this has been disabled with napi in ZC mode */
-				ice_update_enable_itr(rx_ring->vsi, rx_ring->q_vector);
+				ice_update_ena_itr(rx_ring->q_vector);
 
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
-				//if (unlikely(enable_debug)) 
-				//	printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+				if (unlikely(enable_debug)) 
+					printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
       			} else {
-				//if (unlikely(enable_debug)) 
-				//	printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+				if (unlikely(enable_debug)) 
+					printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 			}
     		} else {
 			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
 
-			//if (unlikely(enable_debug))
-			//	printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
+			if (unlikely(enable_debug))
+				printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
 		}
 
 		return new_packets;
@@ -6154,8 +6168,8 @@ int wait_packet_function_ptr(void *data, int mode)
 
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
-		//if (unlikely(enable_debug))
-		//	printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+		if (unlikely(enable_debug))
+			printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 		
 		return 0;
 	}
@@ -6183,7 +6197,7 @@ int wake_up_pfring_zc_socket(struct ice_ring *rx_ring)
 			adapter->pfring_zc.interrupts_required = 1;
 
 			/* Enabling interrupts in ice_napi_poll()
-			 * ice_update_enable_itr(rx_ring->vsi, rx_ring->q_vector); */
+			 * ice_update_ena_itr(rx_ring->q_vector); */
 		}
 	}
 
@@ -6192,7 +6206,11 @@ int wake_up_pfring_zc_socket(struct ice_ring *rx_ring)
 
 static void ice_control_rxq(struct ice_vsi *vsi, int q_index, bool enable)
 {
-	//TODO enable/disable queue
+	ice_vsi_ctrl_one_rx_ring(vsi, enable, q_index, true);
+
+	ice_flush(&vsi->back->hw);
+
+	ice_vsi_wait_one_rx_ring(vsi, enable, q_index);
 }
 
 int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
@@ -6239,32 +6257,34 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
  		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
  		 * in order to avoid this we need to enable interrupts */
-		ice_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
+		ice_update_ena_itr(xx_ring->q_vector);
 
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			struct ice_vsi *vsi = rx_ring->vsi;
-			//struct ice_hw *hw = &vsi->back->hw;
+			struct ice_hw *hw = &vsi->back->hw;
+			u16 pf_q;
       
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
 			for (i = 0; i<rx_ring->count; i++) {
 				union ice_32b_rx_flex_desc *rx_desc = ICE_RX_DESC(rx_ring, i);
-	
-				rx_desc->read.pkt_addr = 0, rx_desc->read.hdr_addr = 0;
+				rx_desc->read.pkt_addr = 0;
+				rx_desc->read.hdr_addr = 0;
 			}
+
 			rmb();
 
-			//TODO
-			/*
-			rx_ring->tail = hw->hw_addr + ICE_QRX_TAIL(pf_q);
+			pf_q = vsi->rxq_map[rx_ring->q_index];
+			rx_ring->tail = hw->hw_addr + QRX_TAIL(pf_q);
 			writel(0, rx_ring->tail);
 			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
-			ice_alloc_rx_buffers(rx_ring, ICE_DESC_UNUSED(rx_ring));
-			*/
+			
+			ice_alloc_rx_bufs(rx_ring, ICE_DESC_UNUSED(rx_ring));
 
 			ice_control_rxq(vsi, rx_ring->q_index, true /* start */);
 		}
+
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			/* Restore TX */
 
@@ -6281,9 +6301,9 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			rmb();
 		}
+
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */) {
 			module_put(THIS_MODULE);  /* -- */
-
 		}
 
 		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
@@ -6291,7 +6311,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
  		 * in order to avoid this we need to enable interrupts even if this is not the last user */
 		//if (n == 0) { /* last user */
 			/* Enabling interrupts in case they've been disabled by napi and never enabled in ZC mode */
-			ice_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
+			ice_update_ena_itr(xx_ring->q_vector);
 		//}
 
 	}
@@ -6305,7 +6325,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 }
 
 #endif
-
 
 /**
  * ice_vsi_cfg - Setup the VSI

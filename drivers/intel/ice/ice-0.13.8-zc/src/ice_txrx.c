@@ -1889,7 +1889,10 @@ static u32 ice_buildreg_itr(u16 itr_idx, u16 itr)
  * ice_update_ena_itr - Update ITR and re-enable MSIX interrupt
  * @q_vector: q_vector for which ITR is being updated and interrupt enabled
  */
-static void ice_update_ena_itr(struct ice_q_vector *q_vector)
+#ifndef HAVE_PF_RING
+static
+#endif
+void ice_update_ena_itr(struct ice_q_vector *q_vector)
 {
 	struct ice_ring_container *tx = &q_vector->tx;
 	struct ice_ring_container *rx = &q_vector->rx;
