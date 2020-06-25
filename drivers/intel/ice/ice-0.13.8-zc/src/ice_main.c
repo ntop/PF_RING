@@ -6469,7 +6469,7 @@ static int ice_up_complete(struct ice_vsi *vsi)
 			rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
 			rx_info.descr_packet_memory_tot_len = rx_ring->size;
 			rx_info.registers_index		    = rx_ring->reg_idx;
-			rx_info.stats_index		    = i; //TODO vsi->info.stat_counter_idx;
+			rx_info.stats_index		    = vsi->vsi_num;
 			rx_info.vector			    = rx_ring->q_vector->v_idx + vsi->base_vector;
  
 			tx_info.num_queues = vsi->num_txq;
@@ -6612,16 +6612,16 @@ void ice_update_vsi_stats(struct ice_vsi *vsi)
 	    test_bit(__ICE_CFG_BUSY, pf->state))
 		return;
 
-#ifdef HAVE_PF_RING
-	//TODO handle stats
-#endif
-
 	/* get stats as recorded by Tx/Rx rings */
 	ice_update_vsi_ring_stats(vsi);
 
 	/* get VSI stats as recorded by the hardware */
 	ice_update_eth_stats(vsi);
 
+#ifdef HAVE_PF_RING
+	cur_ns->rx_packets = cur_es->rx_unicast; 
+	cur_ns->rx_bytes = cur_es->rx_bytes;
+#endif
 	cur_ns->tx_errors = cur_es->tx_errors;
 	cur_ns->rx_dropped = cur_es->rx_discards;
 	cur_ns->tx_dropped = cur_es->tx_discards;
@@ -6843,10 +6843,6 @@ ice_get_stats64(struct net_device *netdev, struct rtnl_link_stats64 *stats)
 		return stats;
 #endif
 
-#ifdef HAVE_PF_RING
-	//TODO handle stats
-#endif
-
 	/* netdev packet/byte stats come from ring counter. These are obtained
 	 * by summing up ring counters (done by ice_update_vsi_ring_stats).
 	 * But, only call the update routine and read the registers if VSI is
@@ -6856,8 +6852,10 @@ ice_get_stats64(struct net_device *netdev, struct rtnl_link_stats64 *stats)
 		ice_update_vsi_ring_stats(vsi);
 	stats->tx_packets = vsi_stats->tx_packets;
 	stats->tx_bytes = vsi_stats->tx_bytes;
+#ifndef HAVE_PF_RING
 	stats->rx_packets = vsi_stats->rx_packets;
 	stats->rx_bytes = vsi_stats->rx_bytes;
+#endif
 
 	/* The rest of the stats can be read from the hardware but instead we
 	 * just return values that the watchdog task has already obtained from
