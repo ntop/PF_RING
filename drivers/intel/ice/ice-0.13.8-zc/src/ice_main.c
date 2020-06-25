@@ -6130,8 +6130,9 @@ int wait_packet_function_ptr(void *data, int mode)
 {
 	struct ice_ring *rx_ring = (struct ice_ring*) data;
 	int new_packets;
+	int enable_irq_debug = 0; // enable_debug;
 
-	if (unlikely(enable_debug))
+	if (unlikely(enable_irq_debug))
 		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][NTC=%u][NTU=%d]\n",
 		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
 		       rx_ring->q_index, rx_ring->next_to_clean, rx_ring->next_to_use);
@@ -6149,18 +6150,18 @@ int wait_packet_function_ptr(void *data, int mode)
 
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
 
-				if (unlikely(enable_debug)) 
+				if (unlikely(enable_irq_debug)) 
 					printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__,
 						rx_ring->q_vector->v_idx);
       			} else {
-				if (unlikely(enable_debug)) 
+				if (unlikely(enable_irq_debug)) 
 					printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, 
 						rx_ring->q_vector->v_idx);
 			}
     		} else {
 			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
 
-			if (unlikely(enable_debug))
+			if (unlikely(enable_irq_debug))
 				printk("[PF_RING-ZC] %s: Packet received [queue=%d][NTC=%u]\n", __FUNCTION__,
 					rx_ring->q_vector->v_idx, rx_ring->next_to_clean); 
 		}
@@ -6171,7 +6172,7 @@ int wait_packet_function_ptr(void *data, int mode)
 
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
-		if (unlikely(enable_debug))
+		if (unlikely(enable_irq_debug))
 			printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 		
 		return 0;
@@ -6180,13 +6181,15 @@ int wait_packet_function_ptr(void *data, int mode)
 
 int wake_up_pfring_zc_socket(struct ice_ring *rx_ring)
 {
+	int enable_irq_debug = 0; // enable_debug;
+
 	if (atomic_read(&rx_ring->pfring_zc.queue_in_use)) {
 		if (waitqueue_active(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue)) {
 			if (ring_is_not_empty(rx_ring)) {
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0; /* napi disables them */
 				wake_up_interruptible(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
-				if (unlikely(enable_debug))
+				if (unlikely(enable_irq_debug))
 					printk("[PF_RING-ZC] %s: Waking up socket [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 				return 1;
 			}
@@ -6248,7 +6251,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
 
 			/* Store tail (see ice_release_rx_desc) */
-			writel_relaxed(rx_ring->next_to_use, rx_ring->tail);
+			writel(rx_ring->next_to_use, rx_ring->tail);
 
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
@@ -6259,7 +6262,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 			/* nothing to do besides increasing the counter */
-
 			if(unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
 		}
@@ -6275,13 +6277,10 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
       
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
-			for (i = 0; i<rx_ring->count; i++) {
-				union ice_32b_rx_flex_desc *rx_desc = ICE_RX_DESC(rx_ring, i);
-				rx_desc->read.pkt_addr = 0;
-				rx_desc->read.hdr_addr = 0;
-			}
+			/* Zero out the descriptor ring */
+			memset(rx_ring->desc, 0, rx_ring->size);
 
-			rmb();
+			wmb();
 
 			rx_ring->next_to_clean = readl(rx_ring->tail);
 
@@ -6303,7 +6302,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			/* Restore TX */
-
 			tx_ring->next_to_use = tx_ring->next_to_clean = readl(tx_ring->tail);
 
 			if (unlikely(enable_debug))
@@ -6316,7 +6314,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				tx_buffer->skb = NULL;
 			}
 
-			rmb();
+			wmb();
 		}
 
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */) {
@@ -6333,10 +6331,12 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 	}
 
+#if 0
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s %s@%d is %sIN use (%p counter: %u)\n", __FUNCTION__,
 			xx_ring->netdev->name, xx_ring->q_index, device_in_use ? "" : "NOT ", 
 			adapter, atomic_read(&adapter->pfring_zc.usage_counter));
+#endif
 
 	return 0;
 }
@@ -6389,7 +6389,8 @@ static void ice_napi_enable_all(struct ice_vsi *vsi)
 		struct ice_q_vector *q_vector = vsi->q_vectors[q_idx];
 
 #ifdef HAVE_PF_RING
-		if (test_bit(NAPI_STATE_SCHED, &q_vector->napi.state)) /* safety check */
+		//TODO Check if this is required
+		// if (test_bit(NAPI_STATE_SCHED, &q_vector->napi.state)) /* safety check */
 #endif
 		if (q_vector->rx.ring || q_vector->tx.ring)
 			napi_enable(&q_vector->napi);
@@ -8131,6 +8132,9 @@ static void ice_tx_timeout(struct net_device *netdev)
 		else
 			printk("[PF_RING-ZC] %s: device in use\n", __FUNCTION__);
 		return; /* avoid card reset while application is running on top of ZC */
+	} else {
+		printk("[PF_RING-ZC] %s: device not in use, ignoring reset anyway\n", __FUNCTION__);
+		return;
 	}
 #endif
 

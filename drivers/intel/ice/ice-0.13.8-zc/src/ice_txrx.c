@@ -2335,8 +2335,9 @@ bypass:
 	 * do it when needed, however make sure that on when interrupts disabled packets 
          * are delivered if #queued < 4 (this was an issue on X710 adapters where we have
          * to always enable interrupts to avoid race conditions in case of multiple sockets (RSS) */
-	 if (atomic_read(&ice_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0 || 
-             adapter->pfring_zc.interrupts_required) {
+	if (1 || //TODO
+	    atomic_read(&ice_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0 || 
+            adapter->pfring_zc.interrupts_required) {
 #endif
 
 	/* Work is done so exit the polling mode and re-enable the interrupt */
