@@ -6246,24 +6246,33 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
     
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 			struct ice_vsi *vsi = rx_ring->vsi;
+			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
+			u_int32_t curr_tail = rx_ring->next_to_clean;
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
+				printk("[PF_RING-ZC] %s:%d RX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
 			/* Store tail (see ice_release_rx_desc) */
-			writel(rx_ring->next_to_use, rx_ring->tail);
+			//writel(rx_ring->next_to_use, rx_ring->tail);
 
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
 			usleep_range(100, 200);
 
 			ice_clean_rx_ring(rx_ring);
+
+			*shadow_tail_ptr = curr_tail;
 		}
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-			/* nothing to do besides increasing the counter */
+			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_TX_DESC(tx_ring, tx_ring->count);
+
+			*shadow_tail_ptr = tx_ring->next_to_use;
+
 			if(unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
+				printk("[PF_RING-ZC] %s:%d TX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+					readl(tx_ring->tail), tx_ring->next_to_use, tx_ring->next_to_clean);
 		}
 
 		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
@@ -6274,6 +6283,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			struct ice_vsi *vsi = rx_ring->vsi;
+			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
       
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
@@ -6282,31 +6292,43 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			wmb();
 
-			rx_ring->next_to_clean = readl(rx_ring->tail);
+			//rx_ring->next_to_clean = readl(rx_ring->tail);
+			rx_ring->next_to_clean = *shadow_tail_ptr;
+
+			//rx_ring->next_to_use = rx_ring->next_to_clean + 1;
+			//if (rx_ring->next_to_use == rx_ring->count)
+			//	rx_ring->next_to_use = 0;
+			rx_ring->next_to_use = rx_ring->next_to_clean;
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Restoring RX Tail=%u\n", __FUNCTION__, __LINE__,
-					rx_ring->next_to_clean);
+				printk("[PF_RING-ZC] %s:%d Restoring RX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
-			rx_ring->next_to_use = rx_ring->next_to_clean + 1;
-			if (rx_ring->next_to_use == rx_ring->count)
-				rx_ring->next_to_use = 0;
 			ice_alloc_rx_bufs(rx_ring, rx_ring->count - 1);
+			
+			/* Force tail update */
+			if (rx_ring->next_to_clean == 0)
+				rx_ring->next_to_use = rx_ring->count - 1;
+			else
+				rx_ring->next_to_use = rx_ring->next_to_clean - 1;
+			writel_relaxed(rx_ring->next_to_use, rx_ring->tail);
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Refilled RX NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
-					rx_ring->next_to_use, rx_ring->next_to_clean);
+				printk("[PF_RING-ZC] %s:%d Refilled RX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
 			ice_control_rxq(vsi, rx_ring->q_index, true /* start */);
 		}
 
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
+			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_TX_DESC(tx_ring, tx_ring->count);
+
 			/* Restore TX */
-			tx_ring->next_to_use = tx_ring->next_to_clean = readl(tx_ring->tail);
+			tx_ring->next_to_use = tx_ring->next_to_clean = *shadow_tail_ptr;
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Restoring TX Tail=%u\n", __FUNCTION__, __LINE__,
-					tx_ring->next_to_use);
+				printk("[PF_RING-ZC] %s:%d Restoring TX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+					readl(tx_ring->tail), tx_ring->next_to_use, tx_ring->next_to_clean);
        
 			for (i = 0; i < tx_ring->count; i++) {
 				struct ice_tx_buf *tx_buffer = &tx_ring->tx_buf[i];
