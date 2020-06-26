@@ -6262,6 +6262,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			ice_clean_rx_ring(rx_ring);
 
+			/* Note: keep this after ice_clean_rx_ring which is calling memset on desc */
 			*shadow_tail_ptr = curr_tail;
 		}
 
@@ -6284,7 +6285,10 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			struct ice_vsi *vsi = rx_ring->vsi;
 			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
-      
+
+			/* Note: keep this before the desc memset */
+			rx_ring->next_to_clean = *shadow_tail_ptr;
+
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
 			/* Zero out the descriptor ring */
@@ -6293,7 +6297,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			wmb();
 
 			//rx_ring->next_to_clean = readl(rx_ring->tail);
-			rx_ring->next_to_clean = *shadow_tail_ptr;
 
 			//rx_ring->next_to_use = rx_ring->next_to_clean + 1;
 			//if (rx_ring->next_to_use == rx_ring->count)
