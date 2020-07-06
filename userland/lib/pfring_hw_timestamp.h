@@ -25,6 +25,29 @@ struct ixia_hw_ts {
 
 /* *********************************************** */
 
+struct arista_7150_keyframe_hw_ts {
+  struct {
+    u_int32_t hi;
+    u_int32_t ticks;
+  } asic_time;
+  u_int64_t utc_nsec;
+  u_int64_t last_sync;
+  u_int64_t key_ts;
+  u_int64_t egress_if_drops;
+  u_int16_t user_def_device_id;
+  u_int16_t keyframe_egress_if;
+  u_int8_t fcs_type;
+  u_int8_t reserved;
+} __attribute__((__packed__));
+
+struct arista_7150_pkt_hw_ts {
+  struct {
+    u_int32_t ticks;
+  } asic;
+} __attribute__((__packed__));
+
+/* *********************************************** */
+
 #define VSS_APCON_TS_LEN       sizeof(struct vss_apcon_hw_ts)
 
 struct vss_apcon_hw_ts {

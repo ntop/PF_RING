@@ -539,10 +539,18 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
         continue; /* rejected */
 #endif
 
-      if(unlikely(ring->ixia_timestamp_enabled))
-        pfring_handle_ixia_hw_timestamp(buffer, &hdr);
-      else if(unlikely(ring->vss_apcon_timestamp_enabled))
-        pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
+      if (unlikely(ring->flags & (
+            PF_RING_IXIA_TIMESTAMP | 
+            PF_RING_VSS_APCON_TIMESTAMP | 
+            PF_RING_ARISTA_TIMESTAMP))) {
+        if(ring->ixia_timestamp_enabled)
+          pfring_handle_ixia_hw_timestamp(buffer, &hdr);
+        else if(ring->vss_apcon_timestamp_enabled)
+          pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
+        else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
+          pfring_handle_arista_hw_timestamp(buffer, &hdr);
+        }
+      }
 
       looper(&hdr, buffer, user_bytes);
     } else {
@@ -609,10 +617,18 @@ recv_next:
 
     rc = ring->recv(ring, buffer, buffer_len, hdr, wait_for_incoming_packet);
 
-    if(unlikely(ring->ixia_timestamp_enabled))
-      pfring_handle_ixia_hw_timestamp(*buffer, hdr);
-    else if(unlikely(ring->vss_apcon_timestamp_enabled))
-      pfring_handle_vss_apcon_hw_timestamp(*buffer, hdr);
+    if (unlikely(ring->flags & (
+          PF_RING_IXIA_TIMESTAMP | 
+          PF_RING_VSS_APCON_TIMESTAMP | 
+          PF_RING_ARISTA_TIMESTAMP))) {
+      if(ring->ixia_timestamp_enabled)
+        pfring_handle_ixia_hw_timestamp(*buffer, hdr);
+      else if(ring->vss_apcon_timestamp_enabled)
+        pfring_handle_vss_apcon_hw_timestamp(*buffer, hdr);
+      else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
+        pfring_handle_arista_hw_timestamp(*buffer, hdr);
+      }
+    }
 
 #ifdef ENABLE_BPF
     if (unlikely(rc > 0 && ring->userspace_bpf && bpf_filter(ring->userspace_bpf_filter.bf_insns, *buffer, hdr->caplen, hdr->len) == 0))

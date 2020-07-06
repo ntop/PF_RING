@@ -396,6 +396,7 @@ struct __pfring {
 #define PF_RING_TX_BPF	               (1 << 22) /**< pfring_open() flag: Evaluate bpf also for transmitted packets (this also force userspace bpf). */
 #define PF_RING_FLOW_OFFLOAD_TUNNEL    (1 << 23) /**< pfring_open() flag: Enable tunnel dissection with flow offload */
 #define PF_RING_DISCARD_INJECTED_PKTS  (1 << 24) /**< pfring_open() flag: Discard packets injected through the stack module (this avoid loops in MITM applications) */
+#define PF_RING_ARISTA_TIMESTAMP       (1 << 25) /**< pfring_open() flag: Enable Arista 7150 hardware timestamp support and stripping */
  
 /* ********************************* */
 
@@ -1220,6 +1221,34 @@ int pfring_read_ixia_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct t
  * @return 0 on success, a negative value otherwise.
  */
 void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
+
+ /**
+ * Reads the UTC time and ticks from a ARISTA key frame.
+ * @param buffer            Incoming packet buffer.
+ * @param buffer_len        Incoming packet buffer length.
+ * @param ts                The UTC time will be placed here.
+ * @param ts                The ticks will be placed here.
+ * @return 0 on success, a negative number otherwise.
+ */
+int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len, struct timespec *ts, u_int32_t *ticks);
+
+ /**
+ * Reads a ARISTA-formatted timestamp from an incoming packet and puts it into the timestamp variable.
+ * @param buffer            Incoming packet buffer.
+ * @param buffer_len        Incoming packet buffer length.
+ * @param ts                If found the hardware timestamp will be placed here
+ * @return The length of the IXIA timestamp (hence 0 means that the timestamp has not been found).
+ */
+int pfring_read_arista_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts);
+
+ /**
+ * Strip a ARISTA-formatted timestamp from an incoming packet. If the timestamp is found, the
+ * hdr parameter (caplen and len fields) are decreased by the size of the timestamp.
+ * @param buffer            Incoming packet buffer.
+ * @param hdr               This is an in/out parameter: it is used to read the original packet len, and it is updated (size decreased) if the hw timestamp is found
+ * @return 0 on success, a negative value otherwise.
+ */
+void pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
  /**
  * Reads a VSS/APCON-formatted timestamp from an incoming packet and puts it into the timestamp variable.
