@@ -548,7 +548,8 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
         else if(ring->vss_apcon_timestamp_enabled)
           pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
         else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
-          pfring_handle_arista_hw_timestamp(buffer, &hdr);
+          if (pfring_handle_arista_hw_timestamp(buffer, &hdr) == 1)
+            continue; /* skip keyframes */
         }
       }
 
@@ -617,7 +618,7 @@ recv_next:
 
     rc = ring->recv(ring, buffer, buffer_len, hdr, wait_for_incoming_packet);
 
-    if (unlikely(ring->flags & (
+    if (unlikely(rc > 0 && ring->flags & (
           PF_RING_IXIA_TIMESTAMP | 
           PF_RING_VSS_APCON_TIMESTAMP | 
           PF_RING_ARISTA_TIMESTAMP))) {
@@ -626,7 +627,8 @@ recv_next:
       else if(ring->vss_apcon_timestamp_enabled)
         pfring_handle_vss_apcon_hw_timestamp(*buffer, hdr);
       else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
-        pfring_handle_arista_hw_timestamp(*buffer, hdr);
+        if (pfring_handle_arista_hw_timestamp(*buffer, hdr) == 1)
+          goto recv_next;
       }
     }
 

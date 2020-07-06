@@ -1226,20 +1226,20 @@ void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
  * Reads the UTC time and ticks from a ARISTA key frame.
  * @param buffer            Incoming packet buffer.
  * @param buffer_len        Incoming packet buffer length.
- * @param ts                The UTC time will be placed here.
- * @param ts                The ticks will be placed here.
+ * @param ns_ts             The nsec UTC time will be placed here.
+ * @param ticks_ts          The ticks will be placed here.
  * @return 0 on success, a negative number otherwise.
  */
-int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len, struct timespec *ts, u_int32_t *ticks);
+int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts, u_int32_t *ticks_ts);
 
  /**
  * Reads a ARISTA-formatted timestamp from an incoming packet and puts it into the timestamp variable.
  * @param buffer            Incoming packet buffer.
  * @param buffer_len        Incoming packet buffer length.
- * @param ts                If found the hardware timestamp will be placed here
- * @return The length of the IXIA timestamp (hence 0 means that the timestamp has not been found).
+ * @param ns_ts             If found the hardware timestamp will be placed here
+ * @return The length of the ARISTA timestamp.
  */
-int pfring_read_arista_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts);
+int pfring_read_arista_hw_timestamp(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts);
 
  /**
  * Strip a ARISTA-formatted timestamp from an incoming packet. If the timestamp is found, the
@@ -1248,7 +1248,7 @@ int pfring_read_arista_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct
  * @param hdr               This is an in/out parameter: it is used to read the original packet len, and it is updated (size decreased) if the hw timestamp is found
  * @return 0 on success, a negative value otherwise.
  */
-void pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
+int pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
  /**
  * Reads a VSS/APCON-formatted timestamp from an incoming packet and puts it into the timestamp variable.
