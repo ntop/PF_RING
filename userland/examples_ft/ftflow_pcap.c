@@ -142,6 +142,20 @@ void my_sigalarm(int sig) {
 
 /* ****************************************************** */
 
+void l7Detected(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
+  pfring_ft_flow_value *v;
+  char buf[32];
+
+  if(enable_l7) {
+    v = pfring_ft_flow_get_value(flow);
+
+    printf("[Detected] l7: %s, category: %u, tunnelType: %u\n",
+	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf, sizeof(buf)), v->l7_protocol.category, v->tunnel_type);
+  }
+}
+
+/* ****************************************************** */
+
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
@@ -322,6 +336,9 @@ int main(int argc, char* argv[]) {
   }
 
   pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
+
+  /* Uncomment to call a function as soon as a L7 protocol is detected */
+  //pfring_ft_set_l7_detected_callback(ft, l7Detected, NULL);
 
   if (protocols_file) {
     rc = pfring_ft_load_ndpi_protocols(ft, protocols_file);
