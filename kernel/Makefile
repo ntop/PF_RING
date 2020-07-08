@@ -64,7 +64,6 @@ all: Makefile pf_ring.c linux/pf_ring.h
 #		echo "*"; \
 #		echo "*********************************************"; \
 #	fi
-	#make -C $(KERNEL_SRC) SUBDIRS=${HERE} EXTRA_CFLAGS='${EXTRA_CFLAGS}' modules
 	make -C $(KERNEL_SRC) M=${HERE} EXTRA_CFLAGS='${EXTRA_CFLAGS}' modules
 
 dkms-deb:
@@ -74,8 +73,8 @@ dkms-rpm:
 	sudo make -f Makefile.dkms rpm
 
 clean:
-	make -C $(KERNEL_SRC) SUBDIRS=$(HERE) clean
-	\rm -f *~ Module.markers  modules.order *#
+	make -C $(KERNEL_SRC) SUBDIRS=$(HERE) clean || true
+	\rm -f *~ Module.symvers Module.markers modules.order *#
 
 install:
 	mkdir -p $(INSTDIR)
