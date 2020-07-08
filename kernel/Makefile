@@ -71,8 +71,8 @@ dkms-rpm:
 	sudo make -f Makefile.dkms rpm
 
 clean:
-	make -C $(KERNEL_SRC) SUBDIRS=$(HERE) clean
-	\rm -f *~ Module.markers  modules.order *#
+	make -C $(KERNEL_SRC) SUBDIRS=$(HERE) clean || true
+	\rm -f *~ Module.symvers Module.markers modules.order *#
 
 install:
 	mkdir -p $(INSTDIR)
