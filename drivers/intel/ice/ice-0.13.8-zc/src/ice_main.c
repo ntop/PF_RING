@@ -6278,10 +6278,12 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		}
 #endif
 
+#ifdef ICE_ZC_IRQ
 		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
  		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
  		 * in order to avoid this we need to enable interrupts */
 		ice_update_ena_itr(xx_ring->q_vector);
+#endif
 
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
@@ -6361,6 +6363,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			module_put(THIS_MODULE);  /* -- */
 		}
 
+#ifdef ICE_ZC_IRQ
 		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
  		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
  		 * in order to avoid this we need to enable interrupts even if this is not the last user */
@@ -6368,6 +6371,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			/* Enabling interrupts in case they've been disabled by napi and never enabled in ZC mode */
 			ice_update_ena_itr(xx_ring->q_vector);
 		//}
+#endif
 
 	}
 

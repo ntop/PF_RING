@@ -797,10 +797,10 @@ bool ice_alloc_rx_bufs(struct ice_ring *rx_ring, u16 cleaned_count)
 	}
 
 #ifdef HAVE_PF_RING
-	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",
-			__FUNCTION__, rx_ring->netdev->name,
-			cleaned_count, rx_ring->count);
+	//if (unlikely(enable_debug))
+	//	printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",
+	//		__FUNCTION__, rx_ring->netdev->name,
+	//		cleaned_count, rx_ring->count);
 #endif
 
 	/* get the Rx descriptor and buffer based on next_to_use */
@@ -2340,7 +2340,7 @@ bypass:
 
 #ifdef HAVE_PF_RING
 	/* Note: we should not enable interrupts here, as wait_packet_function_ptr should 
-	 * do it when needed, however make sure that on when interrupts disabled packets 
+	 * do it when needed, however make sure that when interrupts are disabled packets 
          * are delivered if #queued < 4 (this was an issue on X710 adapters where we have
          * to always enable interrupts to avoid race conditions in case of multiple sockets (RSS) */
 	if (1 || //TODO
