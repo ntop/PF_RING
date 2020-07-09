@@ -238,8 +238,10 @@ static bool ice_clean_tx_irq(struct ice_ring *tx_ring, int napi_budget)
 	//        	__FUNCTION__, tx_ring->netdev->name,
 	//        	atomic_read(&ice_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter));
 
+#ifdef ICE_TX_ENABLE
 	if (atomic_read(&ice_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter) > 0)
 		return true;
+#endif
 #endif
 
 	tx_buf = &tx_ring->tx_buf[i];
@@ -3445,11 +3447,13 @@ netdev_tx_t ice_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 	tx_ring = vsi->tx_rings[skb->queue_mapping];
 
 #ifdef HAVE_PF_RING
+#ifdef ICE_TX_ENABLE
 	/* We don't allow legacy send when in zc mode */
 	if (atomic_read(&ice_netdev_to_pf(netdev)->pfring_zc.usage_counter) > 0) {
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
 	}
+#endif
 #endif
 
 	/* hardware can't handle really short frames, hardware padding works
