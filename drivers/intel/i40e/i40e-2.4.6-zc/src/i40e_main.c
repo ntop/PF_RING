@@ -513,7 +513,7 @@ static struct rtnl_link_stats64 *i40e_get_netdev_stats_struct(
 	stats->rx_length_errors	= vsi_stats->rx_length_errors;
 #ifndef HAVE_VOID_NDO_GET_STATS64
 
-		return stats;
+	return stats;
 #endif
 }
 #else

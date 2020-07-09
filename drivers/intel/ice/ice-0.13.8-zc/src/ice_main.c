@@ -6219,6 +6219,8 @@ static void ice_control_rxq(struct ice_vsi *vsi, int q_index, bool enable)
 	ice_vsi_wait_one_rx_ring(vsi, enable, q_index);
 }
 
+//#define TAIL_RESET
+
 int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
 	struct ice_ring  *rx_ring = (struct ice_ring *) rx_data;
@@ -6250,7 +6252,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			u_int32_t curr_tail = rx_ring->next_to_clean;
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d RX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+				printk("[PF_RING-ZC] %s:%d RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
 					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
 			/* Store tail (see ice_release_rx_desc) */
@@ -6291,33 +6293,36 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
+#ifdef TAIL_RESET
+			rx_ring->next_to_clean = 0;
+			writel_relaxed(0, rx_ring->tail);
+#endif
+
 			/* Zero out the descriptor ring */
 			memset(rx_ring->desc, 0, rx_ring->size);
 
 			wmb();
 
-			//rx_ring->next_to_clean = readl(rx_ring->tail);
-
-			//rx_ring->next_to_use = rx_ring->next_to_clean + 1;
-			//if (rx_ring->next_to_use == rx_ring->count)
-			//	rx_ring->next_to_use = 0;
 			rx_ring->next_to_use = rx_ring->next_to_clean;
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Restoring RX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+				printk("[PF_RING-ZC] %s:%d Restoring RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
 					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
 			ice_alloc_rx_bufs(rx_ring, rx_ring->count - 1);
-			
+
 			/* Force tail update */
 			if (rx_ring->next_to_clean == 0)
 				rx_ring->next_to_use = rx_ring->count - 1;
 			else
 				rx_ring->next_to_use = rx_ring->next_to_clean - 1;
-			writel_relaxed(rx_ring->next_to_use, rx_ring->tail);
+			rx_ring->next_to_alloc = rx_ring->next_to_use;
+#ifdef TAIL_RESET
+			writel_relaxed(rx_ring->next_to_use & ~0x7, rx_ring->tail);
+#endif
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Refilled RX Tail=%u NTU=%u NTC=%u\n", __FUNCTION__, __LINE__,
+				printk("[PF_RING-ZC] %s:%d Refilled RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
 					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
 			ice_control_rxq(vsi, rx_ring->q_index, true /* start */);
