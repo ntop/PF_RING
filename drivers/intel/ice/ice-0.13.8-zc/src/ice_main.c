@@ -6219,7 +6219,7 @@ static void ice_control_rxq(struct ice_vsi *vsi, int q_index, bool enable)
 	ice_vsi_wait_one_rx_ring(vsi, enable, q_index);
 }
 
-//#define TAIL_RESET
+#define TAIL_RESET
 
 int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
@@ -6286,15 +6286,20 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			struct ice_vsi *vsi = rx_ring->vsi;
+#ifndef TAIL_RESET
 			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
 
 			/* Note: keep this before the desc memset */
 			rx_ring->next_to_clean = *shadow_tail_ptr;
+#endif
 
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
 
 #ifdef TAIL_RESET
+			rx_ring->next_to_alloc = 0;
 			rx_ring->next_to_clean = 0;
+			rx_ring->next_to_use = 0;
+
 			writel_relaxed(0, rx_ring->tail);
 #endif
 
@@ -6303,7 +6308,9 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			wmb();
 
+#ifndef TAIL_RESET
 			rx_ring->next_to_use = rx_ring->next_to_clean;
+#endif
 
 			if (unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d Restoring RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
@@ -6311,14 +6318,14 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			ice_alloc_rx_bufs(rx_ring, rx_ring->count - 1);
 
+#ifndef TAIL_RESET
 			/* Force tail update */
 			if (rx_ring->next_to_clean == 0)
 				rx_ring->next_to_use = rx_ring->count - 1;
 			else
 				rx_ring->next_to_use = rx_ring->next_to_clean - 1;
 			rx_ring->next_to_alloc = rx_ring->next_to_use;
-#ifdef TAIL_RESET
-			writel_relaxed(rx_ring->next_to_use & ~0x7, rx_ring->tail);
+			//writel_relaxed(rx_ring->next_to_use & ~0x7, rx_ring->tail);
 #endif
 
 			if (unlikely(enable_debug))

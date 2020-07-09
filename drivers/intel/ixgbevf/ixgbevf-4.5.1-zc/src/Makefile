@@ -54,6 +54,7 @@ CFLAGS_EXTRA += -D HAVE_PF_RING -DIXGBE_NO_HW_RSC -DDISABLE_PACKET_SPLIT ${DEBUG
 
 # Standard compilation, with regular output
 default:
+	# PF_RING
 	cd ../../../../../kernel/; make
 	cp ../../../../../kernel/Module.symvers .
 	@+$(call kernelbuild,modules)
