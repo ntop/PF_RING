@@ -6129,6 +6129,7 @@ int ring_is_not_empty(struct ice_ring *rx_ring) {
 int wait_packet_function_ptr(void *data, int mode)
 {
 	struct ice_ring *rx_ring = (struct ice_ring*) data;
+#ifdef ICE_ZC_IRQ
 	int new_packets;
 	int enable_irq_debug = 0; // enable_debug;
 
@@ -6177,10 +6178,20 @@ int wait_packet_function_ptr(void *data, int mode)
 		
 		return 0;
 	}
+#else
+	rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
+	if (mode == 1) {
+		rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
+		return 1;
+	} else {
+		return 0;
+	}
+#endif
 }
 
 int wake_up_pfring_zc_socket(struct ice_ring *rx_ring)
 {
+#ifdef ICE_ZC_IRQ
 	int enable_irq_debug = 0; // enable_debug;
 
 	if (atomic_read(&rx_ring->pfring_zc.queue_in_use)) {
@@ -6208,6 +6219,9 @@ int wake_up_pfring_zc_socket(struct ice_ring *rx_ring)
 	}
 
 	return 0;
+#else
+	return 1;
+#endif
 }
 
 static void ice_control_rxq(struct ice_vsi *vsi, int q_index, bool enable)
@@ -6302,7 +6316,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rx_ring->next_to_clean = 0;
 			rx_ring->next_to_use = 0;
 
-			writel_relaxed(0, rx_ring->tail);
+			writel(0, rx_ring->tail);
 #endif
 
 			/* Zero out the descriptor ring */
@@ -6318,7 +6332,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				printk("[PF_RING-ZC] %s:%d Restoring RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
 					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
-			ice_alloc_rx_bufs(rx_ring, rx_ring->count - 1);
+			ice_alloc_rx_bufs(rx_ring, rx_ring->count - 1 /* ICE_DESC_UNUSED(rx_ring) */);
 
 #ifndef ICE_RX_TAIL_RESET
 			/* Force tail update */
@@ -6971,7 +6985,7 @@ int ice_down(struct ice_vsi *vsi)
 
 #ifdef HAVE_PF_RING
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, vsi->netdev->name);
+		printk("[PF_RING-ZC] %s\n", __FUNCTION__);
 #endif
 
 	/* Caller of this function is expected to set the

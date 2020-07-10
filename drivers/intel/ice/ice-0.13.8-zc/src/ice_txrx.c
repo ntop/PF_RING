@@ -1460,7 +1460,7 @@ int ice_clean_rx_irq(struct ice_ring *rx_ring, int budget)
 	//	printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", __FUNCTION__, rx_ring->netdev->name,
         //		atomic_read(&ice_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter));
 
-	if (atomic_read(&ice_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter) > 0) {
+	if (rx_ring->netdev && atomic_read(&ice_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter) > 0) {
 		wake_up_pfring_zc_socket(rx_ring);
 		/* Note: returning budget napi will call us again (keeping interrupts disabled),
 		 * returning budget-1 will tell napi that we are done (this usually also reenable interrupts, not with ZC) */
@@ -2171,9 +2171,12 @@ int ice_napi_poll(struct napi_struct *napi, int budget)
 #endif
 #ifdef HAVE_PF_RING
 	struct ice_vsi *vsi = q_vector->vsi;
-	struct ice_pf *adapter = ice_netdev_to_pf(vsi->netdev);
+	struct ice_pf *adapter = NULL;
 
-	adapter->pfring_zc.interrupts_required = 0;
+	if (vsi->netdev) {
+		adapter = ice_netdev_to_pf(vsi->netdev);
+		adapter->pfring_zc.interrupts_required = 0;
+	}
 #endif
 
 #ifdef ADQ_PERF
@@ -2344,8 +2347,7 @@ bypass:
          * are delivered if #queued < 4 (this was an issue on X710 adapters where we have
          * to always enable interrupts to avoid race conditions in case of multiple sockets (RSS) */
 	if (1 || //TODO
-	    atomic_read(&ice_netdev_to_pf(vsi->netdev)->pfring_zc.usage_counter) == 0 || 
-            adapter->pfring_zc.interrupts_required) {
+	    (adapter && (atomic_read(&adapter->pfring_zc.usage_counter) == 0 || adapter->pfring_zc.interrupts_required))) {
 #endif
 
 	/* Work is done so exit the polling mode and re-enable the interrupt */

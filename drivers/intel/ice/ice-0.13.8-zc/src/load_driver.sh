@@ -15,6 +15,9 @@ insmod ../../../../../kernel/pf_ring.ko
 #modprobe configfs
 
 # Load the driver
+#insmod ./ice.ko RSS=1,1
+
+# Load the driver - Debug
 insmod ./ice.ko enable_debug=1 RSS=1,1
 
 sleep 1

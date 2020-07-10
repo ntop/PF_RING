@@ -2836,7 +2836,7 @@ void ice_vsi_close(struct ice_vsi *vsi)
 #ifdef HAVE_PF_RING
 	{
 		if (unlikely(enable_debug))
-			printk("[PF_RING-ZC] %s: called on %s -> ice_down\n", __FUNCTION__, vsi->netdev->name);
+			printk("[PF_RING-ZC] %s -> ice_down\n", __FUNCTION__);
 #endif
 		ice_down(vsi);
 #ifdef HAVE_PF_RING
