@@ -6238,6 +6238,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct ice_ring  *rx_ring = (struct ice_ring *) rx_data;
 	struct ice_ring  *tx_ring = (struct ice_ring *) tx_data;
 	struct ice_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
+	struct ice_vsi   *vsi;
 	struct ice_pf    *adapter;
 	int n;
  
@@ -6246,7 +6247,8 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 	if (xx_ring == NULL) return -1; /* safety check */
 
-	adapter = ice_netdev_to_pf(xx_ring->netdev);
+	vsi = xx_ring->vsi;
+	adapter = vsi->back; /* or use ice_netdev_to_pf(xx_ring->netdev); */
 
 	if (device_in_use) { /* free all memory */
 
@@ -6259,7 +6261,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
     
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-			struct ice_vsi *vsi = rx_ring->vsi;
 			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
 			u_int32_t curr_tail = rx_ring->next_to_clean;
 
@@ -6301,7 +6302,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-			struct ice_vsi *vsi = rx_ring->vsi;
 #ifndef ICE_RX_TAIL_RESET
 			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
 
@@ -6375,6 +6375,11 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */) {
 			module_put(THIS_MODULE);  /* -- */
+#ifdef ICE_USER_TO_KERNEL_RESET
+			/* Interface reset */
+			set_bit(__ICE_PFR_REQ, adapter->state);
+			ice_service_task_schedule(adapter);
+#endif			
 		}
 
 #ifdef ICE_ZC_IRQ
