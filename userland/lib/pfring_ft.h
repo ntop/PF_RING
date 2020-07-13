@@ -342,7 +342,7 @@ pfring_ft_set_flow_packet_callback(
 /**
  * Set the function to be called when a packet and its flow have been processed and the l7 protocol has been just detected.
  * @param table The flow table handle.
- * @param callback The callback.
+ * @param callback The callback (Note: packet/metadata may be NULL).
  * @param user The user data provided to the callback.
  */
 void
