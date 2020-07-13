@@ -6265,7 +6265,8 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			u_int32_t curr_tail = rx_ring->next_to_clean;
 
 			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
+				printk("[PF_RING-ZC] %s:%d RX Dev=%s Queue=%u Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n",
+					__FUNCTION__, __LINE__, vsi->netdev->name, rx_ring->q_index,
 					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
 
 			/* Store tail (see ice_release_rx_desc) */
@@ -6540,6 +6541,10 @@ static int ice_up_complete(struct ice_vsi *vsi)
 			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 			tx_info.registers_index		    = tx_ring->reg_idx;
+
+			if (unlikely(enable_debug))  
+				printk("[PF_RING-ZC] %s: attach [dev=%s][queue=%u][rx desc=%p][pf start=%llu len=%llu][cache_line_size=%u]\n", __FUNCTION__,
+					vsi->netdev->name, rx_ring->q_index, rx_ring->desc, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0), cache_line_size);
 
 			pf_ring_zc_dev_handler(add_device_mapping,
 				&rx_info,
