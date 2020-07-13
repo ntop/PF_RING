@@ -15,14 +15,17 @@ insmod ../../../../../kernel/pf_ring.ko
 #modprobe configfs
 
 # Load the driver
-#insmod ./ice.ko RSS=1,1
+insmod ./ice.ko RSS=1,1
+
+# Enable 4 queues
+#insmod ./ice.ko RSS=4,4,4,4
 
 # Load the driver - Debug
-insmod ./ice.ko enable_debug=1 RSS=1,1
+#insmod ./ice.ko enable_debug=1 RSS=1,1
 
 sleep 1
 
-#pkill irqbalance 
+pkill irqbalance 
 
 INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
 for IF in $INTERFACES ; do
@@ -31,20 +34,19 @@ for IF in $INTERFACES ; do
 		printf "Configuring %s\n" "$IF"
 
 		# Disabling offloads
-		#ethtool -K $IF sg off tso off gso off gro off > /dev/null 2>&1
+		ethtool -K $IF sg off tso off gso off gro off > /dev/null 2>&1
 
 		# Disabling VLAN stripping
-		#ethtool -K $IF rxvlan off
+		ethtool -K $IF rxvlan off
 
-		#ethtool -A $IF autoneg off
-		#ethtool -A $IF rx off
-		#ethtool -A $IF tx off
-		#ethtool -s $IF speed 100000
+		ethtool -A $IF rx off
+		ethtool -A $IF tx off
 
 		ifconfig $IF up
 
-		#sleep 1
-		#bash ../scripts/set_irq_affinity $IF
+		sleep 1
+
+		bash ../scripts/set_irq_affinity $IF
 	fi
 done
 
