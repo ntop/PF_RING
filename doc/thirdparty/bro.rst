@@ -9,12 +9,14 @@ in README.apt_rpm_packages
 
 2. Download Zeek sources from https://download.zeek.org. Please note 
 that installing Zeek from package can lead to failures when capturing 
-from multiple PF_RING queues.
+from multiple PF_RING queues. Latest recommended Zeek version is 3.0.7,
+newest Zeek release are using a packet polling mechanism which is not
+compatible with PF_RING ZC SPSC queues and some devices.
 
 .. code-block:: console
 
-   wget https://download.zeek.org/zeek-X.X.X.tar.gz
-   tar xvzf zeek-X.X.X.tar.gz
+   wget https://download.zeek.org/zeek-3.0.7.tar.gz
+   tar xvzf zeek-3.0.7.tar.gz
 
 3. Configure and install Zeek:
 
