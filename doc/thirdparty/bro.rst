@@ -91,6 +91,7 @@ At this point it is possible to test the configuration running Zeek with:
 .. code-block:: console
 
    /usr/local/zeek/bin/zeekctl
+   [ZeekControl] > install
    [ZeekControl] > start
 
 Another option for distributing the load using ZC is using zero-copy software 
