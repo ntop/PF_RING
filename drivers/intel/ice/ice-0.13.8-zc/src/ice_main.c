@@ -6240,7 +6240,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct ice_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
 	struct ice_vsi   *vsi;
 	struct ice_pf    *adapter;
-	int n;
+	int i, n;
  
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s %s\n", __FUNCTION__, device_in_use ? "open" : "close");
@@ -6250,36 +6250,44 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	vsi = xx_ring->vsi;
 	adapter = vsi->back; /* or use ice_netdev_to_pf(xx_ring->netdev); */
 
-	if (device_in_use) { /* free all memory */
+	if (device_in_use) { /* free all kernel buffers */
 
-		if ((n = atomic_inc_return(&adapter->pfring_zc.usage_counter)) == 1 /* first user */) {
+		if ((n = atomic_inc_return(&adapter->pfring_zc.usage_counter)) == 1 /* first interface user */) {
 			try_module_get(THIS_MODULE); /* ++ */
 
 			/* wait for ice_clean_rx_irq to complete the current receive if any */
 			usleep_range(100, 200);  
+
+			/* Stopping all queues in kernel space on first user - this avoids receiving
+			 * high-pps traffic in kernel space in promiscuous mode */
+			ice_for_each_rxq(vsi, i) {
+				struct ice_ring *rx_ring_i = vsi->rx_rings[i];
+				u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring_i, rx_ring_i->count);
+				u_int32_t curr_tail = rx_ring_i->next_to_clean;
+
+				if (unlikely(enable_debug))
+					printk("[PF_RING-ZC] %s:%d RX Dev=%s Queue=%u Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n",
+						__FUNCTION__, __LINE__, vsi->netdev->name, rx_ring_i->q_index,
+						readl(rx_ring_i->tail), rx_ring_i->next_to_use, rx_ring_i->next_to_clean);
+
+				/* Store tail (see ice_release_rx_desc) */
+				//writel(rx_ring_i->next_to_use, rx_ring_i->tail);
+
+				/* Stop queue - should be already stopped on first interface user */
+				ice_control_rxq(vsi, rx_ring_i->q_index, false /* stop */);
+
+				usleep_range(100, 200);
+
+				ice_clean_rx_ring(rx_ring_i);
+
+				/* Note: keep this after ice_clean_rx_ring which is calling memset on desc */
+				*shadow_tail_ptr = curr_tail;
+			}
 		}
 
     
-		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
-			u_int32_t curr_tail = rx_ring->next_to_clean;
+		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first queue user */) {
 
-			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d RX Dev=%s Queue=%u Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n",
-					__FUNCTION__, __LINE__, vsi->netdev->name, rx_ring->q_index,
-					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
-
-			/* Store tail (see ice_release_rx_desc) */
-			//writel(rx_ring->next_to_use, rx_ring->tail);
-
-			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
-
-			usleep_range(100, 200);
-
-			ice_clean_rx_ring(rx_ring);
-
-			/* Note: keep this after ice_clean_rx_ring which is calling memset on desc */
-			*shadow_tail_ptr = curr_tail;
 		}
 
 #ifdef ICE_TX_ENABLE
@@ -6298,58 +6306,14 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		/* Note: in case of multiple sockets (RX and TX or RSS) ice_clean_*x_irq is called
  		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
  		 * in order to avoid this we need to enable interrupts */
-		ice_update_ena_itr(xx_ring->q_vector);
+		//ice_update_ena_itr(xx_ring->q_vector);
 #endif
 
-	} else { /* restore card memory */
-		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-#ifndef ICE_RX_TAIL_RESET
-			u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring, rx_ring->count);
-
-			/* Note: keep this before the desc memset */
-			rx_ring->next_to_clean = *shadow_tail_ptr;
-#endif
-
+	} else { /* restore kernel buffers */
+		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last queue user */) {
+			/* Stop queue - just in case of bad socket termination
+			 * (queue should be already stopped on first interface user) */
 			ice_control_rxq(vsi, rx_ring->q_index, false /* stop */);
-
-#ifdef ICE_RX_TAIL_RESET
-			rx_ring->next_to_alloc = 0;
-			rx_ring->next_to_clean = 0;
-			rx_ring->next_to_use = 0;
-
-			writel(0, rx_ring->tail);
-#endif
-
-			/* Zero out the descriptor ring */
-			memset(rx_ring->desc, 0, rx_ring->size);
-
-			wmb();
-
-#ifndef ICE_RX_TAIL_RESET
-			rx_ring->next_to_use = rx_ring->next_to_clean;
-#endif
-
-			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Restoring RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
-					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
-
-			ice_alloc_rx_bufs(rx_ring, rx_ring->count - 1 /* ICE_DESC_UNUSED(rx_ring) */);
-
-#ifndef ICE_RX_TAIL_RESET
-			/* Force tail update */
-			if (rx_ring->next_to_clean == 0)
-				rx_ring->next_to_use = rx_ring->count - 1;
-			else
-				rx_ring->next_to_use = rx_ring->next_to_clean - 1;
-			rx_ring->next_to_alloc = rx_ring->next_to_use;
-			//writel_relaxed(rx_ring->next_to_use & ~0x7, rx_ring->tail);
-#endif
-
-			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Refilled RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
-					readl(rx_ring->tail), rx_ring->next_to_use, rx_ring->next_to_clean);
-
-			ice_control_rxq(vsi, rx_ring->q_index, true /* start */);
 		}
 
 #ifdef ICE_TX_ENABLE
@@ -6374,8 +6338,63 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		}
 #endif
 
-		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */) {
+		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last interface user */) {
 			module_put(THIS_MODULE);  /* -- */
+
+			/* Starting all queues in kernel space */
+			ice_for_each_rxq(vsi, i) {
+				struct ice_ring *rx_ring_i = vsi->rx_rings[i];
+#ifndef ICE_RX_TAIL_RESET
+				u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring_i, rx_ring_i->count);
+
+				/* Note: keep this before the desc memset */
+				rx_ring_i->next_to_clean = *shadow_tail_ptr;
+#endif
+
+				/* Disable queue - note: userspace should already stop it
+				 * on graceful termination */
+				ice_control_rxq(vsi, rx_ring_i->q_index, false /* stop */);
+
+#ifdef ICE_RX_TAIL_RESET
+				rx_ring_i->next_to_alloc = 0;
+				rx_ring_i->next_to_clean = 0;
+				rx_ring_i->next_to_use = 0;
+
+				writel(0, rx_ring_i->tail);
+#endif
+
+				/* Zero out the descriptor ring */
+				memset(rx_ring_i->desc, 0, rx_ring_i->size);
+
+				wmb();
+
+#ifndef ICE_RX_TAIL_RESET
+				rx_ring_i->next_to_use = rx_ring_i->next_to_clean;
+#endif
+
+				if (unlikely(enable_debug))
+					printk("[PF_RING-ZC] %s:%d Restoring RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
+						readl(rx_ring_i->tail), rx_ring_i->next_to_use, rx_ring_i->next_to_clean);
+
+				ice_alloc_rx_bufs(rx_ring_i, rx_ring_i->count - 1 /* ICE_DESC_UNUSED(rx_ring_i) */);
+
+#ifndef ICE_RX_TAIL_RESET
+				/* Force tail update */
+				if (rx_ring_i->next_to_clean == 0)
+					rx_ring_i->next_to_use = rx_ring_i->count - 1;
+				else
+					rx_ring_i->next_to_use = rx_ring_i->next_to_clean - 1;
+				rx_ring_i->next_to_alloc = rx_ring_i->next_to_use;
+				//writel_relaxed(rx_ring_i->next_to_use & ~0x7, rx_ring_i->tail);
+#endif
+
+				if (unlikely(enable_debug))
+					printk("[PF_RING-ZC] %s:%d Refilled RX Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n", __FUNCTION__, __LINE__,
+						readl(rx_ring_i->tail), rx_ring_i->next_to_use, rx_ring_i->next_to_clean);
+
+				ice_control_rxq(vsi, rx_ring_i->q_index, true /* start */);
+			}
+
 #ifdef ICE_USER_TO_KERNEL_RESET
 			/* Interface reset */
 			set_bit(__ICE_PFR_REQ, adapter->state);
