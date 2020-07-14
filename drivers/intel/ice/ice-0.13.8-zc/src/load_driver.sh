@@ -17,11 +17,14 @@ insmod ../../../../../kernel/pf_ring.ko
 # Load the driver
 insmod ./ice.ko RSS=1,1
 
-# Enable 4 queues
-#insmod ./ice.ko RSS=4,4,4,4
-
 # Load the driver - Debug
 #insmod ./ice.ko enable_debug=1 RSS=1,1
+
+# Load the driver - Enable RSS
+#insmod ./ice.ko RSS=4,4,4,4
+
+# Load the driver - Enable RSS - Debug
+#insmod ./ice.ko RSS=4,4,4,4 enable_debug=1
 
 sleep 1
 

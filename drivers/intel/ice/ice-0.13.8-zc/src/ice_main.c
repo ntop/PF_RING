@@ -6532,7 +6532,7 @@ static int ice_up_complete(struct ice_vsi *vsi)
 			rx_info.packet_memory_num_slots     = rx_ring->count;
 			rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
 			rx_info.descr_packet_memory_tot_len = rx_ring->size;
-			rx_info.registers_index		    = rx_ring->reg_idx;
+			rx_info.registers_index		    = rx_ring->reg_idx; /* vsi->rxq_map[rx_ring->q_index] */
 			rx_info.stats_index		    = vsi->vsi_num;
 			rx_info.vector			    = rx_ring->q_vector->v_idx + vsi->base_vector;
  
@@ -6540,7 +6540,7 @@ static int ice_up_complete(struct ice_vsi *vsi)
 			tx_info.packet_memory_num_slots     = tx_ring->count;
 			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
-			tx_info.registers_index		    = tx_ring->reg_idx;
+			tx_info.registers_index		    = tx_ring->reg_idx; /* vsi->txq_map[tx_ring->q_index] */
 
 			if (unlikely(enable_debug))  
 				printk("[PF_RING-ZC] %s: attach [dev=%s][queue=%u][rx desc=%p][pf start=%llu len=%llu][cache_line_size=%u]\n", __FUNCTION__,
