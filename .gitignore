@@ -10,6 +10,7 @@
 *.pyc
 *.cmd
 *.ko
+*.o.ur-safe
 
 #### OS and tools generated files
 *~
