@@ -47,6 +47,7 @@ cp $HOME/PF_RING/userland/lib/libpfring.a      $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/lib/libpfring.so     $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/local/include
+cp $HOME/PF_RING/userland/lib/pfring_ft.h      $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/nbpf/nbpf.h  $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/libpcap/libpcap.a    $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/libpcap/libpcap.so.1.8.1	$RPM_BUILD_ROOT/usr/local/lib
@@ -105,6 +106,7 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/lib/libpcap.so.1.8.1
 /usr/local/include/pfring.h
 /usr/local/include/pfring_zc.h
+/usr/local/include/pfring_ft.h
 /usr/local/include/nbpf.h
 %if 0%{?centos_ver} != 8
 /usr/local/lib/daq/daq_pfring.la
