@@ -17,8 +17,8 @@ Installation
 
 Install a kernel >4.18.
 
-On Ubuntu 18.04 you can use uktools available at https://github.com/usbkey9/uktools/
-following the instructions below:
+Ubuntu 20 already runs a kernel 5.x which is supported by AF_XDP. On Ubuntu 18.04 you can
+use uktools available at https://github.com/usbkey9/uktools/ following the instructions below:
 
 .. code-block:: console
 
@@ -32,10 +32,12 @@ Download and unpack sources for kernel 5.x, it will be used to compile and insta
    wget http://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.1.2.tar.xz
    tar xvf linux-5.1.2.tar.xz 
    cd linux-5.1.2/tools/lib/bpf
+   sudo apt-get install libelf-dev
    make
-   make install_lib && make install_headers
+   sudo make install_lib
+   sudo make install_headers
 
-Compile PF_RING with AF_XDP support:
+Compile PF_RING with AF_XDP support (note: --enable-xdp was required on previous pf_ring versions):
 
 .. code-block:: console
 
@@ -52,6 +54,6 @@ Example:
 .. code-block:: console
 
    cd examples
-   ./pfcount -i xdp:eth1@0
+   sudo ./pfcount -i xdp:eth1@0
 
 Please note that with AF_XDP pf_ring attaches to a NIC queue, please disable RSS or open all queues.
