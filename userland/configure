@@ -1378,7 +1378,7 @@ Optional Features:
   --enable-redis          Enable Redis support in PF_RING
   --enable-zmq            Enable ZMQ support in PF_RING
   --disable-ft-dl         Disable dlopen support in FT to link nDPI
-  --enable-xdp            Enable XDP/AF_XDP support in PF_RING
+  --disable-xdp           Disable XDP/AF_XDP support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
 
 Some influential environment variables:
@@ -3904,7 +3904,7 @@ if test "${enable_xdp+set}" = set; then :
   enableval=$enable_xdp;
 fi
 
-if test "x$enable_xdp" = xyes; then
+if test "x$enable_xdp" != "xno"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING AF_XDP support" >&5
 $as_echo_n "checking PF_RING AF_XDP support... " >&6; }
   if test -f /usr/local/include/bpf/xsk.h; then

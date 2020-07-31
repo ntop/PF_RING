@@ -169,9 +169,9 @@ fi
 dnl> end of pthread_setaffinity_np check
 fi
 
-dnl> AF_XDP - disabled by default
-AC_ARG_ENABLE([xdp], AS_HELP_STRING([--enable-xdp], [Enable XDP/AF_XDP support in PF_RING]))
-if test "x$enable_xdp" = xyes; then
+dnl> AF_XDP - Default enabled
+AC_ARG_ENABLE([xdp], AS_HELP_STRING([--disable-xdp], [Disable XDP/AF_XDP support in PF_RING]))
+if test "x$enable_xdp" != "xno"; then
   AC_MSG_CHECKING([PF_RING AF_XDP support])
   if test -f /usr/local/include/bpf/xsk.h; then
     BUILD_KERNEL=`uname -r`
