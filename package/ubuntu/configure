@@ -583,6 +583,8 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+LIBBPF_COPY
+LIBBPF_DEST
 NDPI_DEP
 PRE_BUILD_EXAMPLES
 PRE_DEP
@@ -1723,9 +1725,19 @@ else
   NDPI_DEP=""
 fi
 
+if test "$UBUNTU_RELEASE" = "20.04"; then
+  LIBBPF_DEST="debian/usr/local/lib64"
+  LIBBPF_COPY="cp /usr/local/lib64/libbpf.so* \$(HERE)/debian/usr/local/lib64/ 2>/dev/null || true"
+else
+  LIBBPF_DEST=""
+  LIBBPF_COPY=""
+fi
+
 
 DATE=`date -R`
 KERNEL=`uname -r`
+
+
 
 
 

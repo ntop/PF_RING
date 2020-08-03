@@ -39,6 +39,14 @@ else
   NDPI_DEP=""
 fi
 
+if test "$UBUNTU_RELEASE" = "20.04"; then
+  LIBBPF_DEST="debian/usr/local/lib64"
+  LIBBPF_COPY="cp /usr/local/lib64/libbpf.so* \$(HERE)/debian/usr/local/lib64/ 2>/dev/null || true"
+else
+  LIBBPF_DEST=""
+  LIBBPF_COPY=""
+fi
+
 dnl> The step below is necessary to make sure the package will work on the
 dnl> target system without having to deal with ldconfig
 dnl> if test -d /opt/accolade/lib/;  then sudo cp /opt/accolade/lib/libanic.so /usr/local/lib; fi
@@ -56,6 +64,8 @@ AC_SUBST(PFRING_VERS)
 AC_SUBST(PRE_DEP)
 AC_SUBST(PRE_BUILD_EXAMPLES)
 AC_SUBST(NDPI_DEP)
+AC_SUBST(LIBBPF_DEST)
+AC_SUBST(LIBBPF_COPY)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(debian/changelog)
