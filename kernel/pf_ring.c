@@ -8727,7 +8727,7 @@ static int __init ring_init(void)
   int rc;
 
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
-	 "(C) 2004-19 ntop.org\n",
+	 "(C) 2004-20 ntop.org\n",
 	 RING_VERSION, GIT_REV);
 
   printk("LINUX_VERSION_CODE %08X\n", LINUX_VERSION_CODE);
