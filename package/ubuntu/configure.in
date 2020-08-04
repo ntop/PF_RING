@@ -41,7 +41,7 @@ fi
 
 if test "$UBUNTU_RELEASE" = "20.04"; then
   LIBBPF_DEST="debian/usr/local/lib64"
-  LIBBPF_COPY="cp /usr/local/lib64/libbpf.so* \$(HERE)/debian/usr/local/lib64/ 2>/dev/null || true"
+  LIBBPF_COPY="cp -P /usr/local/lib64/libbpf.so* \$(HERE)/debian/usr/local/lib64/ 2>/dev/null || true"
 else
   LIBBPF_DEST=""
   LIBBPF_COPY=""
