@@ -300,7 +300,7 @@ pfring_zc_queue_breakloop(
  * @param queue        The queue handle.
  * @param pkt_handle   The pointer to the buffer handle to send. Once a packet has been sent, the buffer handle can be reused or if not longer necessary it must be freed by calling pfring_zc_release_packet_handle().
  * @param flush_packet The flag indicating whether this call should flush the enqueued packet, and older packets if any.
- * @return             The packet length on success, a negative value otherwise. 
+ * @return             The packet length on success, 0 if filtered out (bpf), a negative value otherwise. 
  */
 int 
 pfring_zc_send_pkt(
@@ -315,7 +315,7 @@ pfring_zc_send_pkt(
  * @param pkt_handles   The array with the buffer handles for the buffers to send.
  * @param num_packets   The number of packets to send to the queue.
  * @param flush_packets The flag indicating whether this call should flush the enqueued packets, and older packets if any.
- * @return              The number of packets successfully sent, a negative value in case of error.
+ * @return              The number of packets successfully sent, a negative value in case of error. Note: packets sent can be less than num_packets in case there is not enough room in the TX queue or in case of BPF filters.
  */
 int 
 pfring_zc_send_pkt_burst(
