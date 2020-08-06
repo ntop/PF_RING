@@ -247,9 +247,9 @@ else
   AC_MSG_RESULT(no)
   AC_MSG_WARN([nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI])
   AC_MSG_CHECKING([nDPI support for nBPF - static linking])
-  NDPI_HOME="../../nDPI"
-  if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
-    NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
+  NDPI_HOME="$HOME/nDPI"
+  if test -f "$NDPI_HOME/src/lib/libndpi.a"; then
+    NDPI_LIB="../$NDPI_HOME/src/lib/libndpi.a"
     NDPI_INC="-I../$NDPI_HOME/src/include"
     HAVE_NDPI="-D HAVE_NDPI"
     AC_MSG_RESULT(yes)

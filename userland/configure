@@ -3981,9 +3981,9 @@ $as_echo "no" >&6; }
 $as_echo "$as_me: WARNING: nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI" >&2;}
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support for nBPF - static linking" >&5
 $as_echo_n "checking nDPI support for nBPF - static linking... " >&6; }
-  NDPI_HOME="../../nDPI"
-  if test -f "$NDPI_HOME/src/lib/.libs/libndpi.a"; then
-    NDPI_LIB="../$NDPI_HOME/src/lib/.libs/libndpi.a"
+  NDPI_HOME="$HOME/nDPI"
+  if test -f "$NDPI_HOME/src/lib/libndpi.a"; then
+    NDPI_LIB="../$NDPI_HOME/src/lib/libndpi.a"
     NDPI_INC="-I../$NDPI_HOME/src/include"
     HAVE_NDPI="-D HAVE_NDPI"
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
