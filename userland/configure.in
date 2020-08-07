@@ -249,8 +249,8 @@ else
   AC_MSG_CHECKING([nDPI support for nBPF - static linking])
   NDPI_HOME="$HOME/nDPI"
   if test -f "$NDPI_HOME/src/lib/libndpi.a"; then
-    NDPI_LIB="../$NDPI_HOME/src/lib/libndpi.a"
-    NDPI_INC="-I../$NDPI_HOME/src/include"
+    NDPI_LIB="$NDPI_HOME/src/lib/libndpi.a"
+    NDPI_INC="-I$NDPI_HOME/src/include"
     HAVE_NDPI="-D HAVE_NDPI"
     AC_MSG_RESULT(yes)
   else
