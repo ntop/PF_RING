@@ -3965,34 +3965,6 @@ if test "x$enable_bpf" != "xno"; then :
   HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support for FT" >&5
-$as_echo_n "checking nDPI support for FT... " >&6; }
-ndpi_installed=`pkg-config --exists libndpi && echo yes`
-if test x$ndpi_installed = xyes ; then
-  NDPI_LIB=`pkg-config --libs libndpi`
-  NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I^ \t*\)/\1\/libndpi/g'`
-  HAVE_NDPI="-D HAVE_NDPI"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI" >&5
-$as_echo "$as_me: WARNING: nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI" >&2;}
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support for nBPF - static linking" >&5
-$as_echo_n "checking nDPI support for nBPF - static linking... " >&6; }
-  NDPI_HOME="$HOME/nDPI"
-  if test -f "$NDPI_HOME/src/lib/libndpi.a"; then
-    NDPI_LIB="$NDPI_HOME/src/lib/libndpi.a"
-    NDPI_INC="-I$NDPI_HOME/src/include"
-    HAVE_NDPI="-D HAVE_NDPI"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-  fi
-fi
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"

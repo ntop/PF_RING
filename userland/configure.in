@@ -236,27 +236,26 @@ dnl> BPF - Default enabled
 AC_ARG_ENABLE([bpf], AS_HELP_STRING([--disable-bpf], [Disable BPF support in PF_RING]))
 AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
 
-AC_MSG_CHECKING([nDPI support for FT])
-ndpi_installed=`pkg-config --exists libndpi && echo yes`
-if test x$ndpi_installed = xyes ; then
-  NDPI_LIB=`pkg-config --libs libndpi`
-  NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I[^ \t]*\)/\1\/libndpi/g'`
-  HAVE_NDPI="-D HAVE_NDPI"
-  AC_MSG_RESULT(yes)
-else
-  AC_MSG_RESULT(no)
-  AC_MSG_WARN([nDPI is required for L7 protocol detection with PF_RING FT, please install it from http://github.com/ntop/nDPI])
-  AC_MSG_CHECKING([nDPI support for nBPF - static linking])
-  NDPI_HOME="$HOME/nDPI"
-  if test -f "$NDPI_HOME/src/lib/libndpi.a"; then
-    NDPI_LIB="$NDPI_HOME/src/lib/libndpi.a"
-    NDPI_INC="-I$NDPI_HOME/src/include"
-    HAVE_NDPI="-D HAVE_NDPI"
-    AC_MSG_RESULT(yes)
-  else
-    AC_MSG_RESULT(no)
-  fi
-fi
+dnl> AC_MSG_CHECKING([nDPI support])
+dnl> ndpi_installed=`pkg-config --exists libndpi && echo yes`
+dnl> if test x$ndpi_installed = xyes ; then
+dnl>   NDPI_LIB=`pkg-config --libs libndpi`
+dnl>   NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I[^ \t]*\)/\1\/libndpi/g'`
+dnl>   HAVE_NDPI="-D HAVE_NDPI"
+dnl>   AC_MSG_RESULT(yes)
+dnl> else
+dnl>   AC_MSG_RESULT(no)
+dnl>   AC_MSG_CHECKING([nDPI support for nBPF - static linking])
+dnl>   NDPI_HOME="$HOME/nDPI"
+dnl>   if test -f "$NDPI_HOME/src/lib/libndpi.a"; then
+dnl>     NDPI_LIB="$NDPI_HOME/src/lib/libndpi.a"
+dnl>     NDPI_INC="-I$NDPI_HOME/src/include"
+dnl>     HAVE_NDPI="-D HAVE_NDPI"
+dnl>     AC_MSG_RESULT(yes)
+dnl>   else
+dnl>     AC_MSG_RESULT(no)
+dnl>   fi
+dnl> fi
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
