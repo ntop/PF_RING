@@ -81,6 +81,9 @@ void pfring_mod_pcap_close(pfring *ring) {
 
   if(pcap->pd)
     pcap_close(pcap->pd);
+
+  free(ring->priv_data);
+  ring->priv_data = NULL;
 }
 
 /* **************************************************** */
