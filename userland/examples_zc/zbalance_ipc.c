@@ -98,9 +98,6 @@ u_int32_t n2disk_threads;
 char *vlan_filter = NULL;
 bitmap64_t(allowed_vlans, 1024);
 
-static char *bpf_filter = NULL;
-static char *bpf_filename = NULL;
-
 /* ******************************** */
 
 #ifdef HAVE_PF_RING_FT
@@ -399,29 +396,159 @@ void sigproc(int sig) {
 
 /* *************************************** */
 
-static char* read_bpf_filter_from_file(const char* filename) {
-  // signal-safety function only
-  static char buf[256];
-  int fd;
-  buf[0] = '\0';
+#define MAX_FILENAME_LEN 256
+#define MAX_CONTENTS_LEN 256
+
+struct file_node {
+  char filename[MAX_FILENAME_LEN];
+  char contents[MAX_CONTENTS_LEN];
+  struct file_node* next;
+};
+
+struct file_list {
+  struct file_node* head;
+  int modified;
+};
+
+static void append_file_list(struct file_list* list, const char* filename) {
+  struct file_node* new_node = (struct file_node*)malloc(sizeof(struct file_node));
+  strcpy(new_node->filename, filename);
+  new_node->contents[0] = '\0'; 
+  new_node->next = NULL;
+  if (list->head) {
+    struct file_node* node;
+    for (node = list->head; node->next; node = node->next);
+    node->next = new_node;
+  } else
+    list->head = new_node;
+}
+
+// signal-safety function
+static char* readline_from_file(const char* filename) {
+  static char buf[MAX_CONTENTS_LEN];
+	int fd;
   if ((fd = open(filename, O_RDONLY)) > 0) {
     int n;
     if ((n = read(fd, buf, sizeof(buf))) > 0) {
       buf[n] = '\0';
+      char* line_end = strpbrk(buf, "\r\n");
+      if (line_end) // line trim
+        *line_end = '\0';
     }
     close(fd);
-  }
-  return buf;
+    return buf;
+  } else
+    return NULL;
 }
 
-void reload_bpf_filter(int sig) {
-  if (bpf_filename != NULL) {
-    bpf_filter = read_bpf_filter_from_file(bpf_filename);
+// signal-safety function
+static void readline_from_file_list(struct file_list* list) {
+  list->modified = 0;
+  struct file_node* node;
+  for (node = list->head; node; node = node->next) {
+    char* buf = readline_from_file(node->filename);
+    if (buf && strcmp(node->contents, buf)) {
+      list->modified = 1;
+      strcpy(node->contents, buf);
+      trace(TRACE_NORMAL, "file '%s' loaded : '%s'\n", node->filename, node->contents);
+    }
   }
 }
 
-static int is_bpf_filename(const char* str) {
-  return str && strstr(str, ".bpf") != NULL;
+static char** init_inzq_bpf(struct file_list* list, size_t qlen) {
+  int i;
+  struct file_node* node;
+  char** zq_bpf;
+  if (!list->head)
+    return NULL;
+  zq_bpf = calloc(qlen, sizeof(char*));
+  // same bpf for all inzq for now
+  node = list->head;
+  for (i = 0; i < qlen; i++) {
+    zq_bpf[i] = node->contents;
+    trace(TRACE_NORMAL, "inqzs[%d] bpf file : %s\n", i, node->filename);
+  }
+  readline_from_file_list(list);
+  return zq_bpf;
+}
+
+static char** init_outzq_bpf(struct file_list* list, size_t qlen) {
+  int i;
+  struct file_node* node;
+  char** zq_bpf;
+  if (!list->head)
+    return NULL;
+  zq_bpf = calloc(qlen, sizeof(char*));
+  for (node = list->head; node; node = node->next) {
+    char* filename_end = strchr(node->filename, '@');
+    *filename_end++ = '\0';
+    if (*filename_end == '\0') {
+      trace(TRACE_ERROR, "outzq number must be specified after '@'\n");
+      continue;
+    }
+    char* queue_index = strtok(filename_end, ",");
+    while (queue_index) {
+      i = atoi(queue_index);
+      if (i < qlen) {
+        zq_bpf[i] = node->contents;
+        trace(TRACE_NORMAL, "outzqs[%d] bpf file : %s\n", i, node->filename);
+      } else {
+        trace(TRACE_ERROR, "outzq number(%d) must be less than %d\n", i, num_consumer_queues);
+        continue;
+      }
+      queue_index = strtok(NULL, ",");
+    }
+  }
+  readline_from_file_list(list);
+  return zq_bpf;
+}
+
+struct file_list in_bpf_file_list = {NULL, 0};
+struct file_list out_bpf_file_list = {NULL, 0};
+char** inzq_bpf = NULL;
+char** outzq_bpf = NULL;
+
+void on_bpf_files_modified(int sig) {
+  readline_from_file_list(&in_bpf_file_list);
+  readline_from_file_list(&out_bpf_file_list);
+}
+
+// bpf update should be done in packet_process thread but...
+// - filter_func alone is not enough because if bpf doesn't match at all, it will not be called.
+//   (this is especially for inzq_bpf. if outzq_bpf is evaluated after filter_func.)
+// - idle_func alone is not enough because if traffic is too busy, it may not be called.
+// that's why we need both filter_func and idle_func, either of them is always called.
+
+void set_inzq_bpf() {
+  if (in_bpf_file_list.modified) {
+    int i;
+    in_bpf_file_list.modified = 0;
+    for (i = 0; i < num_devices; i++) {
+      if (!inzq_bpf[i])
+        continue;
+      pfring_zc_remove_bpf_filter(inzqs[i]);
+      if (pfring_zc_set_bpf_filter(inzqs[i], inzq_bpf[i]) != 0)
+        trace(TRACE_NORMAL, "inzqs[%d] bpf set error : '%s'", i, inzq_bpf[i]);
+      else
+        trace(TRACE_NORMAL, "inzqs[%d] bpf set : '%s'", i, inzq_bpf[i]);
+    }
+  }
+}
+
+void set_outzq_bpf() {
+  if (out_bpf_file_list.modified) {
+    int i;
+    out_bpf_file_list.modified = 0;
+    for (i = 0; i < num_consumer_queues; i++) {
+      if (!outzq_bpf[i])
+        continue;
+      pfring_zc_remove_bpf_filter(outzqs[i]);
+      if (pfring_zc_set_bpf_filter(outzqs[i], outzq_bpf[i]) != 0)
+        trace(TRACE_NORMAL, "outzqs[%d] bpf set error : '%s'", i, outzq_bpf[i]);
+      else
+        trace(TRACE_NORMAL, "outzqs[%d] bpf set : '%s'", i, outzq_bpf[i]);
+    }
+  }
 }
 
 /* *************************************** */
@@ -465,8 +592,10 @@ void printHelp(void) {
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
-  printf("-f <bpf>         Set a BPF filter (this may affect the performance!)\n");
-  printf("                 bpf can be expression or filename(must end with .bpf) which can be update in runtime by SIGUSR1\n");
+  printf("-f <bpf file>    Set a BPF filter for input queue(this may affect the performance!)\n");
+  printf("                 bpf file contains single line bpf expression which can be update in runtime by SIGUSR1\n");
+  printf("   @num_list     Set a BPF filter for output queues specified in num_list ex. -f bpf1@0,1,2\\n");
+  printf("                 this option can be specified multiple times\n");
   printf("-x <vlans>       Set a VLAN filter (comma-separated list of VLAN ID)\n");
 #ifdef HAVE_PF_RING_FT
   printf("-T               Enable FT (Flow Table) support for flow filtering\n");
@@ -485,27 +614,20 @@ void printHelp(void) {
 }
 
 /* *************************************** */
-void update_bpf_filter() {
-  // updating bpf filter should in packet_process thread
-  // but not in filter_func/distr_func
-  // because if bpf doesn't match at all, they are not called any more.
-  // then idle_func is the only func left.
-  if (bpf_filter != NULL) {
-    int i;
-    for (i = 0; i < num_devices; i++) {
-      if (pfring_zc_remove_bpf_filter(inzqs[i]) != 0) {
-        fprintf(stderr, "pfring_zc_remove_bpf_filter error\n");
-      }
-      if (pfring_zc_set_bpf_filter(inzqs[i], bpf_filter) != 0) {
-        fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", bpf_filter);
-      }
-    }
-    trace(TRACE_NORMAL, "bpf updated : %s", bpf_filter);
-    bpf_filter = NULL;
-  }
+
+void idle_func() {
+  if (inzq_bpf)
+    set_inzq_bpf();
 }
 
-int64_t packet_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+/* *************************************** */
+
+int64_t filter_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+
+  if (inzq_bpf)
+    set_inzq_bpf();
+  if (outzq_bpf)
+	  set_outzq_bpf();
 
   if (vlan_filter) {
     int rc = 0;
@@ -787,9 +909,7 @@ int main(int argc, char* argv[]) {
 #ifdef HAVE_ZMQ
   pthread_t zmq_thread;
 #endif
-  pfring_zc_idle_callback idle_func = NULL;
   pfring_zc_distribution_func distr_func = NULL;
-  pfring_zc_filtering_func filter_func = NULL;
 
   start_time.tv_sec = 0;
 
@@ -826,11 +946,10 @@ int main(int argc, char* argv[]) {
       pfring_zc_debug();
       break;
     case 'f':
-      if (is_bpf_filename(optarg)) {
-        bpf_filename = strdup(optarg);
-        bpf_filter = read_bpf_filter_from_file(bpf_filename);
-      } else
-        bpf_filter = strdup(optarg);
+      if (strchr(optarg, '@'))
+        append_file_list(&out_bpf_file_list, optarg);
+      else
+        append_file_list(&in_bpf_file_list, optarg);
       break;
     case 'm':
       hash_mode = atoi(optarg);
@@ -922,19 +1041,6 @@ int main(int argc, char* argv[]) {
   if (device == NULL) printHelp();
   if (cluster_id < 0) printHelp();
   if (applications == NULL) printHelp();
-
-  if (vlan_filter
-#ifdef HAVE_PF_RING_FT
-      || flow_table
-#endif
-#ifdef HAVE_ZMQ
-      || zmq_server
-#endif
-     )
-    filter_func = packet_filtering_func;
-
-  if (bpf_filename != NULL)
-    idle_func = update_bpf_filter;
 
   if (vlan_filter != NULL) {
     char *vlan;
@@ -1113,15 +1219,7 @@ int main(int argc, char* argv[]) {
       }
 
     }
-
-    if (bpf_filter != NULL) {
-      if (pfring_zc_set_bpf_filter(inzqs[i], bpf_filter) != 0) {
-        fprintf(stderr, "pfring_zc_set_bpf_filter error setting '%s'\n", bpf_filter);
-        return -1;
-      }
-    }
   }
-  bpf_filter = NULL;
 
   for (i = 0; i < num_consumer_queues; i++) {
     if (outdevs[i] == NULL) { /* Egress queue */
@@ -1156,6 +1254,13 @@ int main(int argc, char* argv[]) {
       pfring_zc_destroy_cluster(zc);
       return -1;
     }
+  }
+
+  if ((inzq_bpf = init_inzq_bpf(&in_bpf_file_list, num_devices))) {
+    set_inzq_bpf();
+  }
+  if ((outzq_bpf = init_outzq_bpf(&out_bpf_file_list, num_consumer_queues))) {
+    set_outzq_bpf();
   }
 
   wsp = pfring_zc_create_buffer_pool(zc, PREFETCH_BUFFERS);
@@ -1223,7 +1328,7 @@ int main(int argc, char* argv[]) {
 #ifdef HAVE_ZMQ
   signal(SIGHUP, print_filter);
 #endif
-  signal(SIGUSR1, reload_bpf_filter);
+  signal(SIGUSR1, on_bpf_files_modified);
 
   if (time_pulse) {
     pulse_timestamp_ns = calloc(CACHE_LINE_LEN/sizeof(u_int64_t), sizeof(u_int64_t));
