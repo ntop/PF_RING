@@ -257,6 +257,7 @@ void printHelp(void) {
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
   printf("-z              Randomize generated IPs sequence\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
+  printf("-W <ID>[,<ID>]  Forge VLAN packets with the specified VLAN ID (and QinQ ID if specified after comma)\n");
   printf("-L <num>        Forge VLAN packets with <num> different ids\n");
   printf("-F              Force flush for each packet (to avoid bursts, expect low performance)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
@@ -355,7 +356,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "A:b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:t:w:V:z8:")) != -1) {
+  while((c = getopt(argc, argv, "A:b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:")) != -1) {
     switch(c) {
     case 'A':
       uniq_pkts_per_sec = atoi(optarg);
@@ -445,9 +446,6 @@ int main(int argc, char* argv[]) {
     case 'S':
       inet_aton(optarg, &srcaddr);
       break;
-    case 'w':
-      watermark = atoi(optarg);
-      break;
     case 'd':
       daemon_mode = 1;
       break;
@@ -456,6 +454,21 @@ int main(int argc, char* argv[]) {
       break;
     case 'V':
       ip_v = atoi(optarg);
+      break;
+    case 'w':
+      watermark = atoi(optarg);
+      break;
+    case 'W':
+      {
+        char *comma = strchr(optarg, ',');
+        if(comma != NULL) {
+          comma[0] = '\0'; comma++;
+          qinq_vlan_id = atoi(comma);
+          forge_qinq_vlan = 1;
+        }
+        vlan_id = atoi(optarg);
+        forge_vlan = 1;
+      }
       break;
     case 't':
       num_ports = atoi(optarg);
