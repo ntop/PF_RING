@@ -199,7 +199,9 @@ static void forge_udp_packet_fast(u_char *buffer, u_int packet_len, u_int idx) {
 #if !defined(HAVE_DPDK)
 static int ip_offset = 0;
 static int reforge_src_mac = 0, reforge_dst_mac = 0;
-static int forge_vlan = 0, num_vlan = 1;
+static int forge_vlan = 0, forge_qinq_vlan = 0;
+static int vlan_id = 0, qinq_vlan_id = 0;
+static int num_vlan = 1;
 static int forge_payload = 0;
 static char srcmac[6] = { 0 }, dstmac[6] = { 0 };
 static struct in_addr srcaddr = { 0 }, dstaddr = { 0 };
@@ -224,7 +226,14 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
   if (forge_vlan) { 
     vlan = (struct eth_vlan_hdr *) &buffer[l2_len];
     buffer[l2_len-2] = 0x81, buffer[l2_len-1] = 0x00;
-    vlan->h_vlan_id = htons((idx % num_vlan) + 1); 
+    vlan->h_vlan_id = htons((vlan_id ? vlan_id : 1) + (idx % num_vlan)); 
+    l2_len += sizeof(struct eth_vlan_hdr);
+  }
+
+  if (forge_qinq_vlan) { 
+    vlan = (struct eth_vlan_hdr *) &buffer[l2_len];
+    buffer[l2_len-2] = 0x81, buffer[l2_len-1] = 0x00;
+    vlan->h_vlan_id = htons(qinq_vlan_id); 
     l2_len += sizeof(struct eth_vlan_hdr);
   }
 
