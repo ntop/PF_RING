@@ -176,6 +176,16 @@ pfring_zc_create_cluster(
 );
 
 /**
+ * Get the cluster id. 
+ * @param cluster The cluster handle.
+ * @return        The cluster id.
+ */
+u_int32_t
+pfring_zc_get_cluster_id(
+  pfring_zc_cluster *cluster
+);
+
+/**
  * Destroy a cluster.
  * @param cluster The cluster handle.
  */
@@ -414,17 +424,6 @@ pfring_zc_set_rxfh_indir(
 /* **************************************************************************************** */
 
 /**
- * Get the cluster id. 
- * @param cluster The cluster handle.
- * @return        The cluster id.
- */
-u_int32_t
-pfring_zc_get_cluster_id(
-  pfring_zc_cluster *cluster
-);
-
-
-/**
  * Read the queue id. If the actual queue is a device, it is possible to convert the ID to the device index using QUEUEID_TO_IFINDEX(id)
  * @param queue The queue handle.
  * @return      The queue id. A few macros are available to check the queue id:
@@ -434,15 +433,6 @@ pfring_zc_get_cluster_id(
  *              QUEUEID_TO_IFINDEX(i) convert queue id to device index, if QUEUE_IS_DEVICE(id)
  *              IFINDEX_TO_QUEUEID(i) convert back device index to queue id, if QUEUE_IS_DEVICE(id)
  *              @endcode
- */
-u_int32_t
-pfring_zc_get_queue_id(
-  pfring_zc_queue *queue
-);
-
-/**
- * Read queue queue id.
- * @param queue The queue handle.
  */
 u_int32_t
 pfring_zc_get_queue_id(
@@ -734,6 +724,15 @@ pfring_zc_buffer_pool *
 pfring_zc_create_buffer_pool(
   pfring_zc_cluster *cluster, 
   u_int32_t pool_len
+);
+
+/**
+ * Read pool id.
+ * @param pool The pool handle.
+ */
+u_int32_t
+pfring_zc_get_pool_id(
+  pfring_zc_buffer_pool *pool
 );
 
 /**
