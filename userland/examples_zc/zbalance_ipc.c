@@ -592,10 +592,10 @@ void printHelp(void) {
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
-  printf("-f <bpf file>    Set a BPF filter for input queue(this may affect the performance!)\n");
-  printf("                 bpf file contains single line bpf expression which can be update in runtime by SIGUSR1\n");
-  printf("   @num_list     Set a BPF filter for output queues specified in num_list ex. -f bpf1@0,1,2\\n");
-  printf("                 this option can be specified multiple times\n");
+  printf("-f <bpf file>    Set a BPF filter for input queue (this may affect the performance!)\n");
+  printf("                 <bpf file> contains a single-line BPF expression which can be updated at runtime by sending a SIGUSR1\n");
+  printf("                 It is possible to set a BPF filter for output queues by specifying @<queue id list> (e.g. -f bpf1@0,1,2)\n");
+  printf("                 Note: this option can be specified multiple times\n");
   printf("-x <vlans>       Set a VLAN filter (comma-separated list of VLAN ID)\n");
 #ifdef HAVE_PF_RING_FT
   printf("-T               Enable FT (Flow Table) support for flow filtering\n");
@@ -627,7 +627,7 @@ int64_t packet_filtering_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
   if (inzq_bpf)
     set_inzq_bpf();
   if (outzq_bpf)
-	  set_outzq_bpf();
+    set_outzq_bpf();
 
   if (vlan_filter) {
     int rc = 0;
