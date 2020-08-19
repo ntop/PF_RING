@@ -432,6 +432,16 @@ pfring_ft_list_get_next(
 );
 
 /**
+ * Get the flow ID.
+ * @param flow The flow handle.
+ * @return The flow ID.
+ */
+u_int64_t
+pfring_ft_flow_get_id(
+  pfring_ft_flow *flow
+);
+
+/**
  * Get the flow key.
  * @param flow The flow handle.
  * @return The flow key.
