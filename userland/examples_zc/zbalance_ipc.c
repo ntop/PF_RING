@@ -271,16 +271,18 @@ void print_stats() {
     if (pfring_zc_stats(inzqs[i], &stats) == 0)
       tot_recv += stats.recv, tot_drop += stats.drop;
 
-  if (!daemon_mode && !proc_stats_only)
+  if (!daemon_mode && !proc_stats_only) {
     trace(TRACE_NORMAL, "=========================");
-
+    trace(TRACE_NORMAL, "Queue TX Stats (Packets sent to applications):");
+  }
+  
   for (i = 0; i < num_consumer_queues; i++)
     if (pfring_zc_stats(outzqs[i], &stats) == 0) {
       tot_slave_sent += stats.sent, tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
       
       if (!daemon_mode && !proc_stats_only)
-	trace(TRACE_NORMAL, "Fwd Absolute Stats: Queue %2u: %s pkts (%s drops)\n", i,
-	      pfring_format_numbers((double)stats.sent, buf1, sizeof(buf1), 0),
+	trace(TRACE_NORMAL, "                   Queue %2u: %s pkts (%s drops)\n", i,
+	      pfring_format_numbers((double)stats.sent+stats.drop, buf1, sizeof(buf1), 0),
 	      pfring_format_numbers((double)stats.drop, buf2, sizeof(buf2), 0));      
     }
   
@@ -293,6 +295,24 @@ void print_stats() {
 	    pfring_format_numbers((double)tot_slave_drop, buf4, sizeof(buf4), 0)
     );
 
+  }
+
+  if (print_all && last_time.tv_sec > 0) {
+    double delta_msec = delta_time(&end_time, &last_time);
+    unsigned long long diff_recv = tot_recv - last_tot_recv;
+    unsigned long long diff_drop = tot_drop - last_tot_drop;
+    unsigned long long diff_slave_sent = tot_slave_sent - last_tot_slave_sent;
+    //unsigned long long diff_slave_recv = tot_slave_recv - last_tot_slave_recv;
+    unsigned long long diff_slave_drop = tot_slave_drop - last_tot_slave_drop;
+
+    if (!daemon_mode && !proc_stats_only) {
+      trace(TRACE_NORMAL, "Actual Stats:         Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
+	      pfring_format_numbers(((double)diff_recv/(double)(delta_msec/1000)),  buf1, sizeof(buf1), 1),
+	      pfring_format_numbers(((double)diff_drop/(double)(delta_msec/1000)),  buf2, sizeof(buf2), 1),
+	      pfring_format_numbers(((double)diff_slave_sent/(double)(delta_msec/1000)),  buf3, sizeof(buf3), 1),
+	      pfring_format_numbers(((double)diff_slave_drop/(double)(delta_msec/1000)),  buf4, sizeof(buf4), 1)
+      );
+    }
   }
 
   snprintf(stats_buf, sizeof(stats_buf), 
@@ -337,10 +357,13 @@ void print_stats() {
   	     "IFDropped:    %lu\n",
 	     (long unsigned int)tot_if_recv, 
 	     (long unsigned int)tot_if_drop);
+
+    trace(TRACE_NORMAL, "Queue RX Stats (Packets read by applications):");
+    
     for (i = 0; i < num_consumer_queues; i++) {
       if (pfring_zc_stats(outzqs[i], &stats) == 0) {
         if (!daemon_mode && !proc_stats_only) {
-          trace(TRACE_NORMAL, "                Q %u RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
+          trace(TRACE_NORMAL, "                   Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
                   i, stats.recv, stats.drop, 
 	          stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
         }
@@ -362,26 +385,8 @@ void print_stats() {
   }
 
   pfring_zc_set_proc_stats(zc, stats_buf);
-
-  if (print_all && last_time.tv_sec > 0) {
-    double delta_msec = delta_time(&end_time, &last_time);
-    unsigned long long diff_recv = tot_recv - last_tot_recv;
-    unsigned long long diff_drop = tot_drop - last_tot_drop;
-    unsigned long long diff_slave_sent = tot_slave_sent - last_tot_slave_sent;
-    //unsigned long long diff_slave_recv = tot_slave_recv - last_tot_slave_recv;
-    unsigned long long diff_slave_drop = tot_slave_drop - last_tot_slave_drop;
-
-    if (!daemon_mode && !proc_stats_only) {
-      trace(TRACE_NORMAL, "Actual Stats:         Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
-	      pfring_format_numbers(((double)diff_recv/(double)(delta_msec/1000)),  buf1, sizeof(buf1), 1),
-	      pfring_format_numbers(((double)diff_drop/(double)(delta_msec/1000)),  buf2, sizeof(buf2), 1),
-	      pfring_format_numbers(((double)diff_slave_sent/(double)(delta_msec/1000)),  buf3, sizeof(buf3), 1),
-	      pfring_format_numbers(((double)diff_slave_drop/(double)(delta_msec/1000)),  buf4, sizeof(buf4), 1)
-      );
-    }
-  }
   
-  if (!daemon_mode && !proc_stats_only) 
+  if (!daemon_mode && !proc_stats_only)
     trace(TRACE_NORMAL, "=========================\n\n");
  
   last_tot_recv = tot_recv, last_tot_slave_sent = tot_slave_sent;
