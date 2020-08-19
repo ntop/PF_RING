@@ -271,18 +271,28 @@ void print_stats() {
     if (pfring_zc_stats(inzqs[i], &stats) == 0)
       tot_recv += stats.recv, tot_drop += stats.drop;
 
-  for (i = 0; i < num_consumer_queues; i++)
-    if (pfring_zc_stats(outzqs[i], &stats) == 0)
-      tot_slave_sent += stats.sent, tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
-
-  if (!daemon_mode && !proc_stats_only) {
+  if (!daemon_mode && !proc_stats_only)
     trace(TRACE_NORMAL, "=========================");
-    trace(TRACE_NORMAL, "Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
+
+  for (i = 0; i < num_consumer_queues; i++)
+    if (pfring_zc_stats(outzqs[i], &stats) == 0) {
+      tot_slave_sent += stats.sent, tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
+      
+      if (!daemon_mode && !proc_stats_only)
+	trace(TRACE_NORMAL, "Fwd Absolute Stats: Queue %2u: %s pkts (%s drops)\n", i,
+	      pfring_format_numbers((double)stats.sent, buf1, sizeof(buf1), 0),
+	      pfring_format_numbers((double)stats.drop, buf2, sizeof(buf2), 0));      
+    }
+  
+  if (!daemon_mode && !proc_stats_only) {
+    trace(TRACE_NORMAL, "");
+    trace(TRACE_NORMAL, "Total Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
             pfring_format_numbers((double)tot_recv, buf1, sizeof(buf1), 0),
 	    pfring_format_numbers((double)tot_drop, buf2, sizeof(buf2), 0),
 	    pfring_format_numbers((double)tot_slave_sent, buf3, sizeof(buf3), 0),
 	    pfring_format_numbers((double)tot_slave_drop, buf4, sizeof(buf4), 0)
     );
+
   }
 
   snprintf(stats_buf, sizeof(stats_buf), 
@@ -362,7 +372,7 @@ void print_stats() {
     unsigned long long diff_slave_drop = tot_slave_drop - last_tot_slave_drop;
 
     if (!daemon_mode && !proc_stats_only) {
-      trace(TRACE_NORMAL, "Actual Stats: Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
+      trace(TRACE_NORMAL, "Actual Stats:         Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
 	      pfring_format_numbers(((double)diff_recv/(double)(delta_msec/1000)),  buf1, sizeof(buf1), 1),
 	      pfring_format_numbers(((double)diff_drop/(double)(delta_msec/1000)),  buf2, sizeof(buf2), 1),
 	      pfring_format_numbers(((double)diff_slave_sent/(double)(delta_msec/1000)),  buf3, sizeof(buf3), 1),
@@ -554,7 +564,7 @@ void set_outzq_bpf() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance_ipc - (C) 2014-2020 ntop.org\n");
+  printf("zbalance_ipc - (C) 2014-20 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process balancing packets to multiple consumer processes.\n\n");
   printf("Usage: zbalance_ipc -i <device> -c <cluster id> -n <num inst>\n"
@@ -583,6 +593,7 @@ void printHelp(void) {
   printf("-q <size>        Number of slots in each consumer queue (default: %u)\n", QUEUE_LEN);
   printf("-b <size>        Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
   printf("-w               Use hw aggregation when specifying multiple devices in -i (when supported)\n");
+  printf("-W <sec>         Wait <sec> seconds before processing packets\n");
   printf("-N <num>         Producer for n2disk multi-thread (<num> threads)\n");
   printf("-a               Active packet wait\n");
   printf("-Q <sock list>   Enable VM support (comma-separated list of QEMU monitor sockets)\n");
@@ -890,11 +901,12 @@ int main(int argc, char* argv[]) {
   char *pid_file = NULL;
   char *hugepages_mountpoint = NULL;
   int opt_argc;
+  u_int wait_time_sec = 0;
   char **opt_argv;
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
-  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:n:N:pr:Q:q:P:R:S:u:wvx:z"
+  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:n:N:pr:Q:q:P:R:S:u:wvx:zW:"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -1037,6 +1049,11 @@ int main(int argc, char* argv[]) {
     case 'x':
       vlan_filter = strdup(optarg);
     break;
+    case 'W':
+      wait_time_sec = atoi(optarg);
+      if(wait_time_sec > 10)
+	wait_time_sec = 10; /* Upper limit */
+      break;      
     }
   }
   
@@ -1402,6 +1419,13 @@ int main(int argc, char* argv[]) {
       off++;
     }
   }
+
+  if(wait_time_sec) {
+    trace(TRACE_NORMAL, "Sleeping %u sec...", wait_time_sec);
+    sleep(wait_time_sec);    
+  }
+
+  trace(TRACE_NORMAL, "Running...");
 
   if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4 || hash_mode == 5 || hash_mode == 6) && num_apps == 1)) { /* balancer */
 
