@@ -71,6 +71,11 @@ the '-zc' suffix. Three driver families are currently available:
   - fm10k (RX and TX)
      - Supported cards: FM10420
 
+- 10/25/50/100 Gbit
+
+  - ice (RX and TX)
+     - Supported cards: E810
+
 These drivers can be found in drivers/
 
 Please note that:
