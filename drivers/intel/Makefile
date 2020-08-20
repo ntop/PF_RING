@@ -4,6 +4,7 @@ IXGBE=ixgbe/ixgbe-5.5.3-zc
 IXGBEVF=ixgbevf/ixgbevf-4.5.1-zc
 I40E=i40e/i40e-2.4.6-zc
 FM10K=fm10k/fm10k-0.23.5-zc
+ICE=ice/ice-0.13.8-zc
 
 all:
 	cd $(E1000E); make
@@ -12,6 +13,7 @@ all:
 	cd $(IXGBEVF); make
 	cd $(I40E); make
 	cd $(FM10K); make
+	cd $(ICE); make
 
 clean:
 	cd $(E1000E); make clean
@@ -20,6 +22,7 @@ clean:
 	cd $(IXGBEVF); make clean
 	cd $(I40E); make clean
 	cd $(FM10K); make clean
+	cd $(ICE); make clean
 	-/bin/rm *.deb *.rpm
 
 cleanup:
@@ -33,10 +36,6 @@ dkms-deb-virtual:
 	cd tmp; dpkg-deb -b pfring-drivers-zc-dkms .; mv *.deb ..
 
 dkms-deb: cleanup dkms-deb-virtual
-	sudo make -f Makefile.dkms.fm10k deb
-	cp /var/lib/dkms/fm10k-zc/*/deb/*.deb .
-	sudo make -f Makefile.dkms.i40e deb
-	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.e1000e deb
 	cp /var/lib/dkms/e1000e-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.igb deb
@@ -45,14 +44,21 @@ dkms-deb: cleanup dkms-deb-virtual
 	cp /var/lib/dkms/ixgbe-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.ixgbevf deb
 	cp /var/lib/dkms/ixgbevf-zc/*/deb/*.deb .
+	sudo make -f Makefile.dkms.i40e deb
+	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
+	sudo make -f Makefile.dkms.fm10k deb
+	cp /var/lib/dkms/fm10k-zc/*/deb/*.deb .
+	sudo make -f Makefile.dkms.ice deb
+	cp /var/lib/dkms/ice-zc/*/deb/*.deb .
 
 dkms-rpm: cleanup dkms-rpm-virtual
-	sudo make -f Makefile.dkms.fm10k rpm
-	sudo make -f Makefile.dkms.i40e rpm
 	sudo make -f Makefile.dkms.e1000e rpm
 	sudo make -f Makefile.dkms.igb rpm
 	sudo make -f Makefile.dkms.ixgbe rpm
 	sudo make -f Makefile.dkms.ixgbevf rpm
+	sudo make -f Makefile.dkms.i40e rpm
+	sudo make -f Makefile.dkms.fm10k rpm
+	sudo make -f Makefile.dkms.ice rpm
 
 dkms-rpm-virtual:
 	rpmbuild -ba pfring-zc-rpm.spec

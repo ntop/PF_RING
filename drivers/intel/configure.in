@@ -3,45 +3,51 @@ AC_INIT([Makefile.in], 1.0)
 PF_RING_VERSION=`../../package/version.sh --release`
 REVISION=`../../package/version.sh --revision`
 
-FM10K="fm10k"
-FM10K_VERSION=`grep "FM10K=" Makefile|cut -d '-' -f 2`
-I40E="i40e"
-I40E_VERSION=`grep "I40E=" Makefile|cut -d '-' -f 2`
+E1000E="e1000e"
+E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
+IGB="igb"
+IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
 IXGBE="ixgbe"
 IXGBE_VERSION=`grep "IXGBE=" Makefile|cut -d '-' -f 2`
 IXGBEVF="ixgbevf"
 IXGBEVF_VERSION=`grep "IXGBEVF=" Makefile|cut -d '-' -f 2`
-IGB="igb"
-IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
-E1000E="e1000e"
-E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
+I40E="i40e"
+I40E_VERSION=`grep "I40E=" Makefile|cut -d '-' -f 2`
+FM10K="fm10k"
+FM10K_VERSION=`grep "FM10K=" Makefile|cut -d '-' -f 2`
+ICE="ice"
+ICE_VERSION=`grep "ICE=" Makefile|cut -d '-' -f 2`
 
 AC_SUBST(PF_RING_VERSION)
 AC_SUBST(REVISION)
-AC_SUBST(FM10K)
-AC_SUBST(FM10K_VERSION)
-AC_SUBST(I40E)
-AC_SUBST(I40E_VERSION)
+AC_SUBST(E1000E)
+AC_SUBST(E1000E_VERSION)
+AC_SUBST(IGB)
+AC_SUBST(IGB_VERSION)
 AC_SUBST(IXGBE)
 AC_SUBST(IXGBE_VERSION)
 AC_SUBST(IXGBEVF)
 AC_SUBST(IXGBEVF_VERSION)
-AC_SUBST(IGB)
-AC_SUBST(IGB_VERSION)
-AC_SUBST(E1000E)
-AC_SUBST(E1000E_VERSION)
+AC_SUBST(I40E)
+AC_SUBST(I40E_VERSION)
+AC_SUBST(FM10K)
+AC_SUBST(FM10K_VERSION)
+AC_SUBST(ICE)
+AC_SUBST(ICE_VERSION)
 
-AC_CONFIG_FILES(Makefile.dkms.fm10k)
-AC_CONFIG_FILES(Makefile.dkms.i40e)
+AC_CONFIG_FILES(Makefile.dkms.e1000e)
+AC_CONFIG_FILES(Makefile.dkms.igb)
 AC_CONFIG_FILES(Makefile.dkms.ixgbe)
 AC_CONFIG_FILES(Makefile.dkms.ixgbevf)
-AC_CONFIG_FILES(Makefile.dkms.igb)
-AC_CONFIG_FILES(Makefile.dkms.e1000e)
-AC_CONFIG_FILES(dkms.conf.fm10k)
-AC_CONFIG_FILES(dkms.conf.i40e)
+AC_CONFIG_FILES(Makefile.dkms.i40e)
+AC_CONFIG_FILES(Makefile.dkms.fm10k)
+AC_CONFIG_FILES(Makefile.dkms.ice)
+AC_CONFIG_FILES(dkms.conf.e1000e)
+AC_CONFIG_FILES(dkms.conf.igb)
 AC_CONFIG_FILES(dkms.conf.ixgbe)
 AC_CONFIG_FILES(dkms.conf.ixgbevf)
-AC_CONFIG_FILES(dkms.conf.igb)
-AC_CONFIG_FILES(dkms.conf.e1000e)
+AC_CONFIG_FILES(dkms.conf.i40e)
+AC_CONFIG_FILES(dkms.conf.fm10k)
+AC_CONFIG_FILES(dkms.conf.ice)
 
 AC_OUTPUT

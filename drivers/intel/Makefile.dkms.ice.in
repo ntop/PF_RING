@@ -1,0 +1,41 @@
+all: install
+
+add: veryclean
+	\/bin/rm -rf /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@
+	mkdir -p /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
+	cd @ICE@/@ICE@-@ICE_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
+	cp ../../kernel/linux/pf_ring.h /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
+	sed -i -e 's/ice\.o/ice_zc.o/' -e 's/ice-/ice_zc-/' /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Kbuild
+	mv /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Kbuild /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Makefile
+	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Makefile
+	cp dkms.conf.@ICE@ /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/dkms.conf 
+	dkms add -m @ICE@-zc -v @ICE_VERSION@.@REVISION@
+
+build: add
+	dkms build -m @ICE@-zc -v @ICE_VERSION@.@REVISION@
+
+install: build
+	dkms install --force -m @ICE@-zc -v @ICE_VERSION@.@REVISION@
+
+deb: add add_deb install
+	dkms mkdeb -m @ICE@-zc -v @ICE_VERSION@.@REVISION@ --source-only
+
+rpm: add add_rpm install
+	dkms mkrpm -m @ICE@-zc -v @ICE_VERSION@.@REVISION@ --source-only
+
+add_rpm:
+	cp -f zc.spec /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/@ICE@-zc-dkms-mkrpm.spec
+
+add_deb:
+	cp -r zc-dkms-mkdeb /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/@ICE@-zc-dkms-mkdeb
+	-cd  /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/@ICE@-zc-dkms-mkdeb ; find . -type d -name ".git" -exec rm -fr {} \;
+
+remove:
+	-dkms remove -m @ICE@-zc -v @ICE_VERSION@.@REVISION@ --all
+	\/bin/rm -f /lib/modules/*/weak-updates/ice*ko
+	\/bin/rm -f /lib/modules/*/extra/ice*ko
+	\/bin/rm -rf /var/lib/dkms/ice-zc
+
+veryclean: remove
+	\/bin/rm -fr /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@
+	

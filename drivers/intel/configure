@@ -583,18 +583,20 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-E1000E_VERSION
-E1000E
-IGB_VERSION
-IGB
+ICE_VERSION
+ICE
+FM10K_VERSION
+FM10K
+I40E_VERSION
+I40E
 IXGBEVF_VERSION
 IXGBEVF
 IXGBE_VERSION
 IXGBE
-I40E_VERSION
-I40E
-FM10K_VERSION
-FM10K
+IGB_VERSION
+IGB
+E1000E_VERSION
+E1000E
 REVISION
 PF_RING_VERSION
 target_alias
@@ -1691,18 +1693,20 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 PF_RING_VERSION=`../../package/version.sh --release`
 REVISION=`../../package/version.sh --revision`
 
-FM10K="fm10k"
-FM10K_VERSION=`grep "FM10K=" Makefile|cut -d '-' -f 2`
-I40E="i40e"
-I40E_VERSION=`grep "I40E=" Makefile|cut -d '-' -f 2`
+E1000E="e1000e"
+E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
+IGB="igb"
+IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
 IXGBE="ixgbe"
 IXGBE_VERSION=`grep "IXGBE=" Makefile|cut -d '-' -f 2`
 IXGBEVF="ixgbevf"
 IXGBEVF_VERSION=`grep "IXGBEVF=" Makefile|cut -d '-' -f 2`
-IGB="igb"
-IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
-E1000E="e1000e"
-E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
+I40E="i40e"
+I40E_VERSION=`grep "I40E=" Makefile|cut -d '-' -f 2`
+FM10K="fm10k"
+FM10K_VERSION=`grep "FM10K=" Makefile|cut -d '-' -f 2`
+ICE="ice"
+ICE_VERSION=`grep "ICE=" Makefile|cut -d '-' -f 2`
 
 
 
@@ -1719,29 +1723,35 @@ E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
 
 
 
-ac_config_files="$ac_config_files Makefile.dkms.fm10k"
 
-ac_config_files="$ac_config_files Makefile.dkms.i40e"
+
+ac_config_files="$ac_config_files Makefile.dkms.e1000e"
+
+ac_config_files="$ac_config_files Makefile.dkms.igb"
 
 ac_config_files="$ac_config_files Makefile.dkms.ixgbe"
 
 ac_config_files="$ac_config_files Makefile.dkms.ixgbevf"
 
-ac_config_files="$ac_config_files Makefile.dkms.igb"
+ac_config_files="$ac_config_files Makefile.dkms.i40e"
 
-ac_config_files="$ac_config_files Makefile.dkms.e1000e"
+ac_config_files="$ac_config_files Makefile.dkms.fm10k"
 
-ac_config_files="$ac_config_files dkms.conf.fm10k"
+ac_config_files="$ac_config_files Makefile.dkms.ice"
 
-ac_config_files="$ac_config_files dkms.conf.i40e"
+ac_config_files="$ac_config_files dkms.conf.e1000e"
+
+ac_config_files="$ac_config_files dkms.conf.igb"
 
 ac_config_files="$ac_config_files dkms.conf.ixgbe"
 
 ac_config_files="$ac_config_files dkms.conf.ixgbevf"
 
-ac_config_files="$ac_config_files dkms.conf.igb"
+ac_config_files="$ac_config_files dkms.conf.i40e"
 
-ac_config_files="$ac_config_files dkms.conf.e1000e"
+ac_config_files="$ac_config_files dkms.conf.fm10k"
+
+ac_config_files="$ac_config_files dkms.conf.ice"
 
 
 cat >confcache <<\_ACEOF
@@ -2449,18 +2459,20 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "Makefile.dkms.fm10k") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.fm10k" ;;
-    "Makefile.dkms.i40e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.i40e" ;;
+    "Makefile.dkms.e1000e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.e1000e" ;;
+    "Makefile.dkms.igb") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.igb" ;;
     "Makefile.dkms.ixgbe") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbe" ;;
     "Makefile.dkms.ixgbevf") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbevf" ;;
-    "Makefile.dkms.igb") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.igb" ;;
-    "Makefile.dkms.e1000e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.e1000e" ;;
-    "dkms.conf.fm10k") CONFIG_FILES="$CONFIG_FILES dkms.conf.fm10k" ;;
-    "dkms.conf.i40e") CONFIG_FILES="$CONFIG_FILES dkms.conf.i40e" ;;
+    "Makefile.dkms.i40e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.i40e" ;;
+    "Makefile.dkms.fm10k") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.fm10k" ;;
+    "Makefile.dkms.ice") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ice" ;;
+    "dkms.conf.e1000e") CONFIG_FILES="$CONFIG_FILES dkms.conf.e1000e" ;;
+    "dkms.conf.igb") CONFIG_FILES="$CONFIG_FILES dkms.conf.igb" ;;
     "dkms.conf.ixgbe") CONFIG_FILES="$CONFIG_FILES dkms.conf.ixgbe" ;;
     "dkms.conf.ixgbevf") CONFIG_FILES="$CONFIG_FILES dkms.conf.ixgbevf" ;;
-    "dkms.conf.igb") CONFIG_FILES="$CONFIG_FILES dkms.conf.igb" ;;
-    "dkms.conf.e1000e") CONFIG_FILES="$CONFIG_FILES dkms.conf.e1000e" ;;
+    "dkms.conf.i40e") CONFIG_FILES="$CONFIG_FILES dkms.conf.i40e" ;;
+    "dkms.conf.fm10k") CONFIG_FILES="$CONFIG_FILES dkms.conf.fm10k" ;;
+    "dkms.conf.ice") CONFIG_FILES="$CONFIG_FILES dkms.conf.ice" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
