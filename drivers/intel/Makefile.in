@@ -1,10 +1,10 @@
-E1000E=e1000e/e1000e-3.4.0.2-zc
-IGB=igb/igb-5.3.5.18-zc
-IXGBE=ixgbe/ixgbe-5.5.3-zc
-IXGBEVF=ixgbevf/ixgbevf-4.5.1-zc
-I40E=i40e/i40e-2.4.6-zc
-FM10K=fm10k/fm10k-0.23.5-zc
-ICE=ice/ice-0.13.8-zc
+E1000E=e1000e/e1000e-@E1000E_VERSION@-zc
+IGB=igb/igb-@IGB_VERSION@-zc
+IXGBE=ixgbe/ixgbe-@IXGBE_VERSION@-zc
+IXGBEVF=ixgbevf/ixgbevf-@IXGBEVF_VERSION@-zc
+I40E=i40e/i40e-@I40E_VERSION@-zc
+FM10K=fm10k/fm10k-@FM10K_VERSION@-zc
+ICE=ice/ice-@ICE_VERSION@-zc
 
 all:
 	cd $(E1000E); make

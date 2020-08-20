@@ -1,5 +1,21 @@
 AC_INIT([Makefile.in], 1.0)
 
+E1000E="e1000e"
+IGB="igb"
+IXGBE="ixgbe"
+IXGBEVF="ixgbevf"
+I40E="i40e"
+FM10K="fm10k"
+ICE="ice"
+
+E1000E_VERSION=3.4.0.2
+IGB_VERSION=5.3.5.18
+IXGBE_VERSION=5.5.3
+IXGBEVF_VERSION=4.5.1
+I40E_VERSION=2.4.6
+FM10K_VERSION=0.23.5
+ICE_VERSION=0.13.8
+
 PF_RING_VERSION=`../../package/version.sh --release`
 REVISION=`../../package/version.sh --revision`
 
@@ -12,21 +28,6 @@ else
   # Kernel >=3
   HAVE_ICE=y
 fi
-
-E1000E="e1000e"
-E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
-IGB="igb"
-IGB_VERSION=`grep "IGB=" Makefile|cut -d '-' -f 2`
-IXGBE="ixgbe"
-IXGBE_VERSION=`grep "IXGBE=" Makefile|cut -d '-' -f 2`
-IXGBEVF="ixgbevf"
-IXGBEVF_VERSION=`grep "IXGBEVF=" Makefile|cut -d '-' -f 2`
-I40E="i40e"
-I40E_VERSION=`grep "I40E=" Makefile|cut -d '-' -f 2`
-FM10K="fm10k"
-FM10K_VERSION=`grep "FM10K=" Makefile|cut -d '-' -f 2`
-ICE="ice"
-ICE_VERSION=`grep "ICE=" Makefile|cut -d '-' -f 2`
 
 AC_SUBST(PF_RING_VERSION)
 AC_SUBST(REVISION)
