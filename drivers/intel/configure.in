@@ -3,6 +3,16 @@ AC_INIT([Makefile.in], 1.0)
 PF_RING_VERSION=`../../package/version.sh --release`
 REVISION=`../../package/version.sh --revision`
 
+KERNEL_VERS_MAJ=`uname -r |cut -d. -f1`
+
+if test "$KERNEL_VERS_MAJ" = "2"; then
+  # Kernel 2.6
+  HAVE_ICE=n
+else
+  # Kernel >=3
+  HAVE_ICE=y
+fi
+
 E1000E="e1000e"
 E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
 IGB="igb"
@@ -20,6 +30,7 @@ ICE_VERSION=`grep "ICE=" Makefile|cut -d '-' -f 2`
 
 AC_SUBST(PF_RING_VERSION)
 AC_SUBST(REVISION)
+AC_SUBST(HAVE_ICE)
 AC_SUBST(E1000E)
 AC_SUBST(E1000E_VERSION)
 AC_SUBST(IGB)
@@ -35,6 +46,7 @@ AC_SUBST(FM10K_VERSION)
 AC_SUBST(ICE)
 AC_SUBST(ICE_VERSION)
 
+AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(Makefile.dkms.e1000e)
 AC_CONFIG_FILES(Makefile.dkms.igb)
 AC_CONFIG_FILES(Makefile.dkms.ixgbe)

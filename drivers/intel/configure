@@ -597,6 +597,7 @@ IGB_VERSION
 IGB
 E1000E_VERSION
 E1000E
+HAVE_ICE
 REVISION
 PF_RING_VERSION
 target_alias
@@ -1693,6 +1694,16 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 PF_RING_VERSION=`../../package/version.sh --release`
 REVISION=`../../package/version.sh --revision`
 
+KERNEL_VERS_MAJ=`uname -r |cut -d. -f1`
+
+if test "$KERNEL_VERS_MAJ" = "2"; then
+  # Kernel 2.6
+  HAVE_ICE=n
+else
+  # Kernel >=3
+  HAVE_ICE=y
+fi
+
 E1000E="e1000e"
 E1000E_VERSION=`grep "E1000E=" Makefile|cut -d '-' -f 2`
 IGB="igb"
@@ -1724,6 +1735,9 @@ ICE_VERSION=`grep "ICE=" Makefile|cut -d '-' -f 2`
 
 
 
+
+
+ac_config_files="$ac_config_files Makefile"
 
 ac_config_files="$ac_config_files Makefile.dkms.e1000e"
 
@@ -2459,6 +2473,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
+    "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "Makefile.dkms.e1000e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.e1000e" ;;
     "Makefile.dkms.igb") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.igb" ;;
     "Makefile.dkms.ixgbe") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbe" ;;

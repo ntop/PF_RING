@@ -28,11 +28,11 @@ ice-objs := ice_main.o	\
 
 CFLAGS_ice_main.o := -I$(src)
 
-#ice-$(CONFIG_MFD_CORE:m=y) += ice_idc.o
-#ice-$(CONFIG_DEBUG_FS) += ice_debugfs.o
-#ice-$(CONFIG_PCI_IOV) += ice_virtchnl_pf.o ice_sriov.o
+ice-$(CONFIG_PCI_IOV) += ice_virtchnl_pf.o ice_sriov.o
+ice-$(CONFIG_RFS_ACCEL) += ice_arfs.o
+ice-$(CONFIG_DEBUG_FS) += ice_debugfs.o
+ice-$(CONFIG_MFD_CORE:m=y) += ice_idc.o
 #ice-$(CONFIG_DCB) += ice_dcb.o ice_dcb_nl.o ice_dcb_lib.o
-#ice-$(CONFIG_RFS_ACCEL) += ice_arfs.o
 #ice-$(CONFIG_XDP_SOCKETS) += ice_xsk.o
 
 EXTRA_CFLAGS += -DHAVE_PF_RING

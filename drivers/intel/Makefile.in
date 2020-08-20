@@ -48,8 +48,10 @@ dkms-deb: cleanup dkms-deb-virtual
 	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.fm10k deb
 	cp /var/lib/dkms/fm10k-zc/*/deb/*.deb .
+ifeq (@HAVE_ICE@,y)
 	sudo make -f Makefile.dkms.ice deb
 	cp /var/lib/dkms/ice-zc/*/deb/*.deb .
+endif
 
 dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.e1000e rpm
@@ -58,7 +60,9 @@ dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.ixgbevf rpm
 	sudo make -f Makefile.dkms.i40e rpm
 	sudo make -f Makefile.dkms.fm10k rpm
+ifeq (@HAVE_ICE@,y)
 	sudo make -f Makefile.dkms.ice rpm
+endif
 
 dkms-rpm-virtual:
 	rpmbuild -ba pfring-zc-rpm.spec
