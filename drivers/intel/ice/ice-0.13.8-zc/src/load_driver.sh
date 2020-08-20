@@ -14,6 +14,9 @@ insmod ../../../../../kernel/pf_ring.ko
 #modprobe vxlan
 #modprobe configfs
 
+mkdir -p /lib/firmware/updates/intel/ice/ddp
+cp -f ./updates/intel/ice/ddp/ice.pkg /lib/firmware/updates/intel/ice/ddp/
+
 # Load the driver
 insmod ./ice.ko RSS=1,1
 
