@@ -118,9 +118,14 @@ rebuild_dkms() {
 	#MOD_VERSION=`ls -1d /usr/src/${1}* | tail -1 | cut -d '/' -f 4 | sed -e "s/${1}-//"`
 
 	if [ ${DISTRO} == "debian" ]; then
-		MOD_VERSION=`dpkg -l | grep ${1}-dkms | awk '{print $3}'`
+		SUFFIX="-dkms"
+		MOD_VERSION=`dpkg -l | grep ${1}${SUFFIX} | awk '{print $3}'`
 	elif [ ${DISTRO} == "centos" ]; then
-		MOD_VERSION=`rpm -q ${1}-dkms | cut -d'-' -f3`
+		SUFFIX=""
+		if [ ${1} == "pfring" ]; then
+			SUFFIX="-dkms"
+		fi
+		MOD_VERSION=`rpm -q ${1}${SUFFIX} | cut -d'-' -f3`
 	fi
 
 	echo "Uninstalling old ${1} version"
