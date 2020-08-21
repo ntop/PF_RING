@@ -50,12 +50,12 @@ int pfring_read_ixia_hw_timestamp(u_char *buffer,
 
 /* ********************************* */
 
-void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) {
+int pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) {
   struct timespec ts;
   int ts_size;
 
   if(unlikely(hdr->caplen != hdr->len)) 
-    return; /* full packet only */
+    return -1; /* full packet only */
 
   ts_size = pfring_read_ixia_hw_timestamp(buffer, hdr->len, &ts);
 
@@ -64,6 +64,8 @@ void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) 
     hdr->ts.tv_sec = ts.tv_sec, hdr->ts.tv_usec = ts.tv_nsec/1000;
     hdr->extended_hdr.timestamp_ns = (((u_int64_t) ts.tv_sec) * 1000000000) + ts.tv_nsec;
   }
+
+  return 0;
 }
 
 /* ********************************* */

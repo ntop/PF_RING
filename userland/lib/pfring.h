@@ -1224,7 +1224,7 @@ int pfring_read_ixia_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct t
  * @param hdr               This is an in/out parameter: it is used to read the original packet len, and it is updated (size decreased) if the hw timestamp is found
  * @return 0 on success, a negative value otherwise.
  */
-void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
+int pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
 /**
  * Reads the UTC time and ticks from a ARISTA key frame.
