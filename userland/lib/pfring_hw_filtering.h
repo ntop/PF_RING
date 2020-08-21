@@ -21,5 +21,4 @@ int pfring_hw_ft_handle_hash_filtering_rule(pfring *ring, hash_filtering_rule* r
 int pfring_hw_ft_add_filtering_rule(pfring *ring, filtering_rule* rule_to_add);
 int pfring_hw_ft_remove_filtering_rule(pfring *ring, u_int16_t rule_id);
 
-
 #endif /* _PFRING_HW_FT_H_ */

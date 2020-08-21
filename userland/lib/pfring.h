@@ -198,20 +198,22 @@ struct __pfring {
   u_int8_t initialized;
   u_int8_t enabled;
   u_int8_t long_header;
-
   u_int8_t force_timestamp;
+
   u_int8_t strip_hw_timestamp;
-
   u_int8_t disable_parsing;
-
   u_int8_t disable_timestamp;
   u_int8_t ixia_timestamp_enabled;
+
   u_int8_t vss_apcon_timestamp_enabled;
-
   u_int8_t chunk_mode_enabled;
-
   u_int8_t userspace_bpf;
   u_int8_t force_userspace_bpf;
+
+  u_int8_t zc_device;
+  u_int8_t is_shutting_down;
+  u_int8_t socket_default_accept_policy;
+  u_int8_t __padding; 
 
   u_int32_t rss_mode;
   packet_direction direction; /* Specify the capture direction for packets */
@@ -230,6 +232,7 @@ struct __pfring {
     u_int8_t is_silicom_hw_timestamp_card;
     u_int8_t enable_hw_timestamp;
     u_int8_t last_hw_timestamp_head_offset;
+
     struct timespec last_hw_timestamp;
   } hw_ts;
 
@@ -237,8 +240,6 @@ struct __pfring {
     u_int8_t enabled_rx_packet_send;
     struct pfring_pkthdr *last_received_hdr; /* Header of the past packet that has been received on this socket */
   } tx;
-
-  u_int8_t zc_device;
 
   void *priv_data; /* module private data */
 
@@ -336,9 +337,6 @@ struct __pfring {
 
   u_int32_t slicing_additional_bytes;
 
-  u_int8_t is_shutting_down;
-  u_int8_t socket_default_accept_policy;
-
   int fd;
   int device_id;
 
@@ -351,6 +349,7 @@ struct __pfring {
   u_int8_t ft_enabled; /* PF_RING FT support enabled */
   u_int8_t reentrant;
   u_int8_t break_recv_loop;
+
   u_long num_poll_calls;
 
   pfring_rwlock_t rx_lock;
@@ -1186,7 +1185,7 @@ int pfring_print_parsed_pkt(char *buff, u_int buff_len, const u_char *p, const s
  */
 int pfring_print_pkt(char *buff, u_int buff_len, const u_char *p, u_int len, u_int caplen);
 
- /**
+/**
  * Receive a packet chunk, if enabled via pfring_open() flag.
  * @param ring                      The PF_RING handle.
  * @param chunk                     A buffer that will point to the received chunk. Note that the chunk format is adapter specific.
@@ -1196,7 +1195,7 @@ int pfring_print_pkt(char *buff, u_int buff_len, const u_char *p, u_int len, u_i
  */
 int pfring_recv_chunk(pfring *ring, void **chunk, pfring_chunk_info *chunk_info, u_int8_t wait_for_incoming_chunk);
 
- /**
+/**
  * Set a custom device name to which the socket is bound. This function should be called for devices that are not visible via ifconfig
  * @param ring            The PF_RING handle.
  * @param custom_dev_name The custom device name to be used for this socket.
@@ -1204,7 +1203,12 @@ int pfring_recv_chunk(pfring *ring, void **chunk, pfring_chunk_info *chunk_info,
  */
 int pfring_set_bound_dev_name(pfring *ring, char *custom_dev_name);
 
- /**
+/**
+ * Enable debug mode for hw timestamps.
+ */
+void pfring_enable_hw_timestamp_debug();
+
+/**
  * Reads a IXIA-formatted timestamp from an incoming packet and puts it into the timestamp variable.
  * @param buffer            Incoming packet buffer.
  * @param buffer_len        Incoming packet buffer length.
@@ -1213,7 +1217,7 @@ int pfring_set_bound_dev_name(pfring *ring, char *custom_dev_name);
  */
 int pfring_read_ixia_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts);
 
- /**
+/**
  * Strip a IXIA-formatted timestamp from an incoming packet. If the timestamp is found, the
  * hdr parameter (caplen and len fields) are decreased by the size of the timestamp.
  * @param buffer            Incoming packet buffer.
@@ -1222,7 +1226,7 @@ int pfring_read_ixia_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct t
  */
 void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
- /**
+/**
  * Reads the UTC time and ticks from a ARISTA key frame.
  * @param buffer            Incoming packet buffer.
  * @param buffer_len        Incoming packet buffer length.
@@ -1232,7 +1236,7 @@ void pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
  */
 int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts, u_int32_t *ticks_ts);
 
- /**
+/**
  * Reads a ARISTA-formatted timestamp from an incoming packet and puts it into the timestamp variable.
  * @param buffer            Incoming packet buffer.
  * @param buffer_len        Incoming packet buffer length.
@@ -1241,7 +1245,7 @@ int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len, u_int64_t 
  */
 int pfring_read_arista_hw_timestamp(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts);
 
- /**
+/**
  * Strip a ARISTA-formatted timestamp from an incoming packet. If the timestamp is found, the
  * hdr parameter (caplen and len fields) are decreased by the size of the timestamp.
  * @param buffer            Incoming packet buffer.
@@ -1250,7 +1254,7 @@ int pfring_read_arista_hw_timestamp(u_char *buffer, u_int32_t buffer_len, u_int6
  */
 int pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
- /**
+/**
  * Reads a VSS/APCON-formatted timestamp from an incoming packet and puts it into the timestamp variable.
  * @param buffer            Incoming packet buffer.
  * @param buffer_len        Incoming packet buffer length.
@@ -1259,7 +1263,7 @@ int pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr)
  */
 int pfring_read_vss_apcon_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts);
 
- /**
+/**
  * Strip an VSS/APCON-formatted timestamp from an incoming packet. If the timestamp is found, the
  * hdr parameter (caplen and len fields) are decreased by the size of the timestamp.
  * @param buffer            Incoming packet buffer.

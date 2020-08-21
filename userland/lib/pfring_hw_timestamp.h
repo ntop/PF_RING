@@ -56,3 +56,4 @@ struct vss_apcon_hw_ts {
   u_int32_t crc;
 } __attribute__((__packed__));
 
+/* *********************************************** */

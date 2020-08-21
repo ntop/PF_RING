@@ -18,9 +18,14 @@
 
 #include <linux/ip.h>
 
-//#define DEBUG_TS
-
 static int32_t thiszone = 0;
+static int debug_ts = 0;
+
+/* ********************************* */
+
+void pfring_enable_hw_timestamp_debug() {
+  debug_ts = 1;
+}
 
 /* ********************************* */
 
@@ -111,9 +116,8 @@ int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len,
   last_arista_keyframe_nsec = ns;
   last_arista_keyframe_ticks = t;
 
-#ifdef DEBUG_TS
-  printf("[ARISTA][Key-Frame] Ticks: %u UTC: %ju.%ju\n", t, ns/1000000000, ns%1000000000);
-#endif
+  if (unlikely(debug_ts)) 
+    printf("[ARISTA][Key-Frame] Ticks: %u UTC: %ju.%ju\n", t, ns/1000000000, ns%1000000000);
 
   *ns_ts = ns;
   *ticks_ts = t;
@@ -145,9 +149,8 @@ int pfring_read_arista_hw_timestamp(u_char *buffer,
     ns = last_arista_keyframe_nsec + delta_nsec;
   }
 
-#ifdef DEBUG_TS
-  printf("[ARISTA][Packet] Ticks: %u UTC: %ld.%ld\n", ticks, ns/1000000000, ns%1000000000);
-#endif
+  if (unlikely(debug_ts)) 
+    printf("[ARISTA][Packet] Ticks: %u UTC: %ld.%ld\n", ticks, ns/1000000000, ns%1000000000);
 
   *ns_ts = ns;
 

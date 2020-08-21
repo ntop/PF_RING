@@ -271,6 +271,9 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->force_userspace_bpf = !!(flags & (PF_RING_USERSPACE_BPF|PF_RING_TX_BPF));
   ring->ft_enabled          = !!(flags & PF_RING_L7_FILTERING);
 
+  if (getenv("PF_RING_DEBUG_TS") != NULL)
+    pfring_enable_hw_timestamp_debug();
+
   ft_conf_file = getenv("PF_RING_FT_CONF");
 
   if (ft_conf_file != NULL) {
