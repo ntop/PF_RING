@@ -15,7 +15,7 @@ insmod ../../../../../kernel/pf_ring.ko
 #modprobe configfs
 
 mkdir -p /lib/firmware/updates/intel/ice/ddp
-cp -f ./updates/intel/ice/ddp/ice.pkg /lib/firmware/updates/intel/ice/ddp/
+cp -f ../ddp/ice-1.3.4.0.pkg /lib/firmware/updates/intel/ice/ddp/ice.pkg
 
 # Load the driver
 insmod ./ice.ko RSS=1,1
