@@ -173,7 +173,8 @@ dnl> AF_XDP - Default enabled
 AC_ARG_ENABLE([xdp], AS_HELP_STRING([--disable-xdp], [Disable XDP/AF_XDP support in PF_RING]))
 if test "x$enable_xdp" != "xno"; then
   AC_MSG_CHECKING([PF_RING AF_XDP support])
-  if test -f /usr/local/include/bpf/xsk.h; then
+  BUILD_KERNEL=`uname -r`
+  if test -f /usr/local/include/bpf/xsk.h && test -f /usr/src/linux-headers-$BUILD_KERNEL/include/uapi/linux/if_xdp.h; then
     BUILD_KERNEL=`uname -r`
     AF_XDP_LIB="-lbpf"
     HAVE_AF_XDP="-D HAVE_AF_XDP"

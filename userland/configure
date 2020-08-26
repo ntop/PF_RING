@@ -3907,7 +3907,8 @@ fi
 if test "x$enable_xdp" != "xno"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING AF_XDP support" >&5
 $as_echo_n "checking PF_RING AF_XDP support... " >&6; }
-  if test -f /usr/local/include/bpf/xsk.h; then
+  BUILD_KERNEL=`uname -r`
+  if test -f /usr/local/include/bpf/xsk.h && test -f /usr/src/linux-headers-$BUILD_KERNEL/include/uapi/linux/if_xdp.h; then
     BUILD_KERNEL=`uname -r`
     AF_XDP_LIB="-lbpf"
     HAVE_AF_XDP="-D HAVE_AF_XDP"
