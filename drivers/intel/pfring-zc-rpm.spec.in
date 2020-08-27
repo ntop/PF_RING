@@ -1,7 +1,7 @@
 Summary: PF_RING ZC dkms kernel drivers
 Name: pfring-drivers-zc-dkms
-Version: 1.2
-Release: 0
+Version: @PF_RING_VERSION@
+Release: @REVISION@
 License: GPL
 Group: Networking/Utilities
 URL: http://www.ntop.org/products/pf_ring/
