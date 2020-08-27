@@ -1768,6 +1768,8 @@ ac_config_files="$ac_config_files dkms.conf.fm10k"
 
 ac_config_files="$ac_config_files dkms.conf.ice"
 
+ac_config_files="$ac_config_files pfring-drivers-zc-dkms/DEBIAN/control"
+
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -2489,6 +2491,7 @@ do
     "dkms.conf.i40e") CONFIG_FILES="$CONFIG_FILES dkms.conf.i40e" ;;
     "dkms.conf.fm10k") CONFIG_FILES="$CONFIG_FILES dkms.conf.fm10k" ;;
     "dkms.conf.ice") CONFIG_FILES="$CONFIG_FILES dkms.conf.ice" ;;
+    "pfring-drivers-zc-dkms/DEBIAN/control") CONFIG_FILES="$CONFIG_FILES pfring-drivers-zc-dkms/DEBIAN/control" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

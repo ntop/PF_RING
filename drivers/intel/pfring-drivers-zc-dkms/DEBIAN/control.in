@@ -1,7 +1,7 @@
 Section: misc
 Priority: optional
 Maintainer: Luca Deri <deri@ntop.org>
-Version: 1.3
+Version: @PF_RING_VERSION@-@REVISION@
 Package: pfring-drivers-zc-dkms
 Architecture: all
 Depends: pfring-dkms, e1000e-zc-dkms, igb-zc-dkms, ixgbe-zc-dkms, i40e-zc-dkms, fm10k-zc-dkms

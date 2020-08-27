@@ -62,5 +62,6 @@ AC_CONFIG_FILES(dkms.conf.ixgbevf)
 AC_CONFIG_FILES(dkms.conf.i40e)
 AC_CONFIG_FILES(dkms.conf.fm10k)
 AC_CONFIG_FILES(dkms.conf.ice)
+AC_CONFIG_FILES(pfring-drivers-zc-dkms/DEBIAN/control)
 
 AC_OUTPUT
