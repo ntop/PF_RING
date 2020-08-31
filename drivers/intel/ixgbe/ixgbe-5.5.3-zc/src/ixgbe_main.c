@@ -1332,6 +1332,71 @@ static void ixgbe_clean_rx_ring(struct ixgbe_ring *rx_ring);
 
 static void ixgbe_clean_tx_ring(struct ixgbe_ring *tx_ring);
 
+static unsigned long ixgbe_get_completion_timeout(struct ixgbe_adapter *adapter);
+
+void __ixgbe_enable_rx_queue(struct ixgbe_adapter *adapter, int i)
+{
+	unsigned long wait_delay, delay_interval;
+	struct ixgbe_hw *hw = &adapter->hw;
+	int wait_loop;
+	u32 rxdctl;
+	struct ixgbe_ring *ring = adapter->rx_ring[i];
+	u8 reg_idx = ring->reg_idx;
+
+	rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(reg_idx));
+	rxdctl |= IXGBE_RXDCTL_ENABLE;
+
+	/* write value back with RXDCTL.ENABLE bit cleared */
+	IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(reg_idx), rxdctl);
+
+	delay_interval = ixgbe_get_completion_timeout(adapter) / 100;
+	wait_loop = IXGBE_MAX_RX_DESC_POLL;
+	wait_delay = delay_interval;
+
+	while (wait_loop--) {
+		usleep_range(wait_delay, wait_delay + 10);
+		wait_delay += delay_interval * 2;
+		rxdctl = 0;
+
+		rxdctl |= IXGBE_READ_REG(hw, IXGBE_RXDCTL(reg_idx));
+
+		if (rxdctl & IXGBE_RXDCTL_ENABLE)
+			return;
+	}
+}
+
+void __ixgbe_disable_rx_queue(struct ixgbe_adapter *adapter, int i)
+{
+	unsigned long wait_delay, delay_interval;
+	struct ixgbe_hw *hw = &adapter->hw;
+	int wait_loop;
+	u32 rxdctl;
+	struct ixgbe_ring *ring = adapter->rx_ring[i];
+	u8 reg_idx = ring->reg_idx;
+
+	rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(reg_idx));
+	rxdctl &= ~IXGBE_RXDCTL_ENABLE;
+	rxdctl |= IXGBE_RXDCTL_SWFLSH;
+
+	/* write value back with RXDCTL.ENABLE bit cleared */
+	IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(reg_idx), rxdctl);
+
+	delay_interval = ixgbe_get_completion_timeout(adapter) / 100;
+	wait_loop = IXGBE_MAX_RX_DESC_POLL;
+	wait_delay = delay_interval;
+
+	while (wait_loop--) {
+		usleep_range(wait_delay, wait_delay + 10);
+		wait_delay += delay_interval * 2;
+		rxdctl = 0;
+
+		rxdctl |= IXGBE_READ_REG(hw, IXGBE_RXDCTL(reg_idx));
+
+		if (!(rxdctl & IXGBE_RXDCTL_ENABLE))
+			return;
+	}
+}
+
 int ring_is_not_empty(struct ixgbe_ring *rx_ring) {
 	union ixgbe_adv_rx_desc *rx_desc;
 	u32 staterr;
@@ -1499,10 +1564,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
 
-			ixgbe_clean_rx_ring(rx_ring);
-			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDH(rx_ring->reg_idx), 0);
-			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDT(rx_ring->reg_idx), 0);
-
 			if (adapter->hw.mac.type != ixgbe_mac_82598EB) {
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
 
@@ -1510,6 +1571,16 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				for (i = 0; i < adapter->num_rx_queues; i++)
 					ixgbe_enable_rx_drop(adapter, adapter->rx_ring[i]);
 			}
+
+			/* disable receives while cleaning up the descriptors, 
+			 * it will be enabled by the userspace library or when detaching the socket */
+			__ixgbe_disable_rx_queue(adapter, rx_ring->queue_index);
+
+			ixgbe_clean_rx_ring(rx_ring);
+
+			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDH(rx_ring->reg_idx), 0);
+			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RDT(rx_ring->reg_idx), 0);
+
 		}
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
@@ -1521,11 +1592,14 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	} else { /* restore card memory */
 
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-			u32 rxctrl;
-
 			/* disable receives while setting up the descriptors */
+#if 1
+			__ixgbe_disable_rx_queue(adapter, rx_ring->queue_index);
+#else
+			u32 rxctrl;
 			rxctrl = IXGBE_READ_REG(&adapter->hw, IXGBE_RXCTRL);
 			IXGBE_WRITE_REG(&adapter->hw, IXGBE_RXCTRL, rxctrl & ~IXGBE_RXCTRL_RXEN);
+#endif
    
 			for (i = 0; i < rx_ring->count; i++) {
 				union ixgbe_adv_rx_desc *rx_desc = IXGBE_RX_DESC(rx_ring, i);
@@ -1537,8 +1611,12 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			rmb();
     
 			/* enable all receives */
+#if 1
+			__ixgbe_enable_rx_queue(adapter, rx_ring->queue_index);
+#else
 			rxctrl |= IXGBE_RXCTRL_RXEN;
 			adapter->hw.mac.ops.enable_rx_dma(&adapter->hw, rxctrl);
+#endif
 
 			if (adapter->hw.mac.type != ixgbe_mac_82598EB) {
 				ixgbe_irq_disable_queues(adapter, ((u64)1 << rx_ring->q_vector->v_idx));
