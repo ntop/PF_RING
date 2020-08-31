@@ -1,6 +1,6 @@
 all:
 #	cd broadcom; make
-	cd intel; make
+	cd intel; ./configure; make
 #	cd chelsio/cxgb4; make
 #	cd myricom; make
 
