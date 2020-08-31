@@ -3969,7 +3969,9 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
 {
   struct sk_buff *cloned = NULL;
   struct iphdr *iphdr = NULL;
-  struct sk_buff *skk = NULL;
+  struct sk_buff *skk = NULL, *ret_skb = skb;
+  u_int16_t bkp_transport_header = skb->transport_header;
+  u_int16_t bkp_network_header = skb->network_header;
 
   skb_set_network_header(skb, hdr->extended_hdr.parsed_pkt.offset.l3_offset - displ);
   skb_reset_transport_header(skb);
@@ -4007,6 +4009,7 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
 		 ihl, end,
 		 hdr->extended_hdr.parsed_pkt.offset.l3_offset - displ, displ);
 	}
+
 	skk = ring_gather_frags(cloned);
 
 	if(skk != NULL) {
@@ -4037,18 +4040,23 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
 	    displ -= vlan_offset;
 	  }
 
-	  skb = skk;
+	  hdr->len = hdr->caplen = skk->len + displ;
+	  parse_pkt(skk, 1, displ, hdr, &ip_id);
+
 	  *defragmented_skb = 1;
-	  hdr->len = hdr->caplen = skb->len + displ;
-	  parse_pkt(skb, 1, displ, hdr, &ip_id);
+	  ret_skb = skk;
 	} else {
-	  return(NULL);	/* mask rcvd fragments */
+          ret_skb = NULL; /* mask rcvd fragments */
 	}
       }
     }
   }
 
-  return(skb);
+  /* Restore skb */
+  skb->transport_header = bkp_transport_header;
+  skb->network_header   = bkp_network_header;
+
+  return(ret_skb);
 }
 
 /* ********************************** */
@@ -4077,7 +4085,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   struct sock *skElement;
   int rc = 0, is_ip_pkt = 0, room_available = 0;
   struct pfring_pkthdr hdr;
-  int displ;
+  int displ = 0;
   int defragmented_skb = 0;
   struct sk_buff *skk = NULL;
   u_int32_t last_list_idx;
@@ -4102,14 +4110,13 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
     return 0;
   }
 
-  displ = 0;
-  if(recv_packet && real_skb)
+  if(recv_packet && real_skb) {
     displ = skb->dev->hard_header_len;
-
 #ifdef CONFIG_RASPBERRYPI_FIRMWARE
-  if(displ > 14) /* on RaspberryPi RX skbs have wrong hard_header_len value (26) */
-    displ = 14;
+    if(displ > 14) /* on RaspberryPi RX skbs have wrong hard_header_len value (26) */
+      displ = 14;
 #endif
+  }
 
   dev_index = ifindex_to_pf_index(skb->dev->ifindex);
 
@@ -4186,10 +4193,11 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
       if(real_skb
 	 && is_ip_pkt
 	 && recv_packet) {
-	skb = skk = defrag_skb(skb, displ, &hdr, &defragmented_skb);
 
-	if(skb == NULL)
-	  return(0);
+        skb = skk = defrag_skb(skb, displ, &hdr, &defragmented_skb);
+
+        if(skb == NULL)
+          return(0);
       }
     }
 
