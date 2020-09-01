@@ -702,6 +702,19 @@ syntax(compiler_state_t *cstate)
 	bpf_error(cstate, "syntax error in filter expression");
 }
 
+#ifdef HAVE_PF_RING
+// Format: start "2016-09-29 14:42:53" and end "2016-09-29 14:42:54" [and <BPF>]
+static const char *
+__timeline_filter_cut_start_end(const char *filter) {
+  const char *tmp;
+  if (filter == NULL) return NULL;
+  tmp = strstr(filter, "start ");  if (tmp == NULL) return filter; /* not a time interval */
+  tmp = strstr(tmp, " end ");      if (tmp == NULL) return filter; /* not a time interval */
+  tmp = strstr(&tmp[-1], " and "); if (tmp == NULL) return &filter[strlen(filter)]; /* empty BPF */
+  return &tmp[strlen(" and ")];
+}
+#endif
+
 int
 pcap_compile(pcap_t *p, struct bpf_program *program,
 	     const char *buf, int optimize, bpf_u_int32 mask)
@@ -715,6 +728,19 @@ pcap_compile(pcap_t *p, struct bpf_program *program,
 	volatile YY_BUFFER_STATE in_buffer = NULL;
 	u_int len;
 	int  rc;
+
+#ifdef HAVE_PF_RING
+	xbuf = __timeline_filter_cut_start_end(xbuf);
+	if (p->ring || p->timeline) {
+		if (buf != NULL) {
+			p->bpf_filter = strdup(buf);
+			if (p->bpf_filter == NULL)
+				return -1;
+			if (p->timeline)
+				return 0;
+		}
+	}
+#endif
 
 	/*
 	 * If this pcap_t hasn't been activated, it doesn't have a

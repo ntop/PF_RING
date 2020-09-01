@@ -64,7 +64,9 @@
 #if (defined(linux) || defined(__Lynx__)) && defined(AF_PACKET)
 # ifdef HAVE_NETPACKET_PACKET_H
 /* Linux distributions with newer glibc */
+#ifndef PACKET_HOST /* HAVE_PF_RING check for data structures already defined */
 #  include <netpacket/packet.h>
+#endif
 # else /* HAVE_NETPACKET_PACKET_H */
 /* LynxOS, Linux distributions with older glibc */
 # ifdef __Lynx__

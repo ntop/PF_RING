@@ -106,6 +106,10 @@ extern "C" {
 #define PCAP_VERSION_MAJOR 2
 #define PCAP_VERSION_MINOR 4
 
+#ifdef HAVE_PF_RING
+#define PF_RING_PCAP
+#endif
+
 #define PCAP_ERRBUF_SIZE 256
 
 /*
@@ -203,6 +207,16 @@ struct pcap_pkthdr {
 	bpf_u_int32 caplen;	/* length of portion present */
 	bpf_u_int32 len;	/* length this packet (off wire) */
 };
+
+#ifdef HAVE_PF_RING
+/* Nanosecond accuracy */
+struct ns_pcaphdr {
+	struct timeval ts;
+	bpf_u_int32 caplen;
+	bpf_u_int32 len;  
+	u_int64_t ns;
+};
+#endif
 
 /*
  * As returned by the pcap_stats()
@@ -630,6 +644,15 @@ PCAP_API void	bpf_dump(const struct bpf_program *, int);
   PCAP_API struct timeval *pcap_get_required_select_timeout(pcap_t *);
 
 #endif /* _WIN32/MSDOS/UN*X */
+
+#ifdef HAVE_PF_RING
+  PCAP_API u_int32_t pcap_get_pfring_id(pcap_t *handle);
+  PCAP_API int pcap_set_master_id(pcap_t *handle, u_int32_t master_id);
+  PCAP_API int pcap_set_master(pcap_t *handle, pcap_t *master);
+  PCAP_API int pcap_set_application_name(pcap_t *handle, char *name);
+  PCAP_API int pcap_set_watermark(pcap_t *handle, u_int watermark);
+  PCAP_API int pcap_set_poll_watermark_timeout(pcap_t *handle, u_int16_t poll_watermark_timeout);
+#endif
 
 /*
  * Remote capture definitions.

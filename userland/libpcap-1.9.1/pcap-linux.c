@@ -493,6 +493,10 @@ static struct sock_fprog	total_fcode
 	= { 1, &total_insn };
 #endif /* SO_ATTACH_FILTER */
 
+#ifdef HAVE_PF_RING
+static u_int8_t pf_ring_active_poll = 0;
+#endif
+
 pcap_t *
 pcap_create_interface(const char *device, char *ebuf)
 {
@@ -1276,6 +1280,15 @@ static void	pcap_cleanup_linux( pcap_t *handle )
 	struct iwreq ireq;
 #endif /* IW_MODE_MONITOR */
 
+#ifdef HAVE_PF_RING
+	if (handle->timeline != NULL) { free(handle->timeline); handle->timeline = NULL; }
+	if (handle->ring != NULL) {
+		pfring_close(handle->ring);
+		handle->ring = NULL;
+		return;
+	}
+#endif
+
 	if (handlep->must_do_on_close != 0) {
 		/*
 		 * There's something we have to do when closing this
@@ -1505,6 +1518,41 @@ set_poll_timeout(struct pcap_linux *handlep)
 	}
 }
 
+#ifdef HAVE_PF_RING
+static int is_dummy_interface(const char *device, char **path, char **interface) 
+{
+	const char conf_root[] = "/var/tmp/pf_ring/dummy";
+	const char type_token[]  = "type=";
+	const char path_token[]  = "path=";
+	const char interface_token[] = "interface=";
+	char conf_path[256];
+	char buffer[256];
+	FILE *fd;
+
+	*path = *interface = NULL;
+
+	snprintf(conf_path, sizeof(conf_path), "%s/%s", conf_root, device);
+	fd = fopen(conf_path, "r");
+	if (fd == NULL) return 0; /* not a dummy interface */
+
+	while (fgets(buffer, sizeof(buffer), fd)) {
+		if (buffer[strlen(buffer) - 1] == '\n') buffer[strlen(buffer) - 1] = '\0';
+
+		if (strncmp(buffer, type_token, sizeof(type_token) - 1) == 0) {
+			// nothing to do
+		} else if (strncmp(buffer, path_token, sizeof(path_token) - 1) == 0) {
+			*path = strdup(&buffer[sizeof(path_token) - 1]);
+		} else if (strncmp(buffer, interface_token, sizeof(interface_token) - 1) == 0) {
+			*interface = strdup(&buffer[sizeof(interface_token) - 1]);
+		}
+	}
+
+	fclose(fd);
+
+	return 1;
+}
+#endif
+
 /*
  *  Get a handle for a live capture from the given device. You can
  *  pass NULL as device to get all packages (without link level
@@ -1524,6 +1572,7 @@ pcap_activate_linux(pcap_t *handle)
 
 	device = handle->opt.device;
 
+#ifndef HAVE_PF_RING
 	/*
 	 * Make sure the name we were handed will fit into the ioctls we
 	 * might perform on the device; if not, return a "No such device"
@@ -1539,6 +1588,7 @@ pcap_activate_linux(pcap_t *handle)
 		status = PCAP_ERROR_NO_SUCH_DEVICE;
 		goto fail;
 	}
+#endif
 
 	/*
 	 * Turn a negative snapshot value (invalid), a snapshot value of
@@ -1569,10 +1619,12 @@ pcap_activate_linux(pcap_t *handle)
 	if (strcmp(device, "any") == 0) {
 		if (handle->opt.promisc) {
 			handle->opt.promisc = 0;
+#ifndef HAVE_PF_RING
 			/* Just a warning. */
 			pcap_snprintf(handle->errbuf, PCAP_ERRBUF_SIZE,
 			    "Promiscuous mode not supported on the \"any\" device");
 			status = PCAP_WARNING_PROMISC_NOTSUP;
+#endif
 		}
 	}
 
@@ -1583,6 +1635,93 @@ pcap_activate_linux(pcap_t *handle)
 		status = PCAP_ERROR;
 		goto fail;
 	}
+
+#ifdef HAVE_PF_RING
+	if (!getenv("PCAP_NO_PF_RING")) {
+		/* Code courtesy of Chris Wakelin <c.d.wakelin@reading.ac.uk> */
+		char *clusterId;
+		int flags = PF_RING_TIMESTAMP;
+		char *appname, *active = getenv("PCAP_PF_RING_ACTIVE_POLL"), *rss_rehash;
+		char timeline_device[256];
+		char *real_device = NULL;
+		char *always_sync_fd;
+
+		if (handle->opt.promisc) flags |= PF_RING_PROMISC;
+		if (getenv("PCAP_PF_RING_DNA_RSS" /* deprecated (backward compatibility) */ )) flags |= PF_RING_ZC_SYMMETRIC_RSS;
+		if (getenv("PCAP_PF_RING_ZC_RSS"))  flags |= PF_RING_ZC_SYMMETRIC_RSS;
+		if (getenv("PCAP_PF_RING_STRIP_HW_TIMESTAMP")) flags |= PF_RING_STRIP_HW_TIMESTAMP;
+		if (getenv("PCAP_PF_RING_HW_TIMESTAMP") || handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) flags |= PF_RING_HW_TIMESTAMP;
+		if (getenv("PCAP_PF_RING_USERSPACE_BPF")) flags |= PF_RING_USERSPACE_BPF;
+
+		if (active) pf_ring_active_poll = atoi(active);
+
+		if (is_dummy_interface(device, &handle->timeline, &real_device)) {
+			if (real_device != NULL) {
+				device = real_device;
+			} else if (handle->timeline) {
+				snprintf(timeline_device, sizeof(timeline_device), "timeline:%s", handle->timeline);
+				device = timeline_device; 
+			}
+		}
+
+		handle->ring = pfring_open((char *) device, handle->snapshot, flags);
+
+		if (real_device != NULL) free(real_device);
+		device = real_device = NULL;
+
+		if (handle->ring != NULL) {
+
+			if (getenv("PCAP_PF_RING_RECV_ONLY")) pfring_set_socket_mode(handle->ring, recv_only_mode);
+
+			if (clusterId = getenv("PCAP_PF_RING_CLUSTER_ID")) {
+				if (atoi(clusterId) > 0 && atoi(clusterId) < 255) {
+					if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow);
+                			else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_2_TUPLE"))
+                				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_2_tuple);
+                			else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_4_TUPLE"))
+                				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_4_tuple);
+                			else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_TCP_5_TUPLE"))
+                				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_tcp_5_tuple);
+                			else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_5_TUPLE"))
+                				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_5_tuple);
+					else
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_round_robin);
+              			}
+	    		}
+
+			if (appname = getenv("PCAP_PF_RING_APPNAME"))
+			if (strlen(appname) > 0 && strlen(appname) <= 32)
+				pfring_set_application_name(handle->ring, appname);
+            
+			if (rss_rehash = getenv("PCAP_PF_RING_RSS_REHASH")) {
+				if (atoi(rss_rehash))
+					pfring_enable_rss_rehash(handle->ring);
+			}
+			pfring_set_poll_watermark(handle->ring, 1 /* watermark */);
+			if (always_sync_fd = getenv("PCAP_PF_RING_ALWAYS_SYNC_FD"))
+				handle->sync_selectable_fd = atoi(always_sync_fd);
+			else
+				handle->sync_selectable_fd = 0;
+		}
+	} else
+        	handle->ring = NULL;
+
+	if (handle->ring != NULL) {
+		handle->fd = handle->ring->fd;
+		handle->bufsize = handle->snapshot;
+		handle->linktype = DLT_EN10MB;
+		handle->offset = 2;
+		handle->setnonblock_op = pcap_setnonblock_mmap;
+		handle->getnonblock_op = pcap_getnonblock_mmap;
+
+		handlep->vlan_offset = -1; /* unknown */
+		handlep->timeout = handle->opt.timeout; /* copy timeout value */
+
+		/* printf("Open HAVE_PF_RING(%s)\n", device); */
+	} else {
+		/* printf("Open HAVE_PF_RING(%s) failed. Fallback to pcap\n", device); */
+#endif
 
 	/* copy timeout value */
 	handlep->timeout = handle->opt.timeout;
@@ -1682,6 +1821,10 @@ pcap_activate_linux(pcap_t *handle)
 		}
 	}
 
+#ifdef HAVE_PF_RING
+        }
+#endif
+
 	/* Allocate the buffer */
 
 	handle->buffer	 = malloc(handle->bufsize + handle->offset);
@@ -1696,6 +1839,15 @@ pcap_activate_linux(pcap_t *handle)
 	 * "handle->fd" is a socket, so "select()" and "poll()"
 	 * should work on it.
 	 */
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL) {
+		/* Note: pfring_enable_ring() has been moved to pcap_read_packet()
+		 * to avoid receiving packets while the bpf filter has not been set yet.
+		 * Note this is not a problem for applications lieke tshark using select
+		 * because rings get automatically activated on poll too. */
+		handle->selectable_fd = pfring_get_selectable_fd(handle->ring);
+	} else
+#endif
 	handle->selectable_fd = handle->fd;
 
 	return status;
@@ -1704,6 +1856,20 @@ fail:
 	pcap_cleanup_linux(handle);
 	return status;
 }
+
+#ifdef HAVE_PF_RING
+void pcap_set_appl_name_linux(pcap_t *handle, char *appl_name)
+{
+	if (handle->ring)
+		pfring_set_application_name(handle->ring, appl_name);
+}
+
+void pcap_set_cluster(pcap_t *handle, u_int cluster_id)
+{
+	if (handle->ring)
+		pfring_set_cluster(handle->ring, cluster_id, cluster_per_flow);
+}
+#endif
 
 /*
  *  Read at most max_packets from the capture stream and call the callback
@@ -1807,9 +1973,77 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 	socklen_t		fromlen;
 #endif /* defined(HAVE_PACKET_AUXDATA) && defined(HAVE_STRUCT_TPACKET_AUXDATA_TP_VLAN_TCI) */
 	int			packet_len, caplen;
+#ifdef HAVE_PF_RING
+        struct pfring_pkthdr    pcap_header;
+#else
 	struct pcap_pkthdr	pcap_header;
-
+#endif
         struct bpf_aux_data     aux_data;
+
+#ifdef HAVE_PF_RING
+	if (handle->ring) {
+		char *packet;
+		int wait_for_incoming_packet = (pf_ring_active_poll || (handlep->timeout < 0)) ? 0 : 1;
+		int ret = 0;
+
+		if (!handle->ring->enabled)
+			pfring_enable_ring(handle->ring);
+
+		do {
+			if (handle->break_loop) {
+				/*
+				 * Yes - clear the flag that indicates that it
+				 * has, and return -2 as an indication that we
+				 * were told to break out of the loop.
+				 *
+				 * Patch courtesy of Michael Stiller <ms@2scale.net>
+				 */
+				handle->break_loop = 0;
+				return -2;
+			}
+
+			pcap_header.ts.tv_sec = 0;
+			errno = 0;
+
+			ret = pfring_recv(handle->ring, (u_char**)&packet, 0, &pcap_header, wait_for_incoming_packet);
+
+			if (ret == 0) {
+				if (wait_for_incoming_packet && errno != EINTR) 
+					continue;
+				return 0; /* non-blocking */
+			} else if (ret > 0) {
+				bp = packet;
+				pcap_header.caplen = min(pcap_header.caplen, handle->bufsize);
+				caplen = pcap_header.caplen, packet_len = pcap_header.len;
+				if (handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) {
+					if (pcap_header.extended_hdr.timestamp_ns) {
+						pcap_header.ts.tv_sec  = pcap_header.extended_hdr.timestamp_ns / 1000000000;
+						pcap_header.ts.tv_usec = pcap_header.extended_hdr.timestamp_ns % 1000000000;
+					} else if (pcap_header.ts.tv_sec == 0)
+						clock_gettime(CLOCK_REALTIME, (struct timespec *) &pcap_header.ts);
+					else
+						pcap_header.ts.tv_usec = pcap_header.ts.tv_usec * 1000;
+				} else if (pcap_header.ts.tv_sec == 0)
+						gettimeofday((struct timeval *) &pcap_header.ts, NULL);
+
+				if (handle->sync_selectable_fd) {
+					/* applications like tshark always poll the fd before calling recv,
+					 * this require kernel to be always synchronized (required in case of ZC) */
+					pfring_sync_indexes_with_kernel(handle->ring);
+				}
+
+				break;
+			} else {
+				if (wait_for_incoming_packet && (errno == EINTR || errno == ENETDOWN))
+					continue;
+				return -1;
+			}
+		} while (1);
+
+		goto pfring_pcap_read_packet;
+	}
+#endif
+
 #ifdef HAVE_PF_PACKET_SOCKETS
 	/*
 	 * If this is a cooked device, leave extra room for a
@@ -1983,6 +2217,10 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 		}
 	}
 
+#ifdef HAVE_PF_RING
+pfring_pcap_read_packet:
+#endif
+
 	/*
 	 * Start out with no VLAN information.
 	 */
@@ -2099,6 +2337,10 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 
 	/* Fill in our own header data */
 
+#ifdef HAVE_PF_RING
+        if (!handle->ring) {
+#endif
+
 	/* get timestamp for this packet */
 #if defined(SIOCGSTAMPNS) && defined(SO_TIMESTAMPNS)
 	if (handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) {
@@ -2119,6 +2361,10 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 
 	pcap_header.caplen	= caplen;
 	pcap_header.len		= packet_len;
+
+#ifdef HAVE_PF_RING
+        }
+#endif
 
 	/*
 	 * Count the packet.
@@ -2167,7 +2413,11 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 	handlep->packets_read++;
 
 	/* Call the user supplied callback function */
+#ifdef HAVE_PF_RING
+	callback(userdata, (struct pcap_pkthdr*) &pcap_header, bp);
+#else
 	callback(userdata, &pcap_header, bp);
+#endif
 
 	return 1;
 }
@@ -2204,6 +2454,14 @@ pcap_inject_linux(pcap_t *handle, const void *buf, size_t size)
 			    PCAP_ERRBUF_SIZE);
 			return (-1);
 		}
+	}
+#endif
+
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL) {
+		if (!handle->ring->enabled)
+			pfring_enable_ring(handle->ring);
+		return pfring_send(handle->ring, (char *) buf, size, 1);
 	}
 #endif
 
@@ -2250,8 +2508,29 @@ pcap_stats_linux(pcap_t *handle, struct pcap_stat *stats)
 #endif /* HAVE_TPACKET3 */
 	socklen_t len = sizeof (struct tpacket_stats);
 #endif /* HAVE_STRUCT_TPACKET_STATS */
-
 	long if_dropped = 0;
+
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL) {
+		pfring_stat ring_stats;
+
+		if (pfring_stats(handle->ring, &ring_stats) == 0) {
+			handlep->stat.ps_recv = ring_stats.recv + ring_stats.drop;
+#if 0
+			/* tcpdump reports ps_drop as "packets dropped by kernel",
+			 * that is wrong with ZC, so we should set ps_ifdrop. 
+			 * But snort ignores ps_ifdrop, so it is best to set ps_drop in any case. */
+			if (handle->ring->zc_device)
+				handlep->stat.ps_ifdrop = ring_stats.drop;
+			else
+#else
+				handlep->stat.ps_drop = ring_stats.drop;
+#endif
+			*stats = handlep->stat;
+			return 0;
+		}
+	}
+#endif
 
 	/*
 	 *	To fill in ps_ifdrop, we parse /proc/net/dev for the number
@@ -2905,6 +3184,15 @@ pcap_setfilter_linux_common(pcap_t *handle, struct bpf_program *filter,
 		return -1;
 	}
 
+#ifdef HAVE_PF_RING
+	if (handle->ring) {
+		if (handle->bpf_filter && strlen(handle->bpf_filter) > 0) {
+			//printf("pcap_setfilter -> pfring_set_bpf_filter '%s'\n", handle->bpf_filter ? handle->bpf_filter : "");
+			return pfring_set_bpf_filter(handle->ring, handle->bpf_filter);
+		}
+	}
+#endif
+
 	handlep = handle->priv;
 
 	/* Make our private copy of the filter */
@@ -2978,6 +3266,17 @@ pcap_setfilter_linux_common(pcap_t *handle, struct bpf_program *filter,
 			break;
 		}
 	}
+
+#ifdef HAVE_PF_RING
+	if (can_filter_in_kernel && handle->ring != NULL) {
+		int if_index;
+		if (handle->ring->zc_device /* ZC: we need to filter in userland as kernel is bypassed */
+		    || pfring_get_bound_device_ifindex(handle->ring, &if_index) != 0 /* not a physical device */
+		    || getenv("PCAP_PF_RING_USERSPACE_BPF")) {
+			can_filter_in_kernel = 0;
+		}
+	}
+#endif
 
 	/*
 	 * NOTE: at this point, we've set both the "len" and "filter"
@@ -3072,6 +3371,20 @@ pcap_setfilter_linux(pcap_t *handle, struct bpf_program *filter)
 static int
 pcap_setdirection_linux(pcap_t *handle, pcap_direction_t d)
 {
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL) {
+		packet_direction direction;
+
+		switch (d) {
+			case PCAP_D_INOUT: direction = rx_and_tx_direction; break;
+			case PCAP_D_IN:    direction = rx_only_direction; break;
+			case PCAP_D_OUT:   direction = tx_only_direction; break;
+		}
+
+		return(pfring_set_direction(handle->ring, direction));
+	}
+#endif
+
 #ifdef HAVE_PF_PACKET_SOCKETS
 	struct pcap_linux *handlep = handle->priv;
 
@@ -6616,9 +6929,12 @@ iface_ethtool_get_ts_info(const char *device, pcap_t *handle, char *ebuf)
 	info.cmd = ETHTOOL_GET_TS_INFO;
 	ifr.ifr_data = (caddr_t)&info;
 	if (ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+#ifndef HAVE_PF_RING
 		int save_errno = errno;
+#endif
 
 		close(fd);
+#ifndef HAVE_PF_RING
 		switch (save_errno) {
 
 		case EOPNOTSUPP:
@@ -6628,9 +6944,11 @@ iface_ethtool_get_ts_info(const char *device, pcap_t *handle, char *ebuf)
 			 * asking for the time stamping types, so let's
 			 * just return all the possible types.
 			 */
+#endif
 			iface_set_all_ts_types(handle);
 			return 0;
 
+#ifndef HAVE_PF_RING
 		case ENODEV:
 			/*
 			 * OK, no such device.
@@ -6651,6 +6969,7 @@ iface_ethtool_get_ts_info(const char *device, pcap_t *handle, char *ebuf)
 			    device);
 			return -1;
 		}
+#endif
 	}
 	close(fd);
 
@@ -7169,6 +7488,21 @@ iface_get_arptype(int fd, const char *device, char *ebuf)
 	return ifr.ifr_hwaddr.sa_family;
 }
 
+#ifdef HAVE_PF_RING
+/*
+ * Don't use the pcap buffer but instead use the one passed by the user.
+ * This solution allows multiple threads to read from the same pcap
+ * without having to be serialized through a mutex/semaphore.
+ */
+const u_char *
+pcap_next_pkt(pcap_t *p, struct pcap_pkthdr *h, u_char *buf, u_short bufsize, int *rc)
+{
+	const u_char *_buf = pcap_next(p, h);
+	if (_buf) *rc = 1; else *rc = 0;
+	return _buf;
+}
+#endif
+
 #ifdef SO_ATTACH_FILTER
 static int
 fix_program(pcap_t *handle, struct sock_fprog *fcode, int is_mmapped)
@@ -7390,7 +7724,11 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 	 * the filtering done in userland even if it could have been
 	 * done in the kernel.
 	 */
-	if (setsockopt(handle->fd, SOL_SOCKET, SO_ATTACH_FILTER,
+	if (setsockopt(handle->fd, 
+#ifdef HAVE_PF_RING
+		       (handle->ring != NULL) ? 0 :
+#endif
+		       SOL_SOCKET, SO_ATTACH_FILTER,
 		       &total_fcode, sizeof(total_fcode)) == 0) {
 		char drain[1];
 
@@ -7399,6 +7737,7 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 		 */
 		total_filter_on = 1;
 
+#ifndef HAVE_PF_RING
 		/*
 		 * Save the socket's current mode, and put it in
 		 * non-blocking mode; we drain it by reading packets
@@ -7441,13 +7780,18 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 			    "can't restore FD flags when changing filter");
 			return -2;
 		}
+#endif
 	}
 
 	/*
 	 * Now attach the new filter.
 	 */
-	ret = setsockopt(handle->fd, SOL_SOCKET, SO_ATTACH_FILTER,
-			 fcode, sizeof(*fcode));
+	ret = setsockopt(handle->fd,
+#ifdef HAVE_PF_RING
+			(handle->ring != NULL) ? 0 :
+#endif
+			SOL_SOCKET, SO_ATTACH_FILTER,
+			fcode, sizeof(*fcode));
 	if (ret == -1 && total_filter_on) {
 		/*
 		 * Well, we couldn't set that filter on the socket,
@@ -7489,6 +7833,11 @@ reset_kernel_filter(pcap_t *handle)
 	 * parameter.
 	 */
 	int dummy = 0;
+
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL)
+		return 0;
+#endif
 
 	ret = setsockopt(handle->fd, SOL_SOCKET, SO_DETACH_FILTER,
 				   &dummy, sizeof(dummy));
@@ -7532,3 +7881,61 @@ pcap_lib_version(void)
 	return (PCAP_VERSION_STRING " (without TPACKET)");
 #endif
 }
+
+#ifdef HAVE_PF_RING
+u_int32_t
+pcap_get_pfring_id(pcap_t *handle) 
+{
+	if (handle->ring == NULL)
+		return(0);
+
+	return pfring_get_ring_id(handle->ring);
+}
+
+int
+pcap_set_master_id(pcap_t *handle, u_int32_t master_id) 
+{
+	return pfring_set_master_id(handle->ring, master_id);
+}
+
+int
+pcap_set_master(pcap_t *handle, pcap_t *master) 
+{
+	return pfring_set_master(handle->ring, master->ring);
+}
+
+int
+pcap_set_application_name(pcap_t *handle, char *name) 
+{
+	return pfring_set_application_name(handle->ring, name);
+}
+
+int
+pcap_set_watermark(pcap_t *handle, u_int watermark) 
+{
+	int ret = -1;
+
+	if (handle->ring) {
+		ret = pfring_set_poll_watermark(handle->ring, watermark);
+	}
+
+	return ret;
+}
+
+int
+pcap_set_poll_watermark_timeout(pcap_t *handle, u_int16_t poll_watermark_timeout)
+{
+	int ret = -1;
+
+	if (handle->ring) {
+		ret = pfring_set_poll_watermark_timeout(handle->ring, poll_watermark_timeout);
+	}
+
+	return ret;
+}
+
+pfring* pcap_get_pfring_handle(pcap_t *handle)
+{
+        return(handle->ring);
+}
+#endif
