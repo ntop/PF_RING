@@ -53,6 +53,8 @@
 #define SOL_XDP 283
 #endif
 
+#define _BPF_H_ /* Fix redefinition of struct bpf_insn from libpcap */
+
 #include "pfring.h"
 #include "pfring_utils.h"
 #include "pfring_hw_filtering.h"
