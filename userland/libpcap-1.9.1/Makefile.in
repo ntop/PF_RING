@@ -583,12 +583,12 @@ install: install-shared install-archive libpcap.pc pcap-config @INSTALL_RPCAPD@
 	for i in $(MAN1); do \
 		$(INSTALL_DATA) $(srcdir)/$$i \
 		    $(DESTDIR)$(mandir)/man1/$$i; done
-	for i in $(MAN3PCAP_NOEXPAND); do \
-		$(INSTALL_DATA) $(srcdir)/$$i \
-		    $(DESTDIR)$(mandir)/man3/$$i; done
-	for i in $(MAN3PCAP_EXPAND:.in=); do \
-		$(INSTALL_DATA) $$i \
-		    $(DESTDIR)$(mandir)/man3/$$i; done
+	#for i in $(MAN3PCAP_NOEXPAND); do \
+	#	$(INSTALL_DATA) $(srcdir)/$$i \
+	#	    $(DESTDIR)$(mandir)/man3/$$i; done
+	#for i in $(MAN3PCAP_EXPAND:.in=); do \
+	#	$(INSTALL_DATA) $$i \
+	#	    $(DESTDIR)$(mandir)/man3/$$i; done
 	(cd $(DESTDIR)$(mandir)/man3 && \
 	rm -f pcap_datalink_val_to_description.3pcap && \
 	$(LN_S) pcap_datalink_val_to_name.3pcap \
