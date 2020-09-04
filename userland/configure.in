@@ -176,7 +176,7 @@ if test "x$enable_xdp" != "xno"; then
   BUILD_KERNEL=`uname -r`
   if test -f /usr/local/include/bpf/xsk.h && test -f /usr/src/linux-headers-$BUILD_KERNEL/include/uapi/linux/if_xdp.h; then
     BUILD_KERNEL=`uname -r`
-    AF_XDP_LIB="-lbpf"
+    AF_XDP_LIB="-lbpf -lelf"
     HAVE_AF_XDP="-D HAVE_AF_XDP"
     AF_XDP_OBJS="pfring_mod_af_xdp.o"
     AF_XDP_DEP="copy_if_xdp"
