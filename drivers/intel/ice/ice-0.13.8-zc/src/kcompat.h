@@ -50,6 +50,10 @@
 #undef HAVE_XDP_SUPPORT
 #endif
 
+#ifdef HAVE_AF_XDP_ZC_SUPPORT
+#undef HAVE_AF_XDP_ZC_SUPPORT
+#endif
+
 #ifdef CONFIG_DCB
 #undef CONFIG_DCB
 #endif
@@ -2790,7 +2794,9 @@ static inline bool __kc_napi_if_scheduled_mark_missed(struct napi_struct *n)
 #endif /* !napi_if_scheduled_mark_missed */
 #endif /* HAVE_AF_XDP_SUPPORT */
 #else /* >= 4.20.0 */
+#ifndef HAVE_PF_RING
 #define HAVE_AF_XDP_ZC_SUPPORT
+#endif
 #define HAVE_VXLAN_TYPE
 #endif /* 4.20.0 */
 
