@@ -338,7 +338,7 @@ void printHelp(void) {
 /* *************************************** */
 
 int main(int argc, char* argv[]) {
-  char *device = NULL, c, *bpfFilter = NULL;
+  char *device = "any", c, *bpfFilter = NULL;
   char errbuf[PCAP_ERRBUF_SIZE];
   int promisc, snaplen = DEFAULT_SNAPLEN;
   struct bpf_program fcode;
@@ -419,13 +419,6 @@ int main(int argc, char* argv[]) {
     case 'S':
       dont_strip_hw_ts = 1;
       break;
-    }
-  }
-
-  if(device == NULL) {
-    if((device = pcap_lookupdev(errbuf)) == NULL) {
-      printf("pcap_lookup: %s", errbuf);
-      return(-1);
     }
   }
 
