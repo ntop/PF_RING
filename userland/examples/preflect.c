@@ -99,17 +99,11 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if(out_device == NULL) {
+  if(device == NULL || out_device == NULL) {
     printHelp();
     return(-1);
   }
 
-  if(device == NULL) {
-    if((device = pcap_lookupdev(errbuf)) == NULL) {
-      printf("pcap_lookup: %s", errbuf);
-      return(-1);
-    }
-  }
   printf("Capturing from %s\n", device);
 
   /* hardcode: promisc=1, to_ms=500 */
