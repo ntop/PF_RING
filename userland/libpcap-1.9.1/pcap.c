@@ -3321,8 +3321,11 @@ int
 pcap_get_selectable_fd(pcap_t *p)
 {
 #ifdef HAVE_PF_RING
-	if (p->ring != NULL)
-		p->sync_selectable_fd = 1;
+  if (p->ring != NULL)
+    p->sync_selectable_fd = 1;
+
+  if (!p->ring->enabled)
+    pfring_enable_ring(p->ring);  
 #endif
 	return (p->selectable_fd);
 }
