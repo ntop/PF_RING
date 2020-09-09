@@ -2331,6 +2331,8 @@ if test "xxx_only" = yes; then
 	enable_dbus=no
 fi
 
+enable_dbus=no # PF_RING
+
 if test "x$enable_dbus" != "xno"; then
 	if test "x$enable_dbus" = "xyes"; then
 		case "$host_os" in
@@ -2419,6 +2421,8 @@ if test "xxx_only" = yes; then
 	# want RDMA support.
 	enable_rdma=no
 fi
+
+enable_rdma=no # PF_RING
 
 if test "x$enable_rdma" != "xno"; then
 	AC_CHECK_LIB(ibverbs, ibv_get_device_list, [
