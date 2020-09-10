@@ -314,10 +314,8 @@ int main(int argc, char* argv[]) {
   }
 
   if (device == NULL) {
-    if ((device = pcap_lookupdev(errbuf)) == NULL) {
-      printf("pcap_lookup: %s", errbuf);
-      return -1;
-    }
+    print_help();
+    return -1;
   }
 
   if (enable_l7) {
