@@ -441,10 +441,10 @@ static void append_bpf_file_list(struct bpf_file_list* list, const char* filenam
 // signal-safety function
 static char* read_bpf_file(const char* filename) {
   static char buf[MAX_BPF_EXPRESSION_LEN];
-	int fd;
+  int fd;
   if ((fd = open(filename, O_RDONLY)) > 0) {
     int n;
-    if ((n = read(fd, buf, sizeof(buf))) > 0) {
+    if ((n = read(fd, buf, sizeof(buf))) >= 0) {
       buf[n] = '\0';
       char* line_end = strpbrk(buf, "\r\n");
       if (line_end) // line trim
