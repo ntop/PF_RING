@@ -364,8 +364,8 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
 
     if (unlikely(ring->break_recv_loop)) {
       if (unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
-      ring->break_recv_loop = 0;
-      return -1;
+      errno = EINTR;
+      return 0;
     }
       
     if (unlikely(pfring_mod_af_xdp_poll(ring, duration) == -1 && errno != EINTR)) {

@@ -104,19 +104,24 @@ int pfring_mod_pcap_recv(pfring *ring, u_char** buffer, u_int buffer_len,
   if(ring->reentrant)
     pfring_rwlock_wrlock(&ring->rx_lock);
 
-  if(ring->break_recv_loop)
+  if(ring->break_recv_loop) {
+    errno = EINTR;
     goto exit; /* retval = 0 */
+  }
 
   if(!pcap->is_pcap_file) {
     while(wait_for_incoming_packet) {
       rc = pfring_mod_pcap_poll(ring, 1 /* sec */);
 
-      if(rc > 0)
+      if(rc > 0) {
 	break;
-      else if((rc == 0) || ring->break_recv_loop)
+      } else if((rc == 0) || ring->break_recv_loop) {
+        if (ring->break_recv_loop)
+          errno = EINTR;
 	return(0);
-      else
+      } else {
 	return(-1);
+      }
     }
   }
 

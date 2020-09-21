@@ -521,8 +521,10 @@ int pfring_mod_recv(pfring *ring, u_char** buffer, u_int buffer_len,
   ring->break_recv_loop = 0;
 
   do_pfring_recv:
-    if(ring->break_recv_loop)
+    if(ring->break_recv_loop) {
+      errno = EINTR;
       return(0);
+    }
 
     if(unlikely(ring->reentrant))
       pfring_rwlock_wrlock(&ring->rx_lock);
