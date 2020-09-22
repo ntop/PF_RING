@@ -51,6 +51,8 @@ pfring_zc_pkt_buff *buffer;
 static struct timeval startTime;
 int bind_core = -1;
 int vm_guest = 0;
+u_int8_t touch_payload = 0;
+
 
 struct volatile_globals {
   unsigned long long numPkts;
@@ -143,7 +145,7 @@ void printHelp(void) {
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A simple packet counter application consuming packets from a sw queue.\n\n");
   printf("Usage: zcount_ipc -i <queue id> -c <cluster id>\n"
-	 "                [-h] [-g <core id>] [-s] [-v] [-u] [-a]\n\n");
+	 "                [-h] [-g <core id>] [-s] [-v] [-u] [-a] [-t]\n\n");
   printf("-h              Print this help\n");
   printf("-i <queue id>   Zero queue id\n");
   printf("-c <cluster id> Cluster id\n");
@@ -152,6 +154,7 @@ void printHelp(void) {
   printf("-f <bpf>        Set a BPF filter\n");
   printf("-v              Verbose: print packet data\n");
   printf("-s              In case of -v dump the buffer as sysdig event instead of packet bytes\n");
+  printf("-t              Touch payload (to force packet load on cache)\n");
   printf("-u              Guest VM (master on the host)\n");
   exit(-1);
 }
@@ -166,6 +169,12 @@ void *packet_consumer_thread(void *_id) {
   while(!g->do_shutdown) {
 
     if(pfring_zc_recv_pkt(zq, &buffer, g->wait_for_packet) > 0) {
+      if(touch_payload) {
+	u_char *p = pfring_zc_pkt_buff_data(buffer, zq);
+	volatile int __attribute__ ((unused)) i;
+	
+	i = p[12] + p[13];
+      }
 
       if (unlikely(g->verbose)) {
         u_char *pkt_data = pfring_zc_pkt_buff_data(buffer, zq);
@@ -210,7 +219,7 @@ int main(int argc, char* argv[]) {
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:f:g:hi:svu")) != '?') {
+  while((c = getopt(argc,argv,"ac:f:g:hi:svut")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -240,6 +249,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'u':
       vm_guest = 1;
+      break;
+    case 't':
+      touch_payload = 1;
       break;
     }
   }

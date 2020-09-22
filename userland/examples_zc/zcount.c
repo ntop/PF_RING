@@ -59,7 +59,7 @@ int bind_core = -1;
 int bind_time_pulse_core = -1;
 int buffer_len;
 u_int8_t wait_for_packet = 1, do_shutdown = 0, verbose = 0, add_filtering_rule = 0;
-u_int8_t high_stats_refresh = 0, time_pulse = 0;
+u_int8_t high_stats_refresh = 0, time_pulse = 0, touch_payload = 0;
 
 u_int64_t prev_ns = 0;
 u_int64_t threshold_min = 1500, threshold_max = 2500; /* TODO parameters */
@@ -167,7 +167,7 @@ void printHelp(void) {
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A simple packet counter application.\n\n");
   printf("Usage:   zcount -i <device> -c <cluster id>\n"
-	 "                [-h] [-g <core id>] [-R] [-H] [-S <core id>] [-v] [-a]\n\n");
+	 "                [-h] [-g <core id>] [-R] [-H] [-S <core id>] [-v] [-a] [-t]\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
   printf("-c <cluster id> Cluster id\n");
@@ -178,6 +178,7 @@ void printHelp(void) {
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
   printf("-T              Capture also TX (standard kernel drivers only)\n");
+  printf("-t              Touch payload (to force packet load on cache)\n");
   printf("-D              Debug mode\n");
   printf("-C              Check license\n");
   printf("-M              Print maintenance\n");
@@ -228,6 +229,13 @@ void *packet_consumer_thread(void *user) {
         prev_ns = now_ns;
       }
 
+      if(touch_payload) {
+	u_char *p = pfring_zc_pkt_buff_data(buffers[0], zq);
+	volatile int __attribute__ ((unused)) i;
+	
+	i = p[12] + p[13];
+      }
+
       if (unlikely(verbose))
         print_packet(buffers[0]);
 
@@ -269,7 +277,7 @@ int main(int argc, char* argv[]) {
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:f:g:hi:vCDMRHS:T")) != '?') {
+  while((c = getopt(argc,argv,"ac:f:g:hi:vCDMRHS:Tt")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -304,6 +312,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'T':
       flags |= PF_RING_ZC_DEVICE_CAPTURE_TX;
+      break;
+    case 't':
+      touch_payload = 1;
       break;
     case 'v':
       verbose = 1;
@@ -416,8 +427,10 @@ int main(int argc, char* argv[]) {
   if (!verbose) while (!do_shutdown) {
     if (high_stats_refresh) {
       pfring_zc_stat stats;
+
       pfring_zc_stats(zq, &stats);
       gettimeofday(&timeNow, NULL);
+
       if (timeNow.tv_sec != lastTime.tv_sec) {
         lastTime.tv_sec = timeNow.tv_sec;
         print_stats();
