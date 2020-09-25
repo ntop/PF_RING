@@ -55,7 +55,8 @@ pfring *pd = NULL;
 pfring_ft_table *ft = NULL;
 int bind_core = -1;
 int bind_time_pulse_core = -1;
-u_int8_t quiet = 0, verbose = 0, time_pulse = 0, enable_l7 = 0, do_shutdown = 0;
+u_int8_t quiet = 0, verbose = 0, stats_only = 0;
+u_int8_t time_pulse = 0, enable_l7 = 0, do_shutdown = 0;
 u_int64_t num_pkts = 0;
 u_int64_t num_bytes = 0;
 
@@ -129,6 +130,9 @@ void print_stats() {
 	     pfring_format_numbers(((double) bytes_diff/(double)(delta_last/1000)),  buf2, sizeof(buf2), 1));
 
       pfring_set_application_stats(pd, buf);
+
+      if (stats_only)
+        fprintf(stderr, "%s\n---\n", buf);
     }
   }
 
@@ -372,6 +376,7 @@ void print_help(void) {
   printf("-s <duration>   Enable flow slicing (set timeout to <duration> seconds\n");
   printf("-q              Quiet mode\n");
   printf("-d              Debug mode\n");
+  printf("-t              Print actual stats");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-V              Print version");
 
@@ -391,7 +396,7 @@ int main(int argc, char* argv[]) {
   packet_direction direction = rx_and_tx_direction;
   pthread_t time_thread;
 
-  while ((c = getopt(argc,argv,"c:dg:hi:p:qvF:s:S:V7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dg:hi:p:qvF:s:S:tV7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -440,6 +445,9 @@ int main(int argc, char* argv[]) {
       print_version();
       exit(0);
       break;
+    case 't':
+      stats_only = 1;
+      break;
     }
   }
 
@@ -449,7 +457,7 @@ int main(int argc, char* argv[]) {
   if (enable_l7)
     ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
 
-  ft = pfring_ft_create_table(ft_flags, 0, 0, 0, 0);
+  ft = pfring_ft_create_table(ft_flags, 4000000, 0, 0, 0);
 
   if (ft == NULL) {
     fprintf(stderr, "pfring_ft_create_table error\n");
@@ -470,7 +478,8 @@ int main(int argc, char* argv[]) {
   */
 
   /* Example of callback for expired flows */
-  pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
+  if (!stats_only)
+    pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
   /* Example of callback for packets that have been successfully processed
   pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
