@@ -364,7 +364,8 @@ static void tx_test(u_int8_t port_id, u_int16_t queue_id) {
 
 static int processing_thread(__attribute__((unused)) void *arg) {
   unsigned lcore_id = rte_lcore_id();
-  u_int16_t queue_id = lcore_id;
+  unsigned lcore_index = rte_lcore_index(lcore_id);
+  u_int16_t queue_id = lcore_index;
   pfring_ft_table *ft;
   pfring_ft_pcap_pkthdr h;
   pfring_ft_ext_pkthdr ext_hdr = { 0 };
@@ -375,9 +376,9 @@ static int processing_thread(__attribute__((unused)) void *arg) {
   u_int32_t num_ports, i;
   u_int8_t ports[2];
 
-  if (lcore_id >= num_queues) {
+  if (lcore_index >= num_queues) {
     if (test_loop && twin_port != 0xFF)
-      tx_test(twin_port, lcore_id - num_queues);
+      tx_test(twin_port, lcore_index - num_queues);
     return 0;
   }
 
