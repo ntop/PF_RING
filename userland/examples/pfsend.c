@@ -320,9 +320,43 @@ static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use
 
 /* *************************************** */
 
+static void randomize_packets() {
+  struct packet *tobemoved, *add_before, *prev, *tmp;
+  int j, n, moved_pkts = 0;
+ 
+  // keep the first item in pkt_head and detach the second
+  tobemoved = pkt_head->next;
+  pkt_head->next = NULL;
+  moved_pkts++;
+
+  while (tobemoved != NULL && !do_shutdown) {
+    // detach item
+    tmp = tobemoved->next;
+    tobemoved->next = NULL;
+
+    // get a random item in the destination list
+    n = random() % (min_val(moved_pkts, 200));
+    prev = pkt_head;
+    add_before = pkt_head->next;
+    for (j = 0; j < n && add_before != NULL; j++) {
+      prev = add_before; 
+      add_before = add_before->next;
+    }
+      
+    // move the detached item
+    prev->next = tobemoved;
+    tobemoved->next = add_before;
+    moved_pkts++;
+
+    tobemoved = tmp;
+  }
+}
+
+/* *************************************** */
+
 int main(int argc, char* argv[]) {
   char *pcap_in = NULL, path[255] = { 0 };
-  int c, i, j, n, verbose = 0, active_poll = 0;
+  int c, i, n, verbose = 0, active_poll = 0;
   u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
   u_char buffer[MAX_PACKET_SIZE];
   u_int32_t num_to_send = 0;
@@ -752,11 +786,6 @@ int main(int argc, char* argv[]) {
     pfring_config(cpu_percentage);
   }
 
-  if(!verbose) {
-    signal(SIGALRM, my_sigalarm);
-    alarm(1);
-  }
-
   gettimeofday(&startTime, NULL);
   memcpy(&lastTime, &startTime, sizeof(startTime));
 
@@ -792,6 +821,14 @@ int main(int argc, char* argv[]) {
 
   if (pps < 0) /* flush for sending at the exact original pcap speed only, otherwise let pf_ring flush when needed) */
     flush = 1;
+
+  if (randomize && !on_the_fly_reforging)
+    randomize_packets();
+
+  if(!verbose) {
+    signal(SIGALRM, my_sigalarm);
+    alarm(1);
+  }
 
   while((num_to_send == 0) 
 	|| (i < num_to_send)) {
@@ -830,13 +867,9 @@ int main(int argc, char* argv[]) {
       num_bytes_good_sent += tosend->len + 24 /* 8 Preamble + 4 CRC + 12 IFG */;
     }
 
-    if (randomize) {
+    if (randomize && on_the_fly_reforging) {
       n = random() & 0xF;
-      if (on_the_fly_reforging)
-        reforging_idx += n;
-      else
-        for (j = 0; j < n; j++)
-          tosend = tosend->next;
+      reforging_idx += n;
     }
 
     if (pkt_loop && ++pkt_loop_sent < pkt_loop) {
