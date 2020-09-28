@@ -594,12 +594,19 @@ int main(int argc, char* argv[]) {
 
 	p = (struct packet *) malloc(sizeof(struct packet));
 	if(p) {
+          int plen, oplen;
+
+          plen = oplen = h->caplen;
+          if (datalink == DLT_LINUX_SLL)
+            plen -= 2, oplen -= 2;
+          if (plen < 60)
+            plen = 60;
+          p->len = plen;
+
           p->id = num_pcap_pkts;
-	  p->len = h->caplen;
-          if (datalink == DLT_LINUX_SLL) p->len -= 2;
 	  p->ticks_from_beginning = (((h->ts.tv_sec - beginning.tv_sec) * 1000000) + (h->ts.tv_usec - beginning.tv_usec)) * hz / 1000000;
 	  p->next = NULL;
-	  p->pkt = (u_char *)malloc(p->len);
+	  p->pkt = (u_char *) calloc(1, plen + 4);
 
 	  if(p->pkt == NULL) {
 	    printf("Not enough memory\n");
@@ -607,12 +614,12 @@ int main(int argc, char* argv[]) {
 	  } else {
             if (datalink == DLT_LINUX_SLL) {
 	      memcpy(p->pkt, pkt, 12);
-              memcpy(&p->pkt[12], &pkt[14], p->len - 14);
+              memcpy(&p->pkt[12], &pkt[14], oplen - 14);
 	    } else {
-	      memcpy(p->pkt, pkt, p->len);
+	      memcpy(p->pkt, pkt, oplen);
             }
 	    if(reforge_dst_mac || reforge_src_mac || reforge_ip)
-              reforge_packet((u_char *) p->pkt, p->len, ip_offset + num_pcap_pkts, 0); 
+              reforge_packet((u_char *) p->pkt, oplen, ip_offset + num_pcap_pkts, 0); 
 	  }
 
 	  if(last) {
@@ -620,19 +627,21 @@ int main(int argc, char* argv[]) {
 	    last = p;
 	  } else
 	    pkt_head = p, last = p;
+
+          if(verbose)
+	    printf("Read %d bytes packet from pcap file %s [%lu.%lu Secs =  %lu ticks@%luhz from beginning]\n",
+		   oplen, pcap_in, h->ts.tv_sec - beginning.tv_sec, h->ts.tv_usec - beginning.tv_usec,
+		   (long unsigned int)p->ticks_from_beginning,
+		   (long unsigned int)hz);
+
+          avg_send_len += plen;
+	  num_pcap_pkts++;
+
 	} else {
 	  printf("Not enough memory\n");
 	  break;
 	}
 
-	if(verbose)
-	  printf("Read %d bytes packet from pcap file %s [%lu.%lu Secs =  %lu ticks@%luhz from beginning]\n",
-		 p->len, pcap_in, h->ts.tv_sec - beginning.tv_sec, h->ts.tv_usec - beginning.tv_usec,
-		 (long unsigned int)p->ticks_from_beginning,
-		 (long unsigned int)hz);
-
-	avg_send_len += p->len;
-	num_pcap_pkts++;
       } /* while */
 
       if (num_pcap_pkts == 0) {
