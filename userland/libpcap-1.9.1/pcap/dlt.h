@@ -713,7 +713,9 @@
  * IEEE 802.15.4, with address fields padded, as is done by Linux
  * drivers; requested by Juergen Schimmer.
  */
+#ifndef DLT_IEEE802_15_4_LINUX
 #define DLT_IEEE802_15_4_LINUX	191
+#endif
 
 /*
  * Per Packet Information encapsulated packets.
@@ -746,7 +748,10 @@
  * frames that include the FCS.
  */
 #define DLT_IEEE802_15_4_WITHFCS	195
+
+#ifndef DLT_IEEE802_15_4
 #define DLT_IEEE802_15_4		DLT_IEEE802_15_4_WITHFCS
+#endif
 
 /*
  * Various link-layer types, with a pseudo-header, for SITA
