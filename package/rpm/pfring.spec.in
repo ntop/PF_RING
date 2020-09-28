@@ -45,8 +45,8 @@ cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
 cp $HOME/PF_RING/README.FIRST                  $RPM_BUILD_ROOT/usr/local/pfring/
 cp $HOME/PF_RING/userland/lib/libpfring.a      $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/lib/libpfring.so.@VERS@     $RPM_BUILD_ROOT/usr/local/lib
-ln -sfr $RPM_BUILD_ROOT/usr/local/lib/libpfring.so.@VERS@ $RPM_BUILD_ROOT/usr/local/lib/libpfring.so.@MAJOR_VERS@
-ln -sfr $RPM_BUILD_ROOT/usr/local/lib/libpfring.so.@MAJOR_VERS@ $RPM_BUILD_ROOT/usr/local/lib/libpfring.so
+cd $RPM_BUILD_ROOT/usr/local/lib && ln -sf libpfring.so.@VERS@ libpfring.so.@MAJOR_VERS@ && cd -
+cd $RPM_BUILD_ROOT/usr/local/lib && ln -sf libpfring.so.@MAJOR_VERS@ libpfring.so && cd -
 cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/lib/pfring_ft.h      $RPM_BUILD_ROOT/usr/local/include
