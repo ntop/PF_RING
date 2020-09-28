@@ -44,7 +44,9 @@ cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
 # Userland
 cp $HOME/PF_RING/README.FIRST                  $RPM_BUILD_ROOT/usr/local/pfring/
 cp $HOME/PF_RING/userland/lib/libpfring.a      $RPM_BUILD_ROOT/usr/local/lib
-cp $HOME/PF_RING/userland/lib/libpfring.so     $RPM_BUILD_ROOT/usr/local/lib
+cp $HOME/PF_RING/userland/lib/libpfring.so.@VERS@     $RPM_BUILD_ROOT/usr/local/lib
+ln -sfr $RPM_BUILD_ROOT/usr/local/lib/libpfring.so.@VERS@ $RPM_BUILD_ROOT/usr/local/lib/libpfring.so.@MAJOR_VERS@
+ln -sfr $RPM_BUILD_ROOT/usr/local/lib/libpfring.so.@MAJOR_VERS@ $RPM_BUILD_ROOT/usr/local/lib/libpfring.so
 cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/local/include
 cp $HOME/PF_RING/userland/lib/pfring_ft.h      $RPM_BUILD_ROOT/usr/local/include
@@ -101,6 +103,8 @@ rm -fr $RPM_BUILD_ROOT
 %files
 /usr/local/include/linux/pf_ring.h
 /usr/local/lib/libpfring.a
+/usr/local/lib/libpfring.so.@VERS@
+/usr/local/lib/libpfring.so.@MAJOR_VERS@
 /usr/local/lib/libpfring.so
 /usr/local/lib/libpcap.a
 /usr/local/lib/libpcap.so.1.9.1

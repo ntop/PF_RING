@@ -594,6 +594,7 @@ PLATFORM
 KERNEL
 DATE
 EXTN
+MAJOR_VERS
 VERS
 target_alias
 host_alias
@@ -1675,6 +1676,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 VERS=`../version.sh --release`
+MAJOR_VERS=`../version.sh --major`
 PLATFORM=`uname -p`
 
 if which git >/dev/null; then
@@ -1722,6 +1724,7 @@ RPM_SIGN_CMD="rpm --addsign"
 if test "$CENTOS_RELEASE" -ne 8; then
   RPM_SIGN_CMD="./rpm-sign.exp"
 fi
+
 
 
 

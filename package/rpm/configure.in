@@ -1,6 +1,7 @@
 AC_INIT([Makefile.in], 1.0)
 
 VERS=`../version.sh --release`
+MAJOR_VERS=`../version.sh --major`
 PLATFORM=`uname -p`
 
 if which git >/dev/null; then
@@ -53,6 +54,7 @@ if test "$CENTOS_RELEASE" -ne 8; then
 fi
 
 AC_SUBST(VERS)
+AC_SUBST(MAJOR_VERS)
 AC_SUBST(EXTN)
 AC_SUBST(DATE)
 AC_SUBST(KERNEL)

@@ -2,11 +2,17 @@
 
 SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
 RELEASE="$(cd ${SCRIPTPATH}; cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2)"
+MAJOR_RELEASE="$(cd ${SCRIPTPATH}; cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1)"
 REVISION="$(cd ${SCRIPTPATH}; git rev-list --all |wc -l|tr -d '[[:space:]]')"
 HASH="$(cd ${SCRIPTPATH}; git rev-parse HEAD)"
 
 get_release() {
 	echo "${RELEASE}"
+	exit 0
+}
+
+get_major_release() {
+	echo "${MAJOR_RELEASE}"
 	exit 0
 }
 
@@ -29,6 +35,9 @@ case "$1" in
   --release)
 	get_release;
 	;;
+  --major)
+	get_major_release;
+	;;
   --revision)
 	get_revision;
 	;;
@@ -39,7 +48,7 @@ case "$1" in
 	get_version;
 	;;
   *)
-	echo "Usage: ${0} {--hash|--release|--revision|--version}"
+	echo "Usage: ${0} {--hash|--release|--major|--revision|--version}"
 	exit 1
 esac
 
