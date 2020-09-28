@@ -50,7 +50,6 @@
 
 #ifdef HAVE_NBROKER
 #include "nbroker_api.h"
-#include "nbroker_types.h"
 #endif
 
 #define DAQ_PF_RING_ZC_VERSION 10
@@ -208,7 +207,7 @@ static char *pfringdevice_to_ifname(char *device, char *ifname, int ifname_len) 
   return dev;
 }
 
-static void nbroker_prepare_flow_rule(u_char *buffer, int len, nbroker_match_t *rule) {
+static void nbroker_prepare_flow_rule(u_char *buffer, int len, rrc_match_t *rule) {
   struct pfring_pkthdr phdr;
 
   memset(&phdr, 0, sizeof(phdr));
@@ -225,17 +224,17 @@ static void nbroker_prepare_flow_rule(u_char *buffer, int len, nbroker_match_t *
     rule->dhost.host.v4 = htonl(phdr.extended_hdr.parsed_pkt.ip_dst.v4);
     rule->shost.mask.v4 = rule->dhost.mask.v4 = 0xFFFFFFFF;
   } else {
-    memcpy(&rule->shost.host.v6, &phdr.extended_hdr.parsed_pkt.ip_src.v6, sizeof(nbroker_in6_addr_t));
-    memcpy(&rule->dhost.host.v6, &phdr.extended_hdr.parsed_pkt.ip_dst.v6, sizeof(nbroker_in6_addr_t));
-    memset(&rule->shost.mask.v6, 0xFF, sizeof(nbroker_in6_addr_t));
-    memset(&rule->dhost.mask.v6, 0xFF, sizeof(nbroker_in6_addr_t));
+    memcpy(&rule->shost.host.v6, &phdr.extended_hdr.parsed_pkt.ip_src.v6, sizeof(rrc_in6_addr_t));
+    memcpy(&rule->dhost.host.v6, &phdr.extended_hdr.parsed_pkt.ip_dst.v6, sizeof(rrc_in6_addr_t));
+    memset(&rule->shost.mask.v6, 0xFF, sizeof(rrc_in6_addr_t));
+    memset(&rule->dhost.mask.v6, 0xFF, sizeof(rrc_in6_addr_t));
   }
   rule->sport.low = htons(phdr.extended_hdr.parsed_pkt.l4_src_port);
   rule->dport.low = htons(phdr.extended_hdr.parsed_pkt.l4_dst_port);
 }
     
 static void nbroker_drop_flow(nbroker_t *broker, u_char *buffer, int len, char *port) {
-  nbroker_match_t rule;
+  rrc_match_t rule;
   u_int32_t rule_id;
 
   nbroker_prepare_flow_rule(buffer, len, &rule);
@@ -245,7 +244,7 @@ static void nbroker_drop_flow(nbroker_t *broker, u_char *buffer, int len, char *
 }
 
 static void nbroker_forward_flow(nbroker_t *broker, u_char *buffer, int len, char *port, char *dest_port) {
-  nbroker_match_t rule;
+  rrc_match_t rule;
   u_int32_t rule_id;
 
   nbroker_prepare_flow_rule(buffer, len, &rule);
