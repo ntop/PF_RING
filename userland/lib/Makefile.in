@@ -124,7 +124,7 @@ ${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @AF_XDP_DE
 
 ${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
 	@echo "=*= making library $@ =*="
-	${CC} -Wl,-soname,$@.1 ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@
+	${CC} -Wl,-soname,$@.@MAJOR_VER@ ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@.@VER@
 
 extract_pfring_zc_lib:
 	@AR_X@ @PF_RING_ZC_LIB@
@@ -178,9 +178,9 @@ install-static: ${STATICLIB} install-includes
 
 install-shared:	${DYNAMICLIB} install-includes
 	mkdir -p $(DESTDIR)$(libdir)
-	cp ${DYNAMICLIB} $(DESTDIR)$(libdir)/
-	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB} ${DYNAMICLIB}.@VER@
-	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB} ${DYNAMICLIB}.@MAJOR_VER@
+	cp ${DYNAMICLIB}.@VER@ $(DESTDIR)$(libdir)/
+	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB}.@VER@ ${DYNAMICLIB}.@MAJOR_VER@
+	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB}.@MAJOR_VER@ ${DYNAMICLIB}
 	-@if test "$(USER)" = "root"; then \
 		ldconfig; \
 	fi
