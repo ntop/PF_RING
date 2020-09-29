@@ -232,11 +232,11 @@ void processFlow(pfring_ft_flow *flow, void *user){
     printf("l7: %s, category: %u, ",
 	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf3, sizeof(buf3)), v->l7_protocol.category);
 
-  printf("srcMac: %s, dstMac: %s, srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
+  printf("srcMac: %s, dstMac: %s, vlanId: %u, srcIp: %s, dstIp: %s, srcPort: %u, dstPort: %u, protocol: %u, tcpFlags: 0x%02X, "
          "c2s: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "s2c: { Packets: %ju, Bytes: %ju, First: %u.%u, Last: %u.%u }, "
          "status: %s, action: %s",
-         etheraddr2string(k->smac, buf4), etheraddr2string(k->dmac, buf5),
+         etheraddr2string(k->smac, buf4), etheraddr2string(k->dmac, buf5), k->vlan_id,
          ip1, ip2, k->sport, k->dport, k->protocol, v->direction[s2d_direction].tcp_flags | v->direction[d2s_direction].tcp_flags,
          v->direction[s2d_direction].pkts, v->direction[s2d_direction].bytes,
          (u_int) v->direction[s2d_direction].first.tv_sec, (u_int) v->direction[s2d_direction].first.tv_usec,
