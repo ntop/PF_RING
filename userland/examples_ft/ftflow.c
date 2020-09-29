@@ -59,6 +59,7 @@ u_int8_t quiet = 0, verbose = 0, stats_only = 0;
 u_int8_t time_pulse = 0, enable_l7 = 0, do_shutdown = 0;
 u_int64_t num_pkts = 0;
 u_int64_t num_bytes = 0;
+u_int64_t num_flows = 0;
 
 volatile u_int64_t *pulse_timestamp;
 
@@ -271,6 +272,8 @@ void processFlow(pfring_ft_flow *flow, void *user){
   }
 
   printf("\n");
+
+  num_flows++;
 
   pfring_ft_flow_free(flow);
 }
@@ -575,13 +578,15 @@ int main(int argc, char* argv[]) {
 
   sleep(1);
 
-  if (time_pulse) {
+  if (time_pulse)
     pthread_join(time_thread, NULL);
-  }
 
   pfring_close(pd);
 
   pfring_ft_flush(ft);
+
+  if (!stats_only)
+    fprintf(stderr, "%lu exported flows\n", num_flows);
 
   pfring_ft_destroy_table(ft);
 
