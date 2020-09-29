@@ -273,6 +273,7 @@ typedef void
 #define PFRING_FT_TABLE_FLAGS_DPI       (1 << 0) /**< pfring_ft_create_table() flag: enable nDPI support for L7 protocol detection */
 #define PFRING_FT_TABLE_FLAGS_DPI_EXTRA (1 << 1) /**< pfring_ft_create_table() flag: enable nDPI extra dissection (more flow metadata) */
 #define PFRING_FT_DECODE_TUNNELS        (1 << 2) /**< pfring_ft_create_table() flag: decode tunnels (GTP, L2TP, CAPWAP) */
+#define PFRING_FT_IGNORE_HW_HASH        (1 << 3) /**< pfring_ft_create_table() flag: ignore hw packet hash (e.g. when it's asymmetric leading to one flow per direction) */
 
 /**
  * Create a new flow table.
