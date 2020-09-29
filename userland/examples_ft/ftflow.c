@@ -377,6 +377,7 @@ void print_help(void) {
   printf("-g <core>       CPU core affinity\n");
   printf("-S <core>       Enable timer thread and set CPU core affinity\n");
   printf("-s <duration>   Enable flow slicing (set timeout to <duration> seconds\n");
+  printf("-H              Ignore hw hash (use with adapters computing asymmetric hash)");
   printf("-q              Quiet mode\n");
   printf("-d              Debug mode\n");
   printf("-t              Print actual stats");
@@ -398,8 +399,9 @@ int main(int argc, char* argv[]) {
   u_int32_t flags = 0, ft_flags = 0, slice_duration = 0;
   packet_direction direction = rx_and_tx_direction;
   pthread_t time_thread;
+  u_int8_t ignore_hw_hash = 0;
 
-  while ((c = getopt(argc,argv,"c:dg:hi:p:qvF:s:S:tV7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dg:hHi:p:qvF:s:S:tV7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -440,6 +442,9 @@ int main(int argc, char* argv[]) {
       enable_l7 = 1;
       configuration_file = strdup(optarg);
       break;
+    case 'H':
+      ignore_hw_hash = 1;
+      break;
     case 'S':
       time_pulse = 1;
       bind_time_pulse_core = atoi(optarg);
@@ -459,6 +464,9 @@ int main(int argc, char* argv[]) {
 
   if (enable_l7)
     ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+
+  if (ignore_hw_hash)
+    ft_flags |= PFRING_FT_IGNORE_HW_HASH;
 
   ft = pfring_ft_create_table(ft_flags, 4000000, 0, 0, 0);
 
