@@ -700,14 +700,14 @@ void printHelp(void) {
          "                   %d - tunneled src ip, src port, dst ip, dst port, proto, vlan\n"
          "                   %d - tunneled src ip, src port, dst ip, dst port, proto for TCP, src ip, dst ip otherwise\n"
          "                   %d - round-robin\n"
-	 "                   %d - src + dst ip (with duplication)\n",
+         "                   %d - src + dst ip (with duplication)\n",
     cluster_per_flow_2_tuple, cluster_per_flow_4_tuple,
     cluster_per_flow_5_tuple, cluster_per_flow,
     cluster_per_flow_tcp_5_tuple,
     cluster_per_inner_flow_2_tuple, cluster_per_inner_flow_4_tuple,
     cluster_per_inner_flow_5_tuple, cluster_per_inner_flow,
     cluster_per_inner_flow_tcp_5_tuple,
-	 cluster_round_robin, cluster_per_flow_ip_with_dup_tuple);
+    cluster_round_robin, cluster_per_flow_ip_with_dup_tuple);
   printf("-s              Enable hw timestamping\n");
   printf("-S              Do not strip hw timestamps (if present)\n");
   printf("-F              Do not strip CRC/FCS (when not stripped by the adapter)\n");
@@ -726,9 +726,9 @@ void printHelp(void) {
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-K <len>        Print only packets with length > <len> with -v\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
-	 "                ixia\tTimestamped packets by ixiacom.com hardware devices\n"
-     "                metawatch\tTimestamped packets by Arista 7130 MetaWatch series devices\n"
-	 "                arista\tTimestamped packets by Arista 7150 series devices\n");
+         "                ixia\tTimestamped packets by ixiacom.com hardware devices\n"
+         "                metawatch\tTimestamped packets by Arista 7130 MetaWatch series devices\n"
+         "                arista\tTimestamped packets by Arista 7150 series devices\n");
   printf("-L              List all interfaces and exit (use -v for more info)\n");
 }
 
@@ -1105,7 +1105,7 @@ int main(int argc, char* argv[]) {
       if(strcmp(optarg, "ixia") == 0)
 	enable_ixia_timestamp = 1;
       else if(strcmp(optarg, "metawatch") == 0)
-    enable_metawatch_timestamp = 1;
+        enable_metawatch_timestamp = 1;
       else if(strcmp(optarg, "arista") == 0)
 	enable_arista_timestamp = 1;
       else
