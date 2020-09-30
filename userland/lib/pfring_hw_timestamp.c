@@ -30,7 +30,6 @@ void pfring_enable_hw_timestamp_debug() {
 /* ********************************* */
 
 int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts) {
-  u_int32_t buffer_len = hdr->len;
   double sub_ns = 0.;
   struct metawatch_trailer* trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
 
