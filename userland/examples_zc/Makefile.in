@@ -36,7 +36,7 @@ CFLAGS     = -Wall -Wno-unused-function -Wno-format-truncation @CFLAGS@ ${INCLUD
 PFPROGS   = 
 
 ifneq (@HAVE_PF_RING_ZC@,)
-	PFPROGS += zcount zbounce zbounce_ipc zpipeline zbalance zsend zcount_ipc zfanout_ipc zbalance_ipc zpipeline_ipc zfifo zreplicator zbalance_DC_ipc zsanitycheck
+	PFPROGS += zcount zbounce zbounce_ipc zpipeline zbalance zsend zcount_ipc zfanout_ipc zbalance_ipc zpipeline_ipc zfifo zreplicator zbalance_DC_ipc zsanitycheck zfilter_mt_ipc
 endif
 
 TARGETS   =  ${PFPROGS}
@@ -84,6 +84,9 @@ zbalance_DC_ipc: zbalance_DC_ipc.o ${LIBPFRING} Makefile
 
 zsanitycheck: zsanitycheck.o ${LIBPFRING} Makefile
 	${CC} ${CFLAGS} zsanitycheck.o ${LIBS} -o $@
+
+zfilter_mt_ipc: zfilter_mt_ipc.o ${LIBPFRING} Makefile
+	${CC} ${CFLAGS} zfilter_mt_ipc.o ${LIBS} -o $@
 
 install:
 ifneq (@HAVE_PF_RING_ZC@,)
