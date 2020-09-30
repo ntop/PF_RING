@@ -19,17 +19,14 @@
 #define METAWATCH_SUB_NS_MULTIPLIER 16777216.  // = 2**24
 #define NS_IN_S 1000000000
 
-// REF: https://stackoverflow.com/questions/18961420/reverse-the-endianness-of-a-c-structure
-#pragma pack(1)
-
 struct metawatch_trailer {
-    u_int32_t tlv;  // if flags[1] is set
-    u_int32_t ts_sec;
-    u_int32_t ts_nsec;
-    u_int8_t flags;
-    u_int16_t device_id;
-    u_int8_t port_id;
-};
+  u_int32_t tlv;  // if flags[1] is set
+  u_int32_t ts_sec;
+  u_int32_t ts_nsec;
+  u_int8_t flags;
+  u_int16_t device_id;
+  u_int8_t port_id;
+} __attribute__((__packed__));
 
 /* *********************************************** */
 

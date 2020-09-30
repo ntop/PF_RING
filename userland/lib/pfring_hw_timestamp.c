@@ -30,35 +30,36 @@ void pfring_enable_hw_timestamp_debug() {
 /* ********************************* */
 
 int pfring_read_metawatch_hw_timestamp(u_char *buffer, struct timespec *ts, struct pfring_pkthdr *hdr) {
-    u_int32_t buffer_len = hdr->len;
-    double sub_ns = 0.;
+  u_int32_t buffer_len = hdr->len;
+  double sub_ns = 0.;
 
-    struct metawatch_trailer* trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
+  struct metawatch_trailer* trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
 
-    trailer->ts_sec = ntohl(trailer->ts_sec);
-    trailer->ts_nsec = ntohl(trailer->ts_nsec);
-    trailer->tlv = ntohl(trailer->tlv);
-    trailer->device_id = ntohs(trailer->device_id);
+  trailer->ts_sec = ntohl(trailer->ts_sec);
+  trailer->ts_nsec = ntohl(trailer->ts_nsec);
+  trailer->tlv = ntohl(trailer->tlv);
+  trailer->device_id = ntohs(trailer->device_id);
 
-    if ((trailer->flags & METAWATCH_FLAG_TLV_PRESENT) == METAWATCH_FLAG_TLV_PRESENT)
-        sub_ns = (trailer->tlv >> 8) / METAWATCH_SUB_NS_MULTIPLIER;
+  if ((trailer->flags & METAWATCH_FLAG_TLV_PRESENT) == METAWATCH_FLAG_TLV_PRESENT)
+    sub_ns = (trailer->tlv >> 8) / METAWATCH_SUB_NS_MULTIPLIER;
 
-    if(unlikely(debug_ts))
-        fprintf(stderr, "Flags are %d -> %d.%d(%.9f) - DevID:%d ; PortID:%d\tTLV:%d\n",
-                trailer->flags, trailer->ts_sec, trailer->ts_nsec, sub_ns,
-                trailer->device_id, trailer->port_id, trailer->tlv);
+  if(unlikely(debug_ts))
+    fprintf(stderr, "Flags are %d -> %d.%d(%.9f) - DevID:%d ; PortID:%d\tTLV:%d\n",
+            trailer->flags, trailer->ts_sec, trailer->ts_nsec, sub_ns,
+            trailer->device_id, trailer->port_id, trailer->tlv);
 
-    if(unlikely(thiszone == 0)) thiszone = gmt_to_local(0);
-    ts->tv_sec = trailer->ts_sec - thiszone;
-    ts->tv_nsec = trailer->ts_nsec;
+  if (unlikely(thiszone == 0)) thiszone = gmt_to_local(0);
+  ts->tv_sec = trailer->ts_sec - thiszone;
+  ts->tv_nsec = trailer->ts_nsec;
 
-    hdr->extended_hdr.flags = trailer->flags;
-    hdr->extended_hdr.if_index = trailer->port_id;
-    // FIXME: Where should we store the device_id !!!!
-    // hdr->extended_hdr.? = trailer->device_id;
+  hdr->extended_hdr.flags = trailer->flags;
+  hdr->extended_hdr.if_index = trailer->port_id;
+  // FIXME: Where should we store the device_id !!!!
+  // hdr->extended_hdr.? = trailer->device_id;
 
-    // TODO: find some sensible check if the decoding was successful
-    return METAWATCH_TRAILER_LEN;
+  // TODO: find some sensible check if the decoding was successful
+
+  return METAWATCH_TRAILER_LEN;
 }
 
 /* ********************************* */
