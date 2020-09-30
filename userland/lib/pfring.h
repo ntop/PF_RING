@@ -1230,11 +1230,11 @@ int pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 /**
  * Reads a MetaWatch trailer containing, timestamp (ns), device_id, port_id, sub_ns, flags
  * @param buffer            Incoming packet buffer.
+ * @param buffer_len        Incoming packet buffer length.
  * @param ts                If found the hardware timestamp will be placed here
- * @param hdr               Incoming packet buffer length.
  * @return The length of the Metwatch timestamp (hence 0 means that the timestamp has not been found).
  */
-int pfring_read_metawatch_hw_timestamp(u_char *buffer, struct timespec *ts, struct pfring_pkthdr *hdr);
+int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts);
 
 /**
  * MetaWatch trailer containing, timestamp (ns), device_id, port_id, sub_ns, flags

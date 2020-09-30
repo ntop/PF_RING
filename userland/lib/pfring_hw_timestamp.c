@@ -29,10 +29,9 @@ void pfring_enable_hw_timestamp_debug() {
 
 /* ********************************* */
 
-int pfring_read_metawatch_hw_timestamp(u_char *buffer, struct timespec *ts, struct pfring_pkthdr *hdr) {
+int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts) {
   u_int32_t buffer_len = hdr->len;
   double sub_ns = 0.;
-
   struct metawatch_trailer* trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
 
   trailer->ts_sec = ntohl(trailer->ts_sec);
@@ -52,34 +51,32 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, struct timespec *ts, stru
   ts->tv_sec = trailer->ts_sec - thiszone;
   ts->tv_nsec = trailer->ts_nsec;
 
-  hdr->extended_hdr.flags = trailer->flags;
-  hdr->extended_hdr.if_index = trailer->port_id;
-  // FIXME: Where should we store the device_id !!!!
-  // hdr->extended_hdr.? = trailer->device_id;
-
-  // TODO: find some sensible check if the decoding was successful
-
   return METAWATCH_TRAILER_LEN;
 }
 
 /* ********************************* */
 
 int pfring_handle_metawatch_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) {
-    struct timespec ts;
-    int ts_size;
+  struct timespec ts;
+  int ts_size;
 
-    if(unlikely(hdr->caplen != hdr->len))
-        return -1; /* full packet only */
+  if (unlikely(hdr->caplen != hdr->len))
+    return -1; /* full packet only */
 
-    ts_size = pfring_read_metawatch_hw_timestamp(buffer, &ts, hdr);
+  ts_size = pfring_read_metawatch_hw_timestamp(buffer, hdr->len, &ts);
 
-    if(likely(ts_size > 0)) {
-        hdr->caplen = hdr->len = hdr->len - ts_size;
-        hdr->ts.tv_sec = ts.tv_sec, hdr->ts.tv_usec = ts.tv_nsec/1000;
-        hdr->extended_hdr.timestamp_ns = (((u_int64_t) ts.tv_sec) * 1000000000) + ts.tv_nsec;
-    }
+  if (likely(ts_size > 0)) {
+    hdr->caplen = hdr->len = hdr->len - ts_size;
+    hdr->ts.tv_sec = ts.tv_sec, hdr->ts.tv_usec = ts.tv_nsec/1000;
+    hdr->extended_hdr.timestamp_ns = (((u_int64_t) ts.tv_sec) * 1000000000) + ts.tv_nsec;
+  }
 
-    return 0;
+  //FIXME: Where should we store the below?
+  //trailer->flags
+  //trailer->device_id
+  //trailer->port_id (hdr->extended_hdr.if_index ?)
+
+  return 0;
 }
 
 /* ********************************* */
