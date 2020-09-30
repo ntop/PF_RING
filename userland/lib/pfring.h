@@ -396,7 +396,8 @@ struct __pfring {
 #define PF_RING_FLOW_OFFLOAD_TUNNEL    (1 << 23) /**< pfring_open() flag: Enable tunnel dissection with flow offload */
 #define PF_RING_DISCARD_INJECTED_PKTS  (1 << 24) /**< pfring_open() flag: Discard packets injected through the stack module (this avoid loops in MITM applications) */
 #define PF_RING_ARISTA_TIMESTAMP       (1 << 25) /**< pfring_open() flag: Enable Arista 7150 hardware timestamp support and stripping */
- 
+#define PF_RING_METAWATCH_TIMESTAMP    (1 << 26) /**< pfring_open() flag: Enable Arista 7150 hardware timestamp support and stripping */
+
 /* ********************************* */
 
 /* backward compatibility */
@@ -1225,6 +1226,23 @@ int pfring_read_ixia_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct t
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
+
+/**
+ * Reads a MetaWatch trailer containing, timestamp (ns), device_id, port_id, sub_ns, flags
+ * @param buffer            Incoming packet buffer.
+ * @param ts                If found the hardware timestamp will be placed here
+ * @param hdr               Incoming packet buffer length.
+ * @return The length of the Metwatch timestamp (hence 0 means that the timestamp has not been found).
+ */
+int pfring_read_metawatch_hw_timestamp(u_char *buffer, struct timespec *ts, struct pfring_pkthdr *hdr);
+
+/**
+ * MetaWatch trailer containing, timestamp (ns), device_id, port_id, sub_ns, flags
+ * @param buffer            Incoming packet buffer.
+ * @param hdr               This is an in/out parameter: it is used to read the original packet len, and it is updated (size decreased) if the hw timestamp is found
+ * @return 0 on success, a negative value otherwise.
+ */
+int pfring_handle_metawatch_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
 /**
  * Reads the UTC time and ticks from a ARISTA key frame.

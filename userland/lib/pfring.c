@@ -542,14 +542,17 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
         continue; /* rejected */
 #endif
 
-      if (unlikely(ring->flags & (
+      if (likely(ring->flags & (
             PF_RING_IXIA_TIMESTAMP | 
-            PF_RING_VSS_APCON_TIMESTAMP | 
+            PF_RING_VSS_APCON_TIMESTAMP |
+            PF_RING_METAWATCH_TIMESTAMP |
             PF_RING_ARISTA_TIMESTAMP))) {
         if(ring->ixia_timestamp_enabled)
           pfring_handle_ixia_hw_timestamp(buffer, &hdr);
         else if(ring->vss_apcon_timestamp_enabled)
           pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
+        else if(ring->flags & PF_RING_METAWATCH_TIMESTAMP)
+            pfring_handle_metawatch_hw_timestamp(buffer, &hdr);
         else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
           if (pfring_handle_arista_hw_timestamp(buffer, &hdr) == 1)
             continue; /* skip keyframes */
@@ -623,12 +626,15 @@ recv_next:
 
     if (unlikely(rc > 0 && ring->flags & (
           PF_RING_IXIA_TIMESTAMP | 
-          PF_RING_VSS_APCON_TIMESTAMP | 
+          PF_RING_VSS_APCON_TIMESTAMP |
+          PF_RING_METAWATCH_TIMESTAMP |
           PF_RING_ARISTA_TIMESTAMP))) {
       if(ring->ixia_timestamp_enabled)
         pfring_handle_ixia_hw_timestamp(*buffer, hdr);
       else if(ring->vss_apcon_timestamp_enabled)
         pfring_handle_vss_apcon_hw_timestamp(*buffer, hdr);
+      else if(ring->flags & PF_RING_ARISTA_TIMESTAMP)
+        pfring_handle_metawatch_hw_timestamp(*buffer, hdr);
       else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
         if (pfring_handle_arista_hw_timestamp(*buffer, hdr) == 1)
           goto recv_next;

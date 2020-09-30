@@ -727,6 +727,7 @@ void printHelp(void) {
   printf("-K <len>        Print only packets with length > <len> with -v\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
 	 "                ixia\tTimestamped packets by ixiacom.com hardware devices\n"
+     "                metawatch\tTimestamped packets by Arista 7130 MetaWatch series devices\n"
 	 "                arista\tTimestamped packets by Arista 7150 series devices\n");
   printf("-L              List all interfaces and exit (use -v for more info)\n");
 }
@@ -951,7 +952,7 @@ int main(int argc, char* argv[]) {
   u_char mac_address[6] = { 0 };
   int promisc = 1, snaplen = DEFAULT_SNAPLEN, rc;
   u_int clusterId = 0;
-  u_int8_t enable_ixia_timestamp = 0, enable_arista_timestamp = 0;
+  u_int8_t enable_ixia_timestamp = 0, enable_arista_timestamp = 0, enable_metawatch_timestamp = 0;
   u_int8_t list_interfaces = 0;
   u_int32_t flags = 0;
   int bind_core = -1;
@@ -1103,6 +1104,8 @@ int main(int argc, char* argv[]) {
     case 'z':
       if(strcmp(optarg, "ixia") == 0)
 	enable_ixia_timestamp = 1;
+      else if(strcmp(optarg, "metawatch") == 0)
+    enable_metawatch_timestamp = 1;
       else if(strcmp(optarg, "arista") == 0)
 	enable_arista_timestamp = 1;
       else
@@ -1137,7 +1140,7 @@ int main(int argc, char* argv[]) {
     pfring_config(cpu_percentage);
   }
 
-  if(automa || enable_ixia_timestamp || enable_arista_timestamp) {
+  if(automa || enable_ixia_timestamp || enable_arista_timestamp || enable_metawatch_timestamp) {
     if(snaplen < 1536) {
       snaplen = 1536;
       fprintf(stderr, "WARNING: Snaplen smaller than the MTU. Enlarging it (new snaplen %u)\n", snaplen);
@@ -1166,6 +1169,7 @@ int main(int argc, char* argv[]) {
   if(chunk_mode)              flags |= PF_RING_CHUNK_MODE;
   if(enable_ixia_timestamp)   flags |= PF_RING_IXIA_TIMESTAMP;
   if(enable_arista_timestamp) flags |= PF_RING_ARISTA_TIMESTAMP;
+  if(enable_metawatch_timestamp) flags |= PF_RING_METAWATCH_TIMESTAMP;
   if(asymm_rss)               flags |= PF_RING_ZC_NOT_REPROGRAM_RSS;
   else                        flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   /* flags |= PF_RING_FLOW_OFFLOAD | PF_RING_FLOW_OFFLOAD_NOUPDATES;  to receive FlowID on supported adapters*/
