@@ -385,7 +385,6 @@ int main(int argc, char* argv[]) {
   char *vm_sockets = NULL, *vm_sock; 
   long i;
   int rc;
-  int total_devices = 0;
   char *pid_file = NULL;
   int opt_argc;
   char **opt_argv;
@@ -396,6 +395,7 @@ int main(int argc, char* argv[]) {
   pthread_t time_thread;
   pthread_t filtering_thread[MAX_NUM_THREADS];
   pthread_t collector_thread;
+  int buffer_size, tot_buffers;
 
   start_time.tv_sec = 0;
 
@@ -483,22 +483,27 @@ int main(int argc, char* argv[]) {
   if (enable_vm_support)
     flags |= PF_RING_ZC_ENABLE_VM_SUPPORT;
 
-  zc = pfring_zc_create_cluster(
-    cluster_id, 
-    max_packet_len(thread_device[0]),
-    metadata_len,
-    (total_devices * MAX_CARD_SLOTS) + 
+  tot_buffers = 
+    (num_threads * MAX_CARD_SLOTS) + 
     (num_threads * (queue_len + PREFETCH_BUFFERS)) + 
     PREFETCH_BUFFERS +
-    (num_consumer_queues * (queue_len + POOL_SIZE)), 
+    (num_consumer_queues * (queue_len + POOL_SIZE));
+
+  buffer_size = max_packet_len(thread_device[0]);
+
+  zc = pfring_zc_create_cluster(
+    cluster_id, 
+    buffer_size,
+    metadata_len,
+    tot_buffers,
     pfring_zc_numa_get_cpu_node(bind_collector_core),
     NULL /* auto hugetlb mountpoint */,
     flags
   );
 
   if (zc == NULL) {
-    fprintf(stderr, "pfring_zc_create_cluster error [%s] Please check your hugetlb configuration\n",
-	    strerror(errno));
+    fprintf(stderr, "pfring_zc_create_cluster(buffers=%u, size=%u) error [%s] Please check your hugetlb configuration\n",
+            tot_buffers, buffer_size, strerror(errno));
     return -1;
   }
 
