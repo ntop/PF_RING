@@ -352,7 +352,7 @@ void printHelp(void) {
   printf("zfilter_mq_ipc - (C) 2020 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process filtering packets using multiple threads, one per ingress interface,\n");
-  printf("and forwarding to multiple consumer processes (round-robin or fanout.\n\n");
+  printf("and forwarding to multiple consumer processes (round-robin or fanout).\n\n");
   printf("ethX - (Filtering Thread 0) \\                     / (Consumer Process 0) \n");
   printf("                               (Collector Thread) - (Consumer Process 1) \n");
   printf("ethY - (Filtering Thread 1) /                     \\ (Consumer Process 2) \n\n");
