@@ -35,8 +35,8 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
   u_int32_t tlv;
   u_int16_t device_id;
 
-  if (unlikely(thiszone == 0))
-    thiszone = gmt_to_local(0);
+  //if (unlikely(thiszone == 0))
+  //  thiszone = gmt_to_local(0);
 
   tlv = ntohl(trailer->tlv);
   device_id = ntohs(trailer->device_id);
@@ -44,7 +44,8 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
   if ((trailer->flags & METAWATCH_FLAG_TLV_PRESENT) == METAWATCH_FLAG_TLV_PRESENT)
     sub_ns = (tlv >> 8) / METAWATCH_SUB_NS_MULTIPLIER;
 
-  ts->tv_sec = ntohl(trailer->ts_sec) - thiszone;
+  ts->tv_sec = ntohl(trailer->ts_sec);
+  //ts->tv_sec -= thiszone;
   ts->tv_nsec = ntohl(trailer->ts_nsec);
 
   if(unlikely(debug_ts))
