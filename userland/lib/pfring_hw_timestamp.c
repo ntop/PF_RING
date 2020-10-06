@@ -44,13 +44,13 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
   if ((trailer->flags & METAWATCH_FLAG_TLV_PRESENT) == METAWATCH_FLAG_TLV_PRESENT)
     sub_ns = (tlv >> 8) / METAWATCH_SUB_NS_MULTIPLIER;
 
-  if(unlikely(debug_ts))
-    fprintf(stderr, "Flags are %d -> %d.%d(%.9f) - DevID:%d ; PortID:%d\tTLV:%d\n",
-            trailer->flags, trailer->ts_sec, trailer->ts_nsec, sub_ns,
-            device_id, trailer->port_id, tlv);
-
   ts->tv_sec = ntohl(trailer->ts_sec) - thiszone;
   ts->tv_nsec = ntohl(trailer->ts_nsec);
+
+  if(unlikely(debug_ts))
+    fprintf(stderr, "Flags are %d -> %lu.%lu(%.9f) - DevID:%d ; PortID:%d\tTLV:%d\n",
+            trailer->flags, ts->tv_sec, ts->tv_nsec, sub_ns,
+            device_id, trailer->port_id, tlv);
 
   return METAWATCH_TRAILER_LEN;
 }
