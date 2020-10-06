@@ -3934,6 +3934,7 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
     if(iphdr->frag_off & htons(IP_MF | IP_OFFSET)) {
       if((cloned = skb_clone(skb, GFP_ATOMIC)) != NULL) {
         int vlan_offset = 0;
+        int tot_len, tot_frame_len;
 
         if(displ && (hdr->extended_hdr.parsed_pkt.offset.l3_offset - displ) /*VLAN*/) {
 	  vlan_offset = 4;
@@ -3945,15 +3946,26 @@ static struct sk_buff* defrag_skb(struct sk_buff *skb,
 	skb_reset_transport_header(cloned);
         iphdr = ip_hdr(cloned);
 
-	if(debug_on(2)) {
+        tot_len = ntohs(iphdr->tot_len);
+        tot_frame_len = hdr->extended_hdr.parsed_pkt.offset.l3_offset - displ + tot_len;
+
+        if (tot_frame_len < (cloned->len + displ)) {
+          debug_printk(2, "[defrag] actual frame len (%d) < skb len (%d) Padding?\n",
+                       tot_frame_len, cloned->len + displ);
+          skb_trim(cloned, tot_frame_len); /* trim tail */
+        }
+
+	if (debug_on(2)) {
 	  int ihl, end;
 	  int offset = ntohs(iphdr->frag_off);
+
 	  offset &= IP_OFFSET;
 	  offset <<= 3;
 	  ihl = iphdr->ihl * 4;
           end = offset + cloned->len - ihl;
 
-	  debug_printk(2, "There is a fragment to handle [proto=%d][frag_off=%u]"
+	  debug_printk(2, 
+                 "There is a fragment to handle [proto=%d][frag_off=%u]"
 		 "[ip_id=%u][ip_hdr_len=%d][end=%d][network_header=%d][displ=%d]\n",
 		 iphdr->protocol, offset,
 		 ntohs(iphdr->id),
