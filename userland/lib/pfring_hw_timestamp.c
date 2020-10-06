@@ -32,24 +32,19 @@ void pfring_enable_hw_timestamp_debug() {
 int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts) {
   double sub_ns = 0.;
   struct metawatch_trailer* trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
-  u_int32_t tlv;
-  u_int16_t device_id;
-
-  if (unlikely(thiszone == 0))
-    thiszone = gmt_to_local(0);
-
-  tlv = ntohl(trailer->tlv);
-  device_id = ntohs(trailer->device_id);
+  u_int32_t tlv = ntohl(trailer->tlv);
+  u_int16_t device_id = ntohs(trailer->device_id);
+  u_int32_t ts_sec = ntohl(trailer->ts_sec);
+  u_int32_t ts_nsec = ntohl(trailer->ts_nsec);
 
   if ((trailer->flags & METAWATCH_FLAG_TLV_PRESENT) == METAWATCH_FLAG_TLV_PRESENT)
     sub_ns = (tlv >> 8) / METAWATCH_SUB_NS_MULTIPLIER;
 
   if(unlikely(debug_ts))
     fprintf(stderr, "Flags are %d -> %d.%d(%.9f) - DevID:%d ; PortID:%d\tTLV:%d\n",
-            trailer->flags, trailer->ts_sec, trailer->ts_nsec, sub_ns,
-            device_id, trailer->port_id, tlv);
+            trailer->flags, ts_sec, ts_nsec, sub_ns, device_id, trailer->port_id, tlv);
 
-  ts->tv_sec = ntohl(trailer->ts_sec) - thiszone;
+  ts->tv_sec = ntohl(trailer->ts_sec);
   ts->tv_nsec = ntohl(trailer->ts_nsec);
 
   return METAWATCH_TRAILER_LEN;
