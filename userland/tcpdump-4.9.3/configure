@@ -4335,7 +4335,7 @@ $as_echo "#define TIME_WITH_SYS_TIME 1" >>confdefs.h
 fi
 
 
-LIBS="$LIBS ../lib/libpfring.a -lpthread -lrt"
+LIBS="$LIBS ../lib/libpfring.a -lpthread `../lib/pfring_config --libs`"
 
 case "$host_os" in
 

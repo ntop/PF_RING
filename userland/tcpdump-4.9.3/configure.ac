@@ -68,7 +68,7 @@ fi
 AC_HEADER_TIME
 
 dnl> PF_RING
-LIBS="$LIBS ../lib/libpfring.a -lpthread -lrt"
+LIBS="$LIBS ../lib/libpfring.a -lpthread `../lib/pfring_config --libs`"
 
 case "$host_os" in
 
