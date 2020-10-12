@@ -33,13 +33,11 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
   double sub_ns = 0.;
   struct metawatch_trailer* trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
   u_int32_t tlv;
-  u_int16_t device_id;
 
   //if (unlikely(thiszone == 0))
   //  thiszone = gmt_to_local(0);
 
   tlv = ntohl(trailer->tlv);
-  device_id = ntohs(trailer->device_id);
 
   if ((trailer->flags & METAWATCH_FLAG_TLV_PRESENT) == METAWATCH_FLAG_TLV_PRESENT)
     sub_ns = (tlv >> 8) / METAWATCH_SUB_NS_MULTIPLIER;
@@ -51,7 +49,7 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
   if(unlikely(debug_ts))
     fprintf(stderr, "Flags are %d -> %lu.%lu(%.9f) - DevID:%d ; PortID:%d\tTLV:%d\n",
             trailer->flags, ts->tv_sec, ts->tv_nsec, sub_ns,
-            device_id, trailer->port_id, tlv);
+            ntohs(trailer->device_id), trailer->port_id, tlv);
 
   return METAWATCH_TRAILER_LEN;
 }
@@ -59,24 +57,22 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
 /* ********************************* */
 
 int pfring_handle_metawatch_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) {
+  struct metawatch_trailer* trailer;
   struct timespec ts;
-  int ts_size;
 
   if (unlikely(hdr->caplen != hdr->len))
     return -1; /* full packet only */
 
-  ts_size = pfring_read_metawatch_hw_timestamp(buffer, hdr->len, &ts);
+  /* Read timestamp */
+  pfring_read_metawatch_hw_timestamp(buffer, hdr->len, &ts);
+  hdr->caplen = hdr->len = hdr->len - METAWATCH_TRAILER_LEN;
+  hdr->ts.tv_sec = ts.tv_sec, hdr->ts.tv_usec = ts.tv_nsec/1000;
+  hdr->extended_hdr.timestamp_ns = (((u_int64_t) ts.tv_sec) * 1000000000) + ts.tv_nsec;
 
-  if (likely(ts_size > 0)) {
-    hdr->caplen = hdr->len = hdr->len - ts_size;
-    hdr->ts.tv_sec = ts.tv_sec, hdr->ts.tv_usec = ts.tv_nsec/1000;
-    hdr->extended_hdr.timestamp_ns = (((u_int64_t) ts.tv_sec) * 1000000000) + ts.tv_nsec;
-  }
-
-  //FIXME: Where should we store the below?
-  //trailer->flags
-  //trailer->device_id
-  //trailer->port_id (hdr->extended_hdr.if_index ?)
+  /* Read port and device ID */
+  trailer = (struct metawatch_trailer *) &buffer[hdr->len - METAWATCH_TRAILER_LEN];
+  hdr->extended_hdr.device_id = trailer->device_id;
+  hdr->extended_hdr.port_id = trailer->port_id;
 
   return 0;
 }
