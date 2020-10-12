@@ -230,6 +230,8 @@ pfring_zc_open_device(
 
 /**
  * Create a SPSC queue.
+ * Please note that in order to create queues to be used by external
+ * processes, pfring_zc_create_queue_pool_pair is recommended.
  * @param cluster   The cluster handle.
  * @param queue_len The queue length.
  * @return          The queue handle on success, NULL otherwise (errno is set appropriately). 
@@ -238,6 +240,25 @@ pfring_zc_queue *
 pfring_zc_create_queue(
   pfring_zc_cluster *cluster,
   u_int32_t queue_len
+);
+
+/**
+ * Create a pair of SPSC queue and Pool with the same ID. This can be
+ * used to create queues to be used by external processes.
+ * @param cluster   The cluster handle.
+ * @param queue_len The queue length.
+ * @param pool_len  The number of buffers to reserve for the pool.
+ * @param queue     The queue handle on success, NULL otherwise (out)
+ * @param pool      The pool handle on success, NULL otherwise (out)
+ * @return          0 in success, a negative value otherwise (errno is also set appropriately)
+ */
+int
+pfring_zc_create_queue_pool_pair(
+  pfring_zc_cluster *cluster,
+  u_int32_t queue_len,
+  u_int32_t pool_len,
+  pfring_zc_queue **queue,
+  pfring_zc_buffer_pool **pool
 );
 
 /**
