@@ -27,7 +27,7 @@
 #define RING_VERSION_NUM           0x070700
 
 /* Increment whenever we change slot or packet header layout (e.g. we add/move a field) */
-#define RING_FLOWSLOT_VERSION          17
+#define RING_FLOWSLOT_VERSION          18
 
 #define RING_MAGIC
 #define RING_MAGIC_VALUE             0x88
@@ -343,15 +343,19 @@ struct pfring_extended_pkthdr {
   u_int32_t flags;
 
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
+  u_int8_t port_id;        /* Port ID (when exported by devices like Arista MetaWatch) */
+  u_int16_t device_id;     /* Device ID (when exported by devices like Arista MetaWatch) */
+
   int32_t  if_index;       /* index of the interface on which the packet has been received.
 			      It can be also used to report other information */
+
   u_int32_t pkt_hash;      /* Hash based on the packet header */
 
   /* --- short header ends here --- */
 
   struct {
     int32_t bounce_interface; /* Interface Id where this packet will bounce after processing
-			     if its values is other than UNKNOWN_INTERFACE */
+			         if its values is other than UNKNOWN_INTERFACE */
     struct sk_buff *reserved; /* Kernel only pointer */
   } tx;
 
