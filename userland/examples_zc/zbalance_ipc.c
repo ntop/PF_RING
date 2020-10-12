@@ -1237,34 +1237,42 @@ int main(int argc, char* argv[]) {
       }
 
     } else { /* create sw queue as ingress device */
+      pfring_zc_queue *ext_q = NULL;
+      pfring_zc_buffer_pool *ext_pool = NULL;
 
-      inzqs[i] = pfring_zc_create_queue(zc, queue_len);
+      rc = pfring_zc_create_queue_pool_pair(zc, queue_len, IN_POOL_SIZE, &ext_q, &ext_pool);
 
-      if (inzqs[i] == NULL) {                                                                                                
-        trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));                                             
+      if (rc < 0 || ext_q == NULL || ext_q == NULL) {
+        trace(TRACE_ERROR, "pfring_zc_create_queue_pool_pair error [%s]\n", strerror(errno));                                             
         pfring_zc_destroy_cluster(zc);
         return -1;                                                                                                           
       } 
 
-      if (pfring_zc_create_buffer_pool(zc, IN_POOL_SIZE) == NULL) {
-        trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
-        pfring_zc_destroy_cluster(zc);
-        return -1;
-      }
-
+      inzqs[i] = ext_q;
     }
   }
 
   for (i = 0; i < num_consumer_queues; i++) {
-    if (outdevs[i] == NULL) { /* Egress queue */
-      outzqs[i] = pfring_zc_create_queue(zc, queue_len);
+    pfring_zc_queue *ext_q = NULL;
+    pfring_zc_buffer_pool *ext_pool = NULL;
 
-      if (outzqs[i] == NULL) {
-        trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
-        pfring_zc_destroy_cluster(zc);
-        return -1;
-      }
-    } else { /* Opening device instead of queue for egress */
+    /*
+     * Note: in case of egress devices, we are creating 
+     * dummy queues anyway to keep numeration coherent
+     */
+
+    rc = pfring_zc_create_queue_pool_pair(zc,
+      outdevs[i] == NULL ? queue_len : 1,
+      outdevs[i] == NULL ? IN_POOL_SIZE : 1,
+      &ext_q, &ext_pool);
+
+    if (rc < 0 || ext_q == NULL || ext_q == NULL) {
+      trace(TRACE_ERROR, "pfring_zc_create_queue_pool_pair error [%s]\n", strerror(errno));                                             
+      pfring_zc_destroy_cluster(zc);
+      return -1;                                                                                                           
+    } 
+
+    if (outdevs[i] != NULL) { /* Egress queue */
       outzqs[i] = pfring_zc_open_device(zc, outdevs[i], tx_only, 0);
 
       if (outzqs[i] == NULL) {
@@ -1272,21 +1280,8 @@ int main(int argc, char* argv[]) {
         pfring_zc_destroy_cluster(zc);
         return -1;
       }
-
-      /* creating dummy queues to keep numeration coherent */
-      if (pfring_zc_create_queue(zc, 1) == NULL) {
-        trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
-        pfring_zc_destroy_cluster(zc);
-        return -1;
-      }
-    }
-  }
-
-  for (i = 0; i < num_consumer_queues; i++) { 
-    if (pfring_zc_create_buffer_pool(zc, pool_size) == NULL) {
-      trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
-      pfring_zc_destroy_cluster(zc);
-      return -1;
+    } else {
+      outzqs[i] = ext_q;
     }
   }
 
@@ -1405,20 +1400,19 @@ int main(int argc, char* argv[]) {
 
   trace(TRACE_NORMAL, "Starting balancer with %d consumer queues..\n", num_consumer_queues);
 
-  off = 0;
-
   if (num_in_queues > 0) {
     trace(TRACE_NORMAL, "Run your traffic generator as follows:\n");
     for (i = 0; i < num_in_queues; i++)
-      trace(TRACE_NORMAL, "\tzsend -i zc:%d@%lu\n", cluster_id, off++);
+      trace(TRACE_NORMAL, "\tzsend -i zc:%d@%lu\n", cluster_id, pfring_zc_get_queue_id(inzqs[i]));
   }
 
   trace(TRACE_NORMAL, "Run your application instances as follows:\n");
+  off = 0;
   for (i = 0; i < num_apps; i++) {
     if (num_apps > 1) trace(TRACE_NORMAL, "Application %lu\n", i);
     for (j = 0; j < instances_per_app[i]; j++) {
       if (outdevs[off] == NULL)
-        trace(TRACE_NORMAL, "\tpfcount -i zc:%d@%lu\n", cluster_id, off);
+        trace(TRACE_NORMAL, "\tpfcount -i zc:%d@%lu\n", cluster_id, pfring_zc_get_queue_id(outzqs[off]));
       else
         trace(TRACE_NORMAL, "\t%s\n", outdevs[off]);
       off++;
