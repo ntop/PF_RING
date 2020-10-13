@@ -141,8 +141,11 @@ typedef struct {     /* pfring_pkthdr / pcap_pkthdr common struct */
   u_int32_t len;     /**< length original packet (off wire) */
 } pfring_ft_pcap_pkthdr;
 
-typedef struct {     /* additional packet metadata not available in pcap_pkthdr */
-  u_int32_t hash;    /**< packet hash */
+typedef struct {       /* additional packet metadata not available in pcap_pkthdr */
+  u_int32_t hash;      /**< packet hash */
+  u_int16_t device_id; /**< Source device ID */
+  u_int8_t  port_id;   /**< Source device port ID */
+  u_int8_t  reserved;  /**< Padding */
 } pfring_ft_ext_pkthdr;
 
 typedef struct {
@@ -196,6 +199,8 @@ typedef struct {
   struct timeval first;     /**< Time of first packet seen per direction */
   struct timeval last;      /**< Time of last packet seen per direction */
   u_int8_t tcp_flags;       /**< TCP flags per direction */
+  u_int8_t port_id;         /**< Port ID (when provided e.g. MetaWatch) */
+  u_int16_t device_id;      /**< Device ID (when provided e.g. MetaWatch) */
 } pfring_ft_flow_dir_value;
 
 typedef struct {
