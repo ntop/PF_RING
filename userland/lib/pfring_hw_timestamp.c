@@ -31,7 +31,7 @@ void pfring_enable_hw_timestamp_debug() {
 
 int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts) {
   double sub_ns = 0.;
-  struct metawatch_trailer* trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
+  struct metawatch_trailer *trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
   u_int32_t tlv;
 
   //if (unlikely(thiszone == 0))
@@ -56,8 +56,18 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
 
 /* ********************************* */
 
+int pfring_read_metawatch_device_info(u_char *buffer, u_int32_t buffer_len, u_int16_t *device_id, u_int8_t *port_id) {
+  struct metawatch_trailer *trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
+
+  *device_id = trailer->device_id;
+  *port_id = trailer->port_id;
+
+  return METAWATCH_TRAILER_LEN;
+}
+
+/* ********************************* */
+
 int pfring_handle_metawatch_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) {
-  struct metawatch_trailer* trailer;
   struct timespec ts;
 
   if (unlikely(hdr->caplen != hdr->len))
@@ -65,14 +75,14 @@ int pfring_handle_metawatch_hw_timestamp(u_char* buffer, struct pfring_pkthdr *h
 
   /* Read timestamp */
   pfring_read_metawatch_hw_timestamp(buffer, hdr->len, &ts);
-  hdr->caplen = hdr->len = hdr->len - METAWATCH_TRAILER_LEN;
   hdr->ts.tv_sec = ts.tv_sec, hdr->ts.tv_usec = ts.tv_nsec/1000;
   hdr->extended_hdr.timestamp_ns = (((u_int64_t) ts.tv_sec) * 1000000000) + ts.tv_nsec;
 
   /* Read port and device ID */
-  trailer = (struct metawatch_trailer *) &buffer[hdr->len - METAWATCH_TRAILER_LEN];
-  hdr->extended_hdr.device_id = trailer->device_id;
-  hdr->extended_hdr.port_id = trailer->port_id;
+  pfring_read_metawatch_device_info(buffer, hdr->len, &hdr->extended_hdr.device_id, &hdr->extended_hdr.port_id);
+
+  /* Update length (strip trailer) */
+  hdr->caplen = hdr->len = hdr->len - METAWATCH_TRAILER_LEN;
 
   return 0;
 }
