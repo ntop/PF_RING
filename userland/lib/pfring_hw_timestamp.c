@@ -46,8 +46,8 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
   //ts->tv_sec -= thiszone;
   ts->tv_nsec = ntohl(trailer->ts_nsec);
 
-  if(unlikely(debug_ts))
-    fprintf(stderr, "Flags are %d -> %lu.%lu(%.9f) - DevID:%d ; PortID:%d\tTLV:%d\n",
+  if (unlikely(debug_ts))
+    fprintf(stderr, "[METAWATCH] Flags: %d Timestamp: %lu.%lu(%.9f) DeviceID: %d PortID: %d TLV: %d\n",
             trailer->flags, ts->tv_sec, ts->tv_nsec, sub_ns,
             ntohs(trailer->device_id), trailer->port_id, tlv);
 
@@ -59,7 +59,7 @@ int pfring_read_metawatch_hw_timestamp(u_char *buffer, u_int32_t buffer_len, str
 int pfring_read_metawatch_device_info(u_char *buffer, u_int32_t buffer_len, u_int16_t *device_id, u_int8_t *port_id) {
   struct metawatch_trailer *trailer = (struct metawatch_trailer *) &buffer[buffer_len - METAWATCH_TRAILER_LEN];
 
-  *device_id = trailer->device_id;
+  *device_id = ntohs(trailer->device_id);
   *port_id = trailer->port_id;
 
   return METAWATCH_TRAILER_LEN;
