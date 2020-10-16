@@ -55,6 +55,9 @@ int32_t gmt_to_local(time_t t);
 int pcap_set_cluster(pcap_t *ring, u_int clusterId);
 int pcap_set_application_name(pcap_t *handle, char *name);
 char* pfring_format_numbers(double val, char *buf, u_int buf_len, u_int8_t add_decimals);
+int use_pcap_loop = 1;
+
+volatile int do_shutdown = 0;
 
 /* *************************************** */
 /*
@@ -133,6 +136,7 @@ void sigproc(int sig) {
   fprintf(stderr, "Leaving...\n");
   if (called) return; else called = 1;
 
+  do_shutdown = 1;
   pcap_breakloop(pd);
 }
 
@@ -249,12 +253,7 @@ char* proto2str(u_short proto) {
 
 static int32_t thiszone;
 
-void dummyProcesssPacket(u_char *_deviceId,
-			 const struct pcap_pkthdr *h,
-			 const u_char *p) {
-
-  // printf("pcap_sendpacket returned %d\n", pcap_sendpacket(pd, p, h->caplen));
-
+void processPacket(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char *p) {
   if(verbose) {
     struct ether_header ehdr;
     u_short eth_type, vlan_id;
@@ -308,6 +307,26 @@ void dummyProcesssPacket(u_char *_deviceId,
       printf("\n");
   }
  }
+
+/* *************************************** */
+
+void capturePackets() {
+  u_char *pkt;
+  struct pcap_pkthdr *h;
+  int rc;
+
+  while (!do_shutdown) {
+    rc = pcap_next_ex(pd, &h, (const u_char **) &pkt);
+    if (rc > 0) {
+      processPacket(NULL, h, pkt);
+    } else if (rc == 0) {
+      /* No packets */
+    } else /* rc < 0 */ {
+      /* Error */
+      break;
+    }
+  }
+}
 
 /* *************************************** */
 
@@ -426,10 +445,11 @@ int main(int argc, char* argv[]) {
 
   printf("Capturing from %s\n", device);
 
-  /* hardcode: promisc=1, to_ms=500 */
   promisc = 1;
-  if((pd = pcap_open_live(device, snaplen,
-			  promisc, 500, errbuf)) == NULL) {
+
+  pd = pcap_open_live(device, snaplen, promisc, 1000 /* ms */, errbuf);
+
+  if (pd == NULL) {
     printf("pcap_open_live: %s\n", errbuf);
     return(-1);
   }
@@ -459,7 +479,10 @@ int main(int argc, char* argv[]) {
 
   pcap_set_watermark(pd, 128);
 
-  pcap_loop(pd, -1, dummyProcesssPacket, NULL);
+  if (use_pcap_loop)
+    pcap_loop(pd, -1, processPacket, NULL);
+  else
+    capturePackets();
 
   print_stats();
 
