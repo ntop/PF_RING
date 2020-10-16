@@ -1666,9 +1666,6 @@ pcap_activate_linux(pcap_t *handle)
 
 		handle->ring = pfring_open((char *) device, handle->snapshot, flags);
 
-		if (real_device != NULL) free(real_device);
-		device = real_device = NULL;
-
 		if (handle->ring != NULL) {
 
 			if (getenv("PCAP_PF_RING_RECV_ONLY")) pfring_set_socket_mode(handle->ring, recv_only_mode);
@@ -1703,24 +1700,27 @@ pcap_activate_linux(pcap_t *handle)
 				handle->sync_selectable_fd = atoi(always_sync_fd);
 			else
 				handle->sync_selectable_fd = 0;
+
+			handle->fd = handle->ring->fd;
+			handle->bufsize = handle->snapshot;
+			handle->linktype = DLT_EN10MB;
+			handle->offset = 2;
+			handle->setnonblock_op = pcap_setnonblock_mmap;
+			handle->getnonblock_op = pcap_getnonblock_mmap;
+
+			handlep->vlan_offset = -1; /* unknown */
+			handlep->timeout = handle->opt.timeout; /* copy timeout value */
+
+			/* printf("Open HAVE_PF_RING(%s)\n", device); */
 		}
+
+		if (real_device != NULL) free(real_device);
+		device = real_device = NULL;
 	} else
         	handle->ring = NULL;
 
-	if (handle->ring != NULL) {
-		handle->fd = handle->ring->fd;
-		handle->bufsize = handle->snapshot;
-		handle->linktype = DLT_EN10MB;
-		handle->offset = 2;
-		handle->setnonblock_op = pcap_setnonblock_mmap;
-		handle->getnonblock_op = pcap_getnonblock_mmap;
-
-		handlep->vlan_offset = -1; /* unknown */
-		handlep->timeout = handle->opt.timeout; /* copy timeout value */
-
-		/* printf("Open HAVE_PF_RING(%s)\n", device); */
-	} else {
-		/* printf("Open HAVE_PF_RING(%s) failed. Fallback to pcap\n", device); */
+	if (handle->ring == NULL) {
+		/* printf("Open HAVE_PF_RING(%s) failed. Fallback to pcap\n", handlep->device); */
 #endif
 
 	/* copy timeout value */
@@ -1983,7 +1983,7 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 #ifdef HAVE_PF_RING
 	if (handle->ring) {
 		char *packet;
-		int wait_for_incoming_packet = (pf_ring_active_poll || (handlep->timeout < 0)) ? 0 : 1;
+		int wait_for_incoming_packet = (!pf_ring_active_poll && (handlep->timeout >= 0));
 		int ret = 0;
 
 		if (!handle->ring->enabled)
@@ -2005,11 +2005,19 @@ pcap_read_packet(pcap_t *handle, pcap_handler callback, u_char *userdata)
 			pcap_header.ts.tv_sec = 0;
 			errno = 0;
 
-			ret = pfring_recv(handle->ring, (u_char**)&packet, 0, &pcap_header, wait_for_incoming_packet);
+			ret = pfring_recv(handle->ring, (u_char**)&packet, 0, &pcap_header, 0 /* wait undefinitely */);
 
 			if (ret == 0) {
-				if (wait_for_incoming_packet && errno != EINTR) 
-					continue;
+				if (wait_for_incoming_packet) {
+					ret = pfring_poll(handle->ring, handlep->timeout);
+					if (ret == 0 || (ret < 0 && errno == EINTR))
+						return 0; /* timeout */
+					else if (ret < 0)
+						return -1;
+					else /* ret > 0 - recv the packet */
+						continue;
+				}
+
 				return 0; /* non-blocking */
 			} else if (ret > 0) {
 				bp = packet;
