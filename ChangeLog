@@ -1,7 +1,8 @@
 ---------------------------------------
-2020-10-08 PF_RING 7.8
+2020-10-19 PF_RING 7.8
 
 * PF_RING Library
+ - Add support for Device ID and Port ID to the extended packet header
  - Add Arista 7150 Series hw timestamps support (keyframes and packet trailer parsing and stripping)
  - Add Metawatch Metamako hw timestamps support (packet trailer parsing and stripping)
  - errno EINTR is now returned on breakloop
