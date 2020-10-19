@@ -117,14 +117,16 @@ Note: on SDK version >1.2.26.20180510 the default Accolade 'blocks' setting has
 been changed and you might get errors like "ANIC_block_add(ring:0 buf:16) failed, oversubscribed?"
 There are two options for setting the number of blocks and solve this error:
 
-1. run anic_mfl_config with --blocks=64 (old default)
-2. set the ACCOLADE_RING_BLOCKS env var to 16 (new default) when running pf_ring as anic_mfl_config consumer
+1. run anic_mfl_config with --blocks=16 (new pf_ring default)
+2. set the ANIC_RING_BLOCKS env var to the number set in anic_mfl_config when running pf_ring as anic_mfl_config consumer
 
 Example:
 
 .. code-block:: console
 
    anic_mfl_config -i 0 --mode=port --blocks=64
+   
+   ANIC_RING_BLOCKS=64 pfcount -i anic:0@0
 
 Accolade and Packet Copy
 ------------------------
