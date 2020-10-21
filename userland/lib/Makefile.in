@@ -95,7 +95,11 @@ OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_fi
 # CROSS_COMPILE=arm-mv5sft-linux-gnueabi-
 #
 CC        = ${CROSS_COMPILE}gcc
-WFLAGS    = -Wall -Wno-stringop-truncation -Wno-address-of-packed-member
+GCC_MAJ_VERSION=$(shell ${CC} -dumpversion | cut -f1 -d.)
+WFLAGS    = -Wall
+ifeq ($(shell test $(GCC_MAJ_VERSION) -ge 5 && echo 1), 1)
+WFLAGS += -Wno-stringop-truncation -Wno-address-of-packed-member
+endif
 CFLAGS    += @CFLAGS@ ${WFLAGS} -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@ @HAVE_AF_XDP@ @HAVE_DAG@ @HAVE_FIBERBLAZE@ @HAVE_ACCOLADE@ @HAVE_MYRICOM@ @HAVE_NETCOPE@ @HAVE_EXABLAZE@ @HAVE_BPF@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_NPCAP@
 LDFLAGS   += -g -shared
 SYSLIBS   = -lpthread @SYSLIBS@ @AF_XDP_LIB@ @DAG_LIB@ @FIBERBLAZE_LIB@ @EXABLAZE_LIB@
