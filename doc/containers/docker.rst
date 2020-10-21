@@ -8,27 +8,27 @@ For an overview about the Docker networking support and configuration please ref
 to the Docker documentation (https://docs.docker.com/v1.7/articles/networking/).
 
 As first step build the Docker image using the Dockerfile below, in this example
-based on Ubuntu 16.
+based on Ubuntu 20.
 
 .. code-block:: console
 
-  sudo docker build -t ubuntu16 -f Dockerfile.ubuntu16 .
+  sudo docker build -t ubuntu20 -f Dockerfile.ubuntu20 .
 
 Please note the Dockerfile is running the needed steps for installing the ntop
 repository, installing pfring, and setting the entrypoint script run.sh,
 in order to let us run commands by running the Docker image from command 
 line.
 
-Dockerfile.ubuntu16
+Dockerfile.ubuntu20
 
 .. code-block:: console
 
-   FROM ubuntu:18.04
+   FROM ubuntu:20.04
    MAINTAINER ntop.org
    
    RUN apt-get update && \
      apt-get -y -q install wget lsb-release gnupg && \
-     wget -q http://apt.ntop.org/18.04/all/apt-ntop.deb && \
+     wget -q http://apt.ntop.org/20.04/all/apt-ntop.deb && \
      dpkg -i apt-ntop.deb && \
      apt-get clean all
    
@@ -51,7 +51,7 @@ with pf_ring.
 
 .. code-block:: console
 
-   sudo docker run ubuntu16 pfcount -i eth0
+   sudo docker run ubuntu20 pfcount -i eth0
 
 Note: since PF_RING 7.1 and kernel 3.8 "--cap-add net_admin" is no longer needed.
 An application running inside a docker container is able to capture traffic from the
@@ -60,7 +60,7 @@ interface in the host network namespace you should run docker with "--network=ho
 
 .. code-block:: console
 
-   sudo docker run --network=host ubuntu16 pfcount -i eth0
+   sudo docker run --network=host ubuntu20 pfcount -i eth0
 
 When working with PF_RING ZC, using for instance zbalance_ipc for forwarding traffic
 to consumer applications running inside Docker containers by means of ZC queues, we
@@ -69,7 +69,7 @@ proper capabilities.
 
 .. code-block:: console
 
-   sudo docker run -v /dev/hugepages:/dev/hugepages --cap-add ipc_lock ubuntu16 pfcount -i zc:99@0
+   sudo docker run -v /dev/hugepages:/dev/hugepages --cap-add ipc_lock ubuntu20 pfcount -i zc:99@0
 
 Instead, if we need to create a ZC cluster in the container, for instance in case we 
 want to run zbalance_ipc itself, the application needs to translate virtual addresses 
