@@ -15,39 +15,39 @@ based on Ubuntu 16.
   sudo docker build -t ubuntu16 -f Dockerfile.ubuntu16 .
 
 Please note the Dockerfile is running the needed steps for installing the ntop
-repository, installing pfring, and setting the simple-entrypoint.sh script as
-entrypoint, in order to let us commands running the Docker image from command 
+repository, installing pfring, and setting the entrypoint script run.sh,
+in order to let us run commands by running the Docker image from command 
 line.
 
 Dockerfile.ubuntu16
 
 .. code-block:: console
 
-   FROM ubuntu:16.04
+   FROM ubuntu:18.04
    MAINTAINER ntop.org
    
    RUN apt-get update && \
-       apt-get -y -q install wget lsb-release gnupg && \
-       wget -q http://apt.ntop.org/16.04/all/apt-ntop.deb && dpkg -i apt-ntop.deb && \
-       apt-get clean all && \
-       apt-get update && \
-       apt-get -y install pfring
+     apt-get -y -q install wget lsb-release gnupg && \
+     wget -q http://apt.ntop.org/18.04/all/apt-ntop.deb && \
+     dpkg -i apt-ntop.deb && \
+     apt-get clean all
    
-   COPY simple-entrypoint.sh /tmp
-   ENTRYPOINT ["/tmp/simple-entrypoint.sh"]
-
-simple-entrypoint.sh
-
-.. code-block:: console
-
-   #!/bin/bash
-   set -e
-   exec "$@"
+   RUN apt-get update && \
+     apt-get -y install pfring
+   
+   RUN echo '#!/bin/bash\nset -e\nexec "$@"' > /run.sh && \
+     chmod +x /run.sh
+   
+   ENTRYPOINT ["/run.sh"]
 
 At this point it is possible to test pf_ring using pfcount as sample application.
+
 Please note that the pf_ring.ko kernel module must be loaded on the host machine,
 and that we need to set the proper capabilities using "--cap-add" in order to work 
 with pf_ring.
+
+.. note::  The version of the pf_ring kernel module loaded on the host and the 
+           pf_ring library/application version running in the container have to be the same.
 
 .. code-block:: console
 
