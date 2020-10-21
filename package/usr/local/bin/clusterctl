@@ -301,7 +301,7 @@ case "$1" in
 	;;
 
   *)
-	echo "Usage: /etc/init.d/cluster {start|stop|restart|status} [cluster id(s)]"
+	echo "Usage: ${0} {start|stop|restart|status} [cluster ID(s)]"
 	exit 1
 esac
 
