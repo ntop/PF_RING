@@ -4,6 +4,8 @@ VERS=`../version.sh --release`
 MAJOR_VERS=`../version.sh --major`
 PLATFORM=`uname -p`
 
+LIBPCAP_VERS=`../version.sh --libpcap-version`
+
 if which git >/dev/null; then
    REVISION=`../version.sh --revision`
    GIT_HASH=`../version.sh --hash`
@@ -55,6 +57,7 @@ fi
 
 AC_SUBST(VERS)
 AC_SUBST(MAJOR_VERS)
+AC_SUBST(LIBPCAP_VERS)
 AC_SUBST(EXTN)
 AC_SUBST(DATE)
 AC_SUBST(KERNEL)

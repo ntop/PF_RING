@@ -12,6 +12,8 @@ SYS_LIBS=""
 VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MAJOR_VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1`
 
+LIBPCAP_VER=`ls -d libpcap-* | head -n1 | cut -d"-" -f2`
+
 AC_ARG_ENABLE([archopt], AS_HELP_STRING([--disable-archopt], [Disable march and mtune optimization flags]))
 if test "x$enable_archopt" != "xno"; then
   dnl> Checking for supported libraries (corei7, corei7-avx, core-avx2)
@@ -235,7 +237,7 @@ fi
 
 dnl> BPF - Default enabled
 AC_ARG_ENABLE([bpf], AS_HELP_STRING([--disable-bpf], [Disable BPF support in PF_RING]))
-AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"])
+AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap-$LIBPCAP_VER"; BPF_LIB="-L../libpcap-$LIBPCAP_VER -lpcap"])
 
 dnl> AC_MSG_CHECKING([nDPI support])
 dnl> ndpi_installed=`pkg-config --exists libndpi && echo yes`
@@ -267,6 +269,8 @@ AC_SUBST(CFLAGS)
 
 AC_SUBST(MAJOR_VER)
 AC_SUBST(VER)
+
+AC_SUBST(LIBPCAP_VER)
 
 AC_SUBST(HAVE_PF_RING_ZC)
 AC_SUBST(PF_RING_ZC_LIB)

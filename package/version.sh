@@ -6,6 +6,8 @@ MAJOR_RELEASE="$(cd ${SCRIPTPATH}; cat ../kernel/linux/pf_ring.h | grep RING_VER
 REVISION="$(cd ${SCRIPTPATH}; git rev-list --all |wc -l|tr -d '[[:space:]]')"
 HASH="$(cd ${SCRIPTPATH}; git rev-parse HEAD)"
 
+LIBPCAP_VERSION="$(cd ${SCRIPTPATH}; ls -d ../userland/libpcap-* | head -n1 | cut -d"-" -f2)"
+
 get_release() {
 	echo "${RELEASE}"
 	exit 0
@@ -31,6 +33,11 @@ get_hash() {
 	exit 0
 }
 
+get_libpcap_version() {
+	echo "${LIBPCAP_VERSION}"
+	exit 0
+}
+
 case "$1" in
   --release)
 	get_release;
@@ -47,8 +54,11 @@ case "$1" in
   --version)
 	get_version;
 	;;
+  --libpcap-version)
+	get_libpcap_version;
+	;;
   *)
-	echo "Usage: ${0} {--hash|--release|--major|--revision|--version}"
+	echo "Usage: ${0} {--hash|--release|--major|--revision|--version|--libpcap-version}"
 	exit 1
 esac
 

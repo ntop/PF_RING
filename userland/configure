@@ -682,6 +682,7 @@ PF_RING_ZC_DEP
 PF_RING_ZC_OBJS
 PF_RING_ZC_LIB
 HAVE_PF_RING_ZC
+LIBPCAP_VER
 VER
 MAJOR_VER
 EGREP
@@ -3315,6 +3316,8 @@ SYS_LIBS=""
 VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MAJOR_VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1`
 
+LIBPCAP_VER=`ls -d libpcap-* | head -n1 | cut -d"-" -f2`
+
 # Check whether --enable-archopt was given.
 if test "${enable_archopt+set}" = set; then :
   enableval=$enable_archopt;
@@ -3963,13 +3966,15 @@ if test "${enable_bpf+set}" = set; then :
 fi
 
 if test "x$enable_bpf" != "xno"; then :
-  HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap"; BPF_LIB="-L../libpcap -lpcap"
+  HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap-$LIBPCAP_VER"; BPF_LIB="-L../libpcap-$LIBPCAP_VER -lpcap"
 fi
 
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
+
+
 
 
 
