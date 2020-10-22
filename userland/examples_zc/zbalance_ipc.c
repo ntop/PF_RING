@@ -1263,7 +1263,7 @@ int main(int argc, char* argv[]) {
 
     rc = pfring_zc_create_queue_pool_pair(zc,
       outdevs[i] == NULL ? queue_len : 1,
-      outdevs[i] == NULL ? IN_POOL_SIZE : 1,
+      outdevs[i] == NULL ? pool_size : 1,
       &ext_q, &ext_pool);
 
     if (rc < 0 || ext_q == NULL || ext_q == NULL) {
