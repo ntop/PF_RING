@@ -16,6 +16,9 @@ snort:
 	cd userland/snort/pfring-daq-module; autoreconf -ivf; ./configure; make
 	cd userland/snort/pfring-daq-module-zc; autoreconf -ivf; ./configure; make
 
+tcpdump:
+	cd userland/tcpdump; ./configure; make
+
 changelog:
 	git log --since={`curl -s https://github.com/ntop/PF_RING/releases | grep datetime | head -n1 | egrep -o "[0-9]+\-[0-9]+\-[0-9]+"`} --name-only --pretty=format:" - %s" > Changelog.latest
 
