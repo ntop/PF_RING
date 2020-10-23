@@ -165,6 +165,17 @@ typedef struct {
 
 /* ********************************* */
 
+typedef struct {
+  u_char *data;
+  struct timeval ts;     /**< Time stamp */
+  u_int16_t caplen;      /**< Packet length. */
+  u_int16_t len;         /**< Packet length. */
+  u_int32_t flags;       /**< Packet flags (see PF_RING_ZC_PKT_FLAGS_*). */
+  u_int32_t hash;        /**< Packet hash. */
+} pfring_packet_info;
+
+/* ********************************* */
+
 #ifndef BPF_RELEASE
 struct pfring_bpf_program {
   u_int bf_len; 
@@ -308,6 +319,7 @@ struct __pfring {
   void      (*flush_tx_packets)             (pfring *);
   int       (*register_zerocopy_tx_ring)    (pfring *, pfring *);
   int       (*recv_chunk)                   (pfring *, void **, pfring_chunk_info *, u_int8_t); 
+  int       (*recv_burst)                   (pfring *, pfring_packet_info *, u_int8_t, u_int8_t); 
   int       (*set_bound_dev_name)           (pfring *, char *);
   int       (*get_metadata)         	    (pfring *, u_char **, u_int32_t *);
   u_int32_t (*get_interface_speed)	    (pfring *);
@@ -502,6 +514,20 @@ int pfring_stats(pfring *ring, pfring_stat *stats);
  */
 int pfring_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 		struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet);
+
+/**
+ * Similart to pfring_recv, this call returns a set of incoming packets, when available, 
+ * up to the specified number. (experimental - not supported by all modules)
+ * @param ring        The PF_RING handle where we perform the check.
+ * @param packets     An array of packet descriptors that will be filled up received packets.
+ *                    A length of 0 indicates to use the zero-copy optimization, when available.
+ * @param num_packets The number of packet descriptors.
+ * @param wait_for_packets If 0 we simply check the packet availability, otherwise the call 
+ *                    is blocked until at lease one packet is available. 
+ * @return            0 in case of no packet being received (non-blocking), the number of 
+ *                    packets in case of success, -1 in case of error.
+ */
+int pfring_recv_burst(pfring *ring, pfring_packet_info *packets, u_int8_t num_packets, u_int8_t wait_for_packets); 
 
 /**
  * Same of pfring_recv(), with additional parameters to force packet parsing.

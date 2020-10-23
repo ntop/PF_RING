@@ -665,6 +665,24 @@ recv_next:
 
 /* **************************************************** */
 
+int pfring_recv_burst(pfring *ring, pfring_packet_info *packets, u_int8_t num_packets, 
+                      u_int8_t wait_for_packets) {
+  if (likely(ring
+	     && ring->enabled
+	     && ring->recv_burst
+	     && ring->mode != send_only_mode)) {
+    ring->break_recv_loop = 0;
+    return ring->recv_burst(ring, packets, num_packets, wait_for_packets);
+  }
+
+  if (!ring->enabled)
+    return PF_RING_ERROR_RING_NOT_ENABLED;
+
+  return PF_RING_ERROR_NOT_SUPPORTED;
+}
+
+/* **************************************************** */
+
 int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
 		       struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet,
 		       u_int8_t level /* 1..4 */, u_int8_t add_timestamp, u_int8_t add_hash) {
