@@ -60,7 +60,7 @@ cp $HOME/PF_RING/userland/libpcap/libpcap.so.@LIBPCAP_VERS@	$RPM_BUILD_ROOT/usr/
 #
 mkdir -p $RPM_BUILD_ROOT/usr/lib64/wireshark/extcap
 cp $HOME/PF_RING/userland/wireshark/extcap/ntopdump $RPM_BUILD_ROOT/usr/lib64/wireshark/extcap
-#cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
@@ -128,7 +128,7 @@ rm -fr $RPM_BUILD_ROOT
 /usr/bin/zcount_ipc
 /usr/bin/ftflow
 %endif
-#/usr/bin/tcpdump
+/usr/local/bin/tcpdump
 /usr/bin/pfcount
 /usr/bin/pfsend
 /usr/bin/n2if
