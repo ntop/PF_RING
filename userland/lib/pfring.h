@@ -168,10 +168,10 @@ typedef struct {
 typedef struct {
   u_char *data;
   struct timeval ts;     /**< Time stamp */
-  u_int16_t caplen;      /**< Packet length. */
-  u_int16_t len;         /**< Packet length. */
-  u_int32_t flags;       /**< Packet flags (see PF_RING_ZC_PKT_FLAGS_*). */
-  u_int32_t hash;        /**< Packet hash. */
+  u_int16_t caplen;      /**< Packet captured length */
+  u_int16_t len;         /**< Packet length */
+  u_int32_t flags;       /**< Packet flags (PKT_FLAGS_* defined in pf_ring.h) */
+  u_int32_t hash;        /**< Packet hash */
 } pfring_packet_info;
 
 /* ********************************* */
