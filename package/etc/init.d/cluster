@@ -56,6 +56,6 @@ case "$1" in
 	exit 1
 esac
 
-/usr/local/bin/clusterctl ${ACTION} ${PARAM_CLUSTER_ID}
+/usr/bin/clusterctl ${ACTION} ${PARAM_CLUSTER_ID}
 
 exit 0

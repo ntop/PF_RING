@@ -56,6 +56,6 @@ case "$1" in
 	exit 1
 esac
 
-/usr/local/bin/pf_ringctl ${ACTION}
+/usr/bin/pf_ringctl ${ACTION}
 
 exit 0

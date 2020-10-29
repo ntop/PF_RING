@@ -31,26 +31,22 @@ if [ -d $RPM_BUILD_ROOT ]; then
 	\rm -rf $RPM_BUILD_ROOT
 fi
 
-mkdir -p $RPM_BUILD_ROOT/usr/local/pfring
-mkdir -p $RPM_BUILD_ROOT/usr/local/pfring/kernel
-mkdir -p $RPM_BUILD_ROOT/usr/local/include/linux
+mkdir -p $RPM_BUILD_ROOT/usr/include/linux
+mkdir -p $RPM_BUILD_ROOT/usr/lib
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib
 mkdir -p $RPM_BUILD_ROOT/usr/bin
-mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
 mkdir -p $RPM_BUILD_ROOT/usr/local/bin
-# Kernel module (DKMS will build and install it)
-#cp $HOME/PF_RING/kernel/pf_ring.ko $RPM_BUILD_ROOT/usr/local/pfring/kernel
-cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/local/include/linux/
+mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
+cp $HOME/PF_RING/kernel/linux/pf_ring.h $RPM_BUILD_ROOT/usr/include/linux/
 # Userland
-cp $HOME/PF_RING/README.FIRST                  $RPM_BUILD_ROOT/usr/local/pfring/
-cp $HOME/PF_RING/userland/lib/libpfring.a      $RPM_BUILD_ROOT/usr/local/lib
-cp $HOME/PF_RING/userland/lib/libpfring.so.@VERS@     $RPM_BUILD_ROOT/usr/local/lib
-cd $RPM_BUILD_ROOT/usr/local/lib && ln -sf libpfring.so.@VERS@ libpfring.so.@MAJOR_VERS@ && cd -
-cd $RPM_BUILD_ROOT/usr/local/lib && ln -sf libpfring.so.@MAJOR_VERS@ libpfring.so && cd -
-cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/local/include
-cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/local/include
-cp $HOME/PF_RING/userland/lib/pfring_ft.h      $RPM_BUILD_ROOT/usr/local/include
-cp $HOME/PF_RING/userland/nbpf/nbpf.h  $RPM_BUILD_ROOT/usr/local/include
+cp $HOME/PF_RING/userland/lib/libpfring.a      $RPM_BUILD_ROOT/usr/lib
+cp $HOME/PF_RING/userland/lib/libpfring.so.@VERS@     $RPM_BUILD_ROOT/usr/lib
+cd $RPM_BUILD_ROOT/usr/lib && ln -sf libpfring.so.@VERS@ libpfring.so.@MAJOR_VERS@ && cd -
+cd $RPM_BUILD_ROOT/usr/lib && ln -sf libpfring.so.@MAJOR_VERS@ libpfring.so && cd -
+cp $HOME/PF_RING/userland/lib/pfring.h         $RPM_BUILD_ROOT/usr/include
+cp $HOME/PF_RING/userland/lib/pfring_zc.h      $RPM_BUILD_ROOT/usr/include
+cp $HOME/PF_RING/userland/lib/pfring_ft.h      $RPM_BUILD_ROOT/usr/include
+cp $HOME/PF_RING/userland/nbpf/nbpf.h  $RPM_BUILD_ROOT/usr/include
 cp $HOME/PF_RING/userland/libpcap/libpcap.a    $RPM_BUILD_ROOT/usr/local/lib
 cp $HOME/PF_RING/userland/libpcap/libpcap.so.@LIBPCAP_VERS@	$RPM_BUILD_ROOT/usr/local/lib
 #
@@ -75,9 +71,9 @@ cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so
   cp $HOME/PF_RING/package/etc/init.d/pf_ring    $RPM_BUILD_ROOT/etc/init.d
   cp $HOME/PF_RING/package/etc/init.d/cluster    $RPM_BUILD_ROOT/etc/init.d
 %endif
-cp $HOME/PF_RING/package/usr/local/bin/pf_ringctl $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/package/usr/local/bin/pf_ringcfg $RPM_BUILD_ROOT/usr/local/bin
-cp $HOME/PF_RING/package/usr/local/bin/clusterctl $RPM_BUILD_ROOT/usr/local/bin
+cp $HOME/PF_RING/package/usr/bin/pf_ringctl $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/package/usr/bin/pf_ringcfg $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/package/usr/bin/clusterctl $RPM_BUILD_ROOT/usr/bin
 %if 0%{?centos_ver} != 8
 # DAQ
 mkdir -p $RPM_BUILD_ROOT/usr/local/lib/daq
@@ -101,17 +97,17 @@ cp $HOME/PF_RING/userland/examples_ft/ftflow $RPM_BUILD_ROOT/usr/bin
 rm -fr $RPM_BUILD_ROOT
 
 %files
-/usr/local/include/linux/pf_ring.h
-/usr/local/lib/libpfring.a
-/usr/local/lib/libpfring.so.@VERS@
-/usr/local/lib/libpfring.so.@MAJOR_VERS@
-/usr/local/lib/libpfring.so
+/usr/include/linux/pf_ring.h
+/usr/lib/libpfring.a
+/usr/lib/libpfring.so.@VERS@
+/usr/lib/libpfring.so.@MAJOR_VERS@
+/usr/lib/libpfring.so
 /usr/local/lib/libpcap.a
 /usr/local/lib/libpcap.so.@LIBPCAP_VERS@
-/usr/local/include/pfring.h
-/usr/local/include/pfring_zc.h
-/usr/local/include/pfring_ft.h
-/usr/local/include/nbpf.h
+/usr/include/pfring.h
+/usr/include/pfring_zc.h
+/usr/include/pfring_ft.h
+/usr/include/nbpf.h
 %if 0%{?centos_ver} != 8
 /usr/local/lib/daq/daq_pfring.la
 /usr/local/lib/daq/daq_pfring.so
@@ -132,7 +128,6 @@ rm -fr $RPM_BUILD_ROOT
 /usr/bin/pfcount
 /usr/bin/pfsend
 /usr/bin/n2if
-/usr/local/pfring/README.FIRST
 /etc/ld.so.conf.d/pf_ring.conf
 %if 0%{?centos_ver} != 6
 /usr/lib/systemd/system/pf_ring.service
@@ -142,9 +137,9 @@ rm -fr $RPM_BUILD_ROOT
 /etc/init.d/pf_ring
 /etc/init.d/cluster
 %endif
-/usr/local/bin/pf_ringctl
-/usr/local/bin/pf_ringcfg
-/usr/local/bin/clusterctl
+/usr/bin/pf_ringctl
+/usr/bin/pf_ringcfg
+/usr/bin/clusterctl
 
 # Set the default attributes of all of the files specified to have an
 # owner and group of root and to inherit the permissions of the file

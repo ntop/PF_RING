@@ -9,12 +9,12 @@ RemainAfterExit=yes
 ExecStartPre=/bin/sh -c '/bin/echo "$(/bin/date) pf_ring StartPre" >> /var/log/ntop-systemd.log'
 ExecStartPre=/bin/sh -c 'if [ -x /etc/pf_ring/pre ]; then /etc/pf_ring/pre; fi'
 
-ExecStart=/usr/local/bin/pf_ringctl start
+ExecStart=/usr/bin/pf_ringctl start
 
 ExecStartPost=/bin/sh -c '/bin/echo "$(/bin/date) pf_ring StartPost" >> /var/log/ntop-systemd.log'
 ExecStartPost=/bin/sh -c 'if [ -x /etc/pf_ring/post ]; then /etc/pf_ring/post; fi'
 
-ExecStop=/usr/local/bin/pf_ringctl stop
+ExecStop=/usr/bin/pf_ringctl stop
 
 ExecStopPost=/bin/sh -c '/bin/echo "$(/bin/date) pf_ring StopPost" >> /var/log/ntop-systemd.log'
 

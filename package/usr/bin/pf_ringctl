@@ -420,7 +420,7 @@ start_pf_ring() {
 	PARAM="$(cat "$PF_RING_CONFIG_DIR/pf_ring.conf")"
 
 	PF_RING_MOD="/lib/modules/$KERNEL_VERSION/kernel/net/pf_ring/pf_ring.ko"
-	PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
+	#PF_RING_MOD_LOCAL="/usr/local/pfring/kernel/pf_ring.ko"
 
 	check_pf_ring start
 
@@ -439,8 +439,8 @@ start_pf_ring() {
 			if [ `echo $?` -gt 0 ]; then
 				if [ -f $PF_RING_MOD ]; then
 					/sbin/insmod $PF_RING_MOD $PARAM
-				elif [ -f $PF_RING_MOD_LOCAL ]; then
-					/sbin/insmod $PF_RING_MOD_LOCAL $PARAM
+				#elif [ -f $PF_RING_MOD_LOCAL ]; then
+				#	/sbin/insmod $PF_RING_MOD_LOCAL $PARAM
 				fi
 			fi
 		fi
