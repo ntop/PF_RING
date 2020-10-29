@@ -21,6 +21,9 @@ Provides: daq_pfring_zc.so, daq_pfring.so, libpfring.so
 Provides: libpfring.so
 %endif
 
+# Make sure .build-id is not part of the package
+%define _build_id_links none
+
 %description
 PF_RING kernel module and drivers for high-speed RX/TX package processing
 GIT info: @GIT_BRANCH@:@GIT_HASH@
