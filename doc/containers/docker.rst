@@ -65,7 +65,13 @@ interface in the host network namespace you should run docker with "--network=ho
 When working with PF_RING ZC, using for instance zbalance_ipc for forwarding traffic
 to consumer applications running inside Docker containers by means of ZC queues, we
 need to bind the hugetlb mountpoint inside the container using "-v" and set the
-proper capabilities.
+proper capabilities. In order to test this, run zbalance_ipc on the host:
+
+.. code-block:: console
+
+   sudo zbalance_ipc -i eth0 -n 1 -m 1 -c 99
+
+And attach pfcount from the container as consumer to the cluster queue created by zbalance_ipc:
 
 .. code-block:: console
 
