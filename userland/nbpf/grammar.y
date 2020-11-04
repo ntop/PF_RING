@@ -58,6 +58,7 @@ static void yyerror(const char *msg) {
 %token IPV6
 %token VLAN MPLS GTP
 %token L7PROTO
+%token DEVICE INTERFACE
 %token QUOTED
 %token LOCAL REMOTE
 
@@ -136,6 +137,10 @@ rterm:	  head id		{ $$.n = $2.n; $$.q = $1.q; }
 	| head REMOTE		{ $$.n = nbpf_create_locality_node(NBPF_Q_REMOTE, $1.q); }
 	| L7PROTO ID		{ $$.n = nbpf_create_l7_node(0, (char *)$2); }
 	| L7PROTO pnum		{ $$.n = nbpf_create_l7_node($2, NULL); }
+	| DEVICE ID		{ $$.n = nbpf_create_device_node(0, (char *)$2); }
+	| DEVICE pnum		{ $$.n = nbpf_create_device_node($2, NULL); }
+	| INTERFACE ID		{ $$.n = nbpf_create_interface_node(0, (char *)$2); }
+	| INTERFACE pnum	{ $$.n = nbpf_create_interface_node($2, NULL); }
 	| paren expr ')'	{ $$.n = $2.n; $$.q = $1.q; /* TODO check this */ }
 	| pname			{ $$.n = nbpf_create_protocol_node($1); $$.q = qerr; }
 	| narth relop pnum	{ $$.n = nbpf_create_relation_node($2, $1, $3); $$.q = qerr; }

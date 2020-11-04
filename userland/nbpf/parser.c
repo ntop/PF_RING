@@ -655,6 +655,38 @@ nbpf_node_t *nbpf_create_l7_node(u_int32_t id, const char *name) {
 
 /* ****************************************************** */
 
+nbpf_node_t *nbpf_create_device_node(u_int32_t id, const char *name) {
+  nbpf_node_t *n = alloc_node();
+
+  n->type = N_PRIMITIVE;
+  n->qualifiers.address = NBPF_Q_DEVICE;
+
+  if (name == NULL)
+    n->device_id = id;
+  else
+    nbpf_syntax_error("Device name not supported '%s'\n", name);
+
+  return n;
+}
+
+/* ****************************************************** */
+
+nbpf_node_t *nbpf_create_interface_node(u_int32_t id, const char *name) {
+  nbpf_node_t *n = alloc_node();
+
+  n->type = N_PRIMITIVE;
+  n->qualifiers.address = NBPF_Q_INTERFACE;
+
+  if (name == NULL)
+    n->interface_id = id;
+  else
+    nbpf_syntax_error("Device name not supported '%s'\n", name);
+
+  return n;
+}
+
+/* ****************************************************** */
+
 nbpf_node_t *nbpf_create_custom_node(const char *key, const char *value) {
   nbpf_node_t *n = alloc_node();
 

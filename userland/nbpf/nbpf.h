@@ -105,6 +105,8 @@ nbpf_ip_addr;
 #define NBPF_Q_CUSTOM		12
 #define NBPF_Q_LOCAL            13
 #define NBPF_Q_REMOTE           14
+#define NBPF_Q_DEVICE		15
+#define NBPF_Q_INTERFACE	16
 
 /* Common qualifiers */
 #define NBPF_Q_DEFAULT		0
@@ -149,6 +151,9 @@ PACKED_ON typedef struct nbpf_node {
   nbpf_qualifiers_t qualifiers;
 
   u_int8_t not_rule;
+
+  u_int16_t device_id;
+  u_int16_t interface_id;
 
   u_int8_t vlan_id_defined, mpls_label_defined;
   u_int8_t __padding;
@@ -219,6 +224,7 @@ PACKED_ON typedef struct nbpf_pkt_info_tuple {
 nbpf_pkt_info_tuple_t;
 
 PACKED_ON typedef struct {
+  u_int16_t device_id, interface_id;
   u_int8_t  dmac[6], smac[6];
   u_int16_t vlan_id, vlan_id_qinq;
   u_int16_t master_l7_proto, l7_proto;

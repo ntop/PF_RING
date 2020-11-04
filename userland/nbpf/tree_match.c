@@ -350,6 +350,26 @@ static /* inline */ int packet_match_l7_proto(nbpf_node_t *n, nbpf_pkt_info_t *h
 
 /* ********************************************************************** */
 
+static /* inline */ int packet_match_device_id(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  if(h->device_id == n->device_id)
+    return 1;
+
+  DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
+  return 0;
+}
+
+/* ********************************************************************** */
+
+static /* inline */ int packet_match_interface_id(nbpf_node_t *n, nbpf_pkt_info_t *h) {
+  if(h->interface_id == n->interface_id)
+    return 1;
+
+  DEBUG_PRINTF("%s returning false\n", __FUNCTION__);
+  return 0;
+}
+
+/* ********************************************************************** */
+
 static /* inline */ int packet_match_vlan(nbpf_node_t *n, nbpf_pkt_info_t *h) {
   switch(n->qualifiers.protocol) {
     case NBPF_Q_LINK:
@@ -381,6 +401,10 @@ static /* inline */ int packet_match_primitive(nbpf_tree_t *tree, nbpf_node_t *n
       return 0; /* TODO packet_match_proto_rel(n, h, pkt); note this requires packet data */
     case NBPF_Q_L7PROTO:
       return packet_match_l7_proto(n, h);
+    case NBPF_Q_DEVICE:
+      return packet_match_device_id(n, h);
+    case NBPF_Q_INTERFACE:
+      return packet_match_interface_id(n, h);
     case NBPF_Q_CUSTOM:
       if (tree->custom_callback)
         return tree->custom_callback(n->custom_key, n->custom_value, user);

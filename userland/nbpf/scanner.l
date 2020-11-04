@@ -82,6 +82,8 @@ port	return PORT;
 portrange return PORTRANGE;
 proto	return PROTO;
 l7proto	return L7PROTO;
+device	return DEVICE;
+interface return INTERFACE;
 
 direction|dir return DIR;
 AND|and|"&&" return AND;
