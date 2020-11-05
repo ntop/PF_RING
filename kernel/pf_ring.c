@@ -1743,6 +1743,28 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 	  seq_printf(m, "Reflect: Fwd Errors    : %lu\n", (unsigned long)fsi->tot_fwd_notok);
         }
       }
+
+      if (pfr->cluster_referee) {
+        /* ZC cluster */
+        struct list_head *obj_ptr, *obj_tmp_ptr;
+        write_lock(&cluster_referee_lock);
+        list_for_each_safe(obj_ptr, obj_tmp_ptr, &pfr->cluster_referee->objects_list) {
+          cluster_object *obj_entry = list_entry(obj_ptr, cluster_object, list);
+          switch (obj_entry->object_type) {
+            case 1: /* OBJECT_GENERIC_QUEUE */
+              seq_printf(m, "ZC-Queue-%u-Status      : %s\n",
+                obj_entry->object_id, obj_entry->lock_bitmap ? "locked" : "available");
+            break;
+            case 2: /* OBJECT_BUFFERS_POOL */
+              seq_printf(m, "ZC-Pool-%u-Status       : %s\n",
+                obj_entry->object_id, obj_entry->lock_bitmap ? "locked" : "available");
+            break;
+            default:
+            break;
+          }
+        }
+        write_unlock(&cluster_referee_lock);
+      }
     } else
       seq_printf(m, "WARNING m->private == NULL\n");
   }
