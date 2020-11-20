@@ -1680,10 +1680,10 @@ pcap_activate_linux(pcap_t *handle)
                 				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_4_tuple);
                 			else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_TCP_5_TUPLE"))
                 				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_tcp_5_tuple);
-                			else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_5_TUPLE"))
-                				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_5_tuple);
-					else
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_ROUNDROBIN"))
 						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_round_robin);
+                			else /* Default: if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_5_TUPLE")) */
+                				pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_5_tuple);
               			}
 	    		}
 
