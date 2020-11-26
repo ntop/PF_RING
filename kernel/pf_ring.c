@@ -3119,47 +3119,6 @@ static inline int add_pkt_to_ring(struct sk_buff *skb,
 
 /* ********************************** */
 
-static int add_packet_to_ring(struct pf_ring_socket *pfr,
-			      u_int8_t real_skb,
-			      struct pfring_pkthdr *hdr,
-			      struct sk_buff *skb,
-			      int displ, u_int8_t parse_pkt_first)
-{
-  if(parse_pkt_first) {
-    u_int16_t ip_id;
-
-    parse_pkt(skb, real_skb, displ, hdr, &ip_id);
-  }
-
-  ring_read_lock();
-  add_pkt_to_ring(skb, real_skb, pfr, hdr, 0, -1 /* any channel */, displ);
-  ring_read_unlock();
-  return(0);
-}
-
-/* ********************************** */
-
-static int add_raw_packet_to_ring(struct pf_ring_socket *pfr, struct pfring_pkthdr *hdr,
-				  u_char *data, u_int data_len,
-				  u_int8_t parse_pkt_first)
-{
-  int rc;
-
-  if(parse_pkt_first) {
-    u_int16_t ip_id;
-
-    parse_raw_pkt(data, data_len, hdr, &ip_id);
-  }
-
-  ring_read_lock();
-  rc = copy_raw_data_to_ring(pfr, hdr, data, data_len);
-  ring_read_unlock();
-
-  return(rc == 1 ? 0 : -1);
-}
-
-/* ********************************** */
-
 static void free_filtering_rule(sw_filtering_rule_element * entry, u_int8_t freeing_ring)
 {
 #ifdef CONFIG_TEXTSEARCH
@@ -4164,11 +4123,15 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   uint64_t rdt = _rdtsc(), rdt1, rdt2;
 #endif
 
-  if(channel_id == -1 /* unknown: any channel */)
+  if(channel_id == -1 /* unknown: any channel */) {
     channel_id = skb_get_rx_queue(skb);
+    if (channel_id >= 0xff /* unknown */)
+      channel_id = 0;
+  }
 
-  if(channel_id > MAX_NUM_RX_CHANNELS)
+  if(channel_id > MAX_NUM_RX_CHANNELS) {
     channel_id = channel_id % MAX_NUM_RX_CHANNELS;
+  }
 
   if((!skb) /* Invalid skb */ ||((!enable_tx_capture) && (!recv_packet))) {
     /* An outgoing packet is about to be sent out but we decided not to handle transmitted packets. */
@@ -4540,8 +4503,6 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->poll_num_pkts_watermark = DEFAULT_MIN_PKT_QUEUED;
   pfr->poll_watermark_timeout = DEFAULT_POLL_WATERMARK_TIMEOUT;
   pfr->queue_nonempty_timestamp = 0;
-  pfr->add_packet_to_ring = add_packet_to_ring;
-  pfr->add_raw_packet_to_ring = add_raw_packet_to_ring;
   pfr->header_len = quick_mode ? short_pkt_header : long_pkt_header;
   init_waitqueue_head(&pfr->ring_slots_waitqueue);
   rwlock_init(&pfr->ring_index_lock);

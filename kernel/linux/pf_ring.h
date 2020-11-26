@@ -1136,20 +1136,6 @@ struct cluster_referee {
 
 /* ************************************************* */
 
-typedef int (*do_handle_sw_filtering_hash_bucket)(struct pf_ring_socket *pfr,
-					       sw_filtering_hash_bucket* rule,
-					       u_char add_rule);
-
-typedef int (*do_add_packet_to_ring)(struct pf_ring_socket *pfr,
-				     u_int8_t real_skb,
-				     struct pfring_pkthdr *hdr, struct sk_buff *skb,
-				     int displ, u_int8_t parse_pkt_first);
-
-typedef int (*do_add_raw_packet_to_ring)(struct pf_ring_socket *pfr,
-					 struct pfring_pkthdr *hdr,
-					 u_char *data, u_int data_len,
-					 u_int8_t parse_pkt_first);
-
 typedef u_int32_t (*do_rehash_rss)(struct sk_buff *skb, struct pfring_pkthdr *hdr);
 
 /* ************************************************* */
@@ -1290,10 +1276,6 @@ struct pf_ring_socket {
 
   /* Indexes (Internal) */
   u_int32_t insert_page_id, insert_slot_id;
-
-  /* Function pointer */
-  do_add_packet_to_ring add_packet_to_ring;
-  do_add_raw_packet_to_ring add_raw_packet_to_ring;
 
   /* Kernel consumer */
   char *kernel_consumer_options, *kernel_consumer_private;
