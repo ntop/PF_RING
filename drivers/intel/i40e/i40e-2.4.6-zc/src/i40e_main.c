@@ -300,7 +300,11 @@ void i40e_service_event_schedule(struct i40e_pf *pf)
  * device is munged, not just the one netdev port, so go for the full
  * reset.
  **/
+#ifdef HAVE_TX_TIMEOUT_TXQUEUE
+static void i40e_tx_timeout(struct net_device *netdev, unsigned int txqueue)
+#else
 static void i40e_tx_timeout(struct net_device *netdev)
+#endif
 {
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
 	struct i40e_vsi *vsi = np->vsi;
@@ -13367,10 +13371,10 @@ static pci_ers_result_t i40e_pci_error_slot_reset(struct pci_dev *pdev)
 			result = PCI_ERS_RESULT_DISCONNECT;
 	}
 
-	err = pci_cleanup_aer_uncorrect_error_status(pdev);
+	err = pci_aer_clear_nonfatal_status(pdev);
 	if (err) {
 		dev_info(&pdev->dev,
-			 "pci_cleanup_aer_uncorrect_error_status failed 0x%0x\n",
+			 "pci_aer_clear_nonfatal_status failed 0x%0x\n",
 			 err);
 		/* non-fatal, continue */
 	}
