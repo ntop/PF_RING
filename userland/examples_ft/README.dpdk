@@ -1,22 +1,45 @@
 Prerequisites
 -------------
 
+DPDK <= 19
+~~~~~~~~~~
+
 You need to install and compile DPDK in your HOME directory as explained in
 See http://core.dpdk.org/doc/quick-start/ for DPDK installation and setup
 
-Once DPDK is built make sure to create a symbolic link
+Once DPDK is built make sure to create a symbolic link:
 
-$ cd
-$ ln -s dpdk-18.08 DPDK
+$ cd ~ && ln -s dpdk-18.08 DPDK
 
 so the build process will use the DPDK directory letting you have multiple
 DPDK versions available on your system
 
+Build ftflow_dpdk:
 
-Build
------
-make -f Makefile.dpdk
+$ cd - && make -f Makefile.dpdk.old
 
+DPDK >= 20
+~~~~~~~~~~
+
+Download dpdk:
+
+$ tar xJf dpdk-<version>.tar.xz
+$ cd dpdk-<version>
+
+Build dpdk:
+
+$ meson build
+$ cd build
+$ ninja
+
+Install dpdk:
+
+$ sudo ninja install
+$ sudo ldconfig
+
+Build ftflow_dpdk:
+
+$ make -f Makefile.dpdk
 
 Run Application
 ---------------
