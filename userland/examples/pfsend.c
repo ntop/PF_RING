@@ -671,6 +671,9 @@ int main(int argc, char* argv[]) {
           avg_send_len += plen;
 	  num_pcap_pkts++;
 
+          if(num_to_send > 0 && num_pcap_pkts >= num_to_send)
+            break;
+
 	} else {
 	  printf("Not enough memory\n");
 	  break;
