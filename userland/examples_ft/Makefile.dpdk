@@ -1,5 +1,5 @@
 #
-# Makefile for the PF_RING FT examples using DPDK >= 20 >= 20 >= 20 >= 20 >= 20 >= 20 >= 20 >= 20 >= 20 as capture framework
+# Makefile for the PF_RING FT examples using DPDK >= 20 as capture framework
 #
 # Run 'make -f Makefile.dpdk' to compile the DPDK examples
 #
