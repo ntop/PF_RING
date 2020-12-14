@@ -224,7 +224,7 @@ struct __pfring {
   u_int8_t zc_device;
   u_int8_t is_shutting_down;
   u_int8_t socket_default_accept_policy;
-  u_int8_t __padding; 
+  u_int8_t break_recv_loop_ext;
 
   u_int32_t rss_mode;
   packet_direction direction; /* Specify the capture direction for packets */

@@ -463,7 +463,7 @@ void pfring_shutdown(pfring *ring) {
   if (!ring)
     return;
 
-  ring->is_shutting_down = ring->break_recv_loop = 1;
+  ring->is_shutting_down = ring->break_recv_loop = ring->break_recv_loop_ext = 1;
 
   if(ring->shutdown)
     ring->shutdown(ring);
@@ -516,7 +516,7 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
 #endif
 
   memset(&hdr, 0, sizeof(hdr));
-  ring->break_recv_loop = 0;
+  ring->break_recv_loop = ring->break_recv_loop_ext = 0;
 
   if((! ring)
      || ring->is_shutting_down
@@ -524,7 +524,7 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
      || ring->mode == send_only_mode)
     return -1;
 
-  while(!ring->break_recv_loop) {
+  while(!ring->break_recv_loop_ext) {
     rc = ring->recv(ring, &buffer, 0, &hdr, wait_for_packet);
 
     if(rc < 0)
@@ -574,7 +574,7 @@ void pfring_breakloop(pfring *ring) {
   if(!ring)
     return;
 
-  ring->break_recv_loop = 1;
+  ring->break_recv_loop = ring->break_recv_loop_ext = 1;
 
   if(ring->one_copy_rx_pfring != NULL)
     ring->one_copy_rx_pfring->break_recv_loop = 1;
