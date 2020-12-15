@@ -12910,10 +12910,11 @@ static int i40e_pf_config_rss(struct i40e_pf *pf)
 #ifdef HAVE_PF_RING
 	reg_val = i40e_read_rx_ctl(hw, I40E_PRTQF_CTL_0);
 	if ((reg_val & I40E_PRTQF_CTL_0_HSYM_ENA_MASK) == 0) {
-		if (unlikely(enable_debug))
-			dev_dbg(&pf->pdev->dev, "Enabling symmetric hash (HSYM)\n");
+		dev_info(&pf->pdev->dev, "Enabling symmetric hash (HSYM)\n");
 		reg_val |= I40E_PRTQF_CTL_0_HSYM_ENA_MASK;
 		i40e_write_rx_ctl(hw, I40E_PRTQF_CTL_0, reg_val);
+	} else {
+		dev_info(&pf->pdev->dev, "Symmetric hash (HSYM) not supported\n");
 	}
 #endif
 
