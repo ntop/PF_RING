@@ -3830,7 +3830,7 @@ static void e1000_configure_rx(struct e1000_adapter *adapter)
 			ew32(RXDCTL(0), rxdctl | 0x3);
 		}
 #ifdef HAVE_PM_QOS_REQUEST_LIST_NEW
-		pm_qos_update_request(&adapter->pm_qos_req, lat);
+		cpu_latency_qos_update_request(&adapter->pm_qos_req, lat);
 #elif defined(HAVE_PM_QOS_REQUEST_LIST)
 		pm_qos_update_request(&adapter->pm_qos_req, lat);
 #else
@@ -3839,7 +3839,7 @@ static void e1000_configure_rx(struct e1000_adapter *adapter)
 #endif
 	} else {
 #ifdef HAVE_PM_QOS_REQUEST_LIST_NEW
-		pm_qos_update_request(&adapter->pm_qos_req,
+		cpu_latency_qos_update_request(&adapter->pm_qos_req,
 				      PM_QOS_DEFAULT_VALUE);
 #elif defined(HAVE_PM_QOS_REQUEST_LIST)
 		pm_qos_update_request(&adapter->pm_qos_req,
@@ -5602,8 +5602,7 @@ int e1000e_open(struct net_device *netdev)
 #endif
 	/* DMA latency requirement to workaround jumbo issue */
 #ifdef HAVE_PM_QOS_REQUEST_LIST_NEW
-	pm_qos_add_request(&adapter->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
-			   PM_QOS_DEFAULT_VALUE);
+	cpu_latency_qos_add_request(&adapter->pm_qos_req, PM_QOS_DEFAULT_VALUE);
 #elif defined(HAVE_PM_QOS_REQUEST_LIST)
 	pm_qos_add_request(&adapter->pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
 			   PM_QOS_DEFAULT_VALUE);
@@ -5656,7 +5655,7 @@ int e1000e_open(struct net_device *netdev)
 
 err_req_irq:
 #ifdef HAVE_PM_QOS_REQUEST_LIST_NEW
-	pm_qos_remove_request(&adapter->pm_qos_req);
+	cpu_latency_qos_remove_request(&adapter->pm_qos_req);
 #elif defined(HAVE_PM_QOS_REQUEST_LIST)
 	pm_qos_remove_request(&adapter->pm_qos_req);
 #else
@@ -7106,7 +7105,11 @@ static netdev_tx_t e1000_xmit_frame(struct sk_buff *skb,
  * e1000_tx_timeout - Respond to a Tx Hang
  * @netdev: network interface device structure
  **/
+#ifdef HAVE_TX_TIMEOUT_TXQUEUE
+static void e1000_tx_timeout(struct net_device *netdev, unsigned int txqueue)
+#else
 static void e1000_tx_timeout(struct net_device *netdev)
+#endif
 {
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 
@@ -8285,8 +8288,6 @@ static pci_ers_result_t e1000_io_slot_reset(struct pci_dev *pdev)
 		ew32(WUS, ~0);
 		result = PCI_ERS_RESULT_RECOVERED;
 	}
-
-	pci_cleanup_aer_uncorrect_error_status(pdev);
 
 	return result;
 }
