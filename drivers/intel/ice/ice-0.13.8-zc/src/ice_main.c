@@ -7903,6 +7903,9 @@ int ice_set_rss(struct ice_vsi *vsi, u8 *seed, u8 *lut, u16 lut_size)
 	struct ice_hw *hw = &pf->hw;
 	enum ice_status status;
 	struct device *dev;
+#ifdef HAVE_PF_RING
+	u16 reg;
+#endif
 
 	dev = ice_pf_to_dev(pf);
 	if (seed) {
@@ -7929,6 +7932,19 @@ int ice_set_rss(struct ice_vsi *vsi, u8 *seed, u8 *lut, u16 lut_size)
 			return -EIO;
 		}
 	}
+
+#ifdef HAVE_PF_RING
+	/* Enable registers for symmetric RSS
+	 * Bits 7:6 - Hash Scheme
+	 * 00b = Toeplitz Hash
+	 * 01b = Symmetric Toeplitz
+	 * 10b = Simple XOR
+	 * 11b = Reserved
+	*/
+	reg = rd32(hw, VSIQF_HASH_CTL(vsi->vsi_num));
+	reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (1 << VSIQF_HASH_CTL_HASH_SCHEME_S);
+	wr32(hw, VSIQF_HASH_CTL(vsi->vsi_num), reg); 
+#endif
 
 	return 0;
 }

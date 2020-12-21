@@ -2598,6 +2598,110 @@ ice_add_rss_list(struct ice_hw *hw, u16 vsi_handle, struct ice_flow_prof *prof)
 	      (((u64)(hdr) << ICE_FLOW_PROF_HDR_S) & ICE_FLOW_PROF_HDR_M) | \
 	      ((u8)((segs_cnt) - 1) ? ICE_FLOW_PROF_ENCAP_M : 0))
 
+#ifdef HAVE_PF_RING
+
+static void
+ice_rss_config_xor_word(struct ice_hw *hw, u8 prof_id, u8 src, u8 dst)
+{
+	u32 shift = ((src % 4) << 3);
+	u32 value = dst | 0x80;
+	u8 idx = src / 4;
+	u32 reg;
+
+	/* 
+	 * Note:
+	 * Symmetric hash is defined per packet profile by its GLQF_HSYMM registers.
+	 * For each word with active SYMM flag in the GLQF_HSYMM registers, the input
+	 * set is defined by a XOR function of the words defined by the matched 
+	 * GLQF_HSYMM and GLQF_HINSET registers.
+	 */
+
+	reg = rd32(hw, GLQF_HSYMM(prof_id, idx));
+	reg = (reg & ~(0xff << shift)) | (value << shift);
+	wr32(hw, GLQF_HSYMM(prof_id, idx), reg);
+}
+
+static void
+ice_rss_config_xor(struct ice_hw *hw, u8 prof_id, u8 src, u8 dst, u8 len)
+{
+	int fv_last_word =
+		ICE_FLOW_SW_FIELD_VECTOR_MAX / ICE_FLOW_FV_EXTRACT_SZ - 1;
+	int i;
+
+	for (i = 0; i < len; i++) {
+		ice_rss_config_xor_word(hw, prof_id,
+					fv_last_word - (src + i),
+					fv_last_word - (dst + i));
+		ice_rss_config_xor_word(hw, prof_id,
+					fv_last_word - (dst + i),
+					fv_last_word - (src + i));
+	}
+}
+
+static void
+ice_rss_update_symm(struct ice_hw *hw,
+		    struct ice_flow_prof *prof)
+{
+	struct ice_flow_seg_info *seg =	&prof->segs[prof->segs_cnt - 1];
+	struct ice_flow_seg_xtrct *ipv4_src =
+		&seg->fields[ICE_FLOW_FIELD_IDX_IPV4_SA].xtrct;
+	struct ice_flow_seg_xtrct *ipv4_dst =
+		&seg->fields[ICE_FLOW_FIELD_IDX_IPV4_DA].xtrct;
+	struct ice_flow_seg_xtrct *ipv6_src =
+		&seg->fields[ICE_FLOW_FIELD_IDX_IPV6_SA].xtrct;
+	struct ice_flow_seg_xtrct *ipv6_dst =
+		&seg->fields[ICE_FLOW_FIELD_IDX_IPV6_DA].xtrct;
+	struct ice_flow_seg_xtrct *tcp_src =
+		&seg->fields[ICE_FLOW_FIELD_IDX_TCP_SRC_PORT].xtrct;
+	struct ice_flow_seg_xtrct *tcp_dst =
+		&seg->fields[ICE_FLOW_FIELD_IDX_TCP_SRC_PORT].xtrct;
+
+	struct ice_flow_seg_xtrct *udp_src =
+		&seg->fields[ICE_FLOW_FIELD_IDX_UDP_SRC_PORT].xtrct;
+	struct ice_flow_seg_xtrct *udp_dst =
+		&seg->fields[ICE_FLOW_FIELD_IDX_UDP_SRC_PORT].xtrct;
+
+	struct ice_flow_seg_xtrct *sctp_src =
+		&seg->fields[ICE_FLOW_FIELD_IDX_SCTP_SRC_PORT].xtrct;
+	struct ice_flow_seg_xtrct *sctp_dst =
+		&seg->fields[ICE_FLOW_FIELD_IDX_SCTP_SRC_PORT].xtrct;
+	struct ice_prof_map *map;
+	u8 prof_id, m;
+
+	map = ice_search_prof_id(hw, ICE_BLK_RSS, prof->id);
+	prof_id = map->prof_id;
+
+	/* clear to default */
+	for (m = 0; m < 6; m++)
+		wr32(hw, GLQF_HSYMM(prof_id, m), 0);
+
+	/* xor IPv4 */
+	if (ipv4_src->prot_id != 0 && ipv4_dst->prot_id != 0)
+		ice_rss_config_xor(hw, prof_id,
+				   ipv4_src->idx, ipv4_dst->idx, 2);
+
+	/* xor IPv6 */
+	if (ipv6_src->prot_id != 0 && ipv6_dst->prot_id != 0)
+		ice_rss_config_xor(hw, prof_id,
+				   ipv6_src->idx, ipv6_dst->idx, 8);
+
+	/* xor TCP */
+	if (tcp_src->prot_id != 0 && tcp_dst->prot_id != 0)
+		ice_rss_config_xor(hw, prof_id,
+				   tcp_src->idx, tcp_dst->idx, 1);
+
+	/* xor UDP */
+	if (udp_src->prot_id != 0 && udp_dst->prot_id != 0)
+		ice_rss_config_xor(hw, prof_id,
+				   udp_src->idx, udp_dst->idx, 1);
+
+	/* xor SCTP */
+	if (sctp_src->prot_id != 0 && sctp_dst->prot_id != 0)
+		ice_rss_config_xor(hw, prof_id,
+				   sctp_src->idx, sctp_dst->idx, 1);
+}
+
+#endif
 
 /**
  * ice_add_rss_cfg_sync - add an RSS configuration
@@ -2700,6 +2804,10 @@ ice_add_rss_cfg_sync(struct ice_hw *hw, u16 vsi_handle, u64 hashed_flds,
 
 	status = ice_add_rss_list(hw, vsi_handle, prof);
 
+#ifdef HAVE_PF_RING
+	/* Set symmetric hash */
+	ice_rss_update_symm(hw, prof);
+#endif
 
 exit:
 	devm_kfree(ice_hw_to_dev(hw), segs);
