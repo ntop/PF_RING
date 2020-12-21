@@ -1669,6 +1669,10 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 	struct device *dev;
 	u8 *lut, *key;
 	int err;
+#ifdef HAVE_PF_RING
+	struct ice_hw *hw = &pf->hw;
+	u16 reg;
+#endif
 
 	dev = ice_pf_to_dev(pf);
 #ifdef NETIF_F_HW_TC
@@ -1723,7 +1727,7 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 	if (err)
 		dev_err(dev, "set_rss_key failed, error %d\n", err);
 
-#if 0 //#ifdef HAVE_PF_RING /* TESTING */
+#ifdef HAVE_PF_RING
 	/* Enable registers for symmetric RSS
 	 * Bits 7:6 - Hash Scheme
 	 * 00b = Toeplitz Hash
@@ -1731,7 +1735,6 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 	 * 10b = Simple XOR
 	 * 11b = Reserved
 	*/
-	u16 reg;
 	reg = rd32(hw, VSIQF_HASH_CTL(vsi->vsi_num));
 	reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (1 << VSIQF_HASH_CTL_HASH_SCHEME_S);
 	wr32(hw, VSIQF_HASH_CTL(vsi->vsi_num), reg); 
@@ -1775,27 +1778,27 @@ static void ice_vsi_set_vf_rss_flow_fld(struct ice_vsi *vsi)
 static const struct ice_rss_hash_cfg default_rss_cfgs[] =
 {
 	/* configure RSS for IPv4 with input set IP src/dst */
-	{ICE_FLOW_SEG_HDR_IPV4, ICE_FLOW_HASH_IPV4, ICE_RSS_ANY_HEADERS, false},
+	{ICE_FLOW_SEG_HDR_IPV4, ICE_FLOW_HASH_IPV4, ICE_RSS_ANY_HEADERS, true},
 	/* configure RSS for IPv6 with input set IPv6 src/dst */
-	{ICE_FLOW_SEG_HDR_IPV6, ICE_FLOW_HASH_IPV6, ICE_RSS_ANY_HEADERS, false},
+	{ICE_FLOW_SEG_HDR_IPV6, ICE_FLOW_HASH_IPV6, ICE_RSS_ANY_HEADERS, true},
 	/* configure RSS for tcp4 with input set IP src/dst, TCP src/dst */
 	{ICE_FLOW_SEG_HDR_TCP | ICE_FLOW_SEG_HDR_IPV4,
-				ICE_HASH_TCP_IPV4,  ICE_RSS_ANY_HEADERS, false},
+				ICE_HASH_TCP_IPV4,  ICE_RSS_ANY_HEADERS, true},
 	/* configure RSS for udp4 with input set IP src/dst, UDP src/dst */
 	{ICE_FLOW_SEG_HDR_UDP | ICE_FLOW_SEG_HDR_IPV4,
-				ICE_HASH_UDP_IPV4,  ICE_RSS_ANY_HEADERS, false},
+				ICE_HASH_UDP_IPV4,  ICE_RSS_ANY_HEADERS, true},
 	/* configure RSS for sctp4 with input set IP src/dst */
 	{ICE_FLOW_SEG_HDR_SCTP | ICE_FLOW_SEG_HDR_IPV4,
-				ICE_HASH_SCTP_IPV4, ICE_RSS_ANY_HEADERS, false},
+				ICE_HASH_SCTP_IPV4, ICE_RSS_ANY_HEADERS, true},
 	/* configure RSS for tcp6 with input set IPv6 src/dst, TCP src/dst */
 	{ICE_FLOW_SEG_HDR_TCP | ICE_FLOW_SEG_HDR_IPV6,
-				ICE_HASH_TCP_IPV6,  ICE_RSS_ANY_HEADERS, false},
+				ICE_HASH_TCP_IPV6,  ICE_RSS_ANY_HEADERS, true},
 	/* configure RSS for udp6 with input set IPv6 src/dst, UDP src/dst */
 	{ICE_FLOW_SEG_HDR_UDP | ICE_FLOW_SEG_HDR_IPV6,
-				ICE_HASH_UDP_IPV6,  ICE_RSS_ANY_HEADERS, false},
+				ICE_HASH_UDP_IPV6,  ICE_RSS_ANY_HEADERS, true},
 	/* configure RSS for sctp6 with input set IPv6 src/dst */
 	{ICE_FLOW_SEG_HDR_SCTP | ICE_FLOW_SEG_HDR_IPV6,
-				ICE_HASH_SCTP_IPV6, ICE_RSS_ANY_HEADERS, false},
+				ICE_HASH_SCTP_IPV6, ICE_RSS_ANY_HEADERS, true},
 };
 /**
  * ice_vsi_set_rss_flow_fld - Sets RSS input set for different flows
