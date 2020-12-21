@@ -8579,10 +8579,12 @@ int ice_set_vf_bw(struct net_device *netdev, int vf_id, int max_tx_rate)
 		return -EINVAL;
 	}
 
+#ifdef NETIF_F_HW_TC
 	if (min_tx_rate && ice_is_adq_active(pf)) {
 		dev_err(dev, "ADQ on PF is currently enabled. VF min Tx rate limiting not allowed on this PF.\n");
 		return -EOPNOTSUPP;
 	}
+#endif
 
 	if (min_tx_rate && ice_is_dcb_active(pf)) {
 		dev_err(dev, "DCB on PF is currently enabled. VF min Tx rate limiting not allowed on this PF.\n");
