@@ -15,6 +15,7 @@
 
 #ifdef WIN32
 #include <winsock2.h>
+#define YY_NO_UNISTD_H
 #else
 #include <sys/socket.h>
 #include <netdb.h>
@@ -83,7 +84,7 @@ portrange return PORTRANGE;
 proto	return PROTO;
 l7proto	return L7PROTO;
 device	return DEVICE;
-interface return INTERFACE;
+interface return IFACE;
 
 direction|dir return DIR;
 AND|and|"&&" return AND;
