@@ -86,22 +86,6 @@
 
 /* ********************************* */
 
-#ifndef likely
-#define likely(x)       __builtin_expect((x),1)
-#endif
-
-#ifndef unlikely
-#define unlikely(x)     __builtin_expect((x),0)
-#endif
-
-/* ********************************* */
-
-/* See also __builtin_prefetch
- * http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html */
-#define prefetch(x) __asm volatile("prefetcht0 %0" :: "m" (*(const unsigned long *)x));
-
-/* ********************************* */
-
 #ifdef __cplusplus
 extern "C" {
 #endif

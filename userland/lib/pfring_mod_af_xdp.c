@@ -31,22 +31,6 @@
 #include <linux/if_xdp.h>
 #include <linux/if_link.h>
 
-#ifndef likely
-#define likely(x)       __builtin_expect((x),1)
-#endif
-
-#ifndef unlikely
-#define unlikely(x)     __builtin_expect((x),0)
-#endif
-
-#ifndef min
-#define min(a, b) (a <= b ? a : b)
-#endif
-
-#define gcc_mb() __asm__ __volatile__("": : :"memory")
-#define smp_wmb() gcc_mb()
-#define smp_rmb() gcc_mb()
-
 #include <bpf/xsk.h>
 
 #ifndef SOL_XDP
@@ -56,6 +40,7 @@
 #define _BPF_H_ /* Fix redefinition of struct bpf_insn from libpcap */
 
 #include "pfring.h"
+#include "pfring_priv.h"
 #include "pfring_utils.h"
 #include "pfring_hw_filtering.h"
 #include "pfring_mod.h"

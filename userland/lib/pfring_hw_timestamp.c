@@ -14,6 +14,7 @@
 /* ********************************* */
 
 #include "pfring.h"
+#include "pfring_priv.h"
 #include "pfring_hw_timestamp.h"
 
 #include <linux/ip.h>

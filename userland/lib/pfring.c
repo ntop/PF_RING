@@ -20,6 +20,7 @@
 #endif
 
 #include "pfring.h"
+#include "pfring_priv.h"
 #include <net/ethernet.h>
 
 // #define RING_DEBUG

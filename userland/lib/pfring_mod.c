@@ -33,6 +33,7 @@
 #endif
 
 #include "pfring.h"
+#include "pfring_priv.h"
 #include "pfring_utils.h"
 #include "pfring_hw_filtering.h"
 #include "pfring_mod.h"

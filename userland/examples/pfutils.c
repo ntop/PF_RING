@@ -46,6 +46,8 @@
 #include "pfring_zc.h"
 #endif
 
+#include "pfring_priv.h" /* likely definition */
+
 #define POW2(n) ((n & (n - 1)) == 0)
 
 struct compact_eth_hdr {
