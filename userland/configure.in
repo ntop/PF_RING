@@ -12,7 +12,7 @@ SYS_LIBS=""
 VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MAJOR_VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1`
 
-LIBPCAP_VER=`ls -d libpcap-* | head -n1 | cut -d"-" -f2`
+LIBPCAP_VER=`ls -d libpcap-* | sort -r | head -n1 | cut -d"-" -f2`
 
 AC_ARG_ENABLE([archopt], AS_HELP_STRING([--disable-archopt], [Disable march and mtune optimization flags]))
 if test "x$enable_archopt" != "xno"; then

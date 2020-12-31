@@ -3316,7 +3316,7 @@ SYS_LIBS=""
 VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2`
 MAJOR_VER=`cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2 | cut -d '.' -f 1`
 
-LIBPCAP_VER=`ls -d libpcap-* | head -n1 | cut -d"-" -f2`
+LIBPCAP_VER=`ls -d libpcap-* | sort -r | head -n1 | cut -d"-" -f2`
 
 # Check whether --enable-archopt was given.
 if test "${enable_archopt+set}" = set; then :
