@@ -6,12 +6,12 @@ AC_CONFIG_FILES(Makefile)
 MACHINE=`$CC -dumpmachine | cut -d '-' -f 1`
 SYSTEM=`uname -s`
 CFLAGS=""
-EXTRA_TARGETS=""
+NBPF_EXTRA_TARGETS=""
 SYS_LIBS=""
 AR_X=
 
 if test $SYSTEM = "Linux"; then
-  EXTRA_TARGETS="nbpftest"
+  NBPF_EXTRA_TARGETS="nbpftest"
 fi
 
 if test $MACHINE = "x86_64"; then
@@ -63,7 +63,7 @@ fi
 
 AC_SUBST(CC)
 AC_SUBST(CFLAGS)
-AC_SUBST(EXTRA_TARGETS)
+AC_SUBST(NBPF_EXTRA_TARGETS)
 AC_SUBST(NDPI_LIB)
 AC_SUBST(NDPI_INC)
 AC_SUBST(HAVE_NDPI)

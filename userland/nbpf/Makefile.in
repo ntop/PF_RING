@@ -10,7 +10,7 @@ CFLAGS+=-Wno-address-of-packed-member
 OBJS=nbpf_mod_rdif.o rules.o tree_match.o parser.o lex.yy.o grammar.tab.o nbpf_mod_fiberblaze.o nbpf_mod_napatech.o
 BPFLIB=libnbpf.a
 
-all: $(BPFLIB) @EXTRA_TARGETS@
+all: $(BPFLIB) @NBPF_EXTRA_TARGETS@
 
 $(BPFLIB): $(OBJS)
 	$(AR) rs $@ $(OBJS)

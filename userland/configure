@@ -620,6 +620,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+NBPF_EXTRA_TARGETS
 AR_X
 HAVE_HW_TIMESTAMP
 SYSLIBS
@@ -3973,6 +3974,10 @@ fi
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
+
+NBPF_EXTRA_TARGETS="nbpftest"
+
+
 
 
 

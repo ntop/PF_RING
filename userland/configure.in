@@ -264,6 +264,8 @@ if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"
 fi
 
+NBPF_EXTRA_TARGETS="nbpftest"
+
 AC_SUBST(CC)
 AC_SUBST(CFLAGS)
 
@@ -348,6 +350,8 @@ AC_SUBST(HAVE_HYPERSCAN)
 AC_SUBST(SYSLIBS)
 AC_SUBST(HAVE_HW_TIMESTAMP)
 AC_SUBST(AR_X)
+
+AC_SUBST(NBPF_EXTRA_TARGETS)
 
 dnl> AC_CONFIG_FILES([lib/Makefile])
 AC_CONFIG_FILES([lib/pfring_config])
