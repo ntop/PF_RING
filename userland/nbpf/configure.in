@@ -4,38 +4,43 @@ AC_PROG_CC
 AC_CONFIG_FILES(Makefile)
 
 MACHINE=`$CC -dumpmachine | cut -d '-' -f 1`
+SYSTEM=`uname -s`
 CFLAGS=""
+EXTRA_TARGETS=""
 SYS_LIBS=""
 AR_X=
 
+if test $SYSTEM = "Linux"; then
+  EXTRA_TARGETS="nbpftest"
+fi
+
 if test $MACHINE = "x86_64"; then
+  AR_X="ar x"
 
-AR_X="ar x"
+  dnl> Check for a modern pthread library
+  AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
 
-dnl> Check for a modern pthread library
-AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
+  if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
-if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
+    dnl> R/W locks are broken on some BSD releases
+    if test $SYSTEM != "FreeBSD" && test "$cross_compiling" != "yes" ; then
+      AC_MSG_CHECKING([if r/w locks are supported])
+      AC_TRY_RUN([
+      #include <pthread.h>
+      int main()
+      {
+        pthread_rwlock_t t;
+        return 0;
+      }
+      ]
+      , [ AC_MSG_RESULT(yes) AC_DEFINE_UNQUOTED(HAVE_RW_LOCK, 1, [pthread has rw locks]) ], [AC_MSG_RESULT(no)]
+      )
+    fi
 
-dnl> R/W locks are broken on some BSD releases
-if test "$IS_FREEBSD" != "1" && test "$cross_compiling" != "yes" ; then
-  AC_MSG_CHECKING([if r/w locks are supported])
-  AC_TRY_RUN([
-  #include <pthread.h>
-  int main()
-  {
-    pthread_rwlock_t t;
-    return 0;
-  }
-  ]
-  , [ AC_MSG_RESULT(yes) AC_DEFINE_UNQUOTED(HAVE_RW_LOCK, 1, [pthread has rw locks]) ], [AC_MSG_RESULT(no)]
-  )
-fi
+    dnl> end of pthread_setaffinity_np check
+  fi
 
-dnl> end of pthread_setaffinity_np check
-fi
-
-dnl> end of x86_64 check
+  dnl> end of x86_64 check
 fi
 
 AC_CHECK_LIB([ndpi], [ndpi_get_api_version], [LDFLAGS="${LDFLAGS} -lndpi"])
@@ -58,6 +63,7 @@ fi
 
 AC_SUBST(CC)
 AC_SUBST(CFLAGS)
+AC_SUBST(EXTRA_TARGETS)
 AC_SUBST(NDPI_LIB)
 AC_SUBST(NDPI_INC)
 AC_SUBST(HAVE_NDPI)
