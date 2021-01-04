@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
 RELEASE="$(cd ${SCRIPTPATH}; cat ../kernel/linux/pf_ring.h | grep RING_VERSION | head -1 | cut -d '"' -f 2)"
