@@ -1253,7 +1253,18 @@ if test "$want_dag" != no; then
 	fi
 fi
 
-LIBS="$LIBS `../lib/pfring_config --libs`"
+# PF_RING
+case "$host_os" in
+linux*)
+	LIBS="$LIBS `../lib/pfring_config --libs`"
+	PF_RING_INCLUDES="-I ../../kernel -I ../lib"
+	PF_RING_LIBS="../lib/libpfring.a -lpthread `../lib/pfring_config --libs`"
+	PF_RING_CFLAGS="-DHAVE_PF_RING"
+	AC_SUBST(PF_RING_INCLUDES)
+	AC_SUBST(PF_RING_LIBS)
+	AC_SUBST(PF_RING_CFLAGS)
+	;;
+esac
 
 # NPCAP - Default disabled
 HAVE_PCAP_NPCAP=""
