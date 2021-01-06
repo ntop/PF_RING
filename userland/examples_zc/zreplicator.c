@@ -1,5 +1,5 @@
 /*
- * (C) 2003-2020 - ntop 
+ * (C) 2003-2021 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -163,7 +163,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zreplicator - (C) 2014-2020 ntop.org\n");
+  printf("zreplicator - (C) 2014-2021 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("Read packets from multiple ingress devices and replicate it on multipe egress devices.\n\n");
   printf("Usage: zreplicator -i <device> -o <device> -c <cluster id> [-h] [-g <core id>] [-a]\n\n");

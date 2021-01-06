@@ -1,5 +1,5 @@
 /*
- * (C) 2003-2020 - ntop 
+ * (C) 2003-2021 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -334,7 +334,7 @@ void printHelp(void) {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_if_t *devpointer;
 
-  printf("pcount\n(C) 2003-2020 Deri Luca <deri@ntop.org>\n");
+  printf("pcount\n(C) 2003-2021 Deri Luca <deri@ntop.org>\n");
   printf("-h              Print help\n");
   printf("-i <device>     Device name\n");
   printf("-f <filter>     pcap filter\n");

@@ -1,5 +1,5 @@
 /*
- * (C) 2003-2020 - ntop 
+ * (C) 2003-2021 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -160,7 +160,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance - (C) 2014-2020 ntop.org\n");
+  printf("zbalance - (C) 2014-2021 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master thread balancing packets to multiple consumer threads counting packets.\n\n");
   printf("Usage: zbalance -i <device> -c <cluster id> -g <id:id...>\n"

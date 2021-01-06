@@ -1,5 +1,5 @@
 /*
- * (C) 2020 - ntop 
+ * (C) 2021 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -349,7 +349,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zfilter_mq_ipc - (C) 2020 ntop.org\n");
+  printf("zfilter_mq_ipc - (C) 2021 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process filtering packets using multiple threads, one per ingress interface,\n");
   printf("and forwarding to multiple consumer processes (round-robin or fanout).\n\n");

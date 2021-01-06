@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2020 - ntop.org
+ * (C) 2020-2021 - ntop.org
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -622,10 +622,14 @@ static int pf_xdp_xsk_configure(struct pf_xdp_handle *handle, struct pf_xdp_rx_q
   cfg.xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST;
   cfg.bind_flags = 0;
 
+  //fprintf(stderr, "Creating xsk socket on dev %s queue %u\n", 
+  //  handle->if_name, handle->queue_idx);
+
   ret = xsk_socket__create(&rxq->xsk, handle->if_name, handle->queue_idx, rxq->umem->umem, &rxq->rx, &txq->tx, &cfg);
 
   if (ret) {
-    fprintf(stderr, "Failed to create xsk socket\n");
+    fprintf(stderr, "Failed to create xsk socket on dev %s queue %u: %s (%d)\n", 
+      handle->if_name, handle->queue_idx, strerror(errno), ret);
     goto err;
   }
 
@@ -664,8 +668,12 @@ static void pf_xdp_queue_reset(struct pf_xdp_handle *handle, u_int16_t queue_idx
 static int pf_xdp_eth_rx_queue_setup(struct pf_xdp_handle *handle, u_int16_t queue_id, u_int16_t nb_rx_desc) {
   int ret;
 
-  /* Cleanup XDP in case we didn't shutdown gracefully.. */
-  pf_xdp_remove_xdp_program(handle);
+  /* Cleanup XDP in case we didn't shutdown gracefully.. 
+   * Note: doing this for the first queue only (this assumes
+   * that the application is opening queues in order) */
+  if (queue_id == 0) {
+    pf_xdp_remove_xdp_program(handle);
+  }
 
   pf_xdp_queue_reset(handle, queue_id);
 
