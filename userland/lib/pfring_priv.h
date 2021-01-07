@@ -13,8 +13,6 @@
 #ifndef _PFRING_PRIV_H_
 #define _PFRING_PRIV_H_
 
-#include "pfring.h"
-
 /* ********************************* */
 
 #ifndef likely
