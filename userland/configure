@@ -3628,6 +3628,7 @@ fi
 
 fi
 
+
 have_nl_3="no"
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for nl_socket_alloc in -lnl-3" >&5
 $as_echo_n "checking for nl_socket_alloc in -lnl-3... " >&6; }
@@ -3666,13 +3667,11 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nl_3_nl_socket_alloc" >&5
 $as_echo "$ac_cv_lib_nl_3_nl_socket_alloc" >&6; }
 if test "x$ac_cv_lib_nl_3_nl_socket_alloc" = xyes; then :
-
-  have_nl_3="yes"
-
+   have_nl_3="yes"
 fi
- #libnl-3.0
+
 if test x$have_nl_3 = xyes ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for genl_connect in -lnl-genl-3" >&5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for genl_connect in -lnl-genl-3" >&5
 $as_echo_n "checking for genl_connect in -lnl-genl-3... " >&6; }
 if ${ac_cv_lib_nl_genl_3_genl_connect+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3709,24 +3708,21 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nl_genl_3_genl_connect" >&5
 $as_echo "$ac_cv_lib_nl_genl_3_genl_connect" >&6; }
 if test "x$ac_cv_lib_nl_genl_3_genl_connect" = xyes; then :
-
-    SYSLIBS="$SYSLIBS -lnl-genl-3 -lnl-3"
-
+  SYSLIBS="$SYSLIBS -lnl-genl-3 -lnl-3"
 else
 
     as_fn_error $? "unable to find nl-genl-3 please install libnl-genl-3-dev" "$LINENO" 5
 
 fi
- #libnl-genl-3.0
+
 fi
 
 AR_X=
 
 if test $MACHINE = "x86_64"; then
+  AR_X="ar x"
 
-AR_X="ar x"
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setaffinity_np in -lpthread" >&5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setaffinity_np in -lpthread" >&5
 $as_echo_n "checking for pthread_setaffinity_np in -lpthread... " >&6; }
 if ${ac_cv_lib_pthread_pthread_setaffinity_np+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3771,101 +3767,101 @@ _ACEOF
 fi
 
 
-if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
+  if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING ZC support" >&5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING ZC support" >&5
 $as_echo_n "checking PF_RING ZC support... " >&6; }
-PF_RING_ZC_LIB="libs/libpfring_zc_${MACHINE}${LIBARCH}.a"
-if test -f lib/$PF_RING_ZC_LIB; then
-  HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
-  PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB} | grep -F .o | tr '\n' ' '`
-  PF_RING_ZC_DEP="extract_pfring_zc_lib"
-  PF_RING_ZC_H="pfring_zc.h"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-  else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-if test -f "lib/$PF_RING_ZC_LIB"; then
-  if test ! -z "$DEBUG" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking ZC debug library" >&5
-$as_echo_n "checking ZC debug library... " >&6; }
-    PF_RING_ZC_LIB_DBG="libs/libpfring_zc_${MACHINE}_dbg.a"
-    if test -f "lib/${PF_RING_ZC_LIB_DBG}"; then
-      PF_RING_ZC_LIB=${PF_RING_ZC_LIB_DBG}
-      PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB_DBG} | grep -F .o | tr '\n' ' '`
+    PF_RING_ZC_LIB="libs/libpfring_zc_${MACHINE}${LIBARCH}.a"
+    if test -f lib/$PF_RING_ZC_LIB; then
+      HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
+      PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB} | grep -F .o | tr '\n' ' '`
+      PF_RING_ZC_DEP="extract_pfring_zc_lib"
+      PF_RING_ZC_H="pfring_zc.h"
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     else
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
     fi
-  fi
-fi
 
-PF_RING_FT_LIB_EXT=""
-# Check whether --enable-ft_dl was given.
+    if test -f "lib/$PF_RING_ZC_LIB"; then
+      if test ! -z "$DEBUG" ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking ZC debug library" >&5
+$as_echo_n "checking ZC debug library... " >&6; }
+        PF_RING_ZC_LIB_DBG="libs/libpfring_zc_${MACHINE}_dbg.a"
+        if test -f "lib/${PF_RING_ZC_LIB_DBG}"; then
+          PF_RING_ZC_LIB=${PF_RING_ZC_LIB_DBG}
+          PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB_DBG} | grep -F .o | tr '\n' ' '`
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+        else
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        fi
+      fi
+    fi
+
+        PF_RING_FT_LIB_EXT=""
+    # Check whether --enable-ft_dl was given.
 if test "${enable_ft_dl+set}" = set; then :
   enableval=$enable_ft_dl;
 fi
 
-if test "x$enable_ft_dl" != "xno"; then :
+    if test "x$enable_ft_dl" != "xno"; then :
   PF_RING_FT_LIB_EXT="_dl"
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING FT support" >&5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING FT support" >&5
 $as_echo_n "checking PF_RING FT support... " >&6; }
-PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
-if test -f "lib/$PF_RING_FT_LIB"; then
-  HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
-  PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
-  PF_RING_FT_DEP="extract_pfring_ft_lib"
-  PF_RING_FT_H="pfring_ft.h"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-if test -f "lib/$PF_RING_FT_LIB"; then
-  if test ! -z "$DEBUG" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking FT debug library" >&5
-$as_echo_n "checking FT debug library... " >&6; }
-    PF_RING_FT_LIB_DBG="libs/libpfring_ft_${MACHINE}_dbg${PF_RING_FT_LIB_EXT}.a"
-    if test -f "lib/${PF_RING_FT_LIB_DBG}"; then
-      PF_RING_FT_LIB=${PF_RING_FT_LIB_DBG}
-      PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+    PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
+    if test -f "lib/$PF_RING_FT_LIB"; then
+      HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
+      PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
+      PF_RING_FT_DEP="extract_pfring_ft_lib"
+      PF_RING_FT_H="pfring_ft.h"
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
     else
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
     fi
-  fi
-fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING NPCAP support" >&5
-$as_echo_n "checking PF_RING NPCAP support... " >&6; }
-NPCAP_LIB="libs/libnpcap_${MACHINE}${LIBARCH}.a"
-if test -f lib/$NPCAP_LIB; then
-  HAVE_NPCAP="-D HAVE_NPCAP"
-  NPCAP_OBJS=`ar t lib/${NPCAP_LIB} | grep -F .o | tr '\n' ' '`
-  NPCAP_DEP="extract_npcap_lib"
-  NPCAP_H="npcap.h"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+    if test -f "lib/$PF_RING_FT_LIB"; then
+      if test ! -z "$DEBUG" ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking FT debug library" >&5
+$as_echo_n "checking FT debug library... " >&6; }
+        PF_RING_FT_LIB_DBG="libs/libpfring_ft_${MACHINE}_dbg${PF_RING_FT_LIB_EXT}.a"
+        if test -f "lib/${PF_RING_FT_LIB_DBG}"; then
+          PF_RING_FT_LIB=${PF_RING_FT_LIB_DBG}
+          PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        else
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-fi
+        fi
+      fi
+    fi
 
-if test "$IS_FREEBSD" != "1" && test "$cross_compiling" != "yes" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if r/w locks are supported" >&5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking PF_RING NPCAP support" >&5
+$as_echo_n "checking PF_RING NPCAP support... " >&6; }
+    NPCAP_LIB="libs/libnpcap_${MACHINE}${LIBARCH}.a"
+    if test -f lib/$NPCAP_LIB; then
+      HAVE_NPCAP="-D HAVE_NPCAP"
+      NPCAP_OBJS=`ar t lib/${NPCAP_LIB} | grep -F .o | tr '\n' ' '`
+      NPCAP_DEP="extract_npcap_lib"
+      NPCAP_H="npcap.h"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
+
+        if test "$IS_FREEBSD" != "1" && test "$cross_compiling" != "yes" ; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking if r/w locks are supported" >&5
 $as_echo_n "checking if r/w locks are supported... " >&6; }
-  if test "$cross_compiling" = yes; then :
+      if test "$cross_compiling" = yes; then :
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "cannot run test program while cross compiling
@@ -3874,12 +3870,12 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-  #include <pthread.h>
-  int main()
-  {
-    pthread_rwlock_t t;
-    return 0;
-  }
+      #include <pthread.h>
+      int main()
+      {
+        pthread_rwlock_t t;
+        return 0;
+      }
 
 
 _ACEOF
@@ -3899,7 +3895,42 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
-fi
+    fi
+
+    fi
+
+    MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
+  HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+  ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
+  ACCOLADE_DEP="extract_accolade_lib"
+
+    MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
+  DAG_LIB="-lm -ldl"
+  HAVE_DAG="-D HAVE_DAG"
+  DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
+  DAG_DEP="extract_dag_lib"
+
+
+    MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
+  FIBERBLAZE_LIB="-lm -ldl"
+  HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
+  FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
+  FIBERBLAZE_DEP="extract_fiberblaze_lib"
+
+    MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+  HAVE_MYRICOM="-D HAVE_MYRICOM"
+  MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+  MYRICOM_DEP="extract_myricom_lib"
+
+    MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
+  HAVE_NT="-D HAVE_NT"
+  NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
+  NT_DEP="extract_nt_lib"
+
+    MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
+  HAVE_NETCOPE="-D HAVE_NETCOPE"
+  NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
+  NETCOPE_DEP="extract_netcope_lib"
 
 fi
 
@@ -3924,41 +3955,6 @@ $as_echo "yes" >&6; }
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
   fi
-fi
-
-MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
-ACCOLADE_DEP="extract_accolade_lib"
-
-MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-DAG_LIB="-lm -ldl"
-HAVE_DAG="-D HAVE_DAG"
-DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
-DAG_DEP="extract_dag_lib"
-
-
-MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
-FIBERBLAZE_LIB="-lm -ldl"
-HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
-FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
-FIBERBLAZE_DEP="extract_fiberblaze_lib"
-
-MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-HAVE_MYRICOM="-D HAVE_MYRICOM"
-MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-MYRICOM_DEP="extract_myricom_lib"
-
-MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
-HAVE_NT="-D HAVE_NT"
-NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
-NT_DEP="extract_nt_lib"
-
-MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
-HAVE_NETCOPE="-D HAVE_NETCOPE"
-NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
-NETCOPE_DEP="extract_netcope_lib"
-
 fi
 
 # Check whether --enable-bpf was given.

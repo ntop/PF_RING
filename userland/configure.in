@@ -61,114 +61,159 @@ AC_CHECK_LIB( [nl], [nl_handle_alloc], [SYSLIBS="$SYSLIBS -lnl"])
 AC_CHECK_LIB( [dl], [dlopen, dlsym],   [SYSLIBS="$SYSLIBS -ldl"],
 		   [AC_CHECK_LIB([c], [dlopen, dlsym], [SYSLIBS="$SYSLIBS -lc"],
 		   [AC_MSG_ERROR([unable to find the dlopen(), dlsym() functions]) ]) ])
+
+dnl> libnl-3.0
 have_nl_3="no"
-AC_CHECK_LIB(nl-3, nl_socket_alloc, [
-  have_nl_3="yes"
-]) #libnl-3.0
+AC_CHECK_LIB(nl-3, nl_socket_alloc, [ have_nl_3="yes" ])
 if test x$have_nl_3 = xyes ; then
-  AC_CHECK_LIB(nl-genl-3, genl_connect, [
-    SYSLIBS="$SYSLIBS -lnl-genl-3 -lnl-3"
-  ], [
+  dnl> libnl-genl-3.0
+  AC_CHECK_LIB(nl-genl-3, genl_connect, [SYSLIBS="$SYSLIBS -lnl-genl-3 -lnl-3"], [
     AC_MSG_ERROR([unable to find nl-genl-3 please install libnl-genl-3-dev])
-  ]) #libnl-genl-3.0
+  ])
 fi
 
 AR_X=
 
 if test $MACHINE = "x86_64"; then
+  AR_X="ar x"
 
-AR_X="ar x"
+  dnl> Check for a modern pthread library
+  AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
 
-dnl> Check for a modern pthread library
-AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
+  if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
-if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
-
-AC_MSG_CHECKING([PF_RING ZC support])
-PF_RING_ZC_LIB="libs/libpfring_zc_${MACHINE}${LIBARCH}.a"
-if test -f lib/$PF_RING_ZC_LIB; then
-  HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
-  PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB} | grep -F .o | tr '\n' ' '`
-  PF_RING_ZC_DEP="extract_pfring_zc_lib"
-  PF_RING_ZC_H="pfring_zc.h"
-  AC_MSG_RESULT(yes)
-  else
-  AC_MSG_RESULT(no)
-fi
-
-if test -f "lib/$PF_RING_ZC_LIB"; then
-  if test ! -z "$DEBUG" ; then
-    AC_MSG_CHECKING([ZC debug library])
-    PF_RING_ZC_LIB_DBG="libs/libpfring_zc_${MACHINE}_dbg.a" 
-    if test -f "lib/${PF_RING_ZC_LIB_DBG}"; then
-      PF_RING_ZC_LIB=${PF_RING_ZC_LIB_DBG}
-      PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB_DBG} | grep -F .o | tr '\n' ' '`
+    AC_MSG_CHECKING([PF_RING ZC support])
+    PF_RING_ZC_LIB="libs/libpfring_zc_${MACHINE}${LIBARCH}.a"
+    if test -f lib/$PF_RING_ZC_LIB; then
+      HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
+      PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB} | grep -F .o | tr '\n' ' '`
+      PF_RING_ZC_DEP="extract_pfring_zc_lib"
+      PF_RING_ZC_H="pfring_zc.h"
       AC_MSG_RESULT(yes)
     else
       AC_MSG_RESULT(no)
     fi
-  fi
-fi
 
-dnl> FT dlopen - Default enabled
-PF_RING_FT_LIB_EXT=""
-AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI]))
-AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
+    if test -f "lib/$PF_RING_ZC_LIB"; then
+      if test ! -z "$DEBUG" ; then
+        AC_MSG_CHECKING([ZC debug library])
+        PF_RING_ZC_LIB_DBG="libs/libpfring_zc_${MACHINE}_dbg.a" 
+        if test -f "lib/${PF_RING_ZC_LIB_DBG}"; then
+          PF_RING_ZC_LIB=${PF_RING_ZC_LIB_DBG}
+          PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB_DBG} | grep -F .o | tr '\n' ' '`
+          AC_MSG_RESULT(yes)
+        else
+          AC_MSG_RESULT(no)
+        fi
+      fi
+    fi
 
-AC_MSG_CHECKING([PF_RING FT support])
-PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
-if test -f "lib/$PF_RING_FT_LIB"; then
-  HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
-  PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
-  PF_RING_FT_DEP="extract_pfring_ft_lib"
-  PF_RING_FT_H="pfring_ft.h"
-  AC_MSG_RESULT(yes)
-else
-  AC_MSG_RESULT(no)
-fi
+    dnl> FT dlopen - Default enabled
+    PF_RING_FT_LIB_EXT=""
+    AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI]))
+    AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
 
-if test -f "lib/$PF_RING_FT_LIB"; then
-  if test ! -z "$DEBUG" ; then
-    AC_MSG_CHECKING([FT debug library])
-    PF_RING_FT_LIB_DBG="libs/libpfring_ft_${MACHINE}_dbg${PF_RING_FT_LIB_EXT}.a" 
-    if test -f "lib/${PF_RING_FT_LIB_DBG}"; then
-      PF_RING_FT_LIB=${PF_RING_FT_LIB_DBG}
-      PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+    AC_MSG_CHECKING([PF_RING FT support])
+    PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
+    if test -f "lib/$PF_RING_FT_LIB"; then
+      HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
+      PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
+      PF_RING_FT_DEP="extract_pfring_ft_lib"
+      PF_RING_FT_H="pfring_ft.h"
       AC_MSG_RESULT(yes)
     else
       AC_MSG_RESULT(no)
     fi
+
+    if test -f "lib/$PF_RING_FT_LIB"; then
+      if test ! -z "$DEBUG" ; then
+        AC_MSG_CHECKING([FT debug library])
+        PF_RING_FT_LIB_DBG="libs/libpfring_ft_${MACHINE}_dbg${PF_RING_FT_LIB_EXT}.a" 
+        if test -f "lib/${PF_RING_FT_LIB_DBG}"; then
+          PF_RING_FT_LIB=${PF_RING_FT_LIB_DBG}
+          PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+          AC_MSG_RESULT(yes)
+        else
+          AC_MSG_RESULT(no)
+        fi
+      fi
+    fi
+
+    AC_MSG_CHECKING([PF_RING NPCAP support])
+    NPCAP_LIB="libs/libnpcap_${MACHINE}${LIBARCH}.a"
+    if test -f lib/$NPCAP_LIB; then
+      HAVE_NPCAP="-D HAVE_NPCAP"
+      NPCAP_OBJS=`ar t lib/${NPCAP_LIB} | grep -F .o | tr '\n' ' '`
+      NPCAP_DEP="extract_npcap_lib"
+      NPCAP_H="npcap.h"
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+
+    dnl> R/W locks are broken on some BSD releases
+    if test "$IS_FREEBSD" != "1" && test "$cross_compiling" != "yes" ; then
+      AC_MSG_CHECKING([if r/w locks are supported])
+      AC_TRY_RUN([
+      #include <pthread.h>
+      int main()
+      {
+        pthread_rwlock_t t;
+        return 0;
+      }
+      ]
+      , [ AC_MSG_RESULT(yes) AC_DEFINE_UNQUOTED(HAVE_RW_LOCK, 1, [pthread has rw locks]) ], [AC_MSG_RESULT(no)]
+      )
+    fi
+
+  dnl> end of pthread_setaffinity_np check
   fi
-fi
 
-AC_MSG_CHECKING([PF_RING NPCAP support])
-NPCAP_LIB="libs/libnpcap_${MACHINE}${LIBARCH}.a"
-if test -f lib/$NPCAP_LIB; then
-  HAVE_NPCAP="-D HAVE_NPCAP"
-  NPCAP_OBJS=`ar t lib/${NPCAP_LIB} | grep -F .o | tr '\n' ' '`
-  NPCAP_DEP="extract_npcap_lib"
-  NPCAP_H="npcap.h"
-  AC_MSG_RESULT(yes)
-else
-  AC_MSG_RESULT(no)
-fi
+  dnl> Accolade
+  MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
+  HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+  ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
+  ACCOLADE_DEP="extract_accolade_lib"
 
-dnl> R/W locks are broken on some BSD releases
-if test "$IS_FREEBSD" != "1" && test "$cross_compiling" != "yes" ; then
-  AC_MSG_CHECKING([if r/w locks are supported])
-  AC_TRY_RUN([
-  #include <pthread.h>
-  int main()
-  {
-    pthread_rwlock_t t;
-    return 0;
-  }
-  ]
-  , [ AC_MSG_RESULT(yes) AC_DEFINE_UNQUOTED(HAVE_RW_LOCK, 1, [pthread has rw locks]) ], [AC_MSG_RESULT(no)]
-  )
-fi
+  dnl> DAG
+  MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
+  DAG_LIB="-lm -ldl" 
+  HAVE_DAG="-D HAVE_DAG"
+  DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
+  DAG_DEP="extract_dag_lib"
 
-dnl> end of pthread_setaffinity_np check
+  dnl> Exablaze
+  dnl> HAVE_EXABLAZE="-D HAVE_EXABLAZE"
+  dnl> EXABLAZE_OBJS=`ar t lib/$MOD_EXABLAZE_LIB | grep .o\$ | tr '\n' ' '`
+  dnl> EXABLAZE_DEP="extract_exablaze_lib"
+  dnl> EXABLAZE_LIB="-lexanic"
+
+  dnl> Fiberblaze
+  MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
+  FIBERBLAZE_LIB="-lm -ldl" 
+  HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
+  FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
+  FIBERBLAZE_DEP="extract_fiberblaze_lib"
+
+  dnl> Myricom
+  MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
+  HAVE_MYRICOM="-D HAVE_MYRICOM"
+  MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+  MYRICOM_DEP="extract_myricom_lib"
+
+  dnl> Napatech
+  MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
+  HAVE_NT="-D HAVE_NT"
+  NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
+  NT_DEP="extract_nt_lib"
+
+  dnl> Netcope
+  MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
+  HAVE_NETCOPE="-D HAVE_NETCOPE"
+  NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
+  NETCOPE_DEP="extract_netcope_lib"
+
+dnl> end of x86_64 check
 fi
 
 dnl> AF_XDP - Default enabled
@@ -186,53 +231,6 @@ if test "x$enable_xdp" != "xno"; then
   else
     AC_MSG_RESULT(no)
   fi
-fi
-
-dnl> Accolade
-MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
-ACCOLADE_DEP="extract_accolade_lib"
-
-dnl> DAG
-MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-DAG_LIB="-lm -ldl" 
-HAVE_DAG="-D HAVE_DAG"
-DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
-DAG_DEP="extract_dag_lib"
-
-dnl> Exablaze
-dnl> HAVE_EXABLAZE="-D HAVE_EXABLAZE"
-dnl> EXABLAZE_OBJS=`ar t lib/$MOD_EXABLAZE_LIB | grep .o\$ | tr '\n' ' '`
-dnl> EXABLAZE_DEP="extract_exablaze_lib"
-dnl> EXABLAZE_LIB="-lexanic"
-
-dnl> Fiberblaze
-MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
-FIBERBLAZE_LIB="-lm -ldl" 
-HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
-FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
-FIBERBLAZE_DEP="extract_fiberblaze_lib"
-
-dnl> Myricom
-MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-HAVE_MYRICOM="-D HAVE_MYRICOM"
-MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-MYRICOM_DEP="extract_myricom_lib"
-
-dnl> Napatech
-MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
-HAVE_NT="-D HAVE_NT"
-NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
-NT_DEP="extract_nt_lib"
-
-dnl> Netcope
-MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
-HAVE_NETCOPE="-D HAVE_NETCOPE"
-NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
-NETCOPE_DEP="extract_netcope_lib"
-
-dnl> end of x86_64 check
 fi
 
 dnl> BPF - Default enabled
