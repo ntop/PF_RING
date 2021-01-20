@@ -33,13 +33,13 @@ struct ndpi_flow_struct;
 
 /*** enums ***/
 
-typedef enum {
-  PFRING_FT_ACTION_DEFAULT = 0,
-  PFRING_FT_ACTION_FORWARD,
-  PFRING_FT_ACTION_DISCARD,
-  PFRING_FT_ACTION_USER_1,
-  PFRING_FT_ACTION_USER_2
-} pfring_ft_action;
+#define PFRING_FT_ACTION_DEFAULT 0
+#define PFRING_FT_ACTION_FORWARD 1
+#define PFRING_FT_ACTION_DISCARD 2
+#define PFRING_FT_ACTION_USER_1  3
+#define PFRING_FT_ACTION_USER_2  4
+
+typedef u_int8_t pfring_ft_action;
 
 typedef enum { 
   s2d_direction = 0, /**< Source to destination */
