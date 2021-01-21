@@ -745,6 +745,7 @@ enable_zmq
 enable_ft_dl
 enable_xdp
 enable_bpf
+enable_ndpi
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1382,6 +1383,7 @@ Optional Features:
   --disable-ft-dl         Disable dlopen support in FT to link nDPI
   --disable-xdp           Disable XDP/AF_XDP support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
+  --enable-ndpi           Enable nDPI support (extra dissection with FT)
 
 Some influential environment variables:
   CC          C compiler command
@@ -3966,6 +3968,40 @@ if test "x$enable_bpf" != "xno"; then :
   HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I../libpcap-$LIBPCAP_VER"; BPF_LIB="-L../libpcap-$LIBPCAP_VER -lpcap"
 fi
 
+
+# Check whether --enable-ndpi was given.
+if test "${enable_ndpi+set}" = set; then :
+  enableval=$enable_ndpi;
+fi
+
+if test "x$enable_ndpi" = xyes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support - dynamic linking" >&5
+$as_echo_n "checking nDPI support - dynamic linking... " >&6; }
+  ndpi_installed=`pkg-config --exists libndpi && echo yes`
+  if test x$ndpi_installed = xyes ; then
+    NDPI_LIB=`pkg-config --libs libndpi`
+    NDPI_INC=`pkg-config --cflags libndpi | sed -e 's/\(-I^ \t*\)/\1\/libndpi/g'`
+    HAVE_NDPI="-D HAVE_NDPI"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking nDPI support - static linking" >&5
+$as_echo_n "checking nDPI support - static linking... " >&6; }
+    NDPI_HOME="$HOME/nDPI"
+    if test -f "$NDPI_HOME/src/lib/libndpi.a"; then
+      NDPI_LIB="$NDPI_HOME/src/lib/libndpi.a"
+      NDPI_INC="-I$NDPI_HOME/src/include"
+      HAVE_NDPI="-D HAVE_NDPI"
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
+  fi
+fi
 
 if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
   HAVE_HW_TIMESTAMP="-D ENABLE_HW_TIMESTAMP"

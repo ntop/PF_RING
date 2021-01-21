@@ -48,7 +48,7 @@
 #define DEFAULT_SNAPLEN 256
 
 #ifdef HAVE_NDPI
-//#define PRINT_NDPI_INFO /* Note: this requires linking the nDPI library */
+#define PRINT_NDPI_INFO /* Note: this requires linking the nDPI library */
 #include "ndpi_api.h"
 #endif
 

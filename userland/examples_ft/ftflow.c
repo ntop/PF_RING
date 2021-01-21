@@ -51,15 +51,21 @@
 #define ALARM_SLEEP 1
 #define DEFAULT_DEVICE "eth0"
 
+#ifdef HAVE_NDPI
+#define PRINT_NDPI_INFO /* Note: this requires linking the nDPI library */
+#include "ndpi_api.h"
+#endif
+
 pfring *pd = NULL;
 pfring_ft_table *ft = NULL;
 int bind_core = -1;
 int bind_time_pulse_core = -1;
 u_int8_t quiet = 0, verbose = 0, stats_only = 0;
 u_int8_t time_pulse = 0, enable_l7 = 0, do_shutdown = 0;
-u_int64_t num_pkts = 0;
-u_int64_t num_bytes = 0;
-u_int64_t num_flows = 0;
+u_int64_t num_pkts = 0, num_bytes = 0, num_flows = 0;
+#ifdef PRINT_NDPI_INFO
+u_int8_t enable_l7_extra = 0;
+#endif
 
 volatile u_int64_t *pulse_timestamp;
 
@@ -268,6 +274,15 @@ void processFlow(pfring_ft_flow *flow, void *user){
     case 91:
       if (v->l7_metadata.tls.serverName != NULL)
         printf(", hostName: %s", v->l7_metadata.tls.serverName);
+#ifdef PRINT_NDPI_INFO
+      if (enable_l7_extra) {
+        struct ndpi_flow_struct *ndpi_flow = pfring_ft_flow_get_ndpi_handle(flow);
+        if (ndpi_flow->protos.stun_ssl.ssl.ja3_server[0] != '\0')
+          printf(", ja3s: '%s'", ndpi_flow->protos.stun_ssl.ssl.ja3_server);
+        if (ndpi_flow->protos.stun_ssl.ssl.ja3_client[0] != '\0')
+          printf(", ja3c: '%s'", ndpi_flow->protos.stun_ssl.ssl.ja3_client);
+      }
+#endif
       break;
   }
 
@@ -377,7 +392,10 @@ void print_help(void) {
   printf("-g <core>       CPU core affinity\n");
   printf("-S <core>       Enable timer thread and set CPU core affinity\n");
   printf("-s <duration>   Enable flow slicing (set timeout to <duration> seconds\n");
-  printf("-H              Ignore hw hash (use with adapters computing asymmetric hash)");
+  printf("-H              Ignore hw hash (use with adapters computing asymmetric hash)\n");
+#ifdef PRINT_NDPI_INFO
+  printf("-E              Enable extra packet dissection in nDPI to extract more metadata\n");
+#endif
   printf("-q              Quiet mode\n");
   printf("-d              Debug mode\n");
   printf("-t              Print actual stats");
@@ -401,7 +419,7 @@ int main(int argc, char* argv[]) {
   pthread_t time_thread;
   u_int8_t ignore_hw_hash = 0;
 
-  while ((c = getopt(argc,argv,"c:dg:hHi:p:qvF:s:S:tV7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dEg:hHi:p:qvF:s:S:tV7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -412,6 +430,12 @@ int main(int argc, char* argv[]) {
     case 'd':
       pfring_ft_debug();
       break;
+#ifdef PRINT_NDPI_INFO
+    case 'E':
+      enable_l7 = 1;
+      enable_l7_extra = 1;
+      break;
+#endif
     case 'g':
       bind_core = atoi(optarg);
       break;
@@ -464,6 +488,11 @@ int main(int argc, char* argv[]) {
 
   if (enable_l7)
     ft_flags |= PFRING_FT_TABLE_FLAGS_DPI;
+
+#ifdef PRINT_NDPI_INFO
+  if (enable_l7_extra)
+    ft_flags |= PFRING_FT_TABLE_FLAGS_DPI_EXTRA;
+#endif
 
   if (ignore_hw_hash)
     ft_flags |= PFRING_FT_IGNORE_HW_HASH;
