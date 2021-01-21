@@ -368,9 +368,9 @@ void print_version(void) {
     if (license_expiration) {
       printf("License Type:  Time-limited License \n");
       printf("Lic. Duration: Until %s [%u days left]\n", ctime_nonl(license_expiration), days_left(license_expiration));
-    } else if (maintenance_expiration > 0) {
-      printf("License Type:  Permanent License \n");
-      if (days_left(maintenance_expiration) <= 0)
+    } else {
+      printf("License Type:  Permanent License\n");
+      if (maintenance_expiration == 0 || days_left(maintenance_expiration) <= 0)
         printf("Maintenance:   Expired\n");
       else
         printf("Maintenance:   Until %s [%u days left]\n", ctime_nonl(maintenance_expiration), days_left(maintenance_expiration));
