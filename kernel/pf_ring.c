@@ -1219,6 +1219,8 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
 
     seq_printf(m, "Polling Mode: %s\n", dev_ptr->is_zc_device ? "NAPI/ZC" : "NAPI");
 
+    seq_printf(m, "Promisc:      %s\n", (dev->flags & IFF_PROMISC) ? "Enabled" : "Disabled");
+
     switch(dev->type) {
     case ARPHRD_ETHER    /*   1 */: strcpy(dev_buf, "Ethernet"); break;
     case ARPHRD_LOOPBACK /* 772 */: strcpy(dev_buf, "Loopback"); break;
