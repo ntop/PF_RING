@@ -3928,6 +3928,20 @@ fi
   HAVE_NT="-D HAVE_NT"
   NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
   NT_DEP="extract_nt_lib"
+  if test ! -z "$DEBUG" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking NT debug library" >&5
+$as_echo_n "checking NT debug library... " >&6; }
+    MOD_NT_LIB_DBG="libs/libpfring_nt_${MACHINE}_dbg.a"
+    if test -f "lib/${MOD_NT_LIB_DBG}"; then
+      MOD_NT_LIB=${MOD_NT_LIB_DBG}
+      NT_OBJS=`ar t lib/${MOD_NT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
+  fi
 
     MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
   HAVE_NETCOPE="-D HAVE_NETCOPE"

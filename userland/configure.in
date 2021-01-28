@@ -206,6 +206,17 @@ if test $MACHINE = "x86_64"; then
   HAVE_NT="-D HAVE_NT"
   NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
   NT_DEP="extract_nt_lib"
+  if test ! -z "$DEBUG" ; then
+    AC_MSG_CHECKING([NT debug library])
+    MOD_NT_LIB_DBG="libs/libpfring_nt_${MACHINE}_dbg.a" 
+    if test -f "lib/${MOD_NT_LIB_DBG}"; then
+      MOD_NT_LIB=${MOD_NT_LIB_DBG}
+      NT_OBJS=`ar t lib/${MOD_NT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+  fi
 
   dnl> Netcope
   MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
