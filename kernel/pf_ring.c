@@ -6792,30 +6792,10 @@ int sk_detach_filter(struct sock *sk)
 
 /* ************************************* */
 
-static unsigned long __copy_from_ring_user(void *to,
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
-					   char __user *from,
-#else
-		                           sockptr_t from,
-#endif
-                                           unsigned long n) {
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
-  return copy_from_user(to, from, n);
-#else
-  return copy_from_sockptr(to, from, n);
-#endif
-}
-
-/* ************************************* */
-
 /* Code taken/inspired from core/sock.c */
 static int ring_setsockopt(struct socket *sock,
 			   int level, int optname,
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
 			   char __user * optval,
-#else
-                           sockptr_t optval,
-#endif
 			   unsigned
 			   int optlen)
 {
@@ -6847,7 +6827,7 @@ static int ring_setsockopt(struct socket *sock,
 
       ret = -EFAULT;
 
-      if(__copy_from_ring_user(&fprog, optval, sizeof(fprog)))
+      if(copy_from_user(&fprog, optval, sizeof(fprog)))
         break;
 
       if(fprog.len <= 1) { /* empty filter */
@@ -6893,7 +6873,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(cluster))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&cluster, optval, sizeof(cluster)))
+    if(copy_from_user(&cluster, optval, sizeof(cluster)))
       return(-EFAULT);
 
     write_lock_bh(&pfr->ring_rules_lock);
@@ -6916,7 +6896,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(channel_id_mask))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&channel_id_mask, optval, sizeof(channel_id_mask)))
+    if(copy_from_user(&channel_id_mask, optval, sizeof(channel_id_mask)))
       return(-EFAULT);
 
     num_channels = 0;
@@ -6972,7 +6952,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen > sizeof(name) /* Names should not be too long */ )
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&name, optval, optlen))
+    if(copy_from_user(&name, optval, optlen))
       return(-EFAULT);
 
     if(pfr->appl_name != NULL)
@@ -6990,7 +6970,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(direction))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&direction, optval, sizeof(direction)))
+    if(copy_from_user(&direction, optval, sizeof(direction)))
       return(-EFAULT);
 
     pfr->direction = direction;
@@ -7004,7 +6984,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(sockmode))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&sockmode, optval, sizeof(sockmode)))
+    if(copy_from_user(&sockmode, optval, sizeof(sockmode)))
       return(-EFAULT);
 
     pfr->mode = sockmode;
@@ -7018,7 +6998,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(rule_inactivity))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&rule_inactivity, optval, sizeof(rule_inactivity)))
+    if(copy_from_user(&rule_inactivity, optval, sizeof(rule_inactivity)))
       return(-EFAULT);
     else {
       write_lock_bh(&pfr->ring_rules_lock);
@@ -7032,7 +7012,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(rule_inactivity))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&rule_inactivity, optval, sizeof(rule_inactivity)))
+    if(copy_from_user(&rule_inactivity, optval, sizeof(rule_inactivity)))
       return(-EFAULT);
     else {
       write_lock_bh(&pfr->ring_rules_lock);
@@ -7048,7 +7028,7 @@ static int ring_setsockopt(struct socket *sock,
     else {
       u_int8_t new_policy;
 
-      if(__copy_from_ring_user(&new_policy, optval, optlen))
+      if(copy_from_user(&new_policy, optval, optlen))
 	return(-EFAULT);
 
       write_lock_bh(&pfr->ring_rules_lock);
@@ -7080,7 +7060,7 @@ static int ring_setsockopt(struct socket *sock,
       if(rule == NULL)
 	return(-EFAULT);
 
-      if(__copy_from_ring_user(&rule->rule, optval, optlen))
+      if(copy_from_user(&rule->rule, optval, optlen))
 	return(-EFAULT);
 
       INIT_LIST_HEAD(&rule->list);
@@ -7104,7 +7084,7 @@ static int ring_setsockopt(struct socket *sock,
       if(rule == NULL)
 	return(-EFAULT);
 
-      if(__copy_from_ring_user(&rule->rule, optval, optlen))
+      if(copy_from_user(&rule->rule, optval, optlen))
 	return(-EFAULT);
 
       write_lock_bh(&pfr->ring_rules_lock);
@@ -7128,7 +7108,7 @@ static int ring_setsockopt(struct socket *sock,
       /* This is a list rule */
       int rc;
 
-      if(__copy_from_ring_user(&rule_id, optval, optlen))
+      if(copy_from_user(&rule_id, optval, optlen))
 	return(-EFAULT);
 
       write_lock_bh(&pfr->ring_rules_lock);
@@ -7144,7 +7124,7 @@ static int ring_setsockopt(struct socket *sock,
       sw_filtering_hash_bucket rule;
       int rc;
 
-      if(__copy_from_ring_user(&rule.rule, optval, optlen))
+      if(copy_from_user(&rule.rule, optval, optlen))
 	return(-EFAULT);
 
       write_lock_bh(&pfr->ring_rules_lock);
@@ -7161,7 +7141,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(pfr->sample_rate))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&pfr->sample_rate, optval, sizeof(pfr->sample_rate)))
+    if(copy_from_user(&pfr->sample_rate, optval, sizeof(pfr->sample_rate)))
       return(-EFAULT);
     break;
 
@@ -7169,7 +7149,7 @@ static int ring_setsockopt(struct socket *sock,
 	  if(optlen != sizeof(pfr->filtering_sample_rate))
 		return(-EINVAL);
 
-	  if(__copy_from_ring_user(&pfr->filtering_sample_rate, optval, sizeof(pfr->filtering_sample_rate)))
+	  if(copy_from_user(&pfr->filtering_sample_rate, optval, sizeof(pfr->filtering_sample_rate)))
 		return(-EFAULT);
 
       pfr->filtering_sampling_size = pfr->filtering_sample_rate;
@@ -7236,7 +7216,7 @@ static int ring_setsockopt(struct socket *sock,
       else
 	threshold = min_num_slots;
 
-      if(__copy_from_ring_user(&pfr->poll_num_pkts_watermark, optval, optlen))
+      if(copy_from_user(&pfr->poll_num_pkts_watermark, optval, optlen))
 	return(-EFAULT);
 
       if(pfr->poll_num_pkts_watermark > threshold)
@@ -7253,7 +7233,7 @@ static int ring_setsockopt(struct socket *sock,
 	  if(optlen != sizeof(u_int16_t))
 		return(-EINVAL);
 	  else {
-		if(__copy_from_ring_user(&pfr->poll_watermark_timeout, optval, optlen))
+		if(copy_from_user(&pfr->poll_watermark_timeout, optval, optlen))
            return(-EFAULT);
 		debug_printk(2, "--> SO_SET_POLL_WATERMARK_TIMEOUT=%u\n", pfr->poll_watermark_timeout);
 	  }
@@ -7263,7 +7243,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(u_int32_t))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&pfr->bucket_len, optval, optlen))
+    if(copy_from_user(&pfr->bucket_len, optval, optlen))
       return(-EFAULT);
 
     debug_printk(2, "--> SO_RING_BUCKET_LEN=%d\n", pfr->bucket_len);
@@ -7273,7 +7253,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(zc_dev_mapping))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&mapping, optval, optlen))
+    if(copy_from_user(&mapping, optval, optlen))
       return(-EFAULT);
 
     debug_printk(2, "SO_SELECT_ZC_DEVICE %s\n", mapping.device_name);
@@ -7296,7 +7276,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(ring_id))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&ring_id, optval, sizeof(ring_id)))
+    if(copy_from_user(&ring_id, optval, sizeof(ring_id)))
       return(-EFAULT);
 
     write_lock_bh(&pfr->ring_rules_lock);
@@ -7308,7 +7288,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(hw_filtering_rule))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&hw_rule, optval, sizeof(hw_rule)))
+    if(copy_from_user(&hw_rule, optval, sizeof(hw_rule)))
       return(-EFAULT);
 
     /* Check if a rule with the same id exists */
@@ -7348,7 +7328,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(u_int16_t))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&rule_id, optval, sizeof(u_int16_t)))
+    if(copy_from_user(&rule_id, optval, sizeof(u_int16_t)))
       return(-EFAULT);
 
     /* Check if the rule we want to remove exists */
@@ -7386,7 +7366,7 @@ static int ring_setsockopt(struct socket *sock,
       if(optlen != sizeof(elem))
 	return(-EINVAL);
 
-      if(__copy_from_ring_user(&elem, optval, sizeof(elem)))
+      if(copy_from_user(&elem, optval, sizeof(elem)))
 	return(-EFAULT);
 
       if((pfr->v_filtering_dev = add_virtual_filtering_device(pfr, &elem)) == NULL)
@@ -7407,7 +7387,7 @@ static int ring_setsockopt(struct socket *sock,
       if(optlen < sizeof(ccri))
         return(-EINVAL);
 
-      if(__copy_from_ring_user(&ccri, optval, sizeof(ccri)))
+      if(copy_from_user(&ccri, optval, sizeof(ccri)))
 	return(-EFAULT);
 
       if(create_cluster_referee(pfr, ccri.cluster_id, &ccri.recovered) < 0)
@@ -7427,7 +7407,7 @@ static int ring_setsockopt(struct socket *sock,
     {
       struct public_cluster_object_info pcoi;
 
-      if(__copy_from_ring_user(&pcoi, optval, sizeof(pcoi)))
+      if(copy_from_user(&pcoi, optval, sizeof(pcoi)))
 	return(-EFAULT);
 
       if(publish_cluster_object(pfr, pcoi.cluster_id, pcoi.object_type, pcoi.object_id) < 0)
@@ -7441,7 +7421,7 @@ static int ring_setsockopt(struct socket *sock,
     {
       struct lock_cluster_object_info lcoi;
 
-      if(__copy_from_ring_user(&lcoi, optval, sizeof(lcoi)))
+      if(copy_from_user(&lcoi, optval, sizeof(lcoi)))
 	return(-EFAULT);
 
       if(lock_cluster_object(pfr, lcoi.cluster_id, lcoi.object_type, lcoi.object_id, lcoi.lock_mask) < 0)
@@ -7455,7 +7435,7 @@ static int ring_setsockopt(struct socket *sock,
     {
       struct lock_cluster_object_info lcoi;
 
-      if(__copy_from_ring_user(&lcoi, optval, sizeof(lcoi)))
+      if(copy_from_user(&lcoi, optval, sizeof(lcoi)))
 	return(-EFAULT);
 
       if(unlock_cluster_object(pfr, lcoi.cluster_id, lcoi.object_type, lcoi.object_id, lcoi.lock_mask) < 0)
@@ -7470,7 +7450,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen > (sizeof(pfr->custom_bound_device_name)-1))
       optlen = sizeof(pfr->custom_bound_device_name)-1;
 
-    if(__copy_from_ring_user(&pfr->custom_bound_device_name, optval, optlen)) {
+    if(copy_from_user(&pfr->custom_bound_device_name, optval, optlen)) {
       pfr->custom_bound_device_name[0] = '\0';
       return(-EFAULT);
     } else
@@ -7495,7 +7475,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen > (sizeof(pfr->statsString)-1))
       optlen = sizeof(pfr->statsString)-1;
 
-    if(__copy_from_ring_user(&pfr->statsString, optval, optlen)) {
+    if(copy_from_user(&pfr->statsString, optval, optlen)) {
       pfr->statsString[0] = '\0';
       return(-EFAULT);
     }
@@ -7516,7 +7496,7 @@ static int ring_setsockopt(struct socket *sock,
       if(optlen != sizeof(u_int32_t))
         return (-EINVAL);
 
-      if(__copy_from_ring_user(&enable_promisc, optval, optlen))
+      if(copy_from_user(&enable_promisc, optval, optlen))
         return (-EFAULT);
 
       if(!pfr->ring_dev || pfr->ring_dev == &none_device_element || pfr->ring_dev == &any_device_element) {
@@ -7542,7 +7522,7 @@ static int ring_setsockopt(struct socket *sock,
     if(optlen != sizeof(vlan_id))
       return(-EINVAL);
 
-    if(__copy_from_ring_user(&vlan_id, optval, sizeof(vlan_id)))
+    if(copy_from_user(&vlan_id, optval, sizeof(vlan_id)))
       return(-EFAULT);
 
     pfr->vlan_id = vlan_id;
