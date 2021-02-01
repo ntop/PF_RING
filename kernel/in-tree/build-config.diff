@@ -1,0 +1,51 @@
+diff --git a/net/Kconfig b/net/Kconfig
+index 9dba2715919d..b1f39da0ebba 100644
+--- a/net/Kconfig
++++ b/net/Kconfig
+@@ -453,3 +453,5 @@ config HAVE_CBPF_JIT
+ # Extended BPF JIT (eBPF)
+ config HAVE_EBPF_JIT
+ 	bool
++
++source "net/pf_ring/Kconfig"
+diff --git a/net/Makefile b/net/Makefile
+index 14fede520840..975aee777432 100644
+--- a/net/Makefile
++++ b/net/Makefile
+@@ -86,5 +86,6 @@ obj-y                         += l3mdev/
+ endif
+ obj-$(CONFIG_QRTR)             += qrtr/
+ obj-$(CONFIG_NET_NCSI)         += ncsi/
++obj-$(CONFIG_PF_RING)          += pf_ring/
+ obj-$(CONFIG_XDP_SOCKETS)      += xdp/
+ obj-$(CONFIG_MPTCP)            += mptcp/
+diff --git a/net/pf_ring/Kconfig b/net/pf_ring/Kconfig
+new file mode 100644
+index 000000000000..0ac61ce02522
+--- /dev/null
++++ b/net/pf_ring/Kconfig
+@@ -0,0 +1,12 @@
++config PF_RING
++	tristate "PF_RING sockets (v7)"
++	help
++	  PF_RING socket family, optimized for packet capture.
++          If a PF_RING socket is bound to an adapter (via the bind() system
++          call), such adapter will be used in read-only mode until the socket
++          is destroyed. Whenever an incoming packet is received from the adapter
++          it will not passed to upper layers, but instead it is copied to a ring
++          buffer, which in turn is exported to user space applications via mmap.
++          Please refer to http://luca.ntop.org/Ring.pdf for more.
++
++	  Say N unless you know what you are doing.
+diff --git a/net/pf_ring/Makefile b/net/pf_ring/Makefile
+new file mode 100644
+index 000000000000..23d7bda93a9c
+--- /dev/null
++++ b/net/pf_ring/Makefile
+@@ -0,0 +1,6 @@
++#
++# (C) 2009-18 - ntop.org
++#
++
++obj-$(CONFIG_PF_RING) := pf_ring.o
++
