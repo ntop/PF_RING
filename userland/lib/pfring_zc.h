@@ -102,12 +102,21 @@ typedef struct {
 } pfring_zc_pkt_buff;
 
 /**
- * Buffer handle. 
+ * Queue info.
  */
 typedef struct {
   u_int32_t buffer_len;   /**< Max packet length. */
   u_int32_t metadata_len; /**< User metadata length. */
 } pfring_zc_queue_info;
+
+/**
+ * Cluster info.
+ */
+typedef struct {
+  u_int64_t total_memory;    /**< Total amount of allocated memory. */
+  u_int32_t buffer_len;      /**< Max packet length. */
+  u_int32_t real_buffer_len; /**< Real size of allocated buffers (including head room and padding). */
+} pfring_zc_cluster_info;
 
 /**
  * Return the pointer to the actual packet data.
@@ -173,6 +182,27 @@ pfring_zc_create_cluster(
   u_int32_t tot_num_buffers,
   int32_t numa_node_id,
   const char *hugepages_mountpoint,
+  u_int32_t flags
+);
+
+/**
+ * Return information about the resources allocated by the cluster including the max amount of memory.
+ * @param info                 A struct that is filled with the cluster information.
+ * @param buffer_len           The size of each buffer: it must be at least as large as the MTU + L2 header (it will be rounded up to cache line) and not bigger than the page size.
+ * @param metadata_len         The size of each buffer metadata.
+ * @param tot_num_buffers      The total number of buffers to reserve for queues/devices/extra allocations.
+ * @param flags                Optional flags:
+ *                             @code
+ *                             PF_RING_ZC_ENABLE_VM_SUPPORT enable KVM support (memory is rounded up to power of 2 thus it allocates more memory!)
+ *                             @endcode
+ * @return                     0 on success, a negative value otherwise (errno is also set appropriately)
+ */
+int
+pfring_zc_precompute_cluster_settings(
+  pfring_zc_cluster_info *info, /**< Out */ 
+  u_int32_t buffer_len,
+  u_int32_t metadata_len,
+  u_int32_t tot_num_buffers,
   u_int32_t flags
 );
 
@@ -250,7 +280,7 @@ pfring_zc_create_queue(
  * @param pool_len  The number of buffers to reserve for the pool.
  * @param queue     The queue handle on success, NULL otherwise (out)
  * @param pool      The pool handle on success, NULL otherwise (out)
- * @return          0 in success, a negative value otherwise (errno is also set appropriately)
+ * @return          0 on success, a negative value otherwise (errno is also set appropriately)
  */
 int
 pfring_zc_create_queue_pool_pair(
