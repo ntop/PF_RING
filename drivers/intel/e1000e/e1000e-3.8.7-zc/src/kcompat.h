@@ -827,7 +827,7 @@ struct _kc_ethtool_pauseparam {
 			     UTS_UBUNTU_RELEASE_ABI)
 
 #if UTS_UBUNTU_RELEASE_ABI > 255
-#error UTS_UBUNTU_RELEASE_ABI is too large...
+//#error UTS_UBUNTU_RELEASE_ABI is too large...
 #endif /* UTS_UBUNTU_RELEASE_ABI > 255 */
 
 #if ( LINUX_VERSION_CODE <= KERNEL_VERSION(3,0,0) )
