@@ -848,7 +848,12 @@ static int fm10k_change_mtu(struct net_device *dev, int new_mtu)
  * fm10k_tx_timeout - Respond to a Tx Hang
  * @netdev: network interface device structure
  **/
-static void fm10k_tx_timeout(struct net_device *netdev)
+#ifdef HAVE_TX_TIMEOUT_TXQUEUE
+static void
+fm10k_tx_timeout(struct net_device *netdev, __always_unused unsigned int txqueue)
+#else
+static void i40e_tx_timeout(struct net_device *netdev)
+#endif
 {
 	struct fm10k_intfc *interface = netdev_priv(netdev);
 	bool real_tx_hang = false;

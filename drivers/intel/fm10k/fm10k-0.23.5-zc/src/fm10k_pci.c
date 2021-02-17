@@ -2863,7 +2863,7 @@ static pci_ers_result_t fm10k_io_slot_reset(struct pci_dev *pdev)
 		result = PCI_ERS_RESULT_RECOVERED;
 	}
 
-	pci_cleanup_aer_uncorrect_error_status(pdev);
+	pci_aer_clear_nonfatal_status(pdev);
 
 	return result;
 }
