@@ -3822,6 +3822,7 @@ static void e1000_configure_rx(struct e1000_adapter *adapter)
 		rxcsum &= ~E1000_RXCSUM_TUOFL;
 	ew32(RXCSUM, rxcsum);
 
+#ifndef DISABLE_PM_QOS
 	/* With jumbo frames, excessive C-state transition latencies result
 	 * in dropped transactions.
 	 */
@@ -3856,6 +3857,7 @@ static void e1000_configure_rx(struct e1000_adapter *adapter)
 					  PM_QOS_DEFAULT_VALUE);
 #endif
 	}
+#endif
 
 	/* Enable Receives */
 	ew32(RCTL, rctl);
@@ -5646,6 +5648,7 @@ int e1000e_open(struct net_device *netdev)
 		e1000_update_mng_vlan(adapter);
 
 #endif
+#ifndef DISABLE_PM_QOS
 	/* DMA latency requirement to workaround jumbo issue */
 #ifdef HAVE_PM_QOS_REQUEST_LIST_NEW
 	cpu_latency_qos_add_request(&adapter->pm_qos_req, PM_QOS_DEFAULT_VALUE);
@@ -5655,6 +5658,7 @@ int e1000e_open(struct net_device *netdev)
 #else
 	pm_qos_add_requirement(PM_QOS_CPU_DMA_LATENCY, adapter->netdev->name,
 			       PM_QOS_DEFAULT_VALUE);
+#endif
 #endif
 
 	/* before we allocate an interrupt, we must be ready to handle it.
@@ -5700,6 +5704,7 @@ int e1000e_open(struct net_device *netdev)
 	return 0;
 
 err_req_irq:
+#ifndef DISABLE_PM_QOS
 #ifdef HAVE_PM_QOS_REQUEST_LIST_NEW
 	cpu_latency_qos_remove_request(&adapter->pm_qos_req);
 #elif defined(HAVE_PM_QOS_REQUEST_LIST)
@@ -5707,6 +5712,7 @@ err_req_irq:
 #else
 	pm_qos_remove_requirement(PM_QOS_CPU_DMA_LATENCY,
 				  adapter->netdev->name);
+#endif
 #endif
 	e1000e_release_hw_control(adapter);
 	e1000_power_down_phy(adapter);
@@ -5795,6 +5801,7 @@ int e1000e_close(struct net_device *netdev)
 	    !test_bit(__E1000_TESTING, &adapter->state))
 		e1000e_release_hw_control(adapter);
 
+#ifndef DISABLE_PM_QOS
 #ifdef HAVE_PM_QOS_REQUEST_LIST_NEW
 	cpu_latency_qos_remove_request(&adapter->pm_qos_req);
 #elif defined(HAVE_PM_QOS_REQUEST_LIST)
@@ -5802,6 +5809,7 @@ int e1000e_close(struct net_device *netdev)
 #else
 	pm_qos_remove_requirement(PM_QOS_CPU_DMA_LATENCY,
 				  adapter->netdev->name);
+#endif
 #endif
 
 	pm_runtime_put_sync(pci_dev_to_dev(pdev));
