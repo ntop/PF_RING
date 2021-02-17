@@ -849,10 +849,9 @@ static int fm10k_change_mtu(struct net_device *dev, int new_mtu)
  * @netdev: network interface device structure
  **/
 #ifdef HAVE_TX_TIMEOUT_TXQUEUE
-static void
-fm10k_tx_timeout(struct net_device *netdev, __always_unused unsigned int txqueue)
+static void fm10k_tx_timeout(struct net_device *netdev, __always_unused unsigned int txqueue)
 #else
-static void i40e_tx_timeout(struct net_device *netdev)
+static void fm10k_tx_timeout(struct net_device *netdev)
 #endif
 {
 	struct fm10k_intfc *interface = netdev_priv(netdev);
