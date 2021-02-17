@@ -70,10 +70,6 @@
 #endif
 #endif
 
-#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)))
-#define DISABLE_PM_QOS
-#endif
-
 /* NAPI enable/disable flags here */
 #define NAPI
 #ifdef E1000E_NO_NAPI
@@ -782,6 +778,10 @@ struct _kc_ethtool_pauseparam {
 #ifndef RHEL_RELEASE_CODE
 /* NOTE: RHEL_RELEASE_* introduced in RHEL4.5 */
 #define RHEL_RELEASE_CODE 0
+#endif
+
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)))
+#define DISABLE_PM_QOS
 #endif
 
 /* RHEL 7 didn't backport the parameter change in

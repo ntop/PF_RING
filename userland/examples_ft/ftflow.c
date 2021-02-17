@@ -398,7 +398,7 @@ void print_help(void) {
 #endif
   printf("-q              Quiet mode\n");
   printf("-d              Debug mode\n");
-  printf("-t              Print actual stats");
+  printf("-t              Print actual stats\n");
   printf("-v              Verbose (print also raw packets)\n");
   printf("-V              Print version");
 
