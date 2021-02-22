@@ -713,7 +713,11 @@ static void ixgbe_tx_timeout_reset(struct ixgbe_adapter *adapter)
  * ixgbe_tx_timeout - Respond to a Tx Hang
  * @netdev: network interface device structure
  **/
+#ifdef HAVE_TX_TIMEOUT_TXQUEUE
+static void ixgbe_tx_timeout(struct net_device *netdev, unsigned int txqueue)
+#else
 static void ixgbe_tx_timeout(struct net_device *netdev)
+#endif
 {
 struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	bool real_tx_hang = false;
@@ -13212,7 +13216,7 @@ static pci_ers_result_t ixgbe_io_error_detected(struct pci_dev *pdev,
 			pci_dev_put(vfdev);
 		}
 
-		pci_cleanup_aer_uncorrect_error_status(pdev);
+		pci_aer_clear_nonfatal_status(pdev);
 	}
 
 	/*
@@ -13285,7 +13289,7 @@ static pci_ers_result_t ixgbe_io_slot_reset(struct pci_dev *pdev)
 		result = PCI_ERS_RESULT_RECOVERED;
 	}
 
-	pci_cleanup_aer_uncorrect_error_status(pdev);
+	pci_aer_clear_nonfatal_status(pdev);
 
 	return result;
 }

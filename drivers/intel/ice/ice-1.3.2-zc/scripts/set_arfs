@@ -1,0 +1,86 @@
+#!/bin/bash
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (C) 2020, Intel Corporation
+#
+# Attempt a basic setup of adaptive receive flow steering
+# also known as aRFS.  aRFS will automatically at runtime
+# use ntuple rules to direct receive traffic to the same
+# rx queue (matched by queue number) as was used for the
+# application that was transmitting. Most useful for
+# TCP workloads and latency sensitive TCP connections.
+#
+# typical usage is (as root):
+# set_arfs -s flow_entries eth1 <eth2> <eth3>
+#
+# to get help:
+# set_arfs
+
+usage()
+{
+	echo
+	echo "Usage: $0 [-s flow_entries] <interface> ..."
+	echo "  Options: "
+	echo "    -s            number of socket flow entries"
+	echo "  Examples:"
+	echo "    $0 eth1 eth2            # eth1 and eth2 use default flow_entries"
+	echo "    $0 -s flow_entries eth1 # eth1 use specified flow_entries"
+	echo
+	exit 1
+}
+
+# offer some help
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+	usage
+	exit 1
+fi
+
+# if -s and a value specified, then use them.
+if [ "$1" == "-s" ]; then
+	FLOW_ENTRIES=$2
+	shift
+	shift
+fi
+
+# append the interfaces listed to the string with spaces
+while [ "$#" -ne "0" ] ; do
+	IFACES+=" $1"
+	shift
+done
+
+# for now the user must specify interfaces
+if [ -z "$IFACES" ]; then
+	usage
+	exit 1
+fi
+
+# provide a default flow num value, typically 2048 per queue
+# is useful, but if there are many queues then maybe a smaller
+# value per-queue is good enough.
+if [ -z "$FLOW_ENTRIES" ]; then
+	FLOW_ENTRIES=32768
+fi
+
+set_arfs()
+{
+	echo $FLOW_ENTRIES > /proc/sys/net/core/rps_sock_flow_entries
+	echo -n "done: "
+	grep -H . /proc/sys/net/core/rps_sock_flow_entries
+	for IFACE in $IFACES; do
+		QDIR="/sys/class/net/$IFACE/queues"
+		QUEUES=`ls -1 -d $QDIR/rx-*`
+		QUEUES_COUNT=`ls -1 -d $QDIR/rx-* | wc -l`
+		sockTrack=$((FLOW_ENTRIES / QUEUES_COUNT))
+		if [ -z `ls $QDIR/rx-0/rps_flow_cnt` ]; then
+			echo "ERROR: aRFS is not supported on $IFACE"
+			exit 2
+		fi
+		n=0
+		for i in $QUEUES; do
+			echo $sockTrack > $i/rps_flow_cnt
+			echo -n "Queue $((n++)) done: "
+			grep -H . $i/rps_flow_cnt
+		done
+	done
+}
+
+set_arfs

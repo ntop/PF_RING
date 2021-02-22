@@ -347,7 +347,11 @@ static void ixgbevf_tx_timeout_reset(struct ixgbevf_adapter *adapter)
  * ixgbevf_tx_timeout - Respond to a Tx Hang
  * @netdev: network interface device structure
  **/
+#ifdef HAVE_TX_TIMEOUT_TXQUEUE
+static void ixgbevf_tx_timeout(struct net_device *netdev, unsigned int txqueue)
+#else
 static void ixgbevf_tx_timeout(struct net_device *netdev)
+#endif
 {
 	struct ixgbevf_adapter *adapter = netdev_priv(netdev);
 

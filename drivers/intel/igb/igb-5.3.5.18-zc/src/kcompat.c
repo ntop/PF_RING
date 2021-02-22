@@ -1645,6 +1645,50 @@ int __kc_dma_set_mask_and_coherent(struct device *dev, u64 mask)
 		err = dma_set_coherent_mask(dev, mask);
 	return err;
 }
+
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0))
+static bool _kc_pci_bus_read_dev_vendor_id(struct pci_bus *bus, int devfn,
+					   u32 *l, int crs_timeout)
+{
+	int delay = 1;
+
+	if (pci_bus_read_config_dword(bus, devfn, PCI_VENDOR_ID, l))
+		return false;
+
+	/* some broken boards return 0 or ~0 if a slot is empty: */
+	if (*l == 0xffffffff || *l == 0x00000000 ||
+	    *l == 0x0000ffff || *l == 0xffff0000)
+		return false;
+
+	/* Configuration request Retry Status */
+	while (*l == 0xffff0001) {
+		if (!crs_timeout)
+			return false;
+
+		msleep(delay);
+		delay *= 2;
+		if (pci_bus_read_config_dword(bus, devfn, PCI_VENDOR_ID, l))
+			return false;
+		/* Card hasn't responded in 60 seconds?  Must be stuck. */
+		if (delay > crs_timeout) {
+			printk(KERN_WARNING "pci %04x:%02x:%02x.%d: not "
+			       "responding\n", pci_domain_nr(bus),
+			       bus->number, PCI_SLOT(devfn),
+			       PCI_FUNC(devfn));
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool _kc_pci_device_is_present(struct pci_dev *pdev)
+{
+	u32 v;
+
+	return _kc_pci_bus_read_dev_vendor_id(pdev->bus, pdev->devfn, &v, 0);
+}
+#endif /* <RHEL7.0 */
 #endif /* 3.13.0 */
 
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) )
@@ -2683,3 +2727,30 @@ int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 #endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
 #endif /* !RHEL >= 8.2 */
 #endif /* 5.3.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,7,0))
+u64 _kc_pci_get_dsn(struct pci_dev *dev)
+{
+	u32 dword;
+	u64 dsn;
+	int pos;
+
+	pos = pci_find_ext_capability(dev, PCI_EXT_CAP_ID_DSN);
+	if (!pos)
+		return 0;
+
+	/*
+	 * The Device Serial Number is two dwords offset 4 bytes from the
+	 * capability position. The specification says that the first dword is
+	 * the lower half, and the second dword is the upper half.
+	 */
+	pos += 4;
+	pci_read_config_dword(dev, pos, &dword);
+	dsn = (u64)dword;
+	pci_read_config_dword(dev, pos + 4, &dword);
+	dsn |= ((u64)dword) << 32;
+
+	return dsn;
+}
+#endif /* 5.7.0 */
