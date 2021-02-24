@@ -34,25 +34,33 @@ run the following commands:
    cd ../examples && make
    sudo ./pfcount -i nt:0
 
-Please note that:
+Please note that installing from repository, all applications are already compiled with Napatech support
 
-- installing from repository, all applications are already compiled with Napatech support
+Capturing Traffic
+-----------------
 
-- in order to open a port from the Napatech adapter you should specify nt:<PORT>, example:
+In order to open a port from the Napatech adapter you should specify nt:<PORT>, example:
 
 .. code-block:: console
 
    pfcount -i nt:0
 
-- in order to open a stream you should specify nt:stream<ID>, example:
+In order to open a stream you should specify nt:stream<ID>, example:
 
 .. code-block:: console
 
    pfcount -i nt:stream0
 
-- streams with port aggregation or distribution (similar to RSS) can be created using the ntpl tool (ntpl -e "<command>")
+Streams with port aggregation or distribution (similar to RSS) can be created using the ntpl tool (ntpl -e "<command>")
 
-Note: it is possible to open the same stream from multiple applications at the same time (the slowest consumer will affect the others!). Instead it is not possible to open a port multiple times (as the port is reassigned to a new stream every time you open it).
+Note: it is possible to open the same stream from multiple applications at the same time (the slowest consumer will
+affect the others!). Instead it is not possible to open a port multiple times (as the port is reassigned to a new 
+stream every time you open it). In case of multiple applications, it is possible to set the host buffer allowance (please
+refer to the Napatech documentation for this setting) by using the PF_RING_PACKET_CAPTURE environment variable (with a 
+value between 1 and 100, 80 is usually recommended).
+
+Streams Configuration
+---------------------
 
 Command example for ports (2 and 3) aggregation on a single stream (1):
 
