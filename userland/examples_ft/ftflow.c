@@ -277,10 +277,10 @@ void processFlow(pfring_ft_flow *flow, void *user){
 #ifdef PRINT_NDPI_INFO
       if (enable_l7_extra) {
         struct ndpi_flow_struct *ndpi_flow = pfring_ft_flow_get_ndpi_handle(flow);
-        if (ndpi_flow->protos.stun_ssl.ssl.ja3_server[0] != '\0')
-          printf(", ja3s: '%s'", ndpi_flow->protos.stun_ssl.ssl.ja3_server);
-        if (ndpi_flow->protos.stun_ssl.ssl.ja3_client[0] != '\0')
-          printf(", ja3c: '%s'", ndpi_flow->protos.stun_ssl.ssl.ja3_client);
+        if (ndpi_flow->protos.tls_quic_stun.tls_quic.ja3_server[0] != '\0')
+          printf(", ja3s: '%s'", ndpi_flow->protos.tls_quic_stun.tls_quic.ja3_server);
+        if (ndpi_flow->protos.tls_quic_stun.tls_quic.ja3_client[0] != '\0')
+          printf(", ja3c: '%s'", ndpi_flow->protos.tls_quic_stun.tls_quic.ja3_client);
       }
 #endif
       break;

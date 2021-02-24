@@ -110,7 +110,7 @@ if test $MACHINE = "x86_64"; then
 
     dnl> FT dlopen - Default enabled
     PF_RING_FT_LIB_EXT=""
-    AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI]))
+    AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI (requires --enable-ndpi)]))
     AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
 
     AC_MSG_CHECKING([PF_RING FT support])
@@ -251,7 +251,7 @@ AS_IF([test "x$enable_bpf" != "xno"], [HAVE_BPF="-D ENABLE_BPF"; BPF_INCLUDE="-I
 dnl> AC_MSG_CHECKING([nDPI support])
 
 dnl> nDPI - disabled by default
-AC_ARG_ENABLE([ndpi], AS_HELP_STRING([--enable-ndpi], [Enable nDPI support (extra dissection with FT)]))
+AC_ARG_ENABLE([ndpi], AS_HELP_STRING([--enable-ndpi], [Enable nDPI linking at compile time]))
 if test "x$enable_ndpi" = xyes; then
   AC_MSG_CHECKING([nDPI support - dynamic linking])
   ndpi_installed=`pkg-config --exists libndpi && echo yes`
@@ -272,6 +272,16 @@ if test "x$enable_ndpi" = xyes; then
     else
       AC_MSG_RESULT(no)
     fi
+  fi
+
+  AC_CHECK_LIB([maxminddb], [MMDB_lookup_sockaddr])
+  AC_HAVE_HEADERS(maxminddb.h)
+  if test ".${ac_cv_lib_maxminddb_MMDB_lookup_sockaddr}" = ".yes" &&
+     test ".${ac_cv_header_maxminddb_h}" = ".yes"; then
+     NDPI_LIB="$NDPI_LIB -lmaxminddb"
+     AC_MSG_RESULT(Building with libmaxminddb (https://github.com/maxmind/libmaxminddb))
+  else
+     AC_MSG_RESULT(Building without libmaxminddb (https://github.com/maxmind/libmaxminddb))
   fi
 fi
 

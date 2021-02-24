@@ -1380,10 +1380,11 @@ Optional Features:
   --enable-debug          Enable debug mode
   --enable-redis          Enable Redis support in PF_RING
   --enable-zmq            Enable ZMQ support in PF_RING
-  --disable-ft-dl         Disable dlopen support in FT to link nDPI
+  --disable-ft-dl         Disable dlopen support in FT to link nDPI (requires
+                          --enable-ndpi)
   --disable-xdp           Disable XDP/AF_XDP support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
-  --enable-ndpi           Enable nDPI support (extra dissection with FT)
+  --enable-ndpi           Enable nDPI linking at compile time
 
 Some influential environment variables:
   CC          C compiler command
@@ -4014,6 +4015,73 @@ $as_echo "yes" >&6; }
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
     fi
+  fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for MMDB_lookup_sockaddr in -lmaxminddb" >&5
+$as_echo_n "checking for MMDB_lookup_sockaddr in -lmaxminddb... " >&6; }
+if ${ac_cv_lib_maxminddb_MMDB_lookup_sockaddr+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmaxminddb  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char MMDB_lookup_sockaddr ();
+int
+main ()
+{
+return MMDB_lookup_sockaddr ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_maxminddb_MMDB_lookup_sockaddr=yes
+else
+  ac_cv_lib_maxminddb_MMDB_lookup_sockaddr=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_maxminddb_MMDB_lookup_sockaddr" >&5
+$as_echo "$ac_cv_lib_maxminddb_MMDB_lookup_sockaddr" >&6; }
+if test "x$ac_cv_lib_maxminddb_MMDB_lookup_sockaddr" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBMAXMINDDB 1
+_ACEOF
+
+  LIBS="-lmaxminddb $LIBS"
+
+fi
+
+  for ac_header in maxminddb.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "maxminddb.h" "ac_cv_header_maxminddb_h" "$ac_includes_default"
+if test "x$ac_cv_header_maxminddb_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_MAXMINDDB_H 1
+_ACEOF
+
+fi
+
+done
+
+  if test ".${ac_cv_lib_maxminddb_MMDB_lookup_sockaddr}" = ".yes" &&
+     test ".${ac_cv_header_maxminddb_h}" = ".yes"; then
+     NDPI_LIB="$NDPI_LIB -lmaxminddb"
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Building with libmaxminddb (https://github.com/maxmind/libmaxminddb)" >&5
+$as_echo "Building with libmaxminddb (https://github.com/maxmind/libmaxminddb)" >&6; }
+  else
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Building without libmaxminddb (https://github.com/maxmind/libmaxminddb)" >&5
+$as_echo "Building without libmaxminddb (https://github.com/maxmind/libmaxminddb)" >&6; }
   fi
 fi
 
