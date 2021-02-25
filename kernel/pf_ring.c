@@ -2567,37 +2567,32 @@ static int parse_pkt(struct sk_buff *skb,
 
   rc = parse_raw_pkt(buffer, data_len, hdr, ip_id);
 
-  if (hdr->extended_hdr.parsed_pkt.vlan_id == 0 ||
-      hdr->extended_hdr.parsed_pkt.qinq_vlan_id == 0) {
+  /* Check for stripped vlan id (hw offload) */
 
-    /* Check for stripped vlan id (hw offload) */
+  if(__vlan_hwaccel_get_tag(skb, &vlan_id) == 0 && vlan_id != 0 &&
+     !(hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL)) { 
 
-    if(__vlan_hwaccel_get_tag(skb, &vlan_id) == 0 && vlan_id != 0 &&
-       !(hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL)) { 
+    hdr->extended_hdr.flags |= PKT_FLAGS_VLAN_HWACCEL;
 
-      hdr->extended_hdr.flags |= PKT_FLAGS_VLAN_HWACCEL;
+    vlan_id &= VLAN_VID_MASK;
 
-      vlan_id &= VLAN_VID_MASK;
+    if (hdr->extended_hdr.parsed_pkt.vlan_id != 0)
+      hdr->extended_hdr.parsed_pkt.qinq_vlan_id = hdr->extended_hdr.parsed_pkt.vlan_id;
+    hdr->extended_hdr.parsed_pkt.vlan_id = vlan_id;
 
-      if (hdr->extended_hdr.parsed_pkt.vlan_id != 0)
-        hdr->extended_hdr.parsed_pkt.qinq_vlan_id = hdr->extended_hdr.parsed_pkt.vlan_id;
+    hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE); /* force hash recomputation */
 
-      hdr->extended_hdr.parsed_pkt.vlan_id = vlan_id;
+    if (hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0)
+      hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+    else /* QinQ */
+      hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
 
-      hash_pkt_header(hdr, HASH_PKT_HDR_RECOMPUTE); /* force hash recomputation */
+    hdr->extended_hdr.parsed_pkt.offset.l3_offset += sizeof(struct eth_vlan_hdr);
+    if (hdr->extended_hdr.parsed_pkt.offset.l4_offset)
+      hdr->extended_hdr.parsed_pkt.offset.l4_offset += sizeof(struct eth_vlan_hdr);
 
-      if (hdr->extended_hdr.parsed_pkt.offset.vlan_offset == 0)
-        hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
-      else /* QinQ */
-        hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
-
-      hdr->extended_hdr.parsed_pkt.offset.l3_offset += sizeof(struct eth_vlan_hdr);
-      if (hdr->extended_hdr.parsed_pkt.offset.l4_offset)
-        hdr->extended_hdr.parsed_pkt.offset.l4_offset += sizeof(struct eth_vlan_hdr);
-
-      if (hdr->extended_hdr.parsed_pkt.offset.payload_offset)
-        hdr->extended_hdr.parsed_pkt.offset.payload_offset += sizeof(struct eth_vlan_hdr);
-    }
+    if (hdr->extended_hdr.parsed_pkt.offset.payload_offset)
+      hdr->extended_hdr.parsed_pkt.offset.payload_offset += sizeof(struct eth_vlan_hdr);
   }
 
   return(rc);
