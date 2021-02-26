@@ -120,6 +120,7 @@
 #define PF_RING_ERROR_NOT_ENOUGH_MEMORY   -10
 #define PF_RING_ERROR_INVALID_STATUS      -11
 #define PF_RING_ERROR_RING_NOT_ENABLED    -12
+#define PF_RING_ERROR_BAD_IFNAME          -13
 
 #define REFLECTOR_NAME_LEN                 8
 

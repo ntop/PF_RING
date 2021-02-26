@@ -374,10 +374,18 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
       vlan_dot[0] = '\0';
       vlan_id = atoi(&vlan_dot[1]);
     }
-    
+
     memset(&sa, 0, sizeof(sa));
     sa.sa_family = PF_RING;
-    snprintf(sa.sa_data, sizeof(sa.sa_data), "%s", elem);
+  
+    if (strlen(elem) > sizeof(sa.sa_data))
+      return(PF_RING_ERROR_BAD_IFNAME);
+
+    memcpy(sa.sa_data, elem, strlen(elem));
+
+    /* Terminate string, unless it's 'sa_data size' len (handled by the kernel) */
+    if (strlen(elem) < sizeof(sa.sa_data))
+      sa.sa_data[strlen(elem)] = '\0';
 
     rc = bind(ring->fd, (struct sockaddr *)&sa, sizeof(sa));
     

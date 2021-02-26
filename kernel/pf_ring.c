@@ -5547,6 +5547,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
 static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 {
   struct sock *sk = sock->sk;
+  char name[sizeof(sa->sa_data)+1];
 
   debug_printk(2, "ring_bind() called\n");
 
@@ -5560,12 +5561,14 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
   if(sa->sa_data == NULL)
     return(-EINVAL);
 
-  /* Safety check: add trailing zero if missing */
-  sa->sa_data[sizeof(sa->sa_data) - 1] = '\0';
+  memcpy(name, sa->sa_data, sizeof(sa->sa_data));
 
-  debug_printk(2, "searching device %s\n", sa->sa_data);
+  /* Add trailing zero if missing */
+  name[sizeof(name)-1] = '\0';
 
-  return(packet_ring_bind(sk, sa->sa_data));
+  debug_printk(2, "searching device %s\n", name);
+
+  return(packet_ring_bind(sk, name));
 }
 
 /* ************************************* */
