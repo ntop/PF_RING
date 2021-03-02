@@ -616,7 +616,11 @@ int main(int argc, char* argv[]) {
 	struct packet *p;
 	int rc = pcap_next_ex(pt, &h, (const u_char **) &pkt);
 
-	if(rc <= 0) break;
+	if(rc <= 0) {
+          if (rc == PCAP_ERROR)
+            pcap_perror(pt, "" /* prefix */);
+	  break;
+	}
         
         num_orig_pcap_pkts++;
         if ((num_orig_pcap_pkts-1) < ip_offset) continue;
