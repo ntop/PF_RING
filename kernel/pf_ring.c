@@ -5648,6 +5648,11 @@ static int ring_mmap(struct file *file,
         if(pfr->extra_dma_memory->virtual_addr == NULL)
           return(-EINVAL);
 
+        if(size > pfr->extra_dma_memory->chunk_len) {
+          debug_printk(2, "failed: area too large [%ld > %u]\n", size, pfr->extra_dma_memory->chunk_len);
+          return(-EINVAL);
+        }
+
         if((rc = do_memory_mmap(vma, 0, size, (void *)pfr->extra_dma_memory->virtual_addr[mem_id], 0, VM_LOCKED, 1)) < 0)
           return(rc);
 
@@ -5694,6 +5699,11 @@ static int ring_mmap(struct file *file,
         return(-EINVAL);
       }
 
+      if(size > pfr->zc_dev->mem_info.rx.descr_packet_memory_tot_len) {
+        debug_printk(2, "failed: area too large [%ld > %u]\n", size, pfr->zc_dev->mem_info.rx.descr_packet_memory_tot_len);
+        return(-EINVAL);
+      }
+
       if((rc = do_memory_mmap(vma, 0, size, (void *) pfr->zc_dev->rx_descr_packet_memory, 0, VM_LOCKED, 1)) < 0)
 	return(rc);
 
@@ -5702,6 +5712,11 @@ static int ring_mmap(struct file *file,
       /* ZC: Physical card memory */
       if(pfr->zc_dev == NULL) {
         debug_printk(2, "failed: operation for ZC only");
+        return(-EINVAL);
+      }
+
+      if(size > pfr->zc_dev->mem_info.phys_card_memory_len) {
+        debug_printk(2, "failed: area too large [%ld > %u]\n", size, pfr->zc_dev->mem_info.phys_card_memory_len);
         return(-EINVAL);
       }
 
@@ -5719,6 +5734,11 @@ static int ring_mmap(struct file *file,
       /* ZC: TX packet descriptors */
       if(pfr->zc_dev == NULL) {
         debug_printk(2, "failed: operation for ZC only");
+        return(-EINVAL);
+      }
+
+      if(size > pfr->zc_dev->mem_info.tx.descr_packet_memory_tot_len) {
+        debug_printk(2, "failed: area too large [%ld > %u]\n", size, pfr->zc_dev->mem_info.tx.descr_packet_memory_tot_len);
         return(-EINVAL);
       }
 
