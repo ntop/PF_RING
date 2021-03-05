@@ -108,35 +108,41 @@ if test $MACHINE = "x86_64"; then
       fi
     fi
 
-    dnl> FT dlopen - Default enabled
-    PF_RING_FT_LIB_EXT=""
-    AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI (requires --enable-ndpi)]))
-    AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
+    dnl> FT - Default enabled
+    AC_ARG_ENABLE([ft], AS_HELP_STRING([--disable-ft], [Disable FT support]))
+    if test "x$enable_ft" != "xno"; then
 
-    AC_MSG_CHECKING([PF_RING FT support])
-    PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
-    if test -f "lib/$PF_RING_FT_LIB"; then
-      HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
-      PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
-      PF_RING_FT_DEP="extract_pfring_ft_lib"
-      PF_RING_FT_H="pfring_ft.h"
-      AC_MSG_RESULT(yes)
-    else
-      AC_MSG_RESULT(no)
-    fi
+      dnl> FT dlopen - Default enabled
+      PF_RING_FT_LIB_EXT=""
+      AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI (requires --enable-ndpi)]))
+      AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
 
-    if test -f "lib/$PF_RING_FT_LIB"; then
-      if test ! -z "$DEBUG" ; then
-        AC_MSG_CHECKING([FT debug library])
-        PF_RING_FT_LIB_DBG="libs/libpfring_ft_${MACHINE}_dbg${PF_RING_FT_LIB_EXT}.a" 
-        if test -f "lib/${PF_RING_FT_LIB_DBG}"; then
-          PF_RING_FT_LIB=${PF_RING_FT_LIB_DBG}
-          PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB_DBG} | grep -F .o | tr '\n' ' '`
-          AC_MSG_RESULT(yes)
-        else
-          AC_MSG_RESULT(no)
+      AC_MSG_CHECKING([PF_RING FT support])
+      PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
+      if test -f "lib/$PF_RING_FT_LIB"; then
+        HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
+        PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB} | grep -F .o | tr '\n' ' '`
+        PF_RING_FT_DEP="extract_pfring_ft_lib"
+        PF_RING_FT_H="pfring_ft.h"
+        AC_MSG_RESULT(yes)
+      else
+        AC_MSG_RESULT(no)
+      fi
+
+      if test -f "lib/$PF_RING_FT_LIB"; then
+        if test ! -z "$DEBUG" ; then
+          AC_MSG_CHECKING([FT debug library])
+          PF_RING_FT_LIB_DBG="libs/libpfring_ft_${MACHINE}_dbg${PF_RING_FT_LIB_EXT}.a" 
+          if test -f "lib/${PF_RING_FT_LIB_DBG}"; then
+            PF_RING_FT_LIB=${PF_RING_FT_LIB_DBG}
+            PF_RING_FT_OBJS=`ar t lib/${PF_RING_FT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+            AC_MSG_RESULT(yes)
+          else
+            AC_MSG_RESULT(no)
+          fi
         fi
       fi
+
     fi
 
     AC_MSG_CHECKING([PF_RING NPCAP support])
