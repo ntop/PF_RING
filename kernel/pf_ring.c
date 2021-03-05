@@ -1688,7 +1688,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
 
       seq_printf(m, "Active                 : %d\n", pfr->ring_active);
       seq_printf(m, "Breed                  : %s\n", (pfr->zc_device_entry != NULL) ? "ZC" : "Standard");
-      seq_printf(m, "Appl. Name             : %s\n", pfr->appl_name ? pfr->appl_name : "<unknown>");
+      seq_printf(m, "Appl. Name             : %s\n", pfr->appl_name[0] != '\0' ? pfr->appl_name : "<unknown>");
       seq_printf(m, "Socket Mode            : %s\n", sockmode2string(pfr->mode));
       if(pfr->mode != send_only_mode) {
         seq_printf(m, "Capture Direction      : %s\n", direction2string(pfr->direction));
@@ -5416,9 +5416,6 @@ static int ring_release(struct socket *sock)
 
   write_lock(&pfr->ring_config_lock);
 
-  if(pfr->appl_name != NULL)
-    kfree(pfr->appl_name);
-
   if(ring_memory_ptr != NULL && free_ring_memory)
     vfree(ring_memory_ptr);
 
@@ -6831,7 +6828,6 @@ static int ring_setsockopt(struct socket *sock,
   int found = 1, ret = 0 /* OK */, i;
   u_int32_t ring_id;
   struct add_to_cluster cluster;
-  char name[32 + 1] = { 0 };
   u_int16_t rule_id, rule_inactivity, vlan_id;
   packet_direction direction;
   socket_mode sockmode;
@@ -6977,19 +6973,16 @@ static int ring_setsockopt(struct socket *sock,
   }
 
   case SO_SET_APPL_NAME:
-    if(optlen > sizeof(name) /* Names should not be too long */ )
+    if(optlen >= sizeof(pfr->appl_name))
       return(-EINVAL);
 
-    if(copy_from_sockptr(&name, optval, optlen))
+    if(copy_from_sockptr(&pfr->appl_name, optval, optlen))
       return(-EFAULT);
 
-    if(pfr->appl_name != NULL)
-      kfree(pfr->appl_name);
-    pfr->appl_name = (char *)kmalloc(optlen + 1, GFP_ATOMIC);
-    if(pfr->appl_name != NULL) {
-      memcpy(pfr->appl_name, name, optlen);
-      pfr->appl_name[optlen] = '\0';
-    }
+    pfr->appl_name[optlen] = '\0';
+
+    /* safety check - buffer termination */
+    pfr->appl_name[sizeof(pfr->appl_name) - 1] = '\0';
 
     ret = 0;
     break;

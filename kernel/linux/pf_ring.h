@@ -1177,7 +1177,6 @@ struct pf_ring_socket {
   DECLARE_BITMAP(pf_dev_mask, MAX_NUM_DEV_IDX /* bits */);
   int ring_pid;
   u_int32_t ring_id;
-  char *appl_name; /* String that identifies the application bound to the socket */
   packet_direction direction; /* Specify the capture direction for packets */
   socket_mode mode; /* Specify the link direction to enable (RX, TX, both) */
   pkt_header_len header_len;
@@ -1187,6 +1186,8 @@ struct pf_ring_socket {
   u_int8_t __padding;
 
   struct sock *sk;
+
+  char appl_name[64]; /* String that identifies the application bound to the socket */
 
   /* /proc */
   char sock_proc_name[64];       /* /proc/net/pf_ring/<sock_proc_name>             */
