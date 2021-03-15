@@ -17,7 +17,7 @@ $(BPFLIB): $(OBJS)
 	$(RANLIB) $@
 
 nbpftest: $(BPFLIB) nbpftest.c
-	${CC} $(CFLAGS) -g nbpftest.c -o nbpftest $(BPFLIB) $(LIBS)
+	${CC} $(CFLAGS) @HAVE_NDPI@ @NDPI_INC@ -g nbpftest.c -o nbpftest @NDPI_LIB@ $(BPFLIB) $(LIBS)
 
 lex.yy.c: scanner.l grammar.tab.h
 	$(LEX) scanner.l

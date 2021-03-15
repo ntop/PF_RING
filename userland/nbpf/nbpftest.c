@@ -25,6 +25,11 @@
 #include "nbpf_mod_napatech.h"
 #include "nbpf_mod_fiberblaze.h"
 
+#ifdef HAVE_NDPI 
+#include "ndpi_main.h"
+struct ndpi_detection_module_struct *ndpi_mod;
+#endif
+
 /* ****************************************** */
 
 static char *dir_to_string(int dirq) {
@@ -341,6 +346,29 @@ void fiberblaze_dump_rules(nbpf_rule_list_item_t *pun) {
 
 /* *********************************************************** */
 
+#ifdef HAVE_NDPI 
+void init_ndpi_mod() {
+  NDPI_PROTOCOL_BITMASK all;
+
+  ndpi_mod = ndpi_init_detection_module(ndpi_no_prefs);
+
+  if (ndpi_mod == NULL)
+    return;
+
+  NDPI_BITMASK_SET_ALL(all);
+  ndpi_set_protocol_detection_bitmask2(ndpi_mod, &all);
+  ndpi_finalize_initialization(ndpi_mod);
+}
+
+/* *********************************************************** */
+
+int l7protocol_by_name(const char *name) {
+  return ndpi_get_proto_by_name(ndpi_mod, name);
+}
+#endif
+
+/* *********************************************************** */
+
 void help() {
   printf("nbpftest [-n][-F] -f \"BPF filter\"\n"
 	 "\nUsage:\n"
@@ -384,7 +412,17 @@ int main(int argc, char *argv[]) {
   if(filter == NULL)
     help();
 
-  if((tree = nbpf_parse(filter, NULL)) == NULL) {
+#ifdef HAVE_NDPI 
+  init_ndpi_mod();
+#endif
+
+  if((tree = nbpf_parse(filter, 
+#ifdef HAVE_NDPI 
+                        l7protocol_by_name
+#else
+                        NULL
+#endif
+			)) == NULL) {
     printf("Parse error\n");
     return -1;
   }
