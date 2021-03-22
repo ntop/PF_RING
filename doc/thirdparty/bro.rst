@@ -9,9 +9,10 @@ in README.apt_rpm_packages
 
 2. Download Zeek sources from https://download.zeek.org. Please note 
 that installing Zeek from package can lead to failures when capturing 
-from multiple PF_RING queues. Latest recommended Zeek version is 3.0.7,
-newest Zeek release are using a packet polling mechanism which is not
-compatible with PF_RING ZC SPSC queues and some devices.
+from multiple PF_RING queues. Latest tested Zeek version is 3.0.7,
+newer 3.x Zeek releases are using a packet polling mechanism which is
+not compatible with PF_RING ZC SPSC queues and some devices. This has
+been fixed on 4.x according to https://github.com/zeek/zeek/issues/1063.
 
 .. code-block:: console
 
