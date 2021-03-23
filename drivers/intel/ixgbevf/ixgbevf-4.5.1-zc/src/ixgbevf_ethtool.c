@@ -1612,7 +1612,7 @@ static struct ethtool_ops ixgbevf_ethtool_ops = {
 #endif
 	.get_coalesce           = ixgbevf_get_coalesce,
 	.set_coalesce           = ixgbevf_set_coalesce,
-#ifdef ETHTOOL_COALESECE_USECS
+#ifdef ETHTOOL_COALESCE_USECS
 	.supported_coalesce_params = ETHTOOL_COALESCE_USECS,
 #endif
 #ifdef ETHTOOL_GRXRINGS

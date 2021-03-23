@@ -1311,7 +1311,7 @@ static const struct ethtool_ops fm10k_ethtool_ops = {
 	.set_ringparam		= fm10k_set_ringparam,
 	.get_coalesce		= fm10k_get_coalesce,
 	.set_coalesce		= fm10k_set_coalesce,
-#ifdef ETHTOOL_COALESECE_USECS
+#ifdef ETHTOOL_COALESCE_USECS
 	.supported_coalesce_params = ETHTOOL_COALESCE_USECS |
 	                             ETHTOOL_COALESCE_USE_ADAPTIVE,
 #endif

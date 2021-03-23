@@ -4440,7 +4440,7 @@ static struct ethtool_ops ixgbe_ethtool_ops = {
 #endif
 	.get_coalesce		= ixgbe_get_coalesce,
 	.set_coalesce		= ixgbe_set_coalesce,
-#ifdef ETHTOOL_COALESECE_USECS
+#ifdef ETHTOOL_COALESCE_USECS
 	.supported_coalesce_params = ETHTOOL_COALESCE_USECS,
 #endif
 #ifndef HAVE_NDO_SET_FEATURES

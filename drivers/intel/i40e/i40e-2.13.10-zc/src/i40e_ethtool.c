@@ -7031,7 +7031,7 @@ static const struct ethtool_ops i40e_ethtool_ops = {
 #endif
 	.get_coalesce		= i40e_get_coalesce,
 	.set_coalesce		= i40e_set_coalesce,
-#ifdef ETHTOOL_COALESECE_USECS
+#ifdef ETHTOOL_COALESCE_USECS
 	.supported_coalesce_params = ETHTOOL_COALESCE_USECS |
 	                             ETHTOOL_COALESCE_MAX_FRAMES_IRQ |
 	                             ETHTOOL_COALESCE_USE_ADAPTIVE |

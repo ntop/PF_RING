@@ -3376,7 +3376,7 @@ static const struct ethtool_ops igb_ethtool_ops = {
 #endif
 	.get_coalesce           = igb_get_coalesce,
 	.set_coalesce           = igb_set_coalesce,
-#ifdef ETHTOOL_COALESECE_USECS
+#ifdef ETHTOOL_COALESCE_USECS
 	.supported_coalesce_params = ETHTOOL_COALESCE_USECS,
 #endif
 #ifndef HAVE_RHEL6_ETHTOOL_OPS_EXT_STRUCT
