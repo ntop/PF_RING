@@ -37,14 +37,14 @@ struct ixgbe_stats {
 #define IXGBEVF_STAT(_name, _stat) { \
 	.stat_string = _name, \
 	.type = IXGBEVF_STATS, \
-	.sizeof_stat = FIELD_SIZEOF(struct ixgbevf_adapter, _stat), \
+	.sizeof_stat = sizeof_field(struct ixgbevf_adapter, _stat), \
 	.stat_offset = offsetof(struct ixgbevf_adapter, _stat) \
 }
 
 #define IXGBEVF_NETDEV_STAT(_net_stat) { \
 	.stat_string = #_net_stat, \
 	.type = NETDEV_STATS, \
-	.sizeof_stat = FIELD_SIZEOF(struct net_device_stats, _net_stat), \
+	.sizeof_stat = sizeof_field(struct net_device_stats, _net_stat), \
 	.stat_offset = offsetof(struct net_device_stats, _net_stat) \
 }
 
@@ -1612,6 +1612,9 @@ static struct ethtool_ops ixgbevf_ethtool_ops = {
 #endif
 	.get_coalesce           = ixgbevf_get_coalesce,
 	.set_coalesce           = ixgbevf_set_coalesce,
+#ifdef ETHTOOL_COALESCE_USECS
+	.supported_coalesce_params = ETHTOOL_COALESCE_USECS,
+#endif
 #ifdef ETHTOOL_GRXRINGS
 	.get_rxnfc		= ixgbevf_get_rxnfc,
 	.set_rxnfc		= ixgbevf_set_rxnfc,

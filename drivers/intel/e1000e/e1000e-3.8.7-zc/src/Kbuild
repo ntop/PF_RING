@@ -20,6 +20,7 @@ e1000e-objs := netdev.o \
 CFLAGS_e1000e_main.o := -I$(src)
 
 EXTRA_CFLAGS += -DHAVE_PF_RING -DIXGBE_NO_HW_RSC -DDISABLE_PACKET_SPLIT
+KBUILD_EXTRA_SYMBOLS=../../../../../kernel/Module.symvers
 
 KVER=$(shell uname -r)
 
