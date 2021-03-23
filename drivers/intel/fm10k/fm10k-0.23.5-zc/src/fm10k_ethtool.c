@@ -30,7 +30,7 @@ struct fm10k_stats {
 
 #define FM10K_NETDEV_STAT(_net_stat) { \
 	.stat_string = #_net_stat, \
-	.sizeof_stat = FIELD_SIZEOF(struct net_device_stats, _net_stat), \
+	.sizeof_stat = sizeof_field(struct net_device_stats, _net_stat), \
 	.stat_offset = offsetof(struct net_device_stats, _net_stat) \
 }
 
@@ -53,7 +53,7 @@ static const struct fm10k_stats fm10k_gstrings_net_stats[] = {
 
 #define FM10K_STAT(_name, _stat) { \
 	.stat_string = _name, \
-	.sizeof_stat = FIELD_SIZEOF(struct fm10k_intfc, _stat), \
+	.sizeof_stat = sizeof_field(struct fm10k_intfc, _stat), \
 	.stat_offset = offsetof(struct fm10k_intfc, _stat) \
 }
 
@@ -94,7 +94,7 @@ static const struct fm10k_stats fm10k_gstrings_pf_stats[] = {
 
 #define FM10K_MBX_STAT(_name, _stat) { \
 	.stat_string = _name, \
-	.sizeof_stat = FIELD_SIZEOF(struct fm10k_mbx_info, _stat), \
+	.sizeof_stat = sizeof_field(struct fm10k_mbx_info, _stat), \
 	.stat_offset = offsetof(struct fm10k_mbx_info, _stat) \
 }
 
@@ -112,7 +112,7 @@ static const struct fm10k_stats fm10k_gstrings_mbx_stats[] = {
 
 #define FM10K_QUEUE_STAT(_name, _stat) { \
 	.stat_string = _name, \
-	.sizeof_stat = FIELD_SIZEOF(struct fm10k_ring, _stat), \
+	.sizeof_stat = sizeof_field(struct fm10k_ring, _stat), \
 	.stat_offset = offsetof(struct fm10k_ring, _stat) \
 }
 
@@ -1311,6 +1311,10 @@ static const struct ethtool_ops fm10k_ethtool_ops = {
 	.set_ringparam		= fm10k_set_ringparam,
 	.get_coalesce		= fm10k_get_coalesce,
 	.set_coalesce		= fm10k_set_coalesce,
+#ifdef ETHTOOL_COALESECE_USECS
+	.supported_coalesce_params = ETHTOOL_COALESCE_USECS |
+	                             ETHTOOL_COALESCE_USE_ADAPTIVE,
+#endif
 	.get_rxnfc		= fm10k_get_rxnfc,
 	.set_rxnfc		= fm10k_set_rxnfc,
 	.get_regs               = fm10k_get_regs,

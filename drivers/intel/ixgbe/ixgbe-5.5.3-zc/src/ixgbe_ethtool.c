@@ -55,7 +55,7 @@ struct ixgbe_stats {
 
 #define IXGBE_NETDEV_STAT(_net_stat) { \
 	.stat_string = #_net_stat, \
-	.sizeof_stat = FIELD_SIZEOF(struct net_device_stats, _net_stat), \
+	.sizeof_stat = sizeof_field(struct net_device_stats, _net_stat), \
 	.stat_offset = offsetof(struct net_device_stats, _net_stat) \
 }
 static const struct ixgbe_stats ixgbe_gstrings_net_stats[] = {
@@ -82,7 +82,7 @@ static const struct ixgbe_stats ixgbe_gstrings_net_stats[] = {
 
 #define IXGBE_STAT(_name, _stat) { \
 	.stat_string = _name, \
-	.sizeof_stat = FIELD_SIZEOF(struct ixgbe_adapter, _stat), \
+	.sizeof_stat = sizeof_field(struct ixgbe_adapter, _stat), \
 	.stat_offset = offsetof(struct ixgbe_adapter, _stat) \
 }
 static struct ixgbe_stats ixgbe_gstrings_stats[] = {
@@ -4440,6 +4440,9 @@ static struct ethtool_ops ixgbe_ethtool_ops = {
 #endif
 	.get_coalesce		= ixgbe_get_coalesce,
 	.set_coalesce		= ixgbe_set_coalesce,
+#ifdef ETHTOOL_COALESECE_USECS
+	.supported_coalesce_params = ETHTOOL_COALESCE_USECS,
+#endif
 #ifndef HAVE_NDO_SET_FEATURES
 	.get_rx_csum		= ixgbe_get_rx_csum,
 	.set_rx_csum		= ixgbe_set_rx_csum,

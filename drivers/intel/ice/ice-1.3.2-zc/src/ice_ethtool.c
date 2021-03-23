@@ -5753,6 +5753,11 @@ static const struct ethtool_ops ice_ethtool_ops = {
 	.set_eeprom		= ice_set_eeprom,
 	.get_coalesce		= ice_get_coalesce,
 	.set_coalesce		= ice_set_coalesce,
+#ifdef ETHTOOL_COALESECE_USECS
+	.supported_coalesce_params = ETHTOOL_COALESCE_USECS |
+	                             ETHTOOL_COALESCE_USE_ADAPTIVE |
+	                             ETHTOOL_COALESCE_RX_USECS_HIGH,
+#endif
 	.get_strings		= ice_get_strings,
 	.set_phys_id		= ice_set_phys_id,
 	.get_ethtool_stats      = ice_get_ethtool_stats,

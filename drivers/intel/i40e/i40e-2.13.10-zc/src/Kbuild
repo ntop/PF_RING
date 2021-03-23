@@ -55,6 +55,7 @@ CFLAGS_i40e_main.o := -I$(src)
 #i40e-$(CONFIG_FCOE:m=y) += i40e_fcoe.o
 
 EXTRA_CFLAGS += -DHAVE_PF_RING
+KBUILD_EXTRA_SYMBOLS=../../../../../kernel/Module.symvers
 
 KVER=$(shell uname -r)
 

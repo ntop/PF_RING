@@ -48,6 +48,7 @@ endif
 #ice-$(CONFIG_XDP_SOCKETS) += ice_xsk.o
 
 EXTRA_CFLAGS += -DHAVE_PF_RING
+KBUILD_EXTRA_SYMBOLS=../../../../../kernel/Module.symvers
 
 KVER=$(shell uname -r)
 

@@ -44,6 +44,7 @@ endif
 fm10k-y += kcompat.o
 
 EXTRA_CFLAGS += -DHAVE_PF_RING
+KBUILD_EXTRA_SYMBOLS=../../../../../kernel/Module.symvers
 
 KVER=$(shell uname -r)
 
