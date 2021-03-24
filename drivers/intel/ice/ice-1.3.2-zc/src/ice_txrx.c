@@ -397,6 +397,7 @@ int ice_setup_tx_ring(struct ice_ring *tx_ring)
 			      PAGE_SIZE);
 #ifdef HAVE_PF_RING
 	tx_ring->size += sizeof(u_int32_t); /* shadow tail */
+	tx_ring->size = ALIGN(tx_ring->size, PAGE_SIZE);
 #endif
 	tx_ring->desc = dmam_alloc_coherent(dev, tx_ring->size, &tx_ring->dma,
 					    GFP_KERNEL);
@@ -542,6 +543,7 @@ int ice_setup_rx_ring(struct ice_ring *rx_ring)
 			      PAGE_SIZE);
 #ifdef HAVE_PF_RING
 	rx_ring->size += sizeof(u_int32_t); /* shadow tail */
+	rx_ring->size = ALIGN(rx_ring->size, PAGE_SIZE);
 #endif
 	rx_ring->desc = dmam_alloc_coherent(dev, rx_ring->size, &rx_ring->dma,
 					    GFP_KERNEL);
