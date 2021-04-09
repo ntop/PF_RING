@@ -56,7 +56,7 @@ Streams with port aggregation or distribution (similar to RSS) can be created us
 Note: it is possible to open the same stream from multiple applications at the same time (the slowest consumer will
 affect the others!). Instead it is not possible to open a port multiple times (as the port is reassigned to a new 
 stream every time you open it). In case of multiple applications, it is possible to set the host buffer allowance (please
-refer to the Napatech documentation for this setting) by using the PF_RING_PACKET_CAPTURE environment variable (with a 
+refer to the Napatech documentation for this setting) by using the PF_RING_PACKET_CAPTURE_PRIO environment variable (with a 
 value between 1 and 100, 80 is usually recommended).
 
 Streams Configuration
