@@ -71,8 +71,8 @@ CFLAGS_EXTRA += -D HAVE_PF_RING ${DEBUG_CFLAGS}
 # Standard compilation, with regular output
 default:
 	# PF_RING
-	cd ../../../../../kernel/; make
-	cp ../../../../../kernel/Module.symvers .
+	cd ${PF_RING_PATH}/kernel/; make
+	cp ${PF_RING_PATH}/kernel/Module.symvers .
 	@+$(call kernelbuild,modules)
 
 # Noisy output, for extra debugging

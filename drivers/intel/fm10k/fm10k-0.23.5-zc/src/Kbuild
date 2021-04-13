@@ -44,13 +44,13 @@ endif
 fm10k-y += kcompat.o
 
 EXTRA_CFLAGS += -DHAVE_PF_RING
-KBUILD_EXTRA_SYMBOLS=../../../../../kernel/Module.symvers
+KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/kernel/Module.symvers
 
 KVER=$(shell uname -r)
 
 all:
-	cd ../../../../../kernel/; make
-	cp ../../../../../kernel/Module.symvers .
+	cd ${PF_RING_PATH}/kernel/; make
+	cp ${PF_RING_PATH}/kernel/Module.symvers .
 	$(MAKE) -C /lib/modules/${KVER}/build M=$(PWD) modules
 
 clean:

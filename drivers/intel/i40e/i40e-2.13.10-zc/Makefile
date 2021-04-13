@@ -1,4 +1,5 @@
-export C_INCLUDE_PATH := $(shell cd ../../../../kernel/linux; pwd)
+export PF_RING_PATH := $(shell cd ../../../..; pwd)
+export C_INCLUDE_PATH := ${PF_RING_PATH}/kernel/linux
 
 all:
 	cd src; make

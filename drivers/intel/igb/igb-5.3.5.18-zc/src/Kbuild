@@ -25,13 +25,13 @@ igb-objs := igb_main.o \
 CFLAGS_igb_main.o := -I$(src)
 
 EXTRA_CFLAGS += -DHAVE_PF_RING -DIXGBE_NO_HW_RSC -DDISABLE_PACKET_SPLIT
-KBUILD_EXTRA_SYMBOLS=../../../../../kernel/Module.symvers
+KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/kernel/Module.symvers
 
 KVER=$(shell uname -r)
 
 all:
-	cd ../../../../../kernel/; make
-	cp ../../../../../kernel/Module.symvers .
+	cd ${PF_RING_PATH}/kernel/; make
+	cp ${PF_RING_PATH}/kernel/Module.symvers .
 	$(MAKE) -C /lib/modules/${KVER}/build M=$(PWD) modules
 
 clean:
