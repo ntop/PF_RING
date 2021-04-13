@@ -55,13 +55,13 @@ CFLAGS_i40e_main.o := -I$(src)
 #i40e-$(CONFIG_FCOE:m=y) += i40e_fcoe.o
 
 EXTRA_CFLAGS += -DHAVE_PF_RING
-KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/kernel/Module.symvers
+KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
 
 KVER=$(shell uname -r)
 
 all:
-	cd ${PF_RING_PATH}/kernel/; make
-	cp ${PF_RING_PATH}/kernel/Module.symvers .
+	cd ${PF_RING_PATH}/; make
+	cp ${PF_RING_PATH}/Module.symvers .
 	$(MAKE) -C /lib/modules/${KVER}/build M=$(PWD) modules
 
 clean:

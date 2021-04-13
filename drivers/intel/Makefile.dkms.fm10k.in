@@ -7,7 +7,7 @@ add: veryclean
 	cp ../../kernel/linux/pf_ring.h /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/
 	sed -i -e 's/fm10k\.o/fm10k_zc.o/' -e 's/fm10k-/fm10k_zc-/' /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Kbuild /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Makefile
-	sed -i 's/..\/..\/..\/..\/..\/kernel/\/usr\/src\/pfring-@PF_RING_VERSION@/g' /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Makefile
+	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@' /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@FM10K@ /usr/src/@FM10K@-zc-@FM10K_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @FM10K@-zc -v @FM10K_VERSION@.@REVISION@
 

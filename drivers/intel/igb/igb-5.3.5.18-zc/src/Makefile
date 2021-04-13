@@ -80,8 +80,8 @@ devkernelbuild = $(call kernelbuild,$(if $(filter -DNO_PTP_SUPPORT,${EXTRA_CFLAG
 # Standard compilation, with regular output
 default:
 	# PF_RING
-	cd ${PF_RING_PATH}/kernel/; make
-	cp ${PF_RING_PATH}/kernel/Module.symvers .
+	cd ${PF_RING_PATH}/; make
+	cp ${PF_RING_PATH}/Module.symvers .
 	@+$(call devkernelbuild,modules)
 
 # Noisy output, for extra debugging

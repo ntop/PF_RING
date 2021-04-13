@@ -101,8 +101,8 @@ kernelbuild = ${MAKE} $(if ${GCC_I_SYS},CC:="${GCC_I_SYS}") \
 # Standard compilation, with regular output
 default:
 	# PF_RING
-	cd ${PF_RING_PATH}/kernel/; make
-	cp ${PF_RING_PATH}/kernel/Module.symvers .
+	cd ${PF_RING_PATH}/; make
+	cp ${PF_RING_PATH}/Module.symvers .
 	@+$(call kernelbuild,modules)
 
 # Noisy output, for extra debugging

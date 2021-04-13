@@ -105,8 +105,8 @@ CFLAGS_EXTRA += -D HAVE_PF_RING
 
 all:
 	# PF_RING
-	cd ${PF_RING_PATH}/kernel/; make
-	cp ${PF_RING_PATH}/kernel/Module.symvers .
+	cd ${PF_RING_PATH}/; make
+	cp ${PF_RING_PATH}/Module.symvers .
 	+$(call kernelbuild,modules)
 	@gzip -c ../${DRIVER}.${MANSECTION} > ${DRIVER}.${MANSECTION}.gz
 ifneq ($(wildcard lttng),)
