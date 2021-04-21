@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 11
+#define FT_API_VERSION 17
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -210,6 +210,7 @@ typedef struct {
 
   pfring_ft_ndpi_protocol l7_protocol; /**< nDPI protocol */
   u_int32_t tunnel_type; /**< nDPI tunnel type (ndpi_packet_tunnel) */
+  u_int32_t tunnel_id;   /**< Tunnel ID (if any) */
 
   union {
     struct {
