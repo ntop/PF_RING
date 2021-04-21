@@ -24,6 +24,8 @@
 extern "C" {
 #endif
 
+#define FT_API_VERSION 11
+
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
 typedef void pfring_ft_flow;
@@ -703,6 +705,14 @@ pfring_ft_get_stats(
 void
 pfring_ft_version(
   char *version
+);
+
+/**
+ * Get the PF_RING FT API version.
+ * @return The version number as unsigne inte.
+ */
+u_int32_t
+pfring_ft_api_version(
 );
 
 /**
