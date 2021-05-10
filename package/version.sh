@@ -8,6 +8,11 @@ HASH="$(cd ${SCRIPTPATH}; git rev-parse HEAD)"
 
 LIBPCAP_VERSION="$(cd ${SCRIPTPATH}; ls -d ../userland/libpcap-* | head -n1 | cut -d"-" -f2)"
 
+if [ -d $HOME/nDPI ]; then
+	NDPI_REVISION=`$HOME/nDPI/packages/version.sh --revision`
+	REVISION=$((REVISION+NDPI_REVISION))
+fi
+
 get_release() {
 	echo "${RELEASE}"
 	exit 0
