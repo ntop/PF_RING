@@ -6,7 +6,7 @@
 SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
 
 PF_RING_CONFIG_DIR="/etc/pf_ring"
-ZC_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'fm10k')
+ZC_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'fm10k' 'ice')
 
 CONF_DRIVER_NAME=""
 CONF_RSS_QUEUES=1
