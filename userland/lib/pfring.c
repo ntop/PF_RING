@@ -344,6 +344,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 
   /* default */
   if(!mod_found) {
+    errno = ENODEV;
     ring->device_name = strdup(device_name ? device_name : "any");
     if (ring->device_name == NULL) {
       errno = ENOMEM;
@@ -354,7 +355,6 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   }
 
   if(ret < 0) {
-    errno = ENODEV;
     if (ring->device_name != NULL) free(ring->device_name);
     free(ring);
     return NULL;

@@ -140,6 +140,7 @@ int pfring_mod_open_setup(pfring *ring) {
 	   "kernel is %i, libpfring was compiled with %i\n",
 	   ring->slots_info->version, RING_FLOWSLOT_VERSION);
     close(ring->fd);
+    errno = EINVAL;
     return -1;
   }
   memSlotsLen = ring->slots_info->tot_mem;
@@ -182,6 +183,7 @@ int pfring_mod_open_setup(pfring *ring) {
   if(ring->slot_header_len == (u_int16_t)-1) {
     fprintf(stderr, "[PF_RING] ring failure (pfring_get_slot_header_len)\n");
     close(ring->fd);
+    errno = EINVAL;
     return -1;
   }
 
