@@ -351,7 +351,7 @@ void print_version(void) {
   pfring_ft_version(version);
  
   printf("PF_RING FT v.%s\n" 
-         "Copyright 2018 ntop.org\n",
+         "Copyright 2018-2021 ntop.org\n",
          version);
       
   rc = pfring_ft_license(system_id, &license_expiration, &maintenance_expiration);
@@ -381,7 +381,7 @@ void print_version(void) {
 /* *************************************** */
 
 void print_help(void) {
-  printf("ftflow - (C) 2018 ntop.org\n");
+  printf("ftflow - (C) 2018-2021 ntop.org\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
