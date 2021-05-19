@@ -7407,8 +7407,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 #ifdef ICE_USER_TO_KERNEL_RESET
 			/* Interface reset */
-			set_bit(ICE_PFR_REQ, adapter->state);
-			ice_service_task_schedule(adapter);
+			ice_schedule_reset(adapter, ICE_RESET_PFR);
 #endif			
 		}
 
