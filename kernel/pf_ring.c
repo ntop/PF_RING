@@ -1072,6 +1072,87 @@ static void ring_sock_destruct(struct sock *sk)
 
 /* ********************************** */
 
+pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
+  struct list_head *ptr, *tmp_ptr;
+
+  list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+    pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+    if(net_eq(net, dev_net(dev_ptr->dev)) &&
+        dev_ptr->dev->ifindex == ifindex)
+      return dev_ptr;
+  }
+
+  return NULL;
+}
+
+/* ********************************** */
+
+pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char *name) {
+  struct list_head *ptr, *tmp_ptr;
+  int l = strlen(name);
+
+  list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+    pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+    if(((strcmp(dev_ptr->device_name, name) == 0)
+	/*
+	  The problem is that pfring_mod_bind() needs to specify the interface
+	  name using struct sockaddr that is defined as
+
+	  struct sockaddr { ushort sa_family; char sa_data[14]; };
+
+	  so the total interface name lenght is 13 chars (plus \0 trailer).
+	  The check below is to trap this case.
+	 */
+	|| ((l >= 13) && (strncmp(dev_ptr->device_name, name, 13) == 0)))
+       &&
+       (net == NULL /* any */ || net_eq(dev_net(dev_ptr->dev), net)))
+      return dev_ptr;
+  }
+
+  return NULL;
+}
+
+/* ************************************* */
+
+static zc_dev_list *pf_ring_zc_dev_name_lookup(char *device_name, int32_t channel_id) {
+  struct list_head *ptr, *tmp_ptr;
+  zc_dev_list *entry;
+
+  /* lookinf for ZC dev */
+  list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
+    entry = list_entry(ptr, zc_dev_list, list);
+
+    //printk("[PF_RING] %s:%d Checking %s channel %u\n", __FUNCTION__, __LINE__,
+    //  entry->zc_dev.dev->name, entry->zc_dev.channel_id);
+
+    if(strcmp(entry->zc_dev.dev->name, device_name) == 0
+       && entry->zc_dev.channel_id == channel_id)
+      return entry;
+  }
+
+  return NULL; 
+}
+
+/* ************************************* */
+
+static zc_dev_list *pf_ring_zc_dev_net_device_lookup(struct net_device *dev, int32_t channel_id) {
+  struct list_head *ptr, *tmp_ptr;
+  zc_dev_list *entry;
+
+  /* lookinf for ZC dev */
+  list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
+    entry = list_entry(ptr, zc_dev_list, list);
+
+    if(entry->zc_dev.dev == dev
+       && entry->zc_dev.channel_id == channel_id)
+      return entry;
+  }
+
+  return NULL; 
+}
+
+/* ********************************** */
+
 static int ring_proc_get_info(struct seq_file *m, void *data_not_used);
 static int ring_proc_open(struct inode *inode, struct file *file) {
   return single_open(file, ring_proc_get_info, PDE_DATA(inode));
@@ -1243,8 +1324,17 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
 	       dev_ptr->is_zc_device ? dev_ptr->num_zc_dev_rx_queues : get_num_rx_queues(dev));
 
     if(dev_ptr->is_zc_device) {
+      zc_dev_list *zc_dev_ptr = pf_ring_zc_dev_net_device_lookup(dev, 0);
       seq_printf(m, "Num RX Slots: %d\n", dev_ptr->num_zc_rx_slots);
       seq_printf(m, "Num TX Slots: %d\n", dev_ptr->num_zc_tx_slots);
+      if (zc_dev_ptr) {
+        seq_printf(m, "RX Slot Size: %d\n",
+          zc_dev_ptr->zc_dev.mem_info.rx.packet_memory_slot_len ?
+          zc_dev_ptr->zc_dev.mem_info.rx.packet_memory_slot_len :
+          zc_dev_ptr->zc_dev.mem_info.tx.packet_memory_slot_len);
+        seq_printf(m, "TX Slot Size: %d\n",
+          zc_dev_ptr->zc_dev.mem_info.tx.packet_memory_slot_len);
+      } 
     }
   }
 
@@ -1595,48 +1685,6 @@ static char* sockmode2string(socket_mode m)
   }
 
   return("???");
-}
-
-/* ********************************** */
-
-pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
-  struct list_head *ptr, *tmp_ptr;
-
-  list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-    pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(net_eq(net, dev_net(dev_ptr->dev)) &&
-        dev_ptr->dev->ifindex == ifindex)
-      return dev_ptr;
-  }
-
-  return NULL;
-}
-
-/* ********************************** */
-
-pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char *name) {
-  struct list_head *ptr, *tmp_ptr;
-  int l = strlen(name);
-
-  list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-    pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(((strcmp(dev_ptr->device_name, name) == 0)
-	/*
-	  The problem is that pfring_mod_bind() needs to specify the interface
-	  name using struct sockaddr that is defined as
-
-	  struct sockaddr { ushort sa_family; char sa_data[14]; };
-
-	  so the total interface name lenght is 13 chars (plus \0 trailer).
-	  The check below is to trap this case.
-	 */
-	|| ((l >= 13) && (strncmp(dev_ptr->device_name, name, 13) == 0)))
-       &&
-       (net == NULL /* any */ || net_eq(dev_net(dev_ptr->dev), net)))
-      return dev_ptr;
-  }
-
-  return NULL;
 }
 
 /* ********************************** */
@@ -6229,32 +6277,25 @@ static int add_sock_to_cluster(struct sock *sock,
 
 static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapping)
 {
-  struct list_head *ptr, *tmp_ptr;
   pf_ring_device *dev_ptr;
   zc_dev_list *entry;
-  int dev_found = 0;
+
+  printk("[PF_RING] %s:%d Trying to map %s\n", __FUNCTION__, __LINE__, mapping->device_name);
 
   debug_printk(1, "%s@%d\n", mapping->device_name, mapping->channel_id);
 
   if(strlen(mapping->device_name) == 0)
     printk("[PF_RING] %s:%d ZC socket with empty device name!\n", __FUNCTION__, __LINE__);
 
-  /* lookinf for ZC dev */
-  list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
-    entry = list_entry(ptr, zc_dev_list, list);
-    if(strcmp(entry->zc_dev.dev->name, mapping->device_name) == 0
-        && entry->zc_dev.channel_id == mapping->channel_id) {
-      mapping->device_model = entry->zc_dev.mem_info.device_model;
-      dev_found = 1;
-      break;
-    }
-  }
+  entry = pf_ring_zc_dev_name_lookup(mapping->device_name, mapping->channel_id);
 
-  if(!dev_found) {
+  if(!entry) {
     printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC device\n", __FUNCTION__, __LINE__,
 	   mapping->device_name, mapping->channel_id);
     return -1;
   }
+
+  mapping->device_model = entry->zc_dev.mem_info.device_model;
 
   /* looking for ring_netdev device, setting it here as it is used
    * also before pfring_get_zc_dev to set promisc */
@@ -6277,9 +6318,8 @@ static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapp
 /* ************************************* */
 
 static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
-  struct list_head *ptr, *tmp_ptr;
   zc_dev_list *entry;
-  int i, dev_found = 0, found, rc;
+  int i, found, rc;
   int32_t dev_index;
 
   debug_printk(1, "%s@%d\n", pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
@@ -6288,16 +6328,10 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
     printk("[PF_RING] %s:%d %s ZC socket with empty device name!\n", __FUNCTION__, __LINE__,
       pfr->zc_mapping.operation == add_device_mapping ? "opening" : "closing");
 
-  list_for_each_safe(ptr,tmp_ptr, &zc_devices_list) {
-    entry = list_entry(ptr, zc_dev_list, list);
-    if(strcmp(entry->zc_dev.dev->name, pfr->zc_mapping.device_name) == 0
-        && entry->zc_dev.channel_id == pfr->zc_mapping.channel_id) {
-      dev_found = 1;
-      break;
-    }
-  }
+  entry = pf_ring_zc_dev_name_lookup(pfr->zc_mapping.device_name,
+    pfr->zc_mapping.channel_id);
 
-  if(!dev_found) {
+  if(!entry) {
     printk("[PF_RING] %s:%d %s@%u mapping failed or not a ZC device\n", __FUNCTION__, __LINE__,
 	   pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id);
     return -1;
@@ -8027,7 +8061,7 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
 {
   pf_ring_device *dev_ptr;
 
-  debug_printk(2, "%s ZC device %s@%u\n",
+  printk("%s ZC device %s@%u\n",
 	   operation == add_device_mapping ? "registering" : "removing",
 	   dev->name, channel_id);
 
@@ -8095,35 +8129,29 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
       printk("[PF_RING] Could not kmalloc slot!!\n");
     }
   } else {
-    struct list_head *ptr, *tmp_ptr;
     zc_dev_list *entry;
     int i;
 
-    list_for_each_safe(ptr, tmp_ptr, &zc_devices_list) {
-      entry = list_entry(ptr, zc_dev_list, list);
+    entry = pf_ring_zc_dev_net_device_lookup(dev, channel_id);
 
-      if((entry->zc_dev.dev == dev) && (entry->zc_dev.channel_id == channel_id)) {
-
-        /* driver detach - checking if there is an application running */
-        for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
-          if(entry->bound_sockets[i] != NULL) {
-            printk("[PF_RING] Unloading ZC driver while the device is in use from userspace!!\n");
-            break;
-          }
+    if (entry) {
+      /* driver detach - checking if there is an application running */
+      for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
+        if(entry->bound_sockets[i] != NULL) {
+          printk("[PF_RING] Unloading ZC driver while the device is in use from userspace!!\n");
+          break;
         }
-
-	list_del(ptr);
-	kfree(entry);
-	zc_devices_list_size--;
-	/* Decrement usage count */
-	module_put(THIS_MODULE);
-	break;
       }
+
+      list_del(&entry->list);
+      kfree(entry);
+      zc_devices_list_size--;
+      /* Decrement usage count */
+      module_put(THIS_MODULE);
     }
   }
 
-  debug_printk(2, "%d registered ZC devices/queues\n",
-	   zc_devices_list_size);
+  debug_printk(2, "%d registered ZC devices/queues\n", zc_devices_list_size);
 }
 EXPORT_SYMBOL(pf_ring_zc_dev_handler);
 
