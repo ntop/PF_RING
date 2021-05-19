@@ -39,25 +39,54 @@
 /* *************************************** */
 
 int max_packet_len(char *device) { 
-  pfring *ring;
-  pfring_card_settings settings;
-  int mtu;
+  char ifname_buff[32], path[256];
+  char *ifname = ifname_buff, *ptr;
+  FILE *proc_net_pfr;
+  u_int32_t max_packet_size = 0;
 
-  ring = pfring_open(device, 1536, PF_RING_ZC_NOT_REPROGRAM_RSS);
+  /* Remove prefix (e.g. 'zc:') and queue (@0) if any */
+  snprintf(ifname, sizeof(ifname_buff), "%s", device);
+  ptr = strchr(ifname, ':');
+  if (ptr) ifname = ++ptr;
+  ptr = strchr(ifname, '@');  
+  if (ptr) *ptr = '\0';
 
-  if (ring == NULL)
-    return 1536;
+  /* Try reading from /proc */
+  snprintf(path, sizeof(path), "/proc/net/pf_ring/dev/%s/info", ifname);
+  proc_net_pfr = fopen(path, "r");
+  if (proc_net_pfr != NULL) {
+    while (fgets(path, sizeof(path), proc_net_pfr) != NULL) {
+      char *p = &path[0];
+      const char *slot_size = "RX Slot Size:";
+      if (!strncmp(p, slot_size, strlen(slot_size))) {
+        max_packet_size = atoi(&p[strlen(slot_size)]);
+        break;
+      }
+    }
+    fclose(proc_net_pfr);
+  }
 
-  pfring_get_card_settings(ring, &settings);
+  if (!max_packet_size) {
+    /* Try opening socket */
+    pfring *ring;
+    pfring_card_settings settings;
 
-  mtu = pfring_get_mtu_size(ring);
+    ring = pfring_open(device, 1536, PF_RING_ZC_NOT_REPROGRAM_RSS);
 
-  if (settings.max_packet_size < mtu + 14 /* eth */)
-    settings.max_packet_size = mtu + 14 /* eth */ + 4 /* vlan */;
-  
-  pfring_close(ring);
+    if (!ring) {
+      max_packet_size = 1536;
+    } else {
+      int mtu = pfring_get_mtu_size(ring);
+      pfring_get_card_settings(ring, &settings);
+      if (settings.max_packet_size < mtu + 14 /* eth */)
+        max_packet_size = mtu + 14 /* eth */ + 4 /* vlan */;
+      else
+        max_packet_size = settings.max_packet_size;
+      pfring_close(ring);
+    }
+  }
 
-  return settings.max_packet_size;
+  return max_packet_size;
 }
 
 /* *************************************** */
