@@ -407,6 +407,7 @@ int main(int argc, char* argv[]) {
       break;
     case 'D':
       inet_aton(optarg, &dstaddr);
+      reforge_ip = 1;
       break;
     case 'h':
       printHelp();
@@ -479,6 +480,7 @@ int main(int argc, char* argv[]) {
       break;
     case 'S':
       inet_aton(optarg, &srcaddr);
+      reforge_ip = 1;
       break;
     case 'd':
       daemon_mode = 1;
