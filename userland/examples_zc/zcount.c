@@ -364,16 +364,20 @@ int main(int argc, char* argv[]) {
   }
 
   if (check_license || print_maintenance) {
-    u_int32_t maintenance;
-    if (pfring_zc_check_device_license(zq, &maintenance)) {
-      if (check_license)
-        printf("License Ok\n");
-      else /* print_maintenance */ {
-        time_t exp = maintenance;
-        printf("%u %s\n", maintenance, maintenance > 0 ? ctime(&exp) : "No expiration");
+    if (strncmp(device, "zc:", 3) == 0) {
+      u_int32_t maintenance;
+      if (pfring_zc_check_device_license(zq, &maintenance)) {
+        if (print_maintenance) {
+          time_t exp = maintenance;
+          printf("%u %s\n", maintenance, maintenance > 0 ? ctime(&exp) : "No expiration");
+        } else /* check_license only */ {
+          printf("License Ok\n");
+        }
+      } else {
+        printf("Invalid license\n");
       }
     } else {
-      printf("Invalid license\n");
+      fprintf(stderr, "This does not look like an Intel ZC interface. Please check pfcount -L -v 1\n");
     }
     goto cleanup;
   }
