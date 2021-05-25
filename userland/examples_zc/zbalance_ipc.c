@@ -35,6 +35,8 @@
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
+#include <sys/inotify.h>
+#include <fcntl.h>
 
 #include "pfring.h"
 #include "pfring_zc.h"
@@ -59,6 +61,9 @@
 #define CACHE_LINE_LEN         64
 #define MAX_NUM_APP	       32
 #define IN_POOL_SIZE          256
+
+#define EVENT_SIZE (sizeof(struct inotify_event))
+#define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
 pfring_zc_cluster *zc;
 pfring_zc_worker *zw;
@@ -98,6 +103,9 @@ u_int32_t n2disk_threads;
 char *vlan_filter = NULL;
 bitmap64_t(allowed_vlans, 1024);
 
+int fd;
+int wd;
+
 /* ******************************** */
 
 #ifdef HAVE_PF_RING_FT
@@ -105,6 +113,7 @@ bitmap64_t(allowed_vlans, 1024);
 
 u_int8_t flow_table = 0;
 pfring_ft_table *ft = NULL;
+char *ft_proto_conf = NULL;
 
 void flow_init(pfring_ft_flow *flow, void *user) {
   // Enable this by uncommenting pfring_ft_set_new_flow_callback()
@@ -407,6 +416,15 @@ void sigproc(int sig) {
   do_shutdown = 1;
 
   print_stats();
+
+#ifdef HAVE_PF_RING_FT
+  if (flow_table) {
+    if (ft_proto_conf != NULL) {
+      inotify_rm_watch(fd, wd);
+      close(fd);
+    }
+  }
+#endif
 }
 
 /* *************************************** */
@@ -921,7 +939,6 @@ int main(int argc, char* argv[]) {
   ;
 #ifdef HAVE_PF_RING_FT
   char *ft_rules_conf = NULL;
-  char *ft_proto_conf = NULL;
 #endif
 #ifdef HAVE_ZMQ
   pthread_t zmq_thread;
@@ -1381,8 +1398,24 @@ int main(int argc, char* argv[]) {
     if (ft_rules_conf != NULL) 
       pfring_ft_load_configuration(ft, ft_rules_conf);
 
-    if (ft_proto_conf != NULL)
+    if (ft_proto_conf != NULL){
       pfring_ft_load_ndpi_protocols(ft, ft_proto_conf);
+
+      fd = inotify_init();
+      if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) // error checking for fcntl
+        exit(2);
+
+      wd = inotify_add_watch(fd, ft_proto_conf, IN_MODIFY);
+
+      if (wd == -1)
+      {
+        trace(TRACE_WARNING, "Could not watch : %s\n", ft_proto_conf);
+      }
+      else
+      {
+        trace(TRACE_NORMAL, "Watching protos config at: %s\n", ft_proto_conf);
+      }
+    }
 
     //pfring_ft_set_new_flow_callback(ft, flow_init, NULL);
     //pfring_ft_set_flow_packet_callback(ft, flow_packet_process, NULL);
@@ -1534,6 +1567,35 @@ int main(int argc, char* argv[]) {
   while (!do_shutdown) {
     sleep(ALARM_SLEEP);
     print_stats();
+#ifdef HAVE_PF_RING_FT
+  if (flow_table) {
+    if (ft_proto_conf != NULL) {
+      int i = 0, length;
+      char buffer[EVENT_BUF_LEN];
+      /* Read buffer*/
+      length = read(fd, buffer, EVENT_BUF_LEN);
+
+      /* Process the events which has occurred */
+      while (i < length)
+      {
+
+        struct inotify_event *event = (struct inotify_event *)&buffer[i];
+
+        if (event->len)
+        {
+          if (event->mask & IN_MODIFY)
+          {
+            
+            trace(TRACE_NORMAL, "The protos config at %s was modified\n", event->name);
+            // reload config
+            pfring_ft_load_ndpi_protocols(ft, ft_proto_conf);
+          }
+        }
+        i += EVENT_SIZE + event->len;
+      }
+    }
+  }
+#endif
   }
 
 #ifdef HAVE_ZMQ
