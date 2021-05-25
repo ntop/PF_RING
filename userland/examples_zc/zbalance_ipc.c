@@ -103,8 +103,10 @@ u_int32_t n2disk_threads;
 char *vlan_filter = NULL;
 bitmap64_t(allowed_vlans, 1024);
 
-int fd;
-int wd;
+#ifdef HAVE_PF_RING_FT
+int notify_fd;
+int notify_wd;
+#endif
 
 /* ******************************** */
 
@@ -420,8 +422,8 @@ void sigproc(int sig) {
 #ifdef HAVE_PF_RING_FT
   if (flow_table) {
     if (ft_proto_conf != NULL) {
-      inotify_rm_watch(fd, wd);
-      close(fd);
+      inotify_rm_watch(notify_fd, notify_wd);
+      close(notify_fd);
     }
   }
 #endif
@@ -1401,22 +1403,19 @@ int main(int argc, char* argv[]) {
     if (ft_proto_conf != NULL){
       pfring_ft_load_ndpi_protocols(ft, ft_proto_conf);
 
-      fd = inotify_init();
-      if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0) // error checking for fcntl
+      notify_fd = inotify_init();
+      if (fcntl(notify_fd, F_SETFL, O_NONBLOCK) < 0) // error checking for fcntl
         exit(2);
 
-      wd = inotify_add_watch(fd, ft_proto_conf, IN_MODIFY);
+      notify_wd = inotify_add_watch(notify_fd, ft_proto_conf, IN_MODIFY);
 
-      if (wd == -1)
-      {
+      if (notify_wd == -1)
         trace(TRACE_WARNING, "Could not watch : %s\n", ft_proto_conf);
-      }
       else
-      {
         trace(TRACE_NORMAL, "Watching protos config at: %s\n", ft_proto_conf);
-      }
     }
 
+    /* FT callbacks configuration examples */
     //pfring_ft_set_new_flow_callback(ft, flow_init, NULL);
     //pfring_ft_set_flow_packet_callback(ft, flow_packet_process, NULL);
     //pfring_ft_set_flow_export_callback(ft, flow_free, NULL);
@@ -1568,33 +1567,29 @@ int main(int argc, char* argv[]) {
     sleep(ALARM_SLEEP);
     print_stats();
 #ifdef HAVE_PF_RING_FT
-  if (flow_table) {
-    if (ft_proto_conf != NULL) {
-      int i = 0, length;
-      char buffer[EVENT_BUF_LEN];
-      /* Read buffer*/
-      length = read(fd, buffer, EVENT_BUF_LEN);
+    if (flow_table) {
+      if (ft_proto_conf != NULL) {
+        int i = 0, length;
+        char buffer[EVENT_BUF_LEN];
+        /* Read buffer*/
+        length = read(notify_fd, buffer, EVENT_BUF_LEN);
 
-      /* Process the events which has occurred */
-      while (i < length)
-      {
+        /* Process the events which has occurred */
+        while (i < length) {
+          struct inotify_event *event = (struct inotify_event *)&buffer[i];
 
-        struct inotify_event *event = (struct inotify_event *)&buffer[i];
-
-        if (event->len)
-        {
-          if (event->mask & IN_MODIFY)
-          {
-            
-            trace(TRACE_NORMAL, "The protos config at %s was modified\n", event->name);
-            // reload config
-            pfring_ft_load_ndpi_protocols(ft, ft_proto_conf);
+          if (event->len) {
+            if (event->mask & IN_MODIFY) {
+              trace(TRACE_NORMAL, "The protos config at %s was modified\n", event->name);
+              //Reload config
+              //FIXX this should be moved inline
+              pfring_ft_load_ndpi_protocols(ft, ft_proto_conf);
+            }
           }
+          i += EVENT_SIZE + event->len;
         }
-        i += EVENT_SIZE + event->len;
       }
     }
-  }
 #endif
   }
 
