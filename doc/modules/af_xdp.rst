@@ -2,8 +2,9 @@ AF_XDP Support
 ==============
 
 PF_RING since version 7.5 includes support for AF_XDP adapters,
-however this is available from source code only, using the --enabled-xdp
-configure flag when compiling the userspace library.
+this is available from source code only and should be enabled by
+default (unless the *--enabled-xdp* configure flag is specified)
+when compiling the userspace library.
 
 Prerequisite
 ------------
@@ -37,13 +38,22 @@ Download and unpack sources for kernel 5.x, it will be used to compile and insta
    sudo make install_lib
    sudo make install_headers
 
-Compile PF_RING with AF_XDP support (note: --enable-xdp was required on previous pf_ring versions):
+Compile PF_RING. It should automatically detect and enable AF_XDP support:
 
 .. code-block:: console
 
    cd PF_RING/userland
-   ./configure --enable-xdp
+   ./configure
    make
+
+Note: the --enable-xdp flag was required on previous pf_ring versions.
+
+Please make sure the below output is printed by the configure script
+(this means AF_XDP support is actually detected and enabled).
+
+.. code-block:: console
+
+  checking PF_RING AF_XDP support... yes
 
 Usage
 -----
