@@ -37,6 +37,7 @@ Download and unpack sources for kernel 5.x, it will be used to compile and insta
    make
    sudo make install_lib
    sudo make install_headers
+   sudo ldconfig
 
 Compile PF_RING. It should automatically detect and enable AF_XDP support:
 
