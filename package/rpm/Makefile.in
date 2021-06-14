@@ -16,7 +16,7 @@ all:
 
 dkms:
 	cd ../../kernel; ./configure; make dkms-rpm
-	cp /var/lib/dkms/pfring/@VERS@/rpm/pfring-dkms-@VERS@-@REVISION@.noarch.rpm .
+	cp /var/lib/dkms/pfring/@VERS@.@REVISION@/rpm/pfring-dkms-@VERS@.@REVISION@-@REVISION@.noarch.rpm .
 	cd ../../drivers/intel/; ./configure; make dkms-rpm
 	cp /var/lib/dkms/*-zc/*/rpm/*.noarch.rpm .
 	cp ../../drivers/intel/*.rpm .
@@ -36,6 +36,7 @@ build-rpm:
 
 cleanup-rpm:
 	rm -f $(PACKAGE_PATH)
+	sudo rm -rf /var/lib/dkms/pfring
 	rm -f $(HOME)/rpmbuild/BUILD/$(PACKAGE)
 
 
