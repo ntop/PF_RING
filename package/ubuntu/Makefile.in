@@ -72,7 +72,7 @@ build: pre-build
 	@echo "-------------------------------" 
 	-dpkg --contents  pfring_*deb 
 	@echo "-------------------------------" 
-	@cp /var/lib/dkms/pfring/@PFRING_VERS@/deb/pfring-dkms_@PFRING_VERS@_all.deb .
+	@cp /var/lib/dkms/pfring/@PFRING_VERS@.@REVISION@/deb/pfring-dkms_@PFRING_VERS@.@REVISION@_all.deb .
 	-dpkg --contents  pfring-dkms*deb 
 	@echo "-------------------------------" 
 
