@@ -7627,8 +7627,9 @@ static int ring_getsockopt(struct socket *sock,
       st.tp_packets = pfr->slots_info->tot_insert;
       st.tp_drops = pfr->slots_info->tot_lost;
 
-      if(copy_to_user(optval, &st, len))
+      if(copy_to_user(optval, &st, sizeof(struct tpacket_stats)))
 	return(-EFAULT);
+
       break;
     }
 
