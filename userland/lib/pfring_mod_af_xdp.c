@@ -73,7 +73,6 @@ struct pf_xdp_xsk_umem_info {
 struct pf_xdp_rx_stats {
   u_int64_t rx_pkts;
   u_int64_t rx_bytes;
-  u_int64_t rx_dropped;
 };
 
 struct pf_xdp_tx_stats {
@@ -89,7 +88,6 @@ struct pf_xdp_pkt {
 
 struct pf_xdp_rx_queue {
   struct xsk_ring_cons rx;
-  struct pf_xdp_xsk_umem_info *umem;
   struct xsk_socket *xsk;
   struct pf_xdp_rx_stats stats;
   u_int16_t queue_idx;
@@ -97,7 +95,7 @@ struct pf_xdp_rx_queue {
 
 struct pf_xdp_tx_queue {
   struct xsk_ring_prod tx;
-  struct pf_xdp_xsk_umem_info *umem;
+
   struct xsk_socket *xsk;
   struct pf_xdp_tx_stats stats;
   u_int16_t queue_idx;
@@ -106,7 +104,6 @@ struct pf_xdp_tx_queue {
 struct pf_xdp_handle {
   int if_index;
   u_int16_t queue_idx;
-  char if_name[IFNAMSIZ];
   struct ether_addr eth_addr;
   struct pf_xdp_xsk_umem_info *umem;
 
@@ -250,10 +247,10 @@ int pfring_mod_af_xdp_poll(pfring *ring, u_int wait_duration) {
 
 /* **************************************************** */
 
-static u_int16_t pfring_mod_af_xdp_recv_multi(void *queue, struct pf_xdp_pkt *pkts, u_int16_t nb_pkts, int wait) {
-  struct pf_xdp_rx_queue *rxq = queue;
+static u_int16_t pfring_mod_af_xdp_recv_multi(struct pf_xdp_handle *handle, struct pf_xdp_pkt *pkts, u_int16_t nb_pkts, int wait) {
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct xsk_ring_cons *rx = &rxq->rx;
-  struct pf_xdp_xsk_umem_info *umem = rxq->umem;
+  struct pf_xdp_xsk_umem_info *umem = handle->umem;
   struct xsk_ring_prod *fq = &umem->fq;
   const struct xdp_desc *desc;
   u_int32_t free_thresh = fq->size >> 1;
@@ -274,7 +271,7 @@ static u_int16_t pfring_mod_af_xdp_recv_multi(void *queue, struct pf_xdp_pkt *pk
   for (i = 0; i < n; i++) {
     desc = xsk_ring_cons__rx_desc(rx, idx_rx++);
 
-    pkts[i].buf = xsk_umem__get_data(rxq->umem->buffer, desc->addr);
+    pkts[i].buf = xsk_umem__get_data(umem->buffer, desc->addr);
     pkts[i].len = desc->len;
 
     rx_bytes += desc->len;
@@ -300,7 +297,7 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
   if (unlikely(ring->reentrant)) pthread_rwlock_wrlock(&ring->rx_lock);
 
  redo_recv:
-  if (likely(pfring_mod_af_xdp_recv_multi(&handle->rx_queue, p, 1, wait_for_incoming_packet) > 0)) {
+  if (likely(pfring_mod_af_xdp_recv_multi(handle, p, 1, wait_for_incoming_packet) > 0)) {
 
     if (unlikely(ring->sampling_rate > 1)) {
       if (likely(ring->sampling_counter > 0)) {
@@ -388,8 +385,9 @@ static void pf_xdp_cleanup_tx_cq(struct pf_xdp_xsk_umem_info *umem, int size) {
 
 /* **************************************************** */
 
-static void pf_xdp_flush_tx_q(struct pf_xdp_tx_queue *txq) {
-  struct pf_xdp_xsk_umem_info *umem = txq->umem;
+static void pf_xdp_flush_tx_q(struct pf_xdp_handle *handle) {
+  struct pf_xdp_tx_queue *txq = &handle->tx_queue;
+  struct pf_xdp_xsk_umem_info *umem = handle->umem;
 
   while (send(xsk_socket__fd(txq->xsk), NULL, 0, MSG_DONTWAIT) < 0) {
 
@@ -405,9 +403,9 @@ static void pf_xdp_flush_tx_q(struct pf_xdp_tx_queue *txq) {
 
 /* **************************************************** */
 
-static u_int16_t pfring_mod_af_xdp_send_burst(void *queue, struct pf_xdp_pkt *pkts, u_int16_t nb_pkts) {
-  struct pf_xdp_tx_queue *txq = queue;
-  struct pf_xdp_xsk_umem_info *umem = txq->umem;
+static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, struct pf_xdp_pkt *pkts, u_int16_t nb_pkts) {
+  struct pf_xdp_tx_queue *txq = &handle->tx_queue;
+  struct pf_xdp_xsk_umem_info *umem = handle->umem;
   struct pf_xdp_pkt *pkt_i;
   void *addrs[AF_XDP_DEV_TX_BATCH_SIZE];
   u_int64_t tx_bytes = 0;
@@ -433,7 +431,7 @@ static u_int16_t pfring_mod_af_xdp_send_burst(void *queue, struct pf_xdp_pkt *pk
     return 0;
 
   if (xsk_ring_prod__reserve(&txq->tx, nb_pkts, &idx_tx) != nb_pkts) {
-    pf_xdp_flush_tx_q(txq);
+    pf_xdp_flush_tx_q(handle);
     for (i = 0; i < nb_pkts; i++)
       pf_xdp_buff_q_enqueue(umem->buff_q, addrs[i]);
     return 0;
@@ -456,7 +454,7 @@ static u_int16_t pfring_mod_af_xdp_send_burst(void *queue, struct pf_xdp_pkt *pk
 
   xsk_ring_prod__submit(&txq->tx, nb_pkts);
 
-  pf_xdp_flush_tx_q(txq);
+  pf_xdp_flush_tx_q(handle);
 
   txq->stats.tx_pkts += nb_pkts;
   txq->stats.tx_bytes += tx_bytes;
@@ -473,7 +471,7 @@ int pfring_mod_af_xdp_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flus
   p[0].buf = pkt;
   p[0].len = pkt_len;
 
-  if (pfring_mod_af_xdp_send_burst(&handle->tx_queue, p, 1) > 0) 
+  if (pfring_mod_af_xdp_send_burst(handle, p, 1) > 0) 
     return pkt_len;
 
   return -1;
@@ -493,7 +491,7 @@ int pfring_mod_af_xdp_stats(pfring *ring, pfring_stat *stats) {
   slen = sizeof(struct xdp_statistics);
   rxq = &handle->rx_queue;
   stats->recv += handle->rx_queue.stats.rx_pkts;
-  stats->drop += handle->rx_queue.stats.rx_dropped;
+  stats->drop = 0;
 
   ret = getsockopt(xsk_socket__fd(rxq->xsk), SOL_XDP, XDP_STATISTICS, &xdp_stats, &slen);
 
@@ -607,14 +605,17 @@ err:
 
 /* **************************************************** */
 
-static int pf_xdp_xsk_configure(struct pf_xdp_handle *handle, struct pf_xdp_rx_queue *rxq, struct pf_xdp_tx_queue *txq, int ring_size) {
+static int pf_xdp_xsk_configure(pfring *ring, int ring_size) {
+  struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
+  struct pf_xdp_tx_queue *txq = &handle->tx_queue;
   struct xsk_socket_config cfg;
   int ret = 0;
   int reserve_size;
 
-  rxq->umem = pf_xdp_umem_configure(handle);
+  handle->umem = pf_xdp_umem_configure(handle);
 
-  if (rxq->umem == NULL)
+  if (handle->umem == NULL)
     return -ENOMEM;
 
   cfg.rx_size = ring_size;
@@ -624,22 +625,22 @@ static int pf_xdp_xsk_configure(struct pf_xdp_handle *handle, struct pf_xdp_rx_q
   cfg.bind_flags = 0;
 
   //fprintf(stderr, "Creating xsk socket on dev %s queue %u\n", 
-  //  handle->if_name, handle->queue_idx);
+  //  ring->device_name, handle->queue_idx);
 
-  ret = xsk_socket__create(&rxq->xsk, handle->if_name, handle->queue_idx, rxq->umem->umem, &rxq->rx, &txq->tx, &cfg);
+  ret = xsk_socket__create(&rxq->xsk, ring->device_name, 
+    handle->queue_idx, handle->umem->umem, &rxq->rx, &txq->tx, &cfg);
 
   if (ret) {
     fprintf(stderr, "Failed to create xsk socket on dev %s queue %u: %s (%d)\n", 
-      handle->if_name, handle->queue_idx, strerror(errno), ret);
+      ring->device_name, handle->queue_idx, strerror(errno), ret);
     goto err;
   }
 
-  txq->umem = rxq->umem;
   txq->xsk = rxq->xsk;
 
   reserve_size = AF_XDP_DEV_NUM_DESC/2;
 
-  ret = pf_xdp_refill_queue(rxq->umem, reserve_size);
+  ret = pf_xdp_refill_queue(handle->umem, reserve_size);
 
   if (ret) {
     xsk_socket__delete(rxq->xsk);
@@ -650,7 +651,7 @@ static int pf_xdp_xsk_configure(struct pf_xdp_handle *handle, struct pf_xdp_rx_q
   return 0;
 
 err:
-  pf_xdp_umem_destroy(rxq->umem);
+  pf_xdp_umem_destroy(handle->umem);
 
   return ret;
 }
@@ -666,8 +667,8 @@ static void pf_xdp_queue_reset(struct pf_xdp_handle *handle, u_int16_t queue_idx
 
 /* **************************************************** */
 
-static int pf_xdp_eth_rx_queue_setup(struct pf_xdp_handle *handle, u_int16_t queue_id, u_int16_t nb_rx_desc) {
-  int ret;
+static int pf_xdp_rx_queue_setup(pfring *ring, u_int16_t queue_id) {
+  struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
 
   /* Cleanup XDP in case we didn't shutdown gracefully.. 
    * Note: doing this for the first queue only (this assumes
@@ -678,19 +679,7 @@ static int pf_xdp_eth_rx_queue_setup(struct pf_xdp_handle *handle, u_int16_t que
 
   pf_xdp_queue_reset(handle, queue_id);
 
-  if (pf_xdp_xsk_configure(handle, &handle->rx_queue, &handle->tx_queue, nb_rx_desc)) {
-    fprintf(stderr, "Failed to configure xdp socket\n");
-    ret = -EINVAL;
-    goto err;
-  }
-
-  handle->umem = handle->rx_queue.umem;
-
   return 0;
-
-err:
-  pf_xdp_queue_reset(handle, queue_id);
-  return ret;
 }
 
 /* **************************************************** */
@@ -815,7 +804,7 @@ void pfring_mod_af_xdp_close(pfring *ring) {
 
   if (handle) {
     if (ring->promisc)
-      pf_xdp_dev_promiscuous_disable(handle->if_name);
+      pf_xdp_dev_promiscuous_disable(ring->device_name);
     pf_xdp_dev_close(handle);
     free(handle);
     ring->priv_data = NULL;
@@ -890,7 +879,8 @@ int pfring_mod_af_xdp_open(pfring *ring) {
     goto close_fd;
   }
 
-  strncpy(handle->if_name, ring->device_name, IFNAMSIZ);
+  ring->priv_data = handle;
+
   handle->queue_idx = channel_id;
 
   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -901,7 +891,7 @@ int pfring_mod_af_xdp_open(pfring *ring) {
     goto close_fd;
   }
 
-  strncpy(ifr.ifr_name, handle->if_name, IFNAMSIZ);
+  strncpy(ifr.ifr_name, ring->device_name, IFNAMSIZ);
 
   if (ioctl(sock, SIOCGIFINDEX, &ifr)) {
     fprintf(stderr, "Failed to get interface ifindex\n");
@@ -923,14 +913,17 @@ int pfring_mod_af_xdp_open(pfring *ring) {
 
   close(sock);
 
-  rc = pf_xdp_eth_rx_queue_setup(handle, handle->queue_idx, AF_XDP_DEV_NUM_BUFFERS);
+  rc = pf_xdp_rx_queue_setup(ring, handle->queue_idx);
 
   if (rc < 0) {
     fprintf(stderr, "Failed to setup queue\n");
     goto free_handle;
   }
 
-  ring->priv_data = handle;
+  if (pf_xdp_xsk_configure(ring, AF_XDP_DEV_NUM_BUFFERS)) {
+    fprintf(stderr, "Failed to configure xdp socket\n");
+    goto queue_reset;
+  }
 
   pfring_enable_hw_timestamp(ring, ring->device_name, ring->hw_ts.enable_hw_timestamp ? 1 : 0, 0);
 
@@ -938,11 +931,14 @@ int pfring_mod_af_xdp_open(pfring *ring) {
   pfring_hw_ft_init(ring);
 
   if (ring->promisc)
-    af_xdp_dev_promiscuous_enable(handle->if_name);  
+    af_xdp_dev_promiscuous_enable(ring->device_name);  
 
   errno = 0;
 
   return 0;
+
+queue_reset:
+  pf_xdp_queue_reset(handle, handle->queue_idx);
 
  free_handle:
   free(handle);
