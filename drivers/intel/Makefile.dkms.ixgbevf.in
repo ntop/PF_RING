@@ -7,7 +7,7 @@ add: veryclean
 	cp ../../kernel/linux/pf_ring.h /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@
 	sed -i -e 's/ixgbevf\.o/ixgbevf_zc.o/' -e 's/ixgbevf-/ixgbevf_zc-/' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Kbuild /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
-	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
+	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@.@REVISION@' /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@IXGBEVF@ /usr/src/@IXGBEVF@-zc-@IXGBEVF_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @IXGBEVF@-zc -v @IXGBEVF_VERSION@.@REVISION@
 

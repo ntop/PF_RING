@@ -7,7 +7,7 @@ add: remove
 	cp ../../kernel/linux/pf_ring.h /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@
 	sed -i -e 's/igb\.o/igb_zc.o/' -e 's/igb-/igb_zc-/' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Kbuild /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
-	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
+	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@.@REVISION@' /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/Makefile
 	cp dkms.conf.@IGB@ /usr/src/@IGB@-zc-@IGB_VERSION@.@REVISION@/dkms.conf
 	dkms add -m @IGB@-zc -v @IGB_VERSION@.@REVISION@
 
