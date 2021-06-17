@@ -151,6 +151,19 @@ pfring_zc_pkt_buff_data_from_cluster(
 );
 
 /**
+ * Return the buffer handle given a pointer to a actual packet data.
+ * This is the reverse of pfring_zc_pkt_buff_data.
+ * @param data    The packet data pointer.
+ * @param cluster The cluster handle.
+ * @return        The buffer handle on success, NULL otherwise.
+ */
+pfring_zc_pkt_buff *
+pfring_zc_pkt_data_buff(
+	u_char *data,
+	pfring_zc_cluster *cluster
+);
+
+/**
  * Remove data from the start of a buffer.
  * @param pkt_handle The buffer handle.
  * @param queue Any queue from the cluster.
