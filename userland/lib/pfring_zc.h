@@ -110,13 +110,21 @@ typedef struct {
 } pfring_zc_queue_info;
 
 /**
- * Cluster info.
+ * Cluster required resources info.
  */
 typedef struct {
   u_int64_t total_memory;    /**< Total amount of allocated memory. */
   u_int32_t buffer_len;      /**< Max packet length. */
   u_int32_t real_buffer_len; /**< Real size of allocated buffers (including head room and padding). */
 } pfring_zc_cluster_info;
+
+/**
+ * Cluster memory info.
+ */
+typedef struct {
+  void *base_addr;   /**< Allocated memory base address. */
+  u_int64_t size;    /**< Total amount of allocated memory. */
+} pfring_zc_cluster_mem_info;
 
 /**
  * Return the pointer to the actual packet data.
@@ -186,7 +194,8 @@ pfring_zc_create_cluster(
 );
 
 /**
- * Return information about the resources allocated by the cluster including the max amount of memory.
+ * Return information about the resources that will be allocated the cluster 
+ * including the max amount of memory.
  * @param info                 A struct that is filled with the cluster information.
  * @param buffer_len           The size of each buffer: it must be at least as large as the MTU + L2 header (it will be rounded up to cache line) and not bigger than the page size.
  * @param metadata_len         The size of each buffer metadata.
@@ -204,6 +213,17 @@ pfring_zc_precompute_cluster_settings(
   u_int32_t metadata_len,
   u_int32_t tot_num_buffers,
   u_int32_t flags
+);
+
+/**
+ * Return information about allocated resources.
+ * @param cluster The cluster handle.
+ * @param mem_info The returned information.
+ */
+int
+pfring_zc_get_memory_info(
+  pfring_zc_cluster *cluster,
+  pfring_zc_cluster_mem_info *mem_info
 );
 
 /**
