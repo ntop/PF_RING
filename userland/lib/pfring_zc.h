@@ -127,7 +127,7 @@ typedef struct {
 } pfring_zc_cluster_mem_info;
 
 /**
- * Return the pointer to the actual packet data.
+ * Return the pointer to the actual packet data (same as pfring_zc_pkt_buff_data_from_cluster).
  * @param pkt_handle The buffer handle.
  * @param queue      Any queue from the cluster (e.g. the queue from which the packet is arrived or destined).
  * @return           The pointer on success, NULL otherwise.
@@ -136,6 +136,18 @@ u_char *
 pfring_zc_pkt_buff_data(
   pfring_zc_pkt_buff *pkt_handle,
   pfring_zc_queue *queue
+);
+
+/**
+ * Return the pointer to the actual packet data (same as pfring_zc_pkt_buff_data).
+ * @param pkt_handle The buffer handle.
+ * @param cluster    The cluster handle.
+ * @return           The pointer on success, NULL otherwise.
+ */
+u_char *
+pfring_zc_pkt_buff_data_from_cluster(
+  pfring_zc_pkt_buff *pkt_handle,
+  pfring_zc_cluster *cluster
 );
 
 /**
