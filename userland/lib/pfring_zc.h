@@ -55,6 +55,8 @@
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPC (1 << 2) /**< pfring_zc_builtin_gtp_hash flags: GTP-C */
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPU (1 << 3) /**< pfring_zc_builtin_gtp_hash flags: GTP-U */
 
+#define PF_RING_ZC_BUFFER_HEAD_ROOM 64
+
 #ifdef __cplusplus
 extern "C" {
 #endif
