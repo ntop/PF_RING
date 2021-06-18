@@ -55,7 +55,8 @@
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPC (1 << 2) /**< pfring_zc_builtin_gtp_hash flags: GTP-C */
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPU (1 << 3) /**< pfring_zc_builtin_gtp_hash flags: GTP-U */
 
-#define PF_RING_ZC_BUFFER_HEAD_ROOM 64
+#define PF_RING_ZC_SEND_PKT_MULTI_MAX_QUEUES 64 /**< pfring_zc_send_pkt_multi: max number of queues in queues_mask */
+#define PF_RING_ZC_BUFFER_HEAD_ROOM          64
 
 #ifdef __cplusplus
 extern "C" {
@@ -616,7 +617,7 @@ pfring_zc_create_multi_queue(
  * Send a packet to multiple queues bound to a multi-queue object.
  * @param multi_queue  The multi-queue handle.
  * @param pkt_handle   The pointer to the buffer handle to send. Once a packet has been sent, the buffer handle can be reused or if not longer necessary it must be freed by calling pfring_zc_release_packet_handle().
- * @param queues_mask  The mask with the egress queues where the buffer should be inserted. The LSB indicates the first queue in the multi-queue array.
+ * @param queues_mask  The mask with the egress queues where the buffer should be inserted. The LSB indicates the first queue in the multi-queue array. The max number of queues is defined in PF_RING_ZC_SEND_PKT_MULTI_MAX_QUEUES.
  * @param flush_packet The flag indicating whether this call should flush the enqueued packet, and older packets if any.
  * @return             The number of packet copies enqueued. 
  */
