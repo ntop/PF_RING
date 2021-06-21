@@ -107,7 +107,7 @@ struct pf_xdp_handle {
 
 /* **************************************************** */
 
-static inline int pf_xdp_refill_queue(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **fq_bufs, u_int16_t reserve_size) {
+static inline int pfring_mod_af_xdp_refill_queue(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **fq_bufs, u_int16_t reserve_size) {
   struct pf_xdp_xsk_umem_info *umem = &handle->umem;
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct xsk_ring_prod *fq = &rxq->fq;
@@ -227,7 +227,7 @@ static u_int16_t pfring_mod_af_xdp_recv_burst_zc(struct pf_xdp_handle *handle, p
   }
 
   xsk_ring_cons__release(rx, num_packets);
-  pf_xdp_refill_queue(handle, fq_bufs, num_packets);
+  pfring_mod_af_xdp_refill_queue(handle, fq_bufs, num_packets);
 
   rxq->stats.rx_pkts += num_packets;
   rxq->stats.rx_bytes += rx_bytes;
@@ -406,7 +406,7 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
 
 /* **************************************************** */
 
-static void pf_xdp_cleanup_tx_cq(struct pf_xdp_handle *handle, int size, struct xsk_ring_cons *cq) {
+static void pfring_mod_af_xdp_cleanup_tx_cq(struct pf_xdp_handle *handle, int size, struct xsk_ring_cons *cq) {
   struct pf_xdp_xsk_umem_info *umem = &handle->umem;
   size_t i, n;
   uint32_t idx_cq = 0;
@@ -435,18 +435,18 @@ static void pf_xdp_cleanup_tx_cq(struct pf_xdp_handle *handle, int size, struct 
 
 /* **************************************************** */
 
-static void pf_xdp_flush_tx_q(struct pf_xdp_handle *handle, struct xsk_ring_cons *cq) {
+static void pfring_mod_af_flush_tx_q(struct pf_xdp_handle *handle, struct xsk_ring_cons *cq) {
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
 
-  pf_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
+  pfring_mod_af_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
 
   while (send(xsk_socket__fd(rxq->xsk), NULL, 0, MSG_DONTWAIT) < 0) {
     if (errno != EBUSY && errno != EAGAIN && errno != EINTR)
       break;
 
-    /* pull from completion queue to leave more space */
+    /* Cleanup completion queue */
     if (errno == EAGAIN)
-      pf_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
+      pfring_mod_af_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
   }
 }
 
@@ -468,7 +468,7 @@ static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, pfri
   u_char *pkt_data;
 
   if (xsk_cons_nb_avail(cq, free_thresh) >= free_thresh)
-    pf_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
+    pfring_mod_af_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
 
   for (i = 0; i < num_packets; i++) {
     pkt = pkts[i];
@@ -476,7 +476,7 @@ static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, pfri
     pkt_data = pfring_zc_pkt_buff_data_from_cluster(pkt, handle->zc);
 
     if (!xsk_ring_prod__reserve(&txq->tx, 1, &idx_tx)) {
-      pf_xdp_flush_tx_q(handle, cq);
+      pfring_mod_af_flush_tx_q(handle, cq);
       if (!xsk_ring_prod__reserve(&txq->tx, 1, &idx_tx))
         goto out;
     }
@@ -496,7 +496,7 @@ static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, pfri
     count++;
   }
 
-  pf_xdp_flush_tx_q(handle, cq);
+  pfring_mod_af_flush_tx_q(handle, cq);
 
 out:
   xsk_ring_prod__submit(&txq->tx, count);
@@ -561,7 +561,7 @@ int pfring_mod_af_xdp_stats(pfring *ring, pfring_stat *stats) {
 
 /* **************************************************** */
 
-static void pf_xdp_remove_xdp_program(struct pf_xdp_handle *handle) {
+static void pfring_mod_af_xdp_remove_xdp_program(struct pf_xdp_handle *handle) {
   u_int32_t curr_prog_id = 0;
 
   if (bpf_get_link_xdp_id(handle->if_index, &curr_prog_id, XDP_FLAGS_UPDATE_IF_NOEXIST)) {
@@ -574,19 +574,7 @@ static void pf_xdp_remove_xdp_program(struct pf_xdp_handle *handle) {
 
 /* **************************************************** */
 
-static void pf_xdp_dev_close(struct pf_xdp_handle *handle) {
-  struct pf_xdp_xsk_umem_info *umem = &handle->umem;
-
-  xsk_socket__delete(handle->rx_queue.xsk);
-
-  (void)xsk_umem__delete(umem->umem);
-
-  pf_xdp_remove_xdp_program(handle);
-}
-
-/* **************************************************** */
-
-static int pf_xdp_umem_configure(struct pf_xdp_handle *handle) {
+static int pfring_mod_af_xdp_umem_configure(struct pf_xdp_handle *handle) {
   struct pf_xdp_xsk_umem_info *umem = &handle->umem;
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   pfring_zc_cluster_mem_info mem_info;
@@ -618,7 +606,7 @@ err:
 
 /* **************************************************** */
 
-static int pf_xdp_xsk_configure(pfring *ring) {
+static int pfring_mod_af_xdp_xsk_configure(pfring *ring) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct pf_xdp_tx_queue *txq = &handle->tx_queue;
@@ -628,7 +616,7 @@ static int pf_xdp_xsk_configure(pfring *ring) {
   pfring_zc_pkt_buff *fq_bufs[reserve_size];
   int i, ret = 0;
 
-  ret = pf_xdp_umem_configure(handle);
+  ret = pfring_mod_af_xdp_umem_configure(handle);
 
   if (ret != 0)
     return -ENOMEM;
@@ -664,7 +652,7 @@ static int pf_xdp_xsk_configure(pfring *ring) {
     }
   }
 
-  ret = pf_xdp_refill_queue(handle, fq_bufs, reserve_size);
+  ret = pfring_mod_af_xdp_refill_queue(handle, fq_bufs, reserve_size);
 
   if (ret) {
     xsk_socket__delete(rxq->xsk);
@@ -683,7 +671,7 @@ err:
 
 /* **************************************************** */
 
-static void pf_xdp_dev_change_flags(char *if_name, u_int32_t flags, u_int32_t mask) {
+static void pfring_mod_af_xdp_dev_change_flags(char *if_name, u_int32_t flags, u_int32_t mask) {
   struct ifreq ifr;
   int s;
 
@@ -707,14 +695,14 @@ static void pf_xdp_dev_change_flags(char *if_name, u_int32_t flags, u_int32_t ma
 
 /* **************************************************** */
 
-static void af_xdp_dev_promiscuous_enable(char *if_name) {
-  pf_xdp_dev_change_flags(if_name, IFF_PROMISC, ~0);
+static void pfring_mod_af_xdp_dev_promiscuous_enable(char *if_name) {
+  pfring_mod_af_xdp_dev_change_flags(if_name, IFF_PROMISC, ~0);
 }
 
 /* **************************************************** */
 
-static void pf_xdp_dev_promiscuous_disable(char *if_name) {
-  pf_xdp_dev_change_flags(if_name, 0, ~IFF_PROMISC);
+static void pfring_mod_af_xdp_dev_promiscuous_disable(char *if_name) {
+  pfring_mod_af_xdp_dev_change_flags(if_name, 0, ~IFF_PROMISC);
 }
 
 /* **************************************************** */
@@ -802,10 +790,16 @@ void pfring_mod_af_xdp_close(pfring *ring) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
 
   if (ring->promisc)
-    pf_xdp_dev_promiscuous_disable(ring->device_name);
+    pfring_mod_af_xdp_dev_promiscuous_disable(ring->device_name);
 
   if (handle) {
-    pf_xdp_dev_close(handle);
+    struct pf_xdp_xsk_umem_info *umem = &handle->umem;
+
+    xsk_socket__delete(handle->rx_queue.xsk);
+
+    (void)xsk_umem__delete(umem->umem);
+
+    pfring_mod_af_xdp_remove_xdp_program(handle);
 
     pfring_zc_destroy_cluster(handle->zc);
 
@@ -946,10 +940,10 @@ int pfring_mod_af_xdp_open(pfring *ring) {
    * Note: doing this for the first queue only (this assumes
    * that the application is opening queues in order) */
   if (handle->queue_idx == 0)
-    pf_xdp_remove_xdp_program(handle);
+    pfring_mod_af_xdp_remove_xdp_program(handle);
 #endif
 
-  if (pf_xdp_xsk_configure(ring)) {
+  if (pfring_mod_af_xdp_xsk_configure(ring)) {
     fprintf(stderr, "Failed to configure xdp socket\n");
     goto free_handle;
   }
@@ -964,7 +958,7 @@ int pfring_mod_af_xdp_open(pfring *ring) {
   /* Enable promisc */
 
   if (ring->promisc)
-    af_xdp_dev_promiscuous_enable(ring->device_name);  
+    pfring_mod_af_xdp_dev_promiscuous_enable(ring->device_name);  
 
   errno = 0;
 
