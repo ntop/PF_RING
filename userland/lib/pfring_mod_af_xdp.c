@@ -924,7 +924,7 @@ int pfring_mod_af_xdp_open(pfring *ring) {
   /* Create ZC cluster */
 
   handle->zc = pfring_zc_create_cluster(
-    1000 + handle->if_index, /* Cluster ID */
+    (1 << 10) + (handle->if_index << 6) + handle->queue_idx, /* Encoded Cluster ID */
     AF_XDP_DEV_FRAME_SIZE,
     0, 
     (2 * AF_XDP_DEV_NUM_BUFFERS) + 2,
@@ -941,11 +941,13 @@ int pfring_mod_af_xdp_open(pfring *ring) {
 
   /* Setup queues */
 
+#if 0
   /* Cleanup XDP in case we didn't shutdown gracefully.. 
    * Note: doing this for the first queue only (this assumes
    * that the application is opening queues in order) */
   if (handle->queue_idx == 0)
     pf_xdp_remove_xdp_program(handle);
+#endif
 
   if (pf_xdp_xsk_configure(ring)) {
     fprintf(stderr, "Failed to configure xdp socket\n");
