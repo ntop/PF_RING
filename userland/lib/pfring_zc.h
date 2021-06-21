@@ -194,6 +194,17 @@ pfring_zc_pkt_buff_push(
   u_int16_t len
 );
 
+/**
+ * Remove data from the start of a buffer.
+ * @param pkt_handle The buffer handle.
+ * @param len The number of bytes to remove.
+ */
+void
+pfring_zc_pkt_buff_pull_only(
+  pfring_zc_pkt_buff *pkt_handle,
+  u_int16_t len
+);
+
 /* **************************************************************************************** */
 
 /**
