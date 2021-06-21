@@ -35,8 +35,10 @@
 #include "pfring_mod_pcap.h"
 
 #ifdef HAVE_AF_XDP
+#ifdef HAVE_PF_RING_ZC
 /* AF_XDP */
 #include "pfring_mod_af_xdp.h"
+#endif
 #endif
 
 #ifdef HAVE_NT
@@ -121,11 +123,13 @@ static pfring_module_info pfring_module_list[] = {
   },
 
 #ifdef HAVE_AF_XDP
+#ifdef HAVE_PF_RING_ZC
   {
     .name = "xdp",
     .open = pfring_mod_af_xdp_open,
     .findalldevs = NULL
   },
+#endif
 #endif
 
 #ifdef HAVE_DAG

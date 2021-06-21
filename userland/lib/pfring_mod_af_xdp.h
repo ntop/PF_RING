@@ -14,6 +14,8 @@
 #ifndef _PFRING_MOD_AF_XDP_H_
 #define _PFRING_MOD_AF_XDP_H_
 
+#ifdef HAVE_PF_RING_ZC
+
 int pfring_mod_af_xdp_open(pfring *ring);
 void pfring_mod_af_xdp_close(pfring *ring);
 int pfring_mod_af_xdp_stats(pfring *ring, pfring_stat *stats);
@@ -28,5 +30,7 @@ int pfring_mod_af_xdp_enable_ring(pfring *ring);
 int pfring_mod_af_xdp_get_bound_device_address(pfring *ring, u_char mac_address[6]);
 int pfring_mod_af_xdp_get_bound_device_ifindex(pfring *ring, int *if_index);
 u_int8_t pfring_mod_af_xdp_get_num_rx_channels(pfring *ring);
+
+#endif /* HAVE_PF_RING_ZC */
 
 #endif /* _PFRING_MOD_AF_XDP_H_ */

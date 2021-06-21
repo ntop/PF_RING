@@ -11,6 +11,8 @@
  *
  */
 
+#ifdef HAVE_PF_RING_ZC
+
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/time.h>
@@ -45,28 +47,18 @@
 #include "pfring_utils.h"
 #include "pfring_hw_filtering.h"
 #include "pfring_mod.h"
+#include "pfring_zc.h"
 #include "pfring_mod_af_xdp.h"
 
 #define AF_XDP_DEV_MAX_QUEUES      16
 #define AF_XDP_DEV_NUM_BUFFERS     4096
 #define AF_XDP_DEV_NUM_DESC        XSK_RING_CONS__DEFAULT_NUM_DESCS
-#define AF_XDP_DEV_FRAME_SIZE      XSK_UMEM__DEFAULT_FRAME_SIZE
+#define AF_XDP_DEV_FRAME_SIZE      2048 /* XSK_UMEM__DEFAULT_FRAME_SIZE */
 #define AF_XDP_DEV_DATA_HEADROOM   0
 #define AF_XDP_DEV_RX_BATCH_SIZE   32
-#define AF_XDP_DEV_TX_BATCH_SIZE   32
-
-struct pf_xdp_buff_queue {
-  u_int64_t num_items;
-  u_int64_t head;
-  u_int64_t tail;
-  void **items;
-};
 
 struct pf_xdp_xsk_umem_info {
-  struct xsk_ring_prod fq;
-  struct xsk_ring_cons cq;
   struct xsk_umem *umem;
-  struct pf_xdp_buff_queue *buff_q;
   void *buffer;
 };
 
@@ -77,135 +69,66 @@ struct pf_xdp_rx_stats {
 
 struct pf_xdp_tx_stats {
   u_int64_t tx_pkts;
-  u_int64_t err_pkts;
   u_int64_t tx_bytes;
-};
-
-struct pf_xdp_pkt {
-  void *buf;
-  int len;
+  u_int64_t errors;
 };
 
 struct pf_xdp_rx_queue {
   struct xsk_ring_cons rx;
   struct xsk_socket *xsk;
+
+  pfring_zc_pkt_buff *buffer_in_use;
+
   struct pf_xdp_rx_stats stats;
-  u_int16_t queue_idx;
+
+  struct xsk_ring_prod fq;
+  struct xsk_ring_cons cq;
+
+  struct pollfd fds[1];
 };
 
 struct pf_xdp_tx_queue {
   struct xsk_ring_prod tx;
-
-  struct xsk_socket *xsk;
   struct pf_xdp_tx_stats stats;
-  u_int16_t queue_idx;
 };
 
 struct pf_xdp_handle {
   int if_index;
   u_int16_t queue_idx;
   struct ether_addr eth_addr;
-  struct pf_xdp_xsk_umem_info *umem;
+  struct pf_xdp_xsk_umem_info umem;
 
   struct pf_xdp_rx_queue rx_queue;
   struct pf_xdp_tx_queue tx_queue;
+
+  pfring_zc_cluster *zc;
 };
 
 /* **************************************************** */
 
-static struct pf_xdp_buff_queue *pf_xdp_buff_q_create(u_int64_t num_items) {
-  struct pf_xdp_buff_queue *buff_q;
-
-  buff_q = calloc(1, sizeof(struct pf_xdp_buff_queue));
-
-  if (buff_q == NULL) 
-    return NULL;
-
-  buff_q->items = calloc(num_items, sizeof(void *));
-
-  if (buff_q->items == NULL) {
-    free(buff_q);
-    return NULL;
-  }
-
-  buff_q->tail = num_items - 1;
-  buff_q->head = 0;
-  buff_q->num_items = num_items;
-
-  return buff_q;
-}
-
-/* **************************************************** */
-
-static void pf_xdp_buff_q_free(struct pf_xdp_buff_queue *buff_q) {
-  free(buff_q->items);
-  free(buff_q);
-}
-
-/* **************************************************** */
-
-static inline int pf_xdp_buff_q_dequeue(struct pf_xdp_buff_queue *buff_q, void **item) {
-  u_int32_t next_tail;
-
-  next_tail = (buff_q->tail + 1);
-  if (next_tail == buff_q->num_items) 
-    next_tail = 0;
-
-  if (next_tail != buff_q->head) {
-    *item = buff_q->items[next_tail];
-    buff_q->tail = next_tail;
-    return 0;
-  }
-
-  return -1;
-}
-
-/* **************************************************** */
-
-static inline int pf_xdp_buff_q_enqueue(struct pf_xdp_buff_queue *buff_q, void *item) {
-  u_int32_t next_head;
-
-  next_head = (buff_q->head + 1);
-  if (next_head == buff_q->num_items)
-    next_head = 0;
-
-  if (buff_q->tail != next_head) {
-    buff_q->items[buff_q->head] = item;
-    buff_q->head = next_head;
-    return 0;
-  }
-
-  return -1;
-}
-
-/* **************************************************** */
-
-static inline int pf_xdp_refill_queue(struct pf_xdp_xsk_umem_info *umem, u_int16_t reserve_size) {
-  struct xsk_ring_prod *fq = &umem->fq;
-  u_int32_t provided = 0;
-  u_int32_t idx;
-  u_int16_t i;
+static inline int pf_xdp_refill_queue(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **fq_bufs, u_int16_t reserve_size) {
+  struct pf_xdp_xsk_umem_info *umem = &handle->umem;
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
+  struct xsk_ring_prod *fq = &rxq->fq;
+  u_int32_t i, idx;
 
   if (unlikely(!xsk_ring_prod__reserve(fq, reserve_size, &idx))) {
-    printf("Failed to reserve enough fq descs.\n");
+    for (i = 0; i < reserve_size; i++)
+      pfring_zc_release_packet_handle(handle->zc, fq_bufs[i]);
     return -1;
   }
 
   for (i = 0; i < reserve_size; i++) {
+    u_char *pkt_data = pfring_zc_pkt_buff_data_from_cluster(fq_bufs[i], handle->zc);
     __u64 *fq_addr;
-    void *addr;
-
-    /* FIXX what if we fail dequeueing reserve_size buffers reserved with xsk_ring_prod__reserve? */
-    if (pf_xdp_buff_q_dequeue(umem->buff_q, &addr) != 0)
-      break;
+    u_int64_t rel_addr;
 
     fq_addr = xsk_ring_prod__fill_addr(fq, idx++);
-    *fq_addr = (u_int64_t) addr;
-
-    provided++;
+    rel_addr = (uint64_t) pkt_data - (uint64_t) umem->buffer;
+    *fq_addr = (u_int64_t) rel_addr;
   }
 
-  xsk_ring_prod__submit(fq, provided);
+  xsk_ring_prod__submit(fq, reserve_size);
 
   return 0;
 }
@@ -231,84 +154,118 @@ int pfring_mod_af_xdp_get_selectable_fd(pfring *ring) {
 
 int pfring_mod_af_xdp_poll(pfring *ring, u_int wait_duration) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
-  struct pollfd fds[1];
-  int ret, timeout, nfds = 1;
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
+  int ret;
 
-  memset(fds, 0, sizeof(fds));
-
-  fds[0].fd = xsk_socket__fd(handle->rx_queue.xsk);
-  fds[0].events = POLLIN;
-  timeout = wait_duration;
-
-  ret = poll(fds, nfds, timeout);
+  ret = poll(&rxq->fds[0], 1, wait_duration);
 
   return ret;
 }
 
 /* **************************************************** */
 
-static u_int16_t pfring_mod_af_xdp_recv_multi(struct pf_xdp_handle *handle, struct pf_xdp_pkt *pkts, u_int16_t nb_pkts, int wait) {
+static u_int16_t pfring_mod_af_xdp_recv_burst(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **pkts, u_int16_t nb_pkts, int wait) {
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct xsk_ring_cons *rx = &rxq->rx;
-  struct pf_xdp_xsk_umem_info *umem = handle->umem;
-  struct xsk_ring_prod *fq = &umem->fq;
+  struct xsk_ring_prod *fq = &rxq->fq;
+  struct pf_xdp_xsk_umem_info *umem = &handle->umem;
+  pfring_zc_pkt_buff *fq_bufs[AF_XDP_DEV_RX_BATCH_SIZE];
   const struct xdp_desc *desc;
-  u_int32_t free_thresh = fq->size >> 1;
+  u_char *pkt_data;
+  uint64_t addr;
+  uint32_t len;
+  uint64_t offset;
   u_int32_t idx_rx = 0;
   u_int64_t rx_bytes = 0;
-  int n, i;
+  int i;
 
   nb_pkts = min(nb_pkts, AF_XDP_DEV_RX_BATCH_SIZE);
 
-  n = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
+  nb_pkts = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
 
-  if (n == 0) 
+  if (nb_pkts == 0) {
+    if (xsk_ring_prod__needs_wakeup(fq))
+      poll(&rxq->fds[0], 1, 1000);
+
     return 0;
-
-  if (xsk_prod_nb_free(fq, free_thresh) >= free_thresh)
-    pf_xdp_refill_queue(umem, AF_XDP_DEV_RX_BATCH_SIZE);
-
-  for (i = 0; i < n; i++) {
-    desc = xsk_ring_cons__rx_desc(rx, idx_rx++);
-
-    pkts[i].buf = xsk_umem__get_data(umem->buffer, desc->addr);
-    pkts[i].len = desc->len;
-
-    rx_bytes += desc->len;
-
-    pf_xdp_buff_q_enqueue(umem->buff_q, (void *) desc->addr);
   }
 
-  xsk_ring_cons__release(rx, n);
+  /* Allocating buffers to refill the queue */
+  for (i = 0; i < nb_pkts; i++) {
+    fq_bufs[i] = pfring_zc_get_packet_handle(handle->zc);
 
-  rxq->stats.rx_pkts += n;
+    if (fq_bufs[i] == NULL) {
+      if (i == 0) {
+        printf("Failure allocating enough buffers\n");
+        /* Put back cached_cons, increased by xsk_ring_cons__peek */
+        rx->cached_cons -= nb_pkts;
+        return 0;
+      } else {
+        rx->cached_cons -= nb_pkts - i;
+        nb_pkts = i;
+      }
+    }
+  }
+
+  /* Receive buffers */
+  for (i = 0; i < nb_pkts; i++) {
+    desc = xsk_ring_cons__rx_desc(rx, idx_rx++);
+    addr = desc->addr;
+    len = desc->len;
+
+    offset = xsk_umem__extract_offset(addr);
+    addr = xsk_umem__extract_addr(addr);
+
+    pkt_data = xsk_umem__get_data(umem->buffer, addr);
+    pkts[i] = (pfring_zc_pkt_buff *) pfring_zc_pkt_data_buff(pkt_data, handle->zc);
+    pkts[i]->len = len + offset;
+
+    pfring_zc_pkt_buff_pull_only(pkts[i], offset);
+
+    rx_bytes += len;
+  }
+
+  xsk_ring_cons__release(rx, nb_pkts);
+  pf_xdp_refill_queue(handle, fq_bufs, nb_pkts);
+
+  rxq->stats.rx_pkts += nb_pkts;
   rxq->stats.rx_bytes += rx_bytes;
 
-  return n;
+  return nb_pkts;
 }
 
 /* **************************************************** */
 
 int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
-  struct pf_xdp_pkt p[1];
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
+  pfring_zc_pkt_buff *p[1];
+  u_char *pkt_data;
   u_int32_t duration = 1;
 
   if (unlikely(ring->reentrant)) pthread_rwlock_wrlock(&ring->rx_lock);
 
  redo_recv:
-  if (likely(pfring_mod_af_xdp_recv_multi(handle, p, 1, wait_for_incoming_packet) > 0)) {
+
+  if (rxq->buffer_in_use) {
+    pfring_zc_release_packet_handle(handle->zc, rxq->buffer_in_use);
+    rxq->buffer_in_use = NULL;
+  }
+
+  if (likely(pfring_mod_af_xdp_recv_burst(handle, p, 1, wait_for_incoming_packet) > 0)) {
+
+    rxq->buffer_in_use = p[0];
 
     if (unlikely(ring->sampling_rate > 1)) {
       if (likely(ring->sampling_counter > 0)) {
         ring->sampling_counter--;
-	goto redo_recv;
+        goto redo_recv;
       } else {
         ring->sampling_counter = ring->sampling_rate-1;
       }
     }
 
-    hdr->len = hdr->caplen = p[0].len;
+    hdr->len = hdr->caplen = p[0]->len;
     hdr->extended_hdr.pkt_hash = 0;
     hdr->extended_hdr.rx_direction = 1;
     hdr->extended_hdr.timestamp_ns = 0;
@@ -321,13 +278,15 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
       hdr->ts.tv_usec = 0;
     }
 
+    pkt_data = pfring_zc_pkt_buff_data_from_cluster(p[0], handle->zc);
+
     if (likely(buffer_len == 0)) {
-      *buffer = p[0].buf;
+      *buffer = pkt_data;
     } else {
-      if (buffer_len < p[0].len)
+      if (buffer_len < p[0]->len)
         hdr->caplen = buffer_len;
 
-      memcpy(*buffer, p[0].buf, hdr->caplen);
+      memcpy(*buffer, pkt_data, hdr->caplen);
       memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
       pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
     }
@@ -367,17 +326,28 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
 
 /* **************************************************** */
 
-static void pf_xdp_cleanup_tx_cq(struct pf_xdp_xsk_umem_info *umem, int size) {
-  struct xsk_ring_cons *cq = &umem->cq;
-  u_int32_t idx_cq = 0;
-  u_int64_t addr;
-  int i, n;
+static void pf_xdp_cleanup_tx_cq(struct pf_xdp_handle *handle, int size, struct xsk_ring_cons *cq) {
+  struct pf_xdp_xsk_umem_info *umem = &handle->umem;
+  size_t i, n;
+  uint32_t idx_cq = 0;
 
   n = xsk_ring_cons__peek(cq, size, &idx_cq);
 
   for (i = 0; i < n; i++) {
+    uint64_t addr;
+    pfring_zc_pkt_buff *pkt;
+    u_char *pkt_data;
+
     addr = *xsk_ring_cons__comp_addr(cq, idx_cq++);
-    pf_xdp_buff_q_enqueue(umem->buff_q, (void *) addr);
+    addr = xsk_umem__extract_addr(addr);
+ 
+    pkt_data = (u_char *) xsk_umem__get_data(umem->buffer, addr);
+    pkt = pfring_zc_pkt_data_buff(pkt_data, handle->zc);
+
+    if (pkt) /* safety check */
+      pfring_zc_release_packet_handle(handle->zc, pkt);
+    else
+      fprintf(stderr, "Unable to find packet handle to release\n");
   }
 
   xsk_ring_cons__release(cq, n);
@@ -385,91 +355,94 @@ static void pf_xdp_cleanup_tx_cq(struct pf_xdp_xsk_umem_info *umem, int size) {
 
 /* **************************************************** */
 
-static void pf_xdp_flush_tx_q(struct pf_xdp_handle *handle) {
-  struct pf_xdp_tx_queue *txq = &handle->tx_queue;
-  struct pf_xdp_xsk_umem_info *umem = handle->umem;
+static void pf_xdp_flush_tx_q(struct pf_xdp_handle *handle, struct xsk_ring_cons *cq) {
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
 
-  while (send(xsk_socket__fd(txq->xsk), NULL, 0, MSG_DONTWAIT) < 0) {
+  pf_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
 
+  while (send(xsk_socket__fd(rxq->xsk), NULL, 0, MSG_DONTWAIT) < 0) {
     if (errno != EBUSY && errno != EAGAIN && errno != EINTR)
       break;
 
+    /* pull from completion queue to leave more space */
     if (errno == EAGAIN)
-      pf_xdp_cleanup_tx_cq(umem, AF_XDP_DEV_TX_BATCH_SIZE);
+      pf_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
   }
-
-  pf_xdp_cleanup_tx_cq(umem, AF_XDP_DEV_TX_BATCH_SIZE);
 }
 
 /* **************************************************** */
 
-static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, struct pf_xdp_pkt *pkts, u_int16_t nb_pkts) {
+static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **pkts, u_int16_t nb_pkts) {
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct pf_xdp_tx_queue *txq = &handle->tx_queue;
-  struct pf_xdp_xsk_umem_info *umem = handle->umem;
-  struct pf_xdp_pkt *pkt_i;
-  void *addrs[AF_XDP_DEV_TX_BATCH_SIZE];
-  u_int64_t tx_bytes = 0;
-  u_int32_t idx_tx;
+  struct pf_xdp_xsk_umem_info *umem = &handle->umem;
+  pfring_zc_pkt_buff *pkt;
+  unsigned long tx_bytes = 0;
   int i;
+  uint32_t idx_tx;
+  uint16_t count = 0;
+  struct xdp_desc *desc;
+  uint64_t addr, offset;
+  struct xsk_ring_cons *cq = &rxq->cq;
+  uint32_t free_thresh = cq->size >> 1;
+  u_char *pkt_data;
 
-  nb_pkts = min(nb_pkts, AF_XDP_DEV_TX_BATCH_SIZE);
-
-  pf_xdp_cleanup_tx_cq(umem, nb_pkts);
+  if (xsk_cons_nb_avail(cq, free_thresh) >= free_thresh)
+    pf_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
 
   for (i = 0; i < nb_pkts; i++) {
-    void *addr;
+    pkt = pkts[i];
+    
+    pkt_data = pfring_zc_pkt_buff_data_from_cluster(pkt, handle->zc);
 
-    if (pf_xdp_buff_q_dequeue(umem->buff_q, &addr) != 0) {
-      nb_pkts = i;
-      break;
+    if (!xsk_ring_prod__reserve(&txq->tx, 1, &idx_tx)) {
+      pf_xdp_flush_tx_q(handle, cq);
+      if (!xsk_ring_prod__reserve(&txq->tx, 1, &idx_tx))
+        goto out;
     }
 
-    addrs[i] = addr;
+    desc = xsk_ring_prod__tx_desc(&txq->tx, idx_tx);
+    desc->len = pkt->len;
+
+    addr = (uint64_t) pkt_data - PF_RING_ZC_BUFFER_HEAD_ROOM - (uint64_t) umem->buffer;
+
+    offset = PF_RING_ZC_BUFFER_HEAD_ROOM;
+    offset = offset << XSK_UNALIGNED_BUF_OFFSET_SHIFT;
+
+    desc->addr = addr | offset;
+
+    tx_bytes += pkt->len;
+
+    count++;
   }
 
-  if (nb_pkts == 0)
-    return 0;
+  pf_xdp_flush_tx_q(handle, cq);
 
-  if (xsk_ring_prod__reserve(&txq->tx, nb_pkts, &idx_tx) != nb_pkts) {
-    pf_xdp_flush_tx_q(handle);
-    for (i = 0; i < nb_pkts; i++)
-      pf_xdp_buff_q_enqueue(umem->buff_q, addrs[i]);
-    return 0;
-  }
+out:
+  xsk_ring_prod__submit(&txq->tx, count);
 
-  for (i = 0; i < nb_pkts; i++) {
-    struct xdp_desc *desc;
-    void *pkt;
-
-    desc = xsk_ring_prod__tx_desc(&txq->tx, idx_tx + i);
-    pkt_i = &pkts[i];
-
-    desc->addr = (u_int64_t)addrs[i];
-    desc->len = pkt_i->len;
-    pkt = xsk_umem__get_data(umem->buffer, desc->addr);
-    memcpy(pkt, pkt_i->buf, desc->len);
-
-    tx_bytes += pkt_i->len;
-  }
-
-  xsk_ring_prod__submit(&txq->tx, nb_pkts);
-
-  pf_xdp_flush_tx_q(handle);
-
-  txq->stats.tx_pkts += nb_pkts;
+  txq->stats.tx_pkts += count;
   txq->stats.tx_bytes += tx_bytes;
+  txq->stats.errors += nb_pkts - count;
 
-  return nb_pkts;
+  return count;
 }
 
 /* **************************************************** */
 
 int pfring_mod_af_xdp_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flush_packet) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
-  struct pf_xdp_pkt p[1];
+  pfring_zc_pkt_buff *p[1];
+  u_char *pkt_data;
 
-  p[0].buf = pkt;
-  p[0].len = pkt_len;
+  p[0] = pfring_zc_get_packet_handle(handle->zc);
+
+  if (!p[0])
+    return -1;
+
+  pkt_data = pfring_zc_pkt_buff_data_from_cluster(p[0], handle->zc);
+  memcpy(pkt_data, pkt, pkt_len);
+  p[0]->len = pkt_len;
 
   if (pfring_mod_af_xdp_send_burst(handle, p, 1) > 0) 
     return pkt_len;
@@ -482,18 +455,16 @@ int pfring_mod_af_xdp_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flus
 int pfring_mod_af_xdp_stats(pfring *ring, pfring_stat *stats) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
   struct xdp_statistics xdp_stats;
-  struct pf_xdp_rx_queue *rxq;
-  socklen_t slen;
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
+  socklen_t optlen = sizeof(struct xdp_statistics);
   int ret;
 
   memset(stats, 0, sizeof(*stats));
 
-  slen = sizeof(struct xdp_statistics);
-  rxq = &handle->rx_queue;
   stats->recv += handle->rx_queue.stats.rx_pkts;
   stats->drop = 0;
 
-  ret = getsockopt(xsk_socket__fd(rxq->xsk), SOL_XDP, XDP_STATISTICS, &xdp_stats, &slen);
+  ret = getsockopt(xsk_socket__fd(rxq->xsk), SOL_XDP, XDP_STATISTICS, &xdp_stats, &optlen);
 
   if (ret == 0)
     stats->drop += xdp_stats.rx_dropped;
@@ -502,7 +473,7 @@ int pfring_mod_af_xdp_stats(pfring *ring, pfring_stat *stats) {
   handle->rx_queue.stats.rx_bytes;
   handle->tx_queue.stats.tx_pkts;
   handle->tx_queue.stats.tx_bytes;
-  handle->tx_queue.stats.err_pkts;
+  handle->tx_queue.stats.errors;
   */
 
   return 0;
@@ -523,99 +494,63 @@ static void pf_xdp_remove_xdp_program(struct pf_xdp_handle *handle) {
 
 /* **************************************************** */
 
-static void pf_xdp_umem_destroy(struct pf_xdp_xsk_umem_info *umem) {
-  pf_xdp_buff_q_free(umem->buff_q);
-
-  free(umem->buffer);
-  free(umem);
-}
-
-/* **************************************************** */
-
 static void pf_xdp_dev_close(struct pf_xdp_handle *handle) {
+  struct pf_xdp_xsk_umem_info *umem = &handle->umem;
+
   xsk_socket__delete(handle->rx_queue.xsk);
 
-  (void)xsk_umem__delete(handle->umem->umem);
-  pf_xdp_umem_destroy(handle->umem);
+  (void)xsk_umem__delete(umem->umem);
 
   pf_xdp_remove_xdp_program(handle);
 }
 
 /* **************************************************** */
 
-static struct pf_xdp_xsk_umem_info *pf_xdp_umem_configure(struct pf_xdp_handle *handle) {
-  struct rlimit r = {RLIM_INFINITY, RLIM_INFINITY};
-  struct pf_xdp_xsk_umem_info *umem;
+static int pf_xdp_umem_configure(struct pf_xdp_handle *handle) {
+  struct pf_xdp_xsk_umem_info *umem = &handle->umem;
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
+  pfring_zc_cluster_mem_info mem_info;
   struct xsk_umem_config usr_config = {
-    .fill_size = AF_XDP_DEV_NUM_DESC,
+    .fill_size = AF_XDP_DEV_NUM_DESC * 2,
     .comp_size = AF_XDP_DEV_NUM_DESC,
     .frame_size = AF_XDP_DEV_FRAME_SIZE,
-    .frame_headroom = AF_XDP_DEV_DATA_HEADROOM };
+    .frame_headroom = AF_XDP_DEV_DATA_HEADROOM,
+    .flags = XDP_UMEM_UNALIGNED_CHUNK_FLAG
+  };
   int ret;
-  u_int64_t i;
 
-  umem = calloc(1, sizeof(*umem));
+  pfring_zc_get_memory_info(handle->zc, &mem_info);
 
-  if (umem == NULL) {
-    fprintf(stderr, "Failed to allocate umem info");
-    return NULL;
-  }
-
-  umem->buff_q = pf_xdp_buff_q_create(AF_XDP_DEV_NUM_BUFFERS);
-
-  if (umem->buff_q == NULL) {
-    fprintf(stderr, "Failed to create buffers queue\n");
-    goto err;
-  }
-
-  if (setrlimit(RLIMIT_MEMLOCK, &r)) {
-    fprintf(stderr, "Error in setrlimit(RLIMIT_MEMLOCK): %s\n",
-      strerror(errno));
-    goto err;
-  }
-
-  ret = posix_memalign(&umem->buffer, getpagesize(), /* PAGE_SIZE aligned */
-           AF_XDP_DEV_NUM_BUFFERS * AF_XDP_DEV_FRAME_SIZE);
+  ret = xsk_umem__create(&umem->umem, mem_info.base_addr, mem_info.size, &rxq->fq, &rxq->cq, &usr_config);
 
   if (ret) {
-    fprintf(stderr, "Error allocating memory: %s\n",
-      strerror(errno));
+    fprintf(stderr, "Failure creating umem");
     goto err;
   }
 
-  for (i = 0; i < AF_XDP_DEV_NUM_BUFFERS; i++)
-    pf_xdp_buff_q_enqueue(umem->buff_q, (void *)(i * AF_XDP_DEV_FRAME_SIZE + AF_XDP_DEV_DATA_HEADROOM));
+  umem->buffer = mem_info.base_addr;
 
-  ret = xsk_umem__create(&umem->umem, umem->buffer,
-             AF_XDP_DEV_NUM_BUFFERS * AF_XDP_DEV_FRAME_SIZE,
-             &umem->fq, &umem->cq,
-             &usr_config);
-
-  if (ret) {
-    fprintf(stderr, "Failed to create umem\n");
-    goto err;
-  }
-
-  return umem;
+  return 0;
 
 err:
-  pf_xdp_umem_destroy(umem);
-  return NULL;
+  return -1;
 }
 
 /* **************************************************** */
 
-static int pf_xdp_xsk_configure(pfring *ring, int ring_size) {
+static int pf_xdp_xsk_configure(pfring *ring) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct pf_xdp_tx_queue *txq = &handle->tx_queue;
   struct xsk_socket_config cfg;
-  int ret = 0;
-  int reserve_size;
+  int ring_size = AF_XDP_DEV_NUM_BUFFERS;
+  int reserve_size = AF_XDP_DEV_NUM_DESC;
+  pfring_zc_pkt_buff *fq_bufs[reserve_size];
+  int i, ret = 0;
 
-  handle->umem = pf_xdp_umem_configure(handle);
+  ret = pf_xdp_umem_configure(handle);
 
-  if (handle->umem == NULL)
+  if (ret != 0)
     return -ENOMEM;
 
   cfg.rx_size = ring_size;
@@ -623,12 +558,16 @@ static int pf_xdp_xsk_configure(pfring *ring, int ring_size) {
   cfg.libbpf_flags = 0;
   cfg.xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST;
   cfg.bind_flags = 0;
+#if defined(XDP_USE_NEED_WAKEUP)
+  cfg.bind_flags |= XDP_USE_NEED_WAKEUP;
+#endif
 
   //fprintf(stderr, "Creating xsk socket on dev %s queue %u\n", 
   //  ring->device_name, handle->queue_idx);
 
   ret = xsk_socket__create(&rxq->xsk, ring->device_name, 
-    handle->queue_idx, handle->umem->umem, &rxq->rx, &txq->tx, &cfg);
+    handle->queue_idx, handle->umem.umem,
+    &rxq->rx, &txq->tx, &cfg);
 
   if (ret) {
     fprintf(stderr, "Failed to create xsk socket on dev %s queue %u: %s (%d)\n", 
@@ -636,11 +575,16 @@ static int pf_xdp_xsk_configure(pfring *ring, int ring_size) {
     goto err;
   }
 
-  txq->xsk = rxq->xsk;
+  for (i = 0; i < reserve_size; i++) {
+    fq_bufs[i] = pfring_zc_get_packet_handle(handle->zc);
+    
+    if (fq_bufs[i] == NULL) {
+      fprintf(stderr, "pfring_zc_get_packet_handle error\n");
+      goto err;
+    }
+  }
 
-  reserve_size = AF_XDP_DEV_NUM_DESC/2;
-
-  ret = pf_xdp_refill_queue(handle->umem, reserve_size);
+  ret = pf_xdp_refill_queue(handle, fq_bufs, reserve_size);
 
   if (ret) {
     xsk_socket__delete(rxq->xsk);
@@ -648,38 +592,13 @@ static int pf_xdp_xsk_configure(pfring *ring, int ring_size) {
     goto err;
   }
 
+  rxq->fds[0].fd = xsk_socket__fd(rxq->xsk);
+  rxq->fds[0].events = POLLIN;
+
   return 0;
 
 err:
-  pf_xdp_umem_destroy(handle->umem);
-
   return ret;
-}
-
-/* **************************************************** */
-
-static void pf_xdp_queue_reset(struct pf_xdp_handle *handle, u_int16_t queue_idx) {
-  memset(&handle->rx_queue, 0, sizeof(struct pf_xdp_rx_queue));
-  memset(&handle->rx_queue, 0, sizeof(struct pf_xdp_tx_queue));
-  handle->rx_queue.queue_idx = queue_idx;
-  handle->tx_queue.queue_idx = queue_idx;
-}
-
-/* **************************************************** */
-
-static int pf_xdp_rx_queue_setup(pfring *ring, u_int16_t queue_id) {
-  struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
-
-  /* Cleanup XDP in case we didn't shutdown gracefully.. 
-   * Note: doing this for the first queue only (this assumes
-   * that the application is opening queues in order) */
-  if (queue_id == 0) {
-    pf_xdp_remove_xdp_program(handle);
-  }
-
-  pf_xdp_queue_reset(handle, queue_id);
-
-  return 0;
 }
 
 /* **************************************************** */
@@ -802,10 +721,14 @@ int pfring_mod_af_xdp_enable_ring(pfring *ring) {
 void pfring_mod_af_xdp_close(pfring *ring) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
 
+  if (ring->promisc)
+    pf_xdp_dev_promiscuous_disable(ring->device_name);
+
   if (handle) {
-    if (ring->promisc)
-      pf_xdp_dev_promiscuous_disable(ring->device_name);
     pf_xdp_dev_close(handle);
+
+    pfring_zc_destroy_cluster(handle->zc);
+
     free(handle);
     ring->priv_data = NULL;
   }
@@ -883,6 +806,8 @@ int pfring_mod_af_xdp_open(pfring *ring) {
 
   handle->queue_idx = channel_id;
 
+  /* Read interafce index */
+
   sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
   if (sock < 0) {
@@ -902,6 +827,8 @@ int pfring_mod_af_xdp_open(pfring *ring) {
 
   handle->if_index = ifr.ifr_ifindex;
 
+  /* Read MAC address */
+
   if (ioctl(sock, SIOCGIFHWADDR, &ifr)) {
     fprintf(stderr, "Failed to get interface address\n");
     rc = -1;
@@ -913,22 +840,45 @@ int pfring_mod_af_xdp_open(pfring *ring) {
 
   close(sock);
 
-  rc = pf_xdp_rx_queue_setup(ring, handle->queue_idx);
+  /* Create ZC cluster */
 
-  if (rc < 0) {
-    fprintf(stderr, "Failed to setup queue\n");
+  handle->zc = pfring_zc_create_cluster(
+    1000 + handle->if_index, /* Cluster ID */
+    AF_XDP_DEV_FRAME_SIZE,
+    0, 
+    (2 * AF_XDP_DEV_NUM_BUFFERS) + 2,
+    pfring_zc_numa_get_cpu_node(0 /* CPU core */),
+    NULL /* auto hugetlb mountpoint */,
+    0 
+  );
+
+  if (handle->zc == NULL) {
+    fprintf(stderr, "pfring_zc_create_cluster error [%s]\n", strerror(errno));
+    rc = -1;
+    goto close_fd;
+  }
+
+  /* Setup queues */
+
+  /* Cleanup XDP in case we didn't shutdown gracefully.. 
+   * Note: doing this for the first queue only (this assumes
+   * that the application is opening queues in order) */
+  if (handle->queue_idx == 0)
+    pf_xdp_remove_xdp_program(handle);
+
+  if (pf_xdp_xsk_configure(ring)) {
+    fprintf(stderr, "Failed to configure xdp socket\n");
     goto free_handle;
   }
 
-  if (pf_xdp_xsk_configure(ring, AF_XDP_DEV_NUM_BUFFERS)) {
-    fprintf(stderr, "Failed to configure xdp socket\n");
-    goto queue_reset;
-  }
+  /* Handle offloads */
 
   pfring_enable_hw_timestamp(ring, ring->device_name, ring->hw_ts.enable_hw_timestamp ? 1 : 0, 0);
 
   pfring_set_filtering_mode(ring, hardware_only);
   pfring_hw_ft_init(ring);
+
+  /* Enable promisc */
 
   if (ring->promisc)
     af_xdp_dev_promiscuous_enable(ring->device_name);  
@@ -936,9 +886,6 @@ int pfring_mod_af_xdp_open(pfring *ring) {
   errno = 0;
 
   return 0;
-
-queue_reset:
-  pf_xdp_queue_reset(handle, handle->queue_idx);
 
  free_handle:
   free(handle);
@@ -953,3 +900,4 @@ queue_reset:
 
 /* **************************************************** */
 
+#endif /* HAVE_PF_RING_ZC */
