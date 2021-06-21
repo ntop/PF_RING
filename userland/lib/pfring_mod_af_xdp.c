@@ -517,8 +517,9 @@ int pfring_mod_af_xdp_send(pfring *ring, char *pkt, u_int pkt_len, u_int8_t flus
 
   p[0] = pfring_zc_get_packet_handle(handle->zc);
 
-  if (!p[0])
+  if (!p[0]) {
     return -1;
+  }
 
   pkt_data = pfring_zc_pkt_buff_data_from_cluster(p[0], handle->zc);
   memcpy(pkt_data, pkt, pkt_len);
@@ -626,7 +627,7 @@ static int pfring_mod_af_xdp_xsk_configure(pfring *ring) {
   cfg.libbpf_flags = 0;
   cfg.xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST;
   cfg.bind_flags = 0;
-#if defined(XDP_USE_NEED_WAKEUP)
+#ifdef XDP_USE_NEED_WAKEUP
   cfg.bind_flags |= XDP_USE_NEED_WAKEUP;
 #endif
 
@@ -921,7 +922,7 @@ int pfring_mod_af_xdp_open(pfring *ring) {
     (1 << 10) + (handle->if_index << 6) + handle->queue_idx, /* Encoded Cluster ID */
     AF_XDP_DEV_FRAME_SIZE,
     0, 
-    (2 * AF_XDP_DEV_NUM_BUFFERS) + 2,
+    (4 * AF_XDP_DEV_NUM_BUFFERS) + AF_XDP_DEV_RX_BATCH_SIZE + 1,
     pfring_zc_numa_get_cpu_node(0 /* CPU core */),
     NULL /* auto hugetlb mountpoint */,
     0 
