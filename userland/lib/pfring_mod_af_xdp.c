@@ -77,7 +77,8 @@ struct pf_xdp_rx_queue {
   struct xsk_ring_cons rx;
   struct xsk_socket *xsk;
 
-  pfring_zc_pkt_buff *buffer_in_use;
+  pfring_zc_pkt_buff *buffers_in_use[AF_XDP_DEV_RX_BATCH_SIZE];
+  u_int32_t num_buffers_in_use;
 
   struct pf_xdp_rx_stats stats;
 
@@ -164,7 +165,7 @@ int pfring_mod_af_xdp_poll(pfring *ring, u_int wait_duration) {
 
 /* **************************************************** */
 
-static u_int16_t pfring_mod_af_xdp_recv_burst(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **pkts, u_int16_t nb_pkts, int wait) {
+static u_int16_t pfring_mod_af_xdp_recv_burst_zc(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **pkts, u_int16_t num_packets, int wait) {
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct xsk_ring_cons *rx = &rxq->rx;
   struct xsk_ring_prod *fq = &rxq->fq;
@@ -179,11 +180,11 @@ static u_int16_t pfring_mod_af_xdp_recv_burst(struct pf_xdp_handle *handle, pfri
   u_int64_t rx_bytes = 0;
   int i;
 
-  nb_pkts = min(nb_pkts, AF_XDP_DEV_RX_BATCH_SIZE);
+  num_packets = min(num_packets, AF_XDP_DEV_RX_BATCH_SIZE);
 
-  nb_pkts = xsk_ring_cons__peek(rx, nb_pkts, &idx_rx);
+  num_packets = xsk_ring_cons__peek(rx, num_packets, &idx_rx);
 
-  if (nb_pkts == 0) {
+  if (num_packets == 0) {
     if (xsk_ring_prod__needs_wakeup(fq))
       poll(&rxq->fds[0], 1, 1000);
 
@@ -191,24 +192,24 @@ static u_int16_t pfring_mod_af_xdp_recv_burst(struct pf_xdp_handle *handle, pfri
   }
 
   /* Allocating buffers to refill the queue */
-  for (i = 0; i < nb_pkts; i++) {
+  for (i = 0; i < num_packets; i++) {
     fq_bufs[i] = pfring_zc_get_packet_handle(handle->zc);
 
     if (fq_bufs[i] == NULL) {
       if (i == 0) {
         printf("Failure allocating enough buffers\n");
         /* Put back cached_cons, increased by xsk_ring_cons__peek */
-        rx->cached_cons -= nb_pkts;
+        rx->cached_cons -= num_packets;
         return 0;
       } else {
-        rx->cached_cons -= nb_pkts - i;
-        nb_pkts = i;
+        rx->cached_cons -= num_packets - i;
+        num_packets = i;
       }
     }
   }
 
   /* Receive buffers */
-  for (i = 0; i < nb_pkts; i++) {
+  for (i = 0; i < num_packets; i++) {
     desc = xsk_ring_cons__rx_desc(rx, idx_rx++);
     addr = desc->addr;
     len = desc->len;
@@ -225,13 +226,95 @@ static u_int16_t pfring_mod_af_xdp_recv_burst(struct pf_xdp_handle *handle, pfri
     rx_bytes += len;
   }
 
-  xsk_ring_cons__release(rx, nb_pkts);
-  pf_xdp_refill_queue(handle, fq_bufs, nb_pkts);
+  xsk_ring_cons__release(rx, num_packets);
+  pf_xdp_refill_queue(handle, fq_bufs, num_packets);
 
-  rxq->stats.rx_pkts += nb_pkts;
+  rxq->stats.rx_pkts += num_packets;
   rxq->stats.rx_bytes += rx_bytes;
 
-  return nb_pkts;
+  return num_packets;
+}
+
+/* **************************************************** */
+
+int pfring_mod_af_xdp_recv_burst(pfring *ring, pfring_packet_info *packets, u_int8_t num_packets, u_int8_t wait_for_packets) {
+  struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
+  struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
+  u_char *pkt_data;
+  u_int32_t duration = 1;
+  u_int32_t i, j = 0;
+
+  num_packets = min(num_packets, AF_XDP_DEV_RX_BATCH_SIZE);
+
+  if (unlikely(ring->reentrant)) pthread_rwlock_wrlock(&ring->rx_lock);
+
+ redo_recv:
+
+  for (i = 0; i < rxq->num_buffers_in_use; i++)
+    pfring_zc_release_packet_handle(handle->zc, rxq->buffers_in_use[i]);
+
+  rxq->num_buffers_in_use = pfring_mod_af_xdp_recv_burst_zc(handle, rxq->buffers_in_use, num_packets, wait_for_packets);
+
+  if (likely(rxq->num_buffers_in_use) > 0) {
+    for (i = 0; i < rxq->num_buffers_in_use; i++) {
+
+      if (unlikely(ring->sampling_rate > 1)) {
+        if (likely(ring->sampling_counter > 0)) {
+          ring->sampling_counter--;
+          continue;
+        } else {
+          ring->sampling_counter = ring->sampling_rate-1;
+        }
+      }
+
+      pkt_data = pfring_zc_pkt_buff_data_from_cluster(rxq->buffers_in_use[i], handle->zc);
+      packets[j].data = pkt_data;
+
+      packets[j].len = packets[j].caplen = rxq->buffers_in_use[i]->len;
+      packets[j].hash = 0;
+      packets[j].flags = 0;
+
+      if (unlikely(ring->force_timestamp)) {
+        gettimeofday(&packets[j].ts, NULL);
+      } else {
+        /* as speed is required, we are not setting the sw time */
+        packets[j].ts.tv_sec = 0;
+        packets[j].ts.tv_usec = 0;
+      }
+
+      j++;
+    }
+
+    if (unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
+    
+    return j;
+  }
+
+  if (wait_for_packets) {
+
+    if (unlikely(ring->break_recv_loop)) {
+      if (unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
+      errno = EINTR;
+      return 0;
+    }
+      
+    if (unlikely(pfring_mod_af_xdp_poll(ring, duration) == -1 && errno != EINTR)) {
+      if (unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
+      return -1;
+    }
+
+    if (duration < ring->poll_duration) {
+      duration += 10;
+      if (unlikely(duration > ring->poll_duration)) 
+        duration = ring->poll_duration;
+    }
+
+    goto redo_recv;
+  }
+
+  if (unlikely(ring->reentrant)) pthread_rwlock_unlock(&ring->rx_lock);
+
+  return 0;
 }
 
 /* **************************************************** */
@@ -239,7 +322,6 @@ static u_int16_t pfring_mod_af_xdp_recv_burst(struct pf_xdp_handle *handle, pfri
 int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet) {
   struct pf_xdp_handle *handle = (struct pf_xdp_handle *) ring->priv_data;
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
-  pfring_zc_pkt_buff *p[1];
   u_char *pkt_data;
   u_int32_t duration = 1;
 
@@ -247,14 +329,12 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
 
  redo_recv:
 
-  if (rxq->buffer_in_use) {
-    pfring_zc_release_packet_handle(handle->zc, rxq->buffer_in_use);
-    rxq->buffer_in_use = NULL;
-  }
+  if (rxq->num_buffers_in_use > 0)
+    pfring_zc_release_packet_handle(handle->zc, rxq->buffers_in_use[0]);
 
-  if (likely(pfring_mod_af_xdp_recv_burst(handle, p, 1, wait_for_incoming_packet) > 0)) {
+  if (likely(pfring_mod_af_xdp_recv_burst_zc(handle, rxq->buffers_in_use, 1, wait_for_incoming_packet) > 0)) {
 
-    rxq->buffer_in_use = p[0];
+    rxq->num_buffers_in_use = 1;
 
     if (unlikely(ring->sampling_rate > 1)) {
       if (likely(ring->sampling_counter > 0)) {
@@ -265,7 +345,7 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
       }
     }
 
-    hdr->len = hdr->caplen = p[0]->len;
+    hdr->len = hdr->caplen = rxq->buffers_in_use[0]->len;
     hdr->extended_hdr.pkt_hash = 0;
     hdr->extended_hdr.rx_direction = 1;
     hdr->extended_hdr.timestamp_ns = 0;
@@ -278,12 +358,12 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
       hdr->ts.tv_usec = 0;
     }
 
-    pkt_data = pfring_zc_pkt_buff_data_from_cluster(p[0], handle->zc);
+    pkt_data = pfring_zc_pkt_buff_data_from_cluster(rxq->buffers_in_use[0], handle->zc);
 
     if (likely(buffer_len == 0)) {
       *buffer = pkt_data;
     } else {
-      if (buffer_len < p[0]->len)
+      if (buffer_len < rxq->buffers_in_use[0]->len)
         hdr->caplen = buffer_len;
 
       memcpy(*buffer, pkt_data, hdr->caplen);
@@ -372,7 +452,7 @@ static void pf_xdp_flush_tx_q(struct pf_xdp_handle *handle, struct xsk_ring_cons
 
 /* **************************************************** */
 
-static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **pkts, u_int16_t nb_pkts) {
+static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, pfring_zc_pkt_buff **pkts, u_int16_t num_packets) {
   struct pf_xdp_rx_queue *rxq = &handle->rx_queue;
   struct pf_xdp_tx_queue *txq = &handle->tx_queue;
   struct pf_xdp_xsk_umem_info *umem = &handle->umem;
@@ -390,7 +470,7 @@ static u_int16_t pfring_mod_af_xdp_send_burst(struct pf_xdp_handle *handle, pfri
   if (xsk_cons_nb_avail(cq, free_thresh) >= free_thresh)
     pf_xdp_cleanup_tx_cq(handle, XSK_RING_CONS__DEFAULT_NUM_DESCS, cq);
 
-  for (i = 0; i < nb_pkts; i++) {
+  for (i = 0; i < num_packets; i++) {
     pkt = pkts[i];
     
     pkt_data = pfring_zc_pkt_buff_data_from_cluster(pkt, handle->zc);
@@ -423,7 +503,7 @@ out:
 
   txq->stats.tx_pkts += count;
   txq->stats.tx_bytes += tx_bytes;
-  txq->stats.errors += nb_pkts - count;
+  txq->stats.errors += num_packets - count;
 
   return count;
 }
@@ -749,6 +829,7 @@ int pfring_mod_af_xdp_open(pfring *ring) {
   ring->close = pfring_mod_af_xdp_close;
   ring->stats = pfring_mod_af_xdp_stats;
   ring->recv  = pfring_mod_af_xdp_recv;
+  ring->recv_burst = pfring_mod_af_xdp_recv_burst;
   ring->poll = pfring_mod_af_xdp_poll;
   ring->is_pkt_available = pfring_mod_af_xdp_is_pkt_available;
   ring->send  = pfring_mod_af_xdp_send;
