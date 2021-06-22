@@ -1,25 +1,24 @@
 AF_XDP Support
 ==============
 
-PF_RING since version 7.5 includes support for AF_XDP adapters,
-this is available from source code only and should be enabled by
-default (unless the *--enabled-xdp* configure flag is specified)
-when compiling the userspace library.
+PF_RING since version 7.5 includes support for AF_XDP adapters, when compiling from source
+code this is enabled by default (unless the *--disable-xdp* configure flag is specified).
 
 Prerequisite
 ------------
 
 - Dependencies: libelf-dev
-- Kernel: >4.18 (5.1.2 is tested and recommended), configured with `CONFIG_XDP_SOCKETS=y`
+- Kernel: >= 5.4 (configured with `CONFIG_XDP_SOCKETS=y`)
 - libbpf with latest AF_XDP support installed from <kernel source>/tools/lib/bpf
 
 Installation
 ------------
 
-Install a kernel >4.18.
+Install a kernel >= 5.4, which includes support for unaligned zero-copy buffers.
 
-Ubuntu 20 already runs a kernel 5.x which is supported by AF_XDP. On Ubuntu 18.04 you can
-use uktools available at https://github.com/usbkey9/uktools/ following the instructions below:
+Ubuntu 20 currently runs a kernel >= 5.8 which fully supports AF_XDP.
+
+On Ubuntu 18.04 you can use uktools available at https://github.com/usbkey9/uktools/ following the instructions below:
 
 .. code-block:: console
 
@@ -30,9 +29,9 @@ Download and unpack sources for kernel 5.x, it will be used to compile and insta
 
 .. code-block:: console
 
-   wget http://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.1.2.tar.xz
-   tar xvf linux-5.1.2.tar.xz 
-   cd linux-5.1.2/tools/lib/bpf
+   wget http://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.2.tar.xz
+   tar xvf linux-5.4.2.tar.xz 
+   cd linux-5.4.2/tools/lib/bpf
    sudo apt-get install libelf-dev
    make
    sudo make install_lib
