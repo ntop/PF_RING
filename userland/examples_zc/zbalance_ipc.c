@@ -807,6 +807,8 @@ int64_t eth_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
     //}
     idx = 0;
   } else if (eth_type == ETH_P_8585) {
+    /* Reforge eth type to ETH_P_8021Q */
+    eh->h_proto = htons(ETH_P_8021Q);
     idx = 1;
   } else {
     idx = 2;
