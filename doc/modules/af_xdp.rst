@@ -12,13 +12,12 @@ Prerequisite
 - Dependencies: libelf-dev
 - Kernel: >= 5.4 (configured with `CONFIG_XDP_SOCKETS=y`)
 - libbpf with latest AF_XDP support installed from <kernel source>/tools/lib/bpf
+- Hugepages loaded
 
-Installation
-------------
+Kernel Version
+--------------
 
 Install a kernel >= 5.4, which includes support for unaligned zero-copy buffers.
-Load vanilla drivers (use recent drivers that include AF_XDP support, PF_RING ZC
-drivers should be unloaded as they only support PF_RING ZC mode).
 
 Ubuntu 20 currently runs a kernel >= 5.8 which fully supports AF_XDP.
 
@@ -42,7 +41,13 @@ Download and unpack sources for kernel 5.x, it will be used to compile and insta
    sudo make install_headers
    sudo ldconfig
 
-Compile PF_RING. It should automatically detect and enable AF_XDP support:
+Installation
+------------
+
+Install PF_RING as reported in the *Installing from packages* section
+on a supported OS with a supported kernel version (e.g. Ubuntu 20) or
+compile it from source code. In the latter case AF_XDP support should
+be automatically detected and enabled:
 
 .. code-block:: console
 
@@ -58,6 +63,25 @@ Please make sure the below output is printed by the configure script
 .. code-block:: console
 
   checking PF_RING AF_XDP support... yes
+
+Load the driver
+---------------
+
+Load vanilla drivers (use recent drivers that include AF_XDP support, PF_RING ZC
+drivers should be unloaded as they only support PF_RING ZC mode).
+
+Load Hugepages
+--------------
+
+Hugepages are required for the AF_XDP support to work (used for buffers allocation).
+When installing from packages following the *Installing from packages* guide it is
+only required to create */etc/pf_ring/hugepages.conf*, otherwise hugepages can be
+loaded with:
+
+.. code-block:: console
+
+   echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+   mount -t hugetlbfs nodev /dev/hugepages
 
 Usage
 -----
