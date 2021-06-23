@@ -103,6 +103,10 @@ u_int32_t n2disk_threads;
 char *vlan_filter = NULL;
 bitmap64_t(allowed_vlans, 1024);
 
+#define MAX_MAP_VLAN_SIZE 4
+u_int8_t map_vlan_size = 0;
+u_int16_t map_vlan[MAX_MAP_VLAN_SIZE];
+
 #ifdef HAVE_PF_RING_FT
 int notify_fd;
 int notify_wd;
@@ -610,8 +614,9 @@ void printHelp(void) {
          "                 4 - GTP hash (Inner IP/Port or Seq-Num or Outer IP/Port)\n"
          "                 5 - GRE hash (Inner or Outer IP)\n"
          "                 6 - Interface X to queue X\n"
-         "                 7 - Ethernet type (8021Q to queue 0, 0x8585 to queue 1, other to queue 2)\n");
+         "                 7 - Ethernet type (check 0x8585 type and select the queue, other to queue 0)\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
+  printf("-M <vlans>       Comma-separated list of VLANs to map VLAN to egress queues (-m 7 only)\n");
   printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
   printf("-R <nsec>        Time resolution (nsec) when using Time Pulse thread\n"
          "                 Note: in non-time-sensitive applications use >= 100usec to reduce cpu load\n");
@@ -794,24 +799,28 @@ int64_t eth_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
   u_char *data = pfring_zc_pkt_buff_data(pkt_handle, in_queue);
   struct ethhdr *eh = (struct ethhdr*) data;
   u_int16_t eth_type = ntohs(eh->h_proto);
-  int64_t idx;
+  int64_t idx = 0;
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
-  if (eth_type == ETH_P_8021Q /* 802.1q (VLAN) */) {
-    /* Read VLAN ID */
-    //u_int32_t vlan_offset = sizeof(struct ethhdr);
-    //if ((vlan_offset + sizeof(struct eth_vlan_hdr)) < pkt_handle->len) {
-    //  struct eth_vlan_hdr *vh = (struct eth_vlan_hdr *) &data[vlan_offset];
-    //  u_int16_t vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
-    //}
-    idx = 0;
-  } else if (eth_type == ETH_P_8585) {
+  if (eth_type == ETH_P_8585) {
+    u_int32_t vlan_offset = sizeof(struct ethhdr);
+
+    idx = -1;
+
     /* Reforge eth type to ETH_P_8021Q */
     eh->h_proto = htons(ETH_P_8021Q);
-    idx = 1;
-  } else {
-    idx = 2;
+
+    /* Read VLAN ID */
+    if ((vlan_offset + sizeof(struct eth_vlan_hdr)) < pkt_handle->len) {
+      struct eth_vlan_hdr *vh = (struct eth_vlan_hdr *) &data[vlan_offset];
+      u_int16_t i, vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
+
+      for (i = 0; i < map_vlan_size; i++)
+        if (vlan_id == map_vlan[i]) { idx = i+1; break; }
+    }
+
+    if (idx == -1) return idx; /* drop on no match */
   }
 
   return idx % num_out_queues;
@@ -964,7 +973,7 @@ int main(int argc, char* argv[]) {
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
-  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:n:N:pr:Q:q:P:R:S:u:wvx:zW:"
+  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:M:n:N:pr:Q:q:P:R:S:u:wvx:zW:"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -1051,6 +1060,13 @@ int main(int argc, char* argv[]) {
       break;
     case 'b':
       pool_size = upper_power_of_2(atoi(optarg));
+      break;
+    case 'M':
+      if (map_vlan_size < MAX_MAP_VLAN_SIZE) {
+        map_vlan[map_vlan_size] = atoi(optarg);
+        trace(TRACE_NORMAL, "Mapping VLAN %u to queue %u\n", map_vlan[map_vlan_size], map_vlan_size+1);
+        map_vlan_size++;
+      }
       break;
     case 'N':
       n2disk_producer = 1;
