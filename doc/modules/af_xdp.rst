@@ -1,12 +1,14 @@
 AF_XDP Support
 ==============
 
-PF_RING since version 7.5 includes support for AF_XDP adapters, when compiling from source
-code this is enabled by default (unless the *--disable-xdp* configure flag is specified).
+PF_RING since version 7.5 (note: 7.9 is actually recommended) includes support for AF_XDP adapters,
+when compiling from source code this is enabled by default (unless the *--disable-xdp*
+configure flag is specified).
 
 Prerequisite
 ------------
 
+- PF_RING 7.9.0-6671 or later
 - Dependencies: libelf-dev
 - Kernel: >= 5.4 (configured with `CONFIG_XDP_SOCKETS=y`)
 - libbpf with latest AF_XDP support installed from <kernel source>/tools/lib/bpf
@@ -15,6 +17,8 @@ Installation
 ------------
 
 Install a kernel >= 5.4, which includes support for unaligned zero-copy buffers.
+Load vanilla drivers (use recent drivers that include AF_XDP support, PF_RING ZC
+drivers should be unloaded as they only support PF_RING ZC mode).
 
 Ubuntu 20 currently runs a kernel >= 5.8 which fully supports AF_XDP.
 
