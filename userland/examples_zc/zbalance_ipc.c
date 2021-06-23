@@ -609,7 +609,8 @@ void printHelp(void) {
          "                 3 - Fan-out (1st) + Round-Robin (2nd, 3rd, ..)\n"
          "                 4 - GTP hash (Inner IP/Port or Seq-Num or Outer IP/Port)\n"
          "                 5 - GRE hash (Inner or Outer IP)\n"
-         "                 6 - Interface X to queue X\n");
+         "                 6 - Interface X to queue X\n"
+         "                 7 - Ethernet type (8021Q to queue 0, 0x8585 to queue 1, other to queue 2)\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
   printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
   printf("-R <nsec>        Time resolution (nsec) when using Time Pulse thread\n"
@@ -782,6 +783,36 @@ int64_t direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
   for (ingress_id = 0; ingress_id < num_devices; ingress_id++)
     if (in_queue == inzqs[ingress_id]) break;
   return ingress_id % num_out_queues;
+}
+
+/* *************************************** */
+
+#define ETH_P_8585         0x8585
+
+int64_t eth_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  long num_out_queues = (long) user;
+  u_char *data = pfring_zc_pkt_buff_data(pkt_handle, in_queue);
+  struct ethhdr *eh = (struct ethhdr*) data;
+  u_int16_t eth_type = ntohs(eh->h_proto);
+  int64_t idx;
+
+  if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
+
+  if (eth_type == ETH_P_8021Q /* 802.1q (VLAN) */) {
+    /* Read VLAN ID */
+    //u_int32_t vlan_offset = sizeof(struct ethhdr);
+    //if ((vlan_offset + sizeof(struct eth_vlan_hdr)) < pkt_handle->len) {
+    //  struct eth_vlan_hdr *vh = (struct eth_vlan_hdr *) &data[vlan_offset];
+    //  u_int16_t vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
+    //}
+    idx = 0;
+  } else if (eth_type == ETH_P_8585) {
+    idx = 1;
+  } else {
+    idx = 2;
+  }
+
+  return idx % num_out_queues;
 }
 
 /* *************************************** */
@@ -1458,7 +1489,13 @@ int main(int argc, char* argv[]) {
 
   trace(TRACE_NORMAL, "Running...");
 
-  if (hash_mode == 0 || ((hash_mode == 1 || hash_mode == 4 || hash_mode == 5 || hash_mode == 6) && num_apps == 1)) { /* balancer */
+  if (hash_mode == 0 || 
+      ((hash_mode == 1 || 
+        hash_mode == 4 || 
+        hash_mode == 5 || 
+        hash_mode == 6 || 
+        hash_mode == 7) && 
+       num_apps == 1)) { /* balancer */
 
     switch (hash_mode) {
       case 0: distr_func = rr_distribution_func;
@@ -1483,6 +1520,9 @@ int main(int argc, char* argv[]) {
       break;
       case 6: 
         distr_func =  direct_distribution_func;
+      break;
+      case 7: 
+        distr_func =  eth_distribution_func;
       break;
     }
 

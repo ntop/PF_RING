@@ -273,7 +273,6 @@ int main(int argc, char* argv[]) {
   pthread_t time_thread;
   u_int32_t flags = 0;
   char *filter = NULL;
-  pfring_zc_cluster_mem_info mem_info;
 
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
@@ -356,6 +355,7 @@ int main(int argc, char* argv[]) {
   }
 
   /* Read memory info:
+  pfring_zc_cluster_mem_info mem_info;
   pfring_zc_get_memory_info(zc, &mem_info);
   printf("Base address: %p Size: %ju\n", mem_info.base_addr, mem_info.size);
   */
