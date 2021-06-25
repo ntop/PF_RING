@@ -1007,11 +1007,11 @@ int main(int argc, char* argv[]) {
     if ((c == 255) || (c == -1)) break;
 
     switch (c) {
-    case 'h':
-      printHelp();
-      break;
     case 'a':
       wait_for_packet = 0;
+      break;
+    case 'b':
+      pool_size = upper_power_of_2(atoi(optarg));
       break;
     case 'c':
       cluster_id = atoi(optarg);
@@ -1031,35 +1031,22 @@ int main(int argc, char* argv[]) {
       else
         append_bpf_file_list(&in_bpf_file_list, optarg);
       break;
-    case 'm':
-      hash_mode = atoi(optarg);
+    case 'g':
+      bind_worker_core = atoi(optarg);
       break;
-    case 'n':
-      applications = strdup(optarg);
+    case 'h':
+      printHelp();
       break;
     case 'i':
       device = strdup(optarg);
-      break;
-    case 'g':
-      bind_worker_core = atoi(optarg);
       break;
     case 'l':
       trace_file = fopen(optarg, "w");
       if (trace_file == NULL)
         trace(TRACE_ERROR, "Unable to open log file %s", optarg);
       break;
-    case 'p':
-      print_interface_stats = 1;
-      break;
-    case 'Q':
-      enable_vm_support = 1;
-      vm_sockets = strdup(optarg);
-      break;
-    case 'q':
-      queue_len = upper_power_of_2(atoi(optarg));
-      break;
-    case 'b':
-      pool_size = upper_power_of_2(atoi(optarg));
+    case 'm':
+      hash_mode = atoi(optarg);
       break;
     case 'M':
       if (map_vlan_size < MAX_MAP_VLAN_SIZE) {
@@ -1068,26 +1055,50 @@ int main(int argc, char* argv[]) {
         map_vlan_size++;
       }
       break;
+    case 'n':
+      applications = strdup(optarg);
+      break;
     case 'N':
       n2disk_producer = 1;
       n2disk_threads = atoi(optarg);
       break;
+    case 'p':
+      print_interface_stats = 1;
+      break;
     case 'P':
       pid_file = strdup(optarg);
       break;
+    case 'q':
+      queue_len = upper_power_of_2(atoi(optarg));
+      break;
+    case 'Q':
+      enable_vm_support = 1;
+      vm_sockets = strdup(optarg);
+      break;
     case 'R':
       time_pulse_resolution = atoi(optarg);
-      break;
-    case 'u':
-      if (optarg != NULL) hugepages_mountpoint = strdup(optarg);
       break;
     case 'S':
       time_pulse = 1;
       bind_time_pulse_core = atoi(optarg);
       break;
+    case 'u':
+      if (optarg != NULL) hugepages_mountpoint = strdup(optarg);
+      break;
+    case 'v':
+      trace_verbosity = 3;    
+    break;
     case 'w':
       hw_aggregation = 1;
       break;
+    case 'W':
+      wait_time_sec = atoi(optarg);
+      if(wait_time_sec > 10)
+	wait_time_sec = 10; /* Upper limit */
+      break;      
+    case 'x':
+      vlan_filter = strdup(optarg);
+    break;
     case 'z':
       proc_stats_only = 1;
       break;
@@ -1116,23 +1127,12 @@ int main(int argc, char* argv[]) {
       time_pulse = 1; /* forcing time-pulse to handle rules expiration */
     break;
 #endif
-    case 'v':
-      trace_verbosity = 3;    
-    break;
-    case 'x':
-      vlan_filter = strdup(optarg);
-    break;
-    case 'W':
-      wait_time_sec = atoi(optarg);
-      if(wait_time_sec > 10)
-	wait_time_sec = 10; /* Upper limit */
-      break;      
     }
   }
-  
+ 
   if (device == NULL) printHelp();
   if (cluster_id < 0) printHelp();
-  if (applications == NULL) printHelp();
+  if (applications == NULL && hash_mode != 7) printHelp();
 
   if (vlan_filter
 #ifdef HAVE_PF_RING_FT
@@ -1179,13 +1179,19 @@ int main(int argc, char* argv[]) {
     num_devices = 1;
   }
 
-  app = strtok_r(applications, ",", &app_pos);
-  while (app != NULL && num_apps < MAX_NUM_APP) {
-    instances_per_app[num_apps] = atoi(app);
-    if (instances_per_app[num_apps] == 0) printHelp();
-    num_consumer_queues += instances_per_app[num_apps];
+  if (hash_mode == 7) {
+    instances_per_app[num_apps] = map_vlan_size + 1;
+    num_consumer_queues += instances_per_app[num_apps]; 
     num_apps++;
-    app = strtok_r(NULL, ",", &app_pos);
+  } else {
+    app = strtok_r(applications, ",", &app_pos);
+    while (app != NULL && num_apps < MAX_NUM_APP) {
+      instances_per_app[num_apps] = atoi(app);
+      if (instances_per_app[num_apps] == 0) printHelp();
+      num_consumer_queues += instances_per_app[num_apps];
+      num_apps++;
+      app = strtok_r(NULL, ",", &app_pos);
+    }
   }
 
   if (num_apps == 0) printHelp();
