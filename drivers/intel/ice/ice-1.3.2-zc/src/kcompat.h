@@ -42,9 +42,9 @@
 //#define ICE_RX_TAIL_RESET
 #define ICE_USER_TO_KERNEL_RESET
 
-#define PCI_DEVICE_CACHE_LINE_SIZE		0x0C
-#define PCI_DEVICE_CACHE_LINE_SIZE_BYTES	8
-#define ICE_MAX_NIC				64
+#define PCI_DEVICE_CACHE_LINE_SIZE             0x0C
+#define PCI_DEVICE_CACHE_LINE_SIZE_BYTES       8
+#define ICE_MAX_NIC                            64
 
 #ifdef HAVE_XDP_SUPPORT
 #undef HAVE_XDP_SUPPORT
@@ -280,7 +280,7 @@ struct msix_entry {
 #endif
 
 #ifndef WARN_ON
-#define WARN_ON(x)
+#define WARN_ON(x) ({0;})
 #endif
 
 #ifndef PCI_DEVICE
@@ -351,6 +351,9 @@ struct msix_entry {
 
 #define __ARG_PLACEHOLDER_1 0,
 #define config_enabled(cfg) _config_enabled(cfg)
+#ifdef __CHECKER__
+/* cppcheck-suppress preprocessorErrorDirective */
+#endif /* __CHECKER__ */
 #define _config_enabled(value) __config_enabled(__ARG_PLACEHOLDER_##value)
 #define __config_enabled(arg1_or_junk) ___config_enabled(arg1_or_junk 1, 0)
 #define ___config_enabled(__ignored, val, ...) val
@@ -951,10 +954,17 @@ struct _kc_ethtool_pauseparam {
        SLE_LOCALVERSION_CODE >= KERNEL_VERSION(25,23,0))
 /* SLES15 SP1 Beta1 is 4.12.14-25.23 */
 #define SLE_VERSION_CODE SLE_VERSION(15,1,0)
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,13))
+#elif (LINUX_VERSION_CODE == KERNEL_VERSION(5,3,13))
 /* SLES15 SP2 Beta1 is 5.3.13 */
 #define SLE_VERSION_CODE SLE_VERSION(15,2,0)
-
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,18))
+#if (SLE_LOCALVERSION_CODE < KERNEL_VERSION(47,0,0))
+/* SLES15 SP2 Beta1 is 5.3.18 */
+#define SLE_VERSION_CODE SLE_VERSION(15,2,0)
+#else /* local version >= 47 */
+/* SLES15 SP3 Beta1 is 5.3.18 */
+#define SLE_VERSION_CODE SLE_VERSION(15,3,0)
+#endif
 /* new SLES kernels must be added here with >= based on kernel
  * the idea is to order from newest to oldest and just catch all
  * of them using the >=
@@ -983,6 +993,7 @@ struct _kc_ethtool_pauseparam {
   #undef __TC_MQPRIO_MODE_MAX
   #endif /*  LINUX_VERSION_CODE == KERNEL_VERSION(4,15,0) */
 #endif /* if (NOT RHEL && NOT SLES && NOT UBUNTU) */
+
 
 #ifdef __KLOCWORK__
 /* The following are not compiled into the binary driver; they are here
@@ -1052,6 +1063,36 @@ static inline int _kc_test_and_set_bit(int nr, volatile unsigned long *addr)
 #undef WRITE_ONCE
 #define WRITE_ONCE(x, val)	((x) = (val))
 #endif /* WRITE_ONCE */
+
+#ifdef wait_event_interruptible_timeout
+#undef wait_event_interruptible_timeout
+#define wait_event_interruptible_timeout(wq_head, condition, timeout) ({	\
+	long ret;								\
+	if ((condition))							\
+		ret = timeout;							\
+	else									\
+		ret = 0;							\
+	ret;									\
+})
+#endif /* wait_event_interruptible_timeout */
+
+#ifdef max_t
+#undef max_t
+#define max_t(type, x, y) ({							\
+type __x = (x);								\
+type __y = (y);								\
+__x > __y ? __x : __y;							\
+})
+#endif /* max_t */
+
+#ifdef min_t
+#undef min_t
+#define min_t(type, x, y) ({							\
+type __x = (x);								\
+type __y = (y);								\
+__x < __y ? __x : __y;							\
+})
+#endif /* min_t */
 #endif /* __KLOCWORK__ */
 
 
@@ -1079,7 +1120,8 @@ static inline int _kc_test_and_set_bit(int nr, volatile unsigned long *addr)
 
 /* Newer kernels removed <linux/pci-aspm.h> */
 #if ((LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)) && \
-     (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,3)))
+     (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)) && \
+     !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))))
 #define HAVE_PCI_ASPM_H
 #endif
 
@@ -1299,7 +1341,7 @@ static inline struct pci_dev *pci_upstream_bridge(struct pci_dev *dev)
 
 #if ( LINUX_VERSION_CODE > KERNEL_VERSION(2,6,20) )
 #define devm_kcalloc(dev, cnt, size, flags) \
-	devm_kzalloc(dev, cnt * size, flags)
+	devm_kzalloc(dev, (cnt) * (size), flags)
 #endif /* > 2.6.20 */
 
 #if (!(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,2)))
@@ -2175,7 +2217,7 @@ static inline __u64 readq(const volatile void __iomem *addr)
 static inline void writeq(__u64 val, volatile void __iomem *addr)
 {
 	writel(val, addr);
-	writel(val >> 32, addr + 4);
+	writel(val >> 32, (u8 *)addr + 4);
 }
 #define writeq writeq
 #endif
@@ -2515,6 +2557,14 @@ static inline void __page_frag_cache_drain(struct page *page,
 #ifndef ETH_MIN_MTU
 #define ETH_MIN_MTU 68
 #endif /* ETH_MIN_MTU */
+
+/* If kernel is older than 4.10 but distro is RHEL >= 7.5 || SLES > 12SP4,
+ * it does have support for NAPI_STATE
+ */
+#if ((RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))) ||\
+     (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,4,0))))
+#define HAVE_NAPI_STATE_IN_BUSY_POLL
+#endif /* RHEL >= 7.5 || SLES >=12.4 */
 #else /* >= 4.10 */
 #define HAVE_TC_FLOWER_ENC
 #define HAVE_NETDEVICE_MIN_MAX_MTU
@@ -2530,6 +2580,7 @@ static inline void __page_frag_cache_drain(struct page *page,
  */
 #define HAVE_NAPI_STATE_IN_BUSY_POLL
 #define HAVE_TCF_MIRRED_EGRESS_REDIRECT
+#define HAVE_PTP_CLOCK_INFO_ADJFINE
 #endif /* 4.10.0 */
 
 /*****************************************************************************/
@@ -2594,6 +2645,13 @@ static inline void _kc_dev_consume_skb_any(struct sk_buff *skb)
 /* The RHEL 7.7+ NL_SET_ERR_MSG_MOD triggers unused parameter warnings */
 #undef NL_SET_ERR_MSG_MOD
 #endif
+/* If kernel is older than 4.12 but distro is RHEL >= 7.5 || SLES > 12SP4,
+ * it does have support for MIN_NAPI_ID
+ */
+#if ((RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))) || \
+     (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,4,0))))
+#define HAVE_MIN_NAPI_ID
+#endif /* RHEL >= 7.5 || SLES >= 12.4 */
 #ifndef NL_SET_ERR_MSG_MOD
 #define NL_SET_ERR_MSG_MOD(extack, msg)						\
 	do {									\
@@ -2601,6 +2659,9 @@ static inline void _kc_dev_consume_skb_any(struct sk_buff *skb)
 		pr_err(KBUILD_MODNAME ": " msg);				\
 	} while (0)
 #endif /* !NL_SET_ERR_MSG_MOD */
+#else /* >= 4.12 */
+#define HAVE_NAPI_BUSY_LOOP
+#define HAVE_MIN_NAPI_ID
 #endif /* 4.12 */
 
 /*****************************************************************************/
@@ -2943,7 +3004,9 @@ void _kc_pcie_print_link_status(struct pci_dev *dev);
 
 /*****************************************************************************/
 #if IS_ENABLED(CONFIG_NET_DEVLINK) && \
-    (LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
+    (LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0)) && \
+    !(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
+
 #include <net/devlink.h>
 #if ((LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0)) && \
      (SLE_VERSION_CODE < SLE_VERSION(15,1,0)) && \
@@ -2991,7 +3054,7 @@ struct _kc_devlink_port_attrs {
 	};
 };
 #define devlink_port_attrs _kc_devlink_port_attrs
-#endif /* CONFIG_NET_DEVLINK && <5.9.0 */
+#endif /* CONFIG_NET_DEVLINK && <5.9.0 && !(SLE >= 15.3) */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0))
@@ -3192,6 +3255,7 @@ _kc_dev_change_flags(struct net_device *netdev, unsigned int flags,
       RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,0)) || \
      (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,1)))
 #define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
+#define HAVE_PTP_CLOCK_INFO_GETTIMEX64
 #else /* RHEL >= 7.7 && RHEL < 8.0 || RHEL >= 8.1 */
 struct ptp_system_timestamp {
 	struct timespec64 pre_ts;
@@ -3218,6 +3282,7 @@ ptp_read_system_postts(struct ptp_system_timestamp __always_unused *sts)
 #endif /* RHEL 8.2 */
 #else /* >= 5.0.0 */
 #define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
+#define HAVE_PTP_CLOCK_INFO_GETTIMEX64
 #define HAVE_NDO_BRIDGE_SETLINK_EXTACK
 #define HAVE_DMA_ALLOC_COHERENT_ZEROES_MEM
 #define HAVE_GENEVE_TYPE
@@ -3462,9 +3527,16 @@ devlink_flash_update_status_notify(struct devlink __always_unused *devlink,
 #endif /* <RHEL8.2 */
 #else /* >= 5.3.0 */
 #define XSK_UMEM_RETURNS_XDP_DESC
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#if !(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
 #define HAVE_XSK_UMEM_HAS_ADDRS
+#endif /* SLE < 15.3 */
+#endif /* < 5.8.0*/
 #define HAVE_FLOW_BLOCK_API
 #define HAVE_DEVLINK_PORT_ATTR_PCI_VF
+#if IS_ENABLED(CONFIG_DIMLIB)
+#define HAVE_CONFIG_DIMLIB
+#endif
 #endif /* 5.3.0 */
 
 /*****************************************************************************/
@@ -3522,7 +3594,8 @@ static inline void _kc_bitmap_set_value8(unsigned long *map,
 #define xsk_umem_release_addr		xsk_umem_discard_addr
 #define xsk_umem_release_addr_rq	xsk_umem_discard_addr_rq
 #endif /* HAVE_AF_XDP_SUPPORT */
-#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)))
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)) || \
+     (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
 #define HAVE_TX_TIMEOUT_TXQUEUE
 #endif
 #else /* >= 5.6.0 */
@@ -3549,6 +3622,7 @@ u64 _kc_pci_get_dsn(struct pci_dev *dev);
 #endif
 
 #ifdef HAVE_DEVLINK_REGIONS
+#if !(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
 struct devlink_region_ops {
 	const char *name;
@@ -3569,6 +3643,7 @@ _kc_devlink_region_create(struct devlink *devlink,
 #endif /* devlink_region_create */
 #endif /* CONFIG_NET_DEVLINK */
 #define HAVE_DEVLINK_SNAPSHOT_CREATE_DESTRUCTOR
+#endif /* !(SLE_VERSION >= 15.3) */
 #endif /* HAVE_DEVLINK_REGIONS */
 #else /* >= 5.7.0 */
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT
@@ -3577,22 +3652,53 @@ _kc_devlink_region_create(struct devlink *devlink,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4))) && \
+    !(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
 #define xdp_convert_buff_to_frame convert_to_xdp_frame
+#endif /* (RHEL < 8.4) || (SLE < 15.3) */
 #define flex_array_size(p, member, count) \
 	array_size(count, sizeof(*(p)->member) + __must_be_array((p)->member))
+#if (!(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
+#ifdef HAVE_AF_XDP_ZC_SUPPORT
+#ifndef xsk_umem_get_rx_frame_size
+static inline u32 _xsk_umem_get_rx_frame_size(struct xdp_umem *umem)
+{
+	return umem->chunk_size_nohr - XDP_PACKET_HEADROOM;
+}
+
+#define xsk_umem_get_rx_frame_size _xsk_umem_get_rx_frame_size
+#endif /* xsk_umem_get_rx_frame_size */
+#endif /* HAVE_AF_XDP_ZC_SUPPORT */
+#else /* SLE >= 15.3 */
+#define HAVE_XDP_BUFF_FRAME_SZ
+#define HAVE_MEM_TYPE_XSK_BUFF_POOL
+#endif /* SLE >= 15.3 */
 #else /* >= 5.8.0 */
-#undef HAVE_AF_XDP_ZC_SUPPORT
 #define HAVE_TC_FLOW_INDIR_DEV
 #define HAVE_TC_FLOW_INDIR_BLOCK_CLEANUP
 #define HAVE_XDP_BUFF_FRAME_SZ
+#define HAVE_MEM_TYPE_XSK_BUFF_POOL
 #endif /* 5.8.0 */
 #if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)))
 #define HAVE_TC_FLOW_INDIR_DEV
 #endif
+#if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
+#define HAVE_TC_FLOW_INDIR_DEV
+#endif /* SLE_VERSION_CODE && SLE_VERSION_CODE >= SLES15SP3 */
+
+/*****************************************************************************/
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
+#if IS_ENABLED(CONFIG_NET_DEVLINK) && !defined(devlink_port_attrs_set)
+#undef devlink_port_attrs
+#define devlink_port_attrs_set devlink_port_attrs_set
+#endif /* CONFIG_NET_DEVLINK && !devlink_port_attrs_set */
+#define HAVE_TC_FLOW_INDIR_BLOCK_CLEANUP
+#endif /* (RHEL >= 8.4) */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
-#if IS_ENABLED(CONFIG_NET_DEVLINK) && !defined(devlink_port_attrs_set)
+#if IS_ENABLED(CONFIG_NET_DEVLINK) && !defined(devlink_port_attrs_set) && \
+	!(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
 static inline void
 _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 			   struct _kc_devlink_port_attrs *attrs)
@@ -3604,15 +3710,25 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 }
 
 #define devlink_port_attrs_set _kc_devlink_port_attrs_set
-#endif /* CONFIG_NET_DEVLINK && !devlink_port_attrs_set */
+#endif /* CONFIG_NET_DEVLINK && !devlink_port_attrs_set && !(SLE >= 15.3)*/
 #define HAVE_XDP_QUERY_PROG
 #else /* >= 5.9.0 */
 #define HAVE_FLOW_INDIR_BLOCK_QDISC
 #define HAVE_UDP_TUNNEL_NIC_INFO
 #endif /* 5.9.0 */
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(8,3)))
+#define HAVE_FLOW_INDIR_BLOCK_QDISC
+#endif
+#if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
+#define HAVE_FLOW_INDIR_BLOCK_QDISC
+#endif /* SLE_VERSION_CODE && SLE_VERSION_CODE >= SLES15SP3 */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#if (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
+#define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
+#define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
+#else /* SLE >= 15.3 */
 struct devlink_flash_update_params {
 	const char *file_name;
 	const char *component;
@@ -3638,7 +3754,10 @@ devlink_flash_update_timeout_notify(struct devlink *devlink,
 	devlink_flash_update_status_notify(devlink, status_msg, component, 0, 0);
 }
 #endif /* CONFIG_NET_DEVLINK */
+#endif /* !(SLE >= 15.3) */
 
+#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4))) && \
+     !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0))))
 static inline void net_prefetch(void *p)
 {
 	prefetch(p);
@@ -3646,8 +3765,73 @@ static inline void net_prefetch(void *p)
 	prefetch((u8 *)p + L1_CACHE_BYTES);
 #endif
 }
+#endif  /* (RHEL < 8.4) || (SLE < 15.3) */
+
+#if (!(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0))))
+#define XDP_SETUP_XSK_POOL XDP_SETUP_XSK_UMEM
+#define xsk_get_pool_from_qid xdp_get_umem_from_qid
+#define xsk_pool_get_rx_frame_size xsk_umem_get_rx_frame_size
+#define xsk_pool_set_rxq_info xsk_buff_set_rxq_info
+#define xsk_pool_dma_unmap xsk_buff_dma_unmap
+#define xsk_pool_dma_map xsk_buff_dma_map
+#define xsk_tx_peek_desc xsk_umem_consume_tx
+#define xsk_tx_release xsk_umem_consume_tx_done
+#define xsk_tx_completed xsk_umem_complete_tx
+#define xsk_uses_need_wakeup xsk_umem_uses_need_wakeup
+#ifdef HAVE_MEM_TYPE_XSK_BUFF_POOL
+#include <net/xdp_sock_drv.h>
+static inline void
+_kc_xsk_buff_dma_sync_for_cpu(struct xdp_buff *xdp,
+			      void __always_unused *pool)
+{
+	xsk_buff_dma_sync_for_cpu(xdp);
+}
+
+#define xsk_buff_dma_sync_for_cpu(xdp, pool) \
+	_kc_xsk_buff_dma_sync_for_cpu(xdp, pool)
+#endif /* HAVE_MEM_TYPE_XSK_BUFF_POOL */
+#else /* SLE >= 15.3 */
+#define HAVE_NETDEV_BPF_XSK_POOL
+#endif /* SLE >= 15.3 */
 #else /* >= 5.10.0 */
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
+#define HAVE_NETDEV_BPF_XSK_POOL
 #endif /* 5.10.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0))
+#ifdef HAVE_XDP_BUFF_RXQ
+#include <net/xdp.h>
+static inline int
+_kc_xdp_rxq_info_reg(struct xdp_rxq_info *xdp_rxq, struct net_device *dev,
+		     u32 queue_index, unsigned int __always_unused napi_id)
+{
+	return xdp_rxq_info_reg(xdp_rxq, dev, queue_index);
+}
+
+#define xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id) \
+	_kc_xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id)
+#endif /* HAVE_XDP_BUFF_RXQ */
+#ifdef HAVE_NAPI_BUSY_LOOP
+#ifdef CONFIG_NET_RX_BUSY_POLL
+#include <net/busy_poll.h>
+static inline void
+_kc_napi_busy_loop(unsigned int napi_id,
+		   bool (*loop_end)(void *, unsigned long), void *loop_end_arg,
+		   bool __always_unused prefer_busy_poll,
+		   u16 __always_unused budget)
+{
+	napi_busy_loop(napi_id, loop_end, loop_end_arg);
+}
+
+#define napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget) \
+	_kc_napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget)
+#endif /* CONFIG_NET_RX_BUSY_POLL */
+#endif /* HAVE_NAPI_BUSY_LOOP */
+#define HAVE_DEVLINK_FLASH_UPDATE_BEGIN_END_NOTIFY
+#else /* >= 5.11.0 */
+#define HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
+#endif /* 5.11.0 */
+
 #endif /* _KCOMPAT_H_ */

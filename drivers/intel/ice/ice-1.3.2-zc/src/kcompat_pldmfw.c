@@ -922,7 +922,6 @@ bool pldmfw_op_pci_match_record(struct pldmfw *context, struct pldmfw_record *re
 	else
 		return false;
 }
-EXPORT_SYMBOL(pldmfw_op_pci_match_record);
 
 /**
  * pldm_find_matching_record - Find the first matching PLDM record
@@ -1116,4 +1115,3 @@ out_release_data:
 
 	return err;
 }
-EXPORT_SYMBOL(pldmfw_flash_image);

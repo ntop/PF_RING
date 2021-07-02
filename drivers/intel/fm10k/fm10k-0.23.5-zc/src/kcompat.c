@@ -1,623 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 2013 - 2020 Intel Corporation. */
+/* Copyright(c) 2013 - 2019 Intel Corporation. */
 
 #include "fm10k.h"
 #include "kcompat.h"
-
-/*****************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,8) ) || defined __VMKLNX__
-/* From lib/vsprintf.c */
-#include <asm/div64.h>
-
-static int skip_atoi(const char **s)
-{
-	int i=0;
-
-	while (isdigit(**s))
-		i = i*10 + *((*s)++) - '0';
-	return i;
-}
-
-#define _kc_ZEROPAD	1		/* pad with zero */
-#define _kc_SIGN	2		/* unsigned/signed long */
-#define _kc_PLUS	4		/* show plus */
-#define _kc_SPACE	8		/* space if plus */
-#define _kc_LEFT	16		/* left justified */
-#define _kc_SPECIAL	32		/* 0x */
-#define _kc_LARGE	64		/* use 'ABCDEF' instead of 'abcdef' */
-
-static char * number(char * buf, char * end, long long num, int base, int size, int precision, int type)
-{
-	char c,sign,tmp[66];
-	const char *digits;
-	const char small_digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
-	const char large_digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	int i;
-
-	digits = (type & _kc_LARGE) ? large_digits : small_digits;
-	if (type & _kc_LEFT)
-		type &= ~_kc_ZEROPAD;
-	if (base < 2 || base > 36)
-		return 0;
-	c = (type & _kc_ZEROPAD) ? '0' : ' ';
-	sign = 0;
-	if (type & _kc_SIGN) {
-		if (num < 0) {
-			sign = '-';
-			num = -num;
-			size--;
-		} else if (type & _kc_PLUS) {
-			sign = '+';
-			size--;
-		} else if (type & _kc_SPACE) {
-			sign = ' ';
-			size--;
-		}
-	}
-	if (type & _kc_SPECIAL) {
-		if (base == 16)
-			size -= 2;
-		else if (base == 8)
-			size--;
-	}
-	i = 0;
-	if (num == 0)
-		tmp[i++]='0';
-	else while (num != 0)
-		tmp[i++] = digits[do_div(num,base)];
-	if (i > precision)
-		precision = i;
-	size -= precision;
-	if (!(type&(_kc_ZEROPAD+_kc_LEFT))) {
-		while(size-->0) {
-			if (buf <= end)
-				*buf = ' ';
-			++buf;
-		}
-	}
-	if (sign) {
-		if (buf <= end)
-			*buf = sign;
-		++buf;
-	}
-	if (type & _kc_SPECIAL) {
-		if (base==8) {
-			if (buf <= end)
-				*buf = '0';
-			++buf;
-		} else if (base==16) {
-			if (buf <= end)
-				*buf = '0';
-			++buf;
-			if (buf <= end)
-				*buf = digits[33];
-			++buf;
-		}
-	}
-	if (!(type & _kc_LEFT)) {
-		while (size-- > 0) {
-			if (buf <= end)
-				*buf = c;
-			++buf;
-		}
-	}
-	while (i < precision--) {
-		if (buf <= end)
-			*buf = '0';
-		++buf;
-	}
-	while (i-- > 0) {
-		if (buf <= end)
-			*buf = tmp[i];
-		++buf;
-	}
-	while (size-- > 0) {
-		if (buf <= end)
-			*buf = ' ';
-		++buf;
-	}
-	return buf;
-}
-
-int _kc_vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
-{
-	int len;
-	unsigned long long num;
-	int i, base;
-	char *str, *end, c;
-	const char *s;
-
-	int flags;		/* flags to number() */
-
-	int field_width;	/* width of output field */
-	int precision;		/* min. # of digits for integers; max
-				   number of chars for from string */
-	int qualifier;		/* 'h', 'l', or 'L' for integer fields */
-				/* 'z' support added 23/7/1999 S.H.    */
-				/* 'z' changed to 'Z' --davidm 1/25/99 */
-
-	str = buf;
-	end = buf + size - 1;
-
-	if (end < buf - 1) {
-		end = ((void *) -1);
-		size = end - buf + 1;
-	}
-
-	for (; *fmt ; ++fmt) {
-		if (*fmt != '%') {
-			if (str <= end)
-				*str = *fmt;
-			++str;
-			continue;
-		}
-
-		/* process flags */
-		flags = 0;
-		repeat:
-			++fmt;		/* this also skips first '%' */
-			switch (*fmt) {
-				case '-': flags |= _kc_LEFT; goto repeat;
-				case '+': flags |= _kc_PLUS; goto repeat;
-				case ' ': flags |= _kc_SPACE; goto repeat;
-				case '#': flags |= _kc_SPECIAL; goto repeat;
-				case '0': flags |= _kc_ZEROPAD; goto repeat;
-			}
-
-		/* get field width */
-		field_width = -1;
-		if (isdigit(*fmt))
-			field_width = skip_atoi(&fmt);
-		else if (*fmt == '*') {
-			++fmt;
-			/* it's the next argument */
-			field_width = va_arg(args, int);
-			if (field_width < 0) {
-				field_width = -field_width;
-				flags |= _kc_LEFT;
-			}
-		}
-
-		/* get the precision */
-		precision = -1;
-		if (*fmt == '.') {
-			++fmt;
-			if (isdigit(*fmt))
-				precision = skip_atoi(&fmt);
-			else if (*fmt == '*') {
-				++fmt;
-				/* it's the next argument */
-				precision = va_arg(args, int);
-			}
-			if (precision < 0)
-				precision = 0;
-		}
-
-		/* get the conversion qualifier */
-		qualifier = -1;
-		if (*fmt == 'h' || *fmt == 'l' || *fmt == 'L' || *fmt =='Z') {
-			qualifier = *fmt;
-			++fmt;
-		}
-
-		/* default base */
-		base = 10;
-
-		switch (*fmt) {
-			case 'c':
-				if (!(flags & _kc_LEFT)) {
-					while (--field_width > 0) {
-						if (str <= end)
-							*str = ' ';
-						++str;
-					}
-				}
-				c = (unsigned char) va_arg(args, int);
-				if (str <= end)
-					*str = c;
-				++str;
-				while (--field_width > 0) {
-					if (str <= end)
-						*str = ' ';
-					++str;
-				}
-				continue;
-
-			case 's':
-				s = va_arg(args, char *);
-				if (!s)
-					s = "<NULL>";
-
-				len = strnlen(s, precision);
-
-				if (!(flags & _kc_LEFT)) {
-					while (len < field_width--) {
-						if (str <= end)
-							*str = ' ';
-						++str;
-					}
-				}
-				for (i = 0; i < len; ++i) {
-					if (str <= end)
-						*str = *s;
-					++str; ++s;
-				}
-				while (len < field_width--) {
-					if (str <= end)
-						*str = ' ';
-					++str;
-				}
-				continue;
-
-			case 'p':
-				if ('M' == *(fmt+1)) {
-					str = get_mac(str, end, va_arg(args, unsigned char *));
-					fmt++;
-				} else	{
-					if (field_width == -1) {
-						field_width = 2*sizeof(void *);
-						flags |= _kc_ZEROPAD;
-					}
-					str = number(str, end,
-							(unsigned long) va_arg(args, void *),
-							16, field_width, precision, flags);
-				}
-				continue;
-
-			case 'n':
-				/* FIXME:
-				* What does C99 say about the overflow case here? */
-				if (qualifier == 'l') {
-					long * ip = va_arg(args, long *);
-					*ip = (str - buf);
-				} else if (qualifier == 'Z') {
-					size_t * ip = va_arg(args, size_t *);
-					*ip = (str - buf);
-				} else {
-					int * ip = va_arg(args, int *);
-					*ip = (str - buf);
-				}
-				continue;
-
-			case '%':
-				if (str <= end)
-					*str = '%';
-				++str;
-				continue;
-
-				/* integer number formats - set up the flags and "break" */
-			case 'o':
-				base = 8;
-				break;
-
-			case 'X':
-				flags |= _kc_LARGE;
-			case 'x':
-				base = 16;
-				break;
-
-			case 'd':
-			case 'i':
-				flags |= _kc_SIGN;
-			case 'u':
-				break;
-
-			default:
-				if (str <= end)
-					*str = '%';
-				++str;
-				if (*fmt) {
-					if (str <= end)
-						*str = *fmt;
-					++str;
-				} else {
-					--fmt;
-				}
-				continue;
-		}
-		if (qualifier == 'L')
-			num = va_arg(args, long long);
-		else if (qualifier == 'l') {
-			num = va_arg(args, unsigned long);
-			if (flags & _kc_SIGN)
-				num = (signed long) num;
-		} else if (qualifier == 'Z') {
-			num = va_arg(args, size_t);
-		} else if (qualifier == 'h') {
-			num = (unsigned short) va_arg(args, int);
-			if (flags & _kc_SIGN)
-				num = (signed short) num;
-		} else {
-			num = va_arg(args, unsigned int);
-			if (flags & _kc_SIGN)
-				num = (signed int) num;
-		}
-		str = number(str, end, num, base,
-				field_width, precision, flags);
-	}
-	if (str <= end)
-		*str = '\0';
-	else if (size > 0)
-		/* don't write out a null byte if the buf size is zero */
-		*end = '\0';
-	/* the trailing null byte doesn't count towards the total
-	* ++str;
-	*/
-	return str-buf;
-}
-
-int _kc_snprintf(char * buf, size_t size, const char *fmt, ...)
-{
-	va_list args;
-	int i;
-
-	va_start(args, fmt);
-	i = _kc_vsnprintf(buf,size,fmt,args);
-	va_end(args);
-	return i;
-}
-#endif /* < 2.4.8 */
-
-/*****************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,13) )
-
-/**************************************/
-/* PCI DMA MAPPING */
-
-#if defined(CONFIG_HIGHMEM)
-
-#ifndef PCI_DRAM_OFFSET
-#define PCI_DRAM_OFFSET 0
-#endif
-
-u64
-_kc_pci_map_page(struct pci_dev *dev, struct page *page, unsigned long offset,
-                 size_t size, int direction)
-{
-	return (((u64) (page - mem_map) << PAGE_SHIFT) + offset +
-		PCI_DRAM_OFFSET);
-}
-
-#else /* CONFIG_HIGHMEM */
-
-u64
-_kc_pci_map_page(struct pci_dev *dev, struct page *page, unsigned long offset,
-                 size_t size, int direction)
-{
-	return pci_map_single(dev, (void *)page_address(page) + offset, size,
-			      direction);
-}
-
-#endif /* CONFIG_HIGHMEM */
-
-void
-_kc_pci_unmap_page(struct pci_dev *dev, u64 dma_addr, size_t size,
-                   int direction)
-{
-	return pci_unmap_single(dev, dma_addr, size, direction);
-}
-
-#endif /* 2.4.13 => 2.4.3 */
-
-/*****************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,3) )
-
-/**************************************/
-/* PCI DRIVER API */
-
-int
-_kc_pci_set_dma_mask(struct pci_dev *dev, dma_addr_t mask)
-{
-	if (!pci_dma_supported(dev, mask))
-		return -EIO;
-	dev->dma_mask = mask;
-	return 0;
-}
-
-int
-_kc_pci_request_regions(struct pci_dev *dev, char *res_name)
-{
-	int i;
-
-	for (i = 0; i < 6; i++) {
-		if (pci_resource_len(dev, i) == 0)
-			continue;
-
-		if (pci_resource_flags(dev, i) & IORESOURCE_IO) {
-			if (!request_region(pci_resource_start(dev, i), pci_resource_len(dev, i), res_name)) {
-				pci_release_regions(dev);
-				return -EBUSY;
-			}
-		} else if (pci_resource_flags(dev, i) & IORESOURCE_MEM) {
-			if (!request_mem_region(pci_resource_start(dev, i), pci_resource_len(dev, i), res_name)) {
-				pci_release_regions(dev);
-				return -EBUSY;
-			}
-		}
-	}
-	return 0;
-}
-
-void
-_kc_pci_release_regions(struct pci_dev *dev)
-{
-	int i;
-
-	for (i = 0; i < 6; i++) {
-		if (pci_resource_len(dev, i) == 0)
-			continue;
-
-		if (pci_resource_flags(dev, i) & IORESOURCE_IO)
-			release_region(pci_resource_start(dev, i), pci_resource_len(dev, i));
-
-		else if (pci_resource_flags(dev, i) & IORESOURCE_MEM)
-			release_mem_region(pci_resource_start(dev, i), pci_resource_len(dev, i));
-	}
-}
-
-/**************************************/
-/* NETWORK DRIVER API */
-
-struct net_device *
-_kc_alloc_etherdev(int sizeof_priv)
-{
-	struct net_device *dev;
-	int alloc_size;
-
-	alloc_size = sizeof(*dev) + sizeof_priv + IFNAMSIZ + 31;
-	dev = kzalloc(alloc_size, GFP_KERNEL);
-	if (!dev)
-		return NULL;
-
-	if (sizeof_priv)
-		dev->priv = (void *) (((unsigned long)(dev + 1) + 31) & ~31);
-	dev->name[0] = '\0';
-	ether_setup(dev);
-
-	return dev;
-}
-
-int
-_kc_is_valid_ether_addr(u8 *addr)
-{
-	const char zaddr[6] = { 0, };
-
-	return !(addr[0] & 1) && memcmp(addr, zaddr, 6);
-}
-
-#endif /* 2.4.3 => 2.4.0 */
-
-/*****************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,6) )
-
-int
-_kc_pci_set_power_state(struct pci_dev *dev, int state)
-{
-	return 0;
-}
-
-int
-_kc_pci_enable_wake(struct pci_dev *pdev, u32 state, int enable)
-{
-	return 0;
-}
-
-#endif /* 2.4.6 => 2.4.3 */
-
-/*****************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0) )
-void _kc_skb_fill_page_desc(struct sk_buff *skb, int i, struct page *page,
-                            int off, int size)
-{
-	skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
-	frag->page = page;
-	frag->page_offset = off;
-	frag->size = size;
-	skb_shinfo(skb)->nr_frags = i + 1;
-}
-
-/*
- * Original Copyright:
- * find_next_bit.c: fallback find next bit implementation
- *
- * Copyright (C) 2004 Red Hat, Inc. All Rights Reserved.
- * Written by David Howells (dhowells@redhat.com)
- */
-
-/**
- * find_next_bit - find the next set bit in a memory region
- * @addr: The address to base the search on
- * @offset: The bitnumber to start searching at
- * @size: The maximum size to search
- */
-unsigned long find_next_bit(const unsigned long *addr, unsigned long size,
-                            unsigned long offset)
-{
-	const unsigned long *p = addr + BITOP_WORD(offset);
-	unsigned long result = offset & ~(BITS_PER_LONG-1);
-	unsigned long tmp;
-
-	if (offset >= size)
-		return size;
-	size -= result;
-	offset %= BITS_PER_LONG;
-	if (offset) {
-		tmp = *(p++);
-		tmp &= (~0UL << offset);
-		if (size < BITS_PER_LONG)
-			goto found_first;
-		if (tmp)
-			goto found_middle;
-		size -= BITS_PER_LONG;
-		result += BITS_PER_LONG;
-	}
-	while (size & ~(BITS_PER_LONG-1)) {
-		if ((tmp = *(p++)))
-			goto found_middle;
-		result += BITS_PER_LONG;
-		size -= BITS_PER_LONG;
-	}
-	if (!size)
-		return result;
-	tmp = *p;
-
-found_first:
-	tmp &= (~0UL >> (BITS_PER_LONG - size));
-	if (tmp == 0UL)		/* Are any bits set? */
-		return result + size;	/* Nope. */
-found_middle:
-	return result + ffs(tmp);
-}
-
-size_t _kc_strlcpy(char *dest, const char *src, size_t size)
-{
-	size_t ret = strlen(src);
-
-	if (size) {
-		size_t len = (ret >= size) ? size - 1 : ret;
-		memcpy(dest, src, len);
-		dest[len] = '\0';
-	}
-	return ret;
-}
-
-#ifndef do_div
-#if BITS_PER_LONG == 32
-uint32_t __attribute__((weak)) _kc__div64_32(uint64_t *n, uint32_t base)
-{
-	uint64_t rem = *n;
-	uint64_t b = base;
-	uint64_t res, d = 1;
-	uint32_t high = rem >> 32;
-
-	/* Reduce the thing a bit first */
-	res = 0;
-	if (high >= base) {
-		high /= base;
-		res = (uint64_t) high << 32;
-		rem -= (uint64_t) (high*base) << 32;
-	}
-
-	while ((int64_t)b > 0 && b < rem) {
-		b = b+b;
-		d = d+d;
-	}
-
-	do {
-		if (rem >= b) {
-			rem -= b;
-			res += d;
-		}
-		b >>= 1;
-		d >>= 1;
-	} while (d);
-
-	*n = res;
-	return rem;
-}
-#endif /* BITS_PER_LONG == 32 */
-#endif /* do_div */
-#endif /* 2.6.0 => 2.4.6 */
 
 /*****************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,4) )
@@ -702,7 +87,8 @@ free_skb:
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(5,4)))
 int _kc_pci_save_state(struct pci_dev *pdev)
 {
-	struct adapter_struct *adapter = pci_get_drvdata(pdev);
+	struct net_device *netdev = pci_get_drvdata(pdev);
+	struct adapter_struct *adapter = netdev_priv(netdev);
 	int size = PCI_CONFIG_SPACE_LEN, i;
 	u16 pcie_cap_offset, pcie_link_status;
 
@@ -735,7 +121,8 @@ int _kc_pci_save_state(struct pci_dev *pdev)
 
 void _kc_pci_restore_state(struct pci_dev *pdev)
 {
-	struct adapter_struct *adapter = pci_get_drvdata(pdev);
+	struct net_device *netdev = pci_get_drvdata(pdev);
+	struct adapter_struct *adapter = netdev_priv(netdev);
 	int size = PCI_CONFIG_SPACE_LEN, i;
 	u16 pcie_cap_offset;
 	u16 pcie_link_status;
@@ -916,40 +303,15 @@ void _kc_print_hex_dump(const char *level,
 #endif /* < 2.6.22 */
 
 /*****************************************************************************/
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,23) )
-int fm10k_dcb_netlink_register(void)
-{
-	return 0;
-}
-
-int fm10k_dcb_netlink_unregister(void)
-{
-	return 0;
-}
-
-int fm10k_copy_dcb_cfg(struct fm10k_adapter __always_unused *adapter, int __always_unused tc_max)
-{
-	return 0;
-}
-#endif /* < 2.6.23 */
-
-/*****************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,24) )
 #ifdef NAPI
-struct net_device *napi_to_poll_dev(const struct napi_struct *napi)
-{
-	struct adapter_q_vector *q_vector = container_of(napi,
-	                                                struct adapter_q_vector,
-	                                                napi);
-	return &q_vector->poll_dev;
-}
 
 int __kc_adapter_clean(struct net_device *netdev, int *budget)
 {
 	int work_done;
 	int work_to_do = min(*budget, netdev->quota);
-	/* kcompat.h netif_napi_add puts napi struct in "fake netdev->priv" */
-	struct napi_struct *napi = netdev->priv;
+	struct adapter_struct *adapter = netdev_priv(netdev);
+	struct napi_struct *napi = &adapter->rx_ring[0].napi;
 	work_done = napi->poll(napi, work_to_do);
 	*budget -= work_done;
 	netdev->quota -= work_done;
@@ -1211,21 +573,6 @@ u16 ___kc_skb_tx_hash(struct net_device *dev, const struct sk_buff *skb,
 		return hash;
 	}
 
-	if (netdev_get_num_tc(dev)) {
-		struct adapter_struct *kc_adapter = netdev_priv(dev);
-
-		if (skb->priority == TC_PRIO_CONTROL) {
-			qoffset = kc_adapter->dcb_tc - 1;
-		} else {
-			qoffset = skb->vlan_tci;
-			qoffset &= IXGBE_TX_FLAGS_VLAN_PRIO_MASK;
-			qoffset >>= 13;
-		}
-
-		qcount = kc_adapter->ring_feature[RING_F_RSS].indices;
-		qoffset *= qcount;
-	}
-
 	if (skb->sk && skb->sk->sk_hash)
 		hash = skb->sk->sk_hash;
 	else
@@ -1243,30 +590,17 @@ u16 ___kc_skb_tx_hash(struct net_device *dev, const struct sk_buff *skb,
 
 u8 _kc_netdev_get_num_tc(struct net_device *dev)
 {
-	struct adapter_struct *kc_adapter = netdev_priv(dev);
-	if (kc_adapter->flags & IXGBE_FLAG_DCB_ENABLED)
-		return kc_adapter->dcb_tc;
-	else
-		return 0;
+	return 0;
 }
 
 int _kc_netdev_set_num_tc(struct net_device *dev, u8 num_tc)
 {
-	struct adapter_struct *kc_adapter = netdev_priv(dev);
-
-	if (num_tc > IXGBE_DCB_MAX_TRAFFIC_CLASS)
-		return -EINVAL;
-
-	kc_adapter->dcb_tc = num_tc;
-
 	return 0;
 }
 
-u8 _kc_netdev_get_prio_tc_map(struct net_device __maybe_unused *dev, u8 __maybe_unused up)
+u8 _kc_netdev_get_prio_tc_map(struct net_device *dev, u8 up)
 {
-	struct adapter_struct *kc_adapter = netdev_priv(dev);
-
-	return fm10k_dcb_get_tc_from_up(&kc_adapter->dcb_cfg, 0, up);
+	return 0;
 }
 
 #endif /* !(RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)) */
@@ -1596,18 +930,6 @@ static inline int kc_get_xps_queue(struct net_device *dev, struct sk_buff *skb)
 
 	return queue_index;
 #else
-	struct adapter_struct *kc_adapter = netdev_priv(dev);
-	int queue_index = -1;
-
-	if (kc_adapter->flags & IXGBE_FLAG_FDIR_HASH_CAPABLE) {
-		queue_index = skb_rx_queue_recorded(skb) ?
-					   skb_get_rx_queue(skb) :
-					   smp_processor_id();
-		while (unlikely(queue_index >= dev->real_num_tx_queues))
-			queue_index -= dev->real_num_tx_queues;
-		return queue_index;
-	}
-
 	return -1;
 #endif
 }
@@ -2766,7 +2088,6 @@ void flow_rule_match_ports(const struct flow_rule *rule,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0))
-#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2))))
 #ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
 int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 				   struct list_head __always_unused *driver_list,
@@ -2795,5 +2116,4 @@ int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 	}
 }
 #endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
-#endif /* !RHEL >= 8.2 */
 #endif /* 5.3.0 */

@@ -2455,6 +2455,38 @@ void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
 #endif /* 4.15.0 */
 
 /*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,16,0))
+#if !(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,0)) && \
+     !(SLE_VERSION_CODE >= SLE_VERSION(12,5,0) && \
+       SLE_VERSION_CODE < SLE_VERSION(15,0,0) || \
+       SLE_VERSION_CODE >= SLE_VERSION(15,1,0))
+#if BITS_PER_LONG == 64
+/**
+ * bitmap_from_arr32 - copy the contents of u32 array of bits to bitmap
+ * @bitmap: array of unsigned longs, the destination bitmap
+ * @buf: array of u32 (in host byte order), the source bitmap
+ * @nbits: number of bits in @bitmap
+ */
+void bitmap_from_arr32(unsigned long *bitmap, const u32 *buf, unsigned int nbits)
+{
+	unsigned int i, halfwords;
+
+	halfwords = DIV_ROUND_UP(nbits, 32);
+	for (i = 0; i < halfwords; i++) {
+		bitmap[i/2] = (unsigned long) buf[i];
+		if (++i < halfwords)
+			bitmap[i/2] |= ((unsigned long) buf[i]) << 32;
+	}
+
+	/* Clear tail bits in last word beyond nbits. */
+	if (nbits % BITS_PER_LONG)
+		bitmap[(halfwords - 1) / 2] &= BITMAP_LAST_WORD_MASK(nbits);
+}
+#endif /* BITS_PER_LONG == 64 */
+#endif /* !(RHEL >= 8.0) && !(SLES >= 12.5 && SLES < 15.0 || SLES >= 15.1) */
+#endif /* 4.16.0 */
+
+/*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,17,0))
 /* PCIe link information */
 #define PCIE_SPEED2STR(speed) \
