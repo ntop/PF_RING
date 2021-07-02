@@ -7480,15 +7480,6 @@ _kc_xsk_buff_dma_sync_for_cpu(struct xdp_buff *xdp,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0))
 #ifdef HAVE_XDP_BUFF_RXQ
 #include <net/xdp.h>
-static inline int
-_kc_xdp_rxq_info_reg(struct xdp_rxq_info *xdp_rxq, struct net_device *dev,
-		     u32 queue_index, unsigned int __always_unused napi_id)
-{
-	return xdp_rxq_info_reg(xdp_rxq, dev, queue_index);
-}
-
-#define xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id) \
-	_kc_xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id)
 #endif /* HAVE_XDP_BUFF_RXQ */
 #ifdef HAVE_NAPI_BUSY_LOOP
 #include <net/busy_poll.h>
