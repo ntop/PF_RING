@@ -7298,6 +7298,7 @@ _kc_devlink_region_create(struct devlink *devlink,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 #if IS_ENABLED(CONFIG_NET_DEVLINK) && !defined(devlink_port_attrs_set)
 static inline void
 _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
@@ -7311,6 +7312,7 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 
 #define devlink_port_attrs_set _kc_devlink_port_attrs_set
 #endif /* CONFIG_NET_DEVLINK && !devlink_port_attrs_set */
+#endif /* !RHEL_RELEASE_VERSION(8,4) */
 #define HAVE_XDP_QUERY_PROG
 #else /* >= 5.9.0 */
 #define HAVE_FLOW_INDIR_BLOCK_QDISC
@@ -7325,6 +7327,7 @@ struct devlink_flash_update_params {
 	u32 overwrite_mask;
 };
 
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 static inline void net_prefetch(void *p)
 {
 	prefetch(p);
@@ -7332,6 +7335,7 @@ static inline void net_prefetch(void *p)
 	prefetch((u8 *)p + L1_CACHE_BYTES);
 #endif
 }
+#endif /* !RHEL_RELEASE_VERSION(8,4) */
 #else /* >= 5.10.0 */
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
