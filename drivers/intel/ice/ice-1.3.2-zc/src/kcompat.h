@@ -2746,7 +2746,9 @@ struct _kc_bpf_prog {
 	({ unsigned long long _tmp = (ll); do_div(_tmp, d); _tmp; })
 #endif /* DIV_ROUND_DOWN_ULL */
 #else /* > 4.14 */
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 #define HAVE_XDP_SUPPORT
+#endif /* !RHEL_RELEASE_VERSION(8,4) */
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #define HAVE_TCF_EXTS_HAS_ACTION
 #endif /* 4.14.0 */
@@ -3116,6 +3118,7 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 #endif /* SLES < 15.1 */
 
 #else
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 #include <linux/overflow.h>
 #include <net/xdp_sock.h>
 #define HAVE_XDP_FRAME_STRUCT
@@ -3123,6 +3126,7 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 #define HAVE_NDO_XDP_XMIT_BULK_AND_FLAGS
 #define NO_NDO_XDP_FLUSH
 #define HAVE_AF_XDP_SUPPORT
+#endif
 #endif /* 4.18.0 */
 
 /*****************************************************************************/
@@ -3743,6 +3747,7 @@ struct devlink_flash_update_params {
 #define DEVLINK_FLASH_OVERWRITE_IDENTIFIERS BIT(1)
 #endif
 
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
 #include <net/devlink.h>
 static inline void
@@ -3754,6 +3759,7 @@ devlink_flash_update_timeout_notify(struct devlink *devlink,
 	devlink_flash_update_status_notify(devlink, status_msg, component, 0, 0);
 }
 #endif /* CONFIG_NET_DEVLINK */
+#endif /* !RHEL_RELEASE_VERSION(8,4) */
 #endif /* !(SLE >= 15.3) */
 
 #if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4))) && \

@@ -6460,7 +6460,9 @@ struct _kc_bpf_prog {
 	({ unsigned long long _tmp = (ll); do_div(_tmp, d); _tmp; })
 #endif /* DIV_ROUND_DOWN_ULL */
 #else /* > 4.14 */
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 #define HAVE_XDP_SUPPORT
+#endif /* !RHEL_RELEASE_VERSION(8,4) */
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #define HAVE_TCF_EXTS_HAS_ACTION
 #endif /* 4.14.0 */
@@ -7434,6 +7436,7 @@ struct devlink_flash_update_params {
 #define DEVLINK_FLASH_OVERWRITE_IDENTIFIERS BIT(1)
 #endif
 
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
 #include <net/devlink.h>
 static inline void
@@ -7446,7 +7449,6 @@ devlink_flash_update_timeout_notify(struct devlink *devlink,
 }
 #endif /* CONFIG_NET_DEVLINK */
 
-#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 static inline void net_prefetch(void *p)
 {
 	prefetch(p);
