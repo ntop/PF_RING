@@ -218,7 +218,7 @@ const char *status_to_string(pfring_ft_flow_status status) {
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
   pfring_ft_flow_value *v;
-  char buf1[32], buf2[32], buf3[32], buf4[32], buf5[32];
+  char buf1[64], buf2[64], buf3[32], buf4[32], buf5[32];
   char *ip1, *ip2;
 
   k = pfring_ft_flow_get_key(flow);
