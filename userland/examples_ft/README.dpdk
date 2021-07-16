@@ -26,9 +26,20 @@ Download dpdk:
 $ tar xJf dpdk-<version>.tar.xz
 $ cd dpdk-<version>
 
+Intall meson:
+
+$ apt-get install meson ninja-build
+
 Build dpdk:
 
 $ meson build
+$ cd build
+$ ninja
+
+Note: in order to enable Mellanox support, libibverbs is required:
+
+$ sudo apt install libibverbs-dev
+$ meson --reconfigure build
 $ cd build
 $ ninja
 
