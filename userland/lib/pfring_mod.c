@@ -117,8 +117,10 @@ int pfring_mod_open_setup(pfring *ring) {
   if(!strcmp(ring->device_name, "none")) {
     /* No binding yet */
     rc = 0;
-  } else /* "any" or "<interface name>" */
+  } else {
+    /* "any" or "<interface name>" */
     rc = pfring_bind(ring, ring->device_name);
+  }
 
   if(rc < 0) {
     close(ring->fd);

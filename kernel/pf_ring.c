@@ -5558,7 +5558,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
   if(strcmp(dev->dev->name, "none") != 0 &&
       strcmp(dev->dev->name, "any") != 0 &&
       !(dev->dev->flags & IFF_UP)) {
-    printk("[PF_RING] bind: %s dev index is down\n", dev_name);
+    printk("[PF_RING] bind: device %s is down, bring it up to capture\n", dev_name);
     return -ENETDOWN;
   }
 
