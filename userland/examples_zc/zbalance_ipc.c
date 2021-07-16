@@ -44,6 +44,8 @@
 
 #include "zutils.c"
 
+#define DEFAULT_CONF_FILE "/etc/cluster/cluster.conf"
+
 #define bitmap64_t(name, n) u_int64_t name[n / 64]
 #define bitmap64_reset(b) memset(b, 0, sizeof(b))
 #define bitmap64_set_bit(b, i)   b[i >> 6] |=  ((u_int64_t) 1 << (i & 0x3F))
@@ -993,7 +995,13 @@ int main(int argc, char* argv[]) {
 
   start_time.tv_sec = 0;
 
-  if ((argc == 2) && (argv[1][0] != '-')) {
+  if (argc == 1) {
+    if (load_args_from_file(DEFAULT_CONF_FILE, &opt_argc, &opt_argv) != 0) {
+      trace(TRACE_ERROR, "Please specify all mandatory options via cli or configuration file (default path: %s)\n", DEFAULT_CONF_FILE);
+      printHelp();
+      exit(-1);
+    }
+  } else if ((argc == 2) && (argv[1][0] != '-')) {
     if (load_args_from_file(argv[1], &opt_argc, &opt_argv) != 0) {
       trace(TRACE_ERROR, "Unable to read config file %s\n", argv[1]);
       exit(-1);

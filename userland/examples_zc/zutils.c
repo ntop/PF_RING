@@ -197,6 +197,11 @@ int load_args_from_file(char *conffile, int *ret_argc, char **ret_argv[]) {
   char **opt_argv;
   int i;
 
+  fd = fopen(conffile, "r");
+
+  if(fd == NULL) 
+    return -1;
+
   opt_argc = 0;
   opt_argv = (char **) malloc(sizeof(char *) * MAX_NUM_OPTIONS);
 
@@ -204,11 +209,6 @@ int load_args_from_file(char *conffile, int *ret_argc, char **ret_argv[]) {
     return -1;
 
   memset(opt_argv, 0, sizeof(char *) * MAX_NUM_OPTIONS);
-
-  fd = fopen(conffile, "r");
-
-  if(fd == NULL) 
-    return -1;
 
   opt_argv[opt_argc++] = "";
 
