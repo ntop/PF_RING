@@ -36,13 +36,6 @@ $ meson build
 $ cd build
 $ ninja
 
-Note: in order to enable Mellanox support, libibverbs is required:
-
-$ sudo apt install libibverbs-dev
-$ meson --reconfigure build
-$ cd build
-$ ninja
-
 Install dpdk:
 
 $ sudo ninja install
@@ -58,3 +51,43 @@ Supposing to capture packets from device eno1 you can start the
 application as follows:
 
 sudo ./build/ftflow_dpdk -c 1 --vdev=net_pcap0,iface=eno1 -- -v -7
+
+Mellanox Notes
+--------------
+
+In order to enable Mellanox support, libibverbs is required when building dpdk:
+
+$ sudo apt install libibverbs-dev
+$ meson --reconfigure build
+$ cd build
+$ ninja
+
+After installing dpdk, download Mellanox OFED/EN from https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed
+and install it (this also installs dependencies including libibverbs):
+
+$ cd MLNX_OFED_LINUX-5.4-1.0.3.0-ubuntu20.04-x86_64
+$ ./mlnxofedinstall --upstream-libs --dpdk
+
+Verify the fw:
+
+$ ibv_devinfo
+
+Load the required modules and load hugepages:
+
+$ modprobe -a ib_uverbs mlx5_core mlx5_ib
+$ dpdk-hugepages.py --setup 2G
+
+Check the interfaces and get the Bus IDs:
+
+$ ls -d /sys/class/net/*/device/infiniband_verbs/uverbs* | cut -d / -f 5
+enp1s0f0
+enp1s0f1
+
+$ cd /sys/class/net/enp1s0f0/device/ && pwd -P| sed -n 's,.*/\(.*\),-a \1,p'
+0000:01:00.0
+$ cd /sys/class/net/enp1s0f1/device/ && pwd -P| sed -n 's,.*/\(.*\),-a \1,p'
+0000:01:00.1
+
+Test the driver:
+
+$ dpdk-testpmd -l 1-2 -n 4 -a 0000:01:00.0 -a 0000:01:00.1 -- --rxq=1 --txq=1 -i
