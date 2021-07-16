@@ -17,9 +17,24 @@ Prerequisite
 Kernel Version
 --------------
 
-Install a kernel >= 5.4, which includes support for unaligned zero-copy buffers.
+Install a kernel >= 5.4, which includes support for unaligned zero-copy buffers. 
 
-Ubuntu 20 currently runs a kernel >= 5.8 which fully supports AF_XDP.
+Ubuntu 20 LTS currently runs a kernel 5.4 which fully supports AF_XDP. However the HWE kernel 5.8 is recommended as it provides improved AF_XDP support.
+
+Install *libelf-dev*:
+
+.. code-block:: console
+
+   apt install libelf-dev
+
+Install *libbpf* from kernel source:
+
+.. code-block:: console
+
+   cd /usr/src/linux-headers-$(uname -r)/tools/lib/bpf
+   sudo make install_lib
+   sudo make install_headers
+   sudo ldconfig
 
 On Ubuntu 18.04 you can use uktools available at https://github.com/usbkey9/uktools/ following the instructions below:
 
@@ -35,7 +50,6 @@ Download and unpack sources for kernel 5.x, it will be used to compile and insta
    wget http://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.2.tar.xz
    tar xvf linux-5.4.2.tar.xz 
    cd linux-5.4.2/tools/lib/bpf
-   sudo apt-get install libelf-dev
    make
    sudo make install_lib
    sudo make install_headers
