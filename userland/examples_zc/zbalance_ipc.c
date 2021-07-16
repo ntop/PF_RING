@@ -1627,6 +1627,9 @@ int main(int argc, char* argv[]) {
     pfring_zc_destroy_cluster(zc);
     return -1;
   }
+
+  /* Bind also main thread to the worker core */
+  bind2core(bind_worker_core);
   
   if (user != NULL) {
     if (drop_privileges(user) == 0)
