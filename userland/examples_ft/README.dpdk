@@ -50,15 +50,16 @@ Run Application
 Supposing to capture packets from device eno1 you can start the
 application as follows:
 
-sudo ./build/ftflow_dpdk -c 1 --vdev=net_pcap0,iface=eno1 -- -v -7
+sudo ./ftflow_dpdk -c 1 --vdev=net_pcap0,iface=eno1 -- -v -7
 
 Mellanox Notes
 --------------
 
-In order to enable Mellanox support, libibverbs is required when building dpdk:
+In order to enable Mellanox support, libibverbs is required when building dpdk.
+It is also suggested to disable mlx4 if you are using mlx5 to avoid linking issues.
 
 $ sudo apt install libibverbs-dev
-$ meson --reconfigure build
+$ meson -Ddisable_drivers=net/mlx4 build
 $ cd build
 $ ninja
 
@@ -91,3 +92,8 @@ $ cd /sys/class/net/enp1s0f1/device/ && pwd -P| sed -n 's,.*/\(.*\),-a \1,p'
 Test the driver:
 
 $ dpdk-testpmd -l 1-2 -n 4 -a 0000:01:00.0 -a 0000:01:00.1 -- --rxq=1 --txq=1 -i
+
+Run ftflow_dpdk:
+
+$ sudo ./ftflow_dpdk -l 1 -n 2 -a 0000:01:00.1 -- -p 0 -0
+
