@@ -402,6 +402,11 @@ struct __pfring {
 
 /* ********************************* */
 
+/* Defines with new features implemented by the API */
+#define PF_RING_API_RECV_BURST
+
+/* ********************************* */
+
 /**
  * This call is used to initialize a PF_RING socket hence obtain a handle of type struct pfring 
  * that can be used in subsequent calls. Note that: 
