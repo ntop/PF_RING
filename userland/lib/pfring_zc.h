@@ -18,8 +18,10 @@
 #include <sys/types.h>
 #include <linux/pf_ring.h> /* needed for hw_filtering_rule */
 
-#define PF_RING_ZC_ENABLE_VM_SUPPORT         (1 << 0) /**< pfring_zc_create_cluster() flag: enable KVM support (memory is rounded up to power of 2 thus it allocates more memory!) */
+/* pfring_zc_create_cluster flags */
+#define PF_RING_ZC_ENABLE_VM_SUPPORT          (1 << 0) /**< pfring_zc_create_cluster() flag: enable KVM support (memory is rounded up to power of 2 thus it allocates more memory!) */
 
+/* pfring_zc_open_device flags */
 #define PF_RING_ZC_DEVICE_ASYMMETRIC_RSS      (1 <<  0) /**< pfring_zc_open_device() flag: use asymmetric hw RSS for multiqueue devices. */
 #define PF_RING_ZC_DEVICE_FIXED_RSS_Q_0       (1 <<  1) /**< pfring_zc_open_device() flag: redirect all traffic to the first hw queue. */
 #define PF_RING_ZC_DEVICE_SW_TIMESTAMP        (1 <<  2) /**< pfring_zc_open_device() flag: compute sw timestamp (please note: this adds per-packet overhead). */
@@ -55,6 +57,10 @@
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPC (1 << 2) /**< pfring_zc_builtin_gtp_hash flags: GTP-C */
 #define PF_RING_ZC_BUILTIN_GTP_HASH_FLAGS_GTPU (1 << 3) /**< pfring_zc_builtin_gtp_hash flags: GTP-U */
 
+/* New API features defines */
+#define PF_RING_ZC_API_CLUSTER_INFO
+
+/* Misc defines */
 #define PF_RING_ZC_SEND_PKT_MULTI_MAX_QUEUES 64 /**< pfring_zc_send_pkt_multi: max number of queues in queues_mask */
 #define PF_RING_ZC_BUFFER_HEAD_ROOM          64
 
