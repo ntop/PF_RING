@@ -578,6 +578,8 @@ typedef struct {
   u_int16_t dst_port_low;
   u_int16_t dst_port_high; /* mode 1 only */
   u_int8_t l4_port_not; /* rule match if src_port_low/dst_port_low are defined and they do not match - mode 2 only */
+  u_int8_t steer_to_ring; /* steer matching traffic to the specified ring_id (instead of LB) */
+  u_int8_t ring_id; /* destination ring for action = pass */
 } __attribute__((packed))
 accolade_hw_rule;
 
