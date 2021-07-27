@@ -1324,7 +1324,7 @@ int main(int argc, char* argv[]) {
 
       rc = pfring_zc_create_queue_pool_pair(zc, queue_len, IN_POOL_SIZE, &ext_q, &ext_pool);
 
-      if (rc < 0 || ext_q == NULL || ext_q == NULL) {
+      if (rc < 0 || ext_q == NULL || ext_pool == NULL) {
         trace(TRACE_ERROR, "pfring_zc_create_queue_pool_pair error [%s]\n", strerror(errno));                                             
         pfring_zc_destroy_cluster(zc);
         return -1;                                                                                                           
