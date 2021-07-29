@@ -85,8 +85,12 @@ NBPF_OBJS = `$(AR) t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 #
 # Object files
 #
-OBJS      = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
-	    pfring_hw_timestamp.o pfring_mod_sysdig.o pfring_mod_pcap.o ${PF_RING_ZC_OBJS} ${PF_RING_FT_OBJS} ${AF_XDP_OBJS} ${DAG_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${ACCOLADE_OBJS} ${MYRICOM_OBJS} ${NETCOPE_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
+OBJS_MIN = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
+	   pfring_hw_timestamp.o pfring_mod_sysdig.o pfring_mod_pcap.o ${PF_RING_ZC_OBJS} \
+	   ${AF_XDP_OBJS} ${DAG_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${ACCOLADE_OBJS} \
+	   ${MYRICOM_OBJS} ${NETCOPE_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
+
+OBJS =     ${OBJS_MIN} ${PF_RING_FT_OBJS}
 
 #
 # C compiler and flags
@@ -100,7 +104,13 @@ WFLAGS    = -Wall
 ifeq ($(shell test $(GCC_MAJ_VERSION) -ge 5 && echo 1), 1)
 WFLAGS += -Wno-stringop-truncation -Wno-address-of-packed-member
 endif
-CFLAGS    += @CFLAGS@ ${WFLAGS} -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@ @HAVE_AF_XDP@ @HAVE_DAG@ @HAVE_FIBERBLAZE@ @HAVE_ACCOLADE@ @HAVE_MYRICOM@ @HAVE_NETCOPE@ @HAVE_EXABLAZE@ @HAVE_BPF@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_NPCAP@
+
+CFLAGS_MIN = @CFLAGS@ ${WFLAGS} -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_AF_XDP@ @HAVE_DAG@ @HAVE_FIBERBLAZE@ @HAVE_ACCOLADE@ @HAVE_MYRICOM@ @HAVE_NETCOPE@ @HAVE_EXABLAZE@ @HAVE_BPF@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_NPCAP@
+CFLAGS += ${CFLAGS_MIN} @HAVE_PF_RING_FT@ 
+
+EXTRA_DEPS_MIN = extract_nbpf @PF_RING_ZC_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@
+EXTRA_DEPS =     ${EXTRA_DEPS_MIN} @PF_RING_FT_DEP@
+
 LDFLAGS   += -g -shared
 SYSLIBS   = -lpthread @SYSLIBS@ @AF_XDP_LIB@ @DAG_LIB@ @FIBERBLAZE_LIB@ @EXABLAZE_LIB@
 
@@ -114,21 +124,26 @@ SYSLIBS   = -lpthread @SYSLIBS@ @AF_XDP_LIB@ @DAG_LIB@ @FIBERBLAZE_LIB@ @EXABLAZ
 #
 STATICLIB  = libpfring.a
 DYNAMICLIB = libpfring.so
-TARGETS    = ${STATICLIB} ${DYNAMICLIB}
+DYNAMICLIB_MIN = libpfring_min.so
+TARGETS    = ${STATICLIB} ${DYNAMICLIB} ${DYNAMICLIB_MIN}
 RING_H     = $(PF_RING_KERNEL)/linux/pf_ring.h
 AR ?= ar
 RANLIB ?= ranlib
 
 all: ${TARGETS}
 
-${STATICLIB}: Makefile extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ ${OBJS} pfring.h ${RING_H}
+${STATICLIB}: Makefile ${EXTRA_DEPS} ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
 	$(AR) rs $@ ${OBJS} ${NBPF_OBJS}
 	$(RANLIB) $@
 
-${DYNAMICLIB}: ${OBJS} extract_nbpf @PF_RING_ZC_DEP@ @PF_RING_FT_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@ pfring.h ${RING_H} Makefile
+${DYNAMICLIB}: Makefile ${EXTRA_DEPS} ${OBJS} pfring.h ${RING_H}
 	@echo "=*= making library $@ =*="
 	${CC} -Wl,-soname,$@.@MAJOR_VER@ ${LDFLAGS} ${OBJS} ${NBPF_OBJS} ${SYSLIBS} -o $@.@VER@
+
+${DYNAMICLIB_MIN}: Makefile ${EXTRA_DEPS_MIN} ${OBJS_MIN} pfring.h ${RING_H}
+	@echo "=*= making library $@ =*="
+	${CC} -Wl,-soname,$@.@MAJOR_VER@ ${LDFLAGS} ${OBJS_MIN} ${NBPF_OBJS} ${SYSLIBS} -o $@.@VER@
 
 extract_pfring_zc_lib:
 	@AR_X@ @PF_RING_ZC_LIB@
@@ -180,11 +195,14 @@ install-static: ${STATICLIB} install-includes
 	mkdir -p $(DESTDIR)$(libdir)
 	cp ${STATICLIB} $(DESTDIR)$(libdir)/
 
-install-shared:	${DYNAMICLIB} install-includes
+install-shared:	${DYNAMICLIB} ${DYNAMICLIB_MIN} install-includes
 	mkdir -p $(DESTDIR)$(libdir)
 	cp ${DYNAMICLIB}.@VER@ $(DESTDIR)$(libdir)/
 	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB}.@VER@ ${DYNAMICLIB}.@MAJOR_VER@
 	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB}.@MAJOR_VER@ ${DYNAMICLIB}
+	cp ${DYNAMICLIB_MIN}.@VER@ $(DESTDIR)$(libdir)/
+	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB_MIN}.@VER@ ${DYNAMICLIB_MIN}.@MAJOR_VER@
+	cd $(DESTDIR)$(libdir); ln -sf ${DYNAMICLIB_MIN}.@MAJOR_VER@ ${DYNAMICLIB_MIN}
 	-@if test "$(USER)" = "root"; then \
 		ldconfig; \
 	fi
