@@ -43,18 +43,6 @@ If two PRBs are configured with PRB group *a* and PRB sub group *b*, the PRB nam
    fbcard:0:a/b00
    fbcard:0:a/b01
 
-Before version 7.7, the naming convention for RX was fbcard:CARD_ID:GROUP_NAME:GROUP_RING_ID
-where CARD_ID is the id of the card we want to open, GROUP_NAME is the name of the group 
-specified in the configuration file fbcard.cfg used by configurecard, and RING_ID (in case 
-of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs. 
-For example, if two PRBs are configured in the PRB group *b*, the PRB interface names in
-this case are:
-
-.. code-block:: text
-
-   fbcard:0:b:0
-   fbcard:0:b:1
-
 Example of group configuration with 8 PRB rings using hashing in /opt/fiberblaze/fbcard.cfg:
 
 .. code-block:: text
@@ -82,6 +70,22 @@ input = PORT_ID in the filter section:
        noPrbs 1
        filter "input = 0"
    }
+
+PF_RING <= 7.6
+~~~~~~~~~~~~~~
+
+On older PF_RING version (earlier than version 7.7), the naming convention for RX was 
+fbcard:CARD_ID:GROUP_NAME:GROUP_RING_ID
+where CARD_ID is the id of the card we want to open, GROUP_NAME is the name of the group 
+specified in the configuration file fbcard.cfg used by configurecard, and RING_ID (in case 
+of traffic hashing, i.e. Fiberblaze's RSS) if the id of the PRBs. 
+For example, if two PRBs are configured in the PRB group *b*, the PRB interface names in
+this case are:
+
+.. code-block:: text
+
+   fbcard:0:b:0
+   fbcard:0:b:1
 
 Transmit Traffic
 ----------------
