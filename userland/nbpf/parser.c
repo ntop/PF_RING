@@ -169,6 +169,10 @@ static nbpf_node_t *tree_parse(const char *buffer) {
   nbpf_lex_cleanup(&lex);
 
   if (errors) {
+    if (tree_root.root) {
+      node_purge(tree_root.root);
+      tree_root.root = NULL;
+    }
     return NULL;
   }
 
