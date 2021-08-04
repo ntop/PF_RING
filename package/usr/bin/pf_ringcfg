@@ -141,8 +141,8 @@ get_actual_rss_queues() {
 	IF=$1
 	ACTUAL_RSS_QUEUES="Unknown"
 
-	if [ `cat /proc/net/pf_ring/dev/${IF}/info 2>/dev/null | grep "RX Queues" | grep "RX Queues" | wc -l` -gt 0 ]; then
-		ACTUAL_RSS_QUEUES=`cat /proc/net/pf_ring/dev/${IF}/info 2>/dev/null | grep "RX Queues" | grep "RX Queues" | cut -d':' -f 2`
+	if [ `cat /proc/net/pf_ring/dev/${IF}/info 2>/dev/null | grep "RX Queues" | wc -l` -gt 0 ]; then
+		ACTUAL_RSS_QUEUES=`cat /proc/net/pf_ring/dev/${IF}/info 2>/dev/null | grep "RX Queues" | cut -d':' -f 2`
 	fi
 }
 
