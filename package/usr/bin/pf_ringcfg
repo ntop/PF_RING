@@ -137,6 +137,15 @@ is_interface_running_zc() {
 	return 1
 }
 
+get_actual_rss_queues() {
+	IF=$1
+	ACTUAL_RSS_QUEUES="Unknown"
+
+	if [ `cat /proc/net/pf_ring/dev/${IF}/info 2>/dev/null | grep "RX Queues" | grep "RX Queues" | wc -l` -gt 0 ]; then
+		ACTUAL_RSS_QUEUES=`cat /proc/net/pf_ring/dev/${IF}/info 2>/dev/null | grep "RX Queues" | grep "RX Queues" | cut -d':' -f 2`
+	fi
+}
+
 print_drivers() {
 	for D in ${ZC_DRIVERS[@]} ; do
 		echo "${D}"
@@ -156,6 +165,7 @@ print_interfaces() {
 		fi
 
 		get_interface_driver ${IF}
+		get_actual_rss_queues ${IF}
 
 		INFO=""
 		if is_interface_running_zc ${IF}; then
@@ -164,7 +174,7 @@ print_interfaces() {
 			INFO="[Supported by ZC]"
 		fi
 
-		printf "Name: %-20s Driver: %-10s %-15s" "${IF}" "${DRIVER}" "${INFO}"
+		printf "Name: %-20s Driver: %-10s RSS: %-8s %-15s" "${IF}" "${DRIVER}" "${ACTUAL_RSS_QUEUES}" "${INFO}"
 		echo ""
 	done
 }
