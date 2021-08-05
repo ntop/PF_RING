@@ -131,7 +131,7 @@ int pfring_mod_open_setup(pfring *ring) {
 			      MAP_SHARED, ring->fd, 0);
 
   if(ring->buffer == MAP_FAILED) {
-    fprintf(stderr, "[PF_RING] mmap() failed: try with a smaller snaplen\n");
+    fprintf(stderr, "[PF_RING] mmap() failed: %s\n", strerror(errno));
     close(ring->fd);
     return -1;
   }
@@ -157,7 +157,7 @@ int pfring_mod_open_setup(pfring *ring) {
 			      MAP_SHARED, ring->fd, 0);
 
   if(ring->buffer == MAP_FAILED) {
-    fprintf(stderr, "[PF_RING] mmap() failed");
+    fprintf(stderr, "[PF_RING] mmap() failed: %s\n", strerror(errno));
     close(ring->fd);
     return -1;
    }
