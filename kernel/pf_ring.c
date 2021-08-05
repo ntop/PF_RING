@@ -6294,9 +6294,7 @@ static int pfring_select_zc_dev(struct pf_ring_socket *pfr, zc_dev_mapping *mapp
   pf_ring_device *dev_ptr;
   zc_dev_list *entry;
 
-  printk("[PF_RING] %s:%d Trying to map %s\n", __FUNCTION__, __LINE__, mapping->device_name);
-
-  debug_printk(1, "%s@%d\n", mapping->device_name, mapping->channel_id);
+  printk("[PF_RING] Trying to map ZC device %s@%d\n", mapping->device_name, mapping->channel_id);
 
   if(strlen(mapping->device_name) == 0)
     printk("[PF_RING] %s:%d ZC socket with empty device name!\n", __FUNCTION__, __LINE__);
@@ -8076,13 +8074,13 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
 {
   pf_ring_device *dev_ptr;
 
-  printk("%s ZC device %s@%u\n",
-	   operation == add_device_mapping ? "registering" : "removing",
-	   dev->name, channel_id);
+  printk("[PF_RING] %s ZC device %s@%u\n",
+	 operation == add_device_mapping ? "Registering" : "Removing",
+	 dev->name, channel_id);
 
   if(strlen(dev->name) == 0)
     printk("[PF_RING] %s:%d %s ZC device with empty name!\n", __FUNCTION__, __LINE__,
-      operation == add_device_mapping ? "registering" : "removing");
+           operation == add_device_mapping ? "registering" : "removing");
 
   if(operation == add_device_mapping) {
     zc_dev_list *next;
