@@ -20,7 +20,7 @@ tcpdump:
 	cd userland/tcpdump; ./configure; make
 
 changelog:
-	git log --since={`curl -s https://github.com/ntop/PF_RING/releases | grep datetime | head -n1 | egrep -o "[0-9]+\-[0-9]+\-[0-9]+"`} --name-only --pretty=format:" - %s" > Changelog.latest
+	git log --since={`curl -s https://github.com/ntop/PF_RING/releases | grep datetime | head -n1 | egrep -o "[0-9]+\-[0-9]+\-[0-9]+"`} --name-only --pretty=format:" - %s" > CHANGELOG.latest
 
 documentation:
 	cd doc/doxygen; doxygen Doxyfile

@@ -1,3 +1,79 @@
+# CHANGELOG
+
+---------------------------------------
+2021-08-06 PF_RING 8.0
+
+* PF_RING Library
+ - Add pfring_recv_burst API allowing batch receive (when supported by the capture module/adapter)
+ - New zero-copy AF_XDP support (reworked), including pfring_recv_burst support
+ - Fix breakloop when using pfring_loop
+
+* ZC Library
+ - New pfring_zc_pkt_buff_data_from_cluster API to get the packet buffer providing packet handle and cluster
+ - New pfring_zc_pkt_data_buff API to get the packet handle providing packet buffer and cluster
+ - New pfring_zc_pkt_buff_pull_only API to remove data from the head room of a packet
+ - Add PF_RING_ZC_BUFFER_HEAD_ROOM define (buffer head room size)
+ - Add PF_RING_ZC_SEND_PKT_MULTI_MAX_QUEUES define (max number of queues in queues_mask)
+
+* FT Library
+ - New pfring_ft_api_version API to get the API version
+ - New pfring_zc_precompute_cluster_settings API to get memory information before allocating resources
+ - Add VXLAN encapsulation support
+ - Add tunnel_id to flow metadata
+ - Add support for compiling examples with DPDK >=20
+ - Fix L7 metadata with short flows
+
+* PF_RING-aware Libpcap/Tcpdump
+ - Set 5-tuple clustering as default when using clustering with libpcap
+
+* PF_RING Kernel Module
+ - Support for kernel >=5.9
+ - Add more info to /proc, including promisc mode and ZC slots info
+ - Handle long interface name (error on interface length bigger than 14-char as supported by bind)
+ - Fix channel selection when channel is unknown (e.g. VM)
+ - Fix triple VLAN tags with hw offload/acceleration
+ - Fix check on mapped memory size
+ - Fix potential data race in SO_SET_APPL_NAME
+ - Fix OOB access
+
+* PF_RING Capture Modules
+ - Accolade library update (SDK 1_2_20210714)
+ - Napatech library update (SDK 12.7.2.1)
+ - Silicom/Fiberblaze library update (SDK 3_5_9_1)
+ - Add steer_to_ring and ring_id fields to Accolade rules (accolade_hw_rule)
+ - Add support for recv burst on Napatech adapters in chunk mode
+ - Add PF_RING_PACKET_CAPTURE_PRIO env var to set hostBufferAllowance on Napatech adapters
+ - Rename ACCOLADE_RING_BLOCKS env var to ANIC_RING_BLOCKS on Accolade adapters (default is now 16)
+ - Fix Accolade drop counter when capturing from rings
+ - Fix extraction of packets with nsec timestamps on Timeline module (n2disk dump)
+
+* ZC Drivers
+ - New ice ZC driver v.1.3.2 (Intel Columbiaville / E810 adapters) with symmetric RSS support
+ - Support latest kernels, including RH/CentOS 8.4 and Ubuntu 20, for all ZC drivers
+ - i40e ZC driver update (v.2.13.10)
+ - e1000e ZC driver update (v.3.8.7)
+
+* nBPF 
+ - New nBPF primitives 'device <ID>' and 'interface <ID>' to match metadata from Arista MetaWatch devices
+
+* Examples
+ - pfcount
+   - Add -B option (burst mode)
+ - pfsend
+   - Add -n <num packets> support with -f <pcap>
+   - Add support to reforge src/dst IP from pcap with -S and -D
+ - ftflow
+   - Add -E option to run extra DPI dissection (e.g. to print JA3 info)
+ - zbalance_ipc 
+   - Add runtime reload of nDPI protocol configuration file
+   - Add -m 7 option (sample distribution based on eth type)
+   - Add default configuration file /etc/cluster/cluster.conf (when no option is specified)
+
+* Misc
+ - Move libraries and utility scripts from /usr/local to /usr
+ - Install pfring-aware tcpdump with packages
+ - Add revision to pfring-dkms version
+
 ---------------------------------------
 2020-10-19 PF_RING 7.8
 
