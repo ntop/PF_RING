@@ -145,6 +145,9 @@ hw filter there are two options:
 
 - Using the pfring_add_hw_rule() API.
 
+Sample code for filtering traffic with Accolade (as well as with other adapters) 
+is available in the *pfcount.c* sample application (look for *sample_filtering_rules*).
+
 When using the pfring_add_hw_rule() API, as first action we need to set the default 
 behaviour for packets, this can be 'pass' or 'drop'. Example:
 
