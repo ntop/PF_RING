@@ -308,11 +308,11 @@ static rwlock_t ring_cluster_lock =
 /* List of all devices on which PF_RING has been registered */
 static struct list_head ring_aware_device_list; /* List of pf_ring_device */
 
-/* Map ifindex to pf device idx (used for device_rings, num_rings_per_device) */
+/* Map ifindex to pf device idx (used for quick_mode_rings, num_rings_per_device) */
 static ifindex_map_item ifindex_map[MAX_NUM_DEV_IDX];
 
 /* quick mode <ifindex, channel> to <ring> table */
-static struct pf_ring_socket* device_rings[MAX_NUM_DEV_IDX][MAX_NUM_RX_CHANNELS] = { { NULL } };
+static struct pf_ring_socket* quick_mode_rings[MAX_NUM_DEV_IDX][MAX_NUM_RX_CHANNELS] = { { NULL } };
 
 /* Keep track of number of rings per device (plus any) */
 static u_int8_t num_rings_per_device[MAX_NUM_DEV_IDX] = { 0 };
@@ -4195,7 +4195,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   hdr.extended_hdr.flags = 0;
 
   if(quick_mode) {
-    pfr = device_rings[dev_index][channel_id];
+    pfr = quick_mode_rings[dev_index][channel_id];
 
     if (pfr != NULL /* socket present */
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
@@ -4206,7 +4206,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
       if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
         channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
-        pfr = device_rings[dev_index][channel_id];
+        pfr = quick_mode_rings[dev_index][channel_id];
       }
 
       if(is_valid_skb_direction(pfr->direction, recv_packet)) {
@@ -5381,23 +5381,34 @@ static int ring_release(struct socket *sock)
     if(pfr->ring_dev) {
       int32_t dev_index = ifindex_to_pf_index(pfr->ring_dev->dev->ifindex);
       if (dev_index >= 0) {
+        u_int64_t channel_id_bit;
         int i;
 
         if(num_rings_per_device[dev_index] > 0)
 	  num_rings_per_device[dev_index]--;
 
-        for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
-          u_int64_t channel_id_bit = 1 << i;
-
-	  if(pfr->channel_id_mask & channel_id_bit) {
-	    if(device_rings[dev_index][i] == pfr) {
-	      /*
-	        We must make sure that this is really us and not that by some chance
-	        (e.g. bind failed) another ring
-	      */
-	      device_rings[dev_index][i] = NULL;
-            }
+	if(quick_mode) {
+          /* Reset quick mode for dev and all channels bound to the socket */
+          for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
+            channel_id_bit = 1 << i;
+	    if((pfr->channel_id_mask & channel_id_bit) && quick_mode_rings[dev_index][i] == pfr)
+	      quick_mode_rings[dev_index][i] = NULL;
 	  }
+
+          /* Check all bound devices in case of multi devices */
+          list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+            pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+            dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
+  	    if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
+              /* Reset quick mode for all channels */
+              for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
+                channel_id_bit = 1 << i;
+	        if((pfr->channel_id_mask & channel_id_bit) && quick_mode_rings[dev_index][i] == pfr)
+	          quick_mode_rings[dev_index][i] = NULL;
+	      }
+            }
+          }
+
 	}
       }
     }
@@ -6978,7 +6989,7 @@ static int ring_setsockopt(struct socket *sock,
     }
 
     /*
-      We need to set the device_rings[] for all channels set
+      We need to set the quick_mode_rings[] for all channels set
       in channel_id_mask
     */
 
@@ -6987,7 +6998,7 @@ static int ring_setsockopt(struct socket *sock,
         u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << i);
 
         if(channel_id_mask & channel_id_bit) {
-	  if(device_rings[dev_index][i] != NULL)
+	  if(quick_mode_rings[dev_index][i] != NULL)
 	    return(-EINVAL); /* Socket already bound on this device */
         }
       }
@@ -7002,7 +7013,7 @@ static int ring_setsockopt(struct socket *sock,
         debug_printk(2, "Setting channel %d\n", i);
 
 	if(quick_mode) {
-	  device_rings[dev_index][i] = pfr;
+	  quick_mode_rings[dev_index][i] = pfr;
 	}
 
 	num_channels++;
