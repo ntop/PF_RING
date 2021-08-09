@@ -193,6 +193,33 @@ Example of removing a filtering rule by id:
 
    pfring_remove_hw_rule(pd, rule_id);
 
+Steering
+~~~~~~~~
+
+Packet steering across rings is also supported in order to forward selected traffic
+to a specific queue for processing. In order to create a steering rule, the *steer_to_ring*
+field of the *accolade_hw_rule* structure should be set to *1*, and the destination
+ring ID should be set in the *ring_id* field of the same struct. Example:
+
+.. code-block:: c
+
+   hw_filtering_rule r = { 0 };
+   u_int8_t ring_id = 1; /* use any ID in the range configured in anic_mfl_config */
+   r.rule_id = rule_id++;
+   r.rule_family_type = accolade_rule;
+   r.rule_family.accolade_rule.action = accolade_drop;
+   r.rule_family.accolade_rule.ip_version = h->extended_hdr.parsed_pkt.ip_version;
+   r.rule_family.accolade_rule.src_addr_bits = 32;
+   r.rule_family.accolade_rule.src_addr.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
+   r.rule_family.accolade_rule.dst_addr_bits = 32;
+   r.rule_family.accolade_rule.dst_addr.v4 = h->extended_hdr.parsed_pkt.ipv4_dst;
+   r.rule_family.accolade_rule.protocol = h->extended_hdr.parsed_pkt.l3_proto;
+   r.rule_family.accolade_rule.src_port_low = h->extended_hdr.parsed_pkt.l4_src_port;
+   r.rule_family.accolade_rule.dst_port_low = h->extended_hdr.parsed_pkt.l4_dst_port;
+   r.rule_family.accolade_rule.steer_to_ring = 1;
+   r.rule_family.accolade_rule.ring_id = ring_id;
+   pfring_add_hw_rule(pd, &r);
+
 TX DMA
 ------
 
