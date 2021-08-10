@@ -5381,34 +5381,26 @@ static int ring_release(struct socket *sock)
     if(pfr->ring_dev) {
       int32_t dev_index = ifindex_to_pf_index(pfr->ring_dev->dev->ifindex);
       if (dev_index >= 0) {
-        u_int64_t channel_id_bit;
-        int i;
 
-        if(num_rings_per_device[dev_index] > 0)
-	  num_rings_per_device[dev_index]--;
+        /* Check all bound devices in case of multi devices */
+        list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
+          pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
+          dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
+  	  if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
 
-	if(quick_mode) {
-          /* Reset quick mode for dev and all channels bound to the socket */
-          for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
-            channel_id_bit = 1 << i;
-	    if((pfr->channel_id_mask & channel_id_bit) && quick_mode_rings[dev_index][i] == pfr)
-	      quick_mode_rings[dev_index][i] = NULL;
-	  }
+            if(num_rings_per_device[dev_index] > 0)
+	      num_rings_per_device[dev_index]--;
 
-          /* Check all bound devices in case of multi devices */
-          list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
-            pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-            dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
-  	    if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
+	    if(quick_mode) {
+              int i;
               /* Reset quick mode for all channels */
               for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
-                channel_id_bit = 1 << i;
+                u_int64_t channel_id_bit = 1 << i;
 	        if((pfr->channel_id_mask & channel_id_bit) && quick_mode_rings[dev_index][i] == pfr)
 	          quick_mode_rings[dev_index][i] = NULL;
 	      }
             }
           }
-
 	}
       }
     }
