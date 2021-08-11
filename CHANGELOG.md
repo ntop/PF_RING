@@ -1,7 +1,7 @@
 # CHANGELOG
 
 ---------------------------------------
-2021-08-06 PF_RING 8.0
+2021-08-11 PF_RING 8.0
 
 * PF_RING Library
  - Add pfring_recv_burst API allowing batch receive (when supported by the capture module/adapter)
