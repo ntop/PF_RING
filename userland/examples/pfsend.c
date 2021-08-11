@@ -860,20 +860,23 @@ int main(int argc, char* argv[]) {
     if (unlikely(verbose))
       printf("[%d] pfring_send(%d) returned %d\n", i, tosend->len, rc);
 
-    if (rc == PF_RING_ERROR_INVALID_ARGUMENT) {
+    if (likely(rc >= 0)) {
+      num_pkt_good_sent++;
+      num_bytes_good_sent += tosend->len + 24 /* 8 Preamble + 4 CRC + 12 IFG */;
+    } else if (rc == PF_RING_ERROR_INVALID_ARGUMENT) {
       if (send_error_once) {
         printf("Attempting to send invalid packet [len: %u][MTU: %u]\n",
 	       tosend->len, pfring_get_mtu_size(pd));
         send_error_once = 0;
       }
-    } else if (rc < 0) {
+    } else if (rc == PF_RING_ERROR_NOT_SUPPORTED) {
+      printf("Transmission is not supporte on the selected interface\n");
+      goto close_socket;
+    } else /* Other rc < 0 */ {
       /* Not enough space in buffer */
       if(!active_poll)
 	usleep(1);
       goto redo;
-    } else {
-      num_pkt_good_sent++;
-      num_bytes_good_sent += tosend->len + 24 /* 8 Preamble + 4 CRC + 12 IFG */;
     }
 
     if (randomize && on_the_fly_reforging) {
@@ -930,6 +933,7 @@ int main(int argc, char* argv[]) {
   print_stats();
   printf("Sent %llu packets\n", (long long unsigned int) num_pkt_good_sent);
 
+ close_socket:
   pfring_close(pd);
 
   if (pidFileName)
