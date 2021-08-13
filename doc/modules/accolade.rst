@@ -74,7 +74,10 @@ is already enabled.
    cd examples; make
    sudo ./pfcount -i anic:0
 
-Please note that in order to open port 0 from adapter 0 you should specify anic:DEV:PORT, 
+Packet Capture
+--------------
+
+In order to open port 0 from adapter 0 you should specify anic:DEV:PORT, 
 example:
 
 .. code-block:: console
@@ -90,6 +93,9 @@ or just anic:PORT when using the default adapter 0, example:
 Opening a port this way, the full card is initialised, causing issues when opening 
 other ports later (previous ports may stop working), this can be avoided using the 
 port-to-ring binding as explained later on.
+
+Load-Balancing
+--------------
 
 The anic_mfl_config tool included in the Accolade SDK can be used to aggregate 
 traffic from multiple ports and setup the card for load-balancing (similar to RSS)
@@ -225,6 +231,9 @@ ring ID should be set in the *ring_id* field of the same struct. Example:
 
 TX DMA
 ------
+
+Please note that packet transmission is currently not implemented using the
+PF_RING API.
 
 If you have an Accolade adapter (e.g. 200Ku-Flex) with a firmware supporting 
 TX DMA for replaying PCAP files at line-rate up to 100G, you need to enable
