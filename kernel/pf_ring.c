@@ -108,6 +108,8 @@
 #endif
 #include <net/ip.h>
 #include <net/ipv6.h>
+#include <net/net_namespace.h>
+#include <net/netns/generic.h>
 #include <linux/pci.h>
 #include <asm/shmparam.h>
 
@@ -260,14 +262,11 @@ const static ip_addr ip_zero = { IN6ADDR_ANY_INIT };
 
 static u_int8_t pfring_enabled = 1;
 
-static struct list_head netns_list;
-static rwlock_t netns_lock =
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  RW_LOCK_UNLOCKED
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0))
+static int pf_ring_net_id;
 #else
-  __RW_LOCK_UNLOCKED(netns_lock)
+static unsigned int pf_ring_net_id;
 #endif
-;
 
 /* Dummy 'any' device */
 static pf_ring_device any_device_element, none_device_element;
@@ -307,16 +306,6 @@ static rwlock_t ring_cluster_lock =
 
 /* List of all devices on which PF_RING has been registered */
 static struct list_head ring_aware_device_list; /* List of pf_ring_device */
-
-/* Map ifindex to pf device idx (used for quick_mode_rings, num_rings_per_device) */
-static ifindex_map_item ifindex_map[MAX_NUM_DEV_IDX];
-
-/* quick mode <ifindex, channel> to <ring> table */
-static struct pf_ring_socket* quick_mode_rings[MAX_NUM_DEV_IDX][MAX_NUM_RX_CHANNELS] = { { NULL } };
-
-/* Keep track of number of rings per device (plus any) */
-static u_int8_t num_rings_per_device[MAX_NUM_DEV_IDX] = { 0 };
-static u_int8_t num_any_rings = 0;
 
 /*
    Fragment handling for clusters
@@ -546,13 +535,9 @@ void msleep(unsigned int msecs)
 
 /* ************************************************** */
 
-static void ifindex_map_init(void) {
-  memset(ifindex_map, 0, sizeof(ifindex_map));
-}
-
-/* ************************************************** */
-
-static inline int32_t ifindex_to_pf_index(int32_t ifindex) {
+static inline int32_t ifindex_to_pf_index(pf_ring_net *netns,
+                                          int32_t ifindex) {
+  ifindex_map_item *ifindex_map = netns->ifindex_map;
   int i;
 
   if (ifindex < MAX_NUM_DEV_IDX &&
@@ -570,7 +555,9 @@ static inline int32_t ifindex_to_pf_index(int32_t ifindex) {
 
 /* ************************************************** */
 
-static inline int32_t pf_index_to_ifindex(int32_t pf_index) {
+static inline int32_t pf_index_to_ifindex(pf_ring_net *netns,
+                                          int32_t pf_index) {
+  ifindex_map_item *ifindex_map = netns->ifindex_map;
   if (ifindex_map[pf_index].set)
     return ifindex_map[pf_index].ifindex;
 
@@ -579,8 +566,9 @@ static inline int32_t pf_index_to_ifindex(int32_t pf_index) {
 
 /* ************************************************** */
 
-static int32_t map_ifindex(int32_t ifindex) {
-  int32_t i = ifindex_to_pf_index(ifindex);
+static int32_t map_ifindex(pf_ring_net *netns, int32_t ifindex) {
+  ifindex_map_item *ifindex_map = netns->ifindex_map;
+  int32_t i = ifindex_to_pf_index(netns, ifindex);
 
   if (i >= 0)
     return i;
@@ -606,8 +594,9 @@ static int32_t map_ifindex(int32_t ifindex) {
 
 /* ************************************************** */
 
-static void unmap_ifindex(int32_t ifindex) {
-  int32_t i = ifindex_to_pf_index(ifindex);
+static void unmap_ifindex(pf_ring_net *netns, int32_t ifindex) {
+  ifindex_map_item *ifindex_map = netns->ifindex_map;
+  int32_t i = ifindex_to_pf_index(netns, ifindex);
   if (i >= 0) {
     ifindex_map[i].ifindex = 0;
     ifindex_map[i].direct_mapping = 0;
@@ -779,35 +768,21 @@ void term_lockless_list(lockless_list *l, u_int8_t free_memory)
 /* ********************************** */
 
 pf_ring_net *netns_lookup(struct net *net) {
-  struct list_head *ptr, *tmp_ptr;
-
-  list_for_each_safe(ptr, tmp_ptr, &netns_list) {
-    pf_ring_net *net_ptr = list_entry(ptr, pf_ring_net, list);
-    if(net_eq(net_ptr->net, net))
-      return net_ptr;
-  }
-
-  return NULL;
+  return net_generic(net, pf_ring_net_id);
 }
 
 /* ********************************** */
 
 pf_ring_net *netns_add(struct net *net) {
-  pf_ring_net *netns;
+  pf_ring_net *netns = net_generic(net, pf_ring_net_id);
 
-  netns = kmalloc(sizeof(pf_ring_net), GFP_KERNEL);
-
-  if(netns == NULL)
-    return NULL;
-
-  memset(netns, 0, sizeof(*netns));
   netns->net = net;
-
   ring_proc_init(netns);
 
-  write_lock(&netns_lock);
-  list_add_tail(&netns->list, &netns_list);
-  write_unlock(&netns_lock);
+  /* any_device */
+  map_ifindex(netns, MAX_NUM_IFINDEX-1);
+  /* none_device */
+  map_ifindex(netns, MAX_NUM_IFINDEX-2);
 
   return netns;
 }
@@ -816,27 +791,9 @@ pf_ring_net *netns_add(struct net *net) {
 
 static int netns_remove(struct net *net)
 {
-  struct list_head *ptr, *tmp_ptr;
-  int found = 0;
-
-  write_lock(&netns_lock);
-
-  list_for_each_safe(ptr, tmp_ptr, &netns_list) {
-    pf_ring_net *netns = list_entry(ptr, pf_ring_net, list);
-    if(net_eq(netns->net, net)) {
-
-      ring_proc_term(netns);
-
-      list_del(ptr);
-      kfree(netns);
-      found = 1;
-      break;
-    }
-  }
-
-  write_unlock(&netns_lock);
-
-  return found;
+  pf_ring_net *netns = net_generic(net, pf_ring_net_id);
+  ring_proc_term(netns);
+  return 0;
 }
 
 /* ********************************** */
@@ -1105,7 +1062,8 @@ pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char
 	 */
 	|| ((l >= 13) && (strncmp(dev_ptr->device_name, name, 13) == 0)))
        &&
-       (net == NULL /* any */ || net_eq(dev_net(dev_ptr->dev), net)))
+       (dev_ptr == &any_device_element || dev_ptr == &none_device_element ||
+        net_eq(dev_net(dev_ptr->dev), net)))
       return dev_ptr;
   }
 
@@ -1181,8 +1139,6 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
 {
   pf_ring_net *netns;
 
-  write_lock(&netns_lock);
-
   netns = netns_lookup(sock_net(pfr->sk));
 
   if(netns != NULL &&
@@ -1195,8 +1151,6 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
 
     debug_printk(2, "Added /proc/net/pf_ring/%s\n", pfr->sock_proc_name);
   }
-
-  write_unlock(&netns_lock);
 }
 
 /* ********************************** */
@@ -1204,8 +1158,6 @@ static void ring_proc_add(struct pf_ring_socket *pfr)
 static void ring_proc_remove(struct pf_ring_socket *pfr)
 {
   pf_ring_net *netns;
-
-  write_lock(&netns_lock);
 
   netns = netns_lookup(sock_net(pfr->sk));
 
@@ -1231,8 +1183,6 @@ static void ring_proc_remove(struct pf_ring_socket *pfr)
 
     }
   }
-
-  write_unlock(&netns_lock);
 }
 
 /* ********************************** */
@@ -1313,10 +1263,11 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     seq_printf(m, "Family:       %s\n", dev_family);
 
     if(!dev_ptr->is_zc_device) {
-      int dev_index = ifindex_to_pf_index(dev->ifindex);
+      pf_ring_net *netns = netns_lookup(dev_net(dev));
+      int dev_index = ifindex_to_pf_index(netns, dev->ifindex);
       if(dev_index >= 0)
 	seq_printf(m, "# Bound Sockets:  %d\n",
-		   num_rings_per_device[dev_index]);
+		   netns->num_rings_per_device[dev_index]);
     }
 
     seq_printf(m, "TX Queues:    %d\n", dev->real_num_tx_queues);
@@ -1725,7 +1676,8 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       } else {
         list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
  	  pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-          int32_t dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
+          int32_t dev_index = ifindex_to_pf_index(netns_lookup(dev_net(dev_ptr->dev)),
+                                                  dev_ptr->dev->ifindex);
 	  if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
 	    seq_printf(m, "%s%s", (num > 0) ? "," : "", dev_ptr->dev->name);
 	    num++;
@@ -4135,6 +4087,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   u_int32_t skb_hash = 0;
   u_int8_t skb_hash_set = 0;
   int dev_index;
+  pf_ring_net *netns;
   
   /* Check if there's at least one PF_RING ring defined that
      could receive the packet: if none just stop here */
@@ -4157,12 +4110,13 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 #endif
   }
 
-  dev_index = ifindex_to_pf_index(skb->dev->ifindex);
+  netns = netns_lookup(dev_net(skb->dev));
+  dev_index = ifindex_to_pf_index(netns, skb->dev->ifindex);
 
   if(dev_index < 0)
     return 0;
 
-  if(num_any_rings == 0 && num_rings_per_device[dev_index] == 0)
+  if(netns->num_any_rings == 0 && netns->num_rings_per_device[dev_index] == 0)
     return 0;
 
 #ifdef PROFILING
@@ -4195,7 +4149,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   hdr.extended_hdr.flags = 0;
 
   if(quick_mode) {
-    pfr = quick_mode_rings[dev_index][channel_id];
+    pfr = netns->quick_mode_rings[dev_index][channel_id];
 
     if (pfr != NULL /* socket present */
         && !(pfr->zc_device_entry /* ZC socket (1-copy mode) */
@@ -4206,7 +4160,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
       if(pfr->rehash_rss != NULL) {
         is_ip_pkt = parse_pkt(skb, real_skb, displ, &hdr, &ip_id);
         channel_id = pfr->rehash_rss(skb, &hdr) % get_num_rx_queues(skb->dev);
-        pfr = quick_mode_rings[dev_index][channel_id];
+        pfr = netns->quick_mode_rings[dev_index][channel_id];
       }
 
       if(is_valid_skb_direction(pfr->direction, recv_packet)) {
@@ -4256,8 +4210,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
       pfr = ring_sk(sk);
 
       if(pfr != NULL
-         && (net_eq(dev_net(skb->dev), sock_net(sk)) /* same namespace */
-             || (pfr->ring_dev == &any_device_element /* any */ && net_eq(&init_net, sock_net(sk))) /* on host */)
+         && (net_eq(dev_net(skb->dev), sock_net(sk))) /* same namespace */
 	 && (pfr->ring_slots != NULL)
 	 && (
 	     test_bit(dev_index, pfr->pf_dev_mask)
@@ -4682,7 +4635,6 @@ add_virtual_filtering_device(struct pf_ring_socket *pfr, virtual_filtering_devic
   write_unlock(&virtual_filtering_lock);
 
   /* Add /proc entry */
-  write_lock(&netns_lock);
   netns = netns_lookup(sock_net(pfr->sk));
   if(netns != NULL) {
     elem->info.proc_entry = proc_mkdir(elem->info.device_name, netns->proc_dev_dir);
@@ -4691,7 +4643,6 @@ add_virtual_filtering_device(struct pf_ring_socket *pfr, virtual_filtering_devic
 		     &ring_proc_virtual_filtering_fops /* read */,
 		     (void *) &elem->info);
   }
-  write_unlock(&netns_lock);
 
   return(elem);
 }
@@ -4713,13 +4664,11 @@ static int remove_virtual_filtering_device(struct pf_ring_socket *pfr, char *dev
 
     if(strcmp(filtering_ptr->info.device_name, device_name) == 0) {
       /* Remove /proc entry */
-      write_lock(&netns_lock);
       netns = netns_lookup(sock_net(pfr->sk));
       if(netns != NULL) {
         remove_proc_entry(PROC_INFO, filtering_ptr->info.proc_entry);
         remove_proc_entry(filtering_ptr->info.device_name, netns->proc_dev_dir);
       }
-      write_unlock(&netns_lock);
 
       list_del(ptr);
       write_unlock(&virtual_filtering_lock);
@@ -5306,7 +5255,8 @@ static void set_socket_promisc(struct pf_ring_socket *pfr) {
   /* managing promisc for additional devices */
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    int32_t dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
+    int32_t dev_index = ifindex_to_pf_index(netns_lookup(sock_net(pfr->sk)),
+                                            dev_ptr->dev->ifindex);
     if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
        dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask))
       set_ringdev_promisc(dev_ptr);
@@ -5328,7 +5278,8 @@ static void unset_socket_promisc(struct pf_ring_socket *pfr) {
   /* managing promisc for additional devices */
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    int32_t dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
+    int32_t dev_index = ifindex_to_pf_index(netns_lookup(sock_net(pfr->sk)),
+                                            dev_ptr->dev->ifindex);
     if(pfr->ring_dev->dev->ifindex != dev_ptr->dev->ifindex &&
        dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask))
       unset_ringdev_promisc(dev_ptr);
@@ -5343,6 +5294,7 @@ static int ring_release(struct socket *sock)
 {
   struct sock *sk = sock->sk;
   struct pf_ring_socket *pfr;
+  pf_ring_net *netns;
   struct list_head *ptr, *tmp_ptr;
   void *ring_memory_ptr;
   int free_ring_memory = 1;
@@ -5353,6 +5305,8 @@ static int ring_release(struct socket *sock)
   pfr = ring_sk(sk);
 
   pfr->ring_active = 0;
+
+  netns = netns_lookup(sock_net(sk));
 
   /* Wait until the ring is being used... */
   while(atomic_read(&pfr->num_ring_users) > 0) {
@@ -5376,28 +5330,28 @@ static int ring_release(struct socket *sock)
   ring_write_lock();
 
   if(pfr->ring_dev->dev && pfr->ring_dev == &any_device_element)
-    num_any_rings--;
+    netns->num_any_rings--;
   else {
     if(pfr->ring_dev) {
-      int32_t dev_index = ifindex_to_pf_index(pfr->ring_dev->dev->ifindex);
+      int32_t dev_index = ifindex_to_pf_index(netns, pfr->ring_dev->dev->ifindex);
       if (dev_index >= 0) {
 
         /* Check all bound devices in case of multi devices */
         list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
           pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-          dev_index = ifindex_to_pf_index(dev_ptr->dev->ifindex);
+          dev_index = ifindex_to_pf_index(netns, dev_ptr->dev->ifindex);
   	  if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
 
-            if(num_rings_per_device[dev_index] > 0)
-	      num_rings_per_device[dev_index]--;
+            if(netns->num_rings_per_device[dev_index] > 0)
+	      netns->num_rings_per_device[dev_index]--;
 
 	    if(quick_mode) {
               int i;
               /* Reset quick mode for all channels */
               for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
                 u_int64_t channel_id_bit = 1 << i;
-	        if((pfr->channel_id_mask & channel_id_bit) && quick_mode_rings[dev_index][i] == pfr)
-	          quick_mode_rings[dev_index][i] = NULL;
+	        if((pfr->channel_id_mask & channel_id_bit) && netns->quick_mode_rings[dev_index][i] == pfr)
+	          netns->quick_mode_rings[dev_index][i] = NULL;
 	      }
             }
           }
@@ -5528,6 +5482,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
   struct pf_ring_socket *pfr = ring_sk(sk);
   pf_ring_device *dev = NULL;
   struct net *net;
+  pf_ring_net *netns;
   int32_t dev_index;
 
   if(dev_name == NULL)
@@ -5538,6 +5493,8 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
     net = NULL; /* any namespace*/
   else
     net = sock_net(sk);
+
+  netns = netns_lookup(sock_net(sk));
 
   dev = pf_ring_device_name_lookup(net, dev_name);
 
@@ -5551,7 +5508,7 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
     return -EINVAL;
   }
 
-  dev_index = ifindex_to_pf_index(dev->dev->ifindex);
+  dev_index = ifindex_to_pf_index(netns, dev->dev->ifindex);
 
   if(dev_index < 0) {
     printk("[PF_RING] bind: %s dev index not found\n", dev_name);
@@ -5592,9 +5549,9 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
   pfr->num_rx_channels = get_num_rx_queues(pfr->ring_dev->dev);
 
   if(dev == &any_device_element && !quick_mode) {
-    num_any_rings++;
+    netns->num_any_rings++;
   } else {
-    num_rings_per_device[dev_index]++;
+    netns->num_rings_per_device[dev_index]++;
   }
 
   return 0;
@@ -6352,7 +6309,8 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
     return -1;
   }
 
-  dev_index = ifindex_to_pf_index(entry->zc_dev.dev->ifindex);
+  dev_index = ifindex_to_pf_index(netns_lookup(sock_net(pfr->sk)),
+                                  entry->zc_dev.dev->ifindex);
 
   if (dev_index < 0) {
     printk("[PF_RING] %s:%d %s@%u mapping failed, dev index not found\n", __FUNCTION__, __LINE__,
@@ -6420,7 +6378,8 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
     return -1;
   }
 
-  dev_index = ifindex_to_pf_index(entry->zc_dev.dev->ifindex);
+  dev_index = ifindex_to_pf_index(netns_lookup(dev_net(entry->zc_dev.dev)),
+                                  entry->zc_dev.dev->ifindex);
 
   if (dev_index < 0) {
     printk("[PF_RING] %s:%d %s@%u unmapping failed, dev index not found\n",
@@ -6748,8 +6707,6 @@ int setSocketStats(struct pf_ring_socket *pfr)
   pf_ring_net *netns;
   int rc = 0;
 
-  write_lock(&netns_lock);
-
   netns = netns_lookup(sock_net(pfr->sk));
 
   if(netns != NULL) {
@@ -6772,8 +6729,6 @@ int setSocketStats(struct pf_ring_socket *pfr)
       }
     }
   }
-
-  write_unlock(&netns_lock);
 
   return rc;
 }
@@ -6965,7 +6920,9 @@ static int ring_setsockopt(struct socket *sock,
   {
     u_int64_t channel_id_mask;
     u_int16_t num_channels = 0;
-    int32_t dev_index = ifindex_to_pf_index(pfr->last_bind_dev->dev->ifindex);
+    pf_ring_net *netns = netns_lookup(sock_net(sock->sk));
+    int32_t dev_index = ifindex_to_pf_index(netns,
+                                            pfr->last_bind_dev->dev->ifindex);
 
     if(optlen != sizeof(channel_id_mask))
       return(-EINVAL);
@@ -6990,7 +6947,7 @@ static int ring_setsockopt(struct socket *sock,
         u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << i);
 
         if(channel_id_mask & channel_id_bit) {
-	  if(quick_mode_rings[dev_index][i] != NULL)
+	  if(netns->quick_mode_rings[dev_index][i] != NULL)
 	    return(-EINVAL); /* Socket already bound on this device */
         }
       }
@@ -7005,7 +6962,7 @@ static int ring_setsockopt(struct socket *sock,
         debug_printk(2, "Setting channel %d\n", i);
 
 	if(quick_mode) {
-	  quick_mode_rings[dev_index][i] = pfr;
+	  netns->quick_mode_rings[dev_index][i] = pfr;
 	}
 
 	num_channels++;
@@ -8292,8 +8249,6 @@ void remove_device_from_ring_list(struct net_device *dev)
   struct sock *sk;
   pf_ring_net *netns;
 
-  write_lock(&netns_lock);
-
   netns = netns_lookup(dev_net(dev));
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
@@ -8326,8 +8281,6 @@ void remove_device_from_ring_list(struct net_device *dev)
       break;
     }
   }
-
-  write_unlock(&netns_lock);
 }
 
 /* ********************************** */
@@ -8394,8 +8347,6 @@ int add_device_to_ring_list(struct net_device *dev, int32_t dev_index)
   if((dev_ptr = kmalloc(sizeof(pf_ring_device), GFP_KERNEL)) == NULL)
     return(-ENOMEM);
 
-  write_lock(&netns_lock);
-
   netns = netns_lookup(dev_net(dev));
 
   memset(dev_ptr, 0, sizeof(pf_ring_device));
@@ -8447,8 +8398,6 @@ int add_device_to_ring_list(struct net_device *dev, int32_t dev_index)
   }
 
   list_add(&dev_ptr->device_list, &ring_aware_device_list);
-
-  write_unlock(&netns_lock);
 
   return(0);
 }
@@ -8578,8 +8527,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
     case NETDEV_REGISTER:
       debug_printk(2, "%s: [REGISTER][ifindex: %u]\n", dev->name, dev->ifindex);
 
-      dev_index = map_ifindex(dev->ifindex);
-
+      dev_index = map_ifindex(netns_lookup(dev_net(dev)), dev->ifindex);
       if(dev_index < 0) {
         printk("[PF_RING] %s %s: unable to map interface index %d\n", __FUNCTION__,
                dev->name, dev->ifindex);
@@ -8613,7 +8561,7 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 	 busy until we remove the rule
       */
 
-      unmap_ifindex(dev->ifindex);
+      unmap_ifindex(netns_lookup(dev_net(dev)), dev->ifindex);
       break;
 
     case NETDEV_CHANGE:     /* Interface state change */
@@ -8623,8 +8571,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
 
     case NETDEV_CHANGENAME: /* Rename interface ethX -> ethY */
       debug_printk(2, "Device changed name to %s [ifindex: %u]\n", dev->name, dev->ifindex);
-
-      write_lock(&netns_lock);
 
       /* safety check (name clash) */
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
@@ -8676,8 +8622,6 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
         }
       }
 
-      write_unlock(&netns_lock);
-
       break;
 
     default:
@@ -8697,15 +8641,8 @@ static struct notifier_block ring_netdev_notifier = {
 
 static int __net_init ring_net_init(struct net *net)
 {
-  pf_ring_net *netns;
-
   debug_printk(1, "init network namespace [net=%pK]\n", net);
-
-  netns = netns_add(net);
-
-  if(netns == NULL)
-    return -ENOMEM;
-
+  netns_add(net);
   return 0;
 }
 
@@ -8714,7 +8651,6 @@ static int __net_init ring_net_init(struct net *net)
 static void __net_exit ring_net_exit(struct net *net)
 {
   debug_printk(1, "exit network namespace [net=%pK]\n", net);
-
   netns_remove(net);
 }
 
@@ -8723,6 +8659,8 @@ static void __net_exit ring_net_exit(struct net *net)
 static struct pernet_operations ring_net_ops = {
   .init = ring_net_init,
   .exit = ring_net_exit,
+  .id = &pf_ring_net_id,
+  .size = sizeof(pf_ring_net),
 };
 
 /* ************************************ */
@@ -8740,14 +8678,8 @@ static void __exit ring_exit(void)
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
 
-    write_lock(&netns_lock);
-
     netns = netns_lookup(dev_net(dev_ptr->dev));
-
-    if(netns != NULL)
-      remove_device_from_proc(netns, dev_ptr);
-
-    write_unlock(&netns_lock);
+    remove_device_from_proc(netns, dev_ptr);
 
     list_del(ptr);
     kfree(dev_ptr);
@@ -8822,7 +8754,6 @@ static int __init ring_init(void)
   init_lockless_list(&ring_cluster_list);
   init_lockless_list(&delayed_memory_table);
 
-  INIT_LIST_HEAD(&netns_list);
   INIT_LIST_HEAD(&virtual_filtering_devices_list);
   INIT_LIST_HEAD(&ring_aware_device_list);
   INIT_LIST_HEAD(&zc_devices_list);
@@ -8833,8 +8764,6 @@ static int __init ring_init(void)
 
   init_ring_readers();
 
-  ifindex_map_init();
-
   memset(&any_dev, 0, sizeof(any_dev));
   strcpy(any_dev.name, "any");
   any_dev.ifindex = MAX_NUM_IFINDEX-1;
@@ -8844,7 +8773,6 @@ static int __init ring_init(void)
   any_device_element.device_type = standard_nic_family;
   any_device_element.dev_index = MAX_NUM_DEV_IDX-1;
   strcpy(any_device_element.device_name, "any");
-  map_ifindex(any_dev.ifindex);
 
   INIT_LIST_HEAD(&any_device_element.device_list);
   list_add(&any_device_element.device_list, &ring_aware_device_list);
@@ -8858,7 +8786,6 @@ static int __init ring_init(void)
   none_device_element.device_type = standard_nic_family;
   none_device_element.dev_index = MAX_NUM_DEV_IDX-2;
   strcpy(none_device_element.device_name, "none");
-  map_ifindex(none_dev.ifindex);
 
   sock_register(&ring_family_ops);
   register_pernet_subsys(&ring_net_ops);
