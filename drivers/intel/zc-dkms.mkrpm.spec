@@ -14,7 +14,7 @@ License:	%license
 Release:	dkms
 BuildArch:	noarch
 Group:		System/Kernel
-Requires: 	dkms >= 1.95
+Requires: 	dkms >= 1.95, pfring-dkms
 BuildRequires: 	dkms
 BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-root/
 
