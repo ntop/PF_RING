@@ -1305,7 +1305,15 @@ typedef struct {
   struct proc_dir_entry *proc_dev_dir; 
   struct proc_dir_entry *proc_stats_dir;
 
-  struct list_head list;
+  /* Map ifindex to pf device idx (used for quick_mode_rings, num_rings_per_device) */
+  ifindex_map_item ifindex_map[MAX_NUM_DEV_IDX];
+
+  /* quick mode <ifindex, channel> to <ring> table */
+  struct pf_ring_socket* quick_mode_rings[MAX_NUM_DEV_IDX][MAX_NUM_RX_CHANNELS];
+
+  /* Keep track of number of rings per device (plus any) */
+  u_int8_t num_rings_per_device[MAX_NUM_DEV_IDX];
+  u_int8_t num_any_rings;
 } pf_ring_net;
 
 /* **************************************** */
