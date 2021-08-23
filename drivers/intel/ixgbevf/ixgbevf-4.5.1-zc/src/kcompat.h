@@ -6371,7 +6371,7 @@ struct _kc_bpf_prog {
 	({ unsigned long long _tmp = (ll); do_div(_tmp, d); _tmp; })
 #endif /* DIV_ROUND_DOWN_ULL */
 #else /* > 4.14 */
-#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4))) && (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
 #define HAVE_XDP_SUPPORT
 #endif /* RHEL_RELEASE_VERSION(8,4) */
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV

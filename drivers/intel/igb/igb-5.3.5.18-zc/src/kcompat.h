@@ -7339,5 +7339,10 @@ static inline void net_prefetch(void *p)
 #else /* >= 5.10.0 */
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
+
+#ifndef read_barrier_depends
+#define read_barrier_depends() rmb()
+#endif
+
 #endif /* 5.10.0 */
 #endif /* _KCOMPAT_H_ */
