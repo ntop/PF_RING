@@ -1108,6 +1108,13 @@ int pfring_get_link_status(pfring *ring);
 int pfring_get_link_type(pfring *ring);
 
 /**
+ * Return the max capture length.
+ * @param ring The PF_RING handle.
+ * @return The capture length.
+ */
+int pfring_get_caplen(pfring *ring);
+
+/**
  * Synchronizes the egress ring indexes/registers flushing enqueued packets.
  * @param ring The PF_RING handle.
  * @return 0 on success, a negative value otherwise.
