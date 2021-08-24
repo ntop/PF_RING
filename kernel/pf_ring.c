@@ -778,6 +778,19 @@ pf_ring_net *netns_lookup(struct net *net) {
 
 /* ********************************** */
 
+pf_ring_net *netns_lookup_by_pf_dev(pf_ring_device *dev_ptr) {
+  struct net *net;
+
+  if (dev_ptr == &any_device_element || dev_ptr == &none_device_element)
+    net = &init_net;
+  else
+    net = dev_net(dev_ptr->dev);
+
+  return netns_lookup(net);
+}
+
+/* ********************************** */
+
 pf_ring_net *netns_add(struct net *net) {
   pf_ring_net *netns = net_generic(net, pf_ring_net_id);
 
@@ -1681,13 +1694,10 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       } else {
         list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
  	  pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-          pf_ring_net *pf_net = netns_lookup(dev_net(dev_ptr->dev));
-          if (pf_net != NULL /* safety check */) {
-            int32_t dev_index = ifindex_to_pf_index(pf_net, dev_ptr->dev->ifindex);
-	    if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
-	      seq_printf(m, "%s%s", (num > 0) ? "," : "", dev_ptr->dev->name);
-	      num++;
-            }
+          int32_t dev_index = ifindex_to_pf_index(netns_lookup_by_pf_dev(dev_ptr), dev_ptr->dev->ifindex);
+	  if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
+	    seq_printf(m, "%s%s", (num > 0) ? "," : "", dev_ptr->dev->name);
+	    num++;
           }
 	}
       }
