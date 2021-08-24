@@ -616,7 +616,7 @@ void printHelp(void) {
          "                 4 - GTP hash (Inner IP/Port or Seq-Num or Outer IP/Port)\n"
          "                 5 - GRE hash (Inner or Outer IP)\n"
          "                 6 - Interface X to queue X\n"
-         "                 7 - Ethernet type (check 0x8585 type and select the queue, other to queue 0)\n");
+         "                 7 - Ethernet type (check 0x8585 type and select the queue based on -M, other types to queue 0)\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
   printf("-M <vlans>       Comma-separated list of VLANs to map VLAN to egress queues (-m 7 only)\n");
   printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
