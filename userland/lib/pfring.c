@@ -1235,6 +1235,12 @@ int pfring_get_link_type(pfring *ring) {
 
 /* **************************************************** */
 
+int pfring_get_caplen(pfring *ring) {
+  return ring->caplen;
+}
+
+/* **************************************************** */
+
 u_int16_t pfring_get_slot_header_len(pfring *ring) {
   if(ring && ring->get_slot_header_len)
     return ring->get_slot_header_len(ring);
