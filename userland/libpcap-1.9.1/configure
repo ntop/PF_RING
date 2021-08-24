@@ -10853,7 +10853,11 @@ if test "x$enable_dbus" != "xno"; then
 	fi
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we should enable D-Bus support" >&5
+$as_echo_n "checking whether we should enable D-Bus support... " >&6; }
 if test "x$enable_dbus" != "xno"; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 	# Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -10955,6 +10959,9 @@ $as_echo "no" >&6; }
 	fi
 
 
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 
 # Check whether --enable-rdma was given.

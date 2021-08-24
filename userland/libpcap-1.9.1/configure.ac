@@ -2376,7 +2376,9 @@ if test "x$enable_dbus" != "xno"; then
 	fi
 fi
 
+AC_MSG_CHECKING(whether we should enable D-Bus support)
 if test "x$enable_dbus" != "xno"; then
+	AC_MSG_RESULT([yes])
 	AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [no])
 	if test "x$PKGCONFIG" != "xno"; then
 		AC_MSG_CHECKING([for D-Bus])
@@ -2420,6 +2422,8 @@ if test "x$enable_dbus" != "xno"; then
 	fi
 	AC_SUBST(PCAP_SUPPORT_DBUS)
 	AC_SUBST(DBUS_SRC)
+else
+	AC_MSG_RESULT([no])
 fi
 
 AC_ARG_ENABLE([rdma],
