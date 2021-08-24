@@ -307,6 +307,7 @@ struct __pfring {
   int       (*set_bound_dev_name)           (pfring *, char *);
   int       (*get_metadata)         	    (pfring *, u_char **, u_int32_t *);
   u_int32_t (*get_interface_speed)	    (pfring *);
+  int       (*get_link_type)		    (pfring *);
 
   /* Silicom Redirector Only */
   struct {
@@ -1098,6 +1099,13 @@ int pfring_send_last_rx_packet(pfring *ring, int tx_interface_id);
  * @return 1 if link is up, 0 otherwise.
  */
 int pfring_get_link_status(pfring *ring);
+
+/**
+ * Return the Network link type.
+ * @param ring The PF_RING handle.
+ * @return The link type (e.g. DLT_EN10MB)
+ */
+int pfring_get_link_type(pfring *ring);
 
 /**
  * Synchronizes the egress ring indexes/registers flushing enqueued packets.
