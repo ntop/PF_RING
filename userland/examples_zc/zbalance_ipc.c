@@ -1295,6 +1295,7 @@ int main(int argc, char* argv[]) {
     switch (errno) {
       case ENOBUFS:
         trace(TRACE_ERROR, "Insufficient hugepage memory, please try increasing your hugepage count");
+	trace(TRACE_ERROR, "Please see https://www.ntop.org/guides/pf_ring/hugepages.html");
       break;
       case EAFNOSUPPORT:
         trace(TRACE_ERROR, "PF_RING kernel module not loaded, please start the pfring service");
