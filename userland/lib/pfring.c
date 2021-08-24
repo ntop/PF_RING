@@ -34,6 +34,10 @@
 #include "pfring_mod_sysdig.h"
 #include "pfring_mod_pcap.h"
 
+#ifndef DLT_EN10MB
+#define DLT_EN10MB 1
+#endif
+
 #ifdef HAVE_AF_XDP
 #ifdef HAVE_PF_RING_ZC
 /* AF_XDP */
@@ -1218,6 +1222,15 @@ int pfring_get_device_ifindex(pfring *ring, char *device_name, int *if_index) {
 
 int pfring_get_link_status(pfring *ring) {
   return(pfring_mod_get_link_status(ring));
+}
+
+/* **************************************************** */
+
+int pfring_get_link_type(pfring *ring) {
+  if(ring && ring->get_link_type)
+    return ring->get_link_type(ring);
+
+  return DLT_EN10MB;
 }
 
 /* **************************************************** */
