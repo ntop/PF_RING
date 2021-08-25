@@ -1,5 +1,5 @@
 /*
- * (C) 2003-2021 - ntop 
+ * (C) 2003-21 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ void dummyProcesssPacket(u_char *_deviceId,
 
 void printHelp(void) {
 
-  printf("preflect\n(C) 2010 Deri Luca <deri@ntop.org>\n");
+  printf("preflect\n(C) 2010-21 ntop.org\n");
   printf("-h              [Print help]\n");
   printf("-i <device>     [In device name]\n");
   printf("-o <device>     [Out device name]\n");

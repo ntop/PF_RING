@@ -1,5 +1,5 @@
 /*
- * (C) 2003-2021 - ntop 
+ * (C) 2003-21 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -403,7 +403,7 @@ void dummyProcesssPacket(const struct pfring_pkthdr *h, const u_char *p, long th
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount_82599\n(C) 2011-12 Deri Luca <deri@ntop.org>\n\n");
+  printf("pfcount_82599\n(C) 2011-12 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use device@channel for channels\n");
   printf("-n <threads>    Number of polling threads (default %d)\n", num_threads);
