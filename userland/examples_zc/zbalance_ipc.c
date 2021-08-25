@@ -109,6 +109,9 @@ bitmap64_t(allowed_vlans, 1024);
 u_int8_t map_vlan_size = 0;
 u_int16_t map_vlan[MAX_MAP_VLAN_SIZE];
 
+#define ETH_P_8585         0x8585
+u_int16_t eth_distr_type = ETH_P_8585;
+
 #ifdef HAVE_PF_RING_FT
 int notify_fd;
 int notify_wd;
@@ -616,9 +619,10 @@ void printHelp(void) {
          "                 4 - GTP hash (Inner IP/Port or Seq-Num or Outer IP/Port)\n"
          "                 5 - GRE hash (Inner or Outer IP)\n"
          "                 6 - Interface X to queue X\n"
-         "                 7 - Ethernet type (check 0x8585 type and select the queue based on -M, other types to queue 0)\n");
+         "                 7 - VLAN ID encapsulated in Ethernet type 0x8585 (see -Y). Queue is selected based on -M. Other Ethernet types to queue 0.\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
   printf("-M <vlans>       Comma-separated list of VLANs to map VLAN to egress queues (-m 7 only)\n");
+  printf("-Y <eth type>    Ethernet type used in -m 7. Default: %u (0x8585)\n", ntohs(ETH_P_8585));
   printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
   printf("-R <nsec>        Time resolution (nsec) when using Time Pulse thread\n"
          "                 Note: in non-time-sensitive applications use >= 100usec to reduce cpu load\n");
@@ -794,8 +798,6 @@ int64_t direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
 
 /* *************************************** */
 
-#define ETH_P_8585         0x8585
-
 int64_t eth_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
   u_char *data = pfring_zc_pkt_buff_data(pkt_handle, in_queue);
@@ -805,7 +807,7 @@ int64_t eth_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *i
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
-  if (eth_type == ETH_P_8585) {
+  if (eth_type == eth_distr_type) {
     u_int32_t vlan_offset = sizeof(struct ethhdr);
 
     idx = -1;
@@ -975,7 +977,7 @@ int main(int argc, char* argv[]) {
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t flags;
-  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:M:n:N:pr:Q:q:P:R:S:u:wvx:zW:"
+  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -1106,6 +1108,9 @@ int main(int argc, char* argv[]) {
       break;      
     case 'x':
       vlan_filter = strdup(optarg);
+    break;
+    case 'Y':
+      eth_distr_type = htons(atoi(optarg));
     break;
     case 'z':
       proc_stats_only = 1;
