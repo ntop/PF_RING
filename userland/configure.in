@@ -224,6 +224,19 @@ if test $MACHINE = "x86_64"; then
     fi
   fi
 
+  dnl> Mellanox
+  AC_MSG_CHECKING([Mellanox support])
+  MOD_MLX_LIB="libs/libpfring_mlx_${MACHINE}${LIBARCH}.a"
+  if test -f "lib/${MOD_MLX_LIB}"; then
+    HAVE_MLX="-D HAVE_MLX"
+    MLX_OBJS=`ar t lib/${MOD_MLX_LIB} | grep -F .o | tr '\n' ' '`
+    MLX_DEP="extract_mlx_lib"
+    MLX_LIB="-libverbs"
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
+
   dnl> Netcope
   MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
   HAVE_NETCOPE="-D HAVE_NETCOPE"
@@ -359,6 +372,12 @@ AC_SUBST(HAVE_NT)
 AC_SUBST(NT_OBJS)
 AC_SUBST(NT_DEP)
 AC_SUBST(MOD_NT_LIB)
+
+AC_SUBST(HAVE_MLX)
+AC_SUBST(MLX_OBJS)
+AC_SUBST(MLX_DEP)
+AC_SUBST(MOD_MLX_LIB)
+AC_SUBST(MLX_LIB)
 
 AC_SUBST(HAVE_NETCOPE)
 AC_SUBST(NETCOPE_OBJS)

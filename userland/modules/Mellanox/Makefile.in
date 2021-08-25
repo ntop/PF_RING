@@ -35,9 +35,7 @@ CC        = ${CROSS_COMPILE}gcc $(ARCHFLAGS) -O2 #-g
 CFLAGS    = -Wall -fPIC ${INCLUDE} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0
 LDFLAGS   = -shared
 
-SYSLIBS   = -lpthread
-
-#SYSLIBS="$SYSLIBS -libverbs"
+SYSLIBS   = -lpthread -libverbs
 
 #
 # How to make an object file

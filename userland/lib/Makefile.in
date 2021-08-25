@@ -60,6 +60,11 @@ ACCOLADE_OBJS  = @ACCOLADE_OBJS@
 MYRICOM_OBJS  = @MYRICOM_OBJS@
 
 #
+# Mellanox
+#
+MLX_OBJS  = @MLX_OBJS@
+
+#
 # Netcope
 #
 NETCOPE_OBJS  = @NETCOPE_OBJS@
@@ -88,7 +93,7 @@ NBPF_OBJS = `$(AR) t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 OBJS_MIN = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
 	   pfring_hw_timestamp.o pfring_mod_sysdig.o pfring_mod_pcap.o ${PF_RING_ZC_OBJS} \
 	   ${AF_XDP_OBJS} ${DAG_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${ACCOLADE_OBJS} \
-	   ${MYRICOM_OBJS} ${NETCOPE_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
+	   ${MYRICOM_OBJS} ${MLX_OBJS} ${NETCOPE_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
 
 OBJS =     ${OBJS_MIN} ${PF_RING_FT_OBJS}
 
@@ -105,10 +110,10 @@ ifeq ($(shell test $(GCC_MAJ_VERSION) -ge 5 && echo 1), 1)
 WFLAGS += -Wno-stringop-truncation -Wno-address-of-packed-member
 endif
 
-CFLAGS_MIN = @CFLAGS@ ${WFLAGS} -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_AF_XDP@ @HAVE_DAG@ @HAVE_FIBERBLAZE@ @HAVE_ACCOLADE@ @HAVE_MYRICOM@ @HAVE_NETCOPE@ @HAVE_EXABLAZE@ @HAVE_BPF@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_NPCAP@
+CFLAGS_MIN = @CFLAGS@ ${WFLAGS} -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_AF_XDP@ @HAVE_DAG@ @HAVE_FIBERBLAZE@ @HAVE_ACCOLADE@ @HAVE_MYRICOM@ @HAVE_NETCOPE@ @HAVE_EXABLAZE@ @HAVE_BPF@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_MLX@ @HAVE_NPCAP@
 CFLAGS += ${CFLAGS_MIN} @HAVE_PF_RING_FT@ 
 
-EXTRA_DEPS_MIN = extract_nbpf @PF_RING_ZC_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@
+EXTRA_DEPS_MIN = extract_nbpf @PF_RING_ZC_DEP@ @AF_XDP_DEP@ @EXABLAZE_DEP@ @NT_DEP@ @MYRICOM_DEP@ @MLX_DEP@ @DAG_DEP@ @FIBERBLAZE_DEP@ @ACCOLADE_DEP@ @NETCOPE_DEP@ @NPCAP_DEP@
 EXTRA_DEPS =     ${EXTRA_DEPS_MIN} @PF_RING_FT_DEP@
 
 LDFLAGS   += -g -shared
@@ -156,6 +161,9 @@ extract_myricom_lib:
 
 extract_nt_lib:
 	@AR_X@ @MOD_NT_LIB@
+
+extract_mlx_lib:
+	@AR_X@ @MOD_MLX_LIB@
 
 extract_dag_lib:
 	@AR_X@ @MOD_DAG_LIB@

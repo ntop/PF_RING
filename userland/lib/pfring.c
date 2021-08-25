@@ -75,6 +75,11 @@
 #include "pfring_mod_myricom.h"
 #endif
 
+#ifdef HAVE_MLX
+/* Mellanox */
+#include "pfring_mod_mlx.h"
+#endif
+
 #ifdef HAVE_INVEATECH
 /* InveaTech */
 #include "pfring_mod_invea.h"
@@ -181,6 +186,14 @@ static pfring_module_info pfring_module_list[] = {
     .name = "myri",
     .open = pfring_myri_open,
     .findalldevs = pfring_myri_findalldevs
+  },
+#endif
+
+#ifdef HAVE_MLX
+  {
+    .name = "mlx",
+    .open = pfring_mlx_open,
+    .findalldevs = NULL
   },
 #endif
 

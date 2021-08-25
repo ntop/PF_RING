@@ -638,6 +638,11 @@ MOD_NETCOPE_LIB
 NETCOPE_DEP
 NETCOPE_OBJS
 HAVE_NETCOPE
+MLX_LIB
+MOD_MLX_LIB
+MLX_DEP
+MLX_OBJS
+HAVE_MLX
 MOD_NT_LIB
 NT_DEP
 NT_OBJS
@@ -3955,6 +3960,21 @@ $as_echo "no" >&6; }
     fi
   fi
 
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking Mellanox support" >&5
+$as_echo_n "checking Mellanox support... " >&6; }
+  MOD_MLX_LIB="libs/libpfring_mlx_${MACHINE}${LIBARCH}.a"
+  if test -f "lib/${MOD_MLX_LIB}"; then
+    HAVE_MLX="-D HAVE_MLX"
+    MLX_OBJS=`ar t lib/${MOD_MLX_LIB} | grep -F .o | tr '\n' ' '`
+    MLX_DEP="extract_mlx_lib"
+    MLX_LIB="-libverbs"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+
     MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
   HAVE_NETCOPE="-D HAVE_NETCOPE"
   NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
@@ -4101,6 +4121,12 @@ if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
 fi
 
 NBPF_EXTRA_TARGETS="nbpftest"
+
+
+
+
+
+
 
 
 
