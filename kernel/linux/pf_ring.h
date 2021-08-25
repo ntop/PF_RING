@@ -2,7 +2,7 @@
  *
  * Definitions for packet ring
  *
- * 2004-2021 - ntop.org
+ * 2004-21 - ntop.org
  *
  */
 
@@ -143,13 +143,13 @@
 typedef long __kernel_time_t;
 
 struct timeval {
-	__kernel_time_t		tv_sec;		/* seconds */
-	__kernel_suseconds_t	tv_usec;	/* microseconds */
+  __kernel_time_t		tv_sec;		/* seconds */
+  __kernel_suseconds_t	tv_usec;	/* microseconds */
 };
 
 struct timespec {
-	__kernel_time_t	tv_sec;			/* seconds */
-	long		tv_nsec;		/* nanoseconds */
+  __kernel_time_t	tv_sec;			/* seconds */
+  long		tv_nsec;		/* nanoseconds */
 };
 
 struct timespec ns_to_timespec(const s64 nsec);
@@ -219,8 +219,8 @@ struct eth_vlan_hdr {
 
 struct kcompact_ipv6_hdr {
   u_int32_t         flow_lbl:24,
-		    priority:4,
-                    version:4;
+    priority:4,
+    version:4;
   u_int16_t         payload_len;
   u_int8_t          nexthdr;
   u_int8_t          hop_limit;
@@ -294,7 +294,7 @@ typedef struct {
   ip_addr tunneled_ip_src, tunneled_ip_dst;  
   u_int16_t tunneled_l4_src_port, tunneled_l4_dst_port;
 } __attribute__((packed))
- tunnel_info;
+tunnel_info;
 
 #define MOBILE_IP_PORT           434
 
@@ -515,11 +515,11 @@ intel_82599_perfect_filter_hw_rule;
   Rules are defined per port. Each redirector device
   has 4 ports (numbeder 0..3):
 
-         0   +--------------+   2   +--------------+
+  0   +--------------+   2   +--------------+
   LAN  <===> |              | <===> |   1/10G      |
-             |  Redirector  |       |   Ethernet   |
+  |  Redirector  |       |   Ethernet   |
   LAN  <===> |    Switch    | <===> |   Adapter    |
-         1   +--------------+   3   +--------------+
+  1   +--------------+   3   +--------------+
 
   Drop Rule
   Discard incoming packets matching the filter
@@ -643,23 +643,23 @@ hw_filtering_rule;
 #if defined(I82599_HW_FILTERING_SUPPORT) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,40))
 #define	FLOW_EXT 0x80000000
 union _kcompat_ethtool_flow_union {
-	struct ethtool_tcpip4_spec		tcp_ip4_spec;
-	struct ethtool_usrip4_spec		usr_ip4_spec;
-	__u8					hdata[60];
+  struct ethtool_tcpip4_spec		tcp_ip4_spec;
+  struct ethtool_usrip4_spec		usr_ip4_spec;
+  __u8					hdata[60];
 };
 struct _kcompat_ethtool_flow_ext {
-	__be16	vlan_etype;
-	__be16	vlan_tci;
-	__be32	data[2];
+  __be16	vlan_etype;
+  __be16	vlan_tci;
+  __be32	data[2];
 };
 struct _kcompat_ethtool_rx_flow_spec {
-	__u32		flow_type;
-	union _kcompat_ethtool_flow_union h_u;
-	struct _kcompat_ethtool_flow_ext h_ext;
-	union _kcompat_ethtool_flow_union m_u;
-	struct _kcompat_ethtool_flow_ext m_ext;
-	__u64		ring_cookie;
-	__u32		location;
+  __u32		flow_type;
+  union _kcompat_ethtool_flow_union h_u;
+  struct _kcompat_ethtool_flow_ext h_ext;
+  union _kcompat_ethtool_flow_union m_u;
+  struct _kcompat_ethtool_flow_ext m_ext;
+  __u64		ring_cookie;
+  __u32		location;
 };
 #define ethtool_rx_flow_spec _kcompat_ethtool_rx_flow_spec
 #endif /* defined(I82599_HW_FILTERING_SUPPORT) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,40)) */

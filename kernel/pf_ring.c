@@ -1,6 +1,6 @@
 /* ***************************************************************
  *
- * (C) 2004-2021 - ntop.org
+ * (C) 2004-21 - ntop.org
  *
  * This code includes contributions courtesy of
  * - Amit D. Chaudhary <amit_ml@rajgad.com>
@@ -778,15 +778,9 @@ pf_ring_net *netns_lookup(struct net *net) {
 
 /* ********************************** */
 
-pf_ring_net *netns_lookup_by_pf_dev(pf_ring_device *dev_ptr) {
-  struct net *net;
-
-  if (dev_ptr == &any_device_element || dev_ptr == &none_device_element)
-    net = &init_net;
-  else
-    net = dev_net(dev_ptr->dev);
-
-  return netns_lookup(net);
+static inline int device_net_eq(pf_ring_device *dev_ptr, struct net *net) {
+  return (dev_ptr == &any_device_element || dev_ptr == &none_device_element ||
+          net_eq(dev_net(dev_ptr->dev), net));
 }
 
 /* ********************************** */
@@ -1052,8 +1046,7 @@ pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(net_eq(net, dev_net(dev_ptr->dev)) &&
-        dev_ptr->dev->ifindex == ifindex)
+    if(device_net_eq(dev_ptr, net) && dev_ptr->dev->ifindex == ifindex)
       return dev_ptr;
   }
 
@@ -1079,9 +1072,7 @@ pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char
 	  The check below is to trap this case.
 	 */
 	|| ((l >= 13) && (strncmp(dev_ptr->device_name, name, 13) == 0)))
-       &&
-       (dev_ptr == &any_device_element || dev_ptr == &none_device_element ||
-        net_eq(dev_net(dev_ptr->dev), net)))
+       && device_net_eq(dev_ptr, net))
       return dev_ptr;
   }
 
@@ -1692,12 +1683,15 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       if(pfr->custom_bound_device_name[0] != '\0') {
 	seq_printf(m, pfr->custom_bound_device_name);
       } else {
+        pf_ring_net *netns = netns_lookup(sock_net(pfr->sk));
         list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
  	  pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-          int32_t dev_index = ifindex_to_pf_index(netns_lookup_by_pf_dev(dev_ptr), dev_ptr->dev->ifindex);
-	  if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
-	    seq_printf(m, "%s%s", (num > 0) ? "," : "", dev_ptr->dev->name);
-	    num++;
+          if (device_net_eq(dev_ptr, netns->net)) {
+            int32_t dev_index = ifindex_to_pf_index(netns, dev_ptr->dev->ifindex);
+            if(dev_index >= 0 && test_bit(dev_index, pfr->pf_dev_mask)) {
+              seq_printf(m, "%s%s", (num > 0) ? "," : "", dev_ptr->dev->name);
+              num++;
+            }
           }
 	}
       }
@@ -8270,7 +8264,7 @@ void remove_device_from_ring_list(struct net_device *dev)
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(net_eq(netns->net, dev_net(dev_ptr->dev)) &&
+    if(device_net_eq(dev_ptr, netns->net) &&
         dev_ptr->dev->ifindex == dev->ifindex) {
 
       if(netns != NULL) {
@@ -8554,7 +8548,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       /* safety check */
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-        if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0 && net_eq(dev_net(dev_ptr->dev), dev_net(dev))) {
+        if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0 &&
+           device_net_eq(dev_ptr, dev_net(dev))) {
           printk("[PF_RING] WARNING: multiple devices with the same name (name: %s ifindex: %u already-registered-as: %u)\n",
             dev->name, dev->ifindex, dev_ptr->dev->ifindex);
           if_name_clash = 1;
@@ -8592,7 +8587,8 @@ static int ring_notifier(struct notifier_block *this, unsigned long msg, void *d
       /* safety check (name clash) */
       list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
         dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-        if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0 && net_eq(dev_net(dev_ptr->dev), dev_net(dev))) {
+        if(dev_ptr->dev != dev && strcmp(dev_ptr->dev->name, dev->name) == 0 &&
+           device_net_eq(dev_ptr, dev_net(dev))) {
           printk("[PF_RING] WARNING: different devices (ifindex: %u found-ifindex: %u) with the same name detected during name change to %s\n",
                  dev->ifindex, dev_ptr->dev->ifindex, dev->name);
           if_name_clash = 1;
@@ -8747,7 +8743,7 @@ static int __init ring_init(void)
   int rc;
 
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
-	 "(C) 2004-20 ntop.org\n",
+	 "(C) 2004-21 ntop.org\n",
 	 RING_VERSION, GIT_REV);
 
   printk("LINUX_VERSION_CODE %08X\n", LINUX_VERSION_CODE);

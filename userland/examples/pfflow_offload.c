@@ -1,5 +1,5 @@
 /*
- * (C) 2017-2021 - ntop
+ * (C) 2017-21 - ntop
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -149,7 +149,7 @@ void processBuffer(const struct pfring_pkthdr *h,
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow_offload - (C) 2017-2021 ntop.org\n");
+  printf("pfflow_offload - (C) 2017-21 ntop.org\n");
   printf("Flow processing based on hardware offload\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
