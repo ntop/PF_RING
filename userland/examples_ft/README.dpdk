@@ -26,9 +26,10 @@ Download dpdk:
 $ tar xJf dpdk-<version>.tar.xz
 $ cd dpdk-<version>
 
-Intall meson:
+Intall required tools:
 
 $ apt-get install meson ninja-build
+$ pip3 install pyelftools
 
 Build dpdk:
 
@@ -43,6 +44,7 @@ $ sudo ldconfig
 
 Build ftflow_dpdk:
 
+$ cd ~/PF_RING/userland/examples_ft
 $ make -f Makefile.dpdk
 
 Run Application
