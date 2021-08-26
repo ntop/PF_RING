@@ -165,14 +165,6 @@ static pfring_module_info pfring_module_list[] = {
   },
 #endif
 
-#ifdef HAVE_MELLANOX
-  {
-    .name = "mlx",
-    .open = pfring_mlx_open,
-    .findalldevs = pfring_mlx_findalldevs
-  },
-#endif
-
 #ifdef HAVE_ACCOLADE
   {
     .name = "anic",
@@ -193,7 +185,7 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "mlx",
     .open = pfring_mlx_open,
-    .findalldevs = NULL
+    .findalldevs = pfring_mlx_findalldevs
   },
 #endif
 
