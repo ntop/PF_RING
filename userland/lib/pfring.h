@@ -915,7 +915,7 @@ int pfring_enable_rss_rehash(pfring *ring);
  * Performs passive wait on a PF_RING socket, similar to the standard poll(), taking care of data structures synchronization. 
  * @param ring          The PF_RING socket to poll. 
  * @param wait_duration The poll timeout in msec.
- * @return 0 on success, a negative value otherwise.
+ * @return 0 (no packet) or 1 (packet available) on success, a negative value otherwise.
  */
 int pfring_poll(pfring *ring, u_int wait_duration);
 
