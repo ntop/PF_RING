@@ -3970,6 +3970,22 @@ $as_echo_n "checking Mellanox support... " >&6; }
     MLX_LIB="-libverbs"
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
+
+    if test ! -z "$DEBUG" ; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking Mellanox debug library" >&5
+$as_echo_n "checking Mellanox debug library... " >&6; }
+      MOD_MLX_LIB_DBG="libs/libpfring_mlx_${MACHINE}_dbg.a"
+      if test -f "lib/${MOD_MLX_LIB_DBG}"; then
+        MOD_MLX_LIB=${MOD_MLX_LIB_DBG}
+        MLX_OBJS=`ar t lib/${MOD_MLX_LIB_DBG} | grep -F .o | tr '\n' ' '`
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+      else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+      fi
+    fi
+
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }

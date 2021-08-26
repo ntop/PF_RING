@@ -233,6 +233,19 @@ if test $MACHINE = "x86_64"; then
     MLX_DEP="extract_mlx_lib"
     MLX_LIB="-libverbs"
     AC_MSG_RESULT(yes)
+
+    if test ! -z "$DEBUG" ; then
+      AC_MSG_CHECKING([Mellanox debug library])
+      MOD_MLX_LIB_DBG="libs/libpfring_mlx_${MACHINE}_dbg.a" 
+      if test -f "lib/${MOD_MLX_LIB_DBG}"; then
+        MOD_MLX_LIB=${MOD_MLX_LIB_DBG}
+        MLX_OBJS=`ar t lib/${MOD_MLX_LIB_DBG} | grep -F .o | tr '\n' ' '`
+        AC_MSG_RESULT(yes)
+      else
+        AC_MSG_RESULT(no)
+      fi
+    fi
+
   else
     AC_MSG_RESULT(no)
   fi
