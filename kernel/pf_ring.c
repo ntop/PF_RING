@@ -4474,7 +4474,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   struct sock *sk;
   struct pf_ring_socket *pfr;
   int err = -ENOMEM;
-  int pid = current->pid;
+  int pid = current->tgid;
 
   debug_printk(2, "[pid=%d]\n", pid);
 
@@ -6723,20 +6723,41 @@ int setSocketStats(struct pf_ring_socket *pfr)
   if(netns != NULL) {
     /* 1 - Check if the /proc entry exists otherwise create it */
 
-    if(netns->proc_stats_dir != NULL &&
-        pfr->sock_proc_stats_name[0] == '\0') {
-      struct proc_dir_entry *entry;
+    if(netns->proc_stats_dir != NULL) {
+      if(pfr->ring_pid != current->tgid) {
+	/* 
+	   Probably the app forked as the PID has changed.
+	   We need to update the filename as well the PID
+	*/
 
-      snprintf(pfr->sock_proc_stats_name, sizeof(pfr->sock_proc_stats_name),
-	       "%d-%s.%d", pfr->ring_pid,
-	       pfr->ring_dev->dev->name, pfr->ring_id);
+	/* Remove old /proc names */
+	ring_proc_remove(pfr);
+	remove_proc_entry(pfr->sock_proc_stats_name, netns->proc_stats_dir);
 
-      if((entry = proc_create_data(pfr->sock_proc_stats_name,
-				    0 /* ro */,
-				    netns->proc_stats_dir,
-				    &ring_proc_stats_fops, pfr)) == NULL) {
-        pfr->sock_proc_stats_name[0] = '\0';
-        rc = -1;
+	/* Update the PID */
+	pfr->ring_pid = current->tgid;
+
+	/* Recreate the /proc proc entry */
+	ring_proc_add(pfr);
+
+	/* Force a new entry for stats to be created */
+	pfr->sock_proc_stats_name[0] = '\0';
+      }
+      
+      if(pfr->sock_proc_stats_name[0] == '\0') {
+	struct proc_dir_entry *entry;
+
+	snprintf(pfr->sock_proc_stats_name, sizeof(pfr->sock_proc_stats_name),
+		 "%d-%s.%d", pfr->ring_pid,
+		 pfr->ring_dev->dev->name, pfr->ring_id);
+
+	if((entry = proc_create_data(pfr->sock_proc_stats_name,
+				     0 /* ro */,
+				     netns->proc_stats_dir,
+				     &ring_proc_stats_fops, pfr)) == NULL) {
+	  pfr->sock_proc_stats_name[0] = '\0';
+	  rc = -1;
+	}
       }
     }
   }
