@@ -3967,7 +3967,7 @@ $as_echo_n "checking Mellanox support... " >&6; }
     HAVE_MLX="-D HAVE_MLX"
     MLX_OBJS=`ar t lib/${MOD_MLX_LIB} | grep -F .o | tr '\n' ' '`
     MLX_DEP="extract_mlx_lib"
-    MLX_LIB="-libverbs"
+        MLX_LIB="" # Use dlopen
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 

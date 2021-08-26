@@ -231,7 +231,8 @@ if test $MACHINE = "x86_64"; then
     HAVE_MLX="-D HAVE_MLX"
     MLX_OBJS=`ar t lib/${MOD_MLX_LIB} | grep -F .o | tr '\n' ' '`
     MLX_DEP="extract_mlx_lib"
-    MLX_LIB="-libverbs"
+    dnl> MLX_LIB="-libverbs"
+    MLX_LIB="" # Use dlopen
     AC_MSG_RESULT(yes)
 
     if test ! -z "$DEBUG" ; then
