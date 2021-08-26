@@ -52,8 +52,8 @@ typedef struct {
   u_int num_entries, port_num;
   u_int16_t rx_watermark, num_rx_queued_packets, last_processed_queued_packet;
   struct ibv_recv_wr *wr;
-  struct ibv_exp_flow *flow;
-  struct ibv_exp_flow *uc_flow;
+  struct ibv_flow *flow;
+  struct ibv_flow *uc_flow;
 
 #ifdef LICENSE_CHECK
   u_int32_t demo_check_counter;

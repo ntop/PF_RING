@@ -19,22 +19,24 @@
 /* **************************************************** */
 
 static struct ibv_qp *mlx_create_qp(struct mlx_ring *ring, int nent) {
-  struct ibv_exp_qp_init_attr attr;
+  struct ibv_qp_init_attr attr;
   struct ibv_qp* qp = NULL;
 
-  memset(&attr, 0, sizeof(struct ibv_exp_qp_init_attr));
+  memset(&attr, 0, sizeof(struct ibv_qp_init_attr));
 
-  attr.pd = ring->pd;
+  attr.qp_context = NULL;
   attr.send_cq = ring->cq;
   attr.recv_cq = ring->cq;
-  attr.cap.max_recv_wr = nent;
+  attr.srq = NULL; /* see ibv_create_srq */
   attr.cap.max_send_wr = nent;
-  attr.cap.max_recv_sge = MAX_SGE;
+  attr.cap.max_recv_wr = nent;
   attr.cap.max_send_sge = MAX_SGE;
-  attr.qp_type = IBV_QPT_RAW_PACKET;
+  attr.cap.max_recv_sge = MAX_SGE;
   attr.cap.max_inline_data = MAX_INLINE;
-  attr.comp_mask = IBV_EXP_QP_INIT_ATTR_PD;
-  qp = ibv_exp_create_qp(ring->context, &attr);
+  attr.qp_type = IBV_QPT_RAW_PACKET;
+  attr.sq_sig_all = 0;
+
+  qp = ibv_create_qp(ring->pd, &attr);
 
   return qp;
 }
@@ -229,10 +231,10 @@ static void mlx_release_resources(struct mlx_ring *ring) {
 void pfring_mlx_close(pfring *ring) {
   pfring_mlx *mlx = (pfring_mlx *) ring->priv_data;
 
-  if(mlx->uc_flow && ibv_exp_destroy_flow(mlx->uc_flow))
+  if(mlx->uc_flow && ibv_destroy_flow(mlx->uc_flow))
     printf("Couldn't Destory UC flow\n");
 
-  if(mlx->flow && ibv_exp_destroy_flow(mlx->flow))
+  if(mlx->flow && ibv_destroy_flow(mlx->flow))
     printf("Couldn't Destory promisc flow\n");
 
   free(mlx->wr);
@@ -373,14 +375,14 @@ int pfring_mlx_set_direction(pfring *ring, packet_direction direction) {
 /* **************************************************** */
 
 static int mlx_recv_set_promisc(pfring_mlx *ring, int port) {
-  struct ibv_exp_flow_attr attr;
+  struct ibv_flow_attr attr;
 
-  memset(&attr, 0, sizeof(struct ibv_exp_flow_attr));
+  memset(&attr, 0, sizeof(struct ibv_flow_attr));
 
-  attr.type = IBV_EXP_FLOW_ATTR_ALL_DEFAULT;
+  attr.type = IBV_FLOW_ATTR_ALL_DEFAULT;
   attr.port = port;
 
-  ring->flow = ibv_exp_create_flow(ring->ring.qp, &attr);
+  ring->flow = ibv_create_flow(ring->ring.qp, &attr);
 
   if(!ring->flow) {
     printf("Cannot attach promisc rule to QP\n");
@@ -405,22 +407,22 @@ static void mac_from_gid(uint8_t *mac, uint8_t *gid, uint32_t port) {
 static int mlx_recv_set_unicast(pfring_mlx *ring, int port) {
   void *buff = NULL;
   union ibv_gid gid;
-  struct ibv_exp_flow_attr *attr = NULL;
-  struct ibv_exp_flow_spec *spec = NULL;
-  int buff_size = sizeof(struct ibv_exp_flow_attr) +
-    sizeof(struct ibv_exp_flow_spec_eth);
+  struct ibv_flow_attr *attr = NULL;
+  struct ibv_flow_spec *spec = NULL;
+  int buff_size = sizeof(struct ibv_flow_attr) +
+    sizeof(struct ibv_flow_spec_eth);
 
   if((buff = (uint8_t*)calloc(sizeof(uint8_t), buff_size)) == NULL)
     return(-1);
 
-  attr = (struct ibv_exp_flow_attr*)buff;
-  attr->type = IBV_EXP_FLOW_ATTR_NORMAL;
+  attr = (struct ibv_flow_attr*)buff;
+  attr->type = IBV_FLOW_ATTR_NORMAL;
   attr->size = buff_size;
   attr->num_of_specs = 1;
   attr->port = port;
-  spec = (struct ibv_exp_flow_spec*)(buff + sizeof(struct ibv_exp_flow_attr));
-  spec->eth.type = IBV_EXP_FLOW_SPEC_ETH;
-  spec->eth.size = sizeof(struct ibv_exp_flow_spec_eth);
+  spec = (struct ibv_flow_spec*)(buff + sizeof(struct ibv_flow_attr));
+  spec->eth.type = IBV_FLOW_SPEC_ETH;
+  spec->eth.size = sizeof(struct ibv_flow_spec_eth);
 
   if(ibv_query_gid(ring->ring.context, port, 0, &gid)) {
     printf("Cannot query GUID 0\n");
@@ -431,7 +433,7 @@ static int mlx_recv_set_unicast(pfring_mlx *ring, int port) {
   mac_from_gid(spec->eth.val.dst_mac, gid.raw, port);
   memset(spec->eth.mask.dst_mac, 0xFF, sizeof(spec->eth.mask.dst_mac));
 
-  ring->uc_flow = ibv_exp_create_flow(ring->ring.qp, attr);
+  ring->uc_flow = ibv_create_flow(ring->ring.qp, attr);
   if(!ring->uc_flow) {
     printf("Cannot attach Unicast rule to RSS\n");
     free(buff);
@@ -487,10 +489,10 @@ int pfring_mlx_enable_ring(pfring *ring) {
     goto err_pd;
   }
 
-  if(ring->mtu_len == 0) ring->mtu_len = 1536;
+  if(ring->mtu == 0) ring->mtu = 1536;
 
   mlx->rx_watermark = 16, mlx->num_entries = 512 /* FIX */, mlx->port_num = 1 /* FIX */;
-  if(mlx_configure_qp(&mlx->ring, ring->mtu_len, mlx->num_entries, mlx->port_num)) {
+  if(mlx_configure_qp(&mlx->ring, ring->mtu, mlx->num_entries, mlx->port_num)) {
     printf("Error in QP configuration\n");
     goto err_config;
   }
@@ -501,16 +503,16 @@ int pfring_mlx_enable_ring(pfring *ring) {
   if(mlx_recv_set_unicast(mlx, mlx->port_num))
     goto err_unicast;
 
-  if(mlx_recv_post_wqes(mlx, ring->mtu_len))
+  if(mlx_recv_post_wqes(mlx, ring->mtu))
     goto err_post_wqe;
 
   return(0);
 
  err_post_wqe:
-  ibv_exp_destroy_flow(mlx->uc_flow);
+  ibv_destroy_flow(mlx->uc_flow);
 
  err_unicast:
-  ibv_exp_destroy_flow(mlx->flow);
+  ibv_destroy_flow(mlx->flow);
 
  err_promisc:
   mlx_release_resources(&mlx->ring);
