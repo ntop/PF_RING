@@ -553,13 +553,16 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
     char bigbuf[4096], pbuf[64];;
     u_int len;
 
-    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d][hash=%u][pid=%u (%s)]%s",
+    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d][hash=%u]%s",
 	     h->extended_hdr.rx_direction ? "[RX]" : "[TX]",
 	     h->extended_hdr.if_index,
 	     h->extended_hdr.pkt_hash,
-	     h->extended_hdr.process.pid,
-	     get_process_path(h->extended_hdr.process.pid, pbuf, sizeof(pbuf)),
 	     (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) ? "[MARKED]" : "");
+
+    if (h->extended_hdr.process.pid)
+      snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "[pid=%u (%s)]",
+	       h->extended_hdr.process.pid,
+	       get_process_path(h->extended_hdr.process.pid, pbuf, sizeof(pbuf)));
     
     pfring_print_parsed_pkt(bigbuf, sizeof(bigbuf), p, h);
     len = strlen(bigbuf);
@@ -1057,7 +1060,6 @@ void handleSigHup(int signalId) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c, buf[32], path[256] = { 0 }, *reflector_device = NULL;
-  u_char mac_address[6] = { 0 };
   int promisc = 1, snaplen = DEFAULT_SNAPLEN, rc;
   u_int clusterId = 0;
   u_int8_t enable_ixia_timestamp = 0, enable_arista_timestamp = 0, enable_metawatch_timestamp = 0;
@@ -1305,24 +1307,6 @@ int main(int argc, char* argv[]) {
              version & 0x000000FF);
   }
 
-  if(is_sysdig) {
-    if (!quiet)
-      printf("Capturing from sysdig\n");
-  } else {
-    int ifindex = -1;
-    rc = pfring_get_bound_device_address(pd, mac_address);
-    pfring_get_bound_device_ifindex(pd, &ifindex);
-    if (!quiet)
-      printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
-             device, rc == 0 ? etheraddr_string(mac_address, buf) : "unknown",
-             ifindex, pfring_get_interface_speed(pd));
-  }
-
-  if (!quiet) {
-    printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));
-    printf("# Polling threads:    %d\n", num_threads);
-  }
-
   if (enable_hw_timestamp) {
     struct timespec ltime;
     /* Setting current clock (please note that with standard driver this is not mandatory) */
@@ -1387,6 +1371,22 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Unable to enable ring :-(\n");
     pfring_close(pd);
     return(-1);
+  }
+
+  if (!quiet) {
+    if(is_sysdig) {
+      printf("Capturing from sysdig\n");
+    } else {
+      int ifindex = -1;
+      u_char mac_address[6] = { 0 };
+      rc = pfring_get_bound_device_address(pd, mac_address);
+      pfring_get_bound_device_ifindex(pd, &ifindex);
+      printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
+             device, rc == 0 ? etheraddr_string(mac_address, buf) : "unknown",
+             ifindex, pfring_get_interface_speed(pd));
+      printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));
+      printf("# Polling threads:    %d\n", num_threads);
+    }
   }
 
   sample_filtering_rules();

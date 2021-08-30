@@ -386,7 +386,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->rdi.device_id = ring->rdi.port_id = -1; /* Default */
 
   ring->mtu = pfring_get_mtu_size(ring);
-  if(ring->mtu == 0) ring->mtu =  9000 /* Jumbo MTU */;
+  if(ring->mtu == 0) ring->mtu = 9000 /* Jumbo MTU */;
 
   pfring_get_bound_device_ifindex(ring, &ring->device_id);
   ring->initialized = 1;
