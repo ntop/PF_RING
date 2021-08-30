@@ -493,6 +493,28 @@ static int search_string(char *string_to_match, u_int string_to_match_len) {
 
 /* ****************************************************** */
 
+char* get_process_path(u_int32_t pid, char *pbuf, u_int pbuf_len) {
+  char *space, process_path[256];
+  int len;
+
+  pbuf[0] = '\0';
+  
+  if(pid == 0) return(pbuf);
+  
+  sprintf(process_path, "/proc/%d/exe", pid);
+  if((len = readlink(process_path, pbuf, pbuf_len)) > 0)
+    pbuf[len] = '\0';
+  
+  if((space = strchr(pbuf, ' ')) != NULL) {
+    if(space[1] == '(') /* (deleted) */
+      space[0] = '\0';
+  }
+  
+  return(pbuf);
+}
+
+/* ****************************************************** */
+
 static int32_t thiszone;
 
 void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_match) {
@@ -528,15 +550,17 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
   }
 
   if(use_extended_pkt_header) {
-    char bigbuf[4096];
+    char bigbuf[4096], pbuf[64];;
     u_int len;
 
-    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d][hash=%u]%s",
-      h->extended_hdr.rx_direction ? "[RX]" : "[TX]",
-      h->extended_hdr.if_index,
-      h->extended_hdr.pkt_hash,
-      (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) ? "[MARKED]" : "");
-
+    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d][hash=%u][pid=%u (%s)]%s",
+	     h->extended_hdr.rx_direction ? "[RX]" : "[TX]",
+	     h->extended_hdr.if_index,
+	     h->extended_hdr.pkt_hash,
+	     h->extended_hdr.process.pid,
+	     get_process_path(h->extended_hdr.process.pid, pbuf, sizeof(pbuf)),
+	     (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) ? "[MARKED]" : "");
+    
     pfring_print_parsed_pkt(bigbuf, sizeof(bigbuf), p, h);
     len = strlen(bigbuf);
 

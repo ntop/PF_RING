@@ -27,7 +27,7 @@
 #define RING_VERSION_NUM           0x080100
 
 /* Increment whenever we change slot or packet header layout (e.g. we add/move a field) */
-#define RING_FLOWSLOT_VERSION          18
+#define RING_FLOWSLOT_VERSION          19
 
 #define RING_MAGIC
 #define RING_MAGIC_VALUE             0x88
@@ -365,6 +365,10 @@ struct pfring_extended_pkthdr {
     struct sk_buff *reserved; /* Kernel only pointer */
   } tx;
 
+  struct {
+    u_int32_t pid /* process id */;
+  } process;
+  
   /* NOTE: leave it as last field of the memset on parse_pkt() will fail */
   struct pkt_parsing_info parsed_pkt; /* packet parsing info */
 } __attribute__((packed));
