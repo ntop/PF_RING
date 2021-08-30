@@ -2575,7 +2575,7 @@ static int parse_pkt(struct sk_buff *skb,
   u_int16_t vlan_id;
   int rc;
 
-  hdr->extended_hdr.process.pid = task_pid_nr(current);
+  /* hdr->extended_hdr.process.pid = task_pid_nr(current); */
   
   skb_copy_bits(skb, -skb_displ, buffer, data_len);
 
