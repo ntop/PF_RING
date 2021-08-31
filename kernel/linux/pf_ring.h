@@ -289,6 +289,8 @@ struct gtp_v1_ext_hdr {
 /* GPRS Tunneling Protocol */
 typedef struct {
   u_int32_t tunnel_id; /* GTP/GRE tunnelId or NO_TUNNEL_ID for no filtering */
+  u_int8_t  tunneled_dmac[ETH_ALEN], tunneled_smac[ETH_ALEN];  /* MAC src/dst addresses */
+  u_int16_t tunneled_eth_type;         /* Ethernet type */
   u_int8_t tunneled_ip_version; /* Layer 4 protocol */
   u_int8_t tunneled_proto; /* Layer 4 protocol */
   ip_addr tunneled_ip_src, tunneled_ip_dst;  
@@ -302,6 +304,16 @@ struct mobile_ip_hdr {
   u_int8_t message_type, next_header;
   u_int16_t reserved;
 } __attribute__((packed));
+
+
+#define VXLAN_IP_PORT           4789
+typedef struct {
+    u_int8_t flags[2];
+    u_int16_t gdp;
+    u_int8_t vni[3];
+    u_int8_t res;
+}__attribute__((packed))
+vxlan_hdr ;
 
 typedef enum {
   long_pkt_header = 0, /* it includes PF_RING-extensions over the original pcap header */
