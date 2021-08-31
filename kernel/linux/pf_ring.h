@@ -286,7 +286,7 @@ struct gtp_v1_ext_hdr {
 
 #define NO_TUNNEL_ID     0xFFFFFFFF
 
-/* GPRS Tunneling Protocol */
+/* Tunneling Protocols (e.g. GTP) */
 typedef struct {
   u_int32_t tunnel_id; /* GTP/GRE tunnelId or NO_TUNNEL_ID for no filtering */
   u_int8_t  tunneled_dmac[ETH_ALEN], tunneled_smac[ETH_ALEN];  /* MAC src/dst addresses */

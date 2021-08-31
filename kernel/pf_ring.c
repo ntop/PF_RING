@@ -2454,13 +2454,13 @@ parse_tunnel_ip:
       } else if((hdr->extended_hdr.parsed_pkt.l4_src_port == MOBILE_IP_PORT)
 		|| (hdr->extended_hdr.parsed_pkt.l4_dst_port == MOBILE_IP_PORT)) {
 	/* FIX: missing implementation (TODO) */
-      }else if(((hdr->extended_hdr.parsed_pkt.l4_src_port == VXLAN_IP_PORT)
-            || (hdr->extended_hdr.parsed_pkt.l4_dst_port == VXLAN_IP_PORT))
-          && (data_len > hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(vxlan_hdr)+14)) {
-        vxlan_hdr *vxlanh = (vxlan_hdr*)(&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset]);
+      } else if(((hdr->extended_hdr.parsed_pkt.l4_src_port == VXLAN_IP_PORT)
+                 || (hdr->extended_hdr.parsed_pkt.l4_dst_port == VXLAN_IP_PORT))
+                && (data_len > hdr->extended_hdr.parsed_pkt.offset.payload_offset + sizeof(vxlan_hdr) + 14)) {
+        vxlan_hdr *vxlanh = (vxlan_hdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset]);
         if((vxlanh->flags[0] & 0x08) && vxlanh->res == 0) {
           hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id = (vxlanh->vni[0] << 16) + (vxlanh->vni[1] << 8) + vxlanh->vni[2];
-          eh = (struct ethhdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(vxlan_hdr)]);
+          eh = (struct ethhdr *) (&data[hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(vxlan_hdr)]);
           memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_dmac, eh->h_dest, sizeof(eh->h_dest));
           memcpy(&hdr->extended_hdr.parsed_pkt.tunnel.tunneled_smac, eh->h_source, sizeof(eh->h_source));
           tunnel_len = sizeof(vxlan_hdr) + 14;
