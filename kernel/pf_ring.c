@@ -4312,7 +4312,8 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	    */
 	    skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC
 				       | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
-				       | HASH_PKT_HDR_RECOMPUTE), skb_hash_set = 1;
+				       | HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN),
+	      skb_hash_set = 1;
 	  } else {
 	    if(enable_frag_coherence
 	       && is_ip_pkt
@@ -4408,7 +4409,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 	     && (num_ip_flow_iterations == 0)) {
 	    u_int32_t new_cluster_element_idx = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC
 							        | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
-							        | HASH_PKT_HDR_RECOMPUTE);
+							        | HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN);
 	    
 	    new_cluster_element_idx %= num_cluster_elements;
 	    
