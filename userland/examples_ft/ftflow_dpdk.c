@@ -1,5 +1,5 @@
 /*
- * (C) 2018-2021 - ntop
+ * (C) 2018-21 - ntop
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -479,7 +479,7 @@ static int processing_thread(__attribute__((unused)) void *arg) {
 /* ************************************ */
 
 static void print_help(void) {
-  printf("ftflow_dpdk - (C) 2018-2021 ntop.org\n");
+  printf("ftflow_dpdk - (C) 2018-21 ntop.org\n");
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
   printf("-p <id>[,<id>]  Port id (up to 2 ports are supported)\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");

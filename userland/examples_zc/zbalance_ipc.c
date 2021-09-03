@@ -1,5 +1,5 @@
 /*
- * (C) 2003-21 - ntop 
+ * (C) 2003-20 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -598,7 +598,7 @@ void set_outzq_bpf() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance_ipc - (C) 2014-20 ntop.org\n");
+  printf("zbalance_ipc - (C) 2014-21 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process balancing packets to multiple consumer processes.\n\n");
   printf("Usage: zbalance_ipc -i <device> -c <cluster id> -n <num inst>\n"
