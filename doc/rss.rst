@@ -125,8 +125,8 @@ Where:
 Note: kernel clustering cannot be used in combination with ZC driver as ZC is a 
 kernel-bypass technology.
 
-ZC Load-Balancing (zbalance_ipc)
---------------------------------
+ZC Cluster (zbalance_ipc)
+-------------------------
 
 There are cases where RSS cannot be used for traffic load-balancing, because:
 
@@ -191,8 +191,8 @@ This is the case for instance of nProbe and n2disk processing the same traffic:
    nprobe -i zc:10@1
    n2disk -i zc:10@2 -o /storage
 
-Using zbalance_ipc with systemd
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using ZC Cluster with systemd
+-----------------------------
 
 *zbalance_ipc* can be controlled using *systemctl* on operating systems
 and distributions that use the *systemd* service manager, configuring the
