@@ -1,0 +1,35 @@
+# Sample configuration file for ZC cluster (zbalance_ipc)
+# Please also read https://www.ntop.org/guides/pf_ring/rss.html?highlight=cluster#zc-load-balancing-zbalance-ipc
+# Full options are available with 'zbalance_ipc -h'
+
+# Capture Interface
+-i=zc:eth1
+
+# Traffic aggregation from multiple interfaces
+#-i=zc:eth1,zc:eth2
+
+# Load-Balance to 4 consumer application instances
+-n=4
+
+# Load-Balance to 4 instances of application A, full traffic to 1 instance of application B
+#-n=4,1
+
+# Distribution function
+# - 0 Round-Robin (default)
+# - 1 IP hash
+# - 2 Fan-out
+# - 3 Fan-out (1st) + Round-Robin (2nd, 3rd, ..)
+# - 4 GTP hash (Inner IP/Port or GTP-C Seq-Num)
+# - 5 GRE hash (Inner or Outer IP)
+# - 6 Interface X to queue X
+-m=1
+
+# Cluster ID (unique identifier for the cluster)
+-c=10
+
+# Capture thread CPU Core affinity
+-g=1
+
+# Time thread CPU Core affinity
+#-S=0
+
