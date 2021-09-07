@@ -10,6 +10,13 @@ case "$1" in
       if [  "`dkms status -m $NAME`" ]; then
          dkms remove -m $NAME -v $VERSION --all
       fi
+      if [  "`ls /usr/src/$NAME-$VERSION 2> /dev/null`" ]; then
+         rm -rf /usr/src/$NAME-$VERSION
+      fi
+      # Also cleanup old installations (to be removed at some point)
+      if [  "`ls /usr/src/$NAME-* 2> /dev/null`" ]; then
+         rm -rf /usr/src/$NAME-*
+      fi
     ;;
 
     failed-upgrade)
