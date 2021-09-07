@@ -5031,7 +5031,7 @@ int _kc_pci_wait_for_pending_transaction(struct pci_dev *dev);
 #define HAVE_NDO_SELECT_QUEUE_ACCEL_FALLBACK
 #endif
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0) )
-#define HAVE_VXLAN_RX_OFFLOAD
+//#define HAVE_VXLAN_RX_OFFLOAD
 #if !defined(HAVE_UDP_ENC_TUNNEL) && IS_ENABLED(CONFIG_VXLAN)
 #define HAVE_UDP_ENC_TUNNEL
 #endif
@@ -5169,7 +5169,7 @@ static inline int pci_enable_msix_exact(struct pci_dev *dev,
 #endif /* <=EL7.0 || <=SLES 12.1 */
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5)))
 #ifndef HAVE_VXLAN_RX_OFFLOAD
-#define HAVE_VXLAN_RX_OFFLOAD
+//#define HAVE_VXLAN_RX_OFFLOAD
 #endif /* HAVE_VXLAN_RX_OFFLOAD */
 #endif
 
