@@ -1,6 +1,21 @@
 # Sample configuration file for ZC cluster (zbalance_ipc)
 # Please also read https://www.ntop.org/guides/pf_ring/rss.html?highlight=cluster#zc-load-balancing-zbalance-ipc
 # Full options are available with 'zbalance_ipc -h'
+#
+# Usage: 
+#
+# 1. Copy this file to the actual configuration file including the cluster ID in the file name
+#
+# cp cluster.conf.example cluster-10.conf
+#
+# 2. Enable the service
+#
+# systemctl enable cluster@10
+#
+# 3. Start the configured cluster
+#
+# systemctl start cluster@10
+#
 
 # Capture Interface
 -i=zc:eth1
