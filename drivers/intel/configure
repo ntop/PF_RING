@@ -1768,6 +1768,10 @@ ac_config_files="$ac_config_files dkms.conf.fm10k"
 
 ac_config_files="$ac_config_files dkms.conf.ice"
 
+ac_config_files="$ac_config_files zc-dkms-mkdeb/debian/control"
+
+ac_config_files="$ac_config_files zc-dkms.mkrpm.spec"
+
 ac_config_files="$ac_config_files pfring-drivers-zc-dkms/DEBIAN/control"
 
 ac_config_files="$ac_config_files pfring-zc-rpm.spec"
@@ -2493,6 +2497,8 @@ do
     "dkms.conf.i40e") CONFIG_FILES="$CONFIG_FILES dkms.conf.i40e" ;;
     "dkms.conf.fm10k") CONFIG_FILES="$CONFIG_FILES dkms.conf.fm10k" ;;
     "dkms.conf.ice") CONFIG_FILES="$CONFIG_FILES dkms.conf.ice" ;;
+    "zc-dkms-mkdeb/debian/control") CONFIG_FILES="$CONFIG_FILES zc-dkms-mkdeb/debian/control" ;;
+    "zc-dkms.mkrpm.spec") CONFIG_FILES="$CONFIG_FILES zc-dkms.mkrpm.spec" ;;
     "pfring-drivers-zc-dkms/DEBIAN/control") CONFIG_FILES="$CONFIG_FILES pfring-drivers-zc-dkms/DEBIAN/control" ;;
     "pfring-zc-rpm.spec") CONFIG_FILES="$CONFIG_FILES pfring-zc-rpm.spec" ;;
 
