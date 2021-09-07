@@ -14,7 +14,7 @@ License:	%license
 Release:	@GIT_COMMIT_COUNT@
 BuildArch:	noarch
 Group:		System/Kernel
-Requires: 	dkms >= 1.95, pfring = @VERS@.@REVISION@
+Requires: 	dkms >= 1.95, pfring = @VERS@-@REVISION@
 AutoReqProv: 	no
 BuildRequires: 	dkms, kernel-devel
 Requires:       kernel-devel, make
