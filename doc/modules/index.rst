@@ -14,6 +14,7 @@ Below you can find a comparison of NIC features supported by PF_RING.
     exablaze
     fiberblaze
     intel
+    mellanox
     myricom
     napatech
     netcope
