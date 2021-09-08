@@ -2,7 +2,7 @@
 
 case "$1" in
   upgrade)
-    #
+    # This is an upgrade, do not disable the services
   ;;
   *)
     if [ -f /.dockerenv ]; then exit 0; fi
