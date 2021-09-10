@@ -63,5 +63,10 @@ Please note that multi-queue support (RSS) is not yet available.
 Traffic Transmission
 --------------------
 
-Packet transmission is not yet available.
+Packet transmission is also supported on Mellanox. The same syntax used for capturing traffic can be used to select the TX interface.
+Example:
+
+.. code-block:: console
+
+   pfsend -i mlx:mlx5_0
 
