@@ -286,23 +286,11 @@ static struct packet_type prot_hook;
 
 /* List of virtual filtering devices */
 static struct list_head virtual_filtering_devices_list;
-static rwlock_t virtual_filtering_lock =
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  RW_LOCK_UNLOCKED
-#else
-  __RW_LOCK_UNLOCKED(virtual_filtering_lock)
-#endif
-;
+static DEFINE_MUTEX(virtual_filtering_lock);
 
 /* List of all clusters */
 static lockless_list ring_cluster_list;
-static rwlock_t ring_cluster_lock =
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  RW_LOCK_UNLOCKED
-#else
-  __RW_LOCK_UNLOCKED(virtual_filtering_lock)
-#endif
-;
+static DEFINE_RWLOCK(ring_cluster_lock);
 
 /* List of all devices on which PF_RING has been registered */
 static struct list_head ring_aware_device_list; /* List of pf_ring_device */
@@ -317,13 +305,7 @@ static u_int32_t num_cluster_fragments = 0;
 static u_int32_t num_cluster_discarded_fragments = 0;
 static unsigned long next_fragment_purge_jiffies = 0;
 static struct list_head cluster_fragment_hash[NUM_FRAGMENTS_HASH_SLOTS];
-static rwlock_t cluster_fragments_lock =
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  RW_LOCK_UNLOCKED
-#else
-  __RW_LOCK_UNLOCKED(cluster_fragments_lock)
-#endif
-;
+static DEFINE_SPINLOCK(cluster_fragments_lock);
 
 /* List of all ZC devices */
 static struct list_head zc_devices_list;
@@ -331,13 +313,7 @@ static u_int zc_devices_list_size = 0;
 
 /* List of generic cluster referees */
 static struct list_head cluster_referee_list;
-static rwlock_t cluster_referee_lock =
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  RW_LOCK_UNLOCKED
-#else
-  __RW_LOCK_UNLOCKED(cluster_referee_lock)
-#endif
-;
+static DEFINE_MUTEX(cluster_referee_lock);
 
 /* Dummy buffer used for loopback_test */
 u_int32_t loobpack_test_buffer_len = 4*1024*1024;
@@ -364,24 +340,7 @@ static void purge_idle_fragment_cache(void);
 
 /* ********************************** */
 
-static rwlock_t ring_mgmt_lock;
-
-static inline void init_ring_readers(void) {
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  ring_mgmt_lock = RW_LOCK_UNLOCKED;
-#else
-  rwlock_init(&ring_mgmt_lock);
-#endif
-}
-
-static inline void ring_write_lock(void)        { write_lock_bh(&ring_mgmt_lock);    }
-static inline void ring_write_unlock(void)      { write_unlock_bh(&ring_mgmt_lock);  }
-/* use ring_read_lock/ring_read_unlock in process context (a bottom half may use write_lock) */
-static inline void ring_read_lock(void)         { read_lock_bh(&ring_mgmt_lock);     }
-static inline void ring_read_unlock(void)       { read_unlock_bh(&ring_mgmt_lock);   }
-/* use ring_read_lock_inbh/ring_read_unlock_inbh in bottom half contex */
-static inline void ring_read_lock_inbh(void)    { read_lock(&ring_mgmt_lock);        }
-static inline void ring_read_unlock_inbh(void)  { read_unlock(&ring_mgmt_lock);      }
+static DEFINE_MUTEX(ring_mgmt_lock);
 
 /* ********************************** */
 
@@ -609,12 +568,7 @@ static void unmap_ifindex(pf_ring_net *netns, int32_t ifindex) {
 void init_lockless_list(lockless_list *l)
 {
   memset(l, 0, sizeof(lockless_list));
-
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
-  l->list_lock = RW_LOCK_UNLOCKED;
-#else
-  rwlock_init(&l->list_lock);
-#endif
+  spin_lock_init(&l->list_lock);
 }
 
 /* ************************************************** */
@@ -632,7 +586,7 @@ int lockless_list_add(lockless_list *l, void *elem)
   }
 
   /* I could avoid mutexes but ... */
-  write_lock_bh(&l->list_lock);
+  spin_lock_bh(&l->list_lock);
 
   for(i=0; i<MAX_NUM_LIST_ELEMENTS; i++) {
     void *old_slot_value;
@@ -659,7 +613,7 @@ int lockless_list_add(lockless_list *l, void *elem)
     }
   }
 
-  write_unlock_bh(&l->list_lock);
+  spin_unlock_bh(&l->list_lock);
 
   return(i);
 }
@@ -682,7 +636,7 @@ int lockless_list_remove(lockless_list *l, void *elem)
 
   if(l->num_elements == 0) return(-1); /* Not found */
 
-  write_lock_bh(&l->list_lock);
+  spin_lock_bh(&l->list_lock);
 
   for(i=0; i<MAX_NUM_LIST_ELEMENTS; i++) {
     if(l->list_elements[i] == elem) {
@@ -705,7 +659,7 @@ int lockless_list_remove(lockless_list *l, void *elem)
     }
   }
 
-  write_unlock_bh(&l->list_lock);
+  spin_unlock_bh(&l->list_lock);
   wmb();
 
   return(old_full_slot);
@@ -743,7 +697,7 @@ void lockless_list_empty(lockless_list *l, u_int8_t free_memory)
   int i;
 
   if(free_memory) {
-    write_lock_bh(&l->list_lock);
+    spin_lock_bh(&l->list_lock);
 
     for(i=0; i<MAX_NUM_LIST_ELEMENTS; i++) {
       if(l->list_elements[i] != NULL) {
@@ -753,7 +707,7 @@ void lockless_list_empty(lockless_list *l, u_int8_t free_memory)
     }
 
     l->num_elements = 0;
-    write_unlock_bh(&l->list_lock);
+    spin_unlock_bh(&l->list_lock);
     wmb();
   }
 }
@@ -912,12 +866,11 @@ static void consume_pending_pkts(struct pf_ring_socket *pfr, u_int8_t synchroniz
 	  /* Reset all */
 	  pfr->tx.last_tx_dev = NULL, pfr->tx.last_tx_dev_idx = UNKNOWN_INTERFACE;
 
-	  pfr->tx.last_tx_dev = __dev_get_by_index(sock_net(pfr->sk), hdr->extended_hdr.tx.bounce_interface);
+	  pfr->tx.last_tx_dev = dev_get_by_index(sock_net(pfr->sk), hdr->extended_hdr.tx.bounce_interface);
 
 	  if(pfr->tx.last_tx_dev != NULL) {
 	    /* We have found the device */
 	    pfr->tx.last_tx_dev_idx = hdr->extended_hdr.tx.bounce_interface;
-	    dev_hold(pfr->tx.last_tx_dev); /* Prevent it from being freed */
 	  }
 	}
 
@@ -1761,7 +1714,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
       if (pfr->cluster_referee) {
         /* ZC cluster */
         struct list_head *obj_ptr, *obj_tmp_ptr;
-        write_lock(&cluster_referee_lock);
+        mutex_lock(&cluster_referee_lock);
         list_for_each_safe(obj_ptr, obj_tmp_ptr, &pfr->cluster_referee->objects_list) {
           cluster_object *obj_entry = list_entry(obj_ptr, cluster_object, list);
           switch (obj_entry->object_type) {
@@ -1777,7 +1730,7 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
             break;
           }
         }
-        write_unlock(&cluster_referee_lock);
+        mutex_unlock(&cluster_referee_lock);
       }
     } else
       seq_printf(m, "WARNING m->private == NULL\n");
@@ -3000,15 +2953,15 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
   /* We need to lock as two ksoftirqd might put data onto the same ring */
 
-  if(do_lock) write_lock(&pfr->ring_index_lock);
+  if(do_lock) spin_lock_bh(&pfr->ring_index_lock);
   // smp_rmb();
 
   if(pfr->tx.enable_tx_with_bounce && pfr->header_len == long_pkt_header
      && pfr->slots_info->kernel_remove_off != pfr->slots_info->remove_off /* optimization to avoid too many locks */
      && pfr->slots_info->remove_off != get_next_slot_offset(pfr, pfr->slots_info->kernel_remove_off)) {
-    write_lock(&pfr->tx.consume_tx_packets_lock);
+    spin_lock_bh(&pfr->tx.consume_tx_packets_lock);
     consume_pending_pkts(pfr, 0);
-    write_unlock(&pfr->tx.consume_tx_packets_lock);
+    spin_unlock_bh(&pfr->tx.consume_tx_packets_lock);
   }
 
   off = pfr->slots_info->insert_off;
@@ -3019,7 +2972,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
     pfr->slots_info->tot_lost++;
 
-   if(do_lock) write_unlock(&pfr->ring_index_lock);
+   if(do_lock) spin_unlock_bh(&pfr->ring_index_lock);
     return(0);
   }
 
@@ -3109,7 +3062,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
   pfr->slots_info->tot_insert++;
 
- if(do_lock) write_unlock(&pfr->ring_index_lock);
+ if(do_lock) spin_unlock_bh(&pfr->ring_index_lock);
 
  if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark)
     wake_up_interruptible(&pfr->ring_slots_waitqueue);
@@ -3477,9 +3430,6 @@ static int reflect_packet(struct sk_buff *skb,
     memcpy(&cloned->data[6], dst_mac, 6);
   }
 
-  /* NOTE
-   * dev_queue_xmit() must be called with interrupts enabled
-   * which means it can't be called with spinlocks held. */
   ret = dev_queue_xmit(cloned);
 
   debug_printk(2, "dev_queue_xmit(%s) returned %d\n", reflector_dev->name, ret);
@@ -3579,7 +3529,7 @@ int check_wildcard_rules(struct sk_buff *skb,
 
   debug_printk(2, "Entered check_wildcard_rules()\n");
 
-  read_lock(&pfr->ring_rules_lock);
+  read_lock_bh(&pfr->ring_rules_lock);
 
   list_for_each_safe(ptr, tmp_ptr, &pfr->sw_filtering_rules) {
     sw_filtering_rule_element *entry;
@@ -3606,7 +3556,7 @@ int check_wildcard_rules(struct sk_buff *skb,
 
 	/* we have done with rule evaluation,
 	 * now we need a write_lock to add rules */
-	read_unlock(&pfr->ring_rules_lock);
+	read_unlock_bh(&pfr->ring_rules_lock);
 
 	/* Creating an hash rule from packet headers */
 	hash_bucket = (sw_filtering_hash_bucket *)kcalloc(1, sizeof(sw_filtering_hash_bucket), GFP_ATOMIC);
@@ -3623,9 +3573,9 @@ int check_wildcard_rules(struct sk_buff *skb,
 	  hash_bucket->rule.reflector_device_name[0] = '\0';
 	  hash_bucket->rule.internals.reflector_dev = NULL;
 
-          write_lock(&pfr->ring_rules_lock);
+          write_lock_bh(&pfr->ring_rules_lock);
 	  rc = handle_sw_filtering_hash_bucket(pfr, hash_bucket, 1 /* add rule */);
-	  write_unlock(&pfr->ring_rules_lock);
+	  write_unlock_bh(&pfr->ring_rules_lock);
 
 	  if(rc != 0) {
 	    kfree(hash_bucket);
@@ -3678,7 +3628,7 @@ int check_wildcard_rules(struct sk_buff *skb,
     }
   }  /* for */
 
-  read_unlock(&pfr->ring_rules_lock);
+  read_unlock_bh(&pfr->ring_rules_lock);
 
   return(0);
 }
@@ -3807,7 +3757,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
   if(pfr->sw_filtering_hash != NULL) {
     sw_filtering_hash_bucket *hash_bucket = NULL;
 
-    read_lock(&pfr->ring_rules_lock);
+    read_lock_bh(&pfr->ring_rules_lock);
 
     hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ, &hash_bucket);
 
@@ -3834,7 +3784,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
       pfr->sw_filtering_hash_miss++;
     }
 
-    read_unlock(&pfr->ring_rules_lock);
+    read_unlock_bh(&pfr->ring_rules_lock);
   }
 
   /* [2.2] Search rules list */
@@ -3847,7 +3797,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
     /* [3] Packet sampling */
     if(pfr->sample_rate > 1) {
-      write_lock(&pfr->ring_index_lock);
+      spin_lock_bh(&pfr->ring_index_lock);
 
       if(pfr->pktToSample <= 1) {
 	pfr->pktToSample = pfr->sample_rate;
@@ -3855,12 +3805,12 @@ static int add_skb_to_ring(struct sk_buff *skb,
         pfr->slots_info->tot_pkts++;
 	pfr->pktToSample--;
 
-	write_unlock(&pfr->ring_index_lock);
+	spin_unlock_bh(&pfr->ring_index_lock);
 	atomic_dec(&pfr->num_ring_users);
 	return(-1);
       }
 
-      write_unlock(&pfr->ring_index_lock);
+      spin_unlock_bh(&pfr->ring_index_lock);
     }
 
     if(hdr->caplen > 0) {
@@ -4204,7 +4154,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
         rc = 1;
 
         if(pfr->sample_rate > 1) {
-          write_lock(&pfr->ring_index_lock);
+          spin_lock_bh(&pfr->ring_index_lock);
           if(pfr->pktToSample <= 1) {
             pfr->pktToSample = pfr->sample_rate;
           } else {
@@ -4212,7 +4162,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
             pfr->pktToSample--;
             rc = 0;
           }
-          write_unlock(&pfr->ring_index_lock);
+          spin_unlock_bh(&pfr->ring_index_lock);
         }
 
         if(rc == 1)
@@ -4287,7 +4237,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
     if (cluster_ptr != NULL) {
 
-      read_lock(&ring_cluster_lock);
+      read_lock_bh(&ring_cluster_lock);
 
       /* [2] Check socket clusters */
       cluster_ptr = (ring_cluster_element*)lockless_list_get_first(&ring_cluster_list, &last_list_idx);
@@ -4424,7 +4374,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
       } /* while*/
 
-      read_unlock(&ring_cluster_lock);
+      read_unlock_bh(&ring_cluster_lock);
 
     } /* Clustering */
  
@@ -4540,7 +4490,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
     goto free_sk;
 
   memset(pfr, 0, sizeof(*pfr));
-  rwlock_init(&pfr->ring_config_lock);
+  mutex_init(&pfr->ring_config_lock);
   pfr->sk = sk;
   pfr->ring_shutdown = 0;
   pfr->ring_active = 0;	/* We activate as soon as somebody waits for packets */
@@ -4552,7 +4502,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   pfr->queue_nonempty_timestamp = 0;
   pfr->header_len = quick_mode ? short_pkt_header : long_pkt_header;
   init_waitqueue_head(&pfr->ring_slots_waitqueue);
-  rwlock_init(&pfr->ring_index_lock);
+  spin_lock_init(&pfr->ring_index_lock);
   rwlock_init(&pfr->ring_rules_lock);
   atomic_set(&pfr->num_ring_users, 0);
   INIT_LIST_HEAD(&pfr->sw_filtering_rules);
@@ -4566,7 +4516,7 @@ static int ring_create(struct net *net, struct socket *sock, int protocol
   sk->sk_destruct = ring_sock_destruct;
   pfr->ring_id = atomic_inc_return(&ring_id_serial);
   pfr->vlan_id = RING_ANY_VLAN;
-  rwlock_init(&pfr->tx.consume_tx_packets_lock);
+  spin_lock_init(&pfr->tx.consume_tx_packets_lock);
   pfr->tx.enable_tx_with_bounce = 0;
   pfr->tx.last_tx_dev_idx = UNKNOWN_INTERFACE, pfr->tx.last_tx_dev = NULL;
 
@@ -4648,29 +4598,30 @@ add_virtual_filtering_device(struct pf_ring_socket *pfr, virtual_filtering_devic
     return(NULL);
 
   /* Check if the same entry is already present */
-  write_lock(&virtual_filtering_lock);
+  mutex_lock(&virtual_filtering_lock);
   list_for_each_safe(ptr, tmp_ptr, &virtual_filtering_devices_list) {
     virtual_filtering_device_element *filtering_ptr = list_entry(ptr,
 								 virtual_filtering_device_element,
 								 list);
 
     if(strcmp(filtering_ptr->info.device_name, info->device_name) == 0) {
-      write_unlock(&virtual_filtering_lock);
+      mutex_unlock(&virtual_filtering_lock);
       return(NULL); /* Entry alredy present */
     }
   }
 
   elem = kmalloc(sizeof(virtual_filtering_device_element), GFP_KERNEL);
 
-  if(elem == NULL)
+  if(elem == NULL) {
+    mutex_unlock(&virtual_filtering_lock);
     return(NULL);
-  else {
+  } else {
     memcpy(&elem->info, info, sizeof(virtual_filtering_device_info));
     INIT_LIST_HEAD(&elem->list);
   }
 
   list_add(&elem->list, &virtual_filtering_devices_list);  /* Add as first entry */
-  write_unlock(&virtual_filtering_lock);
+  mutex_unlock(&virtual_filtering_lock);
 
   /* Add /proc entry */
   netns = netns_lookup(sock_net(pfr->sk));
@@ -4694,7 +4645,7 @@ static int remove_virtual_filtering_device(struct pf_ring_socket *pfr, char *dev
 
   debug_printk(2, "remove_virtual_filtering_device(%s)\n", device_name);
 
-  write_lock(&virtual_filtering_lock);
+  mutex_lock(&virtual_filtering_lock);
   list_for_each_safe(ptr, tmp_ptr, &virtual_filtering_devices_list) {
     virtual_filtering_device_element *filtering_ptr;
 
@@ -4709,13 +4660,13 @@ static int remove_virtual_filtering_device(struct pf_ring_socket *pfr, char *dev
       }
 
       list_del(ptr);
-      write_unlock(&virtual_filtering_lock);
+      mutex_unlock(&virtual_filtering_lock);
       kfree(filtering_ptr);
       return(0);
     }
   }
 
-  write_unlock(&virtual_filtering_lock);
+  mutex_unlock(&virtual_filtering_lock);
 
   return(-EINVAL);	/* Not found */
 }
@@ -4917,7 +4868,7 @@ static int create_cluster_referee(struct pf_ring_socket *pfr, u_int32_t cluster_
   if(pfr->cluster_referee) /* already called */
     return -1;
 
-  write_lock(&cluster_referee_lock);
+  mutex_lock(&cluster_referee_lock);
 
   /* checking if the cluster already exists */
   list_for_each_safe(ptr, tmp_ptr, &cluster_referee_list) {
@@ -4965,7 +4916,7 @@ static int create_cluster_referee(struct pf_ring_socket *pfr, u_int32_t cluster_
   cr->master_running = 1;
 
 unlock:
-  write_unlock(&cluster_referee_lock);
+  mutex_unlock(&cluster_referee_lock);
 
   if(cr == NULL) {
     debug_printk(2, "error\n");
@@ -4984,7 +4935,7 @@ static void remove_cluster_referee(struct pf_ring_socket *pfr)
   struct list_head *c_obj_ptr, *c_obj_tmp_ptr;
   cluster_object *c_obj_entry = NULL;
 
-  write_lock(&cluster_referee_lock);
+  mutex_lock(&cluster_referee_lock);
 
   /* looking for the cluster */
   list_for_each_safe(ptr, tmp_ptr, &cluster_referee_list) {
@@ -5017,7 +4968,7 @@ static void remove_cluster_referee(struct pf_ring_socket *pfr)
     }
   }
 
-  write_unlock(&cluster_referee_lock);
+  mutex_unlock(&cluster_referee_lock);
 
   pfr->cluster_referee = NULL;
 }
@@ -5031,7 +4982,7 @@ static int publish_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_
   cluster_object *obj_entry, *c_obj = NULL;
   int rc = -1;
 
-  write_lock(&cluster_referee_lock);
+  mutex_lock(&cluster_referee_lock);
 
   list_for_each_safe(ptr, tmp_ptr, &cluster_referee_list) {
     entry = list_entry(ptr, struct cluster_referee, list);
@@ -5073,7 +5024,7 @@ static int publish_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_
   rc = 0;
 
 unlock:
-  write_unlock(&cluster_referee_lock);
+  mutex_unlock(&cluster_referee_lock);
 
   return rc;
 }
@@ -5087,7 +5038,7 @@ static int lock_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_id,
   cluster_object *obj_entry, *c_obj = NULL;
   int rc = -1;
 
-  write_lock(&cluster_referee_lock);
+  mutex_lock(&cluster_referee_lock);
 
   list_for_each_safe(ptr, tmp_ptr, &cluster_referee_list) {
     entry = list_entry(ptr, struct cluster_referee, list);
@@ -5140,7 +5091,7 @@ static int lock_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_id,
   rc = 0;
 
 unlock:
-  write_unlock(&cluster_referee_lock);
+  mutex_unlock(&cluster_referee_lock);
 
   return rc;
 }
@@ -5156,7 +5107,7 @@ static int unlock_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_i
   cluster_object *c_obj_entry = NULL;
   int rc = -1;
 
-  write_lock(&cluster_referee_lock);
+  mutex_lock(&cluster_referee_lock);
 
   /* looking for the cluster */
   list_for_each_safe(ptr, tmp_ptr, &cluster_referee_list) {
@@ -5184,7 +5135,7 @@ static int unlock_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_i
   rc = 0;
 
 unlock:
-  write_unlock(&cluster_referee_lock);
+  mutex_unlock(&cluster_referee_lock);
 
   return rc;
 }
@@ -5355,17 +5306,13 @@ static int ring_release(struct socket *sock)
 
   if(pfr->kernel_consumer_options) kfree(pfr->kernel_consumer_options);
 
-  /*
-    The calls below must be placed outside the
-    write_lock...write_unlock block.
-  */
   sock_orphan(sk);
   ring_proc_remove(pfr);
 
   if(pfr->tx.last_tx_dev != NULL)
     dev_put(pfr->tx.last_tx_dev); /* Release device */
 
-  ring_write_lock();
+  mutex_lock(&ring_mgmt_lock);
 
   if(pfr->ring_dev->dev && pfr->ring_dev == &any_device_element)
     netns->num_any_rings--;
@@ -5465,10 +5412,9 @@ static int ring_release(struct socket *sock)
   ring_sk(sk) = NULL;
   skb_queue_purge(&sk->sk_write_queue);
 
-  sock_put(sk);
-  ring_write_unlock();
+  mutex_unlock(&ring_mgmt_lock);
 
-  write_lock(&pfr->ring_config_lock);
+  mutex_lock(&pfr->ring_config_lock);
 
   if(ring_memory_ptr != NULL && free_ring_memory)
     vfree(ring_memory_ptr);
@@ -5490,7 +5436,9 @@ static int ring_release(struct socket *sock)
   if(pfr->promisc_enabled)
     unset_socket_promisc(pfr);
 
-  write_unlock(&pfr->ring_config_lock);
+  mutex_unlock(&pfr->ring_config_lock);
+
+  sock_put(sk);
 
   /*
      Wait long enough so that other threads using ring_table
@@ -6020,9 +5968,9 @@ unsigned int ring_poll(struct file *file,
     pfr->ring_active = 1;
 
     if(pfr->tx.enable_tx_with_bounce && pfr->header_len == long_pkt_header) {
-      write_lock_bh(&pfr->tx.consume_tx_packets_lock);
+      spin_lock_bh(&pfr->tx.consume_tx_packets_lock);
       consume_pending_pkts(pfr, 1);
-      write_unlock_bh(&pfr->tx.consume_tx_packets_lock);
+      spin_unlock_bh(&pfr->tx.consume_tx_packets_lock);
     }
 
     if(num_queued_pkts(pfr) < pfr->poll_num_pkts_watermark /* || pfr->num_poll_calls == 1 */)
@@ -6156,7 +6104,7 @@ static int remove_from_cluster(struct sock *sock, struct pf_ring_socket *pfr)
   if(pfr->cluster_id == 0 /* 0 = No Cluster */ )
     return(0);	/* Nothing to do */
 
-  write_lock(&ring_cluster_lock);
+  write_lock_bh(&ring_cluster_lock);
 
   cluster_ptr = (ring_cluster_element*)lockless_list_get_first(&ring_cluster_list, &last_list_idx);
 
@@ -6169,14 +6117,14 @@ static int remove_from_cluster(struct sock *sock, struct pf_ring_socket *pfr)
 	lockless_list_add(&delayed_memory_table, cluster_ptr); /* Free later */
       }
 
-      write_unlock(&ring_cluster_lock);
+      write_unlock_bh(&ring_cluster_lock);
       return ret;
     }
 
     cluster_ptr = (ring_cluster_element*)lockless_list_get_next(&ring_cluster_list, &last_list_idx);
   }
 
-  write_unlock(&ring_cluster_lock);
+  write_unlock_bh(&ring_cluster_lock);
   return(-EINVAL);	/* Not found */
 }
 
@@ -6244,7 +6192,7 @@ static int add_sock_to_cluster(struct sock *sock,
   if(pfr->cluster_id != 0)
     remove_from_cluster(sock, pfr);
 
-  write_lock(&ring_cluster_lock);
+  write_lock_bh(&ring_cluster_lock);
 
   cluster_ptr = (ring_cluster_element*)lockless_list_get_first(&ring_cluster_list, &last_list_idx);
 
@@ -6254,7 +6202,7 @@ static int add_sock_to_cluster(struct sock *sock,
       /* Cluster already present, adding socket */
       rc = add_sock_to_cluster_list(cluster_ptr, sock);
 
-      write_unlock(&ring_cluster_lock);
+      write_unlock_bh(&ring_cluster_lock);
       return(rc);
     }
 
@@ -6264,7 +6212,7 @@ static int add_sock_to_cluster(struct sock *sock,
   /* The cluster does not exist, creating it.. */
 
   if((cluster_ptr = kmalloc(sizeof(ring_cluster_element), GFP_KERNEL)) == NULL) {
-    write_unlock(&ring_cluster_lock);
+    write_unlock_bh(&ring_cluster_lock);
     return(-ENOMEM);
   }
 
@@ -6280,7 +6228,7 @@ static int add_sock_to_cluster(struct sock *sock,
   pfr->cluster_id = cluster->clusterId;
   lockless_list_add(&ring_cluster_list, cluster_ptr);
 
-  write_unlock(&ring_cluster_lock);
+  write_unlock_bh(&ring_cluster_lock);
 
   return(0); /* 0 = OK */
 }
@@ -6362,7 +6310,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
            entry->zc_dev.dev->name, pfr->zc_mapping.channel_id,
            entry->num_bound_sockets, entry);
 
-  write_lock(&entry->lock);
+  spin_lock_bh(&entry->lock);
   found = 0;
   for (i=0; i<MAX_NUM_ZC_BOUND_SOCKETS; i++) {
     if(entry->bound_sockets[i] == NULL) {
@@ -6372,7 +6320,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
       break;
     }
   }
-  write_unlock(&entry->lock);
+  spin_unlock_bh(&entry->lock);
 
   if(!found) {
     printk("[PF_RING] %s:%d something got wrong adding %s@%u\n", __FUNCTION__, __LINE__,
@@ -6426,7 +6374,7 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
     return -1;
   }
 
-  write_lock(&entry->lock);
+  spin_lock_bh(&entry->lock);
   found = 0;
   for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
     if(entry->bound_sockets[i] == pfr) {
@@ -6436,7 +6384,7 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
       break;
     }
   }
-  write_unlock(&entry->lock);
+  spin_unlock_bh(&entry->lock);
 
   if(!found) {
     printk("[PF_RING] %s:%d something got wrong removing socket bound to %s@%u\n",
@@ -6475,7 +6423,7 @@ static int get_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host,
   if(num_cluster_fragments == 0)
     return(-1); /* no fragment */
 
-  write_lock(&cluster_fragments_lock); /* TODO optimisation: lock per hash entry */
+  spin_lock_bh(&cluster_fragments_lock); /* TODO optimisation: lock per hash entry */
 
   list_for_each_safe(ptr, tmp_ptr, &cluster_fragment_hash[hash_id]) {
     struct hash_fragment_node *frag = list_entry(ptr, struct hash_fragment_node, frag_list);
@@ -6496,7 +6444,7 @@ static int get_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host,
     }
   }
 
-  write_unlock(&cluster_fragments_lock);
+  spin_unlock_bh(&cluster_fragments_lock);
 
   return(app_id); /* Not found */
 }
@@ -6544,7 +6492,7 @@ static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host
   if(num_cluster_fragments > MAX_CLUSTER_FRAGMENTS_LEN) /* Avoid filling up all memory */
     return;
 
-  write_lock(&cluster_fragments_lock);
+  spin_lock_bh(&cluster_fragments_lock);
 
   /* 1. Check if there is already the same entry on cache */
   list_for_each_safe(ptr, tmp_ptr, &cluster_fragment_hash[hash_id]) {
@@ -6556,7 +6504,7 @@ static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host
       /* Duplicate found */
       frag->cluster_app_id = app_id;
       frag->expire_jiffies = jiffies + 5*HZ;
-      write_unlock(&cluster_fragments_lock);
+      spin_unlock_bh(&cluster_fragments_lock);
       return;
     }
   }
@@ -6564,7 +6512,7 @@ static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host
   /* 2. Not found, let's add it */
   if((frag = kmalloc(sizeof(struct hash_fragment_node), GFP_ATOMIC)) == NULL) {
     printk("[PF_RING] Out of memory (%s)\n", __FUNCTION__);
-    write_unlock(&cluster_fragments_lock);
+    spin_unlock_bh(&cluster_fragments_lock);
     return;
   }
 
@@ -6578,7 +6526,7 @@ static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host
   num_cluster_fragments++;
   next_fragment_purge_jiffies = frag->expire_jiffies;
   purge_idle_fragment_cache(); /* Just in case there are too many elements */
-  write_unlock(&cluster_fragments_lock);
+  spin_unlock_bh(&cluster_fragments_lock);
 }
 
 /* ************************************* */
@@ -7255,7 +7203,7 @@ static int ring_setsockopt(struct socket *sock,
     if(pfr->zc_device_entry != NULL && !pfr->ring_active /* already active, no check */) {
       int i;
 
-      write_lock(&pfr->zc_device_entry->lock);
+      spin_lock_bh(&pfr->zc_device_entry->lock);
 
       for(i=0; i<MAX_NUM_ZC_BOUND_SOCKETS; i++) {
 	if((pfr->zc_device_entry->bound_sockets[i] != NULL)
@@ -7263,7 +7211,7 @@ static int ring_setsockopt(struct socket *sock,
 	  if(pfr->zc_device_entry->bound_sockets[i]->mode == pfr->mode
 	     || pfr->zc_device_entry->bound_sockets[i]->mode == send_and_recv_mode
 	     || pfr->mode == send_and_recv_mode) {
-            write_unlock(&pfr->zc_device_entry->lock);
+            spin_unlock_bh(&pfr->zc_device_entry->lock);
 	    printk("[PF_RING] Unable to activate two or more ZC sockets on the same interface %s/link direction\n",
 		   pfr->ring_dev->dev->name);
 	    return(-EFAULT); /* No way: we can't have two sockets that are doing the same thing with ZC */
@@ -7273,7 +7221,7 @@ static int ring_setsockopt(struct socket *sock,
 
       pfr->ring_active = 1;
 
-      write_unlock(&pfr->zc_device_entry->lock);
+      spin_unlock_bh(&pfr->zc_device_entry->lock);
 
     } else {
       pfr->ring_active = 1;
@@ -7814,28 +7762,28 @@ static int ring_getsockopt(struct socket *sock,
       if(len < (sizeof(u_int64_t) * num_slots))
         return(-EINVAL);
 
-      write_lock(&pfr->ring_config_lock);
+      mutex_lock(&pfr->ring_config_lock);
 
       if(pfr->extra_dma_memory) { /* already called */
-        write_unlock(&pfr->ring_config_lock);
+        mutex_unlock(&pfr->ring_config_lock);
         return(-EINVAL);
       }
 
       if((extra_dma_memory = allocate_extra_dma_memory(pfr->zc_dev->hwdev,
                                     num_slots, slot_len, chunk_len)) == NULL) {
-        write_unlock(&pfr->ring_config_lock);
+        mutex_unlock(&pfr->ring_config_lock);
         return(-EFAULT);
       }
 
       if(copy_to_user(optval, extra_dma_memory->dma_addr, (sizeof(u_int64_t) * num_slots))) {
         free_extra_dma_memory(extra_dma_memory);
-        write_unlock(&pfr->ring_config_lock);
+        mutex_unlock(&pfr->ring_config_lock);
         return(-EFAULT);
       }
 
       pfr->extra_dma_memory = extra_dma_memory;
 
-      write_unlock(&pfr->ring_config_lock);
+      mutex_unlock(&pfr->ring_config_lock);
 
       break;
     }
@@ -8108,7 +8056,7 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
     if(next != NULL) {
       memset(next, 0, sizeof(zc_dev_list));
 
-      rwlock_init(&next->lock);
+      spin_lock_init(&next->lock);
       next->num_bound_sockets = 0;
 
       /* RX */
@@ -8822,8 +8770,6 @@ static int __init ring_init(void)
 
   for(i = 0; i < NUM_FRAGMENTS_HASH_SLOTS; i++)
     INIT_LIST_HEAD(&cluster_fragment_hash[i]);
-
-  init_ring_readers();
 
   memset(&any_dev, 0, sizeof(any_dev));
   strcpy(any_dev.name, "any");

@@ -401,7 +401,7 @@ struct pfring_pkthdr {
 #ifdef __KERNEL__
 typedef struct {
   u_int32_t num_elements, top_element_id;
-  rwlock_t list_lock;
+  spinlock_t list_lock;
   void *list_elements[MAX_NUM_LIST_ELEMENTS];
 } lockless_list;
 
@@ -1070,7 +1070,7 @@ typedef struct {
     No more than one socket can be enabled for RX and one for TX.
   */
   struct pf_ring_socket *bound_sockets[MAX_NUM_ZC_BOUND_SOCKETS];
-  rwlock_t lock;
+  spinlock_t lock;
 } zc_dev_list;
 
 #define MAX_NUM_IFINDEX 0x7FFFFFFF
@@ -1187,7 +1187,7 @@ struct hash_fragment_node {
  * Ring options
  */
 struct pf_ring_socket {
-  rwlock_t ring_config_lock;
+  struct mutex ring_config_lock;
 
   u_int8_t ring_active, ring_shutdown, num_rx_channels, num_bound_devices;
   pf_ring_device *ring_dev;
@@ -1230,7 +1230,7 @@ struct pf_ring_socket {
      from user space */
   struct {
     u_int8_t enable_tx_with_bounce;
-    rwlock_t consume_tx_packets_lock;
+    spinlock_t consume_tx_packets_lock;
     int32_t last_tx_dev_idx;
     struct net_device *last_tx_dev;
   } tx;
@@ -1296,7 +1296,8 @@ struct pf_ring_socket {
   /* Locks */
   atomic_t num_ring_users;
   wait_queue_head_t ring_slots_waitqueue;
-  rwlock_t ring_index_lock, ring_rules_lock;
+  spinlock_t ring_index_lock;
+  rwlock_t ring_rules_lock;
 
   /* Indexes (Internal) */
   u_int32_t insert_page_id, insert_slot_id;
