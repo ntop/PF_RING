@@ -5412,7 +5412,6 @@ static int ring_release(struct socket *sock)
   ring_sk(sk) = NULL;
   skb_queue_purge(&sk->sk_write_queue);
 
-  sock_put(sk);
   mutex_unlock(&ring_mgmt_lock);
 
   mutex_lock(&pfr->ring_config_lock);
@@ -5438,6 +5437,8 @@ static int ring_release(struct socket *sock)
     unset_socket_promisc(pfr);
 
   mutex_unlock(&pfr->ring_config_lock);
+
+  sock_put(sk);
 
   /*
      Wait long enough so that other threads using ring_table
