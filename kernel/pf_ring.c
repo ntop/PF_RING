@@ -1773,7 +1773,7 @@ static void ring_proc_term(pf_ring_net *netns)
   if(netns->proc_dir == NULL)
     return;
 
-  debug_printk(1, "removing /proc/net/pf_ring [net=%pK]\n", netns->net);
+  debug_printk(1, "Removing /proc/net/pf_ring [net=%pK]\n", netns->net);
 
   remove_proc_entry(PROC_INFO,  netns->proc_dir);
   remove_proc_entry(PROC_STATS, netns->proc_dir);
@@ -6707,7 +6707,6 @@ int setSocketStats(struct pf_ring_socket *pfr)
 
 	/* Remove old /proc names */
 	ring_proc_remove(pfr);
-	remove_proc_entry(pfr->sock_proc_stats_name, netns->proc_stats_dir);
 
 	/* Update the PID */
 	pfr->ring_pid = current->tgid;
