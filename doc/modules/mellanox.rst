@@ -8,17 +8,20 @@ Note: this capture module is currently under development, only basic RX capabili
 Prerequisite
 ------------
 
-The *ibverbs* library is required in order to use Mellanox adapters with PF_RING.
-Download Mellanox OFED/EN from https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed
-and install it, selecting a toolset usually used also by other capture frameworks. Please note this also
-installs *libibverbs*, in addition to other dependencies.
+1. Install the *pfring* package by configuring one of our repositories at http://packages.ntop.org.
+PF_RING can also be downloaded in source format from GIT at https://github.com/ntop/PF_RING/
+
+2. Install the *libibverbs* library, which is required in order to use Mellanox adapters with PF_RING,
+by downloading Mellanox OFED/EN from https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed
+and installing it. Please select a toolset usually used also by other capture frameworks as in the below
+example. Please note that the Mellanox OFED/EN installer installs *libibverbs* as well as other dependencies.
 
 .. code-block:: console
 
    cd MLNX_OFED_LINUX-5.4-1.0.3.0-ubuntu20.04-x86_64
    ./mlnxofedinstall --upstream-libs --dpdk
 
-Configuration
+Compatibility
 -------------
 
 Check the adapter firmware:
@@ -32,6 +35,9 @@ Recommended firmware versions are:
  - ConnectX-5: >= 16.21.1000
  - ConnectX-6: >= 20.27.0090
  - ConnectX-6 Dx: >= 22.27.0090
+
+Configuration
+-------------
 
 Load the required modules:
 
