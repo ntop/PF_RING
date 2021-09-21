@@ -60,11 +60,6 @@
 #include "pfring_mod_fiberblaze.h"
 #endif
 
-#ifdef HAVE_MELLANOX
-/* Mellanox */
-#include "pfring_mod_mlx.h"
-#endif
-
 #ifdef HAVE_ACCOLADE
 /* Accolade */
 #include "pfring_mod_accolade.h"
