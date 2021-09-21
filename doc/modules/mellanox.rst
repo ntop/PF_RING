@@ -50,9 +50,15 @@ Check that the adapter is recognised and listed by PF_RING:
 .. code-block:: console
 
    pfcount -L -v 1
-   Name        SystemName  Module  MAC                BusID         NumaNode  Status  License   Expiration
-   mlx:mlx5_0  enp1s0f0    mlx     B8:CE:F6:8E:DD:5A  0000:00:00.0  -1        Down    NotFound  0
-   mlx:mlx5_1  enp1s0f1    mlx     B8:CE:F6:8E:DD:5B  0000:00:00.0  -1        Down    NotFound  0
+   Name       SystemName Module  MAC               BusID         NumaNode  Status  License Expiration
+   enp1s0f0	  enp1s0f0	 pf_ring B8:CE:F6:8E:DD:5A	0000:01:00.0  -1	      Up	     Valid	 1662797500
+   enp1s0f1	  enp1s0f1	 pf_ring B8:CE:F6:8E:DD:5B	0000:01:00.1  -1	      Up	     Valid	 1662797500
+   mlx:mlx5_0 enp1s0f0   mlx     B8:CE:F6:8E:DD:5A 0000:00:00.0  -1        Down    Valid   1662797500
+   mlx:mlx5_1 enp1s0f1   mlx     B8:CE:F6:8E:DD:5B 0000:00:00.0  -1        Down    Valid   1662797500
+
+Please note that the same interfaces appear twice, as they can se used both using the kernel driver
+(creating a socket on *enp1s0f0* for instance) or the *mlx* module in zero-copy mode (creating a
+socket on the corresponding *mlx:mlx5_0* interface).
 
 Capturing Traffic
 -----------------
