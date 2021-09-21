@@ -70,7 +70,24 @@ as reported by *pfcount -L*. Example:
 
    pfcount -i mlx:mlx5_0
 
-Please note that multi-queue support (RSS) is not yet available.
+RSS / Multi Queue
+~~~~~~~~~~~~~~~~~
+
+Multi-queue support (RSS) is available on Mellanox with the constraint that all queues
+should be used in the same process (supporting multiple capture threads).
+The number of RSS queues can be set using the standard ethtool command on the kernel
+interface. Example for 4 queues:
+
+.. code-block:: console
+
+   ethtool -L enp1s0f0 combined 4
+
+In order to capture traffic from a queue, mlx:<device>@<queue> should be used as interface
+name. Example with queue 0:
+
+.. code-block:: console
+
+   pfcount -i mlx:mlx5_0@0
 
 Traffic Transmission
 --------------------
