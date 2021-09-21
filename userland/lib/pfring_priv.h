@@ -35,12 +35,20 @@
 #define gcc_mb() __asm__ __volatile__("": : :"memory")
 #endif
 
-#ifndef smp_wmb
-#define smp_wmb() gcc_mb()
+#ifndef smp_rmb
+#if defined(__i386__) || defined(__x86_64__)
+#define smp_rmb()   asm volatile("lfence":::"memory")
+#else /* other architectures (e.g. ARM) */
+#define smp_rmb() gcc_mb()
+#endif
 #endif
 
-#ifndef smp_rmb
-#define smp_rmb() gcc_mb()
+#ifndef smp_wmb
+#if defined(__i386__) || defined(__x86_64__)
+#define smp_wmb()   asm volatile("sfence" ::: "memory")
+#else /* other architectures (e.g. ARM) */
+#define smp_wmb() gcc_mb()
+#endif
 #endif
 
 /* ********************************* */
