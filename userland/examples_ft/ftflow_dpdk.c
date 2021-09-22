@@ -178,6 +178,12 @@ static int port_init(void) {
     if (tx_csum_offload)
       port_conf.txmode.offloads = DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM;
 
+    if (num_queues > 1) {
+      /* Configure RSS (on some adapters this has to be explicitly set) */
+      port_conf.rxmode.mq_mode = ETH_MQ_RX_RSS;
+      port_conf.rx_adv_conf.rss_conf.rss_hf = (ETH_RSS_IP | ETH_RSS_TCP | ETH_RSS_UDP);
+    }
+
     retval = rte_eth_dev_configure(port_id, num_queues /* RX */, num_queues /* TX */, &port_conf);
     
     if (retval != 0)
