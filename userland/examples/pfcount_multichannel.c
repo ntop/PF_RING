@@ -156,14 +156,11 @@ void sigproc(int sig) {
   do_shutdown = 1;
   print_stats();
 
-  fprintf(stderr, "Shutting down sockets...\n");
   for(i=0; i<num_channels; i++) {
     threads[i].do_shutdown = 1;
+    fprintf(stderr, "Shutting down socket %d\n", i);
     pfring_shutdown(threads[i].ring);
-    printf("\t%d...\n", i);
   }
-
-  exit(0);
 }
 
 /* ******************************** */
