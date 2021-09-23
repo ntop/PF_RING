@@ -177,16 +177,20 @@ if test $MACHINE = "x86_64"; then
 
   dnl> Accolade
   MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-  HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-  ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
-  ACCOLADE_DEP="extract_accolade_lib"
+  if test -f "lib/$MOD_ACCOLADE_LIB"; then
+    HAVE_ACCOLADE="-D HAVE_ACCOLADE"
+    ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
+    ACCOLADE_DEP="extract_accolade_lib"
+  fi
 
   dnl> DAG
   MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-  DAG_LIB="-lm -ldl" 
-  HAVE_DAG="-D HAVE_DAG"
-  DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
-  DAG_DEP="extract_dag_lib"
+  if test -f "lib/$MOD_DAG_LIB"; then
+    DAG_LIB="-lm -ldl" 
+    HAVE_DAG="-D HAVE_DAG"
+    DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
+    DAG_DEP="extract_dag_lib"
+  fi
 
   dnl> Exablaze
   dnl> HAVE_EXABLAZE="-D HAVE_EXABLAZE"
@@ -196,31 +200,37 @@ if test $MACHINE = "x86_64"; then
 
   dnl> Fiberblaze
   MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
-  FIBERBLAZE_LIB="-lm -ldl" 
-  HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
-  FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
-  FIBERBLAZE_DEP="extract_fiberblaze_lib"
+  if test -f "lib/$MOD_FIBERBLAZE_LIB"; then
+    FIBERBLAZE_LIB="-lm -ldl" 
+    HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
+    FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
+    FIBERBLAZE_DEP="extract_fiberblaze_lib"
+  fi
 
   dnl> Myricom
   MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-  HAVE_MYRICOM="-D HAVE_MYRICOM"
-  MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-  MYRICOM_DEP="extract_myricom_lib"
+  if test -f "lib/$MOD_MYRICOM_LIB"; then
+    HAVE_MYRICOM="-D HAVE_MYRICOM"
+    MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
+    MYRICOM_DEP="extract_myricom_lib"
+  fi
 
   dnl> Napatech
   MOD_NT_LIB="libs/libpfring_nt_$MACHINE$LIBARCH.a"
-  HAVE_NT="-D HAVE_NT"
-  NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
-  NT_DEP="extract_nt_lib"
-  if test ! -z "$DEBUG" ; then
-    AC_MSG_CHECKING([NT debug library])
-    MOD_NT_LIB_DBG="libs/libpfring_nt_${MACHINE}_dbg.a" 
-    if test -f "lib/${MOD_NT_LIB_DBG}"; then
-      MOD_NT_LIB=${MOD_NT_LIB_DBG}
-      NT_OBJS=`ar t lib/${MOD_NT_LIB_DBG} | grep -F .o | tr '\n' ' '`
-      AC_MSG_RESULT(yes)
-    else
-      AC_MSG_RESULT(no)
+  if test -f "lib/$MOD_NT_LIB"; then
+    HAVE_NT="-D HAVE_NT"
+    NT_OBJS=`ar t lib/$MOD_NT_LIB | grep .o\$ | tr '\n' ' '`
+    NT_DEP="extract_nt_lib"
+    if test ! -z "$DEBUG" ; then
+      AC_MSG_CHECKING([NT debug library])
+      MOD_NT_LIB_DBG="libs/libpfring_nt_${MACHINE}_dbg.a" 
+      if test -f "lib/${MOD_NT_LIB_DBG}"; then
+        MOD_NT_LIB=${MOD_NT_LIB_DBG}
+        NT_OBJS=`ar t lib/${MOD_NT_LIB_DBG} | grep -F .o | tr '\n' ' '`
+        AC_MSG_RESULT(yes)
+      else
+        AC_MSG_RESULT(no)
+      fi
     fi
   fi
 
@@ -255,9 +265,11 @@ if test $MACHINE = "x86_64"; then
 
   dnl> Netcope
   MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
-  HAVE_NETCOPE="-D HAVE_NETCOPE"
-  NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
-  NETCOPE_DEP="extract_netcope_lib"
+  if test -f "lib/$MOD_NETCOPE_LIB"; then 
+    HAVE_NETCOPE="-D HAVE_NETCOPE"
+    NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
+    NETCOPE_DEP="extract_netcope_lib"
+  fi
 
 dnl> end of x86_64 check
 fi
