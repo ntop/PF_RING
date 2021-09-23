@@ -107,14 +107,14 @@ static void dumpMatch(char *str);
 void print_stats() {
   pfring_stat pfringStat;
   struct timeval endTime;
-  double deltaMillisec;
+  double delta_last;
   static u_int8_t print_all;
   static u_int64_t lastPkts = 0;
   static u_int64_t lastBytes = 0;
   double diff, bytesDiff;
   static struct timeval lastTime;
   char buf[256], buf1[64], buf2[64], buf3[64], buf4[64], timebuf[128];
-  u_int64_t deltaMillisecStart;
+  u_int64_t delta_abs;
 
   if(startTime.tv_sec == 0) {
     gettimeofday(&startTime, NULL);
@@ -123,7 +123,7 @@ void print_stats() {
     print_all = 1;
 
   gettimeofday(&endTime, NULL);
-  deltaMillisec = delta_time(&endTime, &startTime);
+  delta_last = delta_time(&endTime, &startTime);
 
   if(pfring_stats(pd, &pfringStat) >= 0) {
     double thpt;
@@ -136,19 +136,19 @@ void print_stats() {
       nMatches += stats->numStringMatches[i];
     }
 
-    deltaMillisecStart = delta_time(&endTime, &startTime);
+    delta_abs = delta_time(&endTime, &startTime);
     snprintf(buf, sizeof(buf),
              "Duration: %s\n"
              "Packets:  %lu\n"
              "Dropped:  %lu\n"
              "Bytes:    %lu\n",
-             msec2dhmsm(deltaMillisecStart, timebuf, sizeof(timebuf)),
+             msec2dhmsm(delta_abs, timebuf, sizeof(timebuf)),
              (long unsigned int) nPkts,
              (long unsigned int) pfringStat.drop,
              (long unsigned int) nBytes);
     pfring_set_application_stats(pd, buf);
 
-    thpt = ((double)8*nBytes)/(deltaMillisec*1000);
+    thpt = ((double)8*nBytes)/(delta_last*1000);
 
     fprintf(stderr, "=========================\n"
 	    "Absolute Stats: [%s pkts total][%s pkts dropped][%.1f%% dropped]\n",
@@ -163,7 +163,7 @@ void print_stats() {
 
     if(print_all)
       fprintf(stderr, "[%s %s/sec][%s Mbit/sec]\n",
-	      pfring_format_numbers((double)(nPkts*1000)/deltaMillisec, buf1, sizeof(buf1), 1),
+	      pfring_format_numbers((double)(nPkts*1000)/delta_last, buf1, sizeof(buf1), 1),
               chunk_mode == 1 ? "chunk" : "pkt",
 	      pfring_format_numbers(thpt, buf2, sizeof(buf2), 1));
     else
@@ -173,7 +173,7 @@ void print_stats() {
       fprintf(stderr, "String matched: %llu\n", nMatches);
 
     if(print_all && (lastTime.tv_sec > 0)) {
-      deltaMillisec = delta_time(&endTime, &lastTime);
+      delta_last = delta_time(&endTime, &lastTime);
       diff = nPkts-lastPkts;
       bytesDiff = nBytes - lastBytes;
       bytesDiff /= (1000*1000*1000)/8;
@@ -182,10 +182,10 @@ void print_stats() {
 	      "Actual Stats: [%s %s rcvd][%s ms][%s %s][%s Gbps]",
 	      pfring_format_numbers(diff, buf4, sizeof(buf4), 0),
               chunk_mode == 1 ? "chunks" : "pkts",
-	      pfring_format_numbers(deltaMillisec, buf1, sizeof(buf1), 1),
-	      pfring_format_numbers(((double)diff/(double)(deltaMillisec/1000)),  buf2, sizeof(buf2), 1),
+	      pfring_format_numbers(delta_last, buf1, sizeof(buf1), 1),
+	      pfring_format_numbers(((double)diff/(double)(delta_last/1000)),  buf2, sizeof(buf2), 1),
               chunk_mode == 1 ? "cps" : "pps",
-	      pfring_format_numbers(((double)bytesDiff/(double)(deltaMillisec/1000)),  buf3, sizeof(buf3), 1));
+	      pfring_format_numbers(((double)bytesDiff/(double)(delta_last/1000)),  buf3, sizeof(buf3), 1));
 
       fprintf(stderr, "=========================\n%s\n", buf);
     }

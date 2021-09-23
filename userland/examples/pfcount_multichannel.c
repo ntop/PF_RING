@@ -80,14 +80,15 @@ struct thread_stats *threads;
 void print_stats() {
   pfring_stat pfringStat;
   struct timeval endTime;
-  double deltaMillisec;
+  double delta_abs;
   static u_int64_t lastPkts[MAX_NUM_THREADS] = { 0 };
   u_int64_t diff;
   static struct timeval lastTime;
   int i;
   unsigned long long nBytes = 0, nPkts = 0, pkt_dropped = 0;
   unsigned long long nPktsLast = 0;
-  double pkt_thpt = 0, tot_thpt = 0, delta;
+  double pkt_thpt = 0, tot_thpt = 0, delta_last;
+  char buf1[64];
 
   if(startTime.tv_sec == 0) {
     gettimeofday(&startTime, NULL);
@@ -95,15 +96,14 @@ void print_stats() {
   }
 
   gettimeofday(&endTime, NULL);
-  deltaMillisec = delta_time(&endTime, &startTime);
-
-  delta = delta_time(&endTime, &lastTime);
+  delta_abs = delta_time(&endTime, &startTime);
+  delta_last = delta_time(&endTime, &lastTime);
 
   for(i=0; i < num_channels; i++) {
     nBytes += threads[i].numBytes, nPkts += threads[i].numPkts;
   
     if(pfring_stats(threads[i].ring, &pfringStat) >= 0) {
-      double thpt = ((double)8*threads[i].numBytes)/(deltaMillisec*1000);
+      double thpt = ((double)8*threads[i].numBytes)/(delta_abs*1000);
 
       fprintf(stderr, "=========================\n"
 	      "Absolute Stats: [channel=%d][%u pkts rcvd][%u pkts dropped]\n"
@@ -114,7 +114,7 @@ void print_stats() {
       fprintf(stderr, "%lu pkts - %lu bytes", 
 	      (long unsigned int)threads[i].numPkts,
 	      (long unsigned int)threads[i].numBytes);
-      fprintf(stderr, " [%.1f pkt/sec - %.2f Mbit/sec]\n", (double)(threads[i].numPkts*1000)/deltaMillisec, thpt);
+      fprintf(stderr, " [%.1f pkt/sec - %.2f Mbit/sec]\n", (double)(threads[i].numPkts*1000)/delta_abs, thpt);
       pkt_dropped += pfringStat.drop;
 
       if(lastTime.tv_sec > 0) {
@@ -123,10 +123,11 @@ void print_stats() {
 	diff = threads[i].numPkts-lastPkts[i];
 	nPktsLast += diff;
 	tot_thpt += thpt;
-	pps = ((double)diff/(double)(delta/1000));
+	pps = ((double)diff/(double)(delta_last/1000));
 	fprintf(stderr, "=========================\n"
-		"Actual Stats: [channel=%d][%llu pkts][%.1f ms][%.1f pkt/sec]\n",
-		i, (long long unsigned int)diff, delta, pps);
+		"Actual Stats: [channel=%d][%llu pkts][%.1f ms][%s pps]\n",
+		i, (long long unsigned int)diff, delta_last,
+	        pfring_format_numbers(((double)diff/(double)(delta_last/1000)),  buf1, sizeof(buf1), 1));
 	pkt_thpt += pps;
       }
 
@@ -137,8 +138,10 @@ void print_stats() {
   lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
 
   fprintf(stderr, "=========================\n");
-  fprintf(stderr, "Aggregate stats (all channels): [%.1f pkt/sec][%.2f Mbit/sec][%llu pkts dropped]\n", 
-	  (double)(nPktsLast*1000)/(double)delta, tot_thpt, pkt_dropped);
+  fprintf(stderr, "Aggregate stats (all channels): [%s pps][%.2f Mbit/sec][%llu pkts dropped]\n", 
+	  pfring_format_numbers((double)(nPktsLast*1000)/(double)delta_last,  buf1, sizeof(buf1), 1), 
+          tot_thpt, 
+          pkt_dropped);
   fprintf(stderr, "=========================\n\n");
 }
 
