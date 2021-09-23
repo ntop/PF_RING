@@ -13,8 +13,9 @@ PF_RING can also be downloaded in source format from GIT at https://github.com/n
 
 2. Install the *libibverbs* library, which is required in order to use Mellanox adapters with PF_RING,
 by downloading Mellanox OFED/EN from https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed
-and installing it. Please select a toolset usually used also by other capture frameworks as in the below
-example. Please note that the Mellanox OFED/EN installer installs *libibverbs* as well as other dependencies.
+and installing it. Please note that a reduced toolset can be selected for the OFED SDK to be used by
+capture frameworks (the *--dpdk* option is available for that) as in the below example.
+The Mellanox OFED/EN installer installs *libibverbs* as well as other dependencies.
 
 .. code-block:: console
 
