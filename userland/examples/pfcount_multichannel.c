@@ -114,7 +114,9 @@ void print_stats() {
       fprintf(stderr, "%lu pkts - %lu bytes", 
 	      (long unsigned int)threads[i].numPkts,
 	      (long unsigned int)threads[i].numBytes);
-      fprintf(stderr, " [%.1f pkt/sec - %.2f Mbit/sec]\n", (double)(threads[i].numPkts*1000)/delta_abs, thpt);
+      fprintf(stderr, " [%s pps - %.2f Mbit/sec]\n",
+              pfring_format_numbers((double)(threads[i].numPkts*1000)/delta_abs, buf1, sizeof(buf1), 1),
+              thpt);
       pkt_dropped += pfringStat.drop;
 
       if(lastTime.tv_sec > 0) {
@@ -127,7 +129,7 @@ void print_stats() {
 	fprintf(stderr, "=========================\n"
 		"Actual Stats: [channel=%d][%llu pkts][%.1f ms][%s pps]\n",
 		i, (long long unsigned int)diff, delta_last,
-	        pfring_format_numbers(((double)diff/(double)(delta_last/1000)),  buf1, sizeof(buf1), 1));
+	        pfring_format_numbers(((double)diff/(double)(delta_last/1000)), buf1, sizeof(buf1), 1));
 	pkt_thpt += pps;
       }
 
@@ -139,7 +141,7 @@ void print_stats() {
 
   fprintf(stderr, "=========================\n");
   fprintf(stderr, "Aggregate stats (all channels): [%s pps][%.2f Mbit/sec][%llu pkts dropped]\n", 
-	  pfring_format_numbers((double)(nPktsLast*1000)/(double)delta_last,  buf1, sizeof(buf1), 1), 
+	  pfring_format_numbers((double)(nPktsLast*1000)/(double)delta_last, buf1, sizeof(buf1), 1), 
           tot_thpt, 
           pkt_dropped);
   fprintf(stderr, "=========================\n\n");
@@ -294,8 +296,8 @@ void* packet_consumer_thread(void* _id) {
          dummyProcesssPacket(&hdr, buffer, (u_char*)thread_id);
 
       } else {
-         if(wait_for_packet == 0) 
-           usleep(1); //sched_yield();
+         //if(wait_for_packet == 0) 
+         //  usleep(1); //sched_yield();
       }
    }
 
