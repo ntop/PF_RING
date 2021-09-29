@@ -85,8 +85,8 @@ void print_stats() {
   u_int64_t diff;
   static struct timeval lastTime;
   int i;
-  unsigned long long nBytes = 0, nPkts = 0, pkt_dropped = 0;
-  unsigned long long nPktsLast = 0;
+  unsigned long long bytes_received = 0, pkt_received = 0, pkt_dropped = 0;
+  unsigned long long pkt_received_last = 0;
   double pkt_thpt = 0, tot_thpt = 0, delta_last;
   char buf1[64];
 
@@ -100,7 +100,7 @@ void print_stats() {
   delta_last = delta_time(&endTime, &lastTime);
 
   for(i=0; i < num_channels; i++) {
-    nBytes += threads[i].numBytes, nPkts += threads[i].numPkts;
+    bytes_received += threads[i].numBytes, pkt_received += threads[i].numPkts;
   
     if(pfring_stats(threads[i].ring, &pfringStat) >= 0) {
       double thpt = ((double)8*threads[i].numBytes)/(delta_abs*1000);
@@ -123,7 +123,7 @@ void print_stats() {
 	double pps;
 	
 	diff = threads[i].numPkts-lastPkts[i];
-	nPktsLast += diff;
+	pkt_received_last += diff;
 	tot_thpt += thpt;
 	pps = ((double)diff/(double)(delta_last/1000));
 	fprintf(stderr, "=========================\n"
@@ -140,10 +140,12 @@ void print_stats() {
   lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
 
   fprintf(stderr, "=========================\n");
-  fprintf(stderr, "Aggregate stats (all channels): [%s pps][%.2f Mbit/sec][%llu pkts dropped]\n", 
-	  pfring_format_numbers((double)(nPktsLast*1000)/(double)delta_last, buf1, sizeof(buf1), 1), 
-          tot_thpt, 
-          pkt_dropped);
+  fprintf(stderr, "Aggregate stats (all channels): [%s pps][%.2f Mbit/sec][%llu pkts rcvd][%llu pkts dropped][%llu pkts total]\n", 
+	  pfring_format_numbers((double)(pkt_received_last*1000)/(double)delta_last, buf1, sizeof(buf1), 1), 
+          tot_thpt,
+          pkt_received, 
+          pkt_dropped,
+          pkt_received + pkt_dropped);
   fprintf(stderr, "=========================\n\n");
 }
 
