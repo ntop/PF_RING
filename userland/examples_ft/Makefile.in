@@ -75,4 +75,4 @@ ifneq (@HAVE_PF_RING_FT@,)
 endif
 
 clean:
-	@rm -f ${TARGETS} *.o *~
+	@rm -f ${TARGETS} ftflow_dpdk *.o *~
