@@ -3,7 +3,8 @@ Mellanox Support
 
 PF_RING (8.1 or newer) includes native support for Mellanox ConnectX-4, ConnectX-5 and ConnectX-6 adapters.
 
-Note: this capture module is currently under development, only basic RX capabilities are currently availebl.
+Note: this capture module is currently under development. RX is fully implemented (including RSS and hardware
+timestamp supprot) and under testing. TX is under development.
 
 Prerequisite
 ------------
@@ -11,11 +12,10 @@ Prerequisite
 1. Install the *pfring* package by configuring one of our repositories at http://packages.ntop.org.
 PF_RING can also be downloaded in source format from GIT at https://github.com/ntop/PF_RING/
 
-2. Install the *libibverbs* library, which is required in order to use Mellanox adapters with PF_RING,
-by downloading Mellanox OFED/EN from https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed
-and installing it. Please note that a reduced toolset can be selected for the OFED SDK to be used by
-capture frameworks (the *--dpdk* option is available for that) as in the below example.
-The Mellanox OFED/EN installer installs *libibverbs* as well as other dependencies.
+2. Install Mellanox OFED/EN from https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed 
+This package also installs the *libibverbs* library, which is required in order to use Mellanox adapters 
+with PF_RING, as well as other dependencies. Please note that a reduced toolset can be selected for the 
+OFED SDK to be used by capture frameworks (the *--dpdk* option is available for that) as in the below example.
 
 .. code-block:: console
 
@@ -64,8 +64,8 @@ socket on the corresponding *mlx:mlx5_0* interface).
 Capturing Traffic
 -----------------
 
-In order to capture traffic from a Mellanox adapter using the native *mlx* module, please should specify mlx:<device>
-as reported by *pfcount -L*. Example:
+In order to capture traffic from a Mellanox adapter using the native *mlx* module mlx:<device> should be
+specified as interface name, as reported by *pfcount -L*. Example:
 
 .. code-block:: console
 
@@ -90,11 +90,17 @@ name. Example with queue 0:
 
    pfcount -i mlx:mlx5_0@0
 
+Or to open all queues:
+
+.. code-block:: console
+
+   pfcount_multichannel -i mlx:mlx5_0
+
 Traffic Transmission
 --------------------
 
-Packet transmission is also supported on Mellanox. The same syntax used for capturing traffic can be used to select the TX interface.
-Example:
+Packet transmission is also supported on Mellanox (under development. The same syntax used for 
+capturing traffic can be used to select the TX interface. Example:
 
 .. code-block:: console
 
