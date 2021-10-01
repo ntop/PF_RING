@@ -7262,10 +7262,12 @@ devlink_flash_update_status_notify(struct devlink __always_unused *devlink,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0))
 #if (!(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2)) && \
      !(SLE_VERSION_CODE >= SLE_VERSION(15,2,0)))
+#if !(LINUX_VERSION_CODE == KERNEL_VERSION(4,15,0) && UTS_UBUNTU_RELEASE_ABI >= 159)
 static inline unsigned int skb_frag_off(const skb_frag_t *frag)
 {
 	return frag->page_offset;
 }
+#endif
 
 static inline void skb_frag_off_add(skb_frag_t *frag, int delta)
 {
