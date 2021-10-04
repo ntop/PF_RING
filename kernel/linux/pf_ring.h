@@ -600,7 +600,9 @@ accolade_hw_rule;
 
 typedef enum {
   flow_drop_rule,
-  flow_mark_rule
+  flow_mark_rule,
+  flow_pass_rule,
+  flow_steer_rule
 } generic_flow_rule_action_type;
 
 typedef struct { 
@@ -619,6 +621,7 @@ typedef struct {
   u_int8_t ip_version;
   u_int8_t protocol;
   u_int8_t interface; /* from extended_hdr.if_index */
+  u_int8_t queue_id; /* with action == flow_steer_rule */
 } __attribute__((packed))
 generic_flow_tuple_hw_rule;
 
