@@ -106,7 +106,7 @@ void print_stats() {
     double thpt = ((double)8*threads[i].numBytes)/(delta_abs*1000);
 
     fprintf(stderr, "=========================\n"
-            "Absolute Stats: [channel=%d][%u pkts sent][%s pps - %.2f Mbit/sec]\n",
+            "Absolute Stats: [channel=%d][%u pkts][%s pps][%.2f Mbit/sec]\n",
 	    i, (unsigned int)threads[i].numPkts,
             pfring_format_numbers((double)(threads[i].numPkts*1000)/delta_abs, buf1, sizeof(buf1), 1),
             thpt);
@@ -118,8 +118,7 @@ void print_stats() {
       pkt_sent_last += diff;
       tot_thpt += thpt;
       pps = ((double)diff/(double)(delta_last/1000));
-      fprintf(stderr, "=========================\n"
-	      "Actual Stats: [channel=%d][%llu pkts][%.1f ms][%s pps]\n",
+      fprintf(stderr, "Actual Stats:   [channel=%d][%llu pkts][%.1f ms][%s pps]\n",
 	      i, (long long unsigned int)diff, delta_last,
 	      pfring_format_numbers(((double)diff/(double)(delta_last/1000)), buf1, sizeof(buf1), 1));
       pkt_thpt += pps;
@@ -131,10 +130,10 @@ void print_stats() {
   lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
 
   fprintf(stderr, "=========================\n");
-  fprintf(stderr, "Aggregate stats (all channels): [%s pps][%.2f Mbit/sec][%llu pkts sent]\n", 
-	  pfring_format_numbers((double)(pkt_sent_last*1000)/(double)delta_last, buf1, sizeof(buf1), 1), 
-          tot_thpt,
-          pkt_sent);
+  fprintf(stderr, "Aggregate stats (all channels): [%llu pkts][%s pps][%.2f Mbit/sec]\n", 
+          pkt_sent,
+	  pfring_format_numbers((double)(pkt_sent_last*1000)/(double)delta_last, buf1, sizeof(buf1), 1),
+          tot_thpt);
   fprintf(stderr, "=========================\n\n");
 }
 
