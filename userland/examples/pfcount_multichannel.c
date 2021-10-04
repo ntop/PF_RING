@@ -65,7 +65,6 @@ struct thread_stats {
 };
 
 int verbose = 0, num_channels = 1;
-pfring_stat pfringStats;
 
 struct timeval startTime;
 u_int8_t use_extended_pkt_header = 0, wait_for_packet = 1, do_shutdown = 0;
@@ -180,7 +179,7 @@ void my_sigalarm(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount_multichannel\n(C) 2005-12 ntop.org\n\n");
+  printf("pfcount_multichannel\n(C) 2005-21 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name (No device@channel)\n");
 

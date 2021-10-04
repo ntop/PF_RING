@@ -45,7 +45,7 @@
 
 #define MAX_PACKET_LEN 9000
 
-struct packet {
+struct packet_meta {
   u_int16_t len;
   char      *data;
 };
@@ -141,7 +141,7 @@ static double ticks_to_us(ticks dtick,const ticks hz){
 
 int main(int argc, char* argv[]) {
   char buf1[64];
-  struct packet packet_to_send = { 0 };
+  struct packet_meta packet_to_send = { 0 };
   char c;
   u_int mac_a, mac_b, mac_c, mac_d, mac_e, mac_f;
   int bind_core = -1;

@@ -43,16 +43,6 @@
 #include "pfring.h"
 #include "pfutils.c"
 
-#define MAX_PACKET_SIZE 16018
-
-struct packet {
-  u_int32_t id;
-  u_int16_t len;
-  u_int64_t ticks_from_beginning;
-  u_char *pkt;
-  struct packet *next;
-};
-
 struct ip_header {
 #if BYTE_ORDER == LITTLE_ENDIAN
   u_int32_t	ihl:4,		/* header length */
@@ -114,43 +104,6 @@ int send_len = 60;
 int daemon_mode = 0;
 
 #define DEFAULT_DEVICE     "eth0"
-
-/* *************************************** */
-
-int is_fd_ready(int fd) {
-  struct timeval timeout = {0};
-  fd_set fdset;
-  FD_ZERO(&fdset);
-  FD_SET(fd, &fdset);
-  return (select(fd+1, &fdset, NULL, NULL, &timeout) == 1);
-}
-
-int read_packet_hex(u_char *buf, int buf_len) {
-  int i = 0, d, bytes = 0;
-  char c;
-  char s[3] = {0};
-
-  if (!is_fd_ready(fileno(stdin)))
-    return 0;
-
-  while ((d = fgetc(stdin)) != EOF) {
-    if (d < 0) break;
-    c = (u_char) d;
-    if ((c >= '0' && c <= '9') 
-     || (c >= 'a' && c <= 'f')
-     || (c >= 'A' && c <= 'F')) {
-      s[i&0x1] = c;
-      if (i&0x1) {
-        bytes = (i+1)/2;
-        sscanf(s, "%2hhx", &buf[bytes-1]);
-	if (bytes == buf_len) break;
-      }
-      i++;
-    }
-  }
-
-  return bytes;
-}
 
 /* *************************************** */
 
