@@ -75,6 +75,8 @@ int num_packets = 0;
 time_t last_ts = 0;
 u_int32_t last_ip = 0;
 u_int16_t min_len = 0;
+u_int32_t src_ip_rule = 0;
+u_int8_t src_ip_rule_set = 0;
 
 struct app_stats {
   u_int64_t numPkts[MAX_NUM_THREADS];
@@ -366,6 +368,34 @@ void sample_filtering_rules(){
     else
       printf("Rule %d added successfully...\n", r.rule_id );
   }
+
+  if (src_ip_rule_set) { /* Mellanox (Pass) */
+    /* Pass Src IP */
+
+    hw_filtering_rule r = { 0 };
+
+    /*
+    r.rule_family_type = generic_flow_tuple_rule;
+    r.rule_family.flow_tuple_rule.action = flow_drop_rule;
+
+    pfring_add_hw_rule(pd, &r);
+
+    memset(&r, 0, sizeof(r));
+    */
+
+    r.rule_id = 0;
+    r.rule_family_type = generic_flow_tuple_rule;
+    r.rule_family.flow_tuple_rule.action = flow_pass_rule;
+    r.rule_family.flow_tuple_rule.ip_version = 4;
+    r.rule_family.flow_tuple_rule.protocol = 6;
+    r.rule_family.flow_tuple_rule.src_ip.v4 = src_ip_rule;
+
+    if ((rc = pfring_add_hw_rule(pd, &r)) < 0)
+      fprintf(stderr, "pfring_add_hw_rule(id=%d) failed: rc=%d\n", r.rule_id, rc);
+    else
+      printf("Rule %d added successfully...\n", r.rule_id );
+  }
+
 }
 
 /* ******************************** */
@@ -1075,7 +1105,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
+  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:I:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1132,6 +1162,10 @@ int main(int argc, char* argv[]) {
     case 'i':
       device = strdup(optarg);
       if(strcmp(device, "sysdig:") == 0) is_sysdig = 1;
+      break;
+    case 'I':
+      src_ip_rule = ntohl(inet_addr(optarg));
+      src_ip_rule_set = 1;
       break;
     case 'J':
       promisc = 0;

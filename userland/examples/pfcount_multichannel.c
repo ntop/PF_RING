@@ -45,6 +45,7 @@
 
 #include "pfutils.c"
 
+#define DEFAULT_DEVICE     "eth0"
 #define ALARM_SLEEP             1
 #define DEFAULT_SNAPLEN       128
 #define MAX_NUM_THREADS        64
@@ -72,7 +73,8 @@ u_int numCPU;
 
 struct thread_stats *threads;
 
-#define DEFAULT_DEVICE     "eth0"
+u_int32_t src_ip_rule = 0;
+u_int8_t src_ip_rule_set = 0;
 
 /* ******************************** */
 
@@ -184,8 +186,9 @@ void printHelp(void) {
   printf("-i <device>     Device name (No device@channel)\n");
 
   printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
+  printf("-P <0|1>        Enable (1 - default) or disable (0) promisc\n");
   printf("-l <len>        Capture length\n");
-  printf("-m              Long packet header (with PF_RING extensions)\n");
+  printf("-m              Print more metadata with -v (extended packet header)\n");
   printf("-w <watermark>  Watermark\n");
   printf("-p <poll wait>  Poll wait (msec)\n");
   printf("-b <cpu %%>      CPU pergentage priority (0-99)\n");
@@ -209,10 +212,8 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, long threadId)
   char bigbuf[BUFSIZE]; // buf into which we spew prints
   int  buflen = 0;
 
-  if(h->ts.tv_sec == 0) {
-    memset((void*)&h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
-    pfring_parse_pkt((u_char*)p, (struct pfring_pkthdr*)h, 5, 1, 1);
-  }
+  memset((void*)&h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
+  pfring_parse_pkt((u_char*)p, (struct pfring_pkthdr*)h, 5, !h->ts.tv_sec, !h->extended_hdr.pkt_hash);
 
   s = (h->ts.tv_sec + thiszone) % 86400;
   nsec = h->extended_hdr.timestamp_ns % 1000;
@@ -305,57 +306,28 @@ void* packet_consumer_thread(void* _id) {
    return(NULL);
 }
 
-int ethtool_set_flowdirector(int on) {
-   // @TODO: plop the ethtool ioctl code in here to set up flowdirector
-   // perfect tuple filters.
-   return 0;
-}
+/* *************************************** */
 
-int setup_steering(pfring* thering, const char* addr, int queue) {
-   int rc;
-   static int rule_id = 0; // @HACK!
-   hw_filtering_rule rule;
-   intel_82599_perfect_filter_hw_rule *perfect_rule;
+void sample_filtering_rules() {
+  int rc;
 
-   if (thering == 0 || addr == 0) {
-      errno = EINVAL;
-      return -1;
-   }
+  if (src_ip_rule_set) { /* Mellanox (Pass) */
+    /* Pass Src IP */
 
-   printf("### Perfect Rule Example ###\n");
+    hw_filtering_rule r = { 0 };
 
-   rc = pfring_set_filtering_mode(thering, hardware_only);
-   printf("pfring_set_filtering_mode: hardware_only %s(%d)\n",
-          (rc == 0) ? "SUCCEEDED" : "FAILED", rc );
+    r.rule_id = 0;
+    r.rule_family_type = generic_flow_tuple_rule;
+    r.rule_family.flow_tuple_rule.action = flow_pass_rule;
+    r.rule_family.flow_tuple_rule.ip_version = 4;
+    r.rule_family.flow_tuple_rule.protocol = 6;
+    r.rule_family.flow_tuple_rule.src_ip.v4 = src_ip_rule;
 
-   /*
-     NOTE:
-     - valid protocols: UDP or TCP
-   */
-   perfect_rule = &rule.rule_family.perfect_rule;
-
-   memset(&rule, 0, sizeof(rule));
-   rule.rule_family_type = intel_82599_perfect_filter_rule;
-
-   rule.rule_id = rule_id++;
-   perfect_rule->queue_id = queue;
-   perfect_rule->proto = IPPROTO_UDP;
-   perfect_rule->d_addr = ntohl(inet_addr(addr));
-
-   rc = pfring_add_hw_rule(thering, &rule);
-   
-   if(rc != 0)
-      printf("pfring_add_hw_rule(%d) failed [rc=%d]: "
-             "did you enable the FlowDirector "
-             "(ethtool -K ethX ntuple on)\n",
-             rule.rule_id, rc);
-   else
-      printf("pfring_add_hw_rule(%d) succeeded: "
-             "steering UDP traffic %s:* -> *\n",
-             rule.rule_id,
-             addr);
-
-   return rc;
+    if ((rc = pfring_add_hw_rule(threads[0].ring, &r)) < 0)
+      fprintf(stderr, "pfring_add_hw_rule(id=%d) failed: rc=%d\n", r.rule_id, rc);
+    else
+      printf("Rule %d added successfully...\n", r.rule_id );
+  }
 }
 
 /* *************************************** */
@@ -370,13 +342,14 @@ int main(int argc, char* argv[]) {
   u_int32_t flags = 0;
   pfring *ring[MAX_NUM_RX_CHANNELS];
   int threads_core_affinity[MAX_NUM_RX_CHANNELS];
+  int promisc = 1;
 
   memset(threads_core_affinity, -1, sizeof(threads_core_affinity));
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
   numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 
-  while((c = getopt(argc,argv,"hi:l:mvae:w:b:rp:g:")) != -1) {
+  while((c = getopt(argc,argv,"hi:I:l:mvae:w:b:rp:P:g:")) != -1) {
     switch(c) {
     case 'h':
       printHelp();
@@ -400,6 +373,10 @@ int main(int argc, char* argv[]) {
     case 'i':
       device = strdup(optarg);
       break;
+    case 'I':
+      src_ip_rule = ntohl(inet_addr(optarg));
+      src_ip_rule_set = 1;
+      break;
     case 'm':
       use_extended_pkt_header = 1;
       break;
@@ -417,6 +394,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'p':
       poll_duration = atoi(optarg);
+      break;
+    case 'P':
+      promisc = atoi(optarg);
       break;
     case 'g':
       bind_mask = strdup(optarg);
@@ -445,7 +425,8 @@ int main(int argc, char* argv[]) {
 
   printf("Capturing from %s\n", device);
 
-  flags |= PF_RING_PROMISC; /* hardcode: promisc=1 */
+  if (promisc)
+    flags |= PF_RING_PROMISC;
   flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   if(use_extended_pkt_header) flags |= PF_RING_LONG_HEADER;
 
@@ -499,9 +480,12 @@ int main(int argc, char* argv[]) {
        pfring_set_poll_duration(threads[i].ring, poll_duration);
 
     pfring_enable_ring(threads[i].ring);
-
-    pthread_create(&threads[i].pd_thread, NULL, packet_consumer_thread, (void*)i);
   }
+
+  sample_filtering_rules();
+
+  for(i=0; i<num_channels; i++)
+    pthread_create(&threads[i].pd_thread, NULL, packet_consumer_thread, (void*)i);
 
   if(cpu_percentage > 0) {
     if(cpu_percentage > 99) cpu_percentage = 99;
