@@ -2,9 +2,7 @@ Mellanox Support
 ================
 
 PF_RING (8.1 or newer) includes native support for Mellanox ConnectX-4, ConnectX-5 and ConnectX-6 adapters.
-
-Note: this capture module is currently under development. RX is fully implemented (including RSS and hardware
-timestamp supprot) and under testing. TX is under development.
+Both packet capture (including RSS, packet hash, hardware timestamp support) and transmission are supported.
 
 Prerequisite
 ------------
@@ -99,8 +97,9 @@ Or to open all queues:
 Traffic Transmission
 --------------------
 
-Packet transmission is also supported on Mellanox (under development. The same syntax used for 
-capturing traffic can be used to select the TX interface. Example:
+Packet transmission is also supported on Mellanox (including multiqueue/multithread
+transmission when RSS is enabled). The same syntax used for capturing traffic can be 
+used to select the TX interface. Example:
 
 .. code-block:: console
 
