@@ -43,13 +43,6 @@
 
 #include "zutils.c"
 
-struct packet {
-  u_int16_t len;
-  u_int64_t ticks_from_beginning;
-  char *pkt;
-  struct packet *next;
-};
-
 #define ALARM_SLEEP             1
 #define CACHE_LINE_LEN         64
 #define MAX_CARD_SLOTS      32768
@@ -151,43 +144,6 @@ struct udp_header {
   u_int16_t	len;		/* udp length */
   u_int16_t	check;		/* udp checksum */
 };
-
-/* *************************************** */
-
-int is_fd_ready(int fd) {
-  struct timeval timeout = {0};
-  fd_set fdset;
-  FD_ZERO(&fdset);
-  FD_SET(fd, &fdset);
-  return (select(fd+1, &fdset, NULL, NULL, &timeout) == 1);
-}
-
-int read_packet_hex(u_char *buf, int buf_len) {
-  int i = 0, d, bytes = 0;
-  char c;
-  char s[3] = {0};
-
-  if (!is_fd_ready(fileno(stdin)))
-    return 0;
-
-  while ((d = fgetc(stdin)) != EOF) {
-    if (d < 0) break;
-    c = (u_char) d;
-    if ((c >= '0' && c <= '9') 
-	|| (c >= 'a' && c <= 'f')
-	|| (c >= 'A' && c <= 'F')) {
-      s[i&0x1] = c;
-      if (i&0x1) {
-        bytes = (i+1)/2;
-        sscanf(s, "%2hhx", &buf[bytes-1]);
-	if (bytes == buf_len) break;
-      }
-      i++;
-    }
-  }
-
-  return bytes;
-}
 
 /* *************************************** */
 
@@ -345,7 +301,7 @@ void *send_traffic(void *user) {
 	if (datalink == DLT_LINUX_SLL) p->len -= 2;
 	p->ticks_from_beginning = (((h->ts.tv_sec - beginning.tv_sec) * 1000000) + (h->ts.tv_usec - beginning.tv_usec)) * hz / 1000000;
 	p->next = NULL;
-	p->pkt = (char*)malloc(p->len);
+	p->pkt = (u_char*)malloc(p->len);
 
 	if(p->pkt == NULL) {
 	  printf("Not enough memory\n");
