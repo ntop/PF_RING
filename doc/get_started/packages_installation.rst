@@ -169,3 +169,9 @@ do is to create a /etc/pf_ring/post script as in the example below:
 
    echo "ifconfig eth0 192.168.1.1" > /etc/pf_ring/post
    chmod +x /etc/pf_ring/post
+
+   
+Traffic Balancer Configuration
+------------------------------
+
+PF_RING includes a versatile traffic balancer application named zbalance_ipc that can be used to distribute traffic across applications. `Here <https://www.ntop.org/guides/pf_ring/rss.html#using-zc-cluster-with-systemd>`_ you can read more about its configuration and startup options.
