@@ -351,8 +351,35 @@ load_zc() {
 }
 
 load_mlx() {
-	if [ $(lspci | grep Mellanox | wc -l) -gt 0 ]; then
+	# Driver name
+	D=mlx5_core
+	# Family
+	F=zc
+	# Configuration name
+	C=mlx
+	# Default RSS queues
+	DEF_RSS=1
+
+	if [ -f ${PF_RING_CONFIG_DIR}/${F}/${C}/${C}.conf ] && [ -f ${PF_RING_CONFIG_DIR}/${F}/${C}/${C}.start ] && [ $(lspci | grep Mellanox | wc -l) -gt 0 ]; then
+
+		# Load required modules
 		modprobe -a ib_uverbs mlx5_core mlx5_ib > /dev/null 2>&1
+
+		# Setting configured number of RSS queues (or default)
+		INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
+		for IF in $INTERFACES ; do
+			D_MATCH=$(ethtool -i $IF|grep "$D\$"|wc -l)
+
+			if [ "$D_MATCH" -eq 1 ]; then
+				RSS=$(cat ${PF_RING_CONFIG_DIR}/${F}/${C}/${C}.conf 2>/dev/null | grep RSS | cut -d'=' -f2 | cut -d',' -f1)
+				if [ -z "${RSS}" ]; then
+					# Default: 1 queue
+					RSS=$DEF_RSS
+				fi
+
+				ethtool -L ${IF} combined ${RSS}
+			fi
+		done
 	fi
 }
 
