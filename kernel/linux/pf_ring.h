@@ -1079,6 +1079,9 @@ typedef struct {
 #define MAX_NUM_IFINDEX 0x7FFFFFFF
 #define MAX_NUM_DEV_IDX 1024
 
+#define ANY_IFINDEX  (MAX_NUM_IFINDEX-1)
+#define NONE_IFINDEX (MAX_NUM_IFINDEX-2)
+
 /*
  * Linked-list of virtual filtering devices
  */

@@ -316,8 +316,15 @@ int pfring_mod_set_vlan_id(pfring *ring, u_int16_t vlan_id) {
 
 /* **************************************************** */
 
+#define USE_SOCKADDR_LL
+
 int pfring_mod_bind(pfring *ring, char *device_name) {
+#ifdef USE_SOCKADDR_LL
+  struct sockaddr_ll sll;
+#else
   struct sockaddr sa;
+#endif  
+
   char *at, *elem, *pos, name_copy[256];
   u_int64_t channel_mask = RING_ANY_CHANNEL;
   int rc = 0;
@@ -373,12 +380,26 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
   while(elem != NULL) {
     char *vlan_dot = strchr(elem, '.');
     u_int16_t vlan_id = 0;
-    
+    int ifindex;
+
     if(vlan_dot) {
       vlan_dot[0] = '\0';
       vlan_id = atoi(&vlan_dot[1]);
     }
 
+#ifdef USE_SOCKADDR_LL
+    if (pfring_mod_get_device_ifindex(ring, elem, &ifindex) == 0) {
+      memset(&sll, 0, sizeof(sll));
+
+      sll.sll_family = PF_RING;
+      sll.sll_ifindex = ifindex;
+      sll.sll_protocol = ETH_P_ALL;
+
+      rc = bind(ring->fd, (struct sockaddr *) &sll, sizeof(sll));
+    } else {
+      rc = -1;
+    }
+#else
     memset(&sa, 0, sizeof(sa));
     sa.sa_family = PF_RING;
   
@@ -391,8 +412,9 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
     if (strlen(elem) < sizeof(sa.sa_data))
       sa.sa_data[strlen(elem)] = '\0';
 
-    rc = bind(ring->fd, (struct sockaddr *)&sa, sizeof(sa));
-    
+    rc = bind(ring->fd, (struct sockaddr *) &sa, sizeof(sa));
+#endif    
+
     if(rc == 0) {
       rc = pfring_set_channel_mask(ring, channel_mask);
       /*

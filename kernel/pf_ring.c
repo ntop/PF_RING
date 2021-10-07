@@ -746,9 +746,9 @@ pf_ring_net *netns_add(struct net *net) {
   ring_proc_init(netns);
 
   /* any_device */
-  map_ifindex(netns, MAX_NUM_IFINDEX-1);
+  map_ifindex(netns, ANY_IFINDEX);
   /* none_device */
-  map_ifindex(netns, MAX_NUM_IFINDEX-2);
+  map_ifindex(netns, NONE_IFINDEX);
 
   return netns;
 }
@@ -5463,48 +5463,30 @@ static int ring_release(struct socket *sock)
 /*
  * We create a ring for this socket and bind it to the specified device
  */
-static int packet_ring_bind(struct sock *sk, char *dev_name)
+static int packet_ring_bind(struct sock *sk, pf_ring_device *dev)
 {
   struct pf_ring_socket *pfr = ring_sk(sk);
-  pf_ring_device *dev = NULL;
-  struct net *net;
   pf_ring_net *netns;
   int32_t dev_index;
 
-  if(dev_name == NULL)
-    return -EINVAL;
-
-  if(strcmp(dev_name, "none") == 0 ||
-     strcmp(dev_name, "any") == 0)
-    net = NULL; /* any namespace*/
-  else
-    net = sock_net(sk);
-
   netns = netns_lookup(sock_net(sk));
 
-  dev = pf_ring_device_name_lookup(net, dev_name);
-
-  if(dev == NULL) {
-    printk("[PF_RING] bind: %s not found\n", dev_name);
-    return -EINVAL;
-  }
-
   if(dev->dev->type != ARPHRD_ETHER && dev->dev->type != ARPHRD_LOOPBACK) {
-    printk("[PF_RING] bind: %s has unsupported type\n", dev_name);
+    printk("[PF_RING] bind: %s has unsupported type\n", dev->dev->name);
     return -EINVAL;
   }
 
   dev_index = ifindex_to_pf_index(netns, dev->dev->ifindex);
 
   if(dev_index < 0) {
-    printk("[PF_RING] bind: %s dev index not found\n", dev_name);
+    printk("[PF_RING] bind: %s dev index not found\n", dev->dev->name);
     return -EINVAL;
   }
 
   if(strcmp(dev->dev->name, "none") != 0 &&
       strcmp(dev->dev->name, "any") != 0 &&
       !(dev->dev->flags & IFF_UP)) {
-    printk("[PF_RING] bind: device %s is down, bring it up to capture\n", dev_name);
+    printk("[PF_RING] bind: device %s is down, bring it up to capture\n", dev->dev->name);
     return -ENETDOWN;
   }
 
@@ -5549,28 +5531,64 @@ static int packet_ring_bind(struct sock *sk, char *dev_name)
 static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 {
   struct sock *sk = sock->sk;
-  char name[sizeof(sa->sa_data)+1];
+  struct net *net = sock_net(sk);
+  pf_ring_device *dev = NULL;
 
   debug_printk(2, "ring_bind() called\n");
 
   /*
    * Check legality
    */
-  if(addr_len != sizeof(struct sockaddr))
+  if (addr_len == sizeof(struct sockaddr)) {
+    char name[sizeof(sa->sa_data)+1];
+
+    if (sa->sa_family != PF_RING)
+      return(-EINVAL);
+
+    if (sa->sa_data == NULL)
+      return(-EINVAL);
+
+    memcpy(name, sa->sa_data, sizeof(sa->sa_data));
+
+    /* Add trailing zero if missing */
+    name[sizeof(name)-1] = '\0';
+
+    debug_printk(2, "searching device %s\n", name);
+
+    if(strcmp(name, "none") == 0 ||
+       strcmp(name, "any") == 0)
+      net = NULL; /* any namespace*/
+
+    dev = pf_ring_device_name_lookup(net, name);
+
+    if (dev == NULL) {
+      printk("[PF_RING] bind: %s not found\n", name);
+      return -EINVAL;
+    }
+
+  } else if (addr_len == sizeof(struct sockaddr_ll)) {
+    struct sockaddr_ll *sll = (struct sockaddr_ll *) sa;     
+    int ifindex = sll->sll_ifindex; 
+
+    if (sll->sll_family != PF_RING)
+      return(-EINVAL);
+
+    if(ifindex == ANY_IFINDEX ||
+       ifindex == NONE_IFINDEX)
+      net = NULL; /* any namespace*/
+
+    dev = pf_ring_device_ifindex_lookup(net, ifindex);
+
+    if (dev == NULL) {
+      printk("[PF_RING] bind: ifindex %d not found\n", ifindex);
+      return -EINVAL;
+    }
+
+  } else {
     return(-EINVAL);
-  if(sa->sa_family != PF_RING)
-    return(-EINVAL);
-  if(sa->sa_data == NULL)
-    return(-EINVAL);
+  }
 
-  memcpy(name, sa->sa_data, sizeof(sa->sa_data));
-
-  /* Add trailing zero if missing */
-  name[sizeof(name)-1] = '\0';
-
-  debug_printk(2, "searching device %s\n", name);
-
-  return(packet_ring_bind(sk, name));
+  return(packet_ring_bind(sk, dev));
 }
 
 /* ************************************* */
