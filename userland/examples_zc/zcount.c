@@ -43,7 +43,6 @@
 
 #define ALARM_SLEEP             1
 #define MAX_CARD_SLOTS      32768
-#define MIN_BUFFER_LEN       1536
 #define CACHE_LINE_LEN         64
 
 //#define USE_BURST_API

@@ -616,7 +616,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
   if(unlikely(dump_match)) {
     /* I need to find out which string matched */
     struct strmatch *m = matching_strings;
-    char *_payload = (char*)&p[42], payload[1500];
+    char *_payload = (char*)&p[42], payload[9000];
     u_int payload_len = h->caplen-42, i;
 
     if(payload_len > sizeof(payload)) payload_len = sizeof(payload);
