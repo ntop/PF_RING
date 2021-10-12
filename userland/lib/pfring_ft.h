@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 35
+#define FT_API_VERSION 41
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -254,6 +254,8 @@ typedef struct {
   u_int64_t err_no_mem;       /**< Flow creation errors due to memory allocation failures */
   u_int64_t disc_no_ip;       /**< Number of packets not processed because L3 header was missing */
   u_int64_t max_lookup_depth; /**< Maximum collition list depth during flow lookup */
+  u_int64_t packets;          /**< Number of processed packets */
+  u_int64_t bytes;            /**< Total number of packet bytes */
 } pfring_ft_stats;
 
 /*** Callbacks prototypes ***/
@@ -562,10 +564,6 @@ pfring_ft_zmq_export_flow(
  * @param if_speed Interface speed (Mbps).
  * @param if_ip Interface IP.
  * @param management_ip Management Interface IP.
- * @param packets Captured packets.
- * @param bytes Captured bytes.
- * @param pps Captured packets/sec (avg in the last sec).
- * @param bps Captured bit/sec (avg in the last sec).
  */
 void
 pfring_ft_zmq_export_stats(
@@ -573,11 +571,7 @@ pfring_ft_zmq_export_stats(
   const char *if_name,
   u_int16_t if_speed,
   const char *if_ip,
-  const char *management_ip,
-  u_int64_t packets,
-  u_int64_t bytes,
-  double pps,
-  double bps
+  const char *management_ip
 );
 
 /**
