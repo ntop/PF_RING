@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2018-21 - ntop.org
+ * (C) 2018-2021 - ntop.org
  *
  *  http://www.ntop.org/
  *
@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 17
+#define FT_API_VERSION 35
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -519,6 +519,65 @@ pfring_ft_flow_get_users(
 void
 pfring_ft_flow_free(
   pfring_ft_flow *flow
+);
+
+/**
+ * Configure ZMQ flow export (see pfring_ft_zmq_export_flow)
+ * @param table The flow table handle.
+ * @param endpoint The ZMQ endpoint.
+ * @param server_public_key The ZMQ Public encryption key (NULL for clear).
+ * @param probe_mode Probe mode (connect to the ZMQ collector).
+ * @param disable_compression Disable message compression.
+ * @param use_json Use JSON format (Default: TLV).
+ */
+void
+pfring_ft_zmq_export_configure(
+  pfring_ft_table *table,
+  const char *endpoint,
+  const char *server_public_key,
+  u_int8_t probe_mode,
+  u_int8_t disable_compression,
+  u_int8_t use_json
+);
+
+/**
+ * Built-in callback to be provided to pfring_ft_set_flow_export_callback for
+ * exporting flows in JSON or TLV format to ZMQ. This implements pfring_ft_export_flow_func.
+ * The ZMQ endpoint should be configure with pfring_ft_zmq_export_configure().
+ * The callback also releases the flow calling pfring_ft_flow_free(flow).
+ * Usage: pfring_ft_set_flow_export_callback(table, pfring_ft_zmq_export_flow, table);
+ * @param flow The flow to be exported.
+ * @param user The flow table handle.
+ */
+void
+pfring_ft_zmq_export_flow(
+  pfring_ft_flow *flow,
+  void *user
+);
+
+/**
+ * Export stats via ZMQ
+ * @param table The flow table handle.
+ * @param if_name Interface name.
+ * @param if_speed Interface speed (Mbps).
+ * @param if_ip Interface IP.
+ * @param management_ip Management Interface IP.
+ * @param packets Captured packets.
+ * @param bytes Captured bytes.
+ * @param pps Captured packets/sec (avg in the last sec).
+ * @param bps Captured bit/sec (avg in the last sec).
+ */
+void
+pfring_ft_zmq_export_stats(
+  pfring_ft_table *table,
+  const char *if_name,
+  u_int16_t if_speed,
+  const char *if_ip,
+  const char *management_ip,
+  u_int64_t packets,
+  u_int64_t bytes,
+  double pps,
+  double bps
 );
 
 /**
