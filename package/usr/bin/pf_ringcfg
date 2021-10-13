@@ -7,6 +7,7 @@ SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
 
 PF_RING_CONFIG_DIR="/etc/pf_ring"
 ZC_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'fm10k' 'ice')
+OTHER_SUPPORTED=('mlx5_core')
 
 CONF_DRIVER_NAME=""
 CONF_RSS_QUEUES=1
@@ -85,6 +86,19 @@ install_zc_driver() {
 	return 1
 }
 
+install_mlx_driver() {
+	if hash ibv_devinfo 2>/dev/null; then
+		echo "[>] Mellanox OFED/EN already installed"
+	else
+		echo "[!] Please downlaod Mellanox OFED/EN from:"
+		echo "[!] https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed"
+		echo "[!] Extract the tarball content and run:"
+		echo "[!] ./mlnxofedinstall --upstream-libs --dpdk"
+		exit 1
+	fi
+	return 1
+}
+
 number_of_nodes() {
 	NODES=$(cat /proc/cpuinfo | grep "physical id" | sort -u | wc -l)
 	return $NODES
@@ -119,8 +133,24 @@ is_supported_by_zc() {
 			break
 		fi
 	done
+
 	return $IN
 }
+
+is_supported_by_other() {
+	local IN=1
+	DRIVER=$1
+
+	for D in ${OTHER_SUPPORTED[@]} ; do
+		if [[ "${D}" == "${DRIVER}" ]]; then
+			IN=0
+			break
+		fi
+	done
+
+	return $IN
+}
+
 
 get_interface_driver() {
 	IF=$1
@@ -171,6 +201,8 @@ print_interfaces() {
 		if is_interface_running_zc ${IF}; then
 			INFO="[Running ZC]"
 		elif is_supported_by_zc ${DRIVER}; then
+			INFO="[Supported by ZC]"
+		elif is_supported_by_other ${DRIVER}; then
 			INFO="[Supported by ZC]"
 		fi
 
@@ -225,8 +257,12 @@ configure_kernel_module() {
 
 configure_driver() {
 	NQ=$CONF_RSS_QUEUES
+	DRIVER_FAMILY_NAME=${CONF_DRIVER_NAME}
 
 	if is_supported_by_zc ${CONF_DRIVER_NAME}; then
+		# supported
+		:
+	elif is_supported_by_other ${CONF_DRIVER_NAME}; then
 		# supported
 		:
 	else
@@ -241,16 +277,23 @@ configure_driver() {
 		install_pfring
 	fi
 
-	if ! zc_driver_installed ${CONF_DRIVER_NAME}; then
-		echo "[>] Installing ${CONF_DRIVER_NAME} Zero-Copy driver"
+	if is_supported_by_zc ${CONF_DRIVER_NAME}; then
+		if ! zc_driver_installed ${CONF_DRIVER_NAME}; then
+			echo "[>] Installing ${CONF_DRIVER_NAME} Zero-Copy driver"
 
-		read -p "Continue (y/n)?" choice
-		case "$choice" in 
-		  y|Y ) ;;
-		  * ) echo "Aborting"; exit 1;;
-		esac
+			read -p "Continue (y/n)?" choice
+			case "$choice" in 
+			  y|Y ) ;;
+			  * ) echo "Aborting"; exit 1;;
+			esac
 	
-		install_zc_driver ${CONF_DRIVER_NAME}
+			install_zc_driver ${CONF_DRIVER_NAME}
+		fi
+	elif is_supported_by_other ${CONF_DRIVER_NAME}; then
+		if [ ${CONF_DRIVER_NAME} == "mlx5_core" ]; then
+			DRIVER_FAMILY_NAME="mlx"
+			install_mlx_driver
+		fi
 	fi
 	
 	echo "[>] Configuring PF_RING"
@@ -286,14 +329,14 @@ configure_driver() {
 		exit 1
 	fi
 
-	mkdir -p ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}
+	mkdir -p ${PF_RING_CONFIG_DIR}/zc/${DRIVER_FAMILY_NAME}
 
-	if [ ${CONF_DRIVER_NAME} == "e1000e" ]; then
-		echo "[>] Configuring $CONF_DRIVER_NAME driver with $CONF_RSS_QUEUES RSS queues"
+	if [ ${DRIVER_FAMILY_NAME} == "e1000e" ]; then
+		echo "[>] Configuring $DRIVER_FAMILY_NAME driver with $CONF_RSS_QUEUES RSS queues"
 
-		echo "" > ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
+		echo "" > ${PF_RING_CONFIG_DIR}/zc/${DRIVER_FAMILY_NAME}/${DRIVER_FAMILY_NAME}.conf
 	else
-		echo "[>] Configuring $CONF_DRIVER_NAME driver with $CONF_RSS_QUEUES RSS queues"
+		echo "[>] Configuring $DRIVER_FAMILY_NAME driver with $CONF_RSS_QUEUES RSS queues"
 
 		INDEX=1
 		RSS_LIST="${NQ}"
@@ -302,10 +345,10 @@ configure_driver() {
 			let INDEX=INDEX+1
 		done
 
-		echo "RSS=${RSS_LIST}" > ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.conf
+		echo "RSS=${RSS_LIST}" > ${PF_RING_CONFIG_DIR}/zc/${DRIVER_FAMILY_NAME}/${DRIVER_FAMILY_NAME}.conf
 	fi
 
-	touch ${PF_RING_CONFIG_DIR}/zc/${CONF_DRIVER_NAME}/${CONF_DRIVER_NAME}.start
+	touch ${PF_RING_CONFIG_DIR}/zc/${DRIVER_FAMILY_NAME}/${DRIVER_FAMILY_NAME}.start
 
 	echo "[>] Restarting PF_RING"
 
