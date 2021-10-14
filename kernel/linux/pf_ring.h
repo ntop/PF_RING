@@ -453,6 +453,8 @@ filtering_rule_extended_fields;
 
 /* ************************************************* */
 
+#define FILTERING_RULE_AUTO_RULE_ID 0xFFFF
+
 typedef enum {
   forward_packet_and_stop_rule_evaluation = 0,
   dont_forward_packet_and_stop_rule_evaluation,
@@ -489,7 +491,7 @@ typedef struct {
 filtering_internals;
 
 typedef struct {
-#define FILTERING_RULE_AUTO_RULE_ID 0xFFFF
+  /* FILTERING_RULE_AUTO_RULE_ID to auto generate a rule ID */
   u_int16_t rule_id;                 /* Rules are processed in order from lowest to higest id */
 
   rule_action_behaviour rule_action; /* What to do in case of match */
@@ -637,15 +639,22 @@ typedef enum {
 
 typedef struct {
   hw_filtering_rule_type rule_family_type;
+
+  /* FILTERING_RULE_AUTO_RULE_ID to auto generate a rule ID 
+   * Supported by Accolade and Mellanox */
   u_int16_t rule_id;
 
+  /* Rule priority (when supported by the adapter)
+   * Supported by Mellanox (0..2) */
+  u_int16_t priority;
+
   union {
-    intel_82599_five_tuple_filter_hw_rule five_tuple_rule;
-    intel_82599_perfect_filter_hw_rule perfect_rule;
-    silicom_redirector_hw_rule redirector_rule;
+    intel_82599_five_tuple_filter_hw_rule five_tuple_rule; /* Intel ixgbe */
+    intel_82599_perfect_filter_hw_rule perfect_rule; /* Intel ixgbe */
+    silicom_redirector_hw_rule redirector_rule; /* Silicom Redirector (Intel) */
     generic_flow_id_hw_rule flow_id_rule;
-    generic_flow_tuple_hw_rule flow_tuple_rule;
-    accolade_hw_rule accolade_rule;
+    generic_flow_tuple_hw_rule flow_tuple_rule; /* Mellanox */
+    accolade_hw_rule accolade_rule; /* Accolade */
   } rule_family;
 } __attribute__((packed))
 hw_filtering_rule;
