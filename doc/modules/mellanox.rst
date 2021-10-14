@@ -118,8 +118,11 @@ Filtering rules can be defined as *drop* or *pass*. The default behaviour for pa
 is defined by the promiscuous mode set using the *pfring_open* flag *PF_RING_PROMISC*.
 With the promisc set, all traffic is received by default, no traffic otherwise.
 
-In order to set a filtering rule, a rule ID should be assigned to the rule ID. This
-is a unique identifier that can be used to remove the rule later on. 
+In order to set a filtering rule, a rule ID (0..65534) should be assigned to the rule.
+This is a unique identifier that can be used to remove the rule later on. The ID can
+be automatically assigned by the library by using *FILTERING_RULE_AUTO_RULE_ID* as rule ID.
+
+A priority can also be assigned to the rule, in the range 0..2.
 
 Example setting a filtering rule to drop UDP traffic matching a src IP and destination port:
 
@@ -127,7 +130,8 @@ Example setting a filtering rule to drop UDP traffic matching a src IP and desti
 
    hw_filtering_rule r = { 0 };
    
-   r.rule_id = RULE_ID;
+   r.rule_id = FILTERING_RULE_AUTO_RULE_ID;
+   r.priority = 0;
    r.rule_family_type = generic_flow_tuple_rule;
    
    r.rule_family.flow_tuple_rule.action = flow_drop_rule;
