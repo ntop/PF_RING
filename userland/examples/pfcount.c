@@ -76,6 +76,7 @@ time_t last_ts = 0;
 u_int32_t last_ip = 0;
 u_int16_t min_len = 0;
 int promisc = 1;
+u_int8_t rule_priority = 0;
 u_int32_t src_ip_rule = 0;
 u_int8_t src_ip_rule_set = 0;
 
@@ -370,21 +371,13 @@ void sample_filtering_rules(){
       printf("Rule %d added successfully...\n", r.rule_id );
   }
 
-  if (src_ip_rule_set) { /* Mellanox (Pass) */
-    /* Pass Src IP */
+  if (src_ip_rule_set) { /* Mellanox (Drop) */
+    /* Drop (or Pass if promisc is not set) Src IP */
 
     hw_filtering_rule r = { 0 };
 
-    /*
-    r.rule_family_type = generic_flow_tuple_rule;
-    r.rule_family.flow_tuple_rule.action = flow_drop_rule;
-
-    pfring_add_hw_rule(pd, &r);
-
-    memset(&r, 0, sizeof(r));
-    */
-
-    r.rule_id = 0;
+    r.priority = rule_priority; /* Rule priority (0..2) */
+    r.rule_id = FILTERING_RULE_AUTO_RULE_ID; /* auto generate rule ID */
     r.rule_family_type = generic_flow_tuple_rule;
 
     if (promisc)
@@ -403,7 +396,6 @@ void sample_filtering_rules(){
     else
       printf("Rule %d added successfully...\n", r.rule_id );
   }
-
 }
 
 /* ******************************** */
@@ -826,6 +818,8 @@ void printHelp(void) {
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
   printf("-J              Do not enable promiscuous mode\n");
   printf("-R              Do not reprogram RSS indirection table (Intel ZC only)\n");
+  printf("-I <ip>         Set UDP Src-IP hw filter on Mellanox\n");
+  printf("-P <prio>       Set hw filter priority (0..2)\n");
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-K <len>        Print only packets with length > <len> with -v\n");
   printf("-z <mode>       Enabled hw timestamping/stripping. Currently the supported TS mode are:\n"
@@ -1113,7 +1107,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:I:Jl:Lv:ae:n:w:o:p:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
+  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:I:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1202,6 +1196,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'p':
       poll_duration = atoi(optarg);
+      break;
+    case 'P':
+      rule_priority = atoi(optarg);
       break;
     case 'q':
       is_sysdig = 1;
