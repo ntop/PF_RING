@@ -105,3 +105,46 @@ used to select the TX interface. Example:
 
    pfsend -i mlx:mlx5_0
 
+Hw Filtering
+------------
+
+Mellanox adapters support packet filtering in hw. In order to set an
+hw filter the *pfring_add_hw_rule* API should be used.
+
+Sample code for filtering traffic with Mellanox (as well as with other adapters) 
+is available in the *pfcount.c* sample application (look for *sample_filtering_rules*).
+
+Filtering rules can be defined as *drop* or *pass*. The default behaviour for packets,
+is defined by the promiscuous mode set using the *pfring_open* flag *PF_RING_PROMISC*.
+With the promisc set, all traffic is received by default, no traffic otherwise.
+
+In order to set a filtering rule, a rule ID should be assigned to the rule ID. This
+is a unique identifier that can be used to remove the rule later on. 
+
+Example setting a filtering rule to drop UDP traffic matching a src IP and destination port:
+
+.. code-block:: c
+
+   hw_filtering_rule r = { 0 };
+   
+   r.rule_id = RULE_ID;
+   r.rule_family_type = generic_flow_tuple_rule;
+   
+   r.rule_family.flow_tuple_rule.action = flow_drop_rule;
+   
+   r.rule_family.flow_tuple_rule.ip_version = 4;
+   r.rule_family.flow_tuple_rule.src_ip.v4 = src_ip_rule;
+   r.rule_family.flow_tuple_rule.protocol = IPPROTO_UDP;
+   r.rule_family.flow_tuple_rule.dst_port = 3000;
+   
+   pfring_add_hw_rule(socket, &r);
+
+Please note that all fields are in host byte order.
+
+For a full list of supported fields please take a look at the *generic_flow_tuple_hw_rule* struct.
+
+Example of removing a filtering rule by ID:
+
+.. code-block:: c
+
+   pfring_remove_hw_rule(socket, RULE_ID);
