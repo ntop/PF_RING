@@ -75,6 +75,7 @@ int num_packets = 0;
 time_t last_ts = 0;
 u_int32_t last_ip = 0;
 u_int16_t min_len = 0;
+int promisc = 1;
 u_int32_t src_ip_rule = 0;
 u_int8_t src_ip_rule_set = 0;
 
@@ -385,10 +386,17 @@ void sample_filtering_rules(){
 
     r.rule_id = 0;
     r.rule_family_type = generic_flow_tuple_rule;
-    r.rule_family.flow_tuple_rule.action = flow_pass_rule;
+
+    if (promisc)
+      r.rule_family.flow_tuple_rule.action = flow_drop_rule;
+    else
+      r.rule_family.flow_tuple_rule.action = flow_pass_rule;
+
     r.rule_family.flow_tuple_rule.ip_version = 4;
-    r.rule_family.flow_tuple_rule.protocol = 6;
     r.rule_family.flow_tuple_rule.src_ip.v4 = src_ip_rule;
+
+    r.rule_family.flow_tuple_rule.protocol = IPPROTO_UDP;
+    //r.rule_family.flow_tuple_rule.dst_port = 3000;
 
     if ((rc = pfring_add_hw_rule(pd, &r)) < 0)
       fprintf(stderr, "pfring_add_hw_rule(id=%d) failed: rc=%d\n", r.rule_id, rc);
@@ -1090,7 +1098,7 @@ void handleSigHup(int signalId) {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c, buf[32], path[256] = { 0 }, *reflector_device = NULL;
-  int promisc = 1, snaplen = DEFAULT_SNAPLEN, rc;
+  int snaplen = DEFAULT_SNAPLEN, rc;
   u_int clusterId = 0;
   u_int8_t enable_ixia_timestamp = 0, enable_arista_timestamp = 0, enable_metawatch_timestamp = 0;
   u_int8_t list_interfaces = 0;
