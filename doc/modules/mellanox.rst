@@ -108,8 +108,8 @@ used to select the TX interface. Example:
 Hw Filtering
 ------------
 
-Mellanox adapters support packet filtering in hw. In order to set an
-hw filter the *pfring_add_hw_rule* API should be used.
+Mellanox adapters support packet filtering in hw. Up to 64K rules are supported.
+In order to set an hw filter the *pfring_add_hw_rule* API should be used.
 
 Sample code for filtering traffic with Mellanox (as well as with other adapters) 
 is available in the *pfcount.c* sample application (look for *sample_filtering_rules*).
