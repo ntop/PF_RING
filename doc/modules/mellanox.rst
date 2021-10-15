@@ -122,7 +122,10 @@ In order to set a filtering rule, a rule ID (0..65534) should be assigned to the
 This is a unique identifier that can be used to remove the rule later on. The ID can
 be automatically assigned by the library by using *FILTERING_RULE_AUTO_RULE_ID* as rule ID.
 
-A priority can also be assigned to the rule, in the range 0..2.
+A priority can also be assigned to the rule, in the range 0..2. Two applications capturing 
+traffic from the same interface, and setting a pass rule which is matching the same traffic
+and with the same priority, will both receive the same traffic. Instead, only the application 
+which is setting the higher priority on the rule, would receive the traffic otherwise.
 
 Example setting a filtering rule to drop UDP traffic matching a src IP and destination port:
 
