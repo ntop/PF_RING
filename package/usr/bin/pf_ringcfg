@@ -257,7 +257,17 @@ configure_kernel_module() {
 
 configure_driver() {
 	NQ=$CONF_RSS_QUEUES
+
+	# rename shortcut for mlx
+	if [ ${CONF_DRIVER_NAME} == "mlx" ]; then
+		CONF_DRIVER_NAME="mlx5_core"
+	fi
+
+	# set driver family name
 	DRIVER_FAMILY_NAME=${CONF_DRIVER_NAME}
+	if [ ${CONF_DRIVER_NAME} == "mlx5_core" ]; then
+		DRIVER_FAMILY_NAME="mlx"
+	fi
 
 	if is_supported_by_zc ${CONF_DRIVER_NAME}; then
 		# supported
@@ -291,7 +301,6 @@ configure_driver() {
 		fi
 	elif is_supported_by_other ${CONF_DRIVER_NAME}; then
 		if [ ${CONF_DRIVER_NAME} == "mlx5_core" ]; then
-			DRIVER_FAMILY_NAME="mlx"
 			install_mlx_driver
 		fi
 	fi
