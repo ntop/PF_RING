@@ -70,7 +70,7 @@ u_int string_id = 1;
 char *out_pcap_file = NULL;
 FILE *match_dumper = NULL;
 u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0, check_ts = 0;
-u_int8_t check_seq_ip = 0, asymm_rss = 0, burst_mode = 0;
+u_int8_t check_seq_ip = 0, asymm_rss = 0, burst_mode = 0, rss_q_0_only = 0;
 int num_packets = 0;
 time_t last_ts = 0;
 u_int32_t last_ip = 0;
@@ -371,8 +371,8 @@ void sample_filtering_rules(){
       printf("Rule %d added successfully...\n", r.rule_id );
   }
 
-  if (src_ip_rule_set) { /* Mellanox (Drop) */
-    /* Drop (or Pass if promisc is not set) Src IP */
+  if (src_ip_rule_set) { /* Mellanox (Drop Src IP) */
+    /* Drop (or Pass if promisc is not set) UDP Src IP */
 
     hw_filtering_rule r = { 0 };
 
@@ -390,6 +390,41 @@ void sample_filtering_rules(){
 
     r.rule_family.flow_tuple_rule.protocol = IPPROTO_UDP;
     //r.rule_family.flow_tuple_rule.dst_port = 3000;
+
+    if ((rc = pfring_add_hw_rule(pd, &r)) < 0)
+      fprintf(stderr, "pfring_add_hw_rule(id=%d) failed: rc=%d\n", r.rule_id, rc);
+    else
+      printf("Rule %d added successfully...\n", r.rule_id );
+  }
+
+  if (0) { /* Mellanox (2 Rules) */
+    /* Drop (or Pass if promisc is not set) TCP Dst 46.101.88.215:143 and TCP Dst 17.167.192.126:443 */
+
+    hw_filtering_rule r = { 0 };
+
+    r.priority = rule_priority; /* Rule priority (0..2) */
+    r.rule_family_type = generic_flow_tuple_rule;
+
+    if (promisc)
+      r.rule_family.flow_tuple_rule.action = flow_drop_rule;
+    else
+      r.rule_family.flow_tuple_rule.action = flow_pass_rule;
+
+    r.rule_family.flow_tuple_rule.ip_version = 4;
+    r.rule_family.flow_tuple_rule.protocol = IPPROTO_TCP;
+
+    r.rule_id = FILTERING_RULE_AUTO_RULE_ID; /* auto generate rule ID */
+    r.rule_family.flow_tuple_rule.dst_ip.v4 = ntohl(inet_addr("46.101.88.215"));
+    r.rule_family.flow_tuple_rule.dst_port = 143;
+
+    if ((rc = pfring_add_hw_rule(pd, &r)) < 0)
+      fprintf(stderr, "pfring_add_hw_rule(id=%d) failed: rc=%d\n", r.rule_id, rc);
+    else
+      printf("Rule %d added successfully...\n", r.rule_id );
+
+    r.rule_id = FILTERING_RULE_AUTO_RULE_ID; /* auto generate rule ID */
+    r.rule_family.flow_tuple_rule.dst_ip.v4 = ntohl(inet_addr("17.167.192.126"));
+    r.rule_family.flow_tuple_rule.dst_port = 443;
 
     if ((rc = pfring_add_hw_rule(pd, &r)) < 0)
       fprintf(stderr, "pfring_add_hw_rule(id=%d) failed: rc=%d\n", r.rule_id, rc);
@@ -818,6 +853,7 @@ void printHelp(void) {
   printf("-u <1|2>        For each incoming packet add a drop rule (1=hash, 2=wildcard rule)\n");
   printf("-J              Do not enable promiscuous mode\n");
   printf("-R              Do not reprogram RSS indirection table (Intel ZC only)\n");
+  printf("-0              Send all traffic to RSS queue 0 (this also enabled -R)\n");
   printf("-I <ip>         Set UDP Src-IP hw filter on Mellanox\n");
   printf("-P <prio>       Set hw filter priority (0..2)\n");
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
@@ -1107,7 +1143,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:I:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MRTUK:")) != '?') {
+  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:I:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MRTUK:0")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1269,6 +1305,9 @@ int main(int argc, char* argv[]) {
     case 'R':
       asymm_rss = 1;
       break;
+    case '0':
+      rss_q_0_only = 1;
+      break;
     }
   }
 
@@ -1324,6 +1363,7 @@ int main(int argc, char* argv[]) {
   if(enable_metawatch_timestamp) flags |= PF_RING_METAWATCH_TIMESTAMP;
   if(asymm_rss)               flags |= PF_RING_ZC_NOT_REPROGRAM_RSS;
   else                        flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
+  if(rss_q_0_only)            flags |= PF_RING_ZC_NOT_REPROGRAM_RSS | PF_RING_ZC_FIXED_RSS_Q_0;
   /* flags |= PF_RING_FLOW_OFFLOAD | PF_RING_FLOW_OFFLOAD_NOUPDATES;  to receive FlowID on supported adapters*/
   /* flags |= PF_RING_USERSPACE_BPF; to force userspace BPF even with kernel capture  */
 
