@@ -170,4 +170,7 @@ userland/nbpf/lex.yy.c
 userland/nbpf/libnbpf.a
 userland/nbpf/nbpftest
 
+userland/lib/libs/lib*_dbg.a
+userland/lib/libs/lib*_dbg.so
+
 # Use "git clean -ndX" to test
