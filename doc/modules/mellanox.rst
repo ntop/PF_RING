@@ -146,7 +146,10 @@ Example setting a filtering rule to drop UDP traffic matching a src IP and desti
    
    pfring_add_hw_rule(socket, &r);
 
-Please note that all fields are in host byte order.
+Please note that:
+
+- all fields are in host byte order.
+- when *FILTERING_RULE_AUTO_RULE_ID* is used, the rule ID assigned by *pfring_add_hw_rule* is returned in r.rule_id.
 
 For a full list of supported fields please take a look at the *generic_flow_tuple_hw_rule* struct.
 
@@ -155,3 +158,4 @@ Example of removing a filtering rule by ID:
 .. code-block:: c
 
    pfring_remove_hw_rule(socket, RULE_ID);
+
