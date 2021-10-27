@@ -30,12 +30,12 @@ static int __system_name_lookup(char *name, char *system_name, int system_name_l
   while (pfdev != NULL) {
 
     if (pfdev->name && pfdev->system_name) {
-      char *name = pfdev->name;
+      char *mod_if_name = pfdev->name;
       char *mod_colon, *at;
 
-      mod_colon = strchr(name, ':');
+      mod_colon = strchr(mod_if_name, ':');
       if (mod_colon)
-        name = &mod_colon[1];
+        mod_if_name = &mod_colon[1];
 
       at = strchr(name, '@');
       if (at)
