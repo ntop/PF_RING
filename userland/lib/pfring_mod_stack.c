@@ -41,7 +41,7 @@ static int __system_name_lookup(char *name, char *system_name, int system_name_l
       if (at)
         at[0] = '\0';
 
-      if (strcmp(pfdev->name, name) == 0) {
+      if (strcmp(mod_if_name, name) == 0) {
         snprintf(system_name, system_name_len, "%s", pfdev->system_name);
         found = 1;
         break;
@@ -94,7 +94,7 @@ int pfring_mod_stack_open(pfring *ring) {
   pfring_set_socket_mode(ring, send_and_recv_mode);
 
   /* Only send (inject) and recv (intercept tx) are supported, resetting unused func ptrs */
-  ring->set_direction       = NULL; 
+  /* ring->set_direction       = NULL; Leaving this call for compatibility, however calling this is not required */
   ring->set_cluster         = NULL; 
   ring->remove_from_cluster = NULL; 
   ring->set_master_id       = NULL; 
