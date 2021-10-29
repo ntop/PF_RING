@@ -37,7 +37,7 @@ INCLUDE    = -I${PFRING_KERNEL} -I${PFRINGDIR} -I${PCAPDIR} -Ithird-party `../li
 #
 CC         = ${CROSS_COMPILE}gcc #--platform=native
 WFLAGS     = -Wall -Wno-unused-function -Wno-format-truncation -Wno-address-of-packed-member
-CFLAGS     = @CFLAGS@ ${O_FLAG} ${WFLAGS} ${INCLUDE} @HAVE_BPF@ @HAVE_REDIS@ @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@ -O2 # -g
+CFLAGS     = @CFLAGS@ ${O_FLAG} ${WFLAGS} ${INCLUDE} @HAVE_BPF@ @HAVE_REDIS@ @HAVE_PF_RING_ZC@ @HAVE_PF_RING_FT@
 # LDFLAGS  =
 
 #
