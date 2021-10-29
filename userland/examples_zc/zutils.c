@@ -214,6 +214,10 @@ int load_args_from_file(char *conffile, int *ret_argc, char **ret_argv[]) {
 
   while(cont && fgets(line, sizeof(line), fd)) {
     i = 0;
+
+    if (line[i] == '#')
+      continue;
+
     while(line[i] != '\0') {
       if(line[i] == '=')
         break;
