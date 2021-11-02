@@ -441,8 +441,7 @@ int main(int argc, char* argv[]) {
      printf("WARNING: Too many channels (%d), using %d channels\n", num_channels, MAX_NUM_THREADS);
      num_channels = MAX_NUM_THREADS;
   } else if (num_channels > numCPU) {
-     printf("WARNING: More channels (%d) than available cores (%d), using %d channels\n", num_channels, numCPU, numCPU);
-     num_channels = numCPU;
+     printf("WARNING: More channels (%d) than available cores (%d)\n", num_channels, numCPU);
   } else  {
     printf("Found %d channels\n", num_channels);
   }
