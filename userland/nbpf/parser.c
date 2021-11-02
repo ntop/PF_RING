@@ -120,7 +120,7 @@ static nbpf_node_t* node_clone(nbpf_node_t *t) {
 /* ****************************************** */
 
 nbpf_tree_t* tree_clone(nbpf_tree_t *t) {
-  nbpf_tree_t *c = (nbpf_tree_t *) malloc(sizeof(nbpf_tree_t));
+  nbpf_tree_t *c = (nbpf_tree_t *) calloc(1, sizeof(nbpf_tree_t));
 
   if (!c) 
     return NULL;
@@ -189,7 +189,7 @@ static nbpf_node_t *tree_parse(const char *buffer) {
 /* ****************************************** */
 
 nbpf_tree_t *nbpf_parse(const char *bpf_filter, l7protocol_by_name_func l7proto_by_name_callback) {
-  nbpf_tree_t *t = (nbpf_tree_t *) malloc(sizeof(nbpf_tree_t));
+  nbpf_tree_t *t = (nbpf_tree_t *) calloc(1, sizeof(nbpf_tree_t));
 
   if (t == NULL)
     return NULL;
