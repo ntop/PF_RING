@@ -613,11 +613,11 @@ void printHelp(void) {
          "                 instances of multiple applications, using a comma-separated list\n");
   printf("-m <hash mode>   Hashing modes:\n"
          "                 0 - No hash: Round-Robin (default)\n"
-         "                 1 - IP hash (or Thread-ID in case of sysdig)\n"
+         "                 1 - Source/Dest IP hash (or Thread-ID in case of sysdig)\n"
          "                 2 - Fan-out\n"
          "                 3 - Fan-out (1st) + Round-Robin (2nd, 3rd, ..)\n"
-         "                 4 - GTP hash (Inner IP/Port or Seq-Num or Outer IP/Port)\n"
-         "                 5 - GRE hash (Inner or Outer IP)\n"
+         "                 4 - GTP hash (Inner Source/Dest IP/Port or Seq-Num or Outer Source/Dest IP/Port)\n"
+         "                 5 - GRE hash (Inner or Outer Source/Dest IP)\n"
          "                 6 - Interface X to queue X\n"
          "                 7 - VLAN ID encapsulated in Ethernet type 0x8585 (see -Y). Queue is selected based on -M. Other Ethernet types to queue 0.\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
