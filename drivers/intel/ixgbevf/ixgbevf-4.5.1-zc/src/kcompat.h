@@ -6609,7 +6609,7 @@ void bitmap_from_arr32(unsigned long *bitmap, const u32 *buf, unsigned int nbits
 #endif /* !(RHEL >= 8.0) && !(SLES >= 12.5 && SLES < 15.0 || SLES >= 15.1) */
 #else /* >= 4.16 */
 #include <linux/nospec.h>
-#define HAVE_XDP_BUFF_RXQ
+//#define HAVE_XDP_BUFF_RXQ
 #define HAVE_TC_FLOWER_OFFLOAD_COMMON_EXTACK
 #define HAVE_TCF_MIRRED_DEV
 #define HAVE_VF_STATS_DROPPED

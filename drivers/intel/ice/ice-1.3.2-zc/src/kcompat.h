@@ -2747,7 +2747,7 @@ struct _kc_bpf_prog {
 #endif /* DIV_ROUND_DOWN_ULL */
 #else /* > 4.14 */
 #if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
-#define HAVE_XDP_SUPPORT
+//#define HAVE_XDP_SUPPORT
 #endif /* !RHEL_RELEASE_VERSION(8,4) */
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #define HAVE_TCF_EXTS_HAS_ACTION
@@ -2984,7 +2984,7 @@ void bitmap_from_arr32(unsigned long *bitmap, const u32 *buf, unsigned int nbits
 #endif /* !(RHEL >= 8.0) && !(SLES >= 12.5 && SLES < 15.0 || SLES >= 15.1) */
 #else /* >= 4.16 */
 #include <linux/nospec.h>
-#define HAVE_XDP_BUFF_RXQ
+//#define HAVE_XDP_BUFF_RXQ
 #define HAVE_TC_FLOWER_OFFLOAD_COMMON_EXTACK
 #define HAVE_TCF_MIRRED_DEV
 #define HAVE_VF_STATS_DROPPED
@@ -3121,7 +3121,7 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 #if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
 #include <linux/overflow.h>
 #include <net/xdp_sock.h>
-#define HAVE_XDP_FRAME_STRUCT
+//#define HAVE_XDP_FRAME_STRUCT
 #define HAVE_XDP_SOCK
 #define HAVE_NDO_XDP_XMIT_BULK_AND_FLAGS
 #define NO_NDO_XDP_FLUSH

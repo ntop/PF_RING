@@ -617,9 +617,13 @@ ice_devlink_flash_update(struct devlink *devlink,
 			 struct netlink_ext_ack *extack)
 {
 	struct ice_pf *pf = devlink_priv(devlink);
-	struct device *dev = &pf->pdev->dev;
-	struct ice_hw *hw = &pf->hw;
-	const struct firmware *fw;
+#ifndef HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
+        struct device *dev = &pf->pdev->dev;
+#endif
+        struct ice_hw *hw = &pf->hw;
+#ifndef HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
+        const struct firmware *fw;
+#endif
 	u8 preservation;
 	int err;
 
@@ -647,22 +651,24 @@ ice_devlink_flash_update(struct devlink *devlink,
 	if (err)
 		return err;
 
-	err = request_firmware(&fw, params->file_name, dev);
-	if (err) {
-		NL_SET_ERR_MSG_MOD(extack, "Unable to read file from disk");
-		return err;
-	}
 
-	dev_dbg(dev, "Beginning flash update with file '%s'\n", params->file_name);
+        devlink_flash_update_status_notify(devlink, "Preparing to flash", NULL, 0, 0);
 
-	devlink_flash_update_begin_notify(devlink);
-	devlink_flash_update_status_notify(devlink, "Preparing to flash", NULL, 0, 0);
-	err = ice_flash_pldm_image(pf, fw, preservation, extack);
-	devlink_flash_update_end_notify(devlink);
+#ifndef HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
+        err = request_firmware(&fw, params->file_name, dev);
+        if (err) {
+                NL_SET_ERR_MSG_MOD(extack, "Unable to read file from disk");
+                return err;
+        }
 
-	release_firmware(fw);
+        err = ice_flash_pldm_image(pf, fw, preservation, extack);
 
-	return err;
+        release_firmware(fw);
+
+        return err;
+#else
+        return ice_flash_pldm_image(pf, params->fw, preservation, extack);
+#endif
 }
 
 #ifndef HAVE_DEVLINK_FLASH_UPDATE_PARAMS
