@@ -5423,8 +5423,7 @@ static int ring_release(struct socket *sock)
     remove_cluster_referee(pfr);
 
   if((pfr->zc_device_entry != NULL)
-     && pfr->zc_device_entry->zc_dev.dev
-     && pfr->zc_device_entry->zc_dev.dev->name) {
+     && pfr->zc_device_entry->zc_dev.dev) {
     pfring_release_zc_dev(pfr);
   }
 
@@ -5543,9 +5542,6 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
     char name[sizeof(sa->sa_data)+1];
 
     if (sa->sa_family != PF_RING)
-      return(-EINVAL);
-
-    if (sa->sa_data == NULL)
       return(-EINVAL);
 
     memcpy(name, sa->sa_data, sizeof(sa->sa_data));
