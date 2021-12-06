@@ -1,0 +1,69 @@
+#!/bin/bash
+# Dump Tables script
+# Copyright (C) 2015 - 2016 Intel Corporation
+#
+# This script is used to generate a dump of the hardware state for
+# sending to linux.nics@intel.com for debugging purposes.  This
+# script will generate a dump_tables.gz output file that can be
+# uploaded or emailed.
+
+# Usage: dump_tables eth1
+
+DEV=$1
+. /sys/class/net/$DEV/device/uevent
+# DRIVER=i40e
+# PCI_CLASS=20000
+# PCI_ID=8086:1583
+# PCI_SUBSYS_ID=8086:0002
+# PCI_SLOT_NAME=0000:06:00.0
+# MODALIAS=pci:v00008086d00001583sv00008086sd00000002bc02sc00i00
+
+if [ "$DEV" == "" ]; then
+	echo Usage: $0 "<i40e ethernet interface>"
+	exit -1
+fi
+
+if [ "$PCI_SLOT_NAME" == "" ]; then
+	echo kernel version `uname -r` is not supported, please report the bug at e1000.sourceforge.net
+	exit -2
+fi
+
+CLUSTER=1
+TABLE=0
+INDEX=0
+
+OUTFILE=`mktemp`
+TMPFILE=`mktemp`
+
+# check for the debugfs directory being mounted
+if [ -d "/sys/kernel/debug/i40e" ]; then
+	echo debugfs found
+else
+	echo -n "mounting debugfs as /sys/kernel/debug: "
+	mount -t debugfs none /sys/kernel/debug && echo Success || (echo Failure ; exit -3)
+fi
+
+dmesg -c > /dev/null
+until [ "$TABLE" == "0xff" ]; do
+	until [ "$INDEX" == "0xffffffff" ]; do
+		echo dump debug fwdata $CLUSTER $TABLE $INDEX > /sys/kernel/debug/i40e/$PCI_SLOT_NAME/command
+		# check output, exit if no good
+		dmesg | grep -q unknown && (echo error encountered, see log; exit -4)
+		# store it, without modification
+		dmesg >> $OUTFILE
+		# erase it and prepare for parse
+		dmesg -c > $TMPFILE
+		TABLE=`grep rlen $TMPFILE | sed -e 's/.*next_table=\(.*\) .*\$/\1/'`
+		INDEX=`grep rlen $TMPFILE | sed -e 's/.*next_index=\(.*\)\$/\1/'`
+		echo -n .
+	done
+	INDEX=0
+done
+
+gzip $OUTFILE
+cp $OUTFILE.gz dump_tables.gz
+
+rm $OUTFILE.gz
+rm $TMPFILE
+
+echo Please send the file dump_tables.gz to linux.nics@intel.com or your Intel Support representative.
