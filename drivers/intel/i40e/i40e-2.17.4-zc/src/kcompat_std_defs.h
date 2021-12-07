@@ -117,7 +117,7 @@
 #endif /* 5.3.1 */
 
 /*****************************************************************************/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)) && !(UBUNTU_VERSION_CODE && UBUNTU_VERSION_CODE >= UBUNTU_VERSION(4,15,0,162))
 #define NEED_SKB_FRAG_OFF_ACCESSORS
 #define NEED_FLOW_INDR_BLOCK_CB_REGISTER
 #else /* >= 5.4.0 */
