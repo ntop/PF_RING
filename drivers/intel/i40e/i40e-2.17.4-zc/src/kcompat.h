@@ -7262,7 +7262,7 @@ static inline u32 _xsk_umem_get_rx_frame_size(struct xdp_umem *umem)
 #endif /* SLE_VERSION_CODE && SLE_VERSION_CODE >= SLES15SP3 */
 
 /*****************************************************************************/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0)) && !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
 #if (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
@@ -7318,6 +7318,8 @@ _kc_xsk_buff_dma_sync_for_cpu(struct xdp_buff *xdp,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0))
 #ifdef HAVE_XDP_BUFF_RXQ
 #include <net/xdp.h>
+
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
 static inline int
 _kc_xdp_rxq_info_reg(struct xdp_rxq_info *xdp_rxq, struct net_device *dev,
 		     u32 queue_index, unsigned int __always_unused napi_id)
@@ -7327,10 +7329,14 @@ _kc_xdp_rxq_info_reg(struct xdp_rxq_info *xdp_rxq, struct net_device *dev,
 
 #define xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id) \
 	_kc_xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id)
+#endif
+
 #endif /* HAVE_XDP_BUFF_RXQ */
 #ifdef HAVE_NAPI_BUSY_LOOP
 #ifdef CONFIG_NET_RX_BUSY_POLL
 #include <net/busy_poll.h>
+
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
 static inline void
 _kc_napi_busy_loop(unsigned int napi_id,
 		   bool (*loop_end)(void *, unsigned long), void *loop_end_arg,
@@ -7342,6 +7348,8 @@ _kc_napi_busy_loop(unsigned int napi_id,
 
 #define napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget) \
 	_kc_napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget)
+#endif
+
 #endif /* CONFIG_NET_RX_BUSY_POLL */
 #endif /* HAVE_NAPI_BUSY_LOOP */
 #define HAVE_DEVLINK_FLASH_UPDATE_BEGIN_END_NOTIFY
