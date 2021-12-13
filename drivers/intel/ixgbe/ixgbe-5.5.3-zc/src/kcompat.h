@@ -6700,7 +6700,7 @@ void bitmap_from_arr32(unsigned long *bitmap, const u32 *buf, unsigned int nbits
 #endif /* !(RHEL >= 8.0) && !(SLES >= 12.5 && SLES < 15.0 || SLES >= 15.1) */
 #else /* >= 4.16 */
 #include <linux/nospec.h>
-#define HAVE_XDP_BUFF_RXQ
+//#define HAVE_XDP_BUFF_RXQ
 #define HAVE_TC_FLOWER_OFFLOAD_COMMON_EXTACK
 #define HAVE_TCF_MIRRED_DEV
 #define HAVE_VF_STATS_DROPPED
@@ -7417,7 +7417,7 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 #endif /* 5.9.0 */
 
 /*****************************************************************************/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0)) && !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
 struct devlink_flash_update_params {
 	const char *file_name;
 	const char *component;
@@ -7488,6 +7488,8 @@ _kc_xsk_buff_dma_sync_for_cpu(struct xdp_buff *xdp,
 #endif /* HAVE_XDP_BUFF_RXQ */
 #ifdef HAVE_NAPI_BUSY_LOOP
 #include <net/busy_poll.h>
+
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
 static inline void
 _kc_napi_busy_loop(unsigned int napi_id,
 		   bool (*loop_end)(void *, unsigned long), void *loop_end_arg,
@@ -7499,6 +7501,8 @@ _kc_napi_busy_loop(unsigned int napi_id,
 
 #define napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget) \
 	_kc_napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget)
+#endif
+
 #endif /* HAVE_NAPI_BUSY_LOOP */
 #define HAVE_DEVLINK_FLASH_UPDATE_BEGIN_END_NOTIFY
 #else /* >= 5.11.0 */

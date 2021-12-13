@@ -7414,7 +7414,7 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 #endif /* 5.9.0 */
 
 /*****************************************************************************/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0)) && !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
 struct devlink_flash_update_params {
 	const char *file_name;
 	const char *component;
@@ -7480,7 +7480,7 @@ _kc_xsk_buff_dma_sync_for_cpu(struct xdp_buff *xdp,
 #endif /* 5.10.0 */
 
 /*****************************************************************************/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0)) && !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
 #ifdef HAVE_XDP_BUFF_RXQ
 #include <net/xdp.h>
 static inline int

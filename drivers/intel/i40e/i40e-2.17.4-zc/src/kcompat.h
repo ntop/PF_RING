@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright(c) 2007 - 2020 Intel Corporation. */
+/* Copyright(c) 2013 - 2021 Intel Corporation. */
 
 #ifndef _KCOMPAT_H_
 #define _KCOMPAT_H_
@@ -35,11 +35,28 @@
 #include <linux/udp.h>
 #include <linux/vmalloc.h>
 
+#ifdef HAVE_PF_RING
+#define I40E_32BYTE_RX
+#ifdef CONFIG_DCB
+#undef CONFIG_DCB
+#ifdef CONFIG_FCOE
+#undef CONFIG_FCOE
+#endif
+#ifdef CONFIG_FCOE_MODULE
+#undef CONFIG_FCOE_MODULE
+#endif
+#endif
+#endif
+
 #ifndef GCC_VERSION
 #define GCC_VERSION (__GNUC__ * 10000		\
 		     + __GNUC_MINOR__ * 100	\
 		     + __GNUC_PATCHLEVEL__)
 #endif /* GCC_VERSION */
+
+#ifndef IEEE_8021QAZ_APP_SEL_DSCP
+#define IEEE_8021QAZ_APP_SEL_DSCP	5
+#endif
 
 /* Backport macros for controlling GCC diagnostics */
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0) )
@@ -73,21 +90,24 @@
 /* NAPI enable/disable flags here */
 #define NAPI
 
-#define adapter_struct igb_adapter
-#define adapter_q_vector igb_q_vector
-#define NAPI
+#define adapter_struct i40e_pf
+#define adapter_q_vector i40e_q_vector
 
 /* and finally set defines so that the code sees the changes */
 #ifdef NAPI
+#ifndef CONFIG_I40E_NAPI
+#define CONFIG_I40E_NAPI
+#endif
 #else
+#undef CONFIG_I40E_NAPI
 #endif /* NAPI */
 
 /* Dynamic LTR and deeper C-State support disable/enable */
 
 /* packet split disable/enable */
 #ifdef DISABLE_PACKET_SPLIT
-#ifndef CONFIG_IGB_DISABLE_PACKET_SPLIT
-#define CONFIG_IGB_DISABLE_PACKET_SPLIT
+#ifndef CONFIG_I40E_DISABLE_PACKET_SPLIT
+#define CONFIG_I40E_DISABLE_PACKET_SPLIT
 #endif
 #endif /* DISABLE_PACKET_SPLIT */
 
@@ -252,7 +272,7 @@ struct msix_entry {
 #endif
 
 #ifndef WARN_ON
-#define WARN_ON(x)
+#define WARN_ON(x) ({0;})
 #endif
 
 #ifndef PCI_DEVICE
@@ -263,10 +283,6 @@ struct msix_entry {
 
 #ifndef node_online
 #define node_online(node) ((node) == 0)
-#endif
-
-#ifndef cpu_online
-#define cpu_online(cpuid) test_bit((cpuid), &cpu_online_map)
 #endif
 
 #ifndef _LINUX_RANDOM_H
@@ -323,6 +339,9 @@ struct msix_entry {
 
 #define __ARG_PLACEHOLDER_1 0,
 #define config_enabled(cfg) _config_enabled(cfg)
+#ifdef __CHECKER__
+/* cppcheck-suppress preprocessorErrorDirective */
+#endif /* __CHECKER__ */
 #define _config_enabled(value) __config_enabled(__ARG_PLACEHOLDER_##value)
 #define __config_enabled(arg1_or_junk) ___config_enabled(arg1_or_junk 1, 0)
 #define ___config_enabled(__ignored, val, ...) val
@@ -747,6 +766,9 @@ struct _kc_ethtool_pauseparam {
 #ifndef SPEED_100000
 #define SPEED_100000 100000
 #endif
+#ifndef SPEED_200000
+#define SPEED_200000 200000
+#endif
 
 #ifndef RHEL_RELEASE_VERSION
 #define RHEL_RELEASE_VERSION(a,b) (((a) << 8) + (b))
@@ -810,13 +832,16 @@ struct _kc_ethtool_pauseparam {
  * ignore differences in sublevel which are not important since we have the
  * ABI value. Otherwise, it becomes impossible to correlate ABI to version for
  * ordering checks.
+ *
+ * This also lets us store an ABI value up to 65535, since it can take the
+ * space that would use the lower byte of the Linux version code.
  */
 #define UBUNTU_VERSION_CODE (((~0xFF & LINUX_VERSION_CODE) << 8) + \
 			     UTS_UBUNTU_RELEASE_ABI)
 
-#if UTS_UBUNTU_RELEASE_ABI > 255
-//#error UTS_UBUNTU_RELEASE_ABI is too large...
-#endif /* UTS_UBUNTU_RELEASE_ABI > 255 */
+#if UTS_UBUNTU_RELEASE_ABI > 65535
+#error UTS_UBUNTU_RELEASE_ABI is larger than 65535...
+#endif /* UTS_UBUNTU_RELEASE_ABI > 65535 */
 
 #if ( LINUX_VERSION_CODE <= KERNEL_VERSION(3,0,0) )
 /* Our version code scheme does not make sense for non 3.x or newer kernels,
@@ -825,22 +850,46 @@ struct _kc_ethtool_pauseparam {
  */
 #define UTS_UBUNTU_RELEASE_ABI 0
 #define UBUNTU_VERSION_CODE 0
-#endif
+#endif /* <= 3.0.0 */
+#endif /* !UTS_UBUNTU_RELEASE_ABI */
 
-#endif
-
-/* Note that the 3rd digit is always zero, and will be ignored. This is
- * because Ubuntu kernels are based on x.y.0-ABI values, and while their linux
- * version codes are 3 digit, this 3rd digit is superseded by the ABI value.
+/* We ignore the 3rd digit since we want to give precedence to the additional
+ * ABI value provided by Ubuntu.
  */
-#define UBUNTU_VERSION(a,b,c,d) ((KERNEL_VERSION(a,b,0) << 8) + (d))
+#define UBUNTU_VERSION(a,b,c,d) (((a) << 24) + ((b) << 16) + (d))
 
-/* SuSE version macros are the same as Linux kernel version macro */
-#ifndef SLE_VERSION
-#define SLE_VERSION(a,b,c)	KERNEL_VERSION(a,b,c)
-#endif
-#define SLE_LOCALVERSION(a,b,c)	KERNEL_VERSION(a,b,c)
+/* SLE_VERSION is used to generate a 3-digit encoding that can order SLE
+ * kernels based on their major release, service pack, and a possible
+ * maintenance release.
+ */
+#define SLE_VERSION(a,b,c)	(((a) << 16) + ((b) << 8) + (c))
+
+/* The SLE_LOCALVERSION_CODE comes from a 3-digit code added as part of the
+ * Linux kernel version. It is extracted by the driver Makefile. This macro is
+ * used to generate codes for making comparisons below.
+ */
+#define SLE_LOCALVERSION(a,b,c)	(((a) << 16) + ((b) << 8) + (c))
+
 #ifdef CONFIG_SUSE_KERNEL
+/* Starting since at least SLE 12sp4 and SLE 15, the SUSE kernels have
+ * provided CONFIG_SUSE_VERSION, CONFIG_SUSE_PATCHLEVEL and
+ * CONFIG_SUSE_AUXRELEASE. Use these to generate SLE_VERSION if available.
+ * Only fall back to the manual table otherwise. We expect all future versions
+ * of SLE kernels to include these values, so the table will remain only for
+ * the older releases.
+ */
+#ifdef CONFIG_SUSE_VERSION
+#ifndef CONFIG_SUSE_PATCHLEVEL
+#error "CONFIG_SUSE_VERSION exists but CONFIG_SUSE_PATCHLEVEL is missing"
+#endif
+#ifndef CONFIG_SUSE_AUXRELEASE
+#error "CONFIG_SUSE_VERSION exists but CONFIG_SUSE_AUXRELEASE is missing"
+#endif
+#define SLE_VERSION_CODE SLE_VERSION(CONFIG_SUSE_VERSION, CONFIG_SUSE_PATCHLEVEL, CONFIG_SUSE_AUXRELEASE)
+#else
+/* If we do not have the CONFIG_SUSE_VERSION configuration values, fall back
+ * to the following table for older releases.
+ */
 #if ( LINUX_VERSION_CODE == KERNEL_VERSION(2,6,27) )
 /* SLES11 GA is 2.6.27 based */
 #define SLE_VERSION_CODE SLE_VERSION(11,0,0)
@@ -899,38 +948,10 @@ struct _kc_ethtool_pauseparam {
  *   - 4.4.103-6.33.1, 4.4.103-6.38.1
  *   - 4.4.{114,120}-94.nn.y */
 #define SLE_VERSION_CODE SLE_VERSION(12,3,0)
-#elif (LINUX_VERSION_CODE == KERNEL_VERSION(4,12,14) && \
-       (SLE_LOCALVERSION_CODE == KERNEL_VERSION(94,41,0) || \
-       (SLE_LOCALVERSION_CODE >= KERNEL_VERSION(95,0,0) && \
-        SLE_LOCALVERSION_CODE < KERNEL_VERSION(96,0,0))))
-/* SLES12 SP4 GM is 4.12.14-94.41 and update kernel is 4.12.14-95.x. */
-#define SLE_VERSION_CODE SLE_VERSION(12,4,0)
-#elif (LINUX_VERSION_CODE == KERNEL_VERSION(4,12,14) && \
-       (SLE_LOCALVERSION_CODE == KERNEL_VERSION(23,0,0) || \
-        SLE_LOCALVERSION_CODE == KERNEL_VERSION(2,0,0) || \
-        SLE_LOCALVERSION_CODE == KERNEL_VERSION(136,0,0) || \
-        (SLE_LOCALVERSION_CODE >= KERNEL_VERSION(25,0,0) && \
-	 SLE_LOCALVERSION_CODE < KERNEL_VERSION(26,0,0)) || \
-	(SLE_LOCALVERSION_CODE >= KERNEL_VERSION(150,0,0) && \
-	 SLE_LOCALVERSION_CODE < KERNEL_VERSION(151,0,0))))
-/* SLES15 Beta1 is 4.12.14-2
- * SLES15 GM is 4.12.14-23 and update kernel is 4.12.14-{25,136},
- * and 4.12.14-150.14.
- */
-#define SLE_VERSION_CODE SLE_VERSION(15,0,0)
-#elif (LINUX_VERSION_CODE == KERNEL_VERSION(4,12,14) && \
-       SLE_LOCALVERSION_CODE >= KERNEL_VERSION(25,23,0))
-/* SLES15 SP1 Beta1 is 4.12.14-25.23 */
-#define SLE_VERSION_CODE SLE_VERSION(15,1,0)
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5,3,13))
-/* SLES15 SP2 Beta1 is 5.3.13 */
-#define SLE_VERSION_CODE SLE_VERSION(15,2,0)
-
-/* new SLES kernels must be added here with >= based on kernel
- * the idea is to order from newest to oldest and just catch all
- * of them using the >=
- */
+#else
+#error "This looks like a SUSE kernel, but it has an unrecognized local version code."
 #endif /* LINUX_VERSION_CODE == KERNEL_VERSION(x,y,z) */
+#endif /* !CONFIG_SUSE_VERSION */
 #endif /* CONFIG_SUSE_KERNEL */
 #ifndef SLE_VERSION_CODE
 #define SLE_VERSION_CODE 0
@@ -938,6 +959,24 @@ struct _kc_ethtool_pauseparam {
 #ifndef SLE_LOCALVERSION_CODE
 #define SLE_LOCALVERSION_CODE 0
 #endif /* SLE_LOCALVERSION_CODE */
+
+/*
+ * Include the definitions file for HAVE/NEED flags for the standard upstream
+ * kernels.
+ *
+ * Then, based on the distribution we detect, load the distribution specific
+ * definitions file that customizes the definitions for the target
+ * distribution.
+ */
+#include "kcompat_std_defs.h"
+
+#ifdef CONFIG_SUSE_KERNEL
+#include "kcompat_sles_defs.h"
+#elif UBUNTU_VERSION_CODE
+#include "kcompat_ubuntu_defs.h"
+#elif RHEL_RELEASE_CODE
+#include "kcompat_rhel_defs.h"
+#endif
 
 /*
  * ADQ depends on __TC_MQPRIO_MODE_MAX and related kernel code
@@ -955,9 +994,8 @@ struct _kc_ethtool_pauseparam {
   #endif /*  LINUX_VERSION_CODE == KERNEL_VERSION(4,15,0) */
 #endif /* if (NOT RHEL && NOT SLES && NOT UBUNTU) */
 
+
 #ifdef __KLOCWORK__
-/* The following are not compiled into the binary driver; they are here
- * only to tune Klocwork scans to workaround false-positive issues.
  */
 #ifdef ARRAY_SIZE
 #undef ARRAY_SIZE
@@ -1022,7 +1060,41 @@ static inline int _kc_test_and_set_bit(int nr, volatile unsigned long *addr)
 #undef WRITE_ONCE
 #define WRITE_ONCE(x, val)	((x) = (val))
 #endif /* WRITE_ONCE */
+
+#ifdef wait_event_interruptible_timeout
+#undef wait_event_interruptible_timeout
+#define wait_event_interruptible_timeout(wq_head, condition, timeout) ({	\
+	long ret;								\
+	if ((condition))							\
+		ret = timeout;							\
+	else									\
+		ret = 0;							\
+	ret;									\
+})
+#endif /* wait_event_interruptible_timeout */
+
+#ifdef max_t
+#undef max_t
+#define max_t(type, x, y) ({							\
+type __x = (x);								\
+type __y = (y);								\
+__x > __y ? __x : __y;							\
+})
+#endif /* max_t */
+
+#ifdef min_t
+#undef min_t
+#define min_t(type, x, y) ({							\
+type __x = (x);								\
+type __y = (y);								\
+__x < __y ? __x : __y;							\
+})
+#endif /* min_t */
 #endif /* __KLOCWORK__ */
+
+#include "kcompat_vfd.h"
+struct vfd_objects *create_vfd_sysfs(struct pci_dev *pdev, int num_alloc_vfs);
+void destroy_vfd_sysfs(struct pci_dev *pdev, struct vfd_objects *vfd_obj);
 
 /* Older versions of GCC will trigger -Wformat-nonliteral warnings for const
  * char * strings. Unfortunately, the implementation of do_trace_printk does
@@ -1048,7 +1120,8 @@ static inline int _kc_test_and_set_bit(int nr, volatile unsigned long *addr)
 
 /* Newer kernels removed <linux/pci-aspm.h> */
 #if ((LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)) && \
-     (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,3)))
+     (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)) && \
+     !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))))
 #define HAVE_PCI_ASPM_H
 #endif
 
@@ -1354,21 +1427,13 @@ struct vlan_ethhdr {
 /* 2.4.22 => 2.4.17 */
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,22) )
 #define pci_name(x)	((x)->slot_name)
+#define cpu_online(cpuid) test_bit((cpuid), &cpu_online_map)
 
 #ifndef SUPPORTED_10000baseT_Full
 #define SUPPORTED_10000baseT_Full	BIT(12)
 #endif
 #ifndef ADVERTISED_10000baseT_Full
 #define ADVERTISED_10000baseT_Full	BIT(12)
-#endif
-#endif
-
-/*****************************************************************************/
-/* 2.4.22 => 2.4.17 */
-
-#if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,4,22) )
-#ifndef IGB_NO_LRO
-#define IGB_NO_LRO
 #endif
 #endif
 
@@ -1718,10 +1783,6 @@ uint32_t _kc__div64_32(uint64_t *dividend, uint32_t divisor);
 
 #undef HAVE_I2C_SUPPORT
 #else /* 2.6.0 */
-#if IS_ENABLED(CONFIG_I2C_ALGOBIT) && \
-	(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(4,9)))
-#define HAVE_I2C_SUPPORT
-#endif /* IS_ENABLED(CONFIG_I2C_ALGOBIT) */
 
 #endif /* 2.6.0 => 2.5.28 */
 /*****************************************************************************/
@@ -2520,24 +2581,6 @@ void _kc_print_hex_dump(const char *level, const char *prefix_str,
 #define SUPPORTED_2500baseX_Full BIT(15)
 #endif
 
-#ifdef HAVE_I2C_SUPPORT
-#include <linux/i2c.h>
-#if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(5,5)))
-struct i2c_board_info {
-	char	driver_name[KOBJ_NAME_LEN];
-	char	type[I2C_NAME_SIZE];
-	unsigned short	flags;
-	unsigned short	addr;
-	void		*platform_data;
-};
-#define I2C_BOARD_INFO(driver, dev_addr) .driver_name = (driver),\
-			.addr = (dev_addr)
-#endif /* !(RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(5,5)) */
-#define i2c_new_device(adap, info) _kc_i2c_new_device(adap, info)
-struct i2c_client *
-_kc_i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info);
-#endif /* HAVE_I2C_SUPPORT */
-
 #ifndef ETH_P_PAUSE
 #define ETH_P_PAUSE 0x8808
 #endif
@@ -2560,8 +2603,6 @@ static inline int compound_order(struct page *page)
 
 /*****************************************************************************/
 #if ( LINUX_VERSION_CODE > KERNEL_VERSION(2,6,22) )
-#undef SET_MODULE_OWNER
-#define SET_MODULE_OWNER(dev) do { } while (0)
 #endif /* > 2.6.22 */
 
 /*****************************************************************************/
@@ -2808,19 +2849,7 @@ static inline int _kc_strict_strtol(const char *buf, unsigned int base, long *re
 }
 #endif
 
-#if ( LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0) )
-#ifndef IGB_PROCFS
-#define IGB_PROCFS
-#endif /* IGB_PROCFS */
-#endif /* >= 2.6.0 */
-
 #else /* < 2.6.25 */
-
-#if IS_ENABLED(CONFIG_HWMON)
-#ifndef IGB_HWMON
-#define IGB_HWMON
-#endif /* IGB_HWMON */
-#endif /* CONFIG_HWMON */
 
 #endif /* < 2.6.25 */
 
@@ -2965,7 +2994,9 @@ void __kc_warn_slowpath(const char *file, const int line,
 #endif /* WARN */
 #undef HAVE_IXGBE_DEBUG_FS
 #undef HAVE_IGB_DEBUG_FS
+#define qdisc_reset_all_tx(a)
 #else /* < 2.6.27 */
+#include <net/sch_generic.h>
 #define ethtool_cmd_speed_set _kc_ethtool_cmd_speed_set
 static inline void _kc_ethtool_cmd_speed_set(struct ethtool_cmd *ep,
 					     __u32 speed)
@@ -3172,6 +3203,11 @@ static inline unsigned long dev_trans_start(struct net_device *dev)
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32) )
 #undef netdev_tx_t
 #define netdev_tx_t int
+#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
+#ifndef NETIF_F_FCOE_MTU
+#define NETIF_F_FCOE_MTU       BIT(26)
+#endif
+#endif /* CONFIG_FCOE || CONFIG_FCOE_MODULE */
 
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0) )
 static inline int _kc_pm_runtime_get_sync()
@@ -3230,6 +3266,11 @@ static inline int _kc_pm_runtime_get_sync(struct device __always_unused *dev)
 #define HAVE_RHEL6_NET_DEVICE_OPS_EXT
 #define HAVE_NDO_SET_FEATURES
 #endif /* RHEL >= 6.6 && RHEL < 7.0 */
+#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
+#ifndef HAVE_NETDEV_OPS_FCOE_ENABLE
+#define HAVE_NETDEV_OPS_FCOE_ENABLE
+#endif
+#endif /* CONFIG_FCOE || CONFIG_FCOE_MODULE */
 #ifdef CONFIG_DCB
 #ifndef HAVE_DCBNL_OPS_GETAPP
 #define HAVE_DCBNL_OPS_GETAPP
@@ -3254,6 +3295,11 @@ static inline int _kc_pm_runtime_get_sync(struct device __always_unused *dev)
 /* Features back-ported to RHEL6 or SLES11 SP1 after 2.6.32 */
 #if ( (RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,0)) || \
       (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(11,1,0)) )
+#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
+#ifndef HAVE_NETDEV_OPS_FCOE_GETWWN
+#define HAVE_NETDEV_OPS_FCOE_GETWWN
+#endif
+#endif /* CONFIG_FCOE || CONFIG_FCOE_MODULE */
 #endif /* RHEL6 or SLES11 SP1 */
 #ifndef __percpu
 #define __percpu
@@ -3317,6 +3363,11 @@ static inline bool pci_is_pcie(struct pci_dev *dev)
 #endif /* RHEL >= 6.4 && RHEL < 7.0 */
 
 #else /* < 2.6.33 */
+#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
+#ifndef HAVE_NETDEV_OPS_FCOE_GETWWN
+#define HAVE_NETDEV_OPS_FCOE_GETWWN
+#endif
+#endif /* CONFIG_FCOE || CONFIG_FCOE_MODULE */
 #endif /* < 2.6.33 */
 
 /*****************************************************************************/
@@ -3837,6 +3888,52 @@ static inline int _kc_skb_checksum_start_offset(const struct sk_buff *skb)
 		     skb != (struct sk_buff *)(queue);				\
 		     skb = tmp, tmp = skb->prev)
 #endif
+#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
+#ifndef FCOE_MTU
+#define FCOE_MTU	2158
+#endif
+#endif
+#if IS_ENABLED(CONFIG_DCB)
+#ifndef IEEE_8021QAZ_APP_SEL_ETHERTYPE
+#define IEEE_8021QAZ_APP_SEL_ETHERTYPE	1
+#endif
+#endif
+#if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,4)))
+#define kstrtoul(a, b, c)  ((*(c)) = simple_strtoul((a), NULL, (b)), 0)
+#define kstrtouint(a, b, c)  ((*(c)) = simple_strtoul((a), NULL, (b)), 0)
+#define kstrtou32(a, b, c)  ((*(c)) = simple_strtoul((a), NULL, (b)), 0)
+#endif /* !(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6,4)) */
+#if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)))
+u16 ___kc_skb_tx_hash(struct net_device *, const struct sk_buff *, u16);
+#define __skb_tx_hash(n, s, q) ___kc_skb_tx_hash((n), (s), (q))
+u8 _kc_netdev_get_num_tc(struct net_device *dev);
+#define netdev_get_num_tc(dev) _kc_netdev_get_num_tc(dev)
+int _kc_netdev_set_num_tc(struct net_device *dev, u8 num_tc);
+#define netdev_set_num_tc(dev, tc) _kc_netdev_set_num_tc((dev), (tc))
+#define netdev_reset_tc(dev) _kc_netdev_set_num_tc((dev), 0)
+#define netdev_set_tc_queue(dev, tc, cnt, off) do {} while (0)
+u8 _kc_netdev_get_prio_tc_map(struct net_device *dev, u8 up);
+#define netdev_get_prio_tc_map(dev, up) _kc_netdev_get_prio_tc_map(dev, up)
+#define netdev_set_prio_tc_map(dev, up, tc) do {} while (0)
+#else /* RHEL6.1 or greater */
+#ifndef HAVE_MQPRIO
+#define HAVE_MQPRIO
+#endif /* HAVE_MQPRIO */
+#if IS_ENABLED(CONFIG_DCB)
+#ifndef HAVE_DCBNL_IEEE
+#define HAVE_DCBNL_IEEE
+#ifndef IEEE_8021QAZ_TSA_STRICT
+#define IEEE_8021QAZ_TSA_STRICT		0
+#endif
+#ifndef IEEE_8021QAZ_TSA_ETS
+#define IEEE_8021QAZ_TSA_ETS		2
+#endif
+#ifndef IEEE_8021QAZ_APP_SEL_ETHERTYPE
+#define IEEE_8021QAZ_APP_SEL_ETHERTYPE	1
+#endif
+#endif
+#endif /* CONFIG_DCB */
+#endif /* !(RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,0)) */
 
 #ifndef udp_csum
 #define udp_csum __kc_udp_csum
@@ -3852,6 +3949,11 @@ static inline __wsum __kc_udp_csum(struct sk_buff *skb)
 }
 #endif /* udp_csum */
 #else /* < 2.6.39 */
+#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
+#ifndef HAVE_NETDEV_OPS_FCOE_DDP_TARGET
+#define HAVE_NETDEV_OPS_FCOE_DDP_TARGET
+#endif
+#endif /* CONFIG_FCOE || CONFIG_FCOE_MODULE */
 #ifndef HAVE_MQPRIO
 #define HAVE_MQPRIO
 #endif
@@ -3921,7 +4023,17 @@ struct _kc_ethtool_rx_flow_spec {
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0) )
 #define USE_LEGACY_PM_SUPPORT
 #ifndef kfree_rcu
-#define kfree_rcu(_ptr, _rcu_head) kfree(_ptr)
+#define kfree_rcu(_ptr, _rcu_head) do { 				\
+	void __kc_kfree_rcu(struct rcu_head *rcu_head)			\
+	{								\
+		void *ptr = container_of(rcu_head,			\
+					 typeof(*_ptr),			\
+					 _rcu_head);			\
+		kfree(ptr);						\
+	}								\
+	call_rcu(&(_ptr)->_rcu_head, __kc_kfree_rcu);			\
+} while (0)
+#define HAVE_KFREE_RCU_BARRIER
 #endif /* kfree_rcu */
 #ifndef kstrtol_from_user
 #define kstrtol_from_user(s, c, b, r) _kc_kstrtol_from_user(s, c, b, r)
@@ -5019,7 +5131,7 @@ static inline struct pci_dev *pci_upstream_bridge(struct pci_dev *dev)
 
 #if ( LINUX_VERSION_CODE > KERNEL_VERSION(2,6,20) )
 #define devm_kcalloc(dev, cnt, size, flags) \
-	devm_kzalloc(dev, cnt * size, flags)
+	devm_kzalloc(dev, (cnt) * (size), flags)
 #endif /* > 2.6.20 */
 
 #if (!(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,2)))
@@ -5095,6 +5207,20 @@ static inline void __kc_skb_set_hash(struct sk_buff __maybe_unused *skb,
 
 #else	/* RHEL_RELEASE_CODE >= 7.0 || SLE_VERSION_CODE >= 12.0 */
 
+#if ((RHEL_RELEASE_CODE && RHEL_RELEASE_CODE <= RHEL_RELEASE_VERSION(7,0)) ||\
+     (SLE_VERSION_CODE && SLE_VERSION_CODE <= SLE_VERSION(12,1,0)))
+/* GPLv2 code taken from 5.10-rc2 kernel source include/linux/pci.h, Copyright
+ * original authors.
+ */
+static inline int pci_enable_msix_exact(struct pci_dev *dev,
+					struct msix_entry *entries, int nvec)
+{
+	int rc = pci_enable_msix_range(dev, entries, nvec, nvec);
+	if (rc < 0)
+		return rc;
+	return 0;
+}
+#endif /* <=EL7.0 || <=SLES 12.1 */
 #if (!(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5)))
 #ifndef HAVE_VXLAN_RX_OFFLOAD
 #define HAVE_VXLAN_RX_OFFLOAD
@@ -5623,6 +5749,8 @@ of_find_net_device_by_node(struct device_node __always_unused *np)
 #endif
 #if RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7,2))
 #define HAVE_NDO_BRIDGE_GETLINK_NLFLAGS
+#define HAVE_RHEL7_EXTENDED_NDO_SET_TX_MAXRATE
+#define HAVE_NDO_SET_TX_MAXRATE
 #endif
 #if !((RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(6,8) && RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,0)) && \
       (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(7,2)) && \
@@ -5876,7 +6004,7 @@ static inline __u64 readq(const volatile void __iomem *addr)
 static inline void writeq(__u64 val, volatile void __iomem *addr)
 {
 	writel(val, addr);
-	writel(val >> 32, addr + 4);
+	writel(val >> 32, (u8 *)addr + 4);
 }
 #define writeq writeq
 #endif
@@ -6017,10 +6145,6 @@ struct udp_tunnel_info {
 };
 #endif
 
-#if (RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))
-#define HAVE_TCF_EXTS_TO_LIST
-#endif
-
 #if (UBUNTU_VERSION_CODE && UBUNTU_VERSION_CODE < UBUNTU_VERSION(4,8,0,0))
 #define tc_no_actions(_exts) true
 #define tc_for_each_action(_a, _exts) while (0)
@@ -6069,7 +6193,6 @@ pci_release_mem_regions(struct pci_dev *pdev)
 #endif /* RHEL7.4+ || SLES12sp3+ */
 #else
 #define HAVE_UDP_ENC_RX_OFFLOAD
-#define HAVE_TCF_EXTS_TO_LIST
 #define HAVE_ETHTOOL_NEW_50G_BITS
 #endif /* 4.8.0 */
 
@@ -6216,6 +6339,14 @@ static inline void __page_frag_cache_drain(struct page *page,
 #ifndef ETH_MIN_MTU
 #define ETH_MIN_MTU 68
 #endif /* ETH_MIN_MTU */
+
+/* If kernel is older than 4.10 but distro is RHEL >= 7.5 || SLES > 12SP4,
+ * it does have support for NAPI_STATE
+ */
+#if ((RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))) ||\
+     (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,4,0))))
+#define HAVE_NAPI_STATE_IN_BUSY_POLL
+#endif /* RHEL >= 7.5 || SLES >=12.4 */
 #else /* >= 4.10 */
 #define HAVE_TC_FLOWER_ENC
 #define HAVE_NETDEVICE_MIN_MAX_MTU
@@ -6231,6 +6362,7 @@ static inline void __page_frag_cache_drain(struct page *page,
  */
 #define HAVE_NAPI_STATE_IN_BUSY_POLL
 #define HAVE_TCF_MIRRED_EGRESS_REDIRECT
+#define HAVE_PTP_CLOCK_INFO_ADJFINE
 #endif /* 4.10.0 */
 
 /*****************************************************************************/
@@ -6295,6 +6427,13 @@ static inline void _kc_dev_consume_skb_any(struct sk_buff *skb)
 /* The RHEL 7.7+ NL_SET_ERR_MSG_MOD triggers unused parameter warnings */
 #undef NL_SET_ERR_MSG_MOD
 #endif
+/* If kernel is older than 4.12 but distro is RHEL >= 7.5 || SLES > 12SP4,
+ * it does have support for MIN_NAPI_ID
+ */
+#if ((RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))) || \
+     (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(12,4,0))))
+#define HAVE_MIN_NAPI_ID
+#endif /* RHEL >= 7.5 || SLES >= 12.4 */
 #ifndef NL_SET_ERR_MSG_MOD
 #define NL_SET_ERR_MSG_MOD(extack, msg)						\
 	do {									\
@@ -6302,6 +6441,9 @@ static inline void _kc_dev_consume_skb_any(struct sk_buff *skb)
 		pr_err(KBUILD_MODNAME ": " msg);				\
 	} while (0)
 #endif /* !NL_SET_ERR_MSG_MOD */
+#else /* >= 4.12 */
+#define HAVE_NAPI_BUSY_LOOP
+#define HAVE_MIN_NAPI_ID
 #endif /* 4.12 */
 
 /*****************************************************************************/
@@ -6510,7 +6652,6 @@ const char *_kc_phy_speed_to_str(int speed);
 #define HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
 #define HAVE_TCF_BLOCK
 #else /* RHEL >= 7.6 || SLES >= 15.1 */
-#define TC_SETUP_QDISC_MQPRIO TC_SETUP_MQPRIO
 #endif /* !(RHEL >= 7.6) && !(SLES >= 15.1) */
 void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
 				      struct ethtool_link_ksettings *src);
@@ -6573,23 +6714,6 @@ static inline unsigned long _kc_array_index_mask_nospec(unsigned long index,
 	(typeof(_i)) (_i & _mask);					\
 })
 #endif /* array_index_nospec */
-#if (!(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,6))) && \
-     !(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,1,0))))
-#ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
-#include <net/pkt_cls.h>
-static inline bool
-tc_cls_can_offload_and_chain0(const struct net_device *dev,
-			      struct tc_cls_common_offload *common)
-{
-	if (!tc_can_offload(dev))
-		return false;
-	if (common->chain_index)
-		return false;
-
-	return true;
-}
-#endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
-#endif /* !(RHEL >= 7.6) && !(SLES >= 15.1) */
 #ifndef sizeof_field
 #define sizeof_field(TYPE, MEMBER) (sizeof((((TYPE *)0)->MEMBER)))
 #endif /* sizeof_field */
@@ -6643,114 +6767,11 @@ void _kc_pcie_print_link_status(struct pci_dev *dev);
 #endif /* 4.17.0 */
 
 /*****************************************************************************/
-#if IS_ENABLED(CONFIG_NET_DEVLINK) && \
-    (LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
-#include <net/devlink.h>
-#if ((LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0)) && \
-     (SLE_VERSION_CODE < SLE_VERSION(15,1,0)) && \
-     (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,7)))
-enum devlink_port_flavour {
-	DEVLINK_PORT_FLAVOUR_PHYSICAL,
-	DEVLINK_PORT_FLAVOUR_CPU,
-	DEVLINK_PORT_FLAVOUR_DSA,
-	DEVLINK_PORT_FLAVOUR_PCI_PF,
-	DEVLINK_PORT_FLAVOUR_PCI_VF,
-};
-#endif /* <4.18.0 && <SLES15sp1 && <RHEL7.7 */
-
-#if ((LINUX_VERSION_CODE < KERNEL_VERSION(5,3,0)) && \
-     (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,2)))
-struct devlink_port_phys_attrs {
-	u32 port_number; /* Same value as "split group".
-			  * A physical port which is visible to the user
-			  * for a given port flavour.
-			  */
-	u32 split_subport_number; /* If the port is split, this is the number
-				   * of subport. */
-};
-
-struct devlink_port_pci_pf_attrs {
-	u16 pf; /* Associated PCI PF for this port. */
-};
-
-struct devlink_port_pci_vf_attrs {
-	u16 pf; /* Associated PCI PF for this port. */
-	u16 vf; /* Associated PCI VF for of the PCI PF for this port. */
-};
-#endif /* <5.3.0 && <RHEL8.2*/
-
-struct _kc_devlink_port_attrs {
-	u8 split:1,
-	   splittable:1;
-	u32 lanes;
-	enum devlink_port_flavour flavour;
-	struct netdev_phys_item_id switch_id;
-	union {
-		struct devlink_port_phys_attrs phys;
-		struct devlink_port_pci_pf_attrs pci_pf;
-		struct devlink_port_pci_vf_attrs pci_vf;
-	};
-};
-#define devlink_port_attrs _kc_devlink_port_attrs
-#endif /* CONFIG_NET_DEVLINK && <5.9.0 */
-
-/*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0))
-#ifdef NETIF_F_HW_L2FW_DOFFLOAD
-#include <linux/if_macvlan.h>
-#ifndef macvlan_supports_dest_filter
-#define macvlan_supports_dest_filter _kc_macvlan_supports_dest_filter
-static inline bool _kc_macvlan_supports_dest_filter(struct net_device *dev)
-{
-	struct macvlan_dev *macvlan = netdev_priv(dev);
-
-	return macvlan->mode == MACVLAN_MODE_PRIVATE ||
-	       macvlan->mode == MACVLAN_MODE_VEPA ||
-	       macvlan->mode == MACVLAN_MODE_BRIDGE;
-}
-#endif
-
-#if (!SLE_VERSION_CODE || (SLE_VERSION_CODE < SLE_VERSION(15,1,0)))
-#ifndef macvlan_accel_priv
-#define macvlan_accel_priv _kc_macvlan_accel_priv
-static inline void *_kc_macvlan_accel_priv(struct net_device *dev)
-{
-	struct macvlan_dev *macvlan = netdev_priv(dev);
-
-	return macvlan->fwd_priv;
-}
-#endif
-
-#ifndef macvlan_release_l2fw_offload
-#define macvlan_release_l2fw_offload _kc_macvlan_release_l2fw_offload
-static inline int _kc_macvlan_release_l2fw_offload(struct net_device *dev)
-{
-	struct macvlan_dev *macvlan = netdev_priv(dev);
-
-	macvlan->fwd_priv = NULL;
-	return dev_uc_add(macvlan->lowerdev, dev->dev_addr);
-}
-#endif
-#endif /* !SLES || SLES < 15.1 */
-#endif /* NETIF_F_HW_L2FW_DOFFLOAD */
 #include "kcompat_overflow.h"
 
 #if (SLE_VERSION_CODE < SLE_VERSION(15,1,0))
 #define firmware_request_nowarn	request_firmware_direct
-
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(7,7))
-#if IS_ENABLED(CONFIG_NET_DEVLINK) && !defined(devlink_port_attrs_set)
-static inline void
-_kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
-			   struct _kc_devlink_port_attrs *attrs)
-{
-	if (attrs->split)
-		devlink_port_split_set(devlink_port, attrs->phys.port_number);
-}
-
-#define devlink_port_attrs_set _kc_devlink_port_attrs_set
-#endif /* CONFIG_NET_DEVLINK && !devlink_port_attrs_set */
-#endif /* <RHEL7.7 */
 #endif /* SLES < 15.1 */
 
 #else
@@ -6760,7 +6781,6 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 #define HAVE_XDP_SOCK
 #define HAVE_NDO_XDP_XMIT_BULK_AND_FLAGS
 #define NO_NDO_XDP_FLUSH
-#define HAVE_AF_XDP_SUPPORT
 #endif /* 4.18.0 */
 
 /*****************************************************************************/
@@ -6790,11 +6810,6 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 #define HAVE_NDO_SELECT_QUEUE_SB_DEV
 #define HAVE_TCF_BLOCK_CB_REGISTER_EXTACK
 #endif
-#if ((RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,0)) ||\
-     (SLE_VERSION_CODE >= SLE_VERSION(15,1,0)))
-#define HAVE_TCF_EXTS_FOR_EACH_ACTION
-#undef HAVE_TCF_EXTS_TO_LIST
-#endif /* RHEL8.0+ */
 
 static inline void __kc_metadata_dst_free(void *md_dst)
 {
@@ -6807,8 +6822,6 @@ static inline void __kc_metadata_dst_free(void *md_dst)
 #define NO_NETDEV_BPF_PROG_ATTACHED
 #define HAVE_NDO_SELECT_QUEUE_SB_DEV
 #define HAVE_NETDEV_SB_DEV
-#undef HAVE_TCF_EXTS_TO_LIST
-#define HAVE_TCF_EXTS_FOR_EACH_ACTION
 #define HAVE_TCF_VLAN_TPID
 #define HAVE_RHASHTABLE_TYPES
 #define HAVE_DEVLINK_REGIONS
@@ -6818,29 +6831,6 @@ static inline void __kc_metadata_dst_free(void *md_dst)
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,20,0))
 #define HAVE_XDP_UMEM_PROPS
-#ifdef HAVE_AF_XDP_SUPPORT
-#ifndef napi_if_scheduled_mark_missed
-static inline bool __kc_napi_if_scheduled_mark_missed(struct napi_struct *n)
-{
-	unsigned long val, new;
-
-	do {
-		val = READ_ONCE(n->state);
-		if (val & NAPIF_STATE_DISABLE)
-			return true;
-
-		if (!(val & NAPIF_STATE_SCHED))
-			return false;
-
-		new = val | NAPIF_STATE_MISSED;
-	} while (cmpxchg(&n->state, val, new) != val);
-
-	return true;
-}
-
-#define napi_if_scheduled_mark_missed __kc_napi_if_scheduled_mark_missed
-#endif /* !napi_if_scheduled_mark_missed */
-#endif /* HAVE_AF_XDP_SUPPORT */
 #if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,0)))
 #define HAVE_DEVLINK_ESWITCH_OPS_EXTACK
 #endif /* RHEL >= 8.0 */
@@ -6891,6 +6881,7 @@ _kc_dev_change_flags(struct net_device *netdev, unsigned int flags,
       RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,0)) || \
      (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,1)))
 #define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
+#define HAVE_PTP_CLOCK_INFO_GETTIMEX64
 #else /* RHEL >= 7.7 && RHEL < 8.0 || RHEL >= 8.1 */
 struct ptp_system_timestamp {
 	struct timespec64 pre_ts;
@@ -6915,12 +6906,15 @@ ptp_read_system_postts(struct ptp_system_timestamp __always_unused *sts)
 #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2))
 #define HAVE_TC_INDIR_BLOCK
 #endif /* RHEL 8.2 */
+#define INDIRECT_CALLABLE_DECLARE(x) x
 #else /* >= 5.0.0 */
 #define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
+#define HAVE_PTP_CLOCK_INFO_GETTIMEX64
 #define HAVE_NDO_BRIDGE_SETLINK_EXTACK
 #define HAVE_DMA_ALLOC_COHERENT_ZEROES_MEM
 #define HAVE_GENEVE_TYPE
 #define HAVE_TC_INDIR_BLOCK
+#define HAVE_INDIRECT_CALL_WRAPPER_HEADER
 #endif /* 5.0.0 */
 
 /*****************************************************************************/
@@ -7079,21 +7073,6 @@ __kc_eth_get_headlen(const struct net_device __always_unused *dev, void *data,
 #endif
 #endif /* mmiowb */
 
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,2))
-#if IS_ENABLED(CONFIG_NET_DEVLINK) && !defined(devlink_port_attrs_set)
-static inline void
-_kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
-			   struct _kc_devlink_port_attrs *attrs)
-{
-	devlink_port_attrs_set(devlink_port, attrs->flavour,
-			       attrs->phys.port_number, attrs->split,
-			       attrs->phys.split_subport_number);
-}
-
-#define devlink_port_attrs_set _kc_devlink_port_attrs_set
-#endif /* CONFIG_NET_DEVLINK && !devlink_port_attrs_set */
-#endif /* <RHEL8.2 */
-
 #if (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(8,1))
 #define HAVE_NDO_GET_DEVLINK_PORT
 #endif /* RHEL > 8.1 */
@@ -7146,53 +7125,22 @@ int _kc_flow_block_cb_setup_simple(struct flow_block_offload *f,
 #define ETH_P_LLDP	0x88CC
 #endif /* !ETH_P_LLDP */
 
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,2))
-#if IS_ENABLED(CONFIG_NET_DEVLINK)
-static inline void
-devlink_flash_update_begin_notify(struct devlink __always_unused *devlink)
-{
-}
-
-static inline void
-devlink_flash_update_end_notify(struct devlink __always_unused *devlink)
-{
-}
-
-static inline void
-devlink_flash_update_status_notify(struct devlink __always_unused *devlink,
-				   const char __always_unused *status_msg,
-				   const char __always_unused *component,
-				   unsigned long __always_unused done,
-				   unsigned long __always_unused total)
-{
-}
-#endif /* CONFIG_NET_DEVLINK */
-#endif /* <RHEL8.2 */
 #else /* >= 5.3.0 */
 #define XSK_UMEM_RETURNS_XDP_DESC
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#if !(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
 #define HAVE_XSK_UMEM_HAS_ADDRS
+#endif /* SLE < 15.3 */
+#endif /* < 5.8.0*/
 #define HAVE_FLOW_BLOCK_API
 #define HAVE_DEVLINK_PORT_ATTR_PCI_VF
+#if IS_ENABLED(CONFIG_DIMLIB)
+#define HAVE_CONFIG_DIMLIB
+#endif
 #endif /* 5.3.0 */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0))
-#if (!(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2)) && \
-     !(SLE_VERSION_CODE >= SLE_VERSION(15,2,0)))
-#if !(UBUNTU_VERSION_CODE && UBUNTU_VERSION_CODE >= UBUNTU_VERSION(4,15,0,159) && UBUNTU_VERSION_CODE < UBUNTU_VERSION(5,0,0,0))
-static inline unsigned int skb_frag_off(const skb_frag_t *frag)
-{
-	return frag->page_offset;
-}
-#endif
-
-static inline void skb_frag_off_add(skb_frag_t *frag, int delta)
-{
-	frag->page_offset += delta;
-}
-#define __flow_indr_block_cb_register __tc_indr_block_cb_register
-#define __flow_indr_block_cb_unregister __tc_indr_block_cb_unregister
-#endif /* !(RHEL >= 8.2) && !(SLES >= 15sp2) */
 #if (SLE_VERSION_CODE >= SLE_VERSION(15,2,0))
 #define HAVE_NDO_XSK_WAKEUP
 #endif /* SLES15sp2 */
@@ -7228,11 +7176,12 @@ static inline void _kc_bitmap_set_value8(unsigned long *map,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,6,0))
-#ifdef HAVE_AF_XDP_SUPPORT
+#ifdef HAVE_AF_XDP_ZC_SUPPORT
 #define xsk_umem_release_addr		xsk_umem_discard_addr
 #define xsk_umem_release_addr_rq	xsk_umem_discard_addr_rq
-#endif /* HAVE_AF_XDP_SUPPORT */
-#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)))
+#endif /* HAVE_AF_XDP_ZC_SUPPORT */
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)) || \
+     (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
 #define HAVE_TX_TIMEOUT_TXQUEUE
 #endif
 #else /* >= 5.6.0 */
@@ -7250,36 +7199,9 @@ u64 _kc_pci_get_dsn(struct pci_dev *dev);
 #define pci_aer_clear_nonfatal_status	pci_cleanup_aer_uncorrect_error_status
 #endif
 
-#define cpu_latency_qos_update_request pm_qos_update_request
-#define cpu_latency_qos_add_request(arg1, arg2) pm_qos_add_request(arg1, PM_QOS_CPU_DMA_LATENCY, arg2)
-#define cpu_latency_qos_remove_request pm_qos_remove_request
-
 #ifndef DEVLINK_INFO_VERSION_GENERIC_FW_BUNDLE_ID
 #define DEVLINK_INFO_VERSION_GENERIC_FW_BUNDLE_ID "fw.bundle_id"
 #endif
-
-#ifdef HAVE_DEVLINK_REGIONS
-#if IS_ENABLED(CONFIG_NET_DEVLINK)
-struct devlink_region_ops {
-	const char *name;
-	void (*destructor)(const void *data);
-};
-
-#ifndef devlink_region_create
-static inline struct devlink_region *
-_kc_devlink_region_create(struct devlink *devlink,
-			  const struct devlink_region_ops *ops,
-			  u32 region_max_snapshots, u64 region_size)
-{
-	return devlink_region_create(devlink, ops->name, region_max_snapshots,
-				     region_size);
-}
-
-#define devlink_region_create _kc_devlink_region_create
-#endif /* devlink_region_create */
-#endif /* CONFIG_NET_DEVLINK */
-#define HAVE_DEVLINK_SNAPSHOT_CREATE_DESTRUCTOR
-#endif /* HAVE_DEVLINK_REGIONS */
 #else /* >= 5.7.0 */
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT
 #define HAVE_ETHTOOL_COALESCE_PARAMS_SUPPORT
@@ -7287,64 +7209,159 @@ _kc_devlink_region_create(struct devlink *devlink,
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,8,0))
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4))) && \
+    !(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
 #define xdp_convert_buff_to_frame convert_to_xdp_frame
+#endif /* (RHEL < 8.4) || (SLE < 15.3) */
+#define flex_array_size(p, member, count) \
+	array_size(count, sizeof(*(p)->member) + __must_be_array((p)->member))
+#if (!(SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
+#ifdef HAVE_AF_XDP_ZC_SUPPORT
+#ifndef xsk_umem_get_rx_frame_size
+static inline u32 _xsk_umem_get_rx_frame_size(struct xdp_umem *umem)
+{
+	return umem->chunk_size_nohr - XDP_PACKET_HEADROOM;
+}
+
+#define xsk_umem_get_rx_frame_size _xsk_umem_get_rx_frame_size
+#endif /* xsk_umem_get_rx_frame_size */
+#endif /* HAVE_AF_XDP_ZC_SUPPORT */
+#else /* SLE >= 15.3 */
+#define HAVE_XDP_BUFF_FRAME_SZ
+#define HAVE_MEM_TYPE_XSK_BUFF_POOL
+#endif /* SLE >= 15.3 */
 #else /* >= 5.8.0 */
-#undef HAVE_AF_XDP_ZC_SUPPORT
 #define HAVE_TC_FLOW_INDIR_DEV
 #define HAVE_TC_FLOW_INDIR_BLOCK_CLEANUP
 #define HAVE_XDP_BUFF_FRAME_SZ
+#define HAVE_MEM_TYPE_XSK_BUFF_POOL
 #endif /* 5.8.0 */
 #if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3)))
 #define HAVE_TC_FLOW_INDIR_DEV
 #endif
+#if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
+#define HAVE_TC_FLOW_INDIR_DEV
+#endif /* SLE_VERSION_CODE && SLE_VERSION_CODE >= SLES15SP3 */
+
+/*****************************************************************************/
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
+#define HAVE_TC_FLOW_INDIR_BLOCK_CLEANUP
+#endif /* (RHEL >= 8.4) */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0))
-#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
-#if IS_ENABLED(CONFIG_NET_DEVLINK) && !defined(devlink_port_attrs_set)
-static inline void
-_kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
-			   struct _kc_devlink_port_attrs *attrs)
-{
-	devlink_port_attrs_set(devlink_port, attrs->flavour,
-			       attrs->phys.port_number, attrs->split,
-			       attrs->phys.split_subport_number,
-			       attrs->switch_id.id, attrs->switch_id.id_len);
-}
-
-#define devlink_port_attrs_set _kc_devlink_port_attrs_set
-#endif /* CONFIG_NET_DEVLINK && !devlink_port_attrs_set */
-#endif /* !RHEL_RELEASE_VERSION(8,4) */
-#define HAVE_XDP_QUERY_PROG
 #else /* >= 5.9.0 */
 #define HAVE_FLOW_INDIR_BLOCK_QDISC
 #define HAVE_UDP_TUNNEL_NIC_INFO
 #endif /* 5.9.0 */
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE > RHEL_RELEASE_VERSION(8,3)))
+#define HAVE_FLOW_INDIR_BLOCK_QDISC
+#endif
+#if (SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0)))
+#define HAVE_FLOW_INDIR_BLOCK_QDISC
+#endif /* SLE_VERSION_CODE && SLE_VERSION_CODE >= SLES15SP3 */
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,10,0)) && !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
+#if (SLE_VERSION_CODE && SLE_VERSION_CODE >= SLE_VERSION(15,3,0))
+#define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
+#define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
+#else /* SLE >= 15.3 */
 struct devlink_flash_update_params {
 	const char *file_name;
 	const char *component;
 	u32 overwrite_mask;
 };
 
-#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,4)))
-static inline void net_prefetch(void *p)
-{
-	prefetch(p);
-#if L1_CACHE_BYTES < 128
-	prefetch((u8 *)p + L1_CACHE_BYTES);
+#ifndef DEVLINK_FLASH_OVERWRITE_SETTINGS
+#define DEVLINK_FLASH_OVERWRITE_SETTINGS BIT(0)
 #endif
+
+#ifndef DEVLINK_FLASH_OVERWRITE_IDENTIFIERS
+#define DEVLINK_FLASH_OVERWRITE_IDENTIFIERS BIT(1)
+#endif
+#endif /* !(SLE >= 15.3) */
+
+#if (!(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0))))
+#define XDP_SETUP_XSK_POOL XDP_SETUP_XSK_UMEM
+#define xsk_get_pool_from_qid xdp_get_umem_from_qid
+#define xsk_pool_get_rx_frame_size xsk_umem_get_rx_frame_size
+#define xsk_pool_set_rxq_info xsk_buff_set_rxq_info
+#define xsk_pool_dma_unmap xsk_buff_dma_unmap
+#define xsk_pool_dma_map xsk_buff_dma_map
+#define xsk_tx_peek_desc xsk_umem_consume_tx
+#define xsk_tx_release xsk_umem_consume_tx_done
+#define xsk_tx_completed xsk_umem_complete_tx
+#define xsk_uses_need_wakeup xsk_umem_uses_need_wakeup
+#ifdef HAVE_MEM_TYPE_XSK_BUFF_POOL
+#include <net/xdp_sock_drv.h>
+static inline void
+_kc_xsk_buff_dma_sync_for_cpu(struct xdp_buff *xdp,
+			      void __always_unused *pool)
+{
+	xsk_buff_dma_sync_for_cpu(xdp);
 }
-#endif /* !RHEL_RELEASE_VERSION(8,4) */
+
+#define xsk_buff_dma_sync_for_cpu(xdp, pool) \
+	_kc_xsk_buff_dma_sync_for_cpu(xdp, pool)
+#endif /* HAVE_MEM_TYPE_XSK_BUFF_POOL */
+#else /* SLE >= 15.3 */
+#define HAVE_NETDEV_BPF_XSK_POOL
+#endif /* SLE >= 15.3 */
 #else /* >= 5.10.0 */
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
+#define HAVE_NETDEV_BPF_XSK_POOL
+#endif /* 5.10.0 */
 
-#ifndef read_barrier_depends
-#define read_barrier_depends() rmb()
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0))
+#ifdef HAVE_XDP_BUFF_RXQ
+#include <net/xdp.h>
+
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
+static inline int
+_kc_xdp_rxq_info_reg(struct xdp_rxq_info *xdp_rxq, struct net_device *dev,
+		     u32 queue_index, unsigned int __always_unused napi_id)
+{
+	return xdp_rxq_info_reg(xdp_rxq, dev, queue_index);
+}
+
+#define xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id) \
+	_kc_xdp_rxq_info_reg(xdp_rxq, dev, queue_index, napi_id)
 #endif
 
-#endif /* 5.10.0 */
+#endif /* HAVE_XDP_BUFF_RXQ */
+#ifdef HAVE_NAPI_BUSY_LOOP
+#ifdef CONFIG_NET_RX_BUSY_POLL
+#include <net/busy_poll.h>
+
+#if !(RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,5)))
+static inline void
+_kc_napi_busy_loop(unsigned int napi_id,
+		   bool (*loop_end)(void *, unsigned long), void *loop_end_arg,
+		   bool __always_unused prefer_busy_poll,
+		   u16 __always_unused budget)
+{
+	napi_busy_loop(napi_id, loop_end, loop_end_arg);
+}
+
+#define napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget) \
+	_kc_napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget)
+#endif
+
+#endif /* CONFIG_NET_RX_BUSY_POLL */
+#endif /* HAVE_NAPI_BUSY_LOOP */
+#define HAVE_DEVLINK_FLASH_UPDATE_BEGIN_END_NOTIFY
+#else /* >= 5.11.0 */
+#define HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
+#endif /* 5.11.0 */
+
+/*
+ * Load the implementations file which actually defines kcompat backports.
+ * Legacy backports still exist in this file, but all new backports must be
+ * implemented using kcompat_*defs.h and kcompat_impl.h
+ */
+#include "kcompat_impl.h"
+
 #endif /* _KCOMPAT_H_ */
