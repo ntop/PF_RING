@@ -461,7 +461,14 @@ static int processing_thread(__attribute__((unused)) void *arg) {
 	
 	if (likely(compute_flows)) {
           h.len = h.caplen = len;
-          gettimeofday(&h.ts, NULL);
+
+          if (hwts_dynfield_offset != -1) {
+            u_int64_t ns = hwts_field(bufs[i]);
+            h.ts.tv_sec = ns / 1000000000;
+            h.ts.tv_usec = (ns / 1000) % 1000000;
+          } else {
+            gettimeofday(&h.ts, NULL);
+          }
 
 	  action = pfring_ft_process(ft, (const u_char *) data, &h, &ext_hdr);
         }
