@@ -93,6 +93,7 @@ static u_int32_t pps = 0;
 static struct ether_addr if_mac = { 0 };
 static u_int32_t rx_ring_size = RX_RING_SIZE;
 static u_int32_t tx_ring_size = TX_RING_SIZE;
+static int hwts_dynfield_offset = -1;
 
 static struct lcore_stats {
   u_int64_t num_pkts;
@@ -152,9 +153,25 @@ static int port_init(void) {
 
   for (i = 0; i < num_ports; i++) {
     u_int8_t port_id = (i == 0) ? port : twin_port;
+    struct rte_eth_dev_info dev_info;
     unsigned int numa_socket_id;
-    
+
     printf("Configuring port %u...\n", port_id);
+
+    retval = rte_eth_dev_info_get(port_id, &dev_info);
+
+    if (retval != 0) {
+      printf("Error during getting device (port %u) info: %s\n", port_id, strerror(-retval));
+    } else if (!(dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TIMESTAMP)) {
+      printf("Port %u does not support hardware timestamping\n", port_id);
+    } else {
+      port_conf.rxmode.offloads |= DEV_RX_OFFLOAD_TIMESTAMP; //RTE_ETH_RX_OFFLOAD_TIMESTAMP
+
+      rte_mbuf_dyn_rx_timestamp_register(&hwts_dynfield_offset, NULL);
+
+      if (hwts_dynfield_offset < 0)
+        printf("Failed to register timestamp field\n");
+    }
 
     fc_conf.mode = RTE_FC_NONE;
     fc_conf.autoneg = 0;
@@ -368,6 +385,14 @@ static void tx_test(u_int8_t port_id, u_int16_t queue_id) {
 
 /* ************************************ */
 
+static inline u_int64_t hwts_field(struct rte_mbuf *mbuf) {
+  rte_mbuf_timestamp_t *ts;
+  ts = RTE_MBUF_DYNFIELD(mbuf, hwts_dynfield_offset, rte_mbuf_timestamp_t *);
+  return *ts;
+}
+
+/* ************************************ */
+
 static int processing_thread(__attribute__((unused)) void *arg) {
   unsigned lcore_id = rte_lcore_id();
   unsigned lcore_index = rte_lcore_index(lcore_id);
@@ -430,6 +455,9 @@ static int processing_thread(__attribute__((unused)) void *arg) {
 	char *data = rte_pktmbuf_mtod(bufs[i], char *);
 	int len = rte_pktmbuf_pkt_len(bufs[i]);
 	pfring_ft_action action = PFRING_FT_ACTION_DEFAULT;
+
+        //if (hwts_dynfield_offset != -1)
+        //  printf("TS=%ju\n", hwts_field(bufs[i]));
 	
 	if (likely(compute_flows)) {
           h.len = h.caplen = len;
