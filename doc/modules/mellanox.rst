@@ -69,6 +69,14 @@ specified as interface name, as reported by *pfcount -L*. Example:
 
    pfcount -i mlx:mlx5_0
 
+The default size of the RX ring (the maximum number of packets the adapter can keep in the receive
+FIFO buffer) is 4K. This can be configured using the PF_RING_RX_QUEUE_SIZE environment variable.
+Example:
+
+.. code-block:: console
+
+   PF_RING_RX_QUEUE_SIZE=32768 pfcount -i mlx:mlx5_0
+
 RSS / Multi Queue
 ~~~~~~~~~~~~~~~~~
 
