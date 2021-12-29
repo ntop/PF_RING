@@ -133,7 +133,7 @@ nbpf_tree_t* tree_clone(nbpf_tree_t *t) {
 
 static void node_purge(nbpf_node_t *n) {
   if (n->custom_key) free(n->custom_key);
-  if (n->custom_key) free(n->custom_value);
+  if (n->custom_value) free(n->custom_value);
   if (n->l) node_purge(n->l);
   if (n->r) node_purge(n->r);
   free(n);
