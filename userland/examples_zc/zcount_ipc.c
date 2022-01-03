@@ -141,7 +141,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zcount_ipc - (C) 2014-21 ntop.org\n");
+  printf("zcount_ipc - (C) 2014-22 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A simple packet counter application consuming packets from a sw queue.\n\n");
   printf("Usage: zcount_ipc -i <queue id> -c <cluster id>\n"

@@ -1,5 +1,5 @@
 /*
- * (C) 2018-21 - ntop.org
+ * (C) 2018-22 - ntop.org
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -241,7 +241,7 @@ void process_packet(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char
 /* *************************************** */
 
 void print_help(void) {
-  printf("ftflow_pcap - (C) 2018-21 ntop.org\n");
+  printf("ftflow_pcap - (C) 2018-22 ntop.org\n");
   printf("-h              Print help\n");
   printf("-i <device>     Device name or PCAP file\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");

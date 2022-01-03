@@ -791,7 +791,7 @@ void printDevs() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount - (C) 2005-21 ntop.org\n\n");
+  printf("pfcount - (C) 2005-22 ntop.org\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"
