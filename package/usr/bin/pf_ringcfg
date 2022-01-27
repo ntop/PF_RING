@@ -180,6 +180,10 @@ print_drivers() {
 	for D in ${ZC_DRIVERS[@]} ; do
 		echo "${D}"
 	done
+
+	for D in ${OTHER_SUPPORTED[@]} ; do
+		echo "${D}"
+	done
 }
 
 print_interfaces() {
