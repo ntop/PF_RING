@@ -208,6 +208,8 @@ print_interfaces() {
 			INFO="[Supported by ZC]"
 		elif is_supported_by_other ${DRIVER}; then
 			INFO="[Supported by ZC]"
+		else
+			INFO="[Linux Driver]"
 		fi
 
 		printf "Name: %-20s Driver: %-10s RSS: %-8s %-15s" "${IF}" "${DRIVER}" "${ACTUAL_RSS_QUEUES}" "${INFO}"
