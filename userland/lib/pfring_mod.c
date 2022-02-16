@@ -37,6 +37,7 @@
 #include "pfring_utils.h"
 #include "pfring_hw_filtering.h"
 #include "pfring_mod.h"
+#include "pfring_device.h"
 
 #ifdef HAVE_PF_RING_ZC
 #include "pfring_zc.h" /* pfring_zc_check_device_license_by_name() */
@@ -323,72 +324,32 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
   struct sockaddr_ll sll;
 #else
   struct sockaddr sa;
-#endif  
+#endif
 
-  char *at, *elem, *pos, name_copy[256];
-  u_int64_t channel_mask = RING_ANY_CHANNEL;
+  pfring_device *device;
+  pfring_device_elem *it;
   int rc = 0;
+  int ifindex;
 
   if((device_name == NULL) || (strcmp(device_name, "none") == 0))
     return(-1);
 
-  /* In case of multiple interfaces, channels are the same for all interfaces */
-  at = strchr(device_name, '@');
-  if(at != NULL) {
-    char *tok;
-
-    at[0] = '\0';
-
-    /* Syntax
-       ethX@1,5       channel 1 and 5
-       ethX@1-5       channel 1,2...5
-       ethX@1-3,5-7   channel 1,2,3,5,6,7
-    */
-
-    pos = NULL;
-    tok = strtok_r(&at[1], ",", &pos);
-    channel_mask = 0;
-
-    while(tok != NULL) {
-      char *dash = strchr(tok, '-');
-      int32_t min_val, max_val, i;
-
-      if(dash) {
-	dash[0] = '\0';
-	min_val = atoi(tok);
-	max_val = atoi(&dash[1]);
-
-      } else
-	min_val = max_val = atoi(tok);
-
-      for(i = min_val; i <= max_val; i++)
-	channel_mask |= ((u_int64_t) ((u_int64_t) 1) << i);
-
-      tok = strtok_r(NULL, ",", &pos);
-    }
+  device = pfring_parse_device_name(device_name);
+  if (!device) {
+    fprintf(stderr, "%s: not a valid pfring device name\n", device_name);
+    return(-1);
   }
+
+  // printf("[PF-RING] binding to following device:\n");
+  // pfring_device_dump(device);
 
   /* Setup TX */
   ring->sock_tx.sll_family = PF_PACKET;
   ring->sock_tx.sll_protocol = htons(ETH_P_ALL);
 
-  snprintf(name_copy, sizeof(name_copy), "%s", device_name);
-
-  pos = NULL;
-  elem = strtok_r(name_copy, ";,", &pos);
-
-  while(elem != NULL) {
-    char *vlan_dot = strchr(elem, '.');
-    u_int16_t vlan_id = 0;
-    int ifindex;
-
-    if(vlan_dot) {
-      vlan_dot[0] = '\0';
-      vlan_id = atoi(&vlan_dot[1]);
-    }
-
+  for (it = device->elems; it != NULL; it=it->next) {
 #ifdef USE_SOCKADDR_LL
-    if (pfring_mod_get_device_ifindex(ring, elem, &ifindex) == 0) {
+    if (pfring_mod_get_device_ifindex(ring, it->ifname, &ifindex) == 0) {
       memset(&sll, 0, sizeof(sll));
 
       sll.sll_family = PF_RING;
@@ -402,41 +363,36 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
 #else
     memset(&sa, 0, sizeof(sa));
     sa.sa_family = PF_RING;
-  
-    if (strlen(elem) > sizeof(sa.sa_data))
+    if (strlen(it->ifname > sizeof(sa.sa_data))) {
       return(PF_RING_ERROR_BAD_IFNAME);
-
-    memcpy(sa.sa_data, elem, strlen(elem));
-
-    /* Terminate string, unless it's 'sa_data size' len (handled by the kernel) */
-    if (strlen(elem) < sizeof(sa.sa_data))
-      sa.sa_data[strlen(elem)] = '\0';
-
-    rc = bind(ring->fd, (struct sockaddr *) &sa, sizeof(sa));
-#endif    
-
-    if(rc == 0) {
-      rc = pfring_set_channel_mask(ring, channel_mask);
-      /*
-      if(rc != 0)
-        printf("pfring_set_channel_id() failed: %d\n", rc);
-      */
-
-      if(vlan_id != 0) {
-	rc = pfring_set_vlan_id(ring, vlan_id);
-	/*
-	if(rc != 0)
-	  printf("pfring_set_vlan_id() failed: %d\n", rc); 
-	*/
-      }
     }
 
-    pfring_enable_hw_timestamp(ring, elem, ring->hw_ts.enable_hw_timestamp ? 1 : 0,
-			       0 /* TX timestamp disabled by default */);
+    memcpy(sa.sa_data, it->ifname, strlen(it->ifname));
+    if (strlen(it->ifname) < sizeof(sa.sa_data))
+      sa.sa_data[strlen(it->ifname)] = '\0';
 
-    elem = strtok_r(NULL, ";,", &pos);
+    rc = bind(ring->fd, (struct sockaddr *)&sa, sizeof(sa));
+#endif
+    if(rc == 0) {
+      rc = pfring_set_channel_mask(ring, device->channel_mask);
+      /*
+         if(rc != 0)
+         printf("pfring_set_channel_id() failed: %d\n", rc);
+         */
+
+      if(it->vlan_id != 0) {
+        rc = pfring_set_vlan_id(ring, it->vlan_id);
+        /*
+           if(rc != 0)
+           printf("pfring_set_vlan_id() failed: %d\n", rc); 
+           */
+      }
+      pfring_enable_hw_timestamp(ring, it->ifname, ring->hw_ts.enable_hw_timestamp ? 1 : 0,
+          0 /* TX timestamp disabled by default */);
+    }
   }
 
+  pfring_device_free(device);
   return(rc);
 }
 
