@@ -498,6 +498,9 @@ AC_DEFUN(AC_LBL_SHLIBS_INIT,
 		    PIC_OPT=-fpic
 		    case "$host_cpu" in
 
+		    aarch64*)
+			PIC_OPT=-fPIC
+			;;
 		    sparc64*)
 			case "$host_os" in
 
