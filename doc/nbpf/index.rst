@@ -6,4 +6,3 @@ nBPF
     :numbered:
 
     nbpf
-    fm10k

@@ -66,11 +66,6 @@ the '-zc' suffix. Three driver families are currently available:
   - i40e (RX and TX)
      - Supported cards: Intel X710/XL710
 
-- 10/40/100 Gbit
-
-  - fm10k (RX and TX)
-     - Supported cards: FM10420
-
 - 10/25/50/100 Gbit
 
   - ice (RX and TX)
