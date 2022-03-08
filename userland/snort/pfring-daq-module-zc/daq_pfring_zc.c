@@ -48,10 +48,6 @@
 #include <pcap/bpf.h>
 #endif
 
-#ifdef HAVE_NBROKER
-#include "nbroker_api.h"
-#endif
-
 #define DAQ_PF_RING_ZC_VERSION 10
 
 #define DAQ_PF_RING_MAX_NUM_DEVICES 16
@@ -112,11 +108,6 @@ typedef struct _pfring_context
 
   pfring_zc_cluster *cluster;
   int cluster_id;
-
-#ifdef HAVE_NBROKER
-  nbroker_t *broker;
-  char *broker_ports[DAQ_PF_RING_MAX_NUM_DEVICES];
-#endif
 } Pfring_Context_t;
 
 static void pfring_zc_daq_reset_stats(void *handle);
@@ -187,73 +178,6 @@ static int is_a_queue(char *device, int *cluster_id, int *queue_id) {
 
   return 1;
 }
-
-#ifdef HAVE_NBROKER
-static char *pfringdevice_to_ifname(char *device, char *ifname, int ifname_len) {
-  char *dev;
-
-  /* remove prefix before ':' */
-  dev = strchr(device, ':');
-  if (dev != NULL) dev++;
-  else dev = device;
-
-  snprintf(ifname, ifname_len, "%s", dev);
-
-  /* remove '@' */
-  dev = strchr(ifname, '@');
-  if (dev != NULL) dev[0] = '\0';
-  else dev = ifname;
-
-  return dev;
-}
-
-static void nbroker_prepare_flow_rule(u_char *buffer, int len, rrc_match_t *rule) {
-  struct pfring_pkthdr phdr;
-
-  memset(&phdr, 0, sizeof(phdr));
-  memset(rule, 0, sizeof(*rule));
-
-  phdr.len = phdr.caplen = len;
-  pfring_parse_pkt(buffer, &phdr, 4, 0, 0);
-
-  rule->vlan_id = htons(phdr.extended_hdr.parsed_pkt.vlan_id);
-  rule->proto = phdr.extended_hdr.parsed_pkt.l3_proto;
-  rule->shost.ip_version = rule->dhost.ip_version = phdr.extended_hdr.parsed_pkt.ip_version;
-  if (phdr.extended_hdr.parsed_pkt.ip_version == 4) {
-    rule->shost.host.v4 = htonl(phdr.extended_hdr.parsed_pkt.ip_src.v4);
-    rule->dhost.host.v4 = htonl(phdr.extended_hdr.parsed_pkt.ip_dst.v4);
-    rule->shost.mask.v4 = rule->dhost.mask.v4 = 0xFFFFFFFF;
-  } else {
-    memcpy(&rule->shost.host.v6, &phdr.extended_hdr.parsed_pkt.ip_src.v6, sizeof(rrc_in6_addr_t));
-    memcpy(&rule->dhost.host.v6, &phdr.extended_hdr.parsed_pkt.ip_dst.v6, sizeof(rrc_in6_addr_t));
-    memset(&rule->shost.mask.v6, 0xFF, sizeof(rrc_in6_addr_t));
-    memset(&rule->dhost.mask.v6, 0xFF, sizeof(rrc_in6_addr_t));
-  }
-  rule->sport.low = htons(phdr.extended_hdr.parsed_pkt.l4_src_port);
-  rule->dport.low = htons(phdr.extended_hdr.parsed_pkt.l4_dst_port);
-}
-    
-static void nbroker_drop_flow(nbroker_t *broker, u_char *buffer, int len, char *port) {
-  rrc_match_t rule;
-  u_int32_t rule_id;
-
-  nbroker_prepare_flow_rule(buffer, len, &rule);
-
-  rule_id = NBROKER_AUTO_RULE_ID;
-  nbroker_set_filtering_rule(broker, port, &rule_id, &rule, NBROKER_POLICY_DROP);
-}
-
-static void nbroker_forward_flow(nbroker_t *broker, u_char *buffer, int len, char *port, char *dest_port) {
-  rrc_match_t rule;
-  u_int32_t rule_id;
-
-  nbroker_prepare_flow_rule(buffer, len, &rule);
-
-  rule_id = NBROKER_AUTO_RULE_ID;
-
-  nbroker_set_steering_rule(broker, port, &rule_id, &rule, dest_port);
-}
-#endif
 
 static int pfring_zc_daq_open(Pfring_Context_t *context, int id, char *errbuf, size_t len) {
   uint32_t default_net = 0xFFFFFF00;
@@ -391,16 +315,6 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
     free(context);
     return DAQ_ERROR_NOMEM;
   }
-
-#ifdef HAVE_NBROKER
-  if (nbroker_init(&context->broker, NBROKER_FLAGS_FAST) != NBROKER_RC_OK) {
-    printf("nbroker_init: couldn't initialise nBroker!");
-    context->broker = NULL; /* disable nBroker support and keep running */
-  } else { /* nBroker up and running */
-    /* Set nBroker to automatically purge rules idle for more than 30 sec */
-    nbroker_set_auto_purge(context->broker, 30 /* sec */);
-  }
-#endif
 
   for (entry = config->values; entry; entry = entry->next) {
     if (!entry->value || !*entry->value) {
@@ -558,20 +472,6 @@ static int pfring_zc_daq_initialize(const DAQ_Config_t *config,
         if (max_buffer_len > context->max_buffer_len) context->max_buffer_len = max_buffer_len;
         if (strstr(context->tx_devices[i], "zc:") != NULL) num_buffers += card_buffers;
       }
-
-#ifdef HAVE_NBROKER
-      /* Do we really want to reset all filters? (e.g. what about other RSS consumers) */
-      if (context->broker) {
-        char *port, ifname[24];
-        port = pfringdevice_to_ifname(context->devices[i], ifname, sizeof(ifname));
-        context->broker_ports[i] = strdup(port);
-        if (nbroker_reset_rules(context->broker, context->broker_ports[i], NBROKER_TYPE_FILTERING) != NBROKER_RC_OK)
-          printf("nbroker_reset_rules failed\n");
-        /* Note: we need to reset steering rules also with context->mode != DAQ_MODE_INLINE */
-        if (nbroker_reset_rules(context->broker, context->broker_ports[i], NBROKER_TYPE_STEERING) != NBROKER_RC_OK)
-          printf("nbroker_reset_rules failed\n");
-      }
-#endif
     }
 
     context->cluster = pfring_zc_create_cluster(context->cluster_id, context->max_buffer_len, 0, num_buffers,
@@ -729,10 +629,6 @@ static inline void pfring_zc_daq_process(Pfring_Context_t *context, pfring_zc_pk
   switch(verdict) {
     case DAQ_VERDICT_BLACKLIST: /* Block the packet and block all future packets in the same flow systemwide. */
       /* TODO handle hw filters */
-#ifdef HAVE_NBROKER
-      if (context->broker) 
-        nbroker_drop_flow(context->broker, pkt_buffer, hdr.pktlen, context->broker_ports[rx_ring_idx]);
-#endif
       break;
     case DAQ_VERDICT_WHITELIST: /* Pass the packet and fastpath all future packets in the same flow systemwide. */
     case DAQ_VERDICT_IGNORE:    /* Pass the packet and fastpath all future packets in the same flow for this application. */
@@ -928,17 +824,9 @@ static int pfring_zc_daq_acquire(void *handle, int cnt, DAQ_Analysis_Func_t call
     switch(verdict) {
       case DAQ_VERDICT_BLACKLIST: /* Block the packet and block all future packets in the same flow systemwide. */
         /* TODO handle hw filters */
-#ifdef HAVE_NBROKER
-        if (context->broker) 
-          nbroker_drop_flow(context->broker, pkt_buffer, hdr.pktlen, context->broker_ports[rx_ring_idx]);
-#endif
 	break;
       case DAQ_VERDICT_WHITELIST: /* Pass the packet and fastpath all future packets in the same flow systemwide. */
       case DAQ_VERDICT_IGNORE:    /* Pass the packet and fastpath all future packets in the same flow for this application. */
-#ifdef HAVE_NBROKER
-        if (context->broker && context->mode == DAQ_MODE_INLINE) 
-          nbroker_forward_flow(context->broker, pkt_buffer, hdr.pktlen, context->broker_ports[rx_ring_idx], context->broker_ports[rx_ring_idx ^ 0x1]);
-#endif
 
       case DAQ_VERDICT_PASS:      /* Pass the packet */
       case DAQ_VERDICT_REPLACE:   /* Pass a packet that has been modified in-place.(No resizing allowed!) */
