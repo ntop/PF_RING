@@ -11390,6 +11390,7 @@ static int ixgbe_set_features(struct net_device *netdev,
 #endif /* HAVE_NDO_SET_FEATURES */
 
 #ifdef HAVE_UDP_ENC_RX_OFFLOAD
+#ifndef HAVE_UDP_TUNNEL_NIC_INFO
 /**
  * ixgbe_add_udp_tunnel_port - Get notifications about adding UDP tunnel ports
  * @dev: The port's netdev
@@ -11501,6 +11502,7 @@ static void ixgbe_del_udp_tunnel_port(struct net_device *dev,
 	ixgbe_clear_udp_tunnel_port(adapter, port_mask);
 	adapter->flags2 |= IXGBE_FLAG2_UDP_TUN_REREG_NEEDED;
 }
+#endif
 #elif defined(HAVE_VXLAN_RX_OFFLOAD)
 /**
  * ixgbe_add_vxlan_port - Get notifications about VXLAN ports that come up
@@ -12034,8 +12036,10 @@ static const struct net_device_ops ixgbe_netdev_ops = {
 	.extended.ndo_udp_tunnel_add = ixgbe_add_udp_tunnel_port,
 	.extended.ndo_udp_tunnel_del = ixgbe_del_udp_tunnel_port,
 #else
+#ifndef HAVE_UDP_TUNNEL_NIC_INFO
 	.ndo_udp_tunnel_add	= ixgbe_add_udp_tunnel_port,
 	.ndo_udp_tunnel_del	= ixgbe_del_udp_tunnel_port,
+#endif
 #endif
 #elif defined(HAVE_VXLAN_RX_OFFLOAD)
 	.ndo_add_vxlan_port	= ixgbe_add_vxlan_port,
