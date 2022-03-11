@@ -7297,6 +7297,7 @@ static inline u32 _xsk_umem_get_rx_frame_size(struct xdp_umem *umem)
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
 #else /* SLE >= 15.3 */
+/*
 struct devlink_flash_update_params {
 	const char *file_name;
 	const char *component;
@@ -7310,6 +7311,7 @@ struct devlink_flash_update_params {
 #ifndef DEVLINK_FLASH_OVERWRITE_IDENTIFIERS
 #define DEVLINK_FLASH_OVERWRITE_IDENTIFIERS BIT(1)
 #endif
+*/
 #endif /* !(SLE >= 15.3) */
 
 #if (!(SLE_VERSION_CODE && (SLE_VERSION_CODE >= SLE_VERSION(15,3,0))))
@@ -7361,6 +7363,7 @@ _kc_xdp_rxq_info_reg(struct xdp_rxq_info *xdp_rxq, struct net_device *dev,
 #ifdef HAVE_NAPI_BUSY_LOOP
 #ifdef CONFIG_NET_RX_BUSY_POLL
 #include <net/busy_poll.h>
+/*
 static inline void
 _kc_napi_busy_loop(unsigned int napi_id,
 		   bool (*loop_end)(void *, unsigned long), void *loop_end_arg,
@@ -7372,6 +7375,7 @@ _kc_napi_busy_loop(unsigned int napi_id,
 
 #define napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget) \
 	_kc_napi_busy_loop(napi_id, loop_end, loop_end_arg, prefer_busy_poll, budget)
+*/
 #endif /* CONFIG_NET_RX_BUSY_POLL */
 #endif /* HAVE_NAPI_BUSY_LOOP */
 #define HAVE_DEVLINK_FLASH_UPDATE_BEGIN_END_NOTIFY
