@@ -31,6 +31,7 @@ Check the adapter firmware:
 
 Recommended firmware versions are:
 
+ - ConnectX-4: >= 12.28.2006
  - ConnectX-5: >= 16.21.1000
  - ConnectX-6: >= 20.27.0090
  - ConnectX-6 Dx: >= 22.27.0090
