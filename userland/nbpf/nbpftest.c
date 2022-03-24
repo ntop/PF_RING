@@ -450,6 +450,8 @@ int main(int argc, char *argv[]) {
 
   memset(&pkt, 0, sizeof(pkt));
 
+  pkt.device_id = 400;
+  pkt.interface_id = 45;
   pkt.vlan_id = 34;
   pkt.tuple.eth_type = 0x0800;
   pkt.tuple.ip_version = 4;
@@ -460,7 +462,9 @@ int main(int argc, char *argv[]) {
   pkt.tuple.l4_dst_port = htons(345);
   pkt.l7_proto = 7;
 
-  printf("VlanID=%u IPv%u Src=%s Dst=%s Proto=%u SrcPort=%u DstPort=%u L7Proto=%u -> %s\n",
+  printf("Device=%u Interface=%u VlanID=%u IPv%u Src=%s Dst=%s Proto=%u SrcPort=%u DstPort=%u L7Proto=%u -> %s\n",
+    pkt.device_id,
+    pkt.interface_id,
     pkt.vlan_id,
     pkt.tuple.ip_version,
     bpf_intoaV4(ntohl(pkt.tuple.ip_src.v4), tmp1, sizeof(tmp1)),
