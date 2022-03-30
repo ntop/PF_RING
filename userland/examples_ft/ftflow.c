@@ -344,7 +344,7 @@ void packet_consumer() {
 /* *************************************** */
 
 void print_version(void) {
-  char version[32], system_id[32];
+  char version[32], system_id[64];
   time_t license_expiration, maintenance_expiration;
   int rc;
   
