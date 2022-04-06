@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright (C) 2018-2019, Intel Corporation. */
+/* Copyright (C) 2018-2021, Intel Corporation. */
 
 #include "kcompat.h"
-
-
 
 /*****************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) )
@@ -652,9 +650,6 @@ u32 __kc_eth_get_headlen(const struct net_device __always_unused *dev,
 		struct vlan_hdr *vlan;
 		/* l3 headers */
 		struct iphdr *ipv4;
-#ifdef __CHECKER__
-		/* cppcheck-suppress unusedStructMember */
-#endif /* __CHECKER__ */
 		struct ipv6hdr *ipv6;
 	} hdr;
 	__be16 proto;
@@ -800,9 +795,6 @@ unsigned int _kc_cpumask_local_spread(unsigned int i, int node)
 	 * cpumask_of_node, so just use for_each_online_cpu()
 	 */
 	for_each_online_cpu(cpu)
-#ifdef __CHECKER__
-		/* cppcheck-suppress unreadVariable */
-#endif /* __CHECKER__ */
 		if (i-- == 0)
 			return cpu;
 
@@ -856,11 +848,11 @@ unsigned int _kc_cpumask_local_spread(unsigned int i, int node)
  * and this function is in no way similar to skb_flow_dissect_flow_keys(). An
  * example use can be found in the ice driver, specifically ice_arfs.c.
  *
- * This function is treated as a whitelist of supported fields the SKB can
+ * This function is treated as a allowlist of supported fields the SKB can
  * parse. If new functionality is added make sure to keep this format (i.e. only
  * check for fields that are explicity wanted).
  *
- * Current whitelist:
+ * Current allowlist:
  *
  * TCPv4, TCPv6, UDPv4, UDPv6
  *
@@ -977,6 +969,47 @@ int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
 #endif /* < 4.5.0 */
 
 /*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0))
+int _kc_kstrtobool(const char *s, bool *res)
+{
+	if (!s)
+		return -EINVAL;
+
+	switch (s[0]) {
+	case 'y':
+	case 'Y':
+	case '1':
+		*res = true;
+		return 0;
+	case 'n':
+	case 'N':
+	case '0':
+		*res = false;
+		return 0;
+	case 'o':
+	case 'O':
+		switch (s[1]) {
+		case 'n':
+		case 'N':
+			*res = true;
+			return 0;
+		case 'f':
+		case 'F':
+			*res = false;
+			return 0;
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return -EINVAL;
+}
+#endif /* < 4.6.0 */
+
+/*****************************************************************************/
 #if ((LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)) || \
      (SLE_VERSION_CODE && (SLE_VERSION_CODE <= SLE_VERSION(12,3,0))) || \
      (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE <= RHEL_RELEASE_VERSION(7,5))))
@@ -1010,6 +1043,10 @@ const char *_kc_phy_speed_to_str(int speed)
 #ifdef SPEED_100000
 	case SPEED_100000:
 		return "100Gbps";
+#endif
+#ifdef SPEED_200000
+	case SPEED_200000:
+		return "200Gbps";
 #endif
 	case SPEED_UNKNOWN:
 		return "Unknown";
@@ -1364,3 +1401,11 @@ u64 _kc_pci_get_dsn(struct pci_dev *dev)
 	return dsn;
 }
 #endif /* 5.7.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,17,0))
+void _kc_eth_hw_addr_set(struct net_device *dev, const void *addr)
+{
+	ether_addr_copy(dev->dev_addr, addr);
+}
+#endif /* 5.17.0 */

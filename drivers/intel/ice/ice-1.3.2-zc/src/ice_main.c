@@ -9414,11 +9414,7 @@ static void ice_tx_timeout(struct net_device *netdev)
  * @netdev: This physical port's netdev
  * @ti: Tunnel endpoint information
  */
-#ifdef HAVE_UDP_ENC_RX_OFFLOAD
-static void
-#else
 static void __maybe_unused
-#endif
 ice_udp_tunnel_add(struct net_device *netdev, struct udp_tunnel_info *ti)
 {
 	struct ice_netdev_priv *np = netdev_priv(netdev);
@@ -9480,11 +9476,7 @@ ice_udp_tunnel_add(struct net_device *netdev, struct udp_tunnel_info *ti)
  * @netdev: This physical port's netdev
  * @ti: Tunnel endpoint information
  */
-#ifdef HAVE_UDP_ENC_RX_OFFLOAD
-static void
-#else
 static void __maybe_unused
-#endif
 ice_udp_tunnel_del(struct net_device *netdev, struct udp_tunnel_info *ti)
 {
 	struct ice_netdev_priv *np = netdev_priv(netdev);
@@ -12885,8 +12877,10 @@ static const struct net_device_ops ice_netdev_ops = {
 	.extended.ndo_udp_tunnel_add = ice_udp_tunnel_add,
 	.extended.ndo_udp_tunnel_del = ice_udp_tunnel_del,
 #else
+#ifndef HAVE_UDP_TUNNEL_NIC_INFO
 	.ndo_udp_tunnel_add = ice_udp_tunnel_add,
 	.ndo_udp_tunnel_del = ice_udp_tunnel_del,
+#endif /* !HAVE_UDP_TUNNEL_NIC_INFO */
 #endif
 #else /* !HAVE_UDP_ENC_RX_OFFLOAD */
 #ifdef HAVE_VXLAN_RX_OFFLOAD

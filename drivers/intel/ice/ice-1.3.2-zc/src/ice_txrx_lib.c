@@ -260,23 +260,25 @@ ice_process_skb_fields(struct ice_ring *rx_ring,
 void
 ice_receive_skb(struct ice_ring *rx_ring, struct sk_buff *skb, u16 vlan_tag)
 {
+	netdev_features_t features = rx_ring->netdev->features;
+	bool non_zero_vlan = vlan_tag & VLAN_VID_MASK;
+
 #ifdef ICE_ADD_PROBES
-	if ((rx_ring->netdev->features & NETIF_F_HW_VLAN_CTAG_RX) &&
-	    (vlan_tag & VLAN_VID_MASK)) {
+	if ((features & NETIF_F_HW_VLAN_CTAG_RX) && non_zero_vlan) {
+		rx_ring->vsi->back->rx_q_vlano++;
 		__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), vlan_tag);
-		rx_ring->vsi->back->rx_vlano++;
+	} else if ((features & NETIF_F_HW_VLAN_STAG_RX) && non_zero_vlan) {
+		rx_ring->vsi->back->rx_ad_vlano++;
+		__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021AD), vlan_tag);
 	}
 #else
-	if ((rx_ring->netdev->features & NETIF_F_HW_VLAN_CTAG_RX) &&
-	    (vlan_tag & VLAN_VID_MASK))
+	if ((features & NETIF_F_HW_VLAN_CTAG_RX) && non_zero_vlan)
 		__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), vlan_tag);
-#endif
-	if (napi_gro_receive(&rx_ring->q_vector->napi, skb) == GRO_DROP) {
-		/* this is tracked separately to help us debug stack drops */
-		rx_ring->rx_stats.gro_dropped++;
-		netdev_dbg(rx_ring->netdev, "Receive Queue %d: Dropped packet from GRO\n",
-			   rx_ring->q_index);
-	}
+	else if ((features & NETIF_F_HW_VLAN_STAG_RX) && non_zero_vlan)
+		__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021AD), vlan_tag);
+#endif /* ICE_ADD_PROBES */
+
+	napi_gro_receive(&rx_ring->q_vector->napi, skb);
 }
 
 #ifdef HAVE_XDP_SUPPORT

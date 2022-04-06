@@ -357,7 +357,9 @@ struct ice_ring {
 	struct bpf_prog *xdp_prog;
 #ifdef HAVE_AF_XDP_ZC_SUPPORT
 	struct xdp_umem *xsk_umem;
+#ifndef HAVE_MEM_TYPE_XSK_BUFF_POOL
 	struct zero_copy_allocator zca;
+#endif
 #endif /* HAVE_AF_XDP_ZC_SUPPORT */
 	/* CL3 - 3rd cacheline starts here */
 #ifdef HAVE_XDP_BUFF_RXQ

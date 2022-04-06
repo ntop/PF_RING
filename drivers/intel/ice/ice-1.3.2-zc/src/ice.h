@@ -1418,7 +1418,8 @@ static inline struct xdp_umem *ice_xsk_umem(struct ice_ring *ring)
 	if (!ice_is_xdp_ena_vsi(ring->vsi))
 		return NULL;
 
-	return xdp_get_umem_from_qid(ring->vsi->netdev, qid);
+	//return xdp_get_umem_from_qid(ring->vsi->netdev, qid);
+	return xsk_get_pool_from_qid(vsi->netdev, qid);
 #endif /* !HAVE_AF_XDP_NETDEV_UMEM */
 }
 #endif /* HAVE_AF_XDP_ZC_SUPPORT */

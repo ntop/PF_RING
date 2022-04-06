@@ -453,6 +453,7 @@ int ice_vsi_cfg_rxq(struct ice_ring *ring)
 
 	ring->rx_buf_len = ring->vsi->rx_buf_len;
 
+#ifdef HAVE_XDP_BUFF_RXQ
 #ifdef HAVE_AF_XDP_ZC_SUPPORT
 	if (ring->vsi->type == ICE_VSI_PF) {
 		if (!xdp_rxq_info_is_reg(&ring->xdp_rxq))
@@ -466,6 +467,7 @@ int ice_vsi_cfg_rxq(struct ice_ring *ring)
 
 			ring->rx_buf_len = ring->xsk_umem->chunk_size_nohr -
 					   XDP_PACKET_HEADROOM;
+#ifndef HAVE_MEM_TYPE_XSK_BUFF_POOL
 			ring->zca.free = ice_zca_free;
 			err = xdp_rxq_info_reg_mem_model(&ring->xdp_rxq,
 							 MEM_TYPE_ZERO_COPY,
@@ -475,8 +477,21 @@ int ice_vsi_cfg_rxq(struct ice_ring *ring)
 
 			dev_info(dev, "Registered XDP mem model MEM_TYPE_ZERO_COPY on Rx ring %d\n",
 				 ring->q_index);
+#else
+			err = xdp_rxq_info_reg_mem_model(&ring->xdp_rxq,
+							 MEM_TYPE_XSK_BUFF_POOL,
+							 NULL);
+			if (err)
+				return err;
+			xsk_pool_set_rxq_info(ring->xsk_pool, &ring->xdp_rxq);
+
+			dev_info(dev, "Registered XDP mem model MEM_TYPE_XSK_BUFF_POOL on Rx ring %d\n",
+				 ring->q_index);
+#endif
 		} else {
+#ifndef HAVE_MEM_TYPE_XSK_BUFF_POOL
 			ring->zca.free = NULL;
+#endif
 			if (!xdp_rxq_info_is_reg(&ring->xdp_rxq))
 				/* coverity[check_return] */
 				xdp_rxq_info_reg(&ring->xdp_rxq,
@@ -495,7 +510,7 @@ int ice_vsi_cfg_rxq(struct ice_ring *ring)
 		if (!xdp_rxq_info_is_reg(&ring->xdp_rxq))
 			/* coverity[check_return] */
 			xdp_rxq_info_reg(&ring->xdp_rxq, ring->netdev,
-					 ring->q_index);
+					 ring->q_index, ring->q_vector->napi.napi_id);
 
 		err = xdp_rxq_info_reg_mem_model(&ring->xdp_rxq,
 						 MEM_TYPE_PAGE_SHARED, NULL);
@@ -503,6 +518,7 @@ int ice_vsi_cfg_rxq(struct ice_ring *ring)
 			return err;
 	}
 #endif /* HAVE_AF_XDP_ZC_SUPPORT */
+#endif /* HAVE_XDP_BUFF_RXQ */
 
 	err = ice_setup_rx_ctx(ring);
 	if (err) {

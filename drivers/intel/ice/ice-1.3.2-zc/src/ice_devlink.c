@@ -724,7 +724,7 @@ struct ice_pf *ice_allocate_pf(struct device *dev)
 {
 	struct devlink *devlink;
 
-	devlink = devlink_alloc(&ice_devlink_ops, sizeof(struct ice_pf));
+	devlink = devlink_alloc(&ice_devlink_ops, sizeof(struct ice_pf), dev);
 	if (!devlink)
 		return NULL;
 

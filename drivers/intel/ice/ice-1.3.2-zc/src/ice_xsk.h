@@ -12,7 +12,9 @@ struct ice_vsi;
 #ifdef CONFIG_XDP_SOCKETS
 int ice_xsk_umem_setup(struct ice_vsi *vsi, struct xdp_umem *umem, u16 qid);
 int ice_xsk_umem_query(struct ice_vsi *vsi, struct xdp_umem **umem, u16 qid);
+#ifndef HAVE_MEM_TYPE_XSK_BUFF_POOL
 void ice_zca_free(struct zero_copy_allocator *zca, unsigned long handle);
+#endif
 int ice_clean_rx_irq_zc(struct ice_ring *rx_ring, int budget);
 bool ice_clean_tx_irq_zc(struct ice_ring *xdp_ring);
 #ifdef HAVE_NDO_XSK_WAKEUP
@@ -41,11 +43,13 @@ ice_xsk_umem_query(struct ice_vsi __always_unused *vsi,
 	return -EOPNOTSUPP;
 }
 
+#ifndef HAVE_MEM_TYPE_XSK_BUFF_POOL
 static inline void
 ice_zca_free(struct zero_copy_allocator __always_unused *zca,
 	     unsigned long __always_unused handle)
 {
 }
+#endif
 
 static inline int
 ice_clean_rx_irq_zc(struct ice_ring __always_unused *rx_ring,

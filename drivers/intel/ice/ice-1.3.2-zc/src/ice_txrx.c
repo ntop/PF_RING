@@ -564,7 +564,7 @@ int ice_setup_rx_ring(struct ice_ring *rx_ring)
 	if (rx_ring->vsi->type == ICE_VSI_PF &&
 	    !xdp_rxq_info_is_reg(&rx_ring->xdp_rxq))
 		if (xdp_rxq_info_reg(&rx_ring->xdp_rxq, rx_ring->netdev,
-				     rx_ring->q_index))
+				     rx_ring->q_index, rx_ring->q_vector->napi.napi_id))
 			goto err;
 #endif /* HAVE_XDP_BUFF_RXQ */
 #endif /* HAVE_XDP_SUPPORT */
@@ -650,7 +650,7 @@ ice_run_xdp(struct ice_ring *rx_ring, struct xdp_buff *xdp,
 		result = !err ? ICE_XDP_REDIR : ICE_XDP_CONSUMED;
 		break;
 	default:
-		bpf_warn_invalid_xdp_action(act);
+		bpf_warn_invalid_xdp_action(rx_ring->netdev, xdp_prog, act);
 		/* fallthrough -- not supported action */
 	case XDP_ABORTED:
 		trace_xdp_exception(rx_ring->netdev, xdp_prog, act);

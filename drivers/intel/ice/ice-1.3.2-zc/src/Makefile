@@ -70,6 +70,10 @@ ice-y += kcompat.o
 ifndef CONFIG_PLDMFW
 ice-y += kcompat_pldmfw.o
 endif
+# Use kcompat DIMLIB if kernel doesn't provide it
+ifndef CONFIG_DIMLIB
+ice-y += kcompat_dim.o kcompat_net_dim.o
+endif
 
 else	# ifneq($(KERNELRELEASE),)
 # normal makefile
