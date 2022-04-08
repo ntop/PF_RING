@@ -793,7 +793,11 @@ void ice_devlink_unregister(struct ice_pf *pf)
 void ice_devlink_params_publish(struct ice_pf __maybe_unused *pf)
 {
 #ifdef HAVE_DEVLINK_PARAMS
+#ifndef HAVE_DEVLINK_NOTIFY_REGISTER
+#ifdef HAVE_DEVLINK_PARAMS_PUBLISH
 	devlink_params_publish(priv_to_devlink(pf));
+#endif
+#endif
 #endif
 }
 
@@ -804,7 +808,11 @@ void ice_devlink_params_publish(struct ice_pf __maybe_unused *pf)
 void ice_devlink_params_unpublish(struct ice_pf __maybe_unused *pf)
 {
 #ifdef HAVE_DEVLINK_PARAMS
+#ifndef HAVE_DEVLINK_NOTIFY_REGISTER
+#ifdef HAVE_DEVLINK_PARAMS_PUBLISH
 	devlink_params_unpublish(priv_to_devlink(pf));
+#endif
+#endif
 #endif
 }
 
