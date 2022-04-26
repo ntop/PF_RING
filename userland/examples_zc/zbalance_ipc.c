@@ -292,8 +292,8 @@ void print_stats() {
       tot_recv += stats.recv, tot_drop += stats.drop;
 
   if (!daemon_mode && !proc_stats_only) {
-    trace(TRACE_NORMAL, "=========================");
-    trace(TRACE_NORMAL, "Queue TX Stats (Packets sent to applications):");
+    trace(TRACE_INFO, "=========================");
+    trace(TRACE_INFO, "Queue TX Stats (Packets sent to applications):");
   }
   
   for (i = 0; i < num_consumer_queues; i++)
@@ -301,14 +301,14 @@ void print_stats() {
       tot_slave_sent += stats.sent, tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
       
       if (!daemon_mode && !proc_stats_only)
-	trace(TRACE_NORMAL, "                   Queue %2u: %s pkts (%s drops)\n", i,
+	trace(TRACE_INFO, "                   Queue %2u: %s pkts (%s drops)\n", i,
 	      pfring_format_numbers((double)stats.sent+stats.drop, buf1, sizeof(buf1), 0),
 	      pfring_format_numbers((double)stats.drop, buf2, sizeof(buf2), 0));      
     }
   
   if (!daemon_mode && !proc_stats_only) {
-    trace(TRACE_NORMAL, "");
-    trace(TRACE_NORMAL, "Total Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
+    trace(TRACE_INFO, "");
+    trace(TRACE_INFO, "Total Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
             pfring_format_numbers((double)tot_recv, buf1, sizeof(buf1), 0),
 	    pfring_format_numbers((double)tot_drop, buf2, sizeof(buf2), 0),
 	    pfring_format_numbers((double)tot_slave_sent, buf3, sizeof(buf3), 0),
@@ -326,7 +326,7 @@ void print_stats() {
     unsigned long long diff_slave_drop = tot_slave_drop - last_tot_slave_drop;
 
     if (!daemon_mode && !proc_stats_only) {
-      trace(TRACE_NORMAL, "Actual Stats:         Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
+      trace(TRACE_INFO, "Actual Stats:         Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
 	      pfring_format_numbers(((double)diff_recv/(double)(delta_msec/1000)),  buf1, sizeof(buf1), 1),
 	      pfring_format_numbers(((double)diff_drop/(double)(delta_msec/1000)),  buf2, sizeof(buf2), 1),
 	      pfring_format_numbers(((double)diff_slave_sent/(double)(delta_msec/1000)),  buf3, sizeof(buf3), 1),
@@ -366,7 +366,7 @@ void print_stats() {
         tot_if_recv += stats.recv;
         tot_if_drop += stats.drop;
         if (!daemon_mode && !proc_stats_only) {
-          trace(TRACE_NORMAL, "                %s RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
+          trace(TRACE_INFO, "                %s RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
                   devices[i], stats.recv, stats.drop, 
 	          stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
         }
@@ -378,12 +378,12 @@ void print_stats() {
 	     (long unsigned int)tot_if_recv, 
 	     (long unsigned int)tot_if_drop);
 
-    trace(TRACE_NORMAL, "Queue RX Stats (Packets read by applications):");
+    trace(TRACE_INFO, "Queue RX Stats (Packets read by applications):");
     
     for (i = 0; i < num_consumer_queues; i++) {
       if (pfring_zc_stats(outzqs[i], &stats) == 0) {
         if (!daemon_mode && !proc_stats_only) {
-          trace(TRACE_NORMAL, "                   Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
+          trace(TRACE_INFO, "                   Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
                   i, stats.recv, stats.drop, 
 	          stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
         }
@@ -407,7 +407,7 @@ void print_stats() {
   pfring_zc_set_proc_stats(zc, stats_buf);
   
   if (!daemon_mode && !proc_stats_only)
-    trace(TRACE_NORMAL, "=========================\n\n");
+    trace(TRACE_INFO, "=========================\n\n");
  
   last_tot_recv = tot_recv, last_tot_slave_sent = tot_slave_sent;
   //last_tot_slave_recv = tot_slave_recv;
