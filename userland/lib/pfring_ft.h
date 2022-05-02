@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 41
+#define FT_API_VERSION 47
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -771,7 +771,7 @@ pfring_ft_api_version(
 
 /**
  * Get license info.
- * @param system_id A buffer (32 bytes long) where system id is returned. (out)
+ * @param system_id A buffer (48 bytes long) where system id is returned. (out)
  * @param license_expiration A pointer to a time_t where license expiration is returned. (out)
  * @param maintenance_expiration A pointer to a time_t where maintenance expiration is returned. (out)
  * @return 1 if a valid license is installed, 0 otherwise.
