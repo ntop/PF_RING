@@ -202,6 +202,12 @@ including the flow idleness and lifetime timeouts. Example:
    flow_idle_timeout = 30
    flow_lifetime_timeout = 120
 
+Please keep in mind tha the Deep Packet Inspection engine implemented with nDPI requires the inspection
+of a few packets at the beginning of each communication before being able to identify with a reasonable 
+degree of confidence the L7 protocol. For this reason, the initial packets of any communication are usually
+not marked with a protocol and not filtered when this is used for filtering traffic, until the L7 protocol 
+is detected.
+
 IDS Acceleration
 ----------------
 
