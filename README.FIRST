@@ -18,15 +18,15 @@ PF_RING Drivers Models
 1. PF_RING-aware/ZC drivers
 These drivers are called "aware" as they are optimized for PF_RING. They
 can be used in two ways. As standard drivers (packets continue to pass
-inside the Linux stack), example: 
+inside the Linux stack), example:
 pfcount -i eth1
-or in zero copy, for completely bypassing the Linux stack in both RX and 
-TX, and thus achieve line rate. As soon as one application opens the 
-interface in zero copy (ZC), such interface (while still visible by 
-ifconfig) cannot longer be used for standard networking (e.g. ping or SSH); 
-this until the interface is open in ZC, and once it is closed it returns 
-to be immediately available for standard Linux networking. In order to open 
-it in ZC you must prepend 'zc:' to the interface name, example: 
+or in zero copy, for completely bypassing the Linux stack in both RX and
+TX, and thus achieve line rate. As soon as one application opens the
+interface in zero copy (ZC), such interface (while still visible by
+ifconfig) cannot longer be used for standard networking (e.g. ping or SSH);
+this until the interface is open in ZC, and once it is closed it returns
+to be immediately available for standard Linux networking. In order to open
+it in ZC you must prepend 'zc:' to the interface name, example:
 pfcount -i zc:eth1
 
 2. ZC drivers
@@ -34,7 +34,7 @@ These drivers have been used to implement kernel bypass until PF_RING 5.x
 and since the ZC introduction they will be available for some more time
 but they are deprecated in favour of ZC that offer the same performance
 while featuring much better flexibility. In future PF_RING releases, we
-expect to discontinue thes drivers.
+expect to discontinue these drivers.
 
 PF_RING from Virtual Machines (KVM)
 -----------------------------------
@@ -80,7 +80,7 @@ for testing PF_RING. In particular
 You can look at the application source code for learning how you can use
 the PF_RING API.
 
-Remember that before running any appliction, you need to load the pf_ring.ko
+Remember that before running any application, you need to load the pf_ring.ko
 kernel modules:
 # sudo su
 # insmod ./kernel/pf_ring.ko

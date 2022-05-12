@@ -90,7 +90,7 @@ install_mlx_driver() {
 	if hash ibv_devinfo 2>/dev/null; then
 		echo "[>] Mellanox OFED/EN already installed"
 	else
-		echo "[!] Please downlaod Mellanox OFED/EN from:"
+		echo "[!] Please download Mellanox OFED/EN from:"
 		echo "[!] https://www.mellanox.com/products/infiniband-drivers/linux/mlnx_ofed"
 		echo "[!] Extract the tarball content and run:"
 		echo "[!] ./mlnxofedinstall --upstream-libs --dpdk"
@@ -298,11 +298,11 @@ configure_driver() {
 			echo "[>] Installing ${CONF_DRIVER_NAME} Zero-Copy driver"
 
 			read -p "Continue (y/n)?" choice
-			case "$choice" in 
+			case "$choice" in
 			  y|Y ) ;;
 			  * ) echo "Aborting"; exit 1;;
 			esac
-	
+
 			install_zc_driver ${CONF_DRIVER_NAME}
 		fi
 	elif is_supported_by_other ${CONF_DRIVER_NAME}; then
@@ -310,7 +310,7 @@ configure_driver() {
 			install_mlx_driver
 		fi
 	fi
-	
+
 	echo "[>] Configuring PF_RING"
 
 	mkdir -p ${PF_RING_CONFIG_DIR}
@@ -331,7 +331,7 @@ configure_driver() {
 	rm ${PF_RING_CONFIG_DIR}/hugepages.conf 2>/dev/null
 	while [ "$INDEX" -ne "$NUM_NODES" ]; do
 		echo "node=${INDEX} hugepagenumber=${CONF_HUGEPAGES}" >> ${PF_RING_CONFIG_DIR}/hugepages.conf
-		let INDEX=INDEX+1 
+		let INDEX=INDEX+1
 	done
 
 	echo "[>] Detecting interfaces using $CONF_DRIVER_NAME"

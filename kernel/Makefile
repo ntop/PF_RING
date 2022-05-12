@@ -60,7 +60,7 @@ all: Makefile pf_ring.c linux/pf_ring.h
 #		echo "********** WARNING WARNING WARNING **********"; \
 #		echo "*"; \
 #		echo "* Compiling PF_RING as root might lead you to compile errors"; \
-#		echo "* Please compile PF_RING as unpriviliged user"; \
+#		echo "* Please compile PF_RING as unprivileged user"; \
 #		echo "*"; \
 #		echo "*********************************************"; \
 #	fi

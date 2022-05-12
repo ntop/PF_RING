@@ -13,8 +13,8 @@ Requires: @NDPI_DEP@, pciutils, net-tools, ethtool @EXTRA_REQUIRES@
 
 # Disable shared libs dependency check (needed by FPGA libs)
 AutoReq: no
-# 
-# As dependecies are disabled (AutoReqProv: no) we must report them manually
+#
+# As dependencies are disabled (AutoReqProv: no) we must report them manually
 %if 0%{?centos_ver} != 8
 Provides: daq_pfring_zc.so, daq_pfring.so, libpfring.so
 %else
@@ -226,5 +226,4 @@ fi
 
 %changelog
 * Wed Dec  5 2012  <deri@centos.ntop.org> - @VERS@-%{buildrev}
-- 
-
+-

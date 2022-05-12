@@ -113,7 +113,7 @@ Causes:
 
 - You might not have permissions to mmap hugepages.
 
-- Increase the "max locked memory" ulimit (see ulimit -l) to accomodate 
+- Increase the "max locked memory" ulimit (see ulimit -l) to accommodate 
   the memory needed for buffers and metadata. You can manually increase 
   the ulimit value:
 
