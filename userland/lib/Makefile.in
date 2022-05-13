@@ -91,7 +91,7 @@ NBPF_OBJS = `$(AR) t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 # Object files
 #
 OBJS_MIN = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
-	   pfring_hw_timestamp.o pfring_mod_sysdig.o pfring_mod_pcap.o ${PF_RING_ZC_OBJS} \
+	   pfring_hw_timestamp.o pfring_mod_sysdig.o pfring_mod_pcap.o pfring_device.o ${PF_RING_ZC_OBJS} \
 	   ${AF_XDP_OBJS} ${DAG_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${ACCOLADE_OBJS} \
 	   ${MYRICOM_OBJS} ${MLX_OBJS} ${NETCOPE_OBJS} ${EXABLAZE_OBJS} ${NPCAP_OBJS}
 
