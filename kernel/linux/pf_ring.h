@@ -166,9 +166,9 @@ struct timeval ns_to_timeval(const s64 nsec);
   please do not change them to unsigned
 */
 struct pkt_offset {
-  /* This 'eth_offset' offset *must* be added to all offsets below 
+  /* This 'eth_offset' offset *must* be added to all offsets below
    * ONLY if you are inside the kernel. Ignore it in user-space. */
-  int16_t eth_offset; 
+  int16_t eth_offset;
 
   int16_t vlan_offset;
   int16_t l3_offset;
@@ -268,7 +268,7 @@ struct gtp_v1_hdr {
 } __attribute__((__packed__));
 
 /* Optional: GTP_FLAGS_EXTENSION | GTP_FLAGS_SEQ_NUM | GTP_FLAGS_NPDU_NUM */
-struct gtp_v1_opt_hdr { 
+struct gtp_v1_opt_hdr {
   u_int16_t seq_num;
   u_int8_t  npdu_num;
   u_int8_t  next_ext_hdr;
@@ -293,7 +293,7 @@ typedef struct {
   u_int16_t tunneled_eth_type;         /* Ethernet type */
   u_int8_t tunneled_ip_version; /* Layer 4 protocol */
   u_int8_t tunneled_proto; /* Layer 4 protocol */
-  ip_addr tunneled_ip_src, tunneled_ip_dst;  
+  ip_addr tunneled_ip_src, tunneled_ip_dst;
   u_int16_t tunneled_l4_src_port, tunneled_l4_dst_port;
 } __attribute__((packed))
 tunnel_info;
@@ -379,7 +379,7 @@ struct pfring_extended_pkthdr {
   struct {
     u_int32_t pid /* process id */;
   } process;
-  
+
   /* NOTE: leave it as last field of the memset on parse_pkt() will fail */
   struct pkt_parsing_info parsed_pkt; /* packet parsing info */
 } __attribute__((packed));
@@ -492,7 +492,7 @@ filtering_internals;
 
 typedef struct {
   /* FILTERING_RULE_AUTO_RULE_ID to auto generate a rule ID */
-  u_int16_t rule_id;                 /* Rules are processed in order from lowest to higest id */
+  u_int16_t rule_id;                 /* Rules are processed in order from lowest to highest id */
 
   rule_action_behaviour rule_action; /* What to do in case of match */
   u_int8_t balance_id, balance_pool; /* If balance_pool > 0, then pass the packet above only if the
@@ -607,14 +607,14 @@ typedef enum {
   flow_steer_rule
 } generic_flow_rule_action_type;
 
-typedef struct { 
+typedef struct {
   generic_flow_rule_action_type action;
   u_int32_t flow_id; /* flow id from flow metadata */
   u_int32_t thread; /* id of the thread setting the rule */
 } __attribute__((packed))
 generic_flow_id_hw_rule;
 
-typedef struct { 
+typedef struct {
   generic_flow_rule_action_type action;
   ip_addr src_ip;
   ip_addr dst_ip;
@@ -640,7 +640,7 @@ typedef enum {
 typedef struct {
   hw_filtering_rule_type rule_family_type;
 
-  /* FILTERING_RULE_AUTO_RULE_ID to auto generate a rule ID 
+  /* FILTERING_RULE_AUTO_RULE_ID to auto generate a rule ID
    * Supported by Accolade and Mellanox */
   u_int16_t rule_id;
 
@@ -705,7 +705,7 @@ struct pfring_timespec {
   u_int32_t tv_nsec;
 } __attribute__((packed));
 
-typedef struct { 
+typedef struct {
   u_int32_t flow_id;
 
   u_int8_t ip_version;
@@ -728,7 +728,7 @@ typedef struct {
   u_int32_t rev_packets;
   u_int64_t fwd_bytes;
   u_int64_t rev_bytes;
-  
+
   struct pfring_timespec fwd_ts_first;
   struct pfring_timespec fwd_ts_last;
   struct pfring_timespec rev_ts_first;
@@ -1076,7 +1076,7 @@ typedef struct {
   zc_dev_info zc_dev;
   struct list_head list;
   /*
-    In the ZC world only one application can open and enable the 
+    In the ZC world only one application can open and enable the
     device@channel per direction. The array below is used to keep
     pointers to the sockets bound to device@channel.
     No more than one socket can be enabled for RX and one for TX.
@@ -1149,7 +1149,7 @@ struct dma_memory_info {
   u_int32_t num_chunks, chunk_len;
   u_int32_t num_slots,  slot_len;
   unsigned long *virtual_addr;  /* chunks pointers */
-  u_int64_t     *dma_addr;      /* per-slot DMA adresses */
+  u_int64_t     *dma_addr;      /* per-slot DMA addresses */
   struct device *hwdev;         /* dev for DMA mapping */
 };
 
@@ -1209,7 +1209,7 @@ struct pf_ring_socket {
 
   /* last device set with bind, needed to heck channels when multiple
    * devices are used with quick-mode */
-  pf_ring_device *last_bind_dev; 
+  pf_ring_device *last_bind_dev;
 
   DECLARE_BITMAP(pf_dev_mask, MAX_NUM_DEV_IDX /* bits */);
   int ring_pid;
@@ -1333,7 +1333,7 @@ typedef struct {
   /* /proc entry for ring module */
   struct proc_dir_entry *proc;
   struct proc_dir_entry *proc_dir;
-  struct proc_dir_entry *proc_dev_dir; 
+  struct proc_dir_entry *proc_dev_dir;
   struct proc_dir_entry *proc_stats_dir;
 
   /* Map ifindex to pf device idx (used for quick_mode_rings, num_rings_per_device) */
