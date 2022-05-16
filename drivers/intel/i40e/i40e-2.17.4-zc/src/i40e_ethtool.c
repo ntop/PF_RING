@@ -3325,8 +3325,14 @@ static int __i40e_get_coalesce(struct net_device *netdev,
  * modified per-queue settings, this only guarantees to represent queue 0. See
  * __i40e_get_coalesce for more details.
  **/
+#ifdef HAVE_ETHTOOL_COALESCE_EXTACK
+static int i40e_get_coalesce(struct net_device *netdev, struct ethtool_coalesce *ec,
+			      struct kernel_ethtool_coalesce __maybe_unused *kec,
+			      struct netlink_ext_ack __maybe_unused *extack)
+#else
 static int i40e_get_coalesce(struct net_device *netdev,
-			     struct ethtool_coalesce *ec)
+			      struct ethtool_coalesce *ec)
+#endif /* HAVE_ETHTOOL_COALESCE_EXTACK */
 {
 	return __i40e_get_coalesce(netdev, ec, -1);
 }
@@ -3548,8 +3554,14 @@ static int __i40e_set_coalesce(struct net_device *netdev,
  *
  * This will set each queue to the same coalesce settings.
  **/
+#ifdef HAVE_ETHTOOL_COALESCE_EXTACK
+static int i40e_set_coalesce(struct net_device *netdev, struct ethtool_coalesce *ec,
+			      struct kernel_ethtool_coalesce __maybe_unused *kec,
+			      struct netlink_ext_ack __maybe_unused *extack)
+#else
 static int i40e_set_coalesce(struct net_device *netdev,
-			     struct ethtool_coalesce *ec)
+			      struct ethtool_coalesce *ec)
+#endif /* HAVE_ETHTOOL_COALESCE_EXTACK */
 {
 	return __i40e_set_coalesce(netdev, ec, -1);
 }

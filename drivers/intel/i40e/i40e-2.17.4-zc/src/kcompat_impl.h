@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright(c) 2013 - 2021 Intel Corporation. */
+/* Copyright(c) 1999 - 2021 Intel Corporation. */
 
 #ifndef _KCOMPAT_IMPL_H_
 #define _KCOMPAT_IMPL_H_
@@ -562,35 +562,5 @@ static inline void dev_pm_domain_detach(struct device *dev, bool power_off)
 		acpi_dev_pm_detach(dev, true);
 }
 #endif /* NEED_DEV_PM_DOMAIN_ATTACH_DETACH */
-
-#ifdef NEED_CPU_LATENCY_QOS_RENAME
-/* NEED_CPU_LATENCY_QOS_RENAME
- *
- * The PM_QOS_CPU_DMA_LATENCY definition was removed in 67b06ba01857 ("PM:
- * QoS: Drop PM_QOS_CPU_DMA_LATENCY and rename related functions"). The
- * related functions were renamed to use "cpu_latency_qos_" prefix.
- *
- * Use wrapper functions to map the new API onto the API available in older
- * kernels.
- */
-#include <linux/pm_qos.h>
-static inline void
-cpu_latency_qos_add_request(struct pm_qos_request *req, s32 value)
-{
-	pm_qos_add_request(req, PM_QOS_CPU_DMA_LATENCY, value);
-}
-
-static inline void
-cpu_latency_qos_update_request(struct pm_qos_request *req, s32 new_value)
-{
-	pm_qos_update_request(req, new_value);
-}
-
-static inline void
-cpu_latency_qos_remove_request(struct pm_qos_request *req)
-{
-	pm_qos_remove_request(req);
-}
-#endif /* NEED_CPU_LATENCY_QOS_RENAME */
 
 #endif /* _KCOMPAT_IMPL_H_ */

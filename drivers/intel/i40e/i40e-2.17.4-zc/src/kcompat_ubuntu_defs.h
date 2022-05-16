@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright(c) 2013 - 2021 Intel Corporation. */
+/* Copyright(c) 2007 - 2022 Intel Corporation. */
 
 #ifndef _KCOMPAT_UBUNTU_DEFS_H_
 #define _KCOMPAT_UBUNTU_DEFS_H_
@@ -25,4 +25,11 @@
 #error "UBUNTU_VERSION is undefined"
 #endif
 
+/*****************************************************************************/
+#if (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(4,15,0,159) && \
+     UBUNTU_VERSION_CODE < UBUNTU_VERSION(4,15,0,999))
+#undef NEED_SKB_FRAG_OFF
+#endif
+
+/*****************************************************************************/
 #endif /* _KCOMPAT_UBUNTU_DEFS_H_ */
