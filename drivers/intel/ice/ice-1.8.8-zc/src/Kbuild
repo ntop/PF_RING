@@ -54,6 +54,8 @@ endif
 #ice-$(CONFIG_DCB) += ice_dcb.o ice_dcb_nl.o ice_dcb_lib.o
 #ice-$(CONFIG_XDP_SOCKETS) += ice_xsk.o
 
+obj-m += auxiliary.o
+
 EXTRA_CFLAGS += -DHAVE_PF_RING
 KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
 
