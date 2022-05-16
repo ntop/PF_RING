@@ -2798,8 +2798,14 @@ static int ixgbe_phys_id(struct net_device *netdev, u32 data)
 }
 #endif /* HAVE_ETHTOOL_SET_PHYS_ID */
 
+#ifdef HAVE_ETHTOOL_COALESCE_EXTACK
+static int ixgbe_get_coalesce(struct net_device *netdev, struct ethtool_coalesce *ec,
+			      struct kernel_ethtool_coalesce __maybe_unused *kec,
+			      struct netlink_ext_ack __maybe_unused *extack)
+#else
 static int ixgbe_get_coalesce(struct net_device *netdev,
 			      struct ethtool_coalesce *ec)
+#endif /* HAVE_ETHTOOL_COALESCE_EXTACK */
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 
@@ -2854,8 +2860,14 @@ static bool ixgbe_update_rsc(struct ixgbe_adapter *adapter)
 	return false;
 }
 
+#ifdef HAVE_ETHTOOL_COALESCE_EXTACK
+static int ixgbe_set_coalesce(struct net_device *netdev, struct ethtool_coalesce *ec,
+			      struct kernel_ethtool_coalesce __maybe_unused *kec,
+			      struct netlink_ext_ack __maybe_unused *extack)
+#else
 static int ixgbe_set_coalesce(struct net_device *netdev,
 			      struct ethtool_coalesce *ec)
+#endif /* HAVE_ETHTOOL_COALESCE_EXTACK */
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	int i;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 1999 - 2021 Intel Corporation. */
+/* Copyright(c) 2007 - 2022 Intel Corporation. */
 
 /*
  * net/core/ethtool.c - Ethtool ioctl handler
@@ -1087,7 +1087,7 @@ int _kc_generic_mii_ioctl(struct mii_if_info *mii_if,
 	case SIOCDEVPRIVATE:	/* binary compat, remove in 2.5 */
 	case SIOCGMIIPHY:
 		mii_data->phy_id = mii_if->phy_id;
-		/* fall through */
+		fallthrough;
 
 	case SIOCDEVPRIVATE + 1:/* binary compat, remove in 2.5 */
 	case SIOCGMIIREG:
