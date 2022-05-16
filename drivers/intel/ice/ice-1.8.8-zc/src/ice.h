@@ -64,7 +64,7 @@
 #include "ice_common.h"
 #include "ice_flow.h"
 #include "ice_sched.h"
-#include <linux/auxiliary_bus.h>
+#include <auxiliary_bus.h>
 #include <linux/idr.h>
 #include "ice_idc_int.h"
 #include "virtchnl.h"

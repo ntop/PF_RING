@@ -10,7 +10,7 @@
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 #include <linux/string.h>
-#include "linux/auxiliary_bus.h"
+#include "auxiliary_bus.h"
 #include "auxiliary_compat.h"
 
 static const struct auxiliary_device_id *auxiliary_match_id(const struct auxiliary_device_id *id,

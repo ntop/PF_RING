@@ -426,7 +426,7 @@ define auxiliary_post_install
 	install -d ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}
 	mv -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_MOD_DIR}/auxiliary.ko \
 	      ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/auxiliary.ko
-	install -D -m 644 linux/auxiliary_bus.h ${INSTALL_MOD_PATH}/${KSRC}/include/linux/auxiliary_bus.h
+	install -D -m 644 auxiliary_bus.h ${INSTALL_MOD_PATH}/${KSRC}/include/auxiliary_bus.h
 endef
 else
 auxiliary_post_install =
@@ -436,7 +436,7 @@ ifeq (${NEED_AUX_BUS},2)
 define auxiliary_post_uninstall
 	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/extern-symvers/auxiliary.symvers
 	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/auxiliary.ko
-	rm -f ${INSTALL_MOD_PATH}/${KSRC}/include/linux/auxiliary_bus.h
+	rm -f ${INSTALL_MOD_PATH}/${KSRC}/include/auxiliary_bus.h
 endef
 else
 auxiliary_post_uninstall =

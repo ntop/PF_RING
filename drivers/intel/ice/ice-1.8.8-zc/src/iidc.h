@@ -9,7 +9,7 @@
 #include <linux/if_ether.h>
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
-#include <linux/auxiliary_bus.h>
+#include <auxiliary_bus.h>
 
 /* This major and minor version represent IDC API version information.
  *
