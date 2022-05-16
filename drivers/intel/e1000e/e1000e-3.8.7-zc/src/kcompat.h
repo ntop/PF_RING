@@ -7378,4 +7378,60 @@ static inline void net_prefetch(void *p)
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS
 #endif /* 5.10.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0))
+#define HAVE_DEVLINK_FLASH_UPDATE_BEGIN_END_NOTIFY
+#else /* >= 5.11.0 */
+#define HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
+#define HAVE_XSK_BATCHED_DESCRIPTOR_INTERFACES
+#define HAVE_PASID_SUPPORT
+#endif /* 5.11.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0))
+/* HAVE_KOBJ_IN_MDEV_PARENT_OPS_CREATE
+ *
+ * create api changed as part of the commit c2ef2f50ad0c( vfio/mdev: Remove
+ * kobj from mdev_parent_ops->create())
+ *
+ * if flag is defined use the old API else new API
+ */
+#define HAVE_KOBJ_IN_MDEV_PARENT_OPS_CREATE
+#define HAVE_DEV_IN_MDEV_API
+#else /* >= 5.13.0 */
+#endif /* 5.13.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,14,0))
+#else /* >= 5.14.0 */
+#define HAVE_TTY_WRITE_ROOM_UINT
+#endif /* 5.14.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0))
+#define NEED_DEVLINK_ALLOC_SETS_DEV
+#define HAVE_DEVLINK_REGISTER_SETS_DEV
+#else /* >= 5.15.0 */
+#define HAVE_ETHTOOL_COALESCE_EXTACK
+#define HAVE_NDO_ETH_IOCTL
+#define HAVE_DEVICE_IN_MDEV_PARENT_OPS
+#endif /* 5.15.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0))
+#else /* >= 5.16.0 */
+#define HAVE_DEVLINK_SET_FEATURES
+#define HAVE_DEVLINK_NOTIFY_REGISTER
+#endif /* 5.16.0 */
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,17,0))
+#define NEED_NO_NETDEV_PROG_XDP_WARN_ACTION
+#define NEED_ETH_HW_ADDR_SET
+#else /* >=5.17.0*/
+#define HAVE_XDP_DO_FLUSH
+#define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
+#endif /* 5.17.0 */
+
 #endif /* _KCOMPAT_H_ */
