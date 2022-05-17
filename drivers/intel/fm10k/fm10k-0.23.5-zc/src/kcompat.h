@@ -7358,6 +7358,8 @@ u64 _kc_pci_get_dsn(struct pci_dev *dev);
 
 #ifdef HAVE_DEVLINK_REGIONS
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
+
+#if !(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3))
 struct devlink_region_ops {
 	const char *name;
 	void (*destructor)(const void *data);
@@ -7375,6 +7377,7 @@ _kc_devlink_region_create(struct devlink *devlink,
 
 #define devlink_region_create _kc_devlink_region_create
 #endif /* devlink_region_create */
+#endif /* 8,3 */
 #endif /* CONFIG_NET_DEVLINK */
 #define HAVE_DEVLINK_SNAPSHOT_CREATE_DESTRUCTOR
 #endif /* HAVE_DEVLINK_REGIONS */
