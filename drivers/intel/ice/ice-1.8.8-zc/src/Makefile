@@ -86,7 +86,7 @@ ice-y += kcompat_dim.o kcompat_net_dim.o
 endif
 
 ifeq (${NEED_AUX_BUS},2)
-obj-m += auxiliary.o
+#obj-m += auxiliary.o
 endif
 
 else	# ifneq($(KERNELRELEASE),)
@@ -197,7 +197,7 @@ auxiliary_info:
 	@../scripts/check_aux_bus --verbose --ksrc="${KSRC}" --build-kernel="${BUILD_KERNEL}"
 
 ifeq (${NEED_AUX_BUS},1)
-all: auxiliary_info
+#all: auxiliary_info
 endif
 
 help:
