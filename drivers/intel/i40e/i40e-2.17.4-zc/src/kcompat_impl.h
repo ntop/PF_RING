@@ -42,7 +42,8 @@ static inline void net_prefetch(void *p)
  * Implementing the wrappers directly for older kernels which still have the
  * old implementation of skb_frag_t is trivial.
  */
-#ifdef NEED_SKB_FRAG_OFF_ACCESSORS
+//#ifdef NEED_SKB_FRAG_OFF_ACCESSORS
+#if ( LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0) )
 static inline unsigned int skb_frag_off(const skb_frag_t *frag)
 {
 	return frag->page_offset;
