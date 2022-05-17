@@ -9,6 +9,8 @@
 #include "ice_ptp.h"
 #include "ice_ieps.h"
 
+#ifndef HAVE_PF_RING_NO_RDMA
+
 static DEFINE_IDA(ice_cdev_info_ida);
 
 static struct cdev_info_id ice_cdev_ids[] = ASSIGN_IIDC_INFO;
@@ -836,4 +838,6 @@ bool ice_is_rdma_aux_loaded(struct ice_pf *pf)
 
 	return loaded;
 }
+
+#endif /* HAVE_PF_RING_NO_RDMA */
 

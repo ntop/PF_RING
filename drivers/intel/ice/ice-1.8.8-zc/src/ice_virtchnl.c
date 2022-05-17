@@ -792,11 +792,13 @@ static int ice_vc_get_vf_res_msg(struct ice_vf *vf, u8 *msg)
 	if (vf->driver_caps & VIRTCHNL_VF_OFFLOAD_QOS)
 		vfres->vf_cap_flags |= VIRTCHNL_VF_OFFLOAD_QOS;
 
+#ifndef HAVE_PF_RING_NO_RDMA
 	if (vf->driver_caps & VIRTCHNL_VF_CAP_RDMA &&
 	    vf->vf_ops->cfg_rdma_irq_map && vf->vf_ops->clear_rdma_irq_map &&
 	    test_bit(ICE_FLAG_IWARP_ENA, pf->flags) &&
 	    ice_is_rdma_aux_loaded(pf))
 		vfres->vf_cap_flags |= VIRTCHNL_VF_CAP_RDMA;
+#endif
 
 	vfres->num_vsis = 1;
 	/* Tx and Rx queue are equal for VF */
@@ -4407,6 +4409,7 @@ static int ice_vc_rdma_msg(struct ice_vf *vf, u8 *msg, u16 len)
 	struct iidc_auxiliary_drv *iadrv;
 	int ret = -ENODEV;
 
+#ifndef HAVE_PF_RING_NO_RDMA
 	rcdi = ice_find_cdev_info_by_id(vf->pf, IIDC_RDMA_ID);
 	if (!rcdi) {
 		pr_err("Invalid RDMA peer attempted to send message to peer\n");
@@ -4421,6 +4424,7 @@ static int ice_vc_rdma_msg(struct ice_vf *vf, u8 *msg, u16 len)
 		ret = iadrv->vc_receive(rcdi, vf_abs_id, msg, len);
 	}
 	device_unlock(&rcdi->adev->dev);
+#endif
 	if (ret)
 		ice_dev_err_errno(ice_pf_to_dev(vf->pf), ret,
 				  "Failed to send message to RDMA peer");

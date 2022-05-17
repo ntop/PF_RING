@@ -86,6 +86,7 @@ ice-y += kcompat_dim.o kcompat_net_dim.o
 endif
 
 ifeq (${NEED_AUX_BUS},2)
+# HAVE_PF_RING_NO_RDMA
 #obj-m += auxiliary.o
 endif
 

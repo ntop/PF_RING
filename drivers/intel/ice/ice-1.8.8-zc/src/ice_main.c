@@ -941,7 +941,9 @@ ice_prepare_for_reset(struct ice_pf *pf, enum ice_reset_req reset_type)
 	if (test_bit(ICE_PREPARED_FOR_RESET, pf->state))
 		return;
 
+#ifndef HAVE_PF_RING_NO_RDMA
 	ice_unplug_aux_devs(pf);
+#endif
 
 	/* Notify VFs of impending reset */
 	if (ice_check_sq_alive(hw, &hw->mailboxq))
@@ -1677,7 +1679,9 @@ ice_link_event(struct ice_pf *pf, struct ice_port_info *pi, bool link_up,
 
 	set_bit(IIDC_EVENT_LINK_CHNG, iev->type);
 	iev->info.link_up = link_up;
+#ifndef HAVE_PF_RING_NO_RDMA
 	ice_send_event_to_auxs(pf, iev);
+#endif
 	kfree(iev);
 
 	vsi = ice_get_main_vsi(pf);
@@ -3233,9 +3237,11 @@ static void ice_service_task(struct work_struct *work)
 		return;
 	}
 
+#ifndef HAVE_PF_RING_NO_RDMA
 	if (test_and_clear_bit(ICE_FLAG_PLUG_AUX_DEV, pf->flags)) {
 		ice_plug_aux_devs(pf);
 	}
+#endif
 
 	/* If we are in FW recovery mode, need to exit service tasks here */
 	if (test_bit(ICE_RECOVERY_MODE, pf->state))
@@ -3247,7 +3253,9 @@ static void ice_service_task(struct work_struct *work)
 		event = kzalloc(sizeof(*event), GFP_KERNEL);
 		if (event) {
 			set_bit(IIDC_EVENT_AFTER_MTU_CHANGE, event->type);
+#ifndef HAVE_PF_RING_NO_RDMA
 			ice_send_event_to_auxs(pf, event);
+#endif
 			kfree(event);
 		}
 	}
@@ -4018,7 +4026,9 @@ static irqreturn_t ice_misc_intr(int __always_unused irq, void *data)
 			set_bit(IIDC_EVENT_CRIT_ERR, event->type);
 			/* report the entire OICR value to peer */
 			event->info.reg = oicr;
+#ifndef HAVE_PF_RING_NO_RDMA
 			ice_send_event_to_auxs(pf, event);
+#endif
 			kfree(event);
 		}
 	}
@@ -6009,6 +6019,7 @@ probe_done:
 
 	/* ready to go, so clear down state bit */
 	clear_bit(ICE_DOWN, pf->state);
+#ifndef HAVE_PF_RING_NO_RDMA
 	/* init peers only if supported */
 	if (ice_is_aux_ena(pf)) {
 		pf->cdev_infos = devm_kcalloc(dev, IIDC_MAX_NUM_AUX,
@@ -6029,6 +6040,7 @@ probe_done:
 	} else {
 		dev_warn(dev, "Aux drivers are not supported on this device\n");
 	}
+#endif
 
 #ifdef HAVE_DEVLINK_NOTIFY_REGISTER
 	ice_devlink_register(pf);
@@ -6037,10 +6049,12 @@ probe_done:
 
 	/* Unwind non-managed device resources, etc. if something failed */
 err_init_aux_unroll:
+#ifndef HAVE_PF_RING_NO_RDMA
 	if (ice_is_aux_ena(pf)) {
 		ice_for_each_aux(pf, NULL, ice_unroll_cdev_info);
 		pf->cdev_infos = NULL;
 	}
+#endif
 err_devlink_reg_param:
 	ice_devlink_unregister_params(pf);
 err_netdev_reg:
@@ -6182,9 +6196,11 @@ static void ice_remove(struct pci_dev *pdev)
 		set_bit(ICE_VF_RESETS_DISABLED, pf->state);
 		ice_free_vfs(pf);
 	}
+#ifndef HAVE_PF_RING_NO_RDMA
 	ice_unplug_aux_devs(pf);
 	ice_for_each_aux(pf, NULL, ice_unroll_cdev_info);
 	devm_kfree(dev, pf->cdev_infos);
+#endif
 
 	ice_service_task_stop(pf);
 
@@ -6362,7 +6378,9 @@ static int __maybe_unused ice_suspend(struct device *dev)
 	 */
 	disabled = ice_service_task_stop(pf);
 
+#ifndef HAVE_PF_RING_NO_RDMA
 	ice_unplug_aux_devs(pf);
+#endif
 
 	/* Already suspended?, then there is nothing to do */
 	if (test_and_set_bit(ICE_SUSPENDED, pf->state)) {
@@ -6442,7 +6460,9 @@ static int __maybe_unused ice_resume(struct device *dev)
 	if (ret)
 		ice_dev_err_errno(dev, ret, "Cannot restore interrupt scheme");
 
+#ifndef HAVE_PF_RING_NO_RDMA
 	ice_cdev_info_refresh_msix(pf);
+#endif
 
 	clear_bit(ICE_DOWN, pf->state);
 	/* Now perform PF reset and rebuild */
@@ -9330,8 +9350,11 @@ static void ice_rebuild(struct ice_pf *pf, enum ice_reset_req reset_type)
 		dev_err(dev, "No PF_VSI to update aux drivers\n");
 		goto err_vsi_rebuild;
 	}
+#ifndef HAVE_PF_RING_NO_RDMA
 	ice_cdev_info_update_vsi(ice_find_cdev_info_by_id(pf, IIDC_RDMA_ID),
 				 vsi);
+#endif
+
 #ifdef HAVE_NETDEV_SB_DEV
 	if (test_bit(ICE_FLAG_MACVLAN_ENA, pf->flags)) {
 		err = ice_vsi_rebuild_by_type(pf, ICE_VSI_OFFLOAD_MACVLAN);

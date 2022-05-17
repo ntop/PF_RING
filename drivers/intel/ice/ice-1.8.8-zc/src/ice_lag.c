@@ -160,7 +160,9 @@ ice_lag_link(struct ice_lag *lag, struct netdev_notifier_changeupper_info *info)
 	}
 
 	ice_clear_sriov_cap(pf);
+#ifndef HAVE_PF_RING_NO_RDMA
 	ice_unplug_aux_dev(ice_find_cdev_info_by_id(pf, IIDC_RDMA_ID));
+#endif
 	ice_clear_rdma_cap(pf);
 
 	lag->bonded = true;
