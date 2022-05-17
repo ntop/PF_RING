@@ -331,12 +331,14 @@ static const struct net_device_ops ice_repr_netdev_ops = {
 #endif /* HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SETUP_TC */
 #endif /* HAVE_TC_SETUP_CLSFLOWER */
 #endif /* CONFIG_NET_DEVLINK */
+#if 0
 #ifdef HAVE_NDO_OFFLOAD_STATS
 	.ndo_has_offload_stats = ice_repr_ndo_has_offload_stats,
 	.ndo_get_offload_stats = ice_repr_ndo_get_offload_stats,
 #elif defined(HAVE_RHEL7_EXTENDED_OFFLOAD_STATS)
 	.extended.ndo_has_offload_stats = ice_repr_ndo_has_offload_stats,
 	.extended.ndo_get_offload_stats = ice_repr_ndo_get_offload_stats,
+#endif
 #endif
 };
 

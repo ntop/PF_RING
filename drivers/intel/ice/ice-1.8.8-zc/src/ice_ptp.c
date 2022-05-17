@@ -2976,9 +2976,11 @@ static void
 ice_ptp_set_funcs_generic(struct ice_pf *pf, struct ptp_clock_info *info)
 {
 #ifdef HAVE_PTP_CROSSTIMESTAMP
+#ifdef X86_FEATURE_TSC_KNOWN_FREQ
 	if (boot_cpu_has(X86_FEATURE_ART) &&
 	    boot_cpu_has(X86_FEATURE_TSC_KNOWN_FREQ))
 		info->getcrosststamp = ice_ptp_getcrosststamp_generic;
+#endif
 #endif /* HAVE_PTP_CROSSTIMESTAMP */
 	info->enable = ice_ptp_gpio_enable_generic;
 
