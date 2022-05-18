@@ -1,7 +1,7 @@
 LEX = lex
 YACC = bison
 INCLUDE = -I../lib -I../../kernel
-LIBS=`../lib/pfring_config --libs` -lpthread #@NDPI_LIB@
+LIBS=`../lib/pfring_config --libs` -lpthread -lm #@NDPI_LIB@
 CC=@CC@
 AR ?= ar
 RANLIB ?= ranlib

@@ -618,6 +618,8 @@ typedef struct {
   generic_flow_rule_action_type action;
   ip_addr src_ip;
   ip_addr dst_ip;
+  ip_addr src_ip_mask;
+  ip_addr dst_ip_mask;
   u_int16_t src_port;
   u_int16_t dst_port;
   u_int8_t ip_version;
