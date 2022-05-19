@@ -49,14 +49,6 @@
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES       8
 #define ICE_MAX_NIC                            64
 
-#ifdef HAVE_XDP_SUPPORT
-#undef HAVE_XDP_SUPPORT
-#endif
-
-#ifdef HAVE_AF_XDP_ZC_SUPPORT
-#undef HAVE_AF_XDP_ZC_SUPPORT
-#endif
-
 #ifdef CONFIG_DCB
 #undef CONFIG_DCB
 #endif
@@ -2738,7 +2730,9 @@ struct _kc_bpf_prog {
 	({ unsigned long long _tmp = (ll); do_div(_tmp, d); _tmp; })
 #endif /* DIV_ROUND_DOWN_ULL */
 #else /* > 4.14 */
+#ifndef HAVE_PF_RING
 #define HAVE_XDP_SUPPORT
+#endif
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #define HAVE_TCF_EXTS_HAS_ACTION
 #endif /* 4.14.0 */
@@ -2987,12 +2981,14 @@ void _kc_pcie_print_link_status(struct pci_dev *dev);
 #endif /* SLES < 15.1 */
 
 #else
+#ifndef HAVE_PF_RING
 #include <linux/overflow.h>
 #include <net/xdp_sock.h>
 #define HAVE_XDP_FRAME_STRUCT
 #define HAVE_XDP_SOCK
 #define HAVE_NDO_XDP_XMIT_BULK_AND_FLAGS
 #define NO_NDO_XDP_FLUSH
+#endif
 #endif /* 4.18.0 */
 
 /*****************************************************************************/
