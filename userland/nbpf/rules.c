@@ -22,7 +22,7 @@
  *    - "filtering_rule.rule_action"  = "forward_packet_and_stop_rule_evaluation"
  */
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #include <stdio.h>
 #define DEBUG_PRINTF(fmt, ...) do {printf("[debug][%s:%d] " fmt, __FILE__, __LINE__, ## __VA_ARGS__); } while (0)
@@ -33,6 +33,8 @@
 #ifndef max
 #define max(a, b) (a >= b ? a : b)
 #endif
+
+#define SUPPORT_ALL_EXCEPT_RULES
 
 /***************************************************************************/
 
@@ -111,6 +113,12 @@ static /* inline */ int is_empty_ipv6(u_int8_t ipv6[16]) {
 /* ********************************************************************** */
 
 static void primitive_to_wildcard_filter(nbpf_rule_list_item_t *f, nbpf_node_t *n) {
+
+#ifdef SUPPORT_ALL_EXCEPT_RULES
+  if (n->not_rule)
+    f->fields.not_rule = 1;
+#endif
+
   switch(n->qualifiers.protocol) {
     case NBPF_Q_LINK:
       if (n->qualifiers.address == NBPF_Q_VLAN) {
@@ -630,7 +638,13 @@ nbpf_rule_list_item_t *generate_pfring_wildcard_filters(nbpf_node_t *n) {
         return NULL;
       }
 
-      head = merge_filtering_rule_lists(headl, headr);
+#ifdef SUPPORT_ALL_EXCEPT_RULES
+      if (headl->fields.not_rule || headr->fields.not_rule)
+        /* Exception: chain rules instead or merging to support a list of not rules */
+        head = chain_filtering_rule_lists(headl, headr);
+      else
+#endif
+        head = merge_filtering_rule_lists(headl, headr);
 
       break;
     case N_OR:
@@ -822,15 +836,24 @@ nbpf_rule_block_list_item_t *move_wildcard_filters_blocks_to_contiguous_memory(n
 
 /***************************************************************************/
 
-int check_filter_constraints(nbpf_node_t *n, int max_nesting_level) {
+int check_filter_constraints(nbpf_tree_t *tree, nbpf_node_t *n, int max_nesting_level) {
   if (n == NULL) {
     DEBUG_PRINTF("Empty operator subtree\n");
     return 0; /* empty and/or operators not allowed */
   }
 
   if (n->not_rule) {
+#ifndef SUPPORT_ALL_EXCEPT_RULES
+    /* The NOT operator is not currently supported in BPF-to-rules as:
+     * 1. not all adapters support negative rules
+     * 2. it complicates a lot the generate_pfring_wildcard_filters logic
+     *    to handle all AND and OR combinations */
     DEBUG_PRINTF("NOT operator not supported on capture filters\n");
     return 0;
+#endif
+  } else {
+    /* Pass rule, default should be set to drop */
+    tree->default_pass = 0;
   }
 
   switch(n->type) {
@@ -842,8 +865,8 @@ int check_filter_constraints(nbpf_node_t *n, int max_nesting_level) {
       break;
     case N_AND:
     case N_OR:
-      if (!check_filter_constraints(n->l, max_nesting_level)) return 0;
-      if (!check_filter_constraints(n->r, max_nesting_level)) return 0;
+      if (!check_filter_constraints(tree, n->l, max_nesting_level)) return 0;
+      if (!check_filter_constraints(tree, n->r, max_nesting_level)) return 0;
 
       n->level = max(n->l->level, n->r->level);
 
@@ -867,7 +890,8 @@ int check_filter_constraints(nbpf_node_t *n, int max_nesting_level) {
 /* ********************************************************************** */
 
 int nbpf_check_rules_constraints(nbpf_tree_t *tree, int max_nesting_level) {
-  return check_filter_constraints(tree->root, max_nesting_level);
+  tree->default_pass = 1;
+  return check_filter_constraints(tree, tree->root, max_nesting_level);
 }
 
 /* ********************************************************************** */

@@ -188,6 +188,13 @@ typedef int (*nbpf_ip_locality_callback)(nbpf_ip_addr *ip, u_int8_t ip_version, 
 PACKED_ON typedef struct {
   nbpf_node_t *root;
   int compatibility_level; /* external use */
+
+  /* Default action - This is used when building hw rules to set the default policy
+     - No rules: default pass (pass all)
+     - All not rules: default pass (pass all except ..)
+     - All pass rules or mixed: default drop (drop all except ..)
+   */
+  int default_pass;
  
   /* Callback for custom primitive node match 
    * Return 1 in case of match, 0 otherwise */ 
@@ -260,11 +267,11 @@ PACKED_ON typedef struct nbpf_rule_core_fields_byte_match {
 nbpf_rule_core_fields_byte_match_t;
 
 PACKED_ON typedef struct {
+  u_int8_t not_rule;
   u_int8_t smac[6], dmac[6]; 
   u_int8_t proto; /* tcp, udp, sctp */
   u_int8_t ip_version;
   u_int8_t gtp, vlan, mpls;
-  u_int8_t __padding;
   u_int16_t vlan_id, l7_proto;
   u_int16_t mpls_label;
   nbpf_ip_addr shost, dhost;
