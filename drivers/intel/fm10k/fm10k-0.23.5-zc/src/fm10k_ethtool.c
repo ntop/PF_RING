@@ -661,10 +661,16 @@ clear_reset:
 	return err;
 }
 
-static int fm10k_get_coalesce(struct net_device *dev,
+#ifdef HAVE_ETHTOOL_COALESCE_EXTACK
+static int fm10k_get_coalesce(struct net_device *netdev, struct ethtool_coalesce *ec,
+			      struct kernel_ethtool_coalesce __maybe_unused *kec,
+			      struct netlink_ext_ack __maybe_unused *extack)
+#else
+static int fm10k_get_coalesce(struct net_device *netdev,
 			      struct ethtool_coalesce *ec)
+#endif /* HAVE_ETHTOOL_COALESCE_EXTACK */
 {
-	struct fm10k_intfc *interface = netdev_priv(dev);
+	struct fm10k_intfc *interface = netdev_priv(netdev);
 
 	ec->use_adaptive_tx_coalesce = ITR_IS_ADAPTIVE(interface->tx_itr);
 	ec->tx_coalesce_usecs = interface->tx_itr & ~FM10K_ITR_ADAPTIVE;
@@ -675,10 +681,16 @@ static int fm10k_get_coalesce(struct net_device *dev,
 	return 0;
 }
 
-static int fm10k_set_coalesce(struct net_device *dev,
+#ifdef HAVE_ETHTOOL_COALESCE_EXTACK
+static int fm10k_set_coalesce(struct net_device *netdev, struct ethtool_coalesce *ec,
+			      struct kernel_ethtool_coalesce __maybe_unused *kec,
+			      struct netlink_ext_ack __maybe_unused *extack)
+#else
+static int fm10k_set_coalesce(struct net_device *netdev,
 			      struct ethtool_coalesce *ec)
+#endif /* HAVE_ETHTOOL_COALESCE_EXTACK */
 {
-	struct fm10k_intfc *interface = netdev_priv(dev);
+	struct fm10k_intfc *interface = netdev_priv(netdev);
 	struct fm10k_q_vector *qv;
 	u16 tx_itr, rx_itr;
 	int i;

@@ -1940,9 +1940,17 @@ static const struct net_device_ops fm10k_netdev_ops = {
 #ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN
 	.ndo_set_vf_vlan	= fm10k_ndo_set_vf_vlan,
 #endif /* HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SET_VF_VLAN */
+
 #ifdef HAVE_UDP_ENC_RX_OFFLOAD
+#ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_UDP_TUNNEL
 	.ndo_udp_tunnel_add	= fm10k_udp_tunnel_add,
 	.ndo_udp_tunnel_del	= fm10k_udp_tunnel_del,
+#else
+#ifndef HAVE_UDP_TUNNEL_NIC_INFO
+	.ndo_udp_tunnel_add	= fm10k_udp_tunnel_add,
+	.ndo_udp_tunnel_del	= fm10k_udp_tunnel_del,
+#endif
+#endif
 #endif
 #ifdef NETIF_F_HW_L2FW_DOFFLOAD
 	.ndo_dfwd_add_station	= fm10k_dfwd_add_station,

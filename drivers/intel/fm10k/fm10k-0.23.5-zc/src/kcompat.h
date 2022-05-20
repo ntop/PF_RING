@@ -936,6 +936,24 @@ struct _kc_ethtool_pauseparam {
 #endif /* SLE_LOCALVERSION_CODE */
 
 /*
+ * Include the definitions file for HAVE/NEED flags for the standard upstream
+ * kernels.
+ *
+ * Then, based on the distribution we detect, load the distribution specific
+ * definitions file that customizes the definitions for the target
+ * distribution.
+ */
+#include "kcompat_std_defs.h"
+
+#ifdef CONFIG_SUSE_KERNEL
+#include "kcompat_sles_defs.h"
+#elif UBUNTU_VERSION_CODE
+#include "kcompat_ubuntu_defs.h"
+#elif RHEL_RELEASE_CODE
+#include "kcompat_rhel_defs.h"
+#endif
+
+/*
  * ADQ depends on __TC_MQPRIO_MODE_MAX and related kernel code
  * added around 4.15. Some distributions (e.g. Oracle Linux 7.7)
  * have done a partial back-port of that to their kernels based
@@ -7340,6 +7358,8 @@ u64 _kc_pci_get_dsn(struct pci_dev *dev);
 
 #ifdef HAVE_DEVLINK_REGIONS
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
+
+#if !(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,3))
 struct devlink_region_ops {
 	const char *name;
 	void (*destructor)(const void *data);
@@ -7357,6 +7377,7 @@ _kc_devlink_region_create(struct devlink *devlink,
 
 #define devlink_region_create _kc_devlink_region_create
 #endif /* devlink_region_create */
+#endif /* 8,3 */
 #endif /* CONFIG_NET_DEVLINK */
 #define HAVE_DEVLINK_SNAPSHOT_CREATE_DESTRUCTOR
 #endif /* HAVE_DEVLINK_REGIONS */

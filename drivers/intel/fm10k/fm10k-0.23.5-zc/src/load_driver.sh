@@ -84,15 +84,12 @@ fi
 IS_RDIF_INSTALLED=`which rdif | wc -l`
 IS_RDIFCTL_INSTALLED=`which rdifctl | wc -l`
 
+IS_SILICOM=0
 if [ "$IS_RDIF_INSTALLED" -eq 1 ]; then
 	if [ "$IS_RDIFCTL_INSTALLED" -eq 1 ]; then
 		IS_SILICOM=1
 	fi
 fi
-
-# Comment the line below if you want to configure the switch 
-# with rdif/rdifctl (when available) instead of nbrokerd
-IS_SILICOM=0
 
 if [ "$IS_SILICOM" -eq 1 ]; then
 	rdif stop
@@ -115,18 +112,6 @@ if [ "$IS_SILICOM" -eq 1 ]; then
 	rdifctl dir port 2 redir_port 4
 	rdifctl dir port 4 redir_port 2
 else
-	NBROKER_PATH="$(cd ../../../../../userland/nbroker; pwd)"
-	if [ ! -e $NBROKER_PATH/nbrokerd/nbrokerd ]; then
-		cd $NBROKER_PATH
-		./configure && make
-	fi
-	if [ ! -e /usr/local/lib/librrc.so ]; then
-		cd $NBROKER_PATH
-		make install
-		ldconfig
-	fi
-	echo "FM10K switch initialization.."
-	nohup $NBROKER_PATH/nbrokerd/nbrokerd -c $NBROKER_PATH/rrclib/etc/rrc/fm_platform_attributes.cfg &
-	sleep 12 # It takes a while to initialize the switch
+	echo "Please install Silicom rdif to configure the adapter"
 fi
 

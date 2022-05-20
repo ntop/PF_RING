@@ -3950,8 +3950,13 @@ bool __i40e_chk_linearize(struct sk_buff *skb)
 		 * descriptor associated with the fragment.
 		 */
 		if (stale_size > I40E_MAX_DATA_PER_TXD) {
+#ifdef NEED_SKB_FRAG_OFF_ACCESSORS
+			int align_pad = -(_skb_frag_off(stale)) &
+					(I40E_MAX_READ_REQ_SIZE - 1);
+#else
 			int align_pad = -(skb_frag_off(stale)) &
 					(I40E_MAX_READ_REQ_SIZE - 1);
+#endif
 
 			sum -= align_pad;
 			stale_size -= align_pad;
