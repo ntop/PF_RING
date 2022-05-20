@@ -852,8 +852,10 @@ int check_filter_constraints(nbpf_tree_t *tree, nbpf_node_t *n, int max_nesting_
     return 0;
 #endif
   } else {
-    /* Pass rule, default should be set to drop */
-    tree->default_pass = 0;
+    if (n->type == N_PRIMITIVE) {
+      /* Pass rule, default should be set to drop */
+      tree->default_pass = 0;
+    }
   }
 
   switch(n->type) {
