@@ -118,13 +118,16 @@ extern const char ice_drv_ver[];
 #define ICE_MAX_CSR_SPACE	(8 * 1024 * 1024 - 64 * 1024)
 #endif /* CONFIG_DEBUG_FS */
 #define ICE_REQ_DESC_MULTIPLE	32
-#define ICE_MIN_NUM_DESC	64
-#define ICE_MAX_NUM_DESC	8160
-#define ICE_DFLT_MIN_RX_DESC	512
 #ifdef HAVE_PF_RING
+#define ICE_MIN_NUM_DESC	64
+#define ICE_MAX_NUM_DESC	4096
+#define ICE_DFLT_MIN_RX_DESC	512
 #define ICE_DFLT_NUM_RX_DESC	4096
 #define ICE_DFLT_NUM_TX_DESC	4096
 #else
+#define ICE_MIN_NUM_DESC	64
+#define ICE_MAX_NUM_DESC	8160
+#define ICE_DFLT_MIN_RX_DESC	512
 #define ICE_DFLT_NUM_RX_DESC	2048
 #define ICE_DFLT_NUM_TX_DESC	256
 #endif
