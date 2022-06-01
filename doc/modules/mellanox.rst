@@ -168,3 +168,16 @@ Example of removing a filtering rule by ID:
 
    pfring_remove_hw_rule(socket, RULE_ID);
 
+RoCEv2/RDMA Capture
+-------------------
+
+Mellanox adapters support RoCEv2/RDMA traffic natively. This traffic is not captured
+in the standard mode as it is handled by the adapter, even if this looks like standard UDP
+traffic. In order to enable RoCEv2/RDMA traffic capture, a special sniffing mode should be
+enabled through the PF_RING_MLX_SNIFFER_MODE environment variable as below:
+
+.. code-block:: console
+
+   PF_RING_MLX_SNIFFER_MODE=1 ./pfcount -i mlx:mlx5_0 -v 1
+
+
