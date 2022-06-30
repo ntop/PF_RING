@@ -1,6 +1,63 @@
 # CHANGELOG
 
 ---------------------------------------
+2022-06-30 PF_RING 8.2
+
+* PF_RING Library
+ - New new pfring_get_caplen API
+ - New pfring_get_link_type API
+ - Add src_ip_mask and dst_ip_mask to generic_flow_rule
+ - Add priority to hw_filtering_rule
+ - Add module version to device info returned by pfring_findalldevs
+ - Refactor device name parsing
+ - Use sockaddr_ll in bind (to supports interface names longer than 14 chars)
+
+* ZC Library
+ - New Mellanox support for ConnectX 4/5/6 adapters, including hardware offloads for timestamp, filtering, RSS
+ - Fix pfring_zc_numa_get_cpu_node
+
+* FT Library
+ - Add native support for flow export over ZMQ
+
+* PF_RING Kernel Module
+ - Add support for VXLAN
+ - Add support for both sockaddr and sockaddr_ll in bind
+ - Refactor kernel locking
+ - Discard VLAN in hash cluster_per_flow_ip_with_dup_tuple calculation
+ - Detect when a process owning a PF_RING socket changes the PID (e.g. fork)
+ - Export process PID to userspace
+ - Fix compilation on latest kernels for Rocky Linux and RH 8.5, Debian 9, 10, 11, Ubuntu 18, 20, 22
+ - Fix net namespace handling
+ - Fix crash when renaming /proc entries
+
+* PF_RING Capture Modules
+ - Fix drop statistics on Napatech with HBA set
+
+* ZC Drivers
+ - New igb-zc driver v.5.10.2
+ - New i40e-zc driver v.2.17.4
+ - New ice-zc driver v.1.8.8
+
+* nBPF 
+ - Fix double free
+
+* Examples
+ - New sample application pfsend_multichannel to send traffic using RSS
+ - New zdelay application to forward traffic between interfaces, adding a configurable delay
+ - pfcount_multichannel: remove limit on number of threads
+ - zbalance_ipc: improve hashing modes (e.g. add -Y to control eth type)
+ - pfcount:
+   - Add -0 to steer all traffic to RSS queueu 0
+   - Add -P to set rule priority
+ - ftflow_dpdk:
+   - Set RSS mode/hf (required on some adapters e.g. Mellanox)
+   - Use time from hardware timestamp when available
+
+* Misc
+ - Add support for Ubuntu 22
+ - Remove nBroker support (fm10k adapters are EOL)
+
+---------------------------------------
 2021-08-11 PF_RING 8.0
 
 * PF_RING Library
