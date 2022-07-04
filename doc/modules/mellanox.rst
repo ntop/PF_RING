@@ -180,4 +180,6 @@ enabled through the PF_RING_MLX_SNIFFER_MODE environment variable as below:
 
    PF_RING_MLX_SNIFFER_MODE=1 ./pfcount -i mlx:mlx5_0 -v 1
 
+Please note that hardware filtering (including BPF offload) does not work when this mode
+is enabled.
 
