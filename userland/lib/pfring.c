@@ -237,8 +237,10 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   char *ft_conf_file;
   pfring *ring;
 
-  if (device_name == NULL)
+  if (device_name == NULL) {
+    errno = EINVAL;
     return NULL;
+  }
 
 #ifdef RING_DEBUG
   printf("[PF_RING] Attempting to pfring_open(%s)\n", device_name);
@@ -306,6 +308,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
       ret = pfring_ft_load_ndpi_protocols(ring->ft, ft_proto_file);
 
       if (ret != 0) {
+        errno = EINVAL;
         return NULL;
       }
     }
@@ -314,6 +317,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
       ret = pfring_ft_load_configuration(ring->ft, ft_conf_file);
 
       if (ret != 0) {
+        errno = EINVAL;
         return NULL;
       }
     }
@@ -352,7 +356,6 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
 
   /* default */
   if(!mod_found) {
-    errno = ENODEV;
     ring->device_name = strdup(device_name ? device_name : "any");
     if (ring->device_name == NULL) {
       errno = ENOMEM;
@@ -363,6 +366,8 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   }
 
   if(ret < 0) {
+    if (!errno)
+      errno = ENODEV;
     if (ring->device_name != NULL) free(ring->device_name);
     free(ring);
     return NULL;
@@ -371,6 +376,7 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   if(unlikely(ring->reentrant)) {
     if (pfring_rwlock_init(&ring->rx_lock, PTHREAD_PROCESS_PRIVATE) != 0 || 
         pfring_rwlock_init(&ring->tx_lock, PTHREAD_PROCESS_PRIVATE) != 0) {
+      errno = ENOTSUP;
       free(ring);
       return NULL;
     }
