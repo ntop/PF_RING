@@ -390,6 +390,8 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   if(ring->mtu == 0) ring->mtu = 9000 /* Jumbo MTU */;
 
   pfring_get_bound_device_ifindex(ring, &ring->device_id);
+  errno = 0; /* Ignore errno from pfring_get_bound_device_ifindex */
+
   ring->initialized = 1;
 
 #ifdef RING_DEBUG
