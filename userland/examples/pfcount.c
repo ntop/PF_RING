@@ -886,21 +886,12 @@ void* packet_consumer_thread(void* _id) {
 
   memset(&hdr, 0, sizeof(hdr));
 
-  while(1) {
-    int rc;
-    u_int len;
+  while(!stats->do_shutdown) {
 
-    if(stats->do_shutdown) break;
+    if(pfring_recv(pd, &buffer_p, NO_ZC_BUFFER_LEN, &hdr, wait_for_packet) > 0) {
 
-    if((rc = pfring_recv(pd, &buffer_p, NO_ZC_BUFFER_LEN, &hdr, wait_for_packet)) > 0) {
-      if(stats->do_shutdown) break;
       dummyProcessPacket(&hdr, buffer, (u_char*)thread_id);
-#ifdef TEST_SEND
-      buffer[0] = 0x99;
-      buffer[1] = 0x98;
-      buffer[2] = 0x97;
-      pfring_send(pd, buffer, hdr.caplen);
-#endif
+
     } else {
       if(wait_for_packet == 0) {
 #ifdef USE_PF_RING_POLL_API
@@ -908,24 +899,6 @@ void* packet_consumer_thread(void* _id) {
 #else
         sched_yield();
 #endif
-      }
-    }
-
-    if(0) {
-      struct simple_stats {
-	u_int64_t num_pkts, num_bytes;
-      };
-      struct simple_stats stats;
-
-      len = sizeof(stats);
-      rc = pfring_get_filtering_rule_stats(pd, 5, (char*)&stats, &len);
-      if(rc < 0)
-	fprintf(stderr, "pfring_get_filtering_rule_stats() failed [rc=%d]\n", rc);
-      else {
-        if (!quiet)
-	  printf("[Pkts=%u][Bytes=%u]\n",
-	         (unsigned int)stats.num_pkts,
-	         (unsigned int)stats.num_bytes);
       }
     }
   }
