@@ -59,6 +59,8 @@
 #define DEFAULT_DEVICE     "eth0"
 #define NO_ZC_BUFFER_LEN     9000
 #define BURST_SIZE             32
+#define USE_PF_RING_LOOP_API
+//#define USE_PF_RING_POLL_API
 
 pfring  *pd;
 int verbose = 0, quiet = 0, num_threads = 1;
@@ -873,11 +875,8 @@ void* packet_consumer_thread(void* _id) {
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
   u_char buffer[NO_ZC_BUFFER_LEN];
   u_char *buffer_p = buffer;
-
   u_long core_id = thread_id % numCPU;
   struct pfring_pkthdr hdr;
-
-  /* printf("packet_consumer_thread(%lu)\n", thread_id); */
 
   if((num_threads > 1) && (numCPU > 1)) {
     if(bind2core(core_id) == 0)
@@ -903,7 +902,13 @@ void* packet_consumer_thread(void* _id) {
       pfring_send(pd, buffer, hdr.caplen);
 #endif
     } else {
-      if(wait_for_packet == 0) sched_yield();
+      if(wait_for_packet == 0) {
+#ifdef USE_PF_RING_POLL_API
+        pfring_poll(pd, 1 /* msec */);
+#else
+        sched_yield();
+#endif
+      }
     }
 
     if(0) {
@@ -981,11 +986,8 @@ void* chunk_consumer_thread(void* _id) {
   u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
   void *chunk_p = NULL;
   pfring_chunk_info chunk_info;
-
   u_long core_id = thread_id % numCPU;
   struct pfring_pkthdr hdr;
-
-  /* printf("packet_consumer_thread(%lu)\n", thread_id); */
 
   if((num_threads > 1) && (numCPU > 1)) {
     if(bind2core(core_id) == 0)
@@ -1480,7 +1482,11 @@ int main(int argc, char* argv[]) {
     } else if (burst_mode && pd->recv_burst) {
       burst_consumer_thread(0);
     } else {
+#ifdef USE_PF_RING_LOOP_API 
       pfring_loop(pd, dummyProcessPacket, (u_char*)NULL, wait_for_packet);
+#else
+      packet_consumer_thread(0);
+#endif
     }
   } else {
     pthread_t my_thread;
