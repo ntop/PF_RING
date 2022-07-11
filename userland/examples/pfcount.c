@@ -888,18 +888,24 @@ void* packet_consumer_thread(void* _id) {
 
   while(!stats->do_shutdown) {
 
+#ifdef USE_PF_RING_POLL_API
+    if(pfring_recv(pd, &buffer_p, NO_ZC_BUFFER_LEN, &hdr, 0) > 0) {
+#else
     if(pfring_recv(pd, &buffer_p, NO_ZC_BUFFER_LEN, &hdr, wait_for_packet) > 0) {
+#endif
 
       dummyProcessPacket(&hdr, buffer, (u_char*)thread_id);
 
     } else {
-      if(wait_for_packet == 0) {
-#ifdef USE_PF_RING_POLL_API
-        pfring_poll(pd, 1 /* msec */);
-#else
+      if (stats->do_shutdown)
+        break;
+
+      if(wait_for_packet == 0)
         sched_yield();
+#ifdef USE_PF_RING_POLL_API
+      else
+        pfring_poll(pd, 1 /* msec */);
 #endif
-      }
     }
   }
 
