@@ -4405,11 +4405,11 @@ err:
  */
 static int ice_vc_rdma_msg(struct ice_vf *vf, u8 *msg, u16 len)
 {
+	int ret = -ENODEV;
+#ifndef HAVE_PF_RING_NO_RDMA
 	struct iidc_core_dev_info *rcdi;
 	struct iidc_auxiliary_drv *iadrv;
-	int ret = -ENODEV;
 
-#ifndef HAVE_PF_RING_NO_RDMA
 	rcdi = ice_find_cdev_info_by_id(vf->pf, IIDC_RDMA_ID);
 	if (!rcdi) {
 		pr_err("Invalid RDMA peer attempted to send message to peer\n");

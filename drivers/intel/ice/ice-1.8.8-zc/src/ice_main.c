@@ -6047,15 +6047,15 @@ probe_done:
 #endif /* HAVE_DEVLINK_NOTIFY_REGISTER */
 	return 0;
 
+#ifndef HAVE_PF_RING_NO_RDMA
 	/* Unwind non-managed device resources, etc. if something failed */
 err_init_aux_unroll:
-#ifndef HAVE_PF_RING_NO_RDMA
 	if (ice_is_aux_ena(pf)) {
 		ice_for_each_aux(pf, NULL, ice_unroll_cdev_info);
 		pf->cdev_infos = NULL;
 	}
-#endif
 err_devlink_reg_param:
+#endif
 	ice_devlink_unregister_params(pf);
 err_netdev_reg:
 err_send_version_unroll:
@@ -6157,7 +6157,9 @@ static void ice_setup_mc_magic_wake(struct ice_pf *pf)
 static void ice_remove(struct pci_dev *pdev)
 {
 	struct ice_pf *pf = pci_get_drvdata(pdev);
+#ifndef HAVE_PF_RING_NO_RDMA
 	struct device *dev = &pf->pdev->dev;
+#endif
 	int i;
 
 	if (!pf)
