@@ -7434,4 +7434,10 @@ static inline void net_prefetch(void *p)
 #define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
 #endif /* 5.17.0 */
 
+/*****************************************************************************/
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,6)))
+#else /* >= 8.6 */
+#define HAVE_ETHTOOL_COALESCE_EXTACK
+#endif /* 8.6 */
+
 #endif /* _KCOMPAT_H_ */
