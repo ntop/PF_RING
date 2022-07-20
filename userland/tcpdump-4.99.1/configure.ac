@@ -45,6 +45,9 @@ if test "$ac_cv_header_net_pfvar_h" = yes; then
 	fi
 fi
 
+dnl> PF_RING
+LIBS="$LIBS ../lib/libpfring.a -lpthread `../lib/pfring_config --libs`"
+
 case "$host_os" in
 
 darwin*)
