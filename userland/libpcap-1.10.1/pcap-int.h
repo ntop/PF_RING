@@ -52,6 +52,16 @@
 
 #include "portability.h"
 
+#ifdef HAVE_PF_RING
+#define HAVE_PCAP
+#include "pfring.h"
+#include "nbpf.h"
+#endif
+
+#ifdef HAVE_PCAP_NPCAP
+#include "npcap.h"
+#endif
+
 /*
  * Version string.
  * Uses PACKAGE_VERSION from config.h.
@@ -344,6 +354,16 @@ struct pcap {
 	get_airpcap_handle_op_t get_airpcap_handle_op;
 #endif
 	cleanup_op_t cleanup_op;
+
+#ifdef HAVE_PF_RING
+	pfring *ring;
+	char *bpf_filter;
+	char *timeline;
+	int sync_selectable_fd;
+#endif
+#ifdef HAVE_PCAP_NPCAP
+	npcap_fd_t *npcapfd;
+#endif
 };
 
 /*

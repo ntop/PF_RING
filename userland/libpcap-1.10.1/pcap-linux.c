@@ -336,6 +336,12 @@ static struct sock_fprog	total_fcode
 
 static int	iface_dsa_get_proto_info(const char *device, pcap_t *handle);
 
+#ifdef HAVE_PF_RING
+static int pcap_read_pf_ring(pcap_t *, int, pcap_handler , u_char *);
+
+static u_int8_t pf_ring_active_poll = 0;
+#endif
+
 pcap_t *
 pcap_create_interface(const char *device, char *ebuf)
 {
@@ -794,6 +800,15 @@ static void	pcap_cleanup_linux( pcap_t *handle )
 	int ret;
 #endif /* HAVE_LIBNL */
 
+#ifdef HAVE_PF_RING
+	if (handle->timeline != NULL) { free(handle->timeline); handle->timeline = NULL; }
+	if (handle->ring != NULL) {
+		pfring_close(handle->ring);
+		handle->ring = NULL;
+		return;
+	}
+#endif
+
 	if (handlep->must_do_on_close != 0) {
 		/*
 		 * There's something we have to do when closing this
@@ -947,6 +962,41 @@ static void pcap_breakloop_linux(pcap_t *handle)
 	(void)write(handlep->poll_breakloop_fd, &value, sizeof(value));
 }
 
+#ifdef HAVE_PF_RING
+static int is_dummy_interface(const char *device, char **path, char **interface) 
+{
+	const char conf_root[] = "/var/tmp/pf_ring/dummy";
+	const char type_token[]  = "type=";
+	const char path_token[]  = "path=";
+	const char interface_token[] = "interface=";
+	char conf_path[256];
+	char buffer[256];
+	FILE *fd;
+
+	*path = *interface = NULL;
+
+	snprintf(conf_path, sizeof(conf_path), "%s/%s", conf_root, device);
+	fd = fopen(conf_path, "r");
+	if (fd == NULL) return 0; /* not a dummy interface */
+
+	while (fgets(buffer, sizeof(buffer), fd)) {
+		if (buffer[strlen(buffer) - 1] == '\n') buffer[strlen(buffer) - 1] = '\0';
+
+		if (strncmp(buffer, type_token, sizeof(type_token) - 1) == 0) {
+			// nothing to do
+		} else if (strncmp(buffer, path_token, sizeof(path_token) - 1) == 0) {
+			*path = strdup(&buffer[sizeof(path_token) - 1]);
+		} else if (strncmp(buffer, interface_token, sizeof(interface_token) - 1) == 0) {
+			*interface = strdup(&buffer[sizeof(interface_token) - 1]);
+		}
+	}
+
+	fclose(fd);
+
+	return 1;
+}
+#endif
+
 /*
  *  Get a handle for a live capture from the given device. You can
  *  pass NULL as device to get all packages (without link level
@@ -968,6 +1018,7 @@ pcap_activate_linux(pcap_t *handle)
 
 	device = handle->opt.device;
 
+#ifndef HAVE_PF_RING
 	/*
 	 * Make sure the name we were handed will fit into the ioctls we
 	 * might perform on the device; if not, return a "No such device"
@@ -983,6 +1034,7 @@ pcap_activate_linux(pcap_t *handle)
 		status = PCAP_ERROR_NO_SUCH_DEVICE;
 		goto fail;
 	}
+#endif
 
 	/*
 	 * Turn a negative snapshot value (invalid), a snapshot value of
@@ -1012,12 +1064,117 @@ pcap_activate_linux(pcap_t *handle)
 	if (is_any_device) {
 		if (handle->opt.promisc) {
 			handle->opt.promisc = 0;
+#ifndef HAVE_PF_RING
 			/* Just a warning. */
 			snprintf(handle->errbuf, PCAP_ERRBUF_SIZE,
 			    "Promiscuous mode not supported on the \"any\" device");
 			status = PCAP_WARNING_PROMISC_NOTSUP;
+#endif
 		}
 	}
+
+#ifdef HAVE_PF_RING
+	if (!getenv("PCAP_NO_PF_RING")) {
+		/* Code courtesy of Chris Wakelin <c.d.wakelin@reading.ac.uk> */
+		char *clusterId;
+		int flags = PF_RING_TIMESTAMP;
+		char *appname, *active = getenv("PCAP_PF_RING_ACTIVE_POLL"), *rss_rehash;
+		char timeline_device[256];
+		char *real_device = NULL;
+		char *always_sync_fd;
+
+		if (handle->opt.promisc) flags |= PF_RING_PROMISC;
+		if (getenv("PCAP_PF_RING_DNA_RSS" /* deprecated (backward compatibility) */ )) flags |= PF_RING_ZC_SYMMETRIC_RSS;
+		if (getenv("PCAP_PF_RING_ZC_RSS"))  flags |= PF_RING_ZC_SYMMETRIC_RSS;
+		if (getenv("PCAP_PF_RING_STRIP_HW_TIMESTAMP")) flags |= PF_RING_STRIP_HW_TIMESTAMP;
+		if (getenv("PCAP_PF_RING_HW_TIMESTAMP") || handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) flags |= PF_RING_HW_TIMESTAMP;
+		if (getenv("PCAP_PF_RING_USERSPACE_BPF")) flags |= PF_RING_USERSPACE_BPF;
+
+		if (active) pf_ring_active_poll = atoi(active);
+
+		if (is_dummy_interface(device, &handle->timeline, &real_device)) {
+			if (real_device != NULL) {
+				device = real_device;
+			} else if (handle->timeline) {
+				snprintf(timeline_device, sizeof(timeline_device), "timeline:%s", handle->timeline);
+				device = timeline_device; 
+			}
+		}
+
+		handle->ring = pfring_open((char *) device, handle->snapshot, flags);
+
+		if (handle->ring != NULL) {
+
+			if (getenv("PCAP_PF_RING_RECV_ONLY")) pfring_set_socket_mode(handle->ring, recv_only_mode);
+
+			if (clusterId = getenv("PCAP_PF_RING_CLUSTER_ID")) {
+				if (atoi(clusterId) > 0 && atoi(clusterId) < 255) {
+					if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_2_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_2_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_4_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_4_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_TCP_5_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_tcp_5_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_ROUNDROBIN"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_round_robin);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_INNER_FLOW"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_inner_flow);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_INNER_FLOW_2_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_inner_flow_2_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_INNER_FLOW_4_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_inner_flow_4_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_INNER_FLOW_5_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_inner_flow_5_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_INNER_FLOW_TCP_5_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_inner_flow_tcp_5_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_IP_5_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_ip_5_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_INNER_FLOW_IP_5_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_inner_flow_ip_5_tuple);
+					else if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_IP_WITH_DUP_TUPLE"))
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_ip_with_dup_tuple);
+					else /* Default: if (getenv("PCAP_PF_RING_USE_CLUSTER_PER_FLOW_5_TUPLE")) */
+						pfring_set_cluster(handle->ring, atoi(clusterId), cluster_per_flow_5_tuple);
+				}
+			}
+
+			if (appname = getenv("PCAP_PF_RING_APPNAME"))
+			if (strlen(appname) > 0 && strlen(appname) <= 32)
+				pfring_set_application_name(handle->ring, appname);
+            
+			if (rss_rehash = getenv("PCAP_PF_RING_RSS_REHASH")) {
+				if (atoi(rss_rehash))
+					pfring_enable_rss_rehash(handle->ring);
+			}
+			pfring_set_poll_watermark(handle->ring, 1 /* watermark */);
+			if (always_sync_fd = getenv("PCAP_PF_RING_ALWAYS_SYNC_FD"))
+				handle->sync_selectable_fd = atoi(always_sync_fd);
+			else
+				handle->sync_selectable_fd = 0;
+
+			handle->fd = handle->ring->fd;
+			handle->bufsize = handle->snapshot;
+			handle->linktype = DLT_EN10MB;
+			handle->offset = 2;
+			handle->setnonblock_op = pcap_setnonblock_linux;
+			handle->getnonblock_op = pcap_getnonblock_linux;
+
+			handlep->vlan_offset = -1; /* unknown */
+			handlep->timeout = handle->opt.timeout; /* copy timeout value */
+
+			/* printf("Open HAVE_PF_RING(%s)\n", device); */
+		}
+
+		if (real_device != NULL) free(real_device);
+		device = real_device = NULL;
+	} else
+        	handle->ring = NULL;
+
+	if (handle->ring == NULL) {
+		/* printf("Open HAVE_PF_RING(%s) failed. Fallback to pcap\n", handlep->device); */
+#endif
 
 	/* copy timeout value */
 	handlep->timeout = handle->opt.timeout;
@@ -1098,6 +1255,19 @@ pcap_activate_linux(pcap_t *handle)
 #endif
 	}
 	handle->oneshot_callback = pcap_oneshot_linux;
+
+#ifdef HAVE_PF_RING
+        }
+
+	if (handle->ring != NULL) {
+		handle->read_op = pcap_read_pf_ring;
+		/* Note: pfring_enable_ring() has been moved to pcap_read_pf_ring()
+		 * to avoid receiving packets while the bpf filter has not been set yet.
+		 * Note this is not a problem for applications lieke tshark using select
+		 * because rings get automatically activated on poll too. */
+		handle->selectable_fd = pfring_get_selectable_fd(handle->ring);
+	} else
+#endif
 	handle->selectable_fd = handle->fd;
 
 	return status;
@@ -1106,6 +1276,20 @@ fail:
 	pcap_cleanup_linux(handle);
 	return status;
 }
+
+#ifdef HAVE_PF_RING
+void pcap_set_appl_name_linux(pcap_t *handle, char *appl_name)
+{
+	if (handle->ring)
+		pfring_set_application_name(handle->ring, appl_name);
+}
+
+void pcap_set_cluster(pcap_t *handle, u_int cluster_id)
+{
+	if (handle->ring)
+		pfring_set_cluster(handle->ring, cluster_id, cluster_per_flow);
+}
+#endif
 
 static int
 pcap_set_datalink_linux(pcap_t *handle, int dlt)
@@ -1243,6 +1427,14 @@ pcap_inject_linux(pcap_t *handle, const void *buf, int size)
 		return (-1);
 	}
 
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL) {
+		if (!handle->ring->enabled)
+			pfring_enable_ring(handle->ring);
+		return pfring_send(handle->ring, (char *) buf, size, 1);
+	}
+#endif
+
 	ret = (int)send(handle->fd, buf, size, 0);
 	if (ret == -1) {
 		pcap_fmt_errmsg_for_errno(handle->errbuf, PCAP_ERRBUF_SIZE,
@@ -1280,6 +1472,28 @@ pcap_stats_linux(pcap_t *handle, struct pcap_stat *stats)
 	socklen_t len = sizeof (struct tpacket_stats);
 
 	long long if_dropped = 0;
+
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL) {
+		pfring_stat ring_stats;
+
+		if (pfring_stats(handle->ring, &ring_stats) == 0) {
+			handlep->stat.ps_recv = ring_stats.recv + ring_stats.drop;
+#if 0
+			/* tcpdump reports ps_drop as "packets dropped by kernel",
+			 * that is wrong with ZC, so we should set ps_ifdrop. 
+			 * But snort ignores ps_ifdrop, so it is best to set ps_drop in any case. */
+			if (handle->ring->zc_device)
+				handlep->stat.ps_ifdrop = ring_stats.drop;
+			else
+#else
+				handlep->stat.ps_drop = ring_stats.drop;
+#endif
+			*stats = handlep->stat;
+			return 0;
+		}
+	}
+#endif
 
 	/*
 	 * To fill in ps_ifdrop, we parse
@@ -1726,6 +1940,20 @@ pcap_platform_finddevs(pcap_if_list_t *devlistp, char *errbuf)
 static int
 pcap_setdirection_linux(pcap_t *handle, pcap_direction_t d)
 {
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL) {
+		packet_direction direction;
+
+		switch (d) {
+			case PCAP_D_INOUT: direction = rx_and_tx_direction; break;
+			case PCAP_D_IN:    direction = rx_only_direction; break;
+			case PCAP_D_OUT:   direction = tx_only_direction; break;
+		}
+
+		return(pfring_set_direction(handle->ring, direction));
+	}
+#endif
+
 	/*
 	 * It's guaranteed, at this point, that d is a valid
 	 * direction value.
@@ -4189,6 +4417,204 @@ again:
 }
 #endif /* HAVE_TPACKET3 */
 
+#ifdef HAVE_PF_RING
+/*
+ *  Read a packet from the socket calling the handler provided by
+ *  the user. Returns the number of packets received or -1 if an
+ *  error occured.
+ */
+static int
+pcap_read_pf_ring(pcap_t *handle, int max_packets, pcap_handler callback, u_char *userdata)
+{
+	struct pcap_linux	*handlep = handle->priv;
+	u_char			*bp;
+	int			offset;
+#ifdef HAVE_PF_PACKET_SOCKETS
+	struct sockaddr_ll	from;
+#else
+	struct sockaddr		from;
+#endif
+#if defined(HAVE_PACKET_AUXDATA) && defined(HAVE_STRUCT_TPACKET_AUXDATA_TP_VLAN_TCI)
+	struct iovec		iov;
+	struct msghdr		msg;
+	struct cmsghdr		*cmsg;
+	union {
+		struct cmsghdr	cmsg;
+		char		buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
+	} cmsg_buf;
+#else /* defined(HAVE_PACKET_AUXDATA) && defined(HAVE_STRUCT_TPACKET_AUXDATA_TP_VLAN_TCI) */
+	socklen_t		fromlen;
+#endif /* defined(HAVE_PACKET_AUXDATA) && defined(HAVE_STRUCT_TPACKET_AUXDATA_TP_VLAN_TCI) */
+	int			packet_len, caplen;
+        struct pfring_pkthdr    pcap_header;
+        struct pcap_bpf_aux_data aux_data;
+	int pkts = 0;
+
+	char *packet;
+	int wait_for_incoming_packet = (!pf_ring_active_poll && (handlep->timeout >= 0));
+	int ret = 0;
+
+	if (!handle->ring->enabled)
+		pfring_enable_ring(handle->ring);
+
+	pcap_read_pf_ring_next:
+
+	do {
+		if (handle->break_loop) {
+			/*
+			 * Yes - clear the flag that indicates that it
+			 * has, and return -2 as an indication that we
+			 * were told to break out of the loop.
+			 *
+			 * Patch courtesy of Michael Stiller <ms@2scale.net>
+			 */
+			handle->break_loop = 0;
+			return -2;
+		}
+
+		pcap_header.ts.tv_sec = 0;
+		errno = 0;
+
+		ret = pfring_recv(handle->ring, (u_char**)&packet, 0, &pcap_header, 0 /* wait undefinitely */);
+
+		if (ret == 0) {
+			if (wait_for_incoming_packet) {
+				ret = pfring_poll(handle->ring, handlep->timeout);
+				if (ret == 0 || (ret < 0 && errno == EINTR))
+					return 0; /* timeout */
+				else if (ret < 0)
+					return -1;
+				else /* ret > 0 - recv the packet */
+					continue;
+			}
+
+			return 0; /* non-blocking */
+		} else if (ret > 0) {
+			bp = packet;
+			pcap_header.caplen = min(pcap_header.caplen, handle->bufsize);
+			caplen = pcap_header.caplen, packet_len = pcap_header.len;
+			if (handle->opt.tstamp_precision == PCAP_TSTAMP_PRECISION_NANO) {
+				if (pcap_header.extended_hdr.timestamp_ns) {
+					pcap_header.ts.tv_sec  = pcap_header.extended_hdr.timestamp_ns / 1000000000;
+					pcap_header.ts.tv_usec = pcap_header.extended_hdr.timestamp_ns % 1000000000;
+				} else if (pcap_header.ts.tv_sec == 0)
+					clock_gettime(CLOCK_REALTIME, (struct timespec *) &pcap_header.ts);
+				else
+					pcap_header.ts.tv_usec = pcap_header.ts.tv_usec * 1000;
+			} else if (pcap_header.ts.tv_sec == 0)
+					gettimeofday((struct timeval *) &pcap_header.ts, NULL);
+
+			if (handle->sync_selectable_fd) {
+				/* applications like tshark always poll the fd before calling recv,
+				 * this require kernel to be always synchronized (required in case of ZC) */
+				pfring_sync_indexes_with_kernel(handle->ring);
+			}
+
+			break;
+		} else {
+			if (wait_for_incoming_packet && (errno == EINTR || errno == ENETDOWN))
+				continue;
+			return -1;
+		}
+	} while (1);
+
+	/*
+	 * Start out with no VLAN information.
+	 */
+	aux_data.vlan_tag_present = 0;
+	aux_data.vlan_tag = 0;
+#if defined(HAVE_PACKET_AUXDATA) && defined(HAVE_STRUCT_TPACKET_AUXDATA_TP_VLAN_TCI)
+	if (handlep->vlan_offset != -1) {
+		for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+			struct tpacket_auxdata *aux;
+			unsigned int len;
+			struct vlan_tag *tag;
+
+			if (cmsg->cmsg_len < CMSG_LEN(sizeof(struct tpacket_auxdata)) ||
+			    cmsg->cmsg_level != SOL_PACKET ||
+			    cmsg->cmsg_type != PACKET_AUXDATA) {
+				/*
+				 * This isn't a PACKET_AUXDATA auxiliary
+				 * data item.
+				 */
+				continue;
+			}
+
+			aux = (struct tpacket_auxdata *)CMSG_DATA(cmsg);
+			if (!VLAN_VALID(aux, aux)) {
+				/*
+				 * There is no VLAN information in the
+				 * auxiliary data.
+				 */
+				continue;
+			}
+
+			len = (u_int)packet_len > iov.iov_len ? iov.iov_len : (u_int)packet_len;
+			if (len < (u_int)handlep->vlan_offset)
+				break;
+
+			/*
+			 * Move everything in the header, except the
+			 * type field, down VLAN_TAG_LEN bytes, to
+			 * allow us to insert the VLAN tag between
+			 * that stuff and the type field.
+			 */
+			bp -= VLAN_TAG_LEN;
+			memmove(bp, bp + VLAN_TAG_LEN, handlep->vlan_offset);
+
+			/*
+			 * Now insert the tag.
+			 */
+			tag = (struct vlan_tag *)(bp + handlep->vlan_offset);
+			tag->vlan_tpid = htons(VLAN_TPID(aux, aux));
+			tag->vlan_tci = htons(aux->tp_vlan_tci);
+
+			/*
+			 * Save a flag indicating that we have a VLAN tag,
+			 * and the VLAN TCI, to bpf_aux_data struct for
+			 * use by the BPF filter if we're doing the
+			 * filtering in userland.
+			 */
+			aux_data.vlan_tag_present = 1;
+			aux_data.vlan_tag = htons(aux->tp_vlan_tci) & 0x0fff;
+
+			/*
+			 * Add the tag to the packet lengths.
+			 */
+			packet_len += VLAN_TAG_LEN;
+		}
+	}
+#endif /* defined(HAVE_PACKET_AUXDATA) && defined(HAVE_STRUCT_TPACKET_AUXDATA_TP_VLAN_TCI) */
+
+	caplen = packet_len;
+	if (caplen > handle->snapshot)
+		caplen = handle->snapshot;
+
+	/* Run the packet filter if not using kernel filter */
+	if (handlep->filter_in_userland && handle->fcode.bf_insns) {
+		if (pcap_filter_with_aux_data(handle->fcode.bf_insns, bp,
+		    packet_len, caplen, &aux_data) == 0) {
+			/* rejected by filter */
+			return 0;
+		}
+	}
+
+	/* Fill in our own header data */
+
+	//handlep->packets_read++;
+
+	/* Call the user supplied callback function */
+	callback(userdata, (struct pcap_pkthdr*) &pcap_header, bp);
+
+	pkts++;
+
+	if (pkts < max_packets)
+		goto pcap_read_pf_ring_next;
+
+	return 1;
+}
+#endif
+
 /*
  *  Attach the given BPF code to the packet capture device.
  */
@@ -4208,6 +4634,15 @@ pcap_setfilter_linux(pcap_t *handle, struct bpf_program *filter)
 			PCAP_ERRBUF_SIZE);
 		return -1;
 	}
+
+#ifdef HAVE_PF_RING
+	if (handle->ring) {
+		if (handle->bpf_filter && strlen(handle->bpf_filter) > 0) {
+			//printf("pcap_setfilter -> pfring_set_bpf_filter '%s'\n", handle->bpf_filter ? handle->bpf_filter : "");
+			return pfring_set_bpf_filter(handle->ring, handle->bpf_filter);
+		}
+	}
+#endif
 
 	handlep = handle->priv;
 
@@ -4281,6 +4716,17 @@ pcap_setfilter_linux(pcap_t *handle, struct bpf_program *filter)
 			break;
 		}
 	}
+
+#ifdef HAVE_PF_RING
+	if (can_filter_in_kernel && handle->ring != NULL) {
+		int if_index;
+		if (handle->ring->zc_device /* ZC: we need to filter in userland as kernel is bypassed */
+		    || pfring_get_bound_device_ifindex(handle->ring, &if_index) != 0 /* not a physical device */
+		    || getenv("PCAP_PF_RING_USERSPACE_BPF")) {
+			can_filter_in_kernel = 0;
+		}
+	}
+#endif
 
 	/*
 	 * NOTE: at this point, we've set both the "len" and "filter"
@@ -4722,9 +5168,12 @@ iface_ethtool_get_ts_info(const char *device, pcap_t *handle, char *ebuf)
 	info.cmd = ETHTOOL_GET_TS_INFO;
 	ifr.ifr_data = (caddr_t)&info;
 	if (ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+#ifndef HAVE_PF_RING
 		int save_errno = errno;
+#endif
 
 		close(fd);
+#ifndef HAVE_PF_RING
 		switch (save_errno) {
 
 		case EOPNOTSUPP:
@@ -4734,10 +5183,12 @@ iface_ethtool_get_ts_info(const char *device, pcap_t *handle, char *ebuf)
 			 * asking for the time stamping types, so let's
 			 * just return all the possible types.
 			 */
+#endif
 			if (iface_set_all_ts_types(handle, ebuf) == -1)
 				return -1;
 			return 0;
 
+#ifndef HAVE_PF_RING
 		case ENODEV:
 			/*
 			 * OK, no such device.
@@ -4758,6 +5209,7 @@ iface_ethtool_get_ts_info(const char *device, pcap_t *handle, char *ebuf)
 			    device);
 			return -1;
 		}
+#endif
 	}
 	close(fd);
 
@@ -5105,6 +5557,21 @@ iface_get_arptype(int fd, const char *device, char *ebuf)
 	return ifr.ifr_hwaddr.sa_family;
 }
 
+#ifdef HAVE_PF_RING
+/*
+ * Don't use the pcap buffer but instead use the one passed by the user.
+ * This solution allows multiple threads to read from the same pcap
+ * without having to be serialized through a mutex/semaphore.
+ */
+const u_char *
+pcap_next_pkt(pcap_t *p, struct pcap_pkthdr *h, u_char *buf, u_short bufsize, int *rc)
+{
+	const u_char *_buf = pcap_next(p, h);
+	if (_buf) *rc = 1; else *rc = 0;
+	return _buf;
+}
+#endif
+
 static int
 fix_program(pcap_t *handle, struct sock_fprog *fcode)
 {
@@ -5298,7 +5765,11 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 	 * the filtering done in userland even if it could have been
 	 * done in the kernel.
 	 */
-	if (setsockopt(handle->fd, SOL_SOCKET, SO_ATTACH_FILTER,
+	if (setsockopt(handle->fd, 
+#ifdef HAVE_PF_RING
+		       (handle->ring != NULL) ? 0 :
+#endif
+		       SOL_SOCKET, SO_ATTACH_FILTER,
 		       &total_fcode, sizeof(total_fcode)) == 0) {
 		char drain[1];
 
@@ -5307,6 +5778,7 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 		 */
 		total_filter_on = 1;
 
+#ifndef HAVE_PF_RING
 		/*
 		 * Save the socket's current mode, and put it in
 		 * non-blocking mode; we drain it by reading packets
@@ -5349,12 +5821,17 @@ set_kernel_filter(pcap_t *handle, struct sock_fprog *fcode)
 			    "can't restore FD flags when changing filter");
 			return -2;
 		}
+#endif
 	}
 
 	/*
 	 * Now attach the new filter.
 	 */
-	ret = setsockopt(handle->fd, SOL_SOCKET, SO_ATTACH_FILTER,
+	ret = setsockopt(handle->fd, 
+#ifdef HAVE_PF_RING
+			 (handle->ring != NULL) ? 0 :
+#endif
+			 SOL_SOCKET, SO_ATTACH_FILTER,
 			 fcode, sizeof(*fcode));
 	if (ret == -1 && total_filter_on) {
 		/*
@@ -5398,6 +5875,11 @@ reset_kernel_filter(pcap_t *handle)
 	 */
 	int dummy = 0;
 
+#ifdef HAVE_PF_RING
+	if (handle->ring != NULL)
+		return 0;
+#endif
+
 	ret = setsockopt(handle->fd, SOL_SOCKET, SO_DETACH_FILTER,
 				   &dummy, sizeof(dummy));
 	/*
@@ -5433,3 +5915,61 @@ pcap_lib_version(void)
 	return (PCAP_VERSION_STRING " (with TPACKET_V2)");
 #endif
 }
+
+#ifdef HAVE_PF_RING
+u_int32_t
+pcap_get_pfring_id(pcap_t *handle) 
+{
+	if (handle->ring == NULL)
+		return(0);
+
+	return pfring_get_ring_id(handle->ring);
+}
+
+int
+pcap_set_master_id(pcap_t *handle, u_int32_t master_id) 
+{
+	return pfring_set_master_id(handle->ring, master_id);
+}
+
+int
+pcap_set_master(pcap_t *handle, pcap_t *master) 
+{
+	return pfring_set_master(handle->ring, master->ring);
+}
+
+int
+pcap_set_application_name(pcap_t *handle, char *name) 
+{
+	return pfring_set_application_name(handle->ring, name);
+}
+
+int
+pcap_set_watermark(pcap_t *handle, u_int watermark) 
+{
+	int ret = -1;
+
+	if (handle->ring) {
+		ret = pfring_set_poll_watermark(handle->ring, watermark);
+	}
+
+	return ret;
+}
+
+int
+pcap_set_poll_watermark_timeout(pcap_t *handle, u_int16_t poll_watermark_timeout)
+{
+	int ret = -1;
+
+	if (handle->ring) {
+		ret = pfring_set_poll_watermark_timeout(handle->ring, poll_watermark_timeout);
+	}
+
+	return ret;
+}
+
+pfring* pcap_get_pfring_handle(pcap_t *handle)
+{
+        return(handle->ring);
+}
+#endif

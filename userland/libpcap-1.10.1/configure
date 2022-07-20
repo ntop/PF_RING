@@ -670,6 +670,10 @@ BISON_BYACC
 LEXLIB
 LEX_OUTPUT_ROOT
 LEX
+HAVE_PCAP_NPCAP
+PF_RING_CFLAGS
+PF_RING_LIBS
+PF_RING_INCLUDES
 PKGCONFIG
 VALGRINDTEST_SRC
 LIBOBJS
@@ -750,6 +754,7 @@ enable_ipv6
 with_dag
 with_dag_includes
 with_dag_libraries
+enable_npcap
 with_septel
 with_snf
 with_snf_includes
@@ -1407,6 +1412,7 @@ Optional Features:
   --disable-largefile     omit support for large files
   --disable-protochain    disable \"protochain\" insn
   --enable-ipv6           build IPv6-capable version [default=yes]
+  --enable-npcap          Enable NPCAP support in libpcap
   --enable-remote         enable remote packet capture [default=no]
   --disable-remote        disable remote packet capture
   --enable-optimizer-dbg  build optimizer debugging code
@@ -4604,7 +4610,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -4650,7 +4656,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -4674,7 +4680,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -4719,7 +4725,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -4743,7 +4749,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
+#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -7404,7 +7410,8 @@ else
 		#
 		# Use DAG API if present, otherwise don't
 		#
-		want_dag=ifpresent
+		want_dag=no # PF_RING
+		#want_dag=ifpresent
 	fi
 
 fi
@@ -7744,6 +7751,36 @@ $as_echo "#define HAVE_DAG_API 1" >>confdefs.h
 	CFLAGS="$save_CFLAGS"
 fi
 
+# PF_RING
+case "$host_os" in
+linux*)
+	LIBS="$LIBS `../lib/pfring_config --libs`"
+	PF_RING_INCLUDES="-I ../../kernel -I ../lib"
+	PF_RING_LIBS="../lib/libpfring.a -lpthread `../lib/pfring_config --libs`"
+	PF_RING_CFLAGS="-DHAVE_PF_RING"
+
+
+
+	;;
+esac
+
+# NPCAP - Default disabled
+HAVE_PCAP_NPCAP=""
+# Check whether --enable-npcap was given.
+if test "${enable_npcap+set}" = set; then :
+  enableval=$enable_npcap;
+fi
+
+if test "x$enable_npcap" = "xyes"; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	HAVE_PCAP_NPCAP="-DHAVE_PCAP_NPCAP"
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
 
 # Check whether --with-septel was given.
 if test "${with_septel+set}" = set; then :
@@ -7863,7 +7900,8 @@ else
 		#
 		# Use Sniffer API if present, otherwise don't
 		#
-		want_snf=ifpresent
+		with_snf=no # PF_RING
+		#want_snf=ifpresent
 	fi
 
 fi
@@ -11702,6 +11740,8 @@ else
 fi
 
 
+enable_dbus=no # PF_RING
+
 if test "xxx_only" = yes; then
 	# User requested something-else-only pcap, so they don't
 	# want D-Bus support.
@@ -11812,6 +11852,8 @@ else
   enable_rdma=ifavailable
 fi
 
+
+enable_rdma=no # PF_RING
 
 if test "xxx_only" = yes; then
 	# User requested something-else-only pcap, so they don't

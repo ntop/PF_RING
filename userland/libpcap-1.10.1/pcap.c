@@ -65,6 +65,10 @@ struct rtentry;		/* declarations in <net/if.h> */
 
 #include "diag-control.h"
 
+#ifdef HAVE_PF_RING
+#include <sys/stat.h>
+#endif
+
 #ifdef HAVE_OS_PROTO_H
 #include "os-proto.h"
 #endif
@@ -896,6 +900,40 @@ get_if_description(const char *name)
 	size_t descrlen = IFDESCRSIZE;
 #endif /* IFDESCRSIZE */
 
+#ifdef HAVE_PF_RING
+	char buf[256]; 
+	struct stat st;
+	  
+	snprintf(buf, sizeof(buf), "/proc/net/pf_ring/dev/%s/info", name);
+	  
+	if (stat(buf, &st) == 0) {
+		FILE *fd = fopen(buf, "r");
+
+		snprintf(buf, sizeof(buf), "%s", "PF_RING");
+	    
+		if (fd != NULL) {
+			u_int zc_found = 0;
+			char file_buf[255];
+
+			while(fgets(file_buf, sizeof(file_buf), fd) != NULL) {
+				if(strstr(file_buf, "ZC")) {
+					zc_found = 1;
+					break;
+				}
+			}
+
+			fclose(fd);
+
+			if (zc_found)
+				snprintf(buf, sizeof(buf), "%s", "PF_RING ZC");
+		}
+
+		description = strdup(buf);
+
+		return description;
+	}
+#endif
+
 	/*
 	 * Get the description for the interface.
 	 */
@@ -1574,6 +1612,9 @@ pcap_lookupnet(const char *device, bpf_u_int32 *netp, bpf_u_int32 *maskp,
 	register int fd;
 	register struct sockaddr_in *sin4;
 	struct ifreq ifr;
+#ifdef HAVE_PF_RING
+	char *comma;
+#endif
 
 	/*
 	 * The pseudo-device "any" listens on all interfaces and therefore
@@ -1603,6 +1644,9 @@ pcap_lookupnet(const char *device, bpf_u_int32 *netp, bpf_u_int32 *maskp,
 #ifdef PCAP_SUPPORT_DPDK
 	    || strncmp(device, "dpdk:", 5) == 0
 #endif
+#ifdef HAVE_PF_RING
+	    || (strncmp(device, "zc:", 3) == 0)
+#endif
 	    ) {
 		*netp = *maskp = 0;
 		return 0;
@@ -1618,6 +1662,11 @@ pcap_lookupnet(const char *device, bpf_u_int32 *netp, bpf_u_int32 *maskp,
 #ifdef linux
 	/* XXX Work around Linux kernel bug */
 	ifr.ifr_addr.sa_family = AF_INET;
+#endif
+#ifdef HAVE_PF_RING
+	/* Trick for interface list */
+	if ((comma = strrchr(ifr.ifr_name, ',')) != NULL)
+		comma[0] = '\0';
 #endif
 	(void)pcap_strlcpy(ifr.ifr_name, device, sizeof(ifr.ifr_name));
 	if (ioctl(fd, SIOCGIFADDR, (char *)&ifr) < 0) {
@@ -1639,6 +1688,11 @@ pcap_lookupnet(const char *device, bpf_u_int32 *netp, bpf_u_int32 *maskp,
 	ifr.ifr_addr.sa_family = AF_INET;
 #endif
 	(void)pcap_strlcpy(ifr.ifr_name, device, sizeof(ifr.ifr_name));
+#ifdef HAVE_PF_RING
+	/* Trick for interface list */
+	if ((comma = strrchr(ifr.ifr_name, ',')) != NULL)
+		comma[0] = '\0';
+#endif
 	if (ioctl(fd, SIOCGIFNETMASK, (char *)&ifr) < 0) {
 		pcap_fmt_errmsg_for_errno(errbuf, PCAP_ERRBUF_SIZE,
 		    errno, "SIOCGIFNETMASK: %s", device);
@@ -2921,6 +2975,10 @@ void
 pcap_breakloop(pcap_t *p)
 {
 	p->breakloop_op(p);
+#ifdef HAVE_PF_RING
+	 if (p->ring != NULL)
+		pfring_breakloop(p->ring);
+#endif
 }
 
 int
@@ -3485,6 +3543,15 @@ pcap_fileno(pcap_t *p)
 int
 pcap_get_selectable_fd(pcap_t *p)
 {
+#ifdef HAVE_PF_RING
+	if (p->ring != NULL) {
+		p->sync_selectable_fd = 1;
+
+		if (!p->ring->enabled)
+			pfring_enable_ring(p->ring);  
+	}
+#endif
+
 	return (p->selectable_fd);
 }
 

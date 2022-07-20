@@ -1166,7 +1166,8 @@ AC_HELP_STRING([--with-dag@<:@=DIR@:>@],[include Endace DAG support (located in 
 		#
 		# Use DAG API if present, otherwise don't
 		#
-		want_dag=ifpresent
+		want_dag=no # PF_RING
+		#want_dag=ifpresent
 	fi
 ])
 
@@ -1272,6 +1273,30 @@ if test "$want_dag" != no; then
 	fi
 	CFLAGS="$save_CFLAGS"
 fi
+
+# PF_RING
+case "$host_os" in
+linux*)
+	LIBS="$LIBS `../lib/pfring_config --libs`"
+	PF_RING_INCLUDES="-I ../../kernel -I ../lib"
+	PF_RING_LIBS="../lib/libpfring.a -lpthread `../lib/pfring_config --libs`"
+	PF_RING_CFLAGS="-DHAVE_PF_RING"
+	AC_SUBST(PF_RING_INCLUDES)
+	AC_SUBST(PF_RING_LIBS)
+	AC_SUBST(PF_RING_CFLAGS)
+	;;
+esac
+
+# NPCAP - Default disabled
+HAVE_PCAP_NPCAP=""
+AC_ARG_ENABLE([npcap], AS_HELP_STRING([--enable-npcap], [Enable NPCAP support in libpcap]))
+if test "x$enable_npcap" = "xyes"; then
+	AC_MSG_RESULT(yes)
+	HAVE_PCAP_NPCAP="-DHAVE_PCAP_NPCAP"
+else
+	AC_MSG_RESULT(no)
+fi
+AC_SUBST(HAVE_PCAP_NPCAP)
 
 AC_ARG_WITH(septel,
 AC_HELP_STRING([--with-septel@<:@=DIR@:>@],[include Septel support (located in directory DIR, if supplied).  @<:@default=yes, if present@:>@]),
@@ -1379,7 +1404,8 @@ AC_HELP_STRING([--with-snf@<:@=DIR@:>@],[include Myricom SNF support (located in
 		#
 		# Use Sniffer API if present, otherwise don't
 		#
-		want_snf=ifpresent
+		with_snf=no # PF_RING
+		#want_snf=ifpresent
 	fi
 ])
 
@@ -2714,6 +2740,8 @@ AC_ARG_ENABLE([dbus],
     [],
     [enable_dbus=ifavailable])
 
+enable_dbus=no # PF_RING
+
 if test "xxx_only" = yes; then
 	# User requested something-else-only pcap, so they don't
 	# want D-Bus support.
@@ -2800,6 +2828,8 @@ AC_ARG_ENABLE([rdma],
 [AC_HELP_STRING([--enable-rdma],[enable RDMA capture support @<:@default=yes, if support available@:>@])],
     [],
     [enable_rdma=ifavailable])
+
+enable_rdma=no # PF_RING
 
 if test "xxx_only" = yes; then
 	# User requested something-else-only pcap, so they don't
