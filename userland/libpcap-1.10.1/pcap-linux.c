@@ -1233,16 +1233,6 @@ pcap_activate_linux(pcap_t *handle)
 		goto fail;
 	}
 
-	handle->inject_op = pcap_inject_linux;
-	handle->setfilter_op = pcap_setfilter_linux;
-	handle->setdirection_op = pcap_setdirection_linux;
-	handle->set_datalink_op = pcap_set_datalink_linux;
-	handle->setnonblock_op = pcap_setnonblock_linux;
-	handle->getnonblock_op = pcap_getnonblock_linux;
-	handle->cleanup_op = pcap_cleanup_linux;
-	handle->stats_op = pcap_stats_linux;
-	handle->breakloop_op = pcap_breakloop_linux;
-
 	switch (handlep->tp_version) {
 
 	case TPACKET_V2:
@@ -1259,8 +1249,20 @@ pcap_activate_linux(pcap_t *handle)
 #ifdef HAVE_PF_RING
         }
 
-	if (handle->ring != NULL) {
+	if (handle->ring != NULL)
 		handle->read_op = pcap_read_pf_ring;
+
+	handle->inject_op = pcap_inject_linux;
+	handle->setfilter_op = pcap_setfilter_linux;
+	handle->setdirection_op = pcap_setdirection_linux;
+	handle->set_datalink_op = pcap_set_datalink_linux;
+	handle->setnonblock_op = pcap_setnonblock_linux;
+	handle->getnonblock_op = pcap_getnonblock_linux;
+	handle->cleanup_op = pcap_cleanup_linux;
+	handle->stats_op = pcap_stats_linux;
+	handle->breakloop_op = pcap_breakloop_linux;
+
+	if (handle->ring != NULL) {
 		/* Note: pfring_enable_ring() has been moved to pcap_read_pf_ring()
 		 * to avoid receiving packets while the bpf filter has not been set yet.
 		 * Note this is not a problem for applications lieke tshark using select
