@@ -121,20 +121,26 @@
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
 #define HAVE_DEVLINK_REGION_OPS_SNAPSHOT_OPS
 #undef HAVE_DEVLINK_FLASH_UPDATE_BEGIN_END_NOTIFY
+#ifndef HAVE_PF_RING
 #undef HAVE_XDP_BUFF_RXQ
+#endif
 #undef HAVE_NAPI_BUSY_LOOP
 #endif /* 8.5 */
 
 /*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,6))
 #else /* >= 8.6 */
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0)) /* HAVE_PF_RING */
 #define HAVE_ETHTOOL_COALESCE_EXTACK
+#endif
 #endif /* 8.6 */
 
 /*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #else /* >= 9.0 */
+#ifndef HAVE_PF_RING
 #define HAVE_XDP_BUFF_RXQ
+#endif
 #endif /* 9.0 */
 
 #endif /* _KCOMPAT_RHEL_DEFS_H_ */

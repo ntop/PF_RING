@@ -128,7 +128,9 @@
 /*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,6))
 #else /* >= 8.6 */
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0)) /* HAVE_PF_RING */
 #define HAVE_ETHTOOL_COALESCE_EXTACK
+#endif
 #endif /* 8.6 */
 
 /*****************************************************************************/
