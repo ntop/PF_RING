@@ -60,7 +60,7 @@ extern "C" {
     /*
      * Define it ourselves.
      */
-    extern size_t pcap_strlcat(char * restrict dst, const char * restrict src, size_t dstsize);
+    extern size_t pcap_strlcat(char *  dst, const char * src, size_t dstsize);
   #endif
 #endif
 
@@ -78,7 +78,7 @@ extern "C" {
     /*
      * Define it ourselves.
      */
-    extern size_t pcap_strlcpy(char * restrict dst, const char * restrict src, size_t dstsize);
+    extern size_t pcap_strlcpy(char * dst, const char * src, size_t dstsize);
   #endif
 #endif
 
