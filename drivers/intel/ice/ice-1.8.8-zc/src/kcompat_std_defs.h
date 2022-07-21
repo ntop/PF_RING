@@ -241,8 +241,7 @@
 #endif /* 5.15.0 */
 
 /*****************************************************************************/
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0)) \
-    && !(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,0)) /* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,16,0))
 #else /* >= 5.16.0 */
 #define HAVE_DEVLINK_SET_FEATURES
 #define HAVE_DEVLINK_NOTIFY_REGISTER

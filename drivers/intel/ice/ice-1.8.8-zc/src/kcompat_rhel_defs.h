@@ -132,4 +132,10 @@
 #define HAVE_XDP_BUFF_RXQ
 #endif /* 9.0 */
 
+/*****************************************************************************/
+#if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,0)) /* HAVE_PF_RING */
+#define HAVE_DEVLINK_SET_FEATURES
+#define HAVE_DEVLINK_NOTIFY_REGISTER
+#endif
+
 #endif /* _KCOMPAT_RHEL_DEFS_H_ */
