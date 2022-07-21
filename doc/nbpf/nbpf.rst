@@ -13,7 +13,7 @@ This library has been designed to be efficient, and easy to embed in application
 
 Currently it is used by selected PF_RING modules to convert BPF filtering expressions 
 onto hardware filters supported by popular network adapters such as Accolade, Exablaze,
-Fiberblaze (Silicom FPGA), Intel FM10K (RRC) and Napatech.
+Fiberblaze (Silicom FPGA), Mellanox and Napatech.
 
 Expressions
 -----------
