@@ -2236,7 +2236,15 @@ main(int argc, char **argv)
 	pcap_set_optimizer_debug(dflag);
 #endif
 	if (pcap_compile(pd, &fcode, cmdbuf, Oflag, netmask) < 0)
+#ifdef HAVE_PF_RING
+	{
+		warning("%s", pcap_geterr(pd));
+		pcap_close(pd);
+		exit(0);
+	}
+#else
 		error("%s", pcap_geterr(pd));
+#endif
 	if (dflag) {
 		bpf_dump(&fcode, dflag);
 		pcap_close(pd);
@@ -2328,6 +2336,7 @@ DIAG_ON_CLANG(assign-enum)
 
 	if (pcap_setfilter(pd, &fcode) < 0)
 		error("%s", pcap_geterr(pd));
+
 #ifdef HAVE_CAPSICUM
 	if (RFileName == NULL && VFileName == NULL && pcap_fileno(pd) != -1) {
 		static const unsigned long cmds[] = { BIOCGSTATS, BIOCROTZBUF };
@@ -2608,14 +2617,30 @@ DIAG_ON_CLANG(assign-enum)
 					dlt = new_dlt;
 					ndo->ndo_if_printer = get_if_printer(dlt);
 					if (pcap_compile(pd, &fcode, cmdbuf, Oflag, netmask) < 0)
+#ifdef HAVE_PF_RING
+					{
+						warning("%s", pcap_geterr(pd));
+						pcap_close(pd);
+						exit(0);
+					}
+#else
 						error("%s", pcap_geterr(pd));
+#endif
 				}
 
 				/*
 				 * Set the filter on the new file.
 				 */
 				if (pcap_setfilter(pd, &fcode) < 0)
+#ifdef HAVE_PF_RING
+				{
+					warning("%s", pcap_geterr(pd));
+					pcap_close(pd);
+					exit(0);
+				}
+#else
 					error("%s", pcap_geterr(pd));
+#endif
 
 				/*
 				 * Report the new file.
@@ -2710,6 +2735,9 @@ cleanup(int signo _U_)
 		(void)fflush(stdout);
 		info(1);
 	}
+#ifdef HAVE_PF_RING
+	pcap_close(pd);
+#endif
 	exit_tcpdump(S_SUCCESS);
 #endif
 }
