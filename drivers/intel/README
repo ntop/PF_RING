@@ -8,4 +8,4 @@ ixgbe (10 Gbit) 82599/X520/X540
 
 i40e (10/40 Gbit) X710
 
-fm10k (10/40/100 Gbit) FM10000
+ice (100 Gbit) E810
