@@ -230,10 +230,8 @@
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5,15,0))
-#if !(RHEL_RELEASE_CODE && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,0)) /* HAVE_PF_RING */
 #define NEED_DEVLINK_ALLOC_SETS_DEV
 #define HAVE_DEVLINK_REGISTER_SETS_DEV
-#endif
 #else /* >= 5.15.0 */
 #define HAVE_ETHTOOL_COALESCE_EXTACK
 #define HAVE_NDO_ETH_IOCTL
