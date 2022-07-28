@@ -64,6 +64,8 @@ cp $HOME/PF_RING/userland/wireshark/extcap/ntopdump $RPM_BUILD_ROOT/usr/lib64/wi
 cp $HOME/PF_RING/userland/tcpdump/tcpdump      $RPM_BUILD_ROOT/usr/local/bin
 cp $HOME/PF_RING/userland/examples/pfcount     $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/userland/examples/pfsend      $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples/pfcount_multichannel     $RPM_BUILD_ROOT/usr/bin
+cp $HOME/PF_RING/userland/examples/pfsend_multichannel      $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/tools/n2if                    $RPM_BUILD_ROOT/usr/bin
 cp $HOME/PF_RING/package/etc/ld.so.conf.d/pf_ring.conf $RPM_BUILD_ROOT/etc/ld.so.conf.d
 cp $HOME/PF_RING/package/etc/pf_ring/pf_ring.conf.example $RPM_BUILD_ROOT/etc/pf_ring
@@ -134,6 +136,8 @@ rm -fr $RPM_BUILD_ROOT
 /usr/local/bin/tcpdump
 /usr/bin/pfcount
 /usr/bin/pfsend
+/usr/bin/pfcount_multichannel
+/usr/bin/pfsend_multichannel
 /usr/bin/n2if
 /etc/ld.so.conf.d/pf_ring.conf
 /etc/pf_ring/pf_ring.conf.example
