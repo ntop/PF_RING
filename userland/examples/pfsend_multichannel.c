@@ -311,7 +311,9 @@ int main(int argc, char* argv[]) {
   while((c = getopt(argc,argv,"hi:l:vb:g:D:S:")) != -1) {
     switch(c) {
     case 'b':
-      num_uniq_pkts = atoi(optarg);
+      num_ips = atoi(optarg);
+      if(num_ips == 0) num_ips = 1;
+      num_uniq_pkts = num_ips;
       break;
     case 'h':
       printHelp();
