@@ -172,6 +172,9 @@ void printHelp(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name (No device@channel)\n");
   printf("-l <len>        Packet length\n");
+  printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
+  printf("-S <ip>         Use <ip> as base source IP for -b (default: 10.0.0.1)\n");
+  printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
   printf("-g <id:id...>   Specifies the thread affinity mask. Each <id> represents\n"
 	 "                the core id where the i-th will bind. Example: -g 7:6:5:4\n"
 	 "                binds thread <device>@0 on coreId 7, <device>@1 on coreId 6\n"
@@ -302,7 +305,10 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 
-  while((c = getopt(argc,argv,"hi:l:vb:g:")) != -1) {
+  srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
+  dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
+
+  while((c = getopt(argc,argv,"hi:l:vb:g:D:S:")) != -1) {
     switch(c) {
     case 'b':
       num_uniq_pkts = atoi(optarg);
@@ -322,6 +328,12 @@ int main(int argc, char* argv[]) {
       break;
     case 'g':
       bind_mask = strdup(optarg);
+      break;
+    case 'D':
+      inet_aton(optarg, &dstaddr);
+      break;
+    case 'S':
+      inet_aton(optarg, &srcaddr);
       break;
     }
   }
