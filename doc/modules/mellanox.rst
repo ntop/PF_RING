@@ -114,6 +114,12 @@ used to select the TX interface. Example:
 
    pfsend -i mlx:mlx5_0
 
+Or to send from all queues and scale the transmission performance:
+
+.. code-block:: console
+
+   pfsend_multichannel -i mlx:mlx5_0
+
 Hw Filtering
 ------------
 
