@@ -978,7 +978,7 @@ int pfring_mod_set_bpf_filter(pfring *ring, char *filter_buffer) {
     p->bpf_codegen_flags |= BPF_SPECIAL_VLAN_HANDLING;
 #endif
 
-  rc = pcap_compile(p, &filter, filter_buffer, 0, 0);
+  rc = pcap_compile(p, &filter, filter_buffer, 1, 0);
 
   pcap_close(p);
 
