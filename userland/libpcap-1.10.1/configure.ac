@@ -2445,7 +2445,8 @@ AC_HELP_STRING([--with-dpdk@<:@=DIR@:>@],[include DPDK support (located in direc
 		#
 		# Use DPDK API if present, otherwise don't
 		#
-		want_dpdk=ifpresent
+		want_dpdk=no # PF_RING
+		#want_dpdk=ifpresent
 	fi
 ])
 
