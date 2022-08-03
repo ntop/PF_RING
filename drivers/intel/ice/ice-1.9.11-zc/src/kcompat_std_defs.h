@@ -222,7 +222,9 @@
 #else /* >= 5.11.0 */
 #define HAVE_DEVLINK_FLASH_UPDATE_PARAMS_FW
 #define HAVE_XSK_BATCHED_DESCRIPTOR_INTERFACES
+#ifndef HAVE_PF_RING /* PASID is causing compilation failures */
 #define HAVE_PASID_SUPPORT
+#endif
 #undef HAVE_XDP_RXQ_INFO_REG_3_PARAMS
 #endif /* 5.11.0 */
 
