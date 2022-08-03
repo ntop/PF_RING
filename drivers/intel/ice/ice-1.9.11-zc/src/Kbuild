@@ -41,7 +41,7 @@ ice-objs := ice_main.o	\
 
 CFLAGS_ice_main.o := -I$(src)
 
-ice-$(CONFIG_VFIO_MDEV:m=y) += ice_vdcm.o ice_siov.o
+#ice-$(CONFIG_VFIO_MDEV:m=y) += ice_vdcm.o ice_siov.o
 ice-$(CONFIG_NET_DEVLINK:m=y) += ice_devlink.o ice_fw_update.o ice_eswitch.o ice_repr.o
 ice-$(CONFIG_PCI_IOV) += ice_virtchnl.o ice_sriov.o
 ice-$(CONFIG_RFS_ACCEL) += ice_arfs.o
