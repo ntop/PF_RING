@@ -146,7 +146,9 @@
 /*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #else /* >= 9.0 */
+#ifndef HAVE_PF_RING
 #define HAVE_XDP_BUFF_RXQ
+#endif
 #define HAVE_NDO_ETH_IOCTL
 #undef NEED_DEVLINK_ALLOC_SETS_DEV
 #undef HAVE_DEVLINK_PARAMS_PUBLISH
