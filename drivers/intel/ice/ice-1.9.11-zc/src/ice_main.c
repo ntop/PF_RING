@@ -8331,6 +8331,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last interface user */) {
 			module_put(THIS_MODULE);  /* -- */
 
+#ifndef ICE_USER_TO_KERNEL_RESET
 			/* Starting all queues in kernel space */
 			ice_for_each_rxq(vsi, i) {
 				struct ice_ring *rx_ring_i = vsi->rx_rings[i];
@@ -8384,6 +8385,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 				ice_control_rxq(vsi, rx_ring_i->q_index, true /* start */);
 			}
+#endif
 
 #ifdef ICE_USER_TO_KERNEL_RESET
 			/* Interface reset */
