@@ -2681,7 +2681,7 @@ static int ice_ptp_gpio_enable_e823(struct ptp_clock_info *info,
 	return err;
 }
 
-#ifdef HAVE_PTP_CROSSTIMESTAMP
+#if defined(HAVE_PTP_CROSSTIMESTAMP) && defined(X86_FEATURE_TSC_KNOWN_FREQ)
 /**
  * ice_ptp_get_syncdevicetime - Get the cross time stamp info
  * @device: Current device time
@@ -3046,7 +3046,7 @@ ice_ptp_setup_pins_generic(struct ice_pf *pf, struct ptp_clock_info *info)
 static void
 ice_ptp_set_funcs_generic(struct ice_pf *pf, struct ptp_clock_info *info)
 {
-#ifdef HAVE_PTP_CROSSTIMESTAMP
+#if defined(HAVE_PTP_CROSSTIMESTAMP) && defined(X86_FEATURE_TSC_KNOWN_FREQ)
 	if (boot_cpu_has(X86_FEATURE_ART) &&
 	    boot_cpu_has(X86_FEATURE_TSC_KNOWN_FREQ))
 		info->getcrosststamp = ice_ptp_getcrosststamp_generic;

@@ -55,6 +55,9 @@ ice-y += kcompat_pldmfw.o
 endif
 #ice-$(CONFIG_DCB) += ice_dcb.o ice_dcb_nl.o ice_dcb_lib.o
 #ice-$(CONFIG_XDP_SOCKETS) += ice_xsk.o
+ifndef CONFIG_DIMLIB
+ice-y += kcompat_dim.o kcompat_net_dim.o
+endif
 
 # HAVE_PF_RING_NO_RDMA
 #obj-m += auxiliary.o

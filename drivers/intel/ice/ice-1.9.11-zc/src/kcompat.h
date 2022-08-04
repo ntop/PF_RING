@@ -2238,7 +2238,7 @@ int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
 #endif
 #endif /* < 4.8.0 */
 #define HAVE_NETIF_NAPI_ADD_CALLS_NAPI_HASH_ADD
-#define HAVE_NETDEV_UPPER_INFO
+//#define HAVE_NETDEV_UPPER_INFO /* HAVE_PF_RING */
 #endif /* 4.5.0 */
 
 /*****************************************************************************/
