@@ -8253,12 +8253,15 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			ice_for_each_rxq(vsi, i) {
 				struct ice_ring *rx_ring_i = vsi->rx_rings[i];
 				u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring_i, rx_ring_i->count);
-				u_int32_t curr_tail = rx_ring_i->next_to_clean;
+				u_int32_t curr_tail;
+
+				if (rx_ring_i->next_to_clean == 0) curr_tail = rx_ring_i->count-1;
+				else curr_tail = rx_ring_i->next_to_clean-1;
 
 				if (unlikely(enable_debug))
-					printk("[PF_RING-ZC] %s:%d RX Dev=%s Queue=%u Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u\n",
+					printk("[PF_RING-ZC] %s:%d RX Dev=%s Queue=%u Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u ShadowTail=%u\n",
 						__FUNCTION__, __LINE__, vsi->netdev->name, rx_ring_i->q_index,
-						readl(rx_ring_i->tail), rx_ring_i->next_to_use, rx_ring_i->next_to_clean);
+						readl(rx_ring_i->tail), rx_ring_i->next_to_use, rx_ring_i->next_to_clean, curr_tail);
 
 				/* Store tail (see ice_release_rx_desc) */
 				//writel(rx_ring_i->next_to_use, rx_ring_i->tail);
@@ -8331,7 +8334,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last interface user */) {
 			module_put(THIS_MODULE);  /* -- */
 
-#ifndef ICE_USER_TO_KERNEL_RESET
 			/* Starting all queues in kernel space */
 			ice_for_each_rxq(vsi, i) {
 				struct ice_ring *rx_ring_i = vsi->rx_rings[i];
@@ -8385,7 +8387,6 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 				ice_control_rxq(vsi, rx_ring_i->q_index, true /* start */);
 			}
-#endif
 
 #ifdef ICE_USER_TO_KERNEL_RESET
 			/* Interface reset */
