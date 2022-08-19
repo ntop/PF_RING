@@ -622,6 +622,7 @@ void printHelp(void) {
          "                 7 - VLAN ID encapsulated in Ethernet type 0x8585 (see -Y). Queue is selected based on -M. Other Ethernet types to queue 0.\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
   printf("-M <vlans>       Comma-separated list of VLANs to map VLAN to egress queues (-m 7 only)\n");
+  printf("-X               Capture also TX packets (standard drivers only - not supported with ZC drivers)\n");
   printf("-Y <eth type>    Ethernet type used in -m 7. Default: %u (0x8585)\n", ntohs(ETH_P_8585));
   printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
   printf("-R <nsec>        Time resolution (nsec) when using Time Pulse thread\n"
@@ -976,8 +977,9 @@ int main(int argc, char* argv[]) {
   char **opt_argv;
   char *user = NULL;
   int num_consumer_queues_limit = 0;
-  u_int32_t flags;
-  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:"
+  u_int32_t cluster_flags = 0;
+  u_int32_t rx_open_flags = 0;
+  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -1108,6 +1110,9 @@ int main(int argc, char* argv[]) {
       break;      
     case 'x':
       vlan_filter = strdup(optarg);
+    break;
+    case 'X':
+      rx_open_flags |= PF_RING_ZC_DEVICE_CAPTURE_TX;
     break;
     case 'Y':
       eth_distr_type = htons(atoi(optarg));
@@ -1278,10 +1283,10 @@ int main(int argc, char* argv[]) {
   if (daemon_mode)
     daemonize();
 
-  flags = 0;
+  cluster_flags = 0;
 
   if (enable_vm_support)
-    flags |= PF_RING_ZC_ENABLE_VM_SUPPORT;
+    cluster_flags |= PF_RING_ZC_ENABLE_VM_SUPPORT;
 
   zc = pfring_zc_create_cluster(
     cluster_id, 
@@ -1292,7 +1297,7 @@ int main(int argc, char* argv[]) {
      + (num_outdevs * MAX_CARD_SLOTS) - (num_outdevs * (queue_len /* replaced queues */ - 1 /* dummy queues */)), 
     pfring_zc_numa_get_cpu_node(bind_worker_core),
     hugepages_mountpoint,
-    flags 
+    cluster_flags 
   );
 
   if (zc == NULL) {
@@ -1315,7 +1320,7 @@ int main(int argc, char* argv[]) {
   for (i = 0; i < num_devices; i++) {
     if (strcmp(devices[i], "Q") != 0) {
 
-      inzqs[i] = pfring_zc_open_device(zc, devices[i], rx_only, 0);
+      inzqs[i] = pfring_zc_open_device(zc, devices[i], rx_only, rx_open_flags);
 
       if (inzqs[i] == NULL) {
         trace(TRACE_ERROR, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
