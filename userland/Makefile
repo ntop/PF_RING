@@ -15,7 +15,7 @@ build_nbpf: config
 	cd nbpf; make
 
 libpcap/Makefile:
-	cd libpcap; ./configure --enable-ipv6 --enable-dbus=no --without-libnl --with-snf=no --disable-bluetooth --disable-canusb --with-dag=no
+	cd libpcap; ./configure --enable-ipv6 --enable-dbus=no --without-libnl --with-snf=no --disable-bluetooth --with-dag=no
 
 pcap: libpfring libpcap/Makefile
 	cd libpcap; make
