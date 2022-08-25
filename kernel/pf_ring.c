@@ -4815,9 +4815,16 @@ static struct dma_memory_info *allocate_extra_dma_memory(struct device *hwdev,
       i + 1, dma_memory->num_slots, slot, offset);
 
     dma_memory->dma_addr[i] = cpu_to_le64(
+
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0))
       pci_map_single(to_pci_dev(dma_memory->hwdev), slot,
                      dma_memory->slot_len,
                      PCI_DMA_BIDIRECTIONAL));
+#else
+      dma_map_single(dma_memory->hwdev, slot,
+                     dma_memory->slot_len,
+                     DMA_BIDIRECTIONAL));
+#endif
 
     if(dma_mapping_error(dma_memory->hwdev, dma_memory->dma_addr[i])) {
       printk("[PF_RING] %s: Error mapping DMA slot %d of %d \n", __FUNCTION__, i + 1, dma_memory->num_slots);
@@ -4840,7 +4847,12 @@ static void free_extra_dma_memory(struct dma_memory_info *dma_memory)
       if(dma_memory->dma_addr[i]) {
         dma_unmap_single(dma_memory->hwdev, dma_memory->dma_addr[i],
 	                 dma_memory->slot_len,
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0))
 	                 PCI_DMA_BIDIRECTIONAL);
+#else
+	                 DMA_BIDIRECTIONAL);
+#endif
+
       }
     }
     kfree(dma_memory->dma_addr);
@@ -5830,7 +5842,13 @@ static int pf_ring_inject_packet_to_stack(struct net_device *netdev, struct msgh
   skb->protocol = eth_type_trans(skb, netdev);
   skb->queue_mapping = 0xffff;
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0))
   err = netif_rx_ni(skb);
+#else
+  local_bh_disable();
+  err = netif_rx(skb);
+  local_bh_enable();
+#endif
 
   if(unlikely(debug_on(2) && err == NET_RX_SUCCESS))
     debug_printk(2, "Packet injected into the linux kernel!\n");
