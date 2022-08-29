@@ -1227,7 +1227,7 @@ int main(int argc, char* argv[]) {
     }
   }
   switch (hash_mode) {
-    case 1: 
+    case 2: 
     case 3:
       num_consumer_queues_limit = 64; /* egress mask is 64 bit */
       break;
@@ -1236,7 +1236,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (num_consumer_queues_limit && num_consumer_queues > num_consumer_queues_limit) { 
-    trace(TRACE_ERROR, "Misconfiguration detected: you cannot use more than %d egress queues in fan-out or multi-app mode\n", num_consumer_queues_limit);
+    trace(TRACE_ERROR, "Misconfiguration detected: you cannot use more than %d egress queues in fan-out (-m 1|3) or multi-app mode (-n X,Y)\n", num_consumer_queues_limit);
     return -1;
   }
 
