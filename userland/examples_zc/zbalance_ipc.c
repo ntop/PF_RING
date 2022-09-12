@@ -978,7 +978,7 @@ int main(int argc, char* argv[]) {
   char *user = NULL;
   int num_consumer_queues_limit = 0;
   u_int32_t cluster_flags = 0;
-  u_int32_t rx_open_flags = 0;
+  u_int32_t rx_open_flags;
   const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
@@ -998,6 +998,8 @@ int main(int argc, char* argv[]) {
   pfring_zc_filtering_func filter_func = NULL;
 
   start_time.tv_sec = 0;
+
+  rx_open_flags = PF_RING_ZC_DEVICE_CAPTURE_INJECTED;
 
   if (argc == 1) {
     if (load_args_from_file(DEFAULT_CONF_FILE, &opt_argc, &opt_argv) != 0) {

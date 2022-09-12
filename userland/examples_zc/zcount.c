@@ -270,11 +270,13 @@ int main(int argc, char* argv[]) {
   pthread_t my_thread;
   struct timeval timeNow, lastTime;
   pthread_t time_thread;
-  u_int32_t flags = 0;
+  u_int32_t flags;
   char *filter = NULL;
 
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
+
+  flags = PF_RING_ZC_DEVICE_CAPTURE_INJECTED;
 
   while((c = getopt(argc,argv,"ac:f:g:hi:vCDMRHS:Tt")) != '?') {
     if((c == 255) || (c == -1)) break;
