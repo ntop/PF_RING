@@ -2429,7 +2429,8 @@ AC_HELP_STRING([--with-dpdk@<:@=DIR@:>@],[include DPDK support (located in direc
 	else
 		# User wants DPDK support and has specified a directory,
 		# so use the provided value.
-		want_dpdk=yes
+		#want_dpdk=yes 
+		want_dpdk=no # PF_RING
 		dpdk_dir=$withval
 	fi
 ],[
