@@ -133,7 +133,7 @@ pcap_netmap_ioctl(pcap_t *p, u_long what, uint32_t *if_flags)
 	struct ifreq ifr;
 	int error, fd = d->fd;
 
-#ifdef linux
+#ifdef __linux__
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd < 0) {
 		fprintf(stderr, "Error: cannot get device control socket.\n");
@@ -194,7 +194,7 @@ pcap_netmap_ioctl(pcap_t *p, u_long what, uint32_t *if_flags)
 #endif /* __FreeBSD__ */
 		}
 	}
-#ifdef linux
+#ifdef __linux__
 	close(fd);
 #endif /* linux */
 	return error ? -1 : 0;
