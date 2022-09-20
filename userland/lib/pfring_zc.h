@@ -439,6 +439,22 @@ pfring_zc_send_pkt(
 );
 
 /**
+ * Insert a packet into the queue and return the (hardware when available) send time.
+ * @param queue        The queue handle.
+ * @param pkt_handle   The pointer to the buffer handle to send. Once a packet has been sent, the buffer handle can be reused or if not longer necessary it must be freed by calling pfring_zc_release_packet_handle().
+ * @param flush_packet The flag indicating whether this call should flush the enqueued packet, and older packets if any.
+ * @param ts           The send time.
+ * @return             The packet length on success, 0 if filtered out (bpf), a negative value otherwise. 
+ */
+int
+pfring_zc_send_pkt_get_time(
+  pfring_zc_queue *queue,
+  pfring_zc_pkt_buff **pkt_handle,
+  u_int8_t flush_packet,
+  struct timespec *ts
+);
+
+/**
  * Send a burst of packets to the queue.
  * @param queue         The queue handle.
  * @param pkt_handles   The array with the buffer handles for the buffers to send.
@@ -475,6 +491,43 @@ void
 pfring_zc_sync_queue(
   pfring_zc_queue *queue,
   pfring_zc_queue_mode direction 
+);
+
+/* **************************************************************************************** */
+
+/**
+ * Read the time from the device hardware clock (if supported by the underlying device)
+ * @param queue The queue handle.
+ * @param ts    The time.
+ */
+int
+pfring_zc_get_device_clock(
+  pfring_zc_queue *queue,
+  struct timespec *ts
+);
+
+/**
+ * Set the time in the device hardware clock (if supported by the underlying device)
+ * @param queue The queue handle.
+ * @param ts    The time.
+ */
+int
+pfring_zc_set_device_clock(
+  pfring_zc_queue *queue,
+  struct timespec *ts
+);
+
+/**
+ * Adjust the time in the device hardware clock with an offset (if supported by the underlying device)
+ * @param queue  The queue handle.
+ * @param offset The time offset.
+ * @param sign   The sign.
+ */
+int
+pfring_zc_adjust_device_clock(
+  pfring_zc_queue *queue,
+  struct timespec *offset,
+  int8_t sign
 );
 
 /* **************************************************************************************** */
