@@ -8443,7 +8443,7 @@ int adjust_time_callback(void *rx_adapter, int64_t offset_ns)
 	struct ice_hw    *hw; 
 
 	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s\n", __FUNCTION__);
+		printk("[PF_RING-ZC] %s(%lld)\n", __FUNCTION__, offset_ns);
 
 	if (rx_ring == NULL) return ICE_ERR_BAD_PTR; /* safety check */
 
@@ -8451,8 +8451,10 @@ int adjust_time_callback(void *rx_adapter, int64_t offset_ns)
 	adapter = vsi->back; /* or use ice_netdev_to_pf(rx_ring->netdev); */
 	hw = &adapter->hw;
 
-	if (offset_ns > S32_MAX || offset_ns < S32_MIN)
+	if (offset_ns > S32_MAX || offset_ns < S32_MIN) {
+		printk("[PF_RING-ZC] %s: bad value %lldns\n", __FUNCTION__, offset_ns);
 		return ICE_ERR_PARAM;
+	}
 
 	return ice_ptp_adj_clock(hw, offset_ns, true);
 }
