@@ -2947,8 +2947,9 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 		for (i = 0; i < adapter->num_rx_queues; i++) {
 			struct ixgbevf_ring *rx_ring = adapter->rx_ring[i];
 			struct ixgbevf_ring *tx_ring = adapter->tx_ring[i];	     
-			mem_ring_info rx_info = { 0 };
-			mem_ring_info tx_info = { 0 };
+			zc_dev_ring_info rx_info = { 0 };
+			zc_dev_ring_info tx_info = { 0 };
+			zc_dev_callbacks callbacks = { NULL };
 			u16 rx_buf_len;
 
 			if (ring_uses_large_buffer(rx_ring))
@@ -2968,6 +2969,9 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 	     
+			callbacks.wait_packet = wait_packet_function_ptr;
+			callbacks.usage_notification = notify_function_ptr;
+
 			if(unlikely(enable_debug))
 				printk("%s: [rx-ring=%u/%u/%u][tx-ring=%u/%u/%u]\n", __FUNCTION__,
 				  rx_info.packet_memory_num_slots,
@@ -2978,6 +2982,7 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 				  tx_ring->size);
  
 			pf_ring_zc_dev_handler(add_device_mapping,
+			  &callbacks,
 			  &rx_info,
 			  &tx_info,
 			  rx_ring->desc, /* Packet descriptors */
@@ -2992,9 +2997,7 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) rx_ring,
-			  (void *) tx_ring,
-			  wait_packet_function_ptr,
-			  notify_function_ptr
+			  (void *) tx_ring
 			);
 	    	}
 	}
@@ -3316,6 +3319,7 @@ void ixgbevf_down(struct ixgbevf_adapter *adapter)
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
 			pf_ring_zc_dev_handler(remove_device_mapping,
+			  NULL, /* callbacks */
 			  NULL, /* rx_info */
 			  NULL, /* tx_info */
 			  NULL, /* Packet descriptors */
@@ -3330,9 +3334,7 @@ void ixgbevf_down(struct ixgbevf_adapter *adapter)
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) adapter->rx_ring[i],
-			  (void *) adapter->tx_ring[i],
-			  NULL, /* wait_packet_function_ptr */
-			  NULL /* notify_function_ptr */
+			  (void *) adapter->tx_ring[i]
 			);
 		}
 	}

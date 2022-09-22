@@ -879,11 +879,24 @@ struct ring_sock {
 
 /* *********************************** */
 
-typedef int (*zc_dev_wait_packet)(void *adapter, int mode);
-typedef int (*zc_dev_notify)(void *rx_adapter_ptr, void *tx_adapter_ptr, u_int8_t device_in_use);
+/* ZC driver API - data structures */
+
+typedef int (*zc_dev_wait_packet)(void *rx_adapter, int mode);
+typedef int (*zc_dev_notify)(void *rx_adapter, void *tx_adapter, u_int8_t device_in_use);
+typedef int (*zc_dev_set_time)(void *rx_adapter, u_int64_t time_ns);
+typedef int (*zc_dev_adjust_time)(void *rx_adapter, u_int64_t offset_ns, u_int8_t sign);
+
+typedef struct {
+  zc_dev_wait_packet wait_packet;
+  zc_dev_notify usage_notification;
+  zc_dev_set_time set_time;
+  zc_dev_adjust_time adjust_time;
+} __attribute__((packed))
+zc_dev_callbacks;
 
 typedef enum {
-  add_device_mapping = 0, remove_device_mapping
+  add_device_mapping = 0,
+  remove_device_mapping
 } zc_dev_operation;
 
 /* IMPORTANT NOTE
@@ -914,11 +927,13 @@ typedef struct {
   u_int32_t vector;
   u_int32_t num_queues;
 } __attribute__((packed))
-mem_ring_info;
+zc_dev_ring_info;
+
+/* ************************************************* */
 
 typedef struct {
-  mem_ring_info rx;
-  mem_ring_info tx;
+  zc_dev_ring_info rx;
+  zc_dev_ring_info tx;
   u_int32_t phys_card_memory_len;
   zc_dev_model device_model;
 } __attribute__((packed))
@@ -938,10 +953,11 @@ typedef struct {
 #else
   void *packet_waitqueue;
 #endif
-  u_int8_t *interrupt_received, in_use;
-  void *rx_adapter_ptr, *tx_adapter_ptr;
-  zc_dev_wait_packet wait_packet_function_ptr;
-  zc_dev_notify usage_notification;
+  u_int8_t *interrupt_received;
+  u_int8_t in_use;
+  void *rx_adapter;
+  void *tx_adapter;
+  zc_dev_callbacks callbacks;
 } __attribute__((packed))
 zc_dev_info;
 
@@ -1377,23 +1393,25 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 			     int32_t channel_id,
 			     u_int32_t num_rx_channels);
 
+/* ZC driver API */
+
 void pf_ring_zc_dev_handler(zc_dev_operation operation,
-			    mem_ring_info *rx_info,
-			    mem_ring_info *tx_info,
-			    void          *rx_descr_packet_memory,
-			    void          *tx_descr_packet_memory,
-			    void          *phys_card_memory,
-			    u_int          phys_card_memory_len,
-			    u_int channel_id,
+			    zc_dev_callbacks *callbacks,
+			    zc_dev_ring_info *rx_info,
+			    zc_dev_ring_info *tx_info,
+			    void *rx_descr_packet_memory,
+			    void *tx_descr_packet_memory,
+			    void *phys_card_memory,
+			    u_int32_t phys_card_memory_len,
+			    u_int32_t channel_id,
 			    struct net_device *dev,
 			    struct device *hwdev,
 			    zc_dev_model device_model,
 			    u_char *device_address,
 			    wait_queue_head_t *packet_waitqueue,
 			    u_int8_t *interrupt_received,
-			    void *rx_adapter_ptr, void *tx_adapter_ptr,
-			    zc_dev_wait_packet wait_packet_function_ptr,
-			    zc_dev_notify dev_notify_function_ptr);
+			    void *rx_adapter_ptr,
+			    void *tx_adapter_ptr);
 
 #endif /* __KERNEL__  */
 

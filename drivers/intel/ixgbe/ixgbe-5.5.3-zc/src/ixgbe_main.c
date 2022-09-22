@@ -6805,8 +6805,9 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 		for (i = 0; i < adapter->num_rx_queues; i++) {
 			struct ixgbe_ring *rx_ring = adapter->rx_ring[i];
 			struct ixgbe_ring *tx_ring = adapter->tx_ring[i];	     
-			mem_ring_info rx_info = { 0 };
-			mem_ring_info tx_info = { 0 };
+			zc_dev_ring_info rx_info = { 0 };
+			zc_dev_ring_info tx_info = { 0 };
+			zc_dev_callbacks callbacks = { NULL };
 
 			init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 
@@ -6820,7 +6821,11 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			tx_info.packet_memory_slot_len      = rx_info.packet_memory_slot_len;
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 	      
+			callbacks.wait_packet = wait_packet_function_ptr;
+			callbacks.usage_notification = notify_function_ptr;
+
 			pf_ring_zc_dev_handler(add_device_mapping,
+			  &callbacks,
 			  &rx_info,
 			  &tx_info,
 			  rx_ring->desc, /* Packet descriptors */
@@ -6835,9 +6840,7 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) rx_ring,
-			  (void *) tx_ring,
-			  wait_packet_function_ptr,
-			  notify_function_ptr
+			  (void *) tx_ring
 			);
 	    	}
 	}
@@ -7607,8 +7610,9 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
 			pf_ring_zc_dev_handler(remove_device_mapping,
-			  NULL, // rx_info,
-			  NULL, // tx_info,
+			  NULL, /* callbacks */
+			  NULL, /* rx_info */
+			  NULL, /* tx_info */
 			  NULL, /* Packet descriptors */
 			  NULL, /* Packet descriptors */
 			  NULL, /* mem_start */
@@ -7621,9 +7625,7 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) adapter->rx_ring[i],
-			  (void *) adapter->tx_ring[i],
-			  NULL, // wait_packet_function_ptr
-			  NULL // notify_function_ptr
+			  (void *) adapter->tx_ring[i]
 			);
 		}
 	}

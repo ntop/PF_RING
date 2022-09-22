@@ -8630,8 +8630,9 @@ static int ice_up_complete(struct ice_vsi *vsi)
 		ice_for_each_rxq(vsi, i) {
 			struct ice_ring *rx_ring = vsi->rx_rings[i];
 			struct ice_ring *tx_ring = vsi->tx_rings[i];
-			mem_ring_info rx_info = { 0 };
-			mem_ring_info tx_info = { 0 };
+			zc_dev_ring_info rx_info = { 0 };
+			zc_dev_ring_info tx_info = { 0 };
+			zc_dev_callbacks callbacks = { NULL };
 
 			init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 
@@ -8649,11 +8650,17 @@ static int ice_up_complete(struct ice_vsi *vsi)
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 			tx_info.registers_index		    = tx_ring->reg_idx; /* vsi->txq_map[tx_ring->q_index] */
 
+			callbacks.wait_packet = wait_packet_function_ptr;
+			callbacks.usage_notification = notify_function_ptr;
+			callbacks.set_time = NULL; //TODO
+			callbacks.adjust_time = NULL; //TODO
+
 			if (unlikely(enable_debug))  
 				printk("[PF_RING-ZC] %s: attach [dev=%s][queue=%u][rx desc=%p][pf start=%llu len=%llu][cache_line_size=%u]\n", __FUNCTION__,
 					vsi->netdev->name, rx_ring->q_index, rx_ring->desc, pci_resource_start(pf->pdev, 0), pci_resource_len(pf->pdev, 0), cache_line_size);
 
 			pf_ring_zc_dev_handler(add_device_mapping,
+				&callbacks,
 				&rx_info,
 				&tx_info,
 				rx_ring->desc, /* rx packet descriptors */
@@ -8668,9 +8675,7 @@ static int ice_up_complete(struct ice_vsi *vsi)
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 				(void *) rx_ring,
-				(void *) tx_ring,
-				wait_packet_function_ptr,
-				notify_function_ptr);
+				(void *) tx_ring);
 		}
 	}
 #endif
@@ -9224,6 +9229,7 @@ int ice_down(struct ice_vsi *vsi)
 			struct ice_ring *rx_ring = vsi->rx_rings[i];
 			struct ice_ring *tx_ring = vsi->tx_rings[i];
 			pf_ring_zc_dev_handler(remove_device_mapping,
+				NULL, // callbacks
 				NULL, // rx_info,
 				NULL, // tx_info,
 				NULL, /* Packet descriptors */
@@ -9238,9 +9244,7 @@ int ice_down(struct ice_vsi *vsi)
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 				(void*)rx_ring,
-				(void*)tx_ring,
-				NULL, // wait_packet_function_ptr
-				NULL // notify_function_ptr
+				(void*)tx_ring
 			);
 		}
 	}

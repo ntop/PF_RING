@@ -6041,15 +6041,15 @@ unsigned int ring_poll(struct file *file,
     debug_printk(2, "poll called on ZC device [%d]\n",
 	     *pfr->zc_dev->interrupt_received);
 
-    if(pfr->zc_dev->wait_packet_function_ptr == NULL) {
-      debug_printk(2, "wait_packet_function_ptr is NULL: returning to caller\n");
+    if(pfr->zc_dev->callbacks.wait_packet == NULL) {
+      debug_printk(2, "wait_packet function ptr is NULL: returning to caller\n");
 
       return(0);
     }
 
-    rc = pfr->zc_dev->wait_packet_function_ptr(pfr->zc_dev->rx_adapter_ptr, 1);
+    rc = pfr->zc_dev->callbacks.wait_packet(pfr->zc_dev->rx_adapter, 1);
 
-    debug_printk(2, "wait_packet_function_ptr(1) returned %d\n", rc);
+    debug_printk(2, "wait_packet function ptr (1) returned %d\n", rc);
 
     if(rc == 0) {
       debug_printk(2, "calling poll_wait()\n");
@@ -6059,10 +6059,10 @@ unsigned int ring_poll(struct file *file,
 
       debug_printk(2, "poll_wait() just returned\n");
     } else {
-      rc = pfr->zc_dev->wait_packet_function_ptr(pfr->zc_dev->rx_adapter_ptr, 0);
+      rc = pfr->zc_dev->callbacks.wait_packet(pfr->zc_dev->rx_adapter, 0);
     }
 
-    debug_printk(2, "wait_packet_function_ptr(0) returned %d\n", rc);
+    debug_printk(2, "wait_packet function ptr (0) returned %d\n", rc);
 
     debug_printk(2, "poll %s return [%d]\n",
 	     pfr->ring_dev->dev->name,
@@ -6370,7 +6370,7 @@ static int pfring_get_zc_dev(struct pf_ring_socket *pfr) {
   debug_printk(1, "added mapping %s@%u [num_bound_sockets=%u]\n",
            pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id, entry->num_bound_sockets);
 
-  rc = pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 1 /* lock */);
+  rc = pfr->zc_dev->callbacks.usage_notification(pfr->zc_dev->rx_adapter, pfr->zc_dev->tx_adapter, 1 /* lock */);
 
   if (rc != 0) {
     printk("[PF_RING] %s:%d something went wrong detaching %s@%u\n", __FUNCTION__, __LINE__,
@@ -6433,7 +6433,7 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
            pfr->zc_mapping.device_name, pfr->zc_mapping.channel_id, entry->num_bound_sockets);
 
   if(pfr->zc_dev != NULL) {
-    rc = pfr->zc_dev->usage_notification(pfr->zc_dev->rx_adapter_ptr, pfr->zc_dev->tx_adapter_ptr, 0 /* unlock */);
+    rc = pfr->zc_dev->callbacks.usage_notification(pfr->zc_dev->rx_adapter, pfr->zc_dev->tx_adapter, 0 /* unlock */);
 
     pfr->zc_device_entry = NULL;
     pfr->zc_dev = NULL;
@@ -8057,22 +8057,22 @@ static int ring_getsockopt(struct socket *sock,
 /* ************************************* */
 
 void pf_ring_zc_dev_handler(zc_dev_operation operation,
-			   mem_ring_info *rx_info,
-			   mem_ring_info *tx_info,
-			   void          *rx_descr_packet_memory,
-			   void          *tx_descr_packet_memory,
-			   void          *phys_card_memory,
-			   u_int          phys_card_memory_len,
-			   u_int channel_id,
-			   struct net_device *dev,
-			   struct device *hwdev,
-			   zc_dev_model device_model,
-			   u_char *device_address,
-			   wait_queue_head_t *packet_waitqueue,
-			   u_int8_t *interrupt_received,
-			   void *rx_adapter_ptr, void *tx_adapter_ptr,
-			   zc_dev_wait_packet wait_packet_function_ptr,
-			   zc_dev_notify dev_notify_function_ptr)
+			    zc_dev_callbacks *callbacks,
+			    zc_dev_ring_info *rx_info,
+			    zc_dev_ring_info *tx_info,
+			    void          *rx_descr_packet_memory,
+			    void          *tx_descr_packet_memory,
+			    void          *phys_card_memory,
+			    u_int          phys_card_memory_len,
+			    u_int channel_id,
+			    struct net_device *dev,
+			    struct device *hwdev,
+			    zc_dev_model device_model,
+			    u_char *device_address,
+			    wait_queue_head_t *packet_waitqueue,
+			    u_int8_t *interrupt_received,
+			    void *rx_adapter,
+			    void *tx_adapter)
 {
   pf_ring_device *dev_ptr;
 
@@ -8115,10 +8115,12 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
       memcpy(next->zc_dev.device_address, device_address, 6);
       next->zc_dev.packet_waitqueue = packet_waitqueue;
       next->zc_dev.interrupt_received = interrupt_received;
-      next->zc_dev.rx_adapter_ptr = rx_adapter_ptr;
-      next->zc_dev.tx_adapter_ptr = tx_adapter_ptr;
-      next->zc_dev.wait_packet_function_ptr = wait_packet_function_ptr;
-      next->zc_dev.usage_notification = dev_notify_function_ptr;
+      next->zc_dev.rx_adapter = rx_adapter;
+      next->zc_dev.tx_adapter = tx_adapter;
+      next->zc_dev.callbacks.wait_packet = callbacks->wait_packet;
+      next->zc_dev.callbacks.usage_notification = callbacks->usage_notification;
+      next->zc_dev.callbacks.set_time = callbacks->set_time;
+      next->zc_dev.callbacks.adjust_time = callbacks->adjust_time;
       list_add(&next->list, &zc_devices_list);
       zc_devices_list_size++;
       /* Increment usage count - avoid unloading it while ZC drivers are in use */
