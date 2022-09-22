@@ -177,6 +177,7 @@ void printHelp(void) {
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-X              Enable hardware timestamp (when supported)\n");
   printf("-s <time>       Set hardware timestamp (when supported). Format example: '2022-09-22 14:30:55.123456789'\n");
+  printf("-d <nsec>       Adjust hardware timestamp using a signed nsec delta (when supported)'\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
   printf("-T              Capture also TX (standard kernel drivers only)\n");
   printf("-t              Touch payload (to force packet load on cache)\n");
@@ -275,13 +276,14 @@ int main(int argc, char* argv[]) {
   u_int32_t flags;
   char *filter = NULL;
   char *init_time = NULL;
+  long long shift_time = 0;
 
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
   flags = PF_RING_ZC_DEVICE_CAPTURE_INJECTED;
 
-  while((c = getopt(argc,argv,"ac:f:g:hi:vCDMRHs:S:TtX")) != '?') {
+  while((c = getopt(argc,argv,"ac:d:f:g:hi:vCDMRHs:S:TtX")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -294,6 +296,10 @@ int main(int argc, char* argv[]) {
       break;
     case 'c':
       cluster_id = atoi(optarg);
+      break;
+    case 'd':
+      flags |= PF_RING_ZC_DEVICE_HW_TIMESTAMP;
+      shift_time = atoll(optarg);
       break;
     case 'f':
       filter = strdup(optarg);
@@ -454,6 +460,25 @@ int main(int argc, char* argv[]) {
 
     if (rc == 0) printf("Device clock correctly initialized\n");
     else printf("Unable to set device clock (%u)\n", rc);
+  }
+
+  if (shift_time) {
+    int rc;
+    struct timespec ts;
+    int sign = 0;
+
+    if (shift_time < 0) {
+      sign = -1;
+      shift_time = -shift_time;
+    }
+
+    ts.tv_sec  = shift_time / 1000000000;
+    ts.tv_nsec = shift_time % 1000000000;
+
+    rc = pfring_zc_adjust_device_clock(zq, &ts, sign);
+
+    if (rc == 0) printf("Device clock adjusted (%s %ld.%ld)\n", sign ? "-" : "+", ts.tv_sec, ts.tv_nsec);
+    else printf("Unable to adjust device clock (%u)\n", rc);
   }
 
   pthread_create(&my_thread, NULL, packet_consumer_thread, (void*) NULL);
