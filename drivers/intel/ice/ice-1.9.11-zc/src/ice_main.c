@@ -8116,7 +8116,7 @@ int ring_is_not_empty(struct ice_ring *rx_ring) {
 	return 0;
 }
 
-int wait_packet_function_ptr(void *data, int mode)
+int wait_packet_callback(void *data, int mode)
 {
 	struct ice_ring *rx_ring = (struct ice_ring*) data;
 #ifdef ICE_ZC_IRQ
@@ -8223,7 +8223,7 @@ static void ice_control_rxq(struct ice_vsi *vsi, int q_index, bool enable)
 	ice_vsi_wait_one_rx_ring(vsi, enable, q_index);
 }
 
-int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
+int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
 	struct ice_ring  *rx_ring = (struct ice_ring *) rx_data;
 	struct ice_ring  *tx_ring = (struct ice_ring *) tx_data;
@@ -8416,6 +8416,46 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	return 0;
 }
 
+int set_time_callback(void *rx_adapter, u_int64_t time_ns) 
+{
+	struct ice_ring  *rx_ring = (struct ice_ring *) rx_adapter;
+	struct ice_vsi   *vsi;
+	struct ice_pf    *adapter;
+	struct ice_hw    *hw; 
+
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s\n", __FUNCTION__);
+
+	if (rx_ring == NULL) return ICE_ERR_BAD_PTR; /* safety check */
+
+	vsi = rx_ring->vsi;
+	adapter = vsi->back; /* or use ice_netdev_to_pf(rx_ring->netdev); */
+	hw = &adapter->hw;
+
+	return ice_ptp_init_time(hw, time_ns);
+}
+
+int adjust_time_callback(void *rx_adapter, int64_t offset_ns)
+{
+	struct ice_ring  *rx_ring = (struct ice_ring *) rx_adapter;
+	struct ice_vsi   *vsi;
+	struct ice_pf    *adapter;
+	struct ice_hw    *hw; 
+
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s\n", __FUNCTION__);
+
+	if (rx_ring == NULL) return ICE_ERR_BAD_PTR; /* safety check */
+
+	vsi = rx_ring->vsi;
+	adapter = vsi->back; /* or use ice_netdev_to_pf(rx_ring->netdev); */
+	hw = &adapter->hw;
+
+	if (offset_ns > S32_MAX || offset_ns < S32_MIN)
+		return ICE_ERR_PARAM;
+
+	return ice_ptp_adj_clock(hw, offset_ns, true);
+}
 #endif
 
 /* THEORY OF MODERATION:
@@ -8650,10 +8690,10 @@ static int ice_up_complete(struct ice_vsi *vsi)
 			tx_info.descr_packet_memory_tot_len = tx_ring->size;
 			tx_info.registers_index		    = tx_ring->reg_idx; /* vsi->txq_map[tx_ring->q_index] */
 
-			callbacks.wait_packet = wait_packet_function_ptr;
-			callbacks.usage_notification = notify_function_ptr;
-			callbacks.set_time = NULL; //TODO
-			callbacks.adjust_time = NULL; //TODO
+			callbacks.wait_packet = wait_packet_callback;
+			callbacks.usage_notification = notify_callback;
+			callbacks.set_time = set_time_callback;
+			callbacks.adjust_time = adjust_time_callback;
 
 			if (unlikely(enable_debug))  
 				printk("[PF_RING-ZC] %s: attach [dev=%s][queue=%u][rx desc=%p][pf start=%llu len=%llu][cache_line_size=%u]\n", __FUNCTION__,
