@@ -7322,7 +7322,7 @@ static int ring_setsockopt(struct socket *sock,
     if (pfr->zc_dev && pfr->zc_dev->callbacks.set_time)
       return pfr->zc_dev->callbacks.set_time(pfr->zc_dev->rx_adapter, time_ns);
     else
-      return EOPNOTSUPP;
+      return -EOPNOTSUPP;
 
     break;
 
@@ -7337,7 +7337,7 @@ static int ring_setsockopt(struct socket *sock,
     if (pfr->zc_dev && pfr->zc_dev->callbacks.adjust_time)
       return pfr->zc_dev->callbacks.adjust_time(pfr->zc_dev->rx_adapter, offset_ns);
     else
-      return EOPNOTSUPP;
+      return -EOPNOTSUPP;
 
     break;
 
