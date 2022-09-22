@@ -69,6 +69,8 @@
 #define SO_REHASH_RSS_PACKET             119
 #define SO_SET_FILTERING_SAMPLING_RATE   120
 #define SO_SET_POLL_WATERMARK_TIMEOUT    121
+#define SO_SET_DEV_TIME			 122
+#define SO_ADJ_DEV_TIME			 123
 #define SO_SHUTDOWN_RING                 124
 #define SO_PURGE_IDLE_RULES              125 /* inactivity (sec) */
 #define SO_SET_SOCKET_MODE               126
@@ -884,7 +886,7 @@ struct ring_sock {
 typedef int (*zc_dev_wait_packet)(void *rx_adapter, int mode);
 typedef int (*zc_dev_notify)(void *rx_adapter, void *tx_adapter, u_int8_t device_in_use);
 typedef int (*zc_dev_set_time)(void *rx_adapter, u_int64_t time_ns);
-typedef int (*zc_dev_adjust_time)(void *rx_adapter, u_int64_t offset_ns, u_int8_t sign);
+typedef int (*zc_dev_adjust_time)(void *rx_adapter, int64_t offset_ns);
 
 typedef struct {
   zc_dev_wait_packet wait_packet;

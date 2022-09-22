@@ -6881,6 +6881,8 @@ static int ring_setsockopt(struct socket *sock,
   hw_filtering_rule hw_rule;
   struct list_head *ptr, *tmp_ptr;
   zc_dev_mapping mapping;
+  u_int64_t time_ns;
+  int64_t offset_ns;
 
   if(pfr == NULL)
     return(-EINVAL);
@@ -7300,14 +7302,44 @@ static int ring_setsockopt(struct socket *sock,
     break;
 
   case SO_SET_POLL_WATERMARK_TIMEOUT:
-	  if(optlen != sizeof(u_int16_t))
-		return(-EINVAL);
-	  else {
-		if(copy_from_sockptr(&pfr->poll_watermark_timeout, optval, optlen))
-           return(-EFAULT);
-		debug_printk(2, "--> SO_SET_POLL_WATERMARK_TIMEOUT=%u\n", pfr->poll_watermark_timeout);
-	  }
-  	break;
+    if(optlen != sizeof(u_int16_t))
+      return(-EINVAL);
+    else {
+      if(copy_from_sockptr(&pfr->poll_watermark_timeout, optval, optlen))
+        return(-EFAULT);
+      debug_printk(2, "--> SO_SET_POLL_WATERMARK_TIMEOUT=%u\n", pfr->poll_watermark_timeout);
+    }
+    break;
+
+  case SO_SET_DEV_TIME:
+    if (optlen != sizeof(u_int64_t)) {
+      return(-EINVAL);
+    } else {
+      if (copy_from_sockptr(&time_ns, optval, optlen))
+        return(-EFAULT);
+    }
+
+    if (pfr->zc_dev && pfr->zc_dev->callbacks.set_time)
+      return pfr->zc_dev->callbacks.set_time(pfr->zc_dev->rx_adapter, time_ns);
+    else
+      return EOPNOTSUPP;
+
+    break;
+
+  case SO_ADJ_DEV_TIME:
+    if (optlen != sizeof(int64_t)) {
+      return(-EINVAL);
+    } else {
+      if (copy_from_sockptr(&offset_ns, optval, optlen))
+        return(-EFAULT);
+    }
+
+    if (pfr->zc_dev && pfr->zc_dev->callbacks.adjust_time)
+      return pfr->zc_dev->callbacks.adjust_time(pfr->zc_dev->rx_adapter, offset_ns);
+    else
+      return EOPNOTSUPP;
+
+    break;
 
   case SO_RING_BUCKET_LEN:
     if(optlen != sizeof(u_int32_t))
