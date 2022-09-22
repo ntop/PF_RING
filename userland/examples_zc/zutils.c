@@ -38,6 +38,37 @@
 
 /* *************************************** */
 
+/* Get nsec time from date (2022-01-30 14:30:55.123456789) */
+static int str2nsec(char *timestr, struct timespec *ts) {
+  struct tm tm = { 0 };
+  char *nsecstr = strchr(timestr, '.');
+
+  ts->tv_sec = 0;
+  ts->tv_nsec = 0;
+
+  /* nsec */
+
+  if (nsecstr != NULL) {
+    nsecstr[0] = '\0';
+    nsecstr++; 
+    ts->tv_nsec = atoi(nsecstr);
+  }
+
+  /* sec */
+
+  if (!strptime(timestr, "%Y-%m-%d %H:%M:%S", &tm)) {
+    fprintf(stderr, "Unable to parse %s: invalid format", timestr);
+    return -1;
+  }
+
+  tm.tm_isdst = -1;
+  ts->tv_sec = mktime(&tm);
+
+  return 0;
+}
+
+/* *************************************** */
+
 int max_packet_len(char *device) { 
   char ifname_buff[32], path[256];
   char *ifname = ifname_buff, *ptr;

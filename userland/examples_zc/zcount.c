@@ -175,6 +175,8 @@ void printHelp(void) {
   printf("-f <bpf>        Set a BPF filter\n");
   printf("-R              Test hw filters adding a rule (Intel 82599)\n");
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
+  printf("-X              Enable hardware timestamp (when supported)\n");
+  printf("-s <time>       Set hardware timestamp (when supported). Format example: '2022-09-22 14:30:55.123456789'\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
   printf("-T              Capture also TX (standard kernel drivers only)\n");
   printf("-t              Touch payload (to force packet load on cache)\n");
@@ -272,13 +274,14 @@ int main(int argc, char* argv[]) {
   pthread_t time_thread;
   u_int32_t flags;
   char *filter = NULL;
+  char *init_time = NULL;
 
   lastTime.tv_sec = 0;
   startTime.tv_sec = 0;
 
   flags = PF_RING_ZC_DEVICE_CAPTURE_INJECTED;
 
-  while((c = getopt(argc,argv,"ac:f:g:hi:vCDMRHS:Tt")) != '?') {
+  while((c = getopt(argc,argv,"ac:f:g:hi:vCDMRHs:S:TtX")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -307,6 +310,10 @@ int main(int argc, char* argv[]) {
     case 'H':
       high_stats_refresh = 1;
       break;
+    case 's':
+      flags |= PF_RING_ZC_DEVICE_HW_TIMESTAMP;
+      init_time = strdup(optarg);
+      break;
     case 'S':
       time_pulse = 1;
       bind_time_pulse_core = atoi(optarg);
@@ -328,6 +335,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'M':
       print_maintenance = 1;
+      break;
+    case 'X':
+      flags |= PF_RING_ZC_DEVICE_HW_TIMESTAMP;
       break;
     }
   }
@@ -431,6 +441,19 @@ int main(int argc, char* argv[]) {
     pulse_timestamp_ns = calloc(CACHE_LINE_LEN/sizeof(u_int64_t), sizeof(u_int64_t));
     pthread_create(&time_thread, NULL, time_pulse_thread, NULL);
     while (!*pulse_timestamp_ns && !do_shutdown); /* wait for ts */
+  }
+
+  if (init_time) {
+    int rc;
+    struct timespec ts;
+
+    rc = str2nsec(init_time, &ts);
+
+    if (rc == 0)
+      rc = pfring_zc_set_device_clock(zq, &ts);
+
+    if (rc == 0) printf("Device clock correctly initialized\n");
+    else printf("Unable to set device clock (%u)\n", rc);
   }
 
   pthread_create(&my_thread, NULL, packet_consumer_thread, (void*) NULL);
