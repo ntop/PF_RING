@@ -80,7 +80,8 @@ typedef void pfring_zc_multi_queue;
  */
 typedef enum {
   rx_only,        /**< RX only mode. */
-  tx_only         /**< TX only mode. */
+  tx_only,        /**< TX only mode. */
+  management_only /**< No capture/transmission. */
 } pfring_zc_queue_mode;
 
 /**
