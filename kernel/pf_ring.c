@@ -1596,9 +1596,10 @@ static char* direction2string(packet_direction d)
 static char* sockmode2string(socket_mode m)
 {
   switch(m) {
-  case send_and_recv_mode: return("RX+TX");
-  case recv_only_mode:     return("RX only");
-  case send_only_mode:     return("TX only");
+  case send_and_recv_mode:   return("RX+TX");
+  case recv_only_mode:       return("RX only");
+  case send_only_mode:       return("TX only");
+  case management_only_mode: return("Management only");
   }
 
   return("???");
@@ -7240,25 +7241,29 @@ static int ring_setsockopt(struct socket *sock,
     if(pfr->zc_device_entry != NULL && !pfr->ring_active /* already active, no check */) {
       int i;
 
-      spin_lock_bh(&pfr->zc_device_entry->lock);
+      if (pfr->mode != management_only_mode) {
 
-      for(i=0; i<MAX_NUM_ZC_BOUND_SOCKETS; i++) {
-	if((pfr->zc_device_entry->bound_sockets[i] != NULL)
-	   && pfr->zc_device_entry->bound_sockets[i]->ring_active) {
-	  if(pfr->zc_device_entry->bound_sockets[i]->mode == pfr->mode
-	     || pfr->zc_device_entry->bound_sockets[i]->mode == send_and_recv_mode
-	     || pfr->mode == send_and_recv_mode) {
-            spin_unlock_bh(&pfr->zc_device_entry->lock);
-	    printk("[PF_RING] Unable to activate two or more ZC sockets on the same interface %s/link direction\n",
-		   pfr->ring_dev->dev->name);
-	    return(-EFAULT); /* No way: we can't have two sockets that are doing the same thing with ZC */
-	  }
-	} /* if */
-      } /* for */
+        spin_lock_bh(&pfr->zc_device_entry->lock);
+
+        for(i=0; i<MAX_NUM_ZC_BOUND_SOCKETS; i++) {
+          if((pfr->zc_device_entry->bound_sockets[i] != NULL)
+	     && pfr->zc_device_entry->bound_sockets[i]->ring_active) {
+	    if(pfr->zc_device_entry->bound_sockets[i]->mode == pfr->mode
+	       || pfr->zc_device_entry->bound_sockets[i]->mode == send_and_recv_mode
+	       || pfr->mode == send_and_recv_mode) {
+              spin_unlock_bh(&pfr->zc_device_entry->lock);
+	      printk("[PF_RING] Unable to activate two or more ZC sockets on the same interface %s/link direction\n",
+		     pfr->ring_dev->dev->name);
+	      return(-EFAULT); /* No way: we can't have two sockets that are doing the same thing with ZC */
+	    }
+	  } /* if */
+        } /* for */
+
+        spin_unlock_bh(&pfr->zc_device_entry->lock);
+
+      }
 
       pfr->ring_active = 1;
-
-      spin_unlock_bh(&pfr->zc_device_entry->lock);
 
     } else {
       pfr->ring_active = 1;

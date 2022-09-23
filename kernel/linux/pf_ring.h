@@ -483,7 +483,8 @@ typedef enum {
 typedef enum {
   send_and_recv_mode = 0,
   send_only_mode,
-  recv_only_mode
+  recv_only_mode,
+  management_only_mode
 } socket_mode;
 
 typedef struct {
