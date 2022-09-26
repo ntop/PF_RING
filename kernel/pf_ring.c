@@ -8081,6 +8081,12 @@ static int ring_getsockopt(struct socket *sock,
     }
     break;
 
+  case SO_GET_DEV_TX_TIME:
+
+    // TODO
+
+    break;
+
   default:
     return -ENOPROTOOPT;
   }
@@ -8158,6 +8164,7 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
       next->zc_dev.callbacks.usage_notification = callbacks->usage_notification;
       next->zc_dev.callbacks.set_time = callbacks->set_time;
       next->zc_dev.callbacks.adjust_time = callbacks->adjust_time;
+      next->zc_dev.callbacks.get_tx_time = callbacks->get_tx_time;
       list_add(&next->list, &zc_devices_list);
       zc_devices_list_size++;
       /* Increment usage count - avoid unloading it while ZC drivers are in use */

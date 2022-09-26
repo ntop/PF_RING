@@ -8458,6 +8458,34 @@ int adjust_time_callback(void *rx_adapter, int64_t offset_ns)
 
 	return ice_ptp_adj_clock(hw, offset_ns, true);
 }
+
+int get_tx_time_callback(void *tx_adapter, u_int64_t *time_ns)
+{
+	struct ice_ring  *tx_ring = (struct ice_ring *) tx_adapter;
+	struct ice_vsi   *vsi;
+	struct ice_pf    *adapter;
+	struct ice_hw    *hw; 
+	u8		 idx;
+	u8		 block;
+
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s\n", __FUNCTION__);
+
+	if (tx_ring == NULL) return ICE_ERR_BAD_PTR; /* safety check */
+
+	vsi = tx_ring->vsi;
+	adapter = vsi->back; /* or use ice_netdev_to_pf(tx_ring->netdev); */
+	hw = &adapter->hw;
+
+	/* TODO on E822 see this is set as in ice_ptp_init_tx_e822  */
+	block = adapter->hw.port_info->lport; /* E810 */
+
+	/* Note: a single index is used */
+        idx = 0;
+
+	return ice_read_phy_tstamp(hw, block, idx, time_ns);
+}
+
 #endif
 
 /* THEORY OF MODERATION:

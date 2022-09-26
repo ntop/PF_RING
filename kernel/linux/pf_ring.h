@@ -105,6 +105,7 @@
 #define SO_GET_DEVICE_IFINDEX            185
 #define SO_GET_APPL_STATS_FILE_NAME      186
 #define SO_GET_LINK_STATUS               187
+#define SO_GET_DEV_TX_TIME		 188
 
 /* Other *sockopt */
 #define SO_SELECT_ZC_DEVICE              190
@@ -888,12 +889,14 @@ typedef int (*zc_dev_wait_packet)(void *rx_adapter, int mode);
 typedef int (*zc_dev_notify)(void *rx_adapter, void *tx_adapter, u_int8_t device_in_use);
 typedef int (*zc_dev_set_time)(void *rx_adapter, u_int64_t time_ns);
 typedef int (*zc_dev_adjust_time)(void *rx_adapter, int64_t offset_ns);
+typedef int (*zc_dev_get_tx_time)(void *tx_adapter, u_int64_t *time_ns);
 
 typedef struct {
   zc_dev_wait_packet wait_packet;
   zc_dev_notify usage_notification;
   zc_dev_set_time set_time;
   zc_dev_adjust_time adjust_time;
+  zc_dev_get_tx_time get_tx_time;
 } __attribute__((packed))
 zc_dev_callbacks;
 
