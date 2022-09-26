@@ -8082,9 +8082,20 @@ static int ring_getsockopt(struct socket *sock,
     break;
 
   case SO_GET_DEV_TX_TIME:
+    {
+      u_int64_t time_ns = 0;
 
-    // TODO
+      if(len < sizeof(u_int64_t))
+        return(-EINVAL);
+      
+      if (pfr->zc_dev && pfr->zc_dev->callbacks.get_tx_time)
+        return pfr->zc_dev->callbacks.get_tx_time(pfr->zc_dev->tx_adapter, &time_ns);
+      else
+        return -EOPNOTSUPP;
 
+      if(copy_to_user(optval, &time_ns, sizeof(time_ns)))
+        return(-EFAULT);
+    }
     break;
 
   default:
