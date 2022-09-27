@@ -41,8 +41,11 @@
 
 #include "zutils.c"
 
+#define MAX_CARD_SLOTS      32768
+
 pfring_zc_cluster *zc;
 pfring_zc_queue *zq;
+pfring_zc_pkt_buff *buffer;
 
 u_int8_t verbose = 0;
 
@@ -59,7 +62,28 @@ void printHelp(void) {
   printf("-c <cluster id> Cluster id\n");
   printf("-s <time>       Set hardware timestamp (when supported). Format example: '2022-09-22 14:30:55.123456789'\n");
   printf("-d <nsec>       Adjust hardware timestamp using a signed nsec delta (when supported)'\n");
+  printf("-t              Send a test packet and get the transmission time\n");
   printf("-v              Verbose\n");
+}
+
+/* *************************************** */
+
+void send_packet() {
+  u_char *data = pfring_zc_pkt_buff_data(buffer, zq);
+  struct timespec ts = { 0 };
+  int packet_len = 60;
+  int rc;
+
+  buffer->len = packet_len;
+  forge_udp_packet_fast(data, packet_len, 1);
+
+  rc = pfring_zc_send_pkt_get_time(zq, &buffer, 1, &ts);
+
+  if (rc) {
+    fprintf(stderr, "Packet successfully sent at %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
+  } else {
+    fprintf(stderr, "Failure sending packet\n");
+  }
 }
 
 /* *************************************** */
@@ -71,8 +95,10 @@ int main(int argc, char* argv[]) {
   u_int32_t flags = PF_RING_ZC_DEVICE_HW_TIMESTAMP;
   char *init_time = NULL;
   long long shift_time = 0;
+  int test_send_get_time = 0;
+  int read_time = 1;
 
-  while((c = getopt(argc,argv,"c:d:hi:vDs:")) != '?') {
+  while((c = getopt(argc,argv,"c:d:hi:vDs:t")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -92,6 +118,9 @@ int main(int argc, char* argv[]) {
     case 's':
       init_time = strdup(optarg);
       break;
+    case 't':
+      test_send_get_time = 1;
+      break;
     case 'v':
       verbose = 1;
       break;
@@ -110,7 +139,7 @@ int main(int argc, char* argv[]) {
     cluster_id, 
     1536,
     0, 
-    1,
+    (test_send_get_time ? MAX_CARD_SLOTS : 0) + 1,
     -1,
     NULL /* auto hugetlb mountpoint */,
     0 
@@ -122,7 +151,14 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  zq = pfring_zc_open_device(zc, device, management_only, flags);
+  buffer = pfring_zc_get_packet_handle(zc);
+
+  if (buffer == NULL) {
+    fprintf(stderr, "pfring_zc_get_packet_handle error\n");
+    return -1;
+  }
+
+  zq = pfring_zc_open_device(zc, device, test_send_get_time ? tx_only : management_only, flags);
 
   if(zq == NULL) {
     fprintf(stderr, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
@@ -161,6 +197,18 @@ int main(int argc, char* argv[]) {
 
     if (rc == 0) printf("Device clock adjusted (%s %ld.%ld)\n", sign ? "-" : "+", ts.tv_sec, ts.tv_nsec);
     else printf("Unable to adjust device clock (%u)\n", rc);
+  }
+
+  if (read_time) {
+    struct timespec ts;
+
+    rc = pfring_zc_get_device_clock(zq, &ts);
+
+    printf("Device clock is %ld.%ld\n", ts.tv_sec, ts.tv_nsec);
+  }
+
+  if (test_send_get_time) {
+    send_packet();
   }
 
   sleep(1);
