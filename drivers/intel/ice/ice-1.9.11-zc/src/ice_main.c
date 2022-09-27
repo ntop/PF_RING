@@ -8724,6 +8724,7 @@ static int ice_up_complete(struct ice_vsi *vsi)
 			callbacks.usage_notification = notify_callback;
 			callbacks.set_time = set_time_callback;
 			callbacks.adjust_time = adjust_time_callback;
+			callbacks.get_tx_time = get_tx_time_callback;
 
 			if (unlikely(enable_debug))  
 				printk("[PF_RING-ZC] %s: attach [dev=%s][queue=%u][rx desc=%p][pf start=%llu len=%llu][cache_line_size=%u]\n", __FUNCTION__,
