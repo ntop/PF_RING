@@ -104,9 +104,9 @@ void print_stats() {
 
   if(pcap_stats(pd, &pcapStat) >= 0) {
     fprintf(stderr, "=========================\n"
-	    "Absolute Stats: [%u pkts rcvd][%u pkts dropped]\n"
+	    "Absolute Stats: [%u pkts rcvd][%u pkts dropped (%u if drops)]\n"
 	    "Total Pkts=%u/Dropped=%.1f %%\n",
-	    pcapStat.ps_recv, pcapStat.ps_drop, pcapStat.ps_recv-pcapStat.ps_drop,
+	    pcapStat.ps_recv, pcapStat.ps_drop, pcapStat.ps_ifdrop, pcapStat.ps_recv-pcapStat.ps_drop,
 	    pcapStat.ps_recv == 0 ? 0 : (double)(pcapStat.ps_drop*100)/(double)pcapStat.ps_recv);
     fprintf(stderr, "%llu pkts [%.1f pkt/sec] - %llu bytes [%.2f Mbit/sec]\n",
 	    numPkts, (double)numPkts/deltaSec,
