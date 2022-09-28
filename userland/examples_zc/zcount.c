@@ -184,27 +184,27 @@ void printHelp(void) {
   printf("-D              Debug mode\n");
   printf("-C              Check license\n");
   printf("-M              Print maintenance\n");
-  printf("-v              Verbose\n");
+  printf("-v <level>      Verbose (1 to print packet headers, 2 to print hex)\n");
 }
 
 /* *************************************** */
 
 void print_packet(pfring_zc_pkt_buff *buffer) {
   u_char *pkt_data = pfring_zc_pkt_buff_data(buffer, zq);
-  char bigbuf[4096];
 
   if (buffer->ts.tv_nsec)
     printf("[%u.%u] [hash=%08X] ", buffer->ts.tv_sec, buffer->ts.tv_nsec, buffer->hash);
 
-#if 1
-  pfring_print_pkt(bigbuf, sizeof(bigbuf), pkt_data, buffer->len, buffer->len);
-  fputs(bigbuf, stdout);
-#else
-  int i;
-  for(i = 0; i < buffer->len; i++)
-    printf("%02X ", pkt_data[i]);
-  printf("\n");
-#endif
+  if (verbose == 1) {
+    char bigbuf[4096];
+    pfring_print_pkt(bigbuf, sizeof(bigbuf), pkt_data, buffer->len, buffer->len);
+    fputs(bigbuf, stdout);
+  } else {
+    int i;
+    for(i = 0; i < buffer->len; i++)
+      printf("%02X ", pkt_data[i]);
+    printf("\n");
+  }
 }
 
 /* *************************************** */
@@ -283,7 +283,7 @@ int main(int argc, char* argv[]) {
 
   flags = PF_RING_ZC_DEVICE_CAPTURE_INJECTED;
 
-  while((c = getopt(argc,argv,"ac:d:f:g:hi:vCDMRHs:S:TtX")) != '?') {
+  while((c = getopt(argc,argv,"ac:d:f:g:hi:v:CDMRHs:S:TtX")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -331,7 +331,7 @@ int main(int argc, char* argv[]) {
       touch_payload = 1;
       break;
     case 'v':
-      verbose = 1;
+      verbose = atoi(optarg);
       break;
     case 'C':
       check_license = 1;
