@@ -8467,6 +8467,7 @@ int get_tx_time_callback(void *tx_adapter, u_int64_t *time_ns)
 	struct ice_hw    *hw; 
 	u8		 idx;
 	u8		 block;
+	int		 rc;
 
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s\n", __FUNCTION__);
@@ -8483,7 +8484,9 @@ int get_tx_time_callback(void *tx_adapter, u_int64_t *time_ns)
 	/* Note: a single index is used */
         idx = 0;
 
-	return ice_read_phy_tstamp(hw, block, idx, time_ns);
+	rc = ice_read_phy_tstamp(hw, block, idx, time_ns);
+
+	return rc;
 }
 
 #endif

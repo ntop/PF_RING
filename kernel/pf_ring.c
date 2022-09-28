@@ -8090,7 +8090,8 @@ static int ring_getsockopt(struct socket *sock,
       }      
 
       if (pfr->zc_dev && pfr->zc_dev->callbacks.get_tx_time) {
-        return pfr->zc_dev->callbacks.get_tx_time(pfr->zc_dev->tx_adapter, &time_ns);
+        if (pfr->zc_dev->callbacks.get_tx_time(pfr->zc_dev->tx_adapter, &time_ns) != 0)
+          return(-EFAULT);
       } else {
         return -EOPNOTSUPP;
       }
