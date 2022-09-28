@@ -43,9 +43,9 @@
 
 #define MAX_CARD_SLOTS      32768
 
-pfring_zc_cluster *zc;
-pfring_zc_queue *zq;
-pfring_zc_pkt_buff *buffer;
+pfring_zc_cluster *zc = NULL;
+pfring_zc_queue *zq = NULL;
+pfring_zc_pkt_buff *buffer = NULL;
 
 u_int8_t verbose = 0;
 
@@ -75,7 +75,7 @@ void send_packet() {
   int rc;
 
   buffer->len = packet_len;
-  forge_udp_packet_fast(data, packet_len, 1);
+  forge_udp_packet_fast(data, packet_len, 0);
 
   rc = pfring_zc_send_pkt_get_time(zq, &buffer, 1, &ts);
 
