@@ -8252,6 +8252,16 @@ int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			 * high-pps traffic in kernel space in promiscuous mode */
 			ice_for_each_rxq(vsi, i) {
 				struct ice_ring *rx_ring_i = vsi->rx_rings[i];
+
+				/* Stop queue */
+				ice_control_rxq(vsi, rx_ring_i->q_index, false /* stop */);
+			}
+
+			/* Wait enough to make sure there is no concurrent insertion */
+			usleep_range(100, 200);
+
+			ice_for_each_rxq(vsi, i) {
+				struct ice_ring *rx_ring_i = vsi->rx_rings[i];
 				u_int32_t *shadow_tail_ptr = (u_int32_t *) ICE_RX_DESC(rx_ring_i, rx_ring_i->count);
 				u_int32_t curr_tail;
 
@@ -8259,17 +8269,12 @@ int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				else curr_tail = rx_ring_i->next_to_clean-1;
 
 				if (unlikely(enable_debug))
-					printk("[PF_RING-ZC] %s:%d RX Dev=%s Queue=%u Hw-Tail=%u NTU=%u NTC/Sw-Tail=%u ShadowTail=%u\n",
+					printk("[PF_RING-ZC] %s:%d RX Dev=%s Queue=%u Hw-Tail=%u Next-To-Use=%u Next-To-Clean/Sw-Tail=%u Shadow-Tail=%u\n",
 						__FUNCTION__, __LINE__, vsi->netdev->name, rx_ring_i->q_index,
 						readl(rx_ring_i->tail), rx_ring_i->next_to_use, rx_ring_i->next_to_clean, curr_tail);
 
 				/* Store tail (see ice_release_rx_desc) */
 				//writel(rx_ring_i->next_to_use, rx_ring_i->tail);
-
-				/* Stop queue - should be already stopped on first interface user */
-				ice_control_rxq(vsi, rx_ring_i->q_index, false /* stop */);
-
-				usleep_range(100, 200);
 
 				ice_clean_rx_ring(rx_ring_i);
 
