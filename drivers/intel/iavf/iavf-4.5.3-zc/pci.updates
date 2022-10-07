@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (c) 2013, Intel Corporation.
+
+# updates for the system pci.ids file
+#
+# IMPORTANT!  Entries in this list must be sorted as they
+#             would appear in the system pci.ids file.  Entries
+#             are sorted by ven, dev, subven, subdev
+#             (numerical order). Also, no OEM names in strings.
+#             The oem vendor id will sub into the name when
+#             the string is consumed by the tools using it.
+#
+8086  Intel Corporation
+	0dd5  Ethernet Virtual Device
+	154c  Ethernet Virtual Function 700 Series
+	1571  Ethernet Virtual Function 700 Series
+	1889  Ethernet Adaptive Virtual Function
+	37cd  Ethernet Virtual Function 700 Series

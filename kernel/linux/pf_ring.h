@@ -921,7 +921,8 @@ typedef enum {
   intel_fm10k,
   intel_ixgbe_vf,
   intel_ixgbe_x550,
-  intel_ice
+  intel_ice,
+  intel_i40e_vf
 } zc_dev_model;
 
 typedef struct {

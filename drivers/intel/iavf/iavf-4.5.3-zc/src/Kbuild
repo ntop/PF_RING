@@ -1,0 +1,31 @@
+#
+# Makefile for the Intel Ethernet Adaptive Virtual Function Driver
+#
+
+obj-m += iavf.o
+
+iavf-objs := iavf_main.o \
+	kcompat.o	\
+	iavf_ethtool.o	\
+	iavf_adminq.o	\
+	iavf_common.o	\
+	iavf_txrx.o	\
+	iavf_idc.o	\
+	iavf_ptp.o	\
+	iavf_virtchnl.o
+
+CFLAGS_iavf_main.o := -I$(src)
+
+EXTRA_CFLAGS += -DHAVE_PF_RING
+KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
+
+KVER=$(shell uname -r)
+
+all:
+	cd ${PF_RING_PATH}/; make
+	cp ${PF_RING_PATH}/Module.symvers .
+	$(MAKE) -C /lib/modules/${KVER}/build M=$(PWD) modules
+
+clean:
+	$(MAKE) -C /lib/modules/${KVER}/build M=$(PWD) clean
+
