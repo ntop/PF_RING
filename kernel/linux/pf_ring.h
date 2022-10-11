@@ -75,6 +75,7 @@
 #define SO_PURGE_IDLE_RULES              125 /* inactivity (sec) */
 #define SO_SET_SOCKET_MODE               126
 #define SO_USE_SHORT_PKT_HEADER          127
+#define SO_CONTROL_DEV_QUEUE		 128
 #define SO_ENABLE_RX_PACKET_BOUNCE       131
 #define SO_SET_APPL_STATS                133
 #define SO_SET_STACK_INJECTION_MODE      134 /* stack injection/interception from userspace */
@@ -890,6 +891,7 @@ typedef int (*zc_dev_notify)(void *rx_adapter, void *tx_adapter, u_int8_t device
 typedef int (*zc_dev_set_time)(void *rx_adapter, u_int64_t time_ns);
 typedef int (*zc_dev_adjust_time)(void *rx_adapter, int64_t offset_ns);
 typedef int (*zc_dev_get_tx_time)(void *tx_adapter, u_int64_t *time_ns);
+typedef int (*zc_dev_control_queue)(void *rx_adapter, u_int8_t enable);
 
 typedef struct {
   zc_dev_wait_packet wait_packet;
@@ -897,6 +899,7 @@ typedef struct {
   zc_dev_set_time set_time;
   zc_dev_adjust_time adjust_time;
   zc_dev_get_tx_time get_tx_time;
+  zc_dev_control_queue control_queue;
 } __attribute__((packed))
 zc_dev_callbacks;
 

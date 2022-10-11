@@ -7349,6 +7349,22 @@ static int ring_setsockopt(struct socket *sock,
 
     break;
 
+  case SO_CONTROL_DEV_QUEUE:
+    if (optlen != sizeof(u_int8_t)) {
+      return(-EINVAL);
+    } else {
+      u_int8_t enable_queue;
+
+      if (copy_from_sockptr(&enable_queue, optval, optlen))
+        return(-EFAULT);
+
+      if (pfr->zc_dev && pfr->zc_dev->callbacks.control_queue)
+        return pfr->zc_dev->callbacks.control_queue(pfr->zc_dev->rx_adapter, enable_queue);
+      else
+        return -EOPNOTSUPP;
+    }
+    break;
+
   case SO_RING_BUCKET_LEN:
     if(optlen != sizeof(u_int32_t))
       return(-EINVAL);
@@ -8183,6 +8199,7 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
       next->zc_dev.callbacks.set_time = callbacks->set_time;
       next->zc_dev.callbacks.adjust_time = callbacks->adjust_time;
       next->zc_dev.callbacks.get_tx_time = callbacks->get_tx_time;
+      next->zc_dev.callbacks.control_queue = callbacks->control_queue;
       list_add(&next->list, &zc_devices_list);
       zc_devices_list_size++;
       /* Increment usage count - avoid unloading it while ZC drivers are in use */

@@ -1465,12 +1465,28 @@ int wake_up_pfring_zc_socket(struct iavf_ring *rx_ring)
 	return 0;
 }
 
+int control_queue_ptr(void *rx_data, u_int8_t enable) {
+	struct iavf_ring *rx_ring = (struct iavf_ring *) rx_data;
+	struct iavf_adapter *adapter;
+
+	if (rx_ring == NULL) return -1;
+
+	adapter = netdev_priv(rx_ring->netdev);
+
+	if (enable)
+		iavf_enable_queues(adapter);
+	else
+		iavf_disable_queues(adapter);
+
+	return 0;
+}
+
 int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use) 
 {
 	struct iavf_ring  *rx_ring = (struct iavf_ring *) rx_data;
 	struct iavf_ring  *tx_ring = (struct iavf_ring *) tx_data;
 	struct iavf_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
-	struct iavf_adapter    *adapter;
+	struct iavf_adapter *adapter;
 	int i, n;
  
 	if (unlikely(enable_debug))
@@ -1486,7 +1502,10 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			try_module_get(THIS_MODULE); /* ++ */
 
 			/* wait for clean_rx_irq to complete the current receive if any */
-			usleep_range(100, 200);  
+			usleep_range(100, 200);
+
+			// Note: this is disabling all queues (TODO handle RSS and RX+TX)
+			iavf_disable_queues(adapter);
 		}
 
     
@@ -1530,7 +1549,8 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			for (i = 0; i<rx_ring->count; i++) {
 				union iavf_rx_desc *rx_desc = IAVF_RX_DESC(rx_ring, i);
 	
-				rx_desc->read.pkt_addr = 0, rx_desc->read.hdr_addr = 0;
+				rx_desc->read.pkt_addr = 0;
+				rx_desc->read.hdr_addr = 0;
 			}
 			rmb();
 
@@ -1670,6 +1690,7 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 
 			callbacks.wait_packet = wait_packet_function_ptr;
 			callbacks.usage_notification = notify_function_ptr;
+			callbacks.control_queue = control_queue_ptr;
 
 			pf_ring_zc_dev_handler(add_device_mapping,
 				&callbacks,
