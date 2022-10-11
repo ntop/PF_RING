@@ -443,11 +443,7 @@ pfring_zc_send_pkt(
  * Insert a packet into the queue and return the (hardware when available) send time.
  * @param queue        The queue handle.
  * @param pkt_handle   The pointer to the buffer handle to send. Once a packet has been sent, the buffer handle can be reused or if not longer necessary it must be freed by calling pfring_zc_release_packet_handle().
-<<<<<<< Updated upstream
  * @param flush_packet This flag is currently ignored, packets is immediately sent out flushing also older packets if any.
-=======
- * @param flush_packet The flag indicating whether this call should flush the enqueued packet, and older packets if any.
->>>>>>> Stashed changes
  * @param ts           The send time.
  * @return             The packet length on success, 0 if filtered out (bpf), a negative value otherwise. 
  */
