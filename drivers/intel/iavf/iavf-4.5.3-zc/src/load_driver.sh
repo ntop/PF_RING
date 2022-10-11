@@ -2,7 +2,21 @@
 
 FAMILY=iavf
 
-#service udev start
+# Virtual Functions (host - i40e)
+#
+# Add the kernel parameters below to grub and reboot the machine:
+# $ vim /etc/default/grub
+# GRUB_CMDLINE_LINUX_DEFAULT="iommu=1 msi=1 pci=assign-busses intel_iommu=on"
+# $ update-grub && reboot
+#
+# Note:at least pci=assign-busses is required to fix failures reported in dmesg as below:
+#
+# i40e 0000:02:00.0 enp2s0f0: SR-IOV enabled with 1 VFs
+# i40e 0000:02:00.0: can't enable 1 VFs (bus 03 out of range of [bus 02])
+# i40e 0000:02:00.0: Failed to enable PCI sriov: -12
+#
+# Enable 2 Virtual Functions per interface (uncomment the following line before running the script)
+#echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
 
 # Remove old modules (if loaded)
 rmmod iavf
