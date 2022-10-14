@@ -374,7 +374,12 @@ void sample_filtering_rules(){
   }
 
   if (src_ip_rule_set) { /* Mellanox (Drop Src IP) */
-    /* Drop (or Pass if promisc is not set) UDP Src IP */
+    /* Use promisc to guess what is the default the user wants */
+    generic_default_action_type default_action = promisc ? default_pass : default_drop;
+
+    /* Drop (or Pass if default is drop) UDP Src IP */
+
+    pfring_set_default_hw_action(pd, default_action);
 
     hw_filtering_rule r = { 0 };
 
@@ -382,7 +387,7 @@ void sample_filtering_rules(){
     r.rule_id = FILTERING_RULE_AUTO_RULE_ID; /* auto generate rule ID */
     r.rule_family_type = generic_flow_tuple_rule;
 
-    if (promisc)
+    if (default_action == default_pass)
       r.rule_family.flow_tuple_rule.action = flow_drop_rule;
     else
       r.rule_family.flow_tuple_rule.action = flow_pass_rule;
