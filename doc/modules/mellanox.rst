@@ -129,9 +129,11 @@ In order to set an hw filter the *pfring_add_hw_rule* API should be used.
 Sample code for filtering traffic with Mellanox (as well as with other adapters) 
 is available in the *pfcount.c* sample application (look for *sample_filtering_rules*).
 
-Filtering rules can be defined as *drop* or *pass*. The default behaviour for packets,
-is defined by the promiscuous mode set using the *pfring_open* flag *PF_RING_PROMISC*.
-With the promisc set, all traffic is received by default, no traffic otherwise.
+Filtering rules can be defined as *drop* or *pass*. The default behaviour can be set
+with the *pfring_set_default_hw_action* API. When the default is not explicitly set,
+this depends on the promiscuous mode: with the promisc set, all traffic is received by 
+default (pass), no traffic otherwise (drop). Promisc is set using the *pfring_open* 
+flag *PF_RING_PROMISC*.
 
 In order to set a filtering rule, a rule ID (0..65534) should be assigned to the rule.
 This is a unique identifier that can be used to remove the rule later on. The ID can
@@ -146,6 +148,8 @@ Example setting a filtering rule to drop UDP traffic matching a src IP and desti
 
 .. code-block:: c
 
+   pfring_set_default_hw_action(socket, default_pass);
+   
    hw_filtering_rule r = { 0 };
    
    r.rule_id = FILTERING_RULE_AUTO_RULE_ID;
