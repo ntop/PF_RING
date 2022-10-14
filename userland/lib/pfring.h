@@ -288,6 +288,7 @@ struct __pfring {
   int       (*get_device_ifindex)           (pfring *, char *, int *);
   u_int16_t (*get_slot_header_len)          (pfring *);
   int       (*set_virtual_device)           (pfring *, virtual_filtering_device_info *);
+  int       (*set_default_hw_action)        (pfring *, generic_default_action_type);
   int       (*add_hw_rule)                  (pfring *, hw_filtering_rule *);
   int       (*remove_hw_rule)               (pfring *, u_int16_t);
   int       (*loopback_test)                (pfring *, char *, u_int, u_int);
@@ -582,6 +583,14 @@ int pfring_set_poll_duration(pfring *ring, u_int duration);
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_set_tx_watermark(pfring *ring, u_int16_t watermark);
+
+/**
+ * Set a default action for filtering into the NIC.
+ * @param ring The PF_RING handle on which the default rule will be set. 
+ * @param action. The action (default_pass or default_drop).
+ * @return 0 on success, a negative value otherwise.
+ */
+int pfring_set_default_hw_action(pfring *ring, generic_default_action_type action);
 
 /**
  * Set a specified filtering rule into the NIC. Note that no PF_RING filter is added, but only a NIC filter.

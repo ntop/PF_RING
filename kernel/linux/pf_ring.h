@@ -606,6 +606,11 @@ typedef struct {
 accolade_hw_rule;
 
 typedef enum {
+  default_pass,
+  default_drop
+} generic_default_action_type;
+
+typedef enum {
   flow_drop_rule,
   flow_mark_rule,
   flow_pass_rule,

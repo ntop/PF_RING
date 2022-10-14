@@ -758,6 +758,15 @@ int pfring_set_tx_watermark(pfring *ring, u_int16_t watermark) {
 
 /* **************************************************** */
 
+int pfring_set_default_hw_action(pfring *ring, generic_default_action_type action) {
+   if(ring && ring->set_default_hw_action)
+    return ring->set_default_hw_action(ring, action);
+
+  return(PF_RING_ERROR_NOT_SUPPORTED);
+}
+
+/* **************************************************** */
+
 int pfring_add_hw_rule(pfring *ring, hw_filtering_rule *rule) {
   if(ring && ring->add_hw_rule)
     return ring->add_hw_rule(ring, rule);
