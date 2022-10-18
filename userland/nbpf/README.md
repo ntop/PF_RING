@@ -11,8 +11,7 @@ BPF, and it is designed to be fast and small in size, with no external dependenc
 This library has been designed to be efficient, and easy to embed in applications 
 (e.g. n2disk uses it to filter traffic). 
 Currently it is used by selected PF_RING modules to convert BPF filtering expressions 
-onto hardware filters supported by popular network adapters such as Napatech, Intel FM10K, 
-and Exablaze.
+onto hardware filters supported by popular network adapters such as Napatech and Mellanox.
 
 ----
 ## BPF Expressions

@@ -926,7 +926,6 @@ typedef enum {
   intel_e1000,
   intel_ixgbe_82599_ts,
   intel_i40e,
-  intel_fm10k,
   intel_ixgbe_vf,
   intel_ixgbe_x550,
   intel_ice,
