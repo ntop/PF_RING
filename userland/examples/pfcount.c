@@ -787,7 +787,7 @@ void printDevs() {
       printf("\t%04X:%02X:%02X.%X\t%d\t%s\t%s\t%ld\t%s\n",
         dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
         busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
-        dev->status ? "Up" : "Down", dev->license ? "Valid" : "NotFound", dev->license_expiration,
+        dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"), dev->license ? "Valid" : "NotFound", dev->license_expiration,
         dev->module_version ? dev->module_version : "");
     } else {
       printf(" %d. %s\n", i++, dev->name);

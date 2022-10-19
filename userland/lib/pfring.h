@@ -182,7 +182,7 @@ typedef struct pfring_if {
     int device;
     int function;
   } bus_id;
-  int status; /* 1: up, 0: down*/
+  int status; /* 1: up, 0: down, -1: unknown */
   int license; /* 1: valid, 0: invalid or not installed */
   time_t license_expiration; /* expiration epoch */
   struct pfring_if *next;
