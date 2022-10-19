@@ -632,6 +632,7 @@ typedef struct {
   ip_addr dst_ip_mask;
   u_int16_t src_port;
   u_int16_t dst_port;
+  u_int16_t vlan_id;
   u_int8_t ip_version;
   u_int8_t protocol;
   u_int8_t interface; /* from extended_hdr.if_index */
