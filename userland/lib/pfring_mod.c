@@ -15,11 +15,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include <libgen.h>
-
-#include <sys/ioctl.h>
 #include <net/if.h>
-#include <linux/ethtool.h>
-
 #include <sys/socket.h>
 #include <ifaddrs.h>
 
@@ -675,7 +671,7 @@ int pfring_mod_toggle_filtering_policy(pfring *ring, u_int8_t rules_default_acce
 /* **************************************************** */
 
 int pfring_mod_enable_rss_rehash(pfring *ring) {
-  char dummy;
+  char dummy = '\0';
 
   return(setsockopt(ring->fd, 0, SO_REHASH_RSS_PACKET, &dummy, sizeof(dummy)));
 }
@@ -1062,84 +1058,8 @@ int pfring_mod_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
 
 /* *************************************** */
 
-#ifndef SPEED_UNKNOWN
-#define SPEED_UNKNOWN		-1
-#endif
-
-static u_int32_t __ethtool_get_link_settings(const char *ifname) {
-  int sock, rc;
-  struct ifreq ifr;
-  struct ethtool_cmd edata;
-  u_int32_t speed = 0;
-  const char *col;
-#ifdef USE_ETHTOOL_GLINKSETTINGS
-  struct {
-    struct ethtool_link_settings edata;
-    uint32_t link_mode_data[3 *	ETHTOOL_LINK_MODE_MASK_MAX_KERNEL_NU32];
-  } ecmd;
-#endif
-
-  col = strchr(ifname, ':');
-
-  if (col != NULL)
-    ifname = &col[1];
-
-  sock = socket(PF_INET, SOCK_DGRAM, 0 /* IPPROTO_IP */);
-
-  if (sock < 0) {
-    fprintf(stderr, "Socket error [%s]\n", ifname);
-    return speed;
-  }
-
-  memset(&ifr, 0, sizeof(struct ifreq));
-  strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
-
-#ifdef USE_ETHTOOL_GLINKSETTINGS
-  /* Try with ETHTOOL_GLINKSETTINGS first */
-
-  memset(&ecmd, 0, sizeof(ecmd));
-  ecmd.edata.cmd = ETHTOOL_GLINKSETTINGS;
-  ifr.ifr_data = (void *) &ecmd;
-	
-  rc = ioctl(sock, SIOCETHTOOL, &ifr);
-
-  if (rc == 0) {
-
-    speed = ecmd.edata.speed;
-
-  } else 
-#endif
-  {
-
-    /* Try with ETHTOOL_GSET */
-
-    memset(&edata, 0, sizeof(struct ethtool_cmd));
-    edata.cmd = ETHTOOL_GSET;
-    ifr.ifr_data = (char *) &edata;
-
-    rc = ioctl(sock, SIOCETHTOOL, &ifr);
-
-    if (rc == 0) {
-
-      speed = ethtool_cmd_speed(&edata);
-
-    } else {
-      fprintf(stderr, "error reading link speed on %s\n", ifname);
-    }  
-  }  
-
-  close(sock);
-
-  if (speed == SPEED_UNKNOWN)
-    speed = 0;
-
-  return speed;
-}
-
-/* *************************************** */
-
 u_int32_t pfring_mod_get_interface_speed(pfring *ring) {
-  return __ethtool_get_link_settings(ring->device_name);
+  return pfring_get_ethtool_link_speed(ring->device_name);
 }
  
 /* *************************************** */
