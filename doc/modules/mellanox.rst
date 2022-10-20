@@ -158,6 +158,7 @@ Example setting a filtering rule to drop UDP traffic matching a src IP and desti
    
    r.rule_family.flow_tuple_rule.action = flow_drop_rule;
    
+   r.rule_family.flow_tuple_rule.vlan_id = 10;
    r.rule_family.flow_tuple_rule.ip_version = 4;
    r.rule_family.flow_tuple_rule.src_ip.v4 = src_ip_rule;
    r.rule_family.flow_tuple_rule.protocol = IPPROTO_UDP;
@@ -177,6 +178,12 @@ Example of removing a filtering rule by ID:
 .. code-block:: c
 
    pfring_remove_hw_rule(socket, RULE_ID);
+
+BPF filters are also offloaded to the adapter as long as they can be automatically converted by the nBPF engine into hardware rules. Example:
+
+.. code-block:: console
+
+   pfcount -i mlx:mlx5_0 -f "vlan 10 and host 192.168.1.1"
 
 RoCEv2/RDMA Capture
 -------------------
