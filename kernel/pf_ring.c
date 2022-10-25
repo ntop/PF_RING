@@ -8130,6 +8130,116 @@ static int ring_getsockopt(struct socket *sock,
 
 /* ************************************* */
 
+void pf_ring_zc_dev_register(zc_dev_callbacks *callbacks,
+			     zc_dev_ring_info *rx_info,
+			     zc_dev_ring_info *tx_info,
+			     void          *rx_descr_packet_memory,
+			     void          *tx_descr_packet_memory,
+			     void          *phys_card_memory,
+			     u_int          phys_card_memory_len,
+			     u_int channel_id,
+			     struct net_device *dev,
+			     struct device *hwdev,
+			     zc_dev_model device_model,
+			     u_char *device_address,
+			     wait_queue_head_t *packet_waitqueue,
+			     u_int8_t *interrupt_received,
+			     void *rx_adapter,
+			     void *tx_adapter)
+{
+  pf_ring_device *dev_ptr;
+  zc_dev_list *next;
+
+  next = kmalloc(sizeof(zc_dev_list), GFP_ATOMIC);
+  if(next != NULL) {
+    memset(next, 0, sizeof(zc_dev_list));
+
+    spin_lock_init(&next->lock);
+    next->num_bound_sockets = 0;
+
+    /* RX */
+    if(rx_info != NULL)
+      memcpy(&next->zc_dev.mem_info.rx, rx_info, sizeof(next->zc_dev.mem_info.rx));
+    next->zc_dev.rx_descr_packet_memory = rx_descr_packet_memory;
+
+    /* TX */
+    if(tx_info != NULL)
+      memcpy(&next->zc_dev.mem_info.tx, tx_info, sizeof(next->zc_dev.mem_info.tx));
+    next->zc_dev.tx_descr_packet_memory = tx_descr_packet_memory;
+
+    /* PHYS */
+    next->zc_dev.phys_card_memory = phys_card_memory;
+    next->zc_dev.mem_info.phys_card_memory_len = phys_card_memory_len;
+
+    next->zc_dev.channel_id = channel_id;
+    next->zc_dev.dev = dev;
+    next->zc_dev.hwdev = hwdev;
+    next->zc_dev.mem_info.device_model = device_model;
+    memcpy(next->zc_dev.device_address, device_address, 6);
+    next->zc_dev.packet_waitqueue = packet_waitqueue;
+    next->zc_dev.interrupt_received = interrupt_received;
+    next->zc_dev.rx_adapter = rx_adapter;
+    next->zc_dev.tx_adapter = tx_adapter;
+    next->zc_dev.callbacks.wait_packet = callbacks->wait_packet;
+    next->zc_dev.callbacks.usage_notification = callbacks->usage_notification;
+    next->zc_dev.callbacks.set_time = callbacks->set_time;
+    next->zc_dev.callbacks.adjust_time = callbacks->adjust_time;
+    next->zc_dev.callbacks.get_tx_time = callbacks->get_tx_time;
+    next->zc_dev.callbacks.control_queue = callbacks->control_queue;
+    list_add(&next->list, &zc_devices_list);
+    zc_devices_list_size++;
+    /* Increment usage count - avoid unloading it while ZC drivers are in use */
+    try_module_get(THIS_MODULE);
+
+    /* We now have to update the device list */
+    dev_ptr = pf_ring_device_name_lookup(dev_net(dev), dev->name);
+
+    if(dev_ptr != NULL) {
+      dev_ptr->is_zc_device = 1;
+      dev_ptr->zc_dev_model = device_model;
+      dev_ptr->num_zc_dev_rx_queues = (rx_info != NULL) ? rx_info->num_queues : UNKNOWN_NUM_RX_CHANNELS;
+#if(defined(RHEL_MAJOR) && (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
+      netif_set_real_num_rx_queues(dev_ptr->dev, dev_ptr->num_zc_dev_rx_queues); /* This is a workround for Centos 6 reporting a wrong number of queues */
+#endif
+      if(rx_info != NULL) dev_ptr->num_zc_rx_slots = rx_info->packet_memory_num_slots;
+      if(tx_info != NULL) dev_ptr->num_zc_tx_slots = tx_info->packet_memory_num_slots;
+
+      debug_printk(2, "updating ZC device %s queues=%d\n",
+                   dev_ptr->device_name, dev_ptr->num_zc_dev_rx_queues);
+    }
+  } else {
+    printk("[PF_RING] Could not kmalloc slot!!\n");
+  }
+}
+
+/* ************************************* */
+
+void pf_ring_zc_dev_unregister(struct net_device *dev, u_int channel_id)
+{
+  zc_dev_list *entry;
+  int i;
+
+  entry = pf_ring_zc_dev_net_device_lookup(dev, channel_id);
+
+  if (entry) {
+    /* driver detach - checking if there is an application running */
+    for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
+      if(entry->bound_sockets[i] != NULL) {
+        printk("[PF_RING] Unloading ZC driver while the device is in use from userspace!!\n");
+        break;
+      }
+    }
+
+    list_del(&entry->list);
+    kfree(entry);
+    zc_devices_list_size--;
+    /* Decrement usage count */
+    module_put(THIS_MODULE);
+  }
+}
+
+/* ************************************* */
+
 void pf_ring_zc_dev_handler(zc_dev_operation operation,
 			    zc_dev_callbacks *callbacks,
 			    zc_dev_ring_info *rx_info,
@@ -8148,100 +8258,29 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
 			    void *rx_adapter,
 			    void *tx_adapter)
 {
-  pf_ring_device *dev_ptr;
-
-  printk("[PF_RING] %s ZC device %s@%u\n",
+  printk("[PF_RING] %s ZC device %s@%u [rx-ring=%p][tx-ring=%p]\n",
 	 operation == add_device_mapping ? "Registering" : "Removing",
-	 dev->name, channel_id);
+	 dev->name, channel_id, rx_adapter, tx_adapter);
 
   if(strlen(dev->name) == 0)
     printk("[PF_RING] %s:%d %s ZC device with empty name!\n", __FUNCTION__, __LINE__,
            operation == add_device_mapping ? "registering" : "removing");
 
   if(operation == add_device_mapping) {
-    zc_dev_list *next;
+    /* Unregister if already present */
+    pf_ring_zc_dev_unregister(dev, channel_id);
 
-    next = kmalloc(sizeof(zc_dev_list), GFP_ATOMIC);
-    if(next != NULL) {
-      memset(next, 0, sizeof(zc_dev_list));
-
-      spin_lock_init(&next->lock);
-      next->num_bound_sockets = 0;
-
-      /* RX */
-      if(rx_info != NULL)
-        memcpy(&next->zc_dev.mem_info.rx, rx_info, sizeof(next->zc_dev.mem_info.rx));
-      next->zc_dev.rx_descr_packet_memory = rx_descr_packet_memory;
-
-      /* TX */
-      if(tx_info != NULL)
-        memcpy(&next->zc_dev.mem_info.tx, tx_info, sizeof(next->zc_dev.mem_info.tx));
-      next->zc_dev.tx_descr_packet_memory = tx_descr_packet_memory;
-
-      /* PHYS */
-      next->zc_dev.phys_card_memory = phys_card_memory;
-      next->zc_dev.mem_info.phys_card_memory_len = phys_card_memory_len;
-
-      next->zc_dev.channel_id = channel_id;
-      next->zc_dev.dev = dev;
-      next->zc_dev.hwdev = hwdev;
-      next->zc_dev.mem_info.device_model = device_model;
-      memcpy(next->zc_dev.device_address, device_address, 6);
-      next->zc_dev.packet_waitqueue = packet_waitqueue;
-      next->zc_dev.interrupt_received = interrupt_received;
-      next->zc_dev.rx_adapter = rx_adapter;
-      next->zc_dev.tx_adapter = tx_adapter;
-      next->zc_dev.callbacks.wait_packet = callbacks->wait_packet;
-      next->zc_dev.callbacks.usage_notification = callbacks->usage_notification;
-      next->zc_dev.callbacks.set_time = callbacks->set_time;
-      next->zc_dev.callbacks.adjust_time = callbacks->adjust_time;
-      next->zc_dev.callbacks.get_tx_time = callbacks->get_tx_time;
-      next->zc_dev.callbacks.control_queue = callbacks->control_queue;
-      list_add(&next->list, &zc_devices_list);
-      zc_devices_list_size++;
-      /* Increment usage count - avoid unloading it while ZC drivers are in use */
-      try_module_get(THIS_MODULE);
-
-      /* We now have to update the device list */
-      dev_ptr = pf_ring_device_name_lookup(dev_net(dev), dev->name);
-
-      if(dev_ptr != NULL) {
-        dev_ptr->is_zc_device = 1;
-        dev_ptr->zc_dev_model = device_model;
-        dev_ptr->num_zc_dev_rx_queues = (rx_info != NULL) ? rx_info->num_queues : UNKNOWN_NUM_RX_CHANNELS;
-#if(defined(RHEL_MAJOR) && (RHEL_MAJOR == 6) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))) && defined(CONFIG_RPS)
-        netif_set_real_num_rx_queues(dev_ptr->dev, dev_ptr->num_zc_dev_rx_queues); /* This is a workround for Centos 6 reporting a wrong number of queues */
-#endif
-        if(rx_info != NULL) dev_ptr->num_zc_rx_slots = rx_info->packet_memory_num_slots;
-        if(tx_info != NULL) dev_ptr->num_zc_tx_slots = tx_info->packet_memory_num_slots;
-
-        debug_printk(2, "updating ZC device %s queues=%d\n",
-                     dev_ptr->device_name, dev_ptr->num_zc_dev_rx_queues);
-      }
-    } else {
-      printk("[PF_RING] Could not kmalloc slot!!\n");
-    }
+    /* Register */
+    pf_ring_zc_dev_register(callbacks, 
+      rx_info, tx_info, 
+      rx_descr_packet_memory, tx_descr_packet_memory, 
+      phys_card_memory, phys_card_memory_len,
+      channel_id, dev, hwdev, device_model, device_address,
+      packet_waitqueue, interrupt_received,
+      rx_adapter, tx_adapter);
   } else {
-    zc_dev_list *entry;
-    int i;
-
-    entry = pf_ring_zc_dev_net_device_lookup(dev, channel_id);
-
-    if (entry) {
-      /* driver detach - checking if there is an application running */
-      for (i = 0; i < MAX_NUM_ZC_BOUND_SOCKETS; i++) {
-        if(entry->bound_sockets[i] != NULL) {
-          printk("[PF_RING] Unloading ZC driver while the device is in use from userspace!!\n");
-          break;
-        }
-      }
-
-      list_del(&entry->list);
-      kfree(entry);
-      zc_devices_list_size--;
-      /* Decrement usage count */
-      module_put(THIS_MODULE);
-    }
+    /* Unregister */
+    pf_ring_zc_dev_unregister(dev, channel_id);
   }
 
   debug_printk(2, "%d registered ZC devices/queues\n", zc_devices_list_size);
