@@ -38,6 +38,7 @@
 
 #ifdef HAVE_PF_RING
 #define HAVE_PF_RING_NO_RDMA
+#define HAVE_PF_RING_ONLY /* No kernel mode even when ZC is not in use */
 #endif
 
 #ifndef GCC_VERSION

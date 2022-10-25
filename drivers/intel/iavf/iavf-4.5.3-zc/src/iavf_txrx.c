@@ -861,6 +861,9 @@ void iavf_free_rx_resources(struct iavf_ring *rx_ring)
 	rx_ring->rx_bi = NULL;
 
 	if (rx_ring->desc) {
+		//if (unlikely(enable_debug))
+			printk("[PF_RING-ZC] %s:%d Deallocating descriptors\n", __FUNCTION__, __LINE__);
+
 		dma_free_coherent(rx_ring->dev, rx_ring->size,
 				  rx_ring->desc, rx_ring->dma);
 		rx_ring->desc = NULL;
@@ -1066,6 +1069,9 @@ bool iavf_alloc_rx_buffers(struct iavf_ring *rx_ring, u16 cleaned_count)
 		return false;
 
 #ifdef HAVE_PF_RING
+#ifdef HAVE_PF_RING_ONLY
+	return true;
+#endif
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",
 			__FUNCTION__, rx_ring->netdev->name,
@@ -2138,11 +2144,10 @@ static int iavf_clean_rx_irq(struct iavf_ring *rx_ring, int budget)
 	struct xdp_buff xdp = {};
 	bool failure = false;
 #ifdef HAVE_PF_RING
+#ifdef HAVE_PF_RING_ONLY
+	return budget-1;
+#else
 	struct iavf_adapter *adapter = netdev_priv(rx_ring->netdev);
-
-	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", __FUNCTION__, rx_ring->netdev->name,
-        		atomic_read(&adapter->pfring_zc.usage_counter));
 
 	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
 		wake_up_pfring_zc_socket(rx_ring);
@@ -2150,6 +2155,7 @@ static int iavf_clean_rx_irq(struct iavf_ring *rx_ring, int budget)
 		 * returning budget-1 will tell napi that we are done (this usually also reenable interrupts, not with ZC) */
 		return budget-1;
 	}
+#endif
 #endif
 
 #ifdef HAVE_XDP_BUFF_RXQ
@@ -3698,8 +3704,12 @@ netdev_tx_t iavf_lan_xmit_frame(struct sk_buff *skb, struct net_device *netdev)
 	struct iavf_ring *tx_ring = &adapter->tx_rings[skb->queue_mapping];
 
 #ifdef HAVE_PF_RING
+#ifndef HAVE_PF_RING_ONLY
 	/* We don't allow legacy send when in zc mode */
-	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) i
+#endif
+	{
+
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
 	}

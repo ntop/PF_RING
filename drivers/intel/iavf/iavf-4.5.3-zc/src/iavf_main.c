@@ -769,13 +769,6 @@ static void iavf_configure_rx(struct iavf_adapter *adapter)
 #endif
 
 	for (i = 0; i < adapter->num_active_queues; i++) {
-
-#ifdef HAVE_PF_RING
-	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s:%d %s queue-index=%u\n", 
-        		__FUNCTION__, __LINE__, adapter->netdev? adapter->netdev->name : "null", i);
-#endif
-
 		adapter->rx_rings[i].tail =
 			hw->hw_addr + QRX_TAIL(hw, i);
 		adapter->rx_rings[i].rx_buf_len = rx_buf_len;
@@ -1368,14 +1361,17 @@ int ring_is_not_empty(struct iavf_ring *rx_ring) {
 	u32 rx_status;
 	int i;
 
+	if (rx_ring == NULL) {
+		printk("[PF_RING-ZC] %s: RX ring NULL, this should not happen\n", __FUNCTION__);
+		return 0;
+ 	} else if (rx_ring->desc == NULL) {
+		printk("[PF_RING-ZC] %s: RX descriptors NULL, this should not happen\n", __FUNCTION__);
+		return 0;
+	}
+
 	/* Tail is write-only on i40e, checking all descriptors (or we need a shadow tail from userspace) */
 	for (i = 0; i < rx_ring->count; i++) {
 		rx_desc = IAVF_RX_DESC(rx_ring, i);    
-		if (rx_desc == NULL) {
-			printk("[PF_RING-ZC] %s: RX descriptor #%u NULL, this should not happen\n", 
-			       __FUNCTION__, i);
- 			break;
-		}
 		qword = le64_to_cpu(rx_desc->wb.qword1.status_error_len);
 		rx_status = (qword & IAVF_RXD_QW1_STATUS_MASK) >> IAVF_RXD_QW1_STATUS_SHIFT;
 		if (rx_status & (1 << IAVF_RX_DESC_STATUS_DD_SHIFT))
@@ -1392,13 +1388,12 @@ int wait_packet_function_ptr(void *data, int mode)
 	struct iavf_ring *rx_ring = (struct iavf_ring*) data;
 	int new_packets;
 
-	//if (unlikely(enable_debug))
-	//	printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d]\n",
-	//	       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
-	//	       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use);
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d][rx-ring=%p]\n",
+		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
+		       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use, rx_ring);
 
 	if (mode == 1 /* Enable interrupt */) {
-
 		new_packets = ring_is_not_empty(rx_ring);
 
 		if (!new_packets) {
@@ -1409,18 +1404,9 @@ int wait_packet_function_ptr(void *data, int mode)
 				iavf_update_enable_itr(rx_ring->vsi, rx_ring->q_vector);
 
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 1;
-
-				//if (unlikely(enable_debug)) 
-				//	printk("[PF_RING-ZC] %s: Enabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
-      			} else {
-				//if (unlikely(enable_debug)) 
-				//	printk("[PF_RING-ZC] %s: Interrupts already enabled [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
 			}
     		} else {
 			rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
-
-			//if (unlikely(enable_debug))
-			//	printk("[PF_RING-ZC] %s: Packet received [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx); 
 		}
 
 		return new_packets;
@@ -1429,9 +1415,6 @@ int wait_packet_function_ptr(void *data, int mode)
 
 		rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0;
 
-		//if (unlikely(enable_debug))
-		//	printk("[PF_RING-ZC] %s: Disabled interrupts [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
-		
 		return 0;
 	}
 }
@@ -1457,26 +1440,9 @@ int wake_up_pfring_zc_socket(struct iavf_ring *rx_ring)
 			struct iavf_adapter *adapter = netdev_priv(rx_ring->netdev);
 			adapter->pfring_zc.interrupts_required = 1;
 
-			/* Enabling interrupts in i40e_napi_poll()
-			 * i40e_update_enable_itr(rx_ring->vsi, rx_ring->q_vector); */
+			/* Note: enabling interrupts in _napi_poll() */
 		}
 	}
-
-	return 0;
-}
-
-int control_queue_ptr(void *rx_data, u_int8_t enable) {
-	struct iavf_ring *rx_ring = (struct iavf_ring *) rx_data;
-	struct iavf_adapter *adapter;
-
-	if (rx_ring == NULL) return -1;
-
-	adapter = netdev_priv(rx_ring->netdev);
-
-	if (enable)
-		iavf_enable_queues(adapter);
-	else
-		iavf_disable_queues(adapter);
 
 	return 0;
 }
@@ -1487,7 +1453,7 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	struct iavf_ring  *tx_ring = (struct iavf_ring *) tx_data;
 	struct iavf_ring  *xx_ring = (rx_ring != NULL) ? rx_ring : tx_ring;
 	struct iavf_adapter *adapter;
-	int i, n;
+	int n;
  
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s %s\n", __FUNCTION__, device_in_use ? "open" : "close");
@@ -1503,27 +1469,12 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			/* wait for clean_rx_irq to complete the current receive if any */
 			usleep_range(100, 200);
-
-			// Note: this is disabling all queues (TODO handle RSS and RX+TX)
-			iavf_disable_queues(adapter);
 		}
 
     
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
-			//struct iavf_vsi *vsi = &adapter->vsi;
-			//u16 pf_q = vsi->base_queue + rx_ring->queue_index;
-
 			if (unlikely(enable_debug))
 				printk("[PF_RING-ZC] %s:%d RX Tail=%u\n", __FUNCTION__, __LINE__, readl(rx_ring->tail));
-
-			//TODO iavf_control_rxq(vsi, pf_q, false /* stop */);
-
-			/* FIXX this is causing system crashes on high traffic rates, 
-			 * however we should fix it as it causes some skbuff leak on every pfring_open!
-			 * Note: the usleep_range above should be enough to avoid crashes, more tests are needed
-			i40e_clean_rx_ring(rx_ring);
-			iavf_control_rxq(vsi, pf_q, true);
-			*/
 		}
 
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
@@ -1533,65 +1484,26 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 				printk("[PF_RING-ZC] %s:%d TX Tail=%u\n", __FUNCTION__, __LINE__, readl(tx_ring->tail));
 		}
 
-		/* Note: in case of multiple sockets (RX and TX or RSS) clean_*x_irq is called
- 		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
- 		 * in order to avoid this we need to enable interrupts */
-		iavf_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
-
 	} else { /* restore card memory */
 		if (rx_ring != NULL && atomic_dec_return(&rx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
-			//struct iavf_vsi *vsi = &adapter->vsi;
-			//u16 pf_q = vsi->base_queue + rx_ring->queue_index;
-			struct iavf_hw *hw = &adapter->hw;
-      
-			//TODO iavf_control_rxq(vsi, pf_q, false /* stop */);
-
-			for (i = 0; i<rx_ring->count; i++) {
-				union iavf_rx_desc *rx_desc = IAVF_RX_DESC(rx_ring, i);
-	
-				rx_desc->read.pkt_addr = 0;
-				rx_desc->read.hdr_addr = 0;
-			}
-			rmb();
-
-			//rx_ring->tail = hw->hw_addr + I40E_QRX_TAIL(pf_q);
-			rx_ring->tail = hw->hw_addr + QRX_TAIL(hw, rx_ring->queue_index);
-
-			writel(0, rx_ring->tail);
-			rx_ring->next_to_use = rx_ring->next_to_clean = 0;
-			iavf_alloc_rx_buffers(rx_ring, IAVF_DESC_UNUSED(rx_ring));
-
-			//TODO iavf_control_rxq(vsi, pf_q, true /* start */);
+			/*
+			 * NOTE
+			 * On this driver there is no way to just disable one or all queues and give control
+			 * to the userspace driver, to replace the buffers. When issuing a disable command 
+			 * through the adminq *all* queues are disabled and the descriptor rings are deallocated.
+			 * For this reason we are currently disabling the napi polling all together and loading
+			 * this driver in *userspace mode* directly.
+			 */
 		}
 		if (tx_ring != NULL && atomic_dec_return(&tx_ring->pfring_zc.queue_in_use) == 0 /* last user */) {
 			/* Restore TX */
-
-			tx_ring->next_to_use = tx_ring->next_to_clean = readl(tx_ring->tail);
-
-			if (unlikely(enable_debug))
-				printk("[PF_RING-ZC] %s:%d Restoring TX Tail=%u\n", __FUNCTION__, __LINE__, tx_ring->next_to_use);
-       
-			for (i = 0; i < tx_ring->count; i++) {
-				struct iavf_tx_buffer *tx_buffer = &tx_ring->tx_bi[i];
-				tx_buffer->next_to_watch = NULL;
-				tx_buffer->skb = NULL;
-			}
-
-			rmb();
 		}
 		if ((n = atomic_dec_return(&adapter->pfring_zc.usage_counter)) == 0 /* last user */) {
 			module_put(THIS_MODULE);  /* -- */
 
+			/* Last user - resetting rings to restore the head/tail status (this also reallocates the rings!) */
+			iavf_schedule_reset(adapter);
 		}
-
-		/* Note: in case of multiple sockets (RX and TX or RSS) clean_*x_irq is called
- 		 * and interrupts are disabled, preventing packets from arriving on the active sockets,
- 		 * in order to avoid this we need to enable interrupts even if this is not the last user */
-		//if (n == 0) { /* last user */
-			/* Enabling interrupts in case they've been disabled by napi and never enabled in ZC mode */
-			iavf_update_enable_itr(xx_ring->vsi, xx_ring->q_vector);
-		//}
-
 	}
 
 	if (unlikely(enable_debug))
@@ -1649,7 +1561,7 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 
 #ifdef HAVE_PF_RING
 	/* Note: queues will be enabled by a delayed work 
-	 * iavf_watchdog_task-> iavf_process_aq_command -> iavf_disable_queues */
+	 * iavf_watchdog_task-> iavf_process_aq_command -> iavf_enable_queues */
 
 	if (adapter->netdev) {
 		int i;
@@ -1660,17 +1572,17 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 		cache_line_size *= PCI_DEVICE_CACHE_LINE_SIZE_BYTES;
 		if (cache_line_size == 0) cache_line_size = 64;
 
-		//if (unlikely(enable_debug))  
-			printk("[PF_RING-ZC] %s: attach %s [pf start=%llu len=%llu][cache_line_size=%u]\n", __FUNCTION__,
-				adapter->netdev->name, pci_resource_start(adapter->pdev, 0), pci_resource_len(adapter->pdev, 0),
-				cache_line_size);
-
 		for (i = 0; i < adapter->num_active_queues; i++) {
 			struct iavf_ring *rx_ring = &adapter->rx_rings[i];
 			struct iavf_ring *tx_ring = &adapter->tx_rings[i];
 			zc_dev_ring_info rx_info = { 0 };
 			zc_dev_ring_info tx_info = { 0 };
 			zc_dev_callbacks callbacks = { NULL };
+
+			if (unlikely(enable_debug))  
+				printk("[PF_RING-ZC] %s: attach %s@%d [pf start=%llu len=%llu][cache_line_size=%u][rx-ring=%p][tx-ring=%p]\n", __FUNCTION__,
+					adapter->netdev->name, i, pci_resource_start(adapter->pdev, 0), pci_resource_len(adapter->pdev, 0),
+					cache_line_size, rx_ring, tx_ring);
 
 			init_waitqueue_head(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
 
@@ -1679,8 +1591,10 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 			rx_info.packet_memory_slot_len      = ALIGN(rx_ring->rx_buf_len, cache_line_size);
 			rx_info.descr_packet_memory_tot_len = rx_ring->size;
 			rx_info.registers_index		    = rx_ring->reg_idx;
-			//TODO rx_info.stats_index		    = adapter->info.stat_counter_idx;
-			//TODO rx_info.vector			    = rx_ring->q_vector->v_idx + adapter->base_vector;
+
+			// Note used
+			//rx_info.stats_index		    = adapter->info.stat_counter_idx;
+			//rx_info.vector			    = rx_ring->q_vector->v_idx + adapter->base_vector;
  
 			tx_info.num_queues = adapter->num_active_queues;
 			tx_info.packet_memory_num_slots     = tx_ring->count;
@@ -1690,7 +1604,6 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 
 			callbacks.wait_packet = wait_packet_function_ptr;
 			callbacks.usage_notification = notify_function_ptr;
-			callbacks.control_queue = control_queue_ptr;
 
 			pf_ring_zc_dev_handler(add_device_mapping,
 				&callbacks,
@@ -1731,11 +1644,6 @@ void iavf_down(struct iavf_adapter *adapter)
 
 	if (adapter->state <= __IAVF_DOWN_PENDING)
 		return;
-
-#ifdef HAVE_PF_RING
-	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s: called on %s\n", __FUNCTION__, netdev->name);
-#endif
 
 	netif_carrier_off(netdev);
 	netif_tx_disable(netdev);
@@ -1797,15 +1705,16 @@ void iavf_down(struct iavf_adapter *adapter)
 	if (netdev) {
 		int i;
 
-		//if (unlikely(enable_debug))
-	      		printk("[PF_RING-ZC] %s: detach %s\n", __FUNCTION__, netdev->name);
-
 		if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
 			printk("[PF_RING-ZC] %s: detaching %s while in use\n", __FUNCTION__, netdev->name); 
 
 		for (i = 0; i < adapter->num_active_queues; i++) {
 			struct iavf_ring *rx_ring = &adapter->rx_rings[i];
 			struct iavf_ring *tx_ring = &adapter->tx_rings[i];
+
+			if (unlikely(enable_debug))
+		      		printk("[PF_RING-ZC] %s: detach %s@%d\n", __FUNCTION__, netdev->name, i);
+
 			pf_ring_zc_dev_handler(remove_device_mapping,
 				NULL, /* callbacks */
 				NULL, /* rx_info */
@@ -4996,7 +4905,6 @@ static int iavf_open(struct net_device *netdev)
 		goto unlock;
 	}
 
-
 	/* allocate transmit descriptors */
 	err = iavf_setup_all_tx_resources(adapter);
 	if (err)
@@ -5021,8 +4929,10 @@ static int iavf_open(struct net_device *netdev)
 	/* Restore VLAN and Cloud filters that were removed with IFF_DOWN */
 	iavf_restore_filters(adapter);
 
+	/* Allocate buffers */
 	iavf_configure(adapter);
 
+	/* Enable queues */
 	iavf_up_complete(adapter);
 
 	iavf_irq_enable(adapter, true);
@@ -5078,11 +4988,6 @@ static int iavf_close(struct net_device *netdev)
 #endif
 
 	set_bit(__IAVF_VSI_DOWN, adapter->vsi.state);
-
-#ifdef HAVE_PF_RING
-	if (unlikely(enable_debug))
-		printk("[PF_RING-ZC] %s: called on %s -> iavf_down\n", __FUNCTION__, adapter->netdev->name);
-#endif
 
 	iavf_down(adapter);
 	iavf_change_state(adapter, __IAVF_DOWN_PENDING);
