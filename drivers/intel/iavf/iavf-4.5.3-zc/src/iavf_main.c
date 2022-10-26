@@ -1514,6 +1514,22 @@ int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use)
 	return 0;
 }
 
+int get_stats_function_ptr(void *rx_adapter, u_int64_t *rx_missed)
+{
+	struct iavf_ring  *rx_ring = (struct iavf_ring *) rx_adapter;
+	struct iavf_adapter *adapter;
+	
+	if (rx_ring == NULL) return IAVF_ERR_BAD_PTR; /* safety check */
+
+	adapter = netdev_priv(rx_ring->netdev);
+
+	iavf_schedule_request_stats(adapter);
+
+	*rx_missed = adapter->net_stats.rx_dropped;
+
+	return 0;
+}
+
 #endif
 
 /**
@@ -1604,6 +1620,7 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 
 			callbacks.wait_packet = wait_packet_function_ptr;
 			callbacks.usage_notification = notify_function_ptr;
+			callbacks.get_stats = get_stats_function_ptr;
 
 			pf_ring_zc_dev_handler(add_device_mapping,
 				&callbacks,
