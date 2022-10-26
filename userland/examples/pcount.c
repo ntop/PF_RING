@@ -52,8 +52,6 @@ unsigned long long numPkts = 0, numBytes = 0;
 #define DEFAULT_DEVICE "eth1" /* "e1000" */
 
 int32_t gmt_to_local(time_t t);
-int pcap_set_cluster(pcap_t *ring, u_int clusterId);
-int pcap_set_application_name(pcap_t *handle, char *name);
 char* pfring_format_numbers(double val, char *buf, u_int buf_len, u_int8_t add_decimals);
 int use_pcap_loop = 1;
 
