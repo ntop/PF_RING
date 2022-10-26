@@ -1279,20 +1279,6 @@ fail:
 	return status;
 }
 
-#ifdef HAVE_PF_RING
-void pcap_set_appl_name_linux(pcap_t *handle, char *appl_name)
-{
-	if (handle->ring)
-		pfring_set_application_name(handle->ring, appl_name);
-}
-
-void pcap_set_cluster(pcap_t *handle, u_int cluster_id)
-{
-	if (handle->ring)
-		pfring_set_cluster(handle->ring, cluster_id, cluster_per_flow);
-}
-#endif
-
 static int
 pcap_set_datalink_linux(pcap_t *handle, int dlt)
 {
@@ -5943,7 +5929,14 @@ pcap_set_master(pcap_t *handle, pcap_t *master)
 int
 pcap_set_application_name(pcap_t *handle, char *name) 
 {
-	return pfring_set_application_name(handle->ring, name);
+	if (handle->ring)
+		return pfring_set_application_name(handle->ring, name);
+}
+
+void pcap_set_cluster(pcap_t *handle, u_int cluster_id)
+{
+	if (handle->ring)
+		pfring_set_cluster(handle->ring, cluster_id, cluster_per_flow);
 }
 
 int

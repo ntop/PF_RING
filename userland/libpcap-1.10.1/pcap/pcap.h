@@ -873,6 +873,7 @@ PCAP_API const char *pcap_lib_version(void);
   PCAP_API int pcap_set_application_name(pcap_t *handle, char *name);
   PCAP_API int pcap_set_watermark(pcap_t *handle, u_int watermark);
   PCAP_API int pcap_set_poll_watermark_timeout(pcap_t *handle, u_int16_t poll_watermark_timeout);
+  PCAP_API void pcap_set_cluster(pcap_t *handle, u_int cluster_id);
 #endif
 
 /*
