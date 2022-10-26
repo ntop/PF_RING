@@ -16,7 +16,7 @@ fi
 PF_RING="pf_ring"
 PF_RING_CONFIG_DIR="/etc/pf_ring"
 DRIVERS_FLAVOR=("zc")
-DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'ice')
+DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'iavf' 'ice')
 ERROR=0
 DRIVER_INSTALLED=0
 OLD_HUGEPAGES_CONFIG="${PF_RING_CONFIG_DIR}/hugepages"
@@ -305,6 +305,18 @@ load_driver() {
 		else 
 			DRIVER_INSTALLED=1
 		fi
+
+		if [ ${1} == "iavf" ]; then
+			# Configure RSS using ethtool for drivers not supporting the RSS param
+			DEF_RSS=1
+			RSS=$(cat ${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.conf 2>/dev/null | grep RSS | cut -d'=' -f2 | cut -d',' -f1)
+			if [ -z "${RSS}" ]; then
+				# Default: 1 queue
+				RSS=$DEF_RSS
+			fi
+			ethtool -L ${IF} combined ${RSS}
+		fi
+
 	else
 		echo "Driver ${1}-${2} not available"
 	fi
@@ -319,7 +331,7 @@ load_zc() {
 	/sbin/modprobe configfs > /dev/null 2>&1
 
 	# load dkms drivers
-	# search for file under /etc/pf_ring/zc/{e1000e,igb,ixgbe,ixgbevf,i40e,ice}/{e1000e,igb,ixgbe,ixgbevf,i40e,ice}.conf
+	# search for file under /etc/pf_ring/zc/{e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice}/{e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice}.conf
 	for F in ${DRIVERS_FLAVOR[@]} ; do
 		for D in ${DKMS_DRIVERS[@]} ; do
 			if [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.conf ] && [ -f ${PF_RING_CONFIG_DIR}/${F}/${D}/${D}.start ]; then
@@ -376,7 +388,6 @@ load_mlx() {
 					# Default: 1 queue
 					RSS=$DEF_RSS
 				fi
-
 				ethtool -L ${IF} combined ${RSS}
 			fi
 		done
