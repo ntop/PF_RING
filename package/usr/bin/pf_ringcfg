@@ -6,7 +6,7 @@
 SCRIPTPATH="$(cd "$(dirname "$0")"; pwd -P)"
 
 PF_RING_CONFIG_DIR="/etc/pf_ring"
-ZC_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'ice')
+ZC_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'iavf' 'ice')
 OTHER_SUPPORTED=('mlx5_core')
 
 CONF_DRIVER_NAME=""
