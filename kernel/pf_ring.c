@@ -8118,6 +8118,27 @@ static int ring_getsockopt(struct socket *sock,
     }
     break;
 
+  case SO_GET_DEV_STATS:
+    {
+      u_int64_t rx_missed = 0;
+
+      if(len < sizeof(u_int64_t)) {
+        return(-EINVAL);
+      }      
+
+      if (pfr->zc_dev && pfr->zc_dev->callbacks.get_stats) {
+        if (pfr->zc_dev->callbacks.get_stats(pfr->zc_dev->rx_adapter, &rx_missed) != 0)
+          return(-EFAULT);
+      } else {
+        return -EOPNOTSUPP;
+      }
+
+      if(copy_to_user(optval, &rx_missed, sizeof(rx_missed))) {
+        return(-EFAULT);
+      }
+    }
+    break;
+
   default:
     return -ENOPROTOOPT;
   }
@@ -8186,6 +8207,7 @@ void pf_ring_zc_dev_register(zc_dev_callbacks *callbacks,
     next->zc_dev.callbacks.adjust_time = callbacks->adjust_time;
     next->zc_dev.callbacks.get_tx_time = callbacks->get_tx_time;
     next->zc_dev.callbacks.control_queue = callbacks->control_queue;
+    next->zc_dev.callbacks.get_stats = callbacks->get_stats;
     list_add(&next->list, &zc_devices_list);
     zc_devices_list_size++;
     /* Increment usage count - avoid unloading it while ZC drivers are in use */
