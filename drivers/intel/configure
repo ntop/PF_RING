@@ -616,6 +616,8 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 ICE_VERSION
 ICE
+IAVF_VERSION
+IAVF
 I40E_VERSION
 I40E
 IXGBEVF_VERSION
@@ -1736,6 +1738,7 @@ IGB="igb"
 IXGBE="ixgbe"
 IXGBEVF="ixgbevf"
 I40E="i40e"
+IAVF="iavf"
 ICE="ice"
 
 E1000E_VERSION=3.8.7
@@ -1743,6 +1746,7 @@ IGB_VERSION=5.10.2
 IXGBE_VERSION=5.5.3
 IXGBEVF_VERSION=4.5.1
 I40E_VERSION=2.17.4
+IAVF_VERSION=4.5.3
 ICE_VERSION=1.9.11
 
 PF_RING_VERSION=`../../package/version.sh --release`
@@ -1774,6 +1778,8 @@ fi
 
 
 
+
+
 ac_config_files="$ac_config_files Makefile"
 
 ac_config_files="$ac_config_files Makefile.dkms.e1000e"
@@ -1786,6 +1792,8 @@ ac_config_files="$ac_config_files Makefile.dkms.ixgbevf"
 
 ac_config_files="$ac_config_files Makefile.dkms.i40e"
 
+ac_config_files="$ac_config_files Makefile.dkms.iavf"
+
 ac_config_files="$ac_config_files Makefile.dkms.ice"
 
 ac_config_files="$ac_config_files dkms.conf.e1000e"
@@ -1797,6 +1805,8 @@ ac_config_files="$ac_config_files dkms.conf.ixgbe"
 ac_config_files="$ac_config_files dkms.conf.ixgbevf"
 
 ac_config_files="$ac_config_files dkms.conf.i40e"
+
+ac_config_files="$ac_config_files dkms.conf.iavf"
 
 ac_config_files="$ac_config_files dkms.conf.ice"
 
@@ -2515,12 +2525,14 @@ do
     "Makefile.dkms.ixgbe") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbe" ;;
     "Makefile.dkms.ixgbevf") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ixgbevf" ;;
     "Makefile.dkms.i40e") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.i40e" ;;
+    "Makefile.dkms.iavf") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.iavf" ;;
     "Makefile.dkms.ice") CONFIG_FILES="$CONFIG_FILES Makefile.dkms.ice" ;;
     "dkms.conf.e1000e") CONFIG_FILES="$CONFIG_FILES dkms.conf.e1000e" ;;
     "dkms.conf.igb") CONFIG_FILES="$CONFIG_FILES dkms.conf.igb" ;;
     "dkms.conf.ixgbe") CONFIG_FILES="$CONFIG_FILES dkms.conf.ixgbe" ;;
     "dkms.conf.ixgbevf") CONFIG_FILES="$CONFIG_FILES dkms.conf.ixgbevf" ;;
     "dkms.conf.i40e") CONFIG_FILES="$CONFIG_FILES dkms.conf.i40e" ;;
+    "dkms.conf.iavf") CONFIG_FILES="$CONFIG_FILES dkms.conf.iavf" ;;
     "dkms.conf.ice") CONFIG_FILES="$CONFIG_FILES dkms.conf.ice" ;;
     "zc-dkms-mkdeb/debian/control") CONFIG_FILES="$CONFIG_FILES zc-dkms-mkdeb/debian/control" ;;
     "zc-dkms.mkrpm.spec") CONFIG_FILES="$CONFIG_FILES zc-dkms.mkrpm.spec" ;;

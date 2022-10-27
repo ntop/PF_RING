@@ -6,6 +6,10 @@ igb (1 Gbit) 82575/82576/82580/I350/I210
 
 ixgbe (10 Gbit) 82599/X520/X540 
 
-i40e (10/40 Gbit) X710
+ixgbevf (10 Gbit) 82599/X520/X540 VF 
+
+i40e (10/40 Gbit) X710/XL710
+
+iavf (10/40 Gbit) X710/XL710 VF
 
 ice (100 Gbit) E810

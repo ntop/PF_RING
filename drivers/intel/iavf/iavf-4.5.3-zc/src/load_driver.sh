@@ -33,12 +33,6 @@ modprobe configfs
 # Load the driver
 insmod ./iavf.ko
 
-# Enable debugging
-#find /sys/kernel/debug/iavf/ -name command -exec sh -c 'echo  "msg_enable 16" > {}' {} ';'
-
-# Disable multiqueue
-#find /sys/kernel/debug/iavf/ -name command -exec sh -c 'echo  "set rss_size 1" > {}' {} ';'
-
 sleep 1
 
 pkill irqbalance 
@@ -63,15 +57,6 @@ for IF in $INTERFACES ; do
 
 		# Disabling VLAN stripping
 		ethtool -K $IF rxvlan off
-
-		# Flow Control automatically disabled by the driver (no need to use the following commands)
-		#ethtool -A $IF autoneg off
-		#ethtool -A $IF rx off
-		#ethtool -A $IF tx off
-		#ethtool -s $IF speed 10000
-
-		# Enable n-tuple hw filters
-		#ethtool -K $IF ntuple on
 
 		ifconfig $IF up
 		sleep 1

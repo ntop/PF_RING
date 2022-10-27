@@ -4,6 +4,7 @@ IXGBE=ixgbe/ixgbe-@IXGBE_VERSION@-zc
 IXGBEVF=ixgbevf/ixgbevf-@IXGBEVF_VERSION@-zc
 I40E=i40e/i40e-@I40E_VERSION@-zc
 ICE=ice/ice-@ICE_VERSION@-zc
+IAVF=iavf/iavf-@IAVF_VERSION@-zc
 
 all:
 	cd $(E1000E); make
@@ -43,6 +44,8 @@ dkms-deb: cleanup dkms-deb-virtual
 	cp /var/lib/dkms/ixgbevf-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.i40e deb
 	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
+	sudo make -f Makefile.dkms.iavf deb
+	cp /var/lib/dkms/iavf-zc/*/deb/*.deb .
 ifeq (@HAVE_ICE@,y)
 	sudo make -f Makefile.dkms.ice deb
 	cp /var/lib/dkms/ice-zc/*/deb/*.deb .
@@ -54,6 +57,7 @@ dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.ixgbe rpm
 	sudo make -f Makefile.dkms.ixgbevf rpm
 	sudo make -f Makefile.dkms.i40e rpm
+	sudo make -f Makefile.dkms.iavf rpm
 ifeq (@HAVE_ICE@,y)
 	sudo make -f Makefile.dkms.ice rpm
 endif

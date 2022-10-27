@@ -49,6 +49,9 @@ esac
    echo 'blacklist e1000e-zc' > /etc/modprobe.d/e1000e-zc.conf
    echo 'blacklist igb-zc' > /etc/modprobe.d/igb-zc.conf
    echo 'blacklist ixgbe-zc' > /etc/modprobe.d/ixgbe-zc.conf
+   echo 'blacklist ixgbevf-zc' > /etc/modprobe.d/ixgbevf-zc.conf
    echo 'blacklist i40e-zc' > /etc/modprobe.d/i40e-zc.conf
+   echo 'blacklist iavf-zc' > /etc/modprobe.d/iavf-zc.conf
+   echo 'blacklist ice-zc' > /etc/modprobe.d/ice-zc.conf
 
 exit 0

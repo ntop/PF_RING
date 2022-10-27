@@ -1,0 +1,41 @@
+all: install
+
+add: veryclean
+	\/bin/rm -rf /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@
+	mkdir -p /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/
+	cd @IAVF@/@IAVF@-@IAVF_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/
+	cp ../../kernel/linux/pf_ring.h /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/
+	sed -i -e 's/iavf\.o/iavf_zc.o/' -e 's/iavf-/iavf_zc-/' /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Kbuild
+	mv /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Kbuild /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Makefile
+	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@.@REVISION@' /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Makefile
+	cp dkms.conf.@IAVF@ /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/dkms.conf 
+	dkms add -m @IAVF@-zc -v @IAVF_VERSION@.@REVISION@
+
+build: add
+	dkms build -m @IAVF@-zc -v @IAVF_VERSION@.@REVISION@
+
+install: build
+	dkms install --force -m @IAVF@-zc -v @IAVF_VERSION@.@REVISION@
+
+deb: add add_deb install
+	dkms mkdeb -m @IAVF@-zc -v @IAVF_VERSION@.@REVISION@ --source-only
+
+rpm: add add_rpm install
+	dkms mkrpm -m @IAVF@-zc -v @IAVF_VERSION@.@REVISION@ --source-only
+
+add_rpm:
+	cp -f zc.spec /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/@IAVF@-zc-dkms-mkrpm.spec
+
+add_deb:
+	cp -r zc-dkms-mkdeb /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/@IAVF@-zc-dkms-mkdeb
+	-cd  /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/@IAVF@-zc-dkms-mkdeb ; find . -type d -name ".git" -exec rm -fr {} \;
+
+remove:
+	-dkms remove -m @IAVF@-zc -v @IAVF_VERSION@.@REVISION@ --all
+	\/bin/rm -f /lib/modules/*/weak-updates/iavf*ko
+	\/bin/rm -f /lib/modules/*/extra/iavf*ko
+	\/bin/rm -rf /var/lib/dkms/iavf-zc
+
+veryclean: remove
+	\/bin/rm -fr /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@
+	

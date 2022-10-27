@@ -5,6 +5,7 @@ IGB="igb"
 IXGBE="ixgbe"
 IXGBEVF="ixgbevf"
 I40E="i40e"
+IAVF="iavf"
 ICE="ice"
 
 E1000E_VERSION=3.8.7
@@ -12,6 +13,7 @@ IGB_VERSION=5.10.2
 IXGBE_VERSION=5.5.3
 IXGBEVF_VERSION=4.5.1
 I40E_VERSION=2.17.4
+IAVF_VERSION=4.5.3
 ICE_VERSION=1.9.11
 
 PF_RING_VERSION=`../../package/version.sh --release`
@@ -40,6 +42,8 @@ AC_SUBST(IXGBEVF)
 AC_SUBST(IXGBEVF_VERSION)
 AC_SUBST(I40E)
 AC_SUBST(I40E_VERSION)
+AC_SUBST(IAVF)
+AC_SUBST(IAVF_VERSION)
 AC_SUBST(ICE)
 AC_SUBST(ICE_VERSION)
 
@@ -49,12 +53,14 @@ AC_CONFIG_FILES(Makefile.dkms.igb)
 AC_CONFIG_FILES(Makefile.dkms.ixgbe)
 AC_CONFIG_FILES(Makefile.dkms.ixgbevf)
 AC_CONFIG_FILES(Makefile.dkms.i40e)
+AC_CONFIG_FILES(Makefile.dkms.iavf)
 AC_CONFIG_FILES(Makefile.dkms.ice)
 AC_CONFIG_FILES(dkms.conf.e1000e)
 AC_CONFIG_FILES(dkms.conf.igb)
 AC_CONFIG_FILES(dkms.conf.ixgbe)
 AC_CONFIG_FILES(dkms.conf.ixgbevf)
 AC_CONFIG_FILES(dkms.conf.i40e)
+AC_CONFIG_FILES(dkms.conf.iavf)
 AC_CONFIG_FILES(dkms.conf.ice)
 AC_CONFIG_FILES(zc-dkms-mkdeb/debian/control)
 AC_CONFIG_FILES(zc-dkms.mkrpm.spec)
