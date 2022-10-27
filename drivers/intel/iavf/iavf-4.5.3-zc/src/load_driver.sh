@@ -16,7 +16,14 @@ FAMILY=iavf
 # i40e 0000:02:00.0: Failed to enable PCI sriov: -12
 #
 # Enable 2 Virtual Functions per interface (uncomment the following line before running the script)
-#echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
+# $ echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
+#
+# Filter traffic for VF based on VLAN ID (in addition to MAC address)
+# $ ip link set $IF vf $VF_ID vlan $VLAN_ID
+#
+# Reset VLAN FILTER
+# $ ip link set $IF vf $VF_ID vlan 0
+#
 
 # Remove old modules (if loaded)
 rmmod iavf
