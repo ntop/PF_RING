@@ -62,12 +62,12 @@ Manual Configuration
 The init script acts as follows:
 
 1. it loads the pf_ring.ko kernel module reading the module parameters from /etc/pf_ring/pf_ring.conf
-2. it scans /etc/pf_ring/zc/{e1000e,igb,ixgbe,ixgbevf,i40e,ice,mlx}/ searching for the drivers configuration files:
+2. it scans /etc/pf_ring/zc/{e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}/ searching for the drivers configuration files:
 
-   - {e1000e,igb,ixgbe,ixgbevf,i40e,ice,mlx}.conf containing the driver parameters
-   - {e1000e,igb,ixgbe,ixgbevf,i40e,ice,mlx}.start that should be just an empty file
+   - {e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.conf containing the driver parameters
+   - {e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.start that should be just an empty file
 
-3. it loads the drivers whose corresponding {e1000e,igb,ixgbe,ixgbevf,i40e,ice,mlx}.start file is present, unloading the vanilla driver.
+3. it loads the drivers whose corresponding {e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.start file is present, unloading the vanilla driver.
 4. if a ZC driver has been loaded, it configures hugepages reading the configuration from /etc/pf_ring/hugepages.conf. Each line (one per CPU) of the configuration file should contain:
 
 .. code-block:: console
