@@ -59,12 +59,12 @@ the '-zc' suffix. Three driver families are currently available:
 - 10 Gbit
 
   - ixgbe/ixgbevf (RX and TX)
-     - Supported cards: Intel 82599/X520/X540/X55x
+     - Supported cards: Intel 82599/X520/X540/X55x and VFs
 
 - 10/40 Gbit
 
-  - i40e (RX and TX)
-     - Supported cards: Intel X710/XL710
+  - i40e/iavf (RX and TX)
+     - Supported cards: Intel X710/XL710 and VFs
 
 - 10/25/50/100 Gbit
 
