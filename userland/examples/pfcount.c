@@ -79,8 +79,6 @@ u_int32_t last_ip = 0;
 u_int16_t min_len = 0;
 int promisc = 1;
 u_int8_t rule_priority = 0;
-u_int32_t src_ip_rule = 0;
-u_int8_t src_ip_rule_set = 0;
 
 struct app_stats {
   u_int64_t numPkts[MAX_NUM_THREADS];
@@ -373,7 +371,8 @@ void sample_filtering_rules(){
       printf("Rule %d added successfully...\n", r.rule_id );
   }
 
-  if (src_ip_rule_set) { /* Mellanox (Drop Src IP) */
+  if (0) { /* Mellanox (Drop Src IP) */
+
     /* Use promisc to guess what is the default the user wants */
     generic_default_action_type default_action = promisc ? default_pass : default_drop;
 
@@ -393,7 +392,7 @@ void sample_filtering_rules(){
       r.rule_family.flow_tuple_rule.action = flow_pass_rule;
 
     r.rule_family.flow_tuple_rule.ip_version = 4;
-    r.rule_family.flow_tuple_rule.src_ip.v4 = src_ip_rule;
+    r.rule_family.flow_tuple_rule.src_ip.v4 = ntohl(inet_addr("10.0.0.1"));
 
     r.rule_family.flow_tuple_rule.protocol = IPPROTO_UDP;
     //r.rule_family.flow_tuple_rule.dst_port = 3000;
@@ -862,7 +861,6 @@ void printHelp(void) {
   printf("-J              Do not enable promiscuous mode\n");
   printf("-R              Do not reprogram RSS indirection table (Intel ZC only)\n");
   printf("-0              Send all traffic to RSS queue 0 (this also enabled -R)\n");
-  printf("-I <ip>         Set UDP Src-IP hw filter on Mellanox\n");
   printf("-P <prio>       Set hw filter priority (0..2)\n");
   printf("-v <mode>       Verbose [1: verbose, 2: very verbose (print packet payload)]\n");
   printf("-K <len>        Print only packets with length > <len> with -v\n");
@@ -1130,7 +1128,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:I:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MRTUK:0")) != '?') {
+  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MRTUK:0")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1187,10 +1185,6 @@ int main(int argc, char* argv[]) {
     case 'i':
       device = strdup(optarg);
       if(strcmp(device, "sysdig:") == 0) is_sysdig = 1;
-      break;
-    case 'I':
-      src_ip_rule = ntohl(inet_addr(optarg));
-      src_ip_rule_set = 1;
       break;
     case 'J':
       promisc = 0;
