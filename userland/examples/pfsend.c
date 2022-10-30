@@ -883,6 +883,8 @@ int main(int argc, char* argv[]) {
     if(num_to_send > 0) i++;
   } /* for */
 
+  pfring_flush_tx_packets(pd);
+
   print_stats();
   printf("Sent %llu packets\n", (long long unsigned int) num_pkt_good_sent);
 
