@@ -858,11 +858,17 @@ int main(int argc, char* argv[]) {
         if (unlikely(do_shutdown)) break;
       }
     } else if (pps < 0) {
+      int tx_syncronized = 0;
       /* real pcap rate */
       if (tosend->ticks_from_beginning == 0)
         tick_start = getticks(); /* first packet, resetting time */
-      while((getticks() - tick_start) < tosend->ticks_from_beginning)
+      while((getticks() - tick_start) < tosend->ticks_from_beginning) {
+        if (!tx_syncronized) {
+          pfring_flush_tx_packets(pd);
+          tx_syncronized = 1;
+        }
         if (unlikely(do_shutdown)) break;
+      }
     }
 
     /* add N uniq packets per second */
