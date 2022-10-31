@@ -259,6 +259,33 @@ start_interfaces() {
 	done
 }
 
+# Configure RSS using ethtool
+configure_rss() {
+	# Default RSS queues
+	DEF_RSS=1
+
+	# Driver name (e.g. mlx5_core)
+	D=$1
+	# Family (e.g. zc)
+	F=$2
+	# Configuration name (e.g. mlx)
+	C=$3
+
+	# Setting configured number of RSS queues (or default)
+	INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
+	for IF in $INTERFACES ; do
+		D_MATCH=$(ethtool -i $IF|grep "$D\$"|wc -l)
+
+		if [ "$D_MATCH" -eq 1 ]; then
+			RSS=$(cat ${PF_RING_CONFIG_DIR}/${F}/${C}/${C}.conf 2>/dev/null | grep RSS | cut -d'=' -f2 | cut -d',' -f1)
+			if [ -z "${RSS}" ]; then
+				RSS=$DEF_RSS
+			fi
+			ethtool -L ${IF} combined ${RSS}
+		fi
+	done
+}
+
 load_driver() {
 	DRV_PARAM=""
 
@@ -307,14 +334,8 @@ load_driver() {
 		fi
 
 		if [ ${1} == "iavf" ]; then
-			# Configure RSS using ethtool for drivers not supporting the RSS param
-			DEF_RSS=1
-			RSS=$(cat ${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.conf 2>/dev/null | grep RSS | cut -d'=' -f2 | cut -d',' -f1)
-			if [ -z "${RSS}" ]; then
-				# Default: 1 queue
-				RSS=$DEF_RSS
-			fi
-			ethtool -L ${IF} combined ${RSS}
+			# Setting configured number of RSS queues (or default)
+			configure_rss ${1} ${2} ${1}
 		fi
 
 	else
@@ -378,19 +399,7 @@ load_mlx() {
 		modprobe -a ib_uverbs mlx5_core mlx5_ib > /dev/null 2>&1
 
 		# Setting configured number of RSS queues (or default)
-		INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
-		for IF in $INTERFACES ; do
-			D_MATCH=$(ethtool -i $IF|grep "$D\$"|wc -l)
-
-			if [ "$D_MATCH" -eq 1 ]; then
-				RSS=$(cat ${PF_RING_CONFIG_DIR}/${F}/${C}/${C}.conf 2>/dev/null | grep RSS | cut -d'=' -f2 | cut -d',' -f1)
-				if [ -z "${RSS}" ]; then
-					# Default: 1 queue
-					RSS=$DEF_RSS
-				fi
-				ethtool -L ${IF} combined ${RSS}
-			fi
-		done
+		configure_rss ${D} ${F} ${C}
 	fi
 }
 
