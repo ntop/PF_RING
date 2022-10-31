@@ -21,6 +21,10 @@ FAMILY=iavf
 # Filter traffic for VF based on VLAN ID (in addition to MAC address)
 # $ ip link set $IF vf $VF_ID vlan $VLAN_ID
 #
+# Filter traffic for VF based on VLAN ID (promisc - ignore the MAC address)
+# $ ip link set $IF vf $VF_ID vlan $VLAN_ID
+# ip link set dev $IF vf $VF_ID trust on
+#
 # Reset VLAN FILTER
 # $ ip link set $IF vf $VF_ID vlan 0
 #
