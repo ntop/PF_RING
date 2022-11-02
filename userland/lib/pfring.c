@@ -408,8 +408,10 @@ u_int8_t pfring_open_multichannel(const char *device_name, u_int32_t caplen,
 				  pfring *ring[MAX_NUM_RX_CHANNELS]) {
   u_int8_t num_channels, i, num = 0;
   char *at;
-  const char *dev = device_name;
+  const char *dev;
   char base_dev[32];
+
+  dev = device_name;
 
   /* Use linux device in case of zc to avoid opening in ZC mode for read only */
   if (strncmp(dev, "zc:", 3) == 0)
@@ -435,11 +437,18 @@ u_int8_t pfring_open_multichannel(const char *device_name, u_int32_t caplen,
     num_channels = MAX_NUM_RX_CHANNELS;
 
   /* Now do the real job */
-  for(i=0; i<num_channels; i++) {
-    char dev[64];
 
-    snprintf(dev, sizeof(dev), "%s@%d", base_dev, i);
-    ring[i] = pfring_open(dev, caplen, flags);
+  snprintf(base_dev, sizeof(base_dev), "%s", device_name);
+
+  at = strchr(base_dev, '@');
+  if(at != NULL)
+    at[0] = '\0';
+
+  for(i=0; i<num_channels; i++) {
+    char dev_queue[64];
+
+    snprintf(dev_queue, sizeof(dev_queue), "%s@%d", base_dev, i);
+    ring[i] = pfring_open(dev_queue, caplen, flags);
 
     if(ring[i] == NULL)
       return(num);
