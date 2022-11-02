@@ -18,15 +18,18 @@ FAMILY=iavf
 # Enable 2 Virtual Functions per interface (uncomment the following line before running the script)
 # $ echo '2' > /sys/bus/pci/devices/$(ethtool -i $IF | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
 #
-# Filter traffic for VF based on VLAN ID (in addition to MAC address)
+# Filter traffic for VF also based on VLAN ID (in addition to MAC address)
 # $ ip link set $IF vf $VF_ID vlan $VLAN_ID
 #
-# Filter traffic for VF based on VLAN ID (promisc - ignore the MAC address)
+# Filter traffic for VF based on VLAN ID only (promisc - ignore the MAC address)
 # $ ip link set $IF vf $VF_ID vlan $VLAN_ID
-# ip link set dev $IF vf $VF_ID trust on
+# $ ip link set dev $IF vf $VF_ID trust on
 #
 # Reset VLAN FILTER
 # $ ip link set $IF vf $VF_ID vlan 0
+#
+# Receive all traffic from the physical interface (promisc)
+# $ ip link set dev $IF vf $VF_ID trust on
 #
 
 # Remove old modules (if loaded)
