@@ -382,6 +382,7 @@ int main(int argc, char* argv[]) {
       break;
     case 'v':
       verbose = 1;
+      use_extended_pkt_header = 1;
       break;
     case 'w':
       watermark = atoi(optarg);
