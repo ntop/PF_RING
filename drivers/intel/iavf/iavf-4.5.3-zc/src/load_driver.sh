@@ -47,6 +47,21 @@ modprobe configfs
 # Load the driver
 insmod ./iavf.ko
 
+#
+# This driver supports ZC mode only (kernel is disconnected). In order to
+# enable selected VF adapters in ZC mode use the kernel_only_adapter 
+# parameter, specifying the VFs you want to use in standard mode in an array.
+#
+# insmod ./iavf.ko kernel_only_adapter=0,1
+# (first adapter in ZC mode, second adapter in kernel mode)
+#
+# You can check the adapter index loading the ZC driver and checking dmesg:
+#
+# dmesg | grep "iavf adapter"
+# [342606.801690] iavf adapter enp1s0f1v0 index = 0 running in ZC mode
+# [342607.949566] iavf adapter enp1s0f1v1 index = 1 running in Kernel mode
+#
+
 sleep 1
 
 pkill irqbalance 

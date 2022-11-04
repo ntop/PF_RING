@@ -39,6 +39,7 @@
 #ifdef HAVE_PF_RING
 #define HAVE_PF_RING_NO_RDMA
 #define HAVE_PF_RING_ONLY /* No kernel mode even when ZC is not in use */
+#define IAVF_MAX_NIC 64
 #endif
 
 #ifndef GCC_VERSION

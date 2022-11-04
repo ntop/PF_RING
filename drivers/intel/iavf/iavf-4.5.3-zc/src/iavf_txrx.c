@@ -10,9 +10,10 @@
 #endif
 
 #ifdef HAVE_PF_RING
-int wake_up_pfring_zc_socket(struct iavf_ring *rx_ring); /* iavf_main.c */
-
 extern int enable_debug;
+extern int kernel_only_adapter[IAVF_MAX_NIC];
+
+int wake_up_pfring_zc_socket(struct iavf_ring *rx_ring); /* iavf_main.c */
 #endif
 
 static __le64 build_ctob(u32 td_cmd, u32 td_offset, unsigned int size, u32 td_tag)
@@ -1063,6 +1064,11 @@ bool iavf_alloc_rx_buffers(struct iavf_ring *rx_ring, u16 cleaned_count)
 	u16 ntu = rx_ring->next_to_use;
 	union iavf_rx_desc *rx_desc;
 	struct iavf_rx_buffer *bi;
+#ifdef HAVE_PF_RING
+#ifdef HAVE_PF_RING_ONLY
+	struct iavf_adapter *adapter = netdev_priv(rx_ring->netdev); 
+#endif
+#endif
 
 	/* do nothing if no valid netdev defined */
 	if (!rx_ring->netdev || !cleaned_count)
@@ -1070,7 +1076,8 @@ bool iavf_alloc_rx_buffers(struct iavf_ring *rx_ring, u16 cleaned_count)
 
 #ifdef HAVE_PF_RING
 #ifdef HAVE_PF_RING_ONLY
-	return true;
+	if (!kernel_only_adapter[adapter->instance])
+		return true;
 #endif
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",
@@ -2145,7 +2152,10 @@ static int iavf_clean_rx_irq(struct iavf_ring *rx_ring, int budget)
 	bool failure = false;
 #ifdef HAVE_PF_RING
 #ifdef HAVE_PF_RING_ONLY
-	return budget-1;
+	struct iavf_adapter *adapter = netdev_priv(rx_ring->netdev); 
+
+	if (!kernel_only_adapter[adapter->instance])
+		return budget-1;
 #else
 	struct iavf_adapter *adapter = netdev_priv(rx_ring->netdev);
 
@@ -3704,9 +3714,11 @@ netdev_tx_t iavf_lan_xmit_frame(struct sk_buff *skb, struct net_device *netdev)
 	struct iavf_ring *tx_ring = &adapter->tx_rings[skb->queue_mapping];
 
 #ifdef HAVE_PF_RING
-#ifndef HAVE_PF_RING_ONLY
+#ifdef HAVE_PF_RING_ONLY
+	if (!kernel_only_adapter[adapter->instance])
+#else
 	/* We don't allow legacy send when in zc mode */
-	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) i
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
 #endif
 	{
 

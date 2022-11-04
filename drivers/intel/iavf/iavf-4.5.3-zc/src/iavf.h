@@ -774,6 +774,7 @@ struct iavf_adapter {
 #endif
 	struct iavf_rdma rdma;
 #ifdef HAVE_PF_RING
+	u16 instance;
 	struct {
 		atomic_t usage_counter;
 		u8 interrupts_required;

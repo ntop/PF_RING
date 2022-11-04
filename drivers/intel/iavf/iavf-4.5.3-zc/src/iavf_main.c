@@ -19,13 +19,22 @@
 #define IAVF_PCI_DEVICE_CACHE_LINE_SIZE      0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES        8
 
-#define IAVF_MAX_NIC 64
-
+/* 
+ * Note: ethtool should be used on this driver to set RSS
 static int RSS[IAVF_MAX_NIC] = 
   { [0 ... (IAVF_MAX_NIC - 1)] = 0 };
 module_param_array_named(RSS, RSS, int, NULL, 0444);
 MODULE_PARM_DESC(RSS,
                  "Number of Receive-Side Scaling Descriptor Queues, default 0=number of cpus");
+ */
+
+#ifdef HAVE_PF_RING_ONLY
+int kernel_only_adapter[IAVF_MAX_NIC] = 
+  { [0 ... (IAVF_MAX_NIC - 1)] = 0 };
+module_param_array_named(kernel_only_adapter, kernel_only_adapter, int, NULL, 0444);
+MODULE_PARM_DESC(kernel_only_adapter,
+                 "Kernel only adapters (disable ZC), default 0=enable ZC");
+#endif
 
 int enable_debug = 0;
 module_param(enable_debug, int, 0644);
@@ -1579,7 +1588,15 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 	/* Note: queues will be enabled by a delayed work 
 	 * iavf_watchdog_task-> iavf_process_aq_command -> iavf_enable_queues */
 
-	if (adapter->netdev) {
+	printk("iavf adapter %s index = %u running in %s mode\n",
+        	adapter->netdev->name, adapter->instance, 
+		kernel_only_adapter[adapter->instance] ? "Kernel" : "ZC");
+
+	if (adapter->netdev 
+#ifdef HAVE_PF_RING_ONLY
+            && !kernel_only_adapter[adapter->instance]
+#endif
+           ) {
 		int i;
 		u16 cache_line_size;
 
@@ -5788,6 +5805,9 @@ static int iavf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	struct iavf_adapter *adapter = NULL;
 	struct iavf_hw *hw = NULL;
 	int err;
+#ifdef HAVE_PF_RING_ONLY
+	static u16 vfs_found = 0;
+#endif
 
 	err = pci_enable_device(pdev);
 	if (err)
@@ -5852,6 +5872,9 @@ static int iavf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	hw->bus.device = PCI_SLOT(pdev->devfn);
 	hw->bus.func = PCI_FUNC(pdev->devfn);
 	hw->bus.bus_id = pdev->bus->number;
+#ifdef HAVE_PF_RING_ONLY
+	adapter->instance = vfs_found++;
+#endif
 
 	/* set up the spinlocks for the AQ, do this only once in probe
 	 * and destroy them only once in remove
