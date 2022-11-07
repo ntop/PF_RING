@@ -657,7 +657,7 @@ void printHelp(void) {
   printf("-A <policy>      Set default policy (0: drop, 1: accept) to be used with -Z (default: accept)\n");
 #endif
   printf("-G <queue>:<ver> Forward GTP-C version <ver> to queue <queue> (with -m 4)\n");
-  printf("-E               Debug mode\n");
+  printf("-J               Debug mode\n");
   printf("-v               Verbose\n");
   exit(-1);
 }
@@ -979,7 +979,7 @@ int main(int argc, char* argv[]) {
   int num_consumer_queues_limit = 0;
   u_int32_t cluster_flags = 0;
   u_int32_t rx_open_flags;
-  const char *opt_string = "ab:c:dD:Ef:G:g:hi:l:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
+  const char *opt_string = "ab:c:dD:f:G:g:hi:Jl:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -1036,7 +1036,7 @@ int main(int argc, char* argv[]) {
     case 'D':
       user = strdup(optarg);
       break;
-    case 'E':
+    case 'J':
       pfring_zc_debug();
       break;
     case 'f':

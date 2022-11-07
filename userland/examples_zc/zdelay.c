@@ -230,6 +230,7 @@ void printHelp(void) {
   printf("-T <time core>    Bind time thread to core\n");
   printf("-a                Active packet wait to improve latency (higher cpu load)\n");
   printf("-f                Flush packets immediately to improve latency (lower throughput)\n");
+  printf("-J                Debug mode\n");
   printf("-v                Verbose\n");
   printf("-h                Print this help\n\n");
   printf("Example: zdelay -i zc:eno1 -o zc:eno2 -c 1 -d 100 -s 1000\n");
@@ -434,7 +435,7 @@ int main(int argc, char* argv[]) {
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:d:I:O:T:hi:o:fs:v")) != '?') {
+  while((c = getopt(argc,argv,"ac:d:I:JO:T:hi:o:fs:v")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -464,6 +465,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'I':
       pair[0].rx_core = atoi(optarg) % numCPU;
+      break;
+    case 'J':
+      pfring_zc_debug();
       break;
     case 'O':
       pair[0].tx_core = atoi(optarg) % numCPU;
