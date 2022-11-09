@@ -20,6 +20,7 @@ FAMILY=iavf
 #
 # Filter traffic for VF also based on VLAN ID (in addition to MAC address)
 # $ ip link set $IF vf $VF_ID vlan $VLAN_ID
+# Note: setting a VLAN ID filter on a VF will strip the VLAN header in the adapter (it is not possible to disable stripping)
 #
 # Filter traffic for VF based on VLAN ID only (promisc - ignore the MAC address)
 # $ ip link set $IF vf $VF_ID vlan $VLAN_ID
