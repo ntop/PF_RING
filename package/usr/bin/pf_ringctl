@@ -304,6 +304,9 @@ load_driver() {
 			if [ ${1} == "i40e" ]; then
 				/sbin/modprobe -r i40iw 2>/dev/null
 			fi
+			if [ ${1} == "ice" ]; then
+				/sbin/modprobe -r irdma 2>/dev/null
+			fi
 
 			/sbin/modprobe -r ${1}
 			if [ `echo $?` -gt 0 ]; then
@@ -311,14 +314,14 @@ load_driver() {
 				return
 			fi
 		fi
-			
+
 		# check if already loaded
 		if [ `lsmod |grep -w ^${1}_${2} | wc -l` -eq 1 ]; then
 			echo "Driver ${1}-${2} already installed"
 			DRIVER_INSTALLED=1
 			return
 		fi
-			
+
 		/sbin/modprobe ${1}_${2} ${DRV_PARAM}
 		if [ `echo $?` -gt 0 ]; then
 			echo "Error loading driver ${1}-${2}"
