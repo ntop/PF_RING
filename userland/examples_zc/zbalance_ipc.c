@@ -862,6 +862,15 @@ int64_t fo_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
 
 /* *************************************** */
 
+__int128_t fo_distribution_func_v3(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  int64_t l = 0xffffffffffffffff;
+  int64_t h = 0xffffffffffffffff;
+  if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
+  return (__int128_t) ((__int128_t) h << 64) | l; 
+}
+
+/* *************************************** */
+
 int64_t fo_rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
   long num_out_queues = (long) user;
 
@@ -883,6 +892,25 @@ int64_t fo_multiapp_ip_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_
   for (i = 0; i < num_apps; i++) {
     app_instance = hash % instances_per_app[i];
     consumers_mask |= ((int64_t) 1 << (offset + app_instance));
+    offset += instances_per_app[i];
+  }
+
+  return consumers_mask;
+}
+
+/* *************************************** */
+
+__int128_t fo_multiapp_ip_distribution_func_v3(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
+  int32_t i, offset = 0, app_instance, hash;
+  __int128_t consumers_mask = 0; 
+
+  if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
+
+  hash = pfring_zc_builtin_ip_hash(pkt_handle, in_queue);
+
+  for (i = 0; i < num_apps; i++) {
+    app_instance = hash % instances_per_app[i];
+    consumers_mask |= ((__int128_t) 1 << (offset + app_instance));
     offset += instances_per_app[i];
   }
 
@@ -976,7 +1004,7 @@ int main(int argc, char* argv[]) {
   u_int wait_time_sec = 0;
   char **opt_argv;
   char *user = NULL;
-  int num_consumer_queues_limit = 0;
+  int num_consumer_queues_limit = 0, use_api_v3 = 0;
   u_int32_t cluster_flags = 0;
   u_int32_t rx_open_flags;
   const char *opt_string = "ab:c:dD:f:G:g:hi:Jl:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
@@ -995,6 +1023,7 @@ int main(int argc, char* argv[]) {
 #endif
   pfring_zc_idle_callback idle_func = NULL;
   pfring_zc_distribution_func distr_func = NULL;
+  pfring_zc_distribution_func_v3 distr_func_v3 = NULL;
   pfring_zc_filtering_func filter_func = NULL;
 
   start_time.tv_sec = 0;
@@ -1218,10 +1247,12 @@ int main(int argc, char* argv[]) {
   if (num_apps > 1) {
     switch (hash_mode) {
       case 1: 
+        num_consumer_queues_limit = PF_RING_ZC_SEND_PKT_MULTI_V3_MAX_QUEUES;
+        break;
       case 4:
       case 5:
       case 6:
-        num_consumer_queues_limit = 64; /* egress mask is 64 bit */
+        num_consumer_queues_limit = PF_RING_ZC_SEND_PKT_MULTI_MAX_QUEUES;
         break;
       default:
         printHelp();
@@ -1230,16 +1261,23 @@ int main(int argc, char* argv[]) {
   }
   switch (hash_mode) {
     case 2: 
+      num_consumer_queues_limit = PF_RING_ZC_SEND_PKT_MULTI_V3_MAX_QUEUES;
+      break;
     case 3:
-      num_consumer_queues_limit = 64; /* egress mask is 64 bit */
+      num_consumer_queues_limit = PF_RING_ZC_SEND_PKT_MULTI_MAX_QUEUES;
       break;
     default:
       break;
   }
 
-  if (num_consumer_queues_limit && num_consumer_queues > num_consumer_queues_limit) { 
-    trace(TRACE_ERROR, "Misconfiguration detected: you cannot use more than %d egress queues in fan-out (-m 1|3) or multi-app mode (-n X,Y)\n", num_consumer_queues_limit);
-    return -1;
+  if (num_consumer_queues_limit) {
+    if (num_consumer_queues > num_consumer_queues_limit) {
+      trace(TRACE_ERROR, "Misconfiguration detected: you cannot use more than %d egress queues in fan-out (-m 1|3) or multi-app mode (-n X,Y)\n", num_consumer_queues_limit);
+      return -1;
+    }
+
+    if (num_consumer_queues_limit > PF_RING_ZC_SEND_PKT_MULTI_MAX_QUEUES)
+      use_api_v3 = 1;
   }
 
   for (i = 0; i < num_devices; i++) {
@@ -1599,10 +1637,13 @@ int main(int argc, char* argv[]) {
     switch (hash_mode) {
       case 1: 
         distr_func = fo_multiapp_ip_distribution_func;
+        distr_func_v3 = fo_multiapp_ip_distribution_func_v3;
       break;
       case 2: 
-        if (time_pulse) 
+        if (time_pulse) {
           distr_func = fo_distribution_func; /* else built-in send-to-all */
+          distr_func_v3 = fo_distribution_func_v3;
+        }
       break;
       case 3: 
         distr_func = fo_rr_distribution_func;
@@ -1618,20 +1659,36 @@ int main(int argc, char* argv[]) {
       break;
     }
 
-    zw = pfring_zc_run_fanout_v2(
-      inzqs, 
-      outzmq, 
-      num_devices,
-      wsp,
-      round_robin_bursts_policy, 
-      idle_func,
-      filter_func,
-      NULL,
-      distr_func,
-      (void *) ((long) num_consumer_queues),
-      !wait_for_packet, 
-      bind_worker_core
-    );
+    if (use_api_v3)
+      zw = pfring_zc_run_fanout_v3(
+        inzqs, 
+        outzmq, 
+        num_devices,
+        wsp,
+        round_robin_bursts_policy, 
+        idle_func,
+        filter_func,
+        NULL,
+        distr_func_v3,
+        (void *) ((long) num_consumer_queues),
+        !wait_for_packet, 
+        bind_worker_core
+      );
+    else
+      zw = pfring_zc_run_fanout_v2(
+        inzqs, 
+        outzmq, 
+        num_devices,
+        wsp,
+        round_robin_bursts_policy, 
+        idle_func,
+        filter_func,
+        NULL,
+        distr_func,
+        (void *) ((long) num_consumer_queues),
+        !wait_for_packet, 
+        bind_worker_core
+      );
 
   }
 
