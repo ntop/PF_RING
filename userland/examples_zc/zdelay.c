@@ -412,12 +412,21 @@ u_int64_t compute_buffer_size(u_int32_t delay_usec, u_int64_t link_speed) {
   u_int64_t max_pps = link_speed / ((60+24) * 8);
   double max_ppus = (double) max_pps / 1000000;
   double max_buff_packets = max_ppus * delay_usec;
+  u_int64_t queue_len, margin = 512;
+  
 
   printf("Link speed: %.3f Gbps\n", (double) link_speed/1000000000);
   printf("Max packets/sec: %.3f Mpps\n", (double) max_pps/1000000);
   printf("Max buffered packets: %lu\n", (u_int64_t) max_buff_packets);
 
-  return (u_int64_t) max_buff_packets + 512 /* add some margin to handle queue watermark and bursts */;
+  /* round queue len to pow2 */
+  queue_len = upper_power_of_2((u_int64_t) max_buff_packets);
+
+  /* add some margin to handle queue watermark and bursts */;
+  if (queue_len - max_buff_packets < margin)
+    queue_len = upper_power_of_2((u_int64_t) max_buff_packets + margin);
+
+  return queue_len;
 }
 
 /* *************************************** */
