@@ -322,6 +322,12 @@ load_driver() {
 			return
 		fi
 
+		# Check if there is a pre script (e.g. used for VFs configuration)
+		DRV_PRE_SCRIPT="${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.pre"
+		if [ -x ${DRV_PRE_SCRIPT} ]; then
+			${DRV_PRE_SCRIPT}
+		fi
+
 		/sbin/modprobe ${1}_${2} ${DRV_PARAM}
 		if [ `echo $?` -gt 0 ]; then
 			echo "Error loading driver ${1}-${2}"
@@ -339,6 +345,12 @@ load_driver() {
 		if [ ${1} == "iavf" ] || [ ${1} == "ixgbevf" ]; then
 			# Setting configured number of RSS queues (or default)
 			configure_rss ${1} ${2} ${1}
+		fi
+
+		# Check if there is a post script
+		DRV_POST_SCRIPT="${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.post"
+		if [ -x ${DRV_POST_SCRIPT} ]; then
+			${DRV_POST_SCRIPT}
 		fi
 
 	else
@@ -535,8 +547,8 @@ start_pf_ring() {
 	## Load dummy interfaces associated to timelines or nic cards ##
 	local N2IF_SCRIPT="/usr/bin/n2if"
 	if [ -f "${N2IF_SCRIPT}" ]; then
-	${N2IF_SCRIPT} up-all
-	sleep 1
+		${N2IF_SCRIPT} up-all
+		sleep 1
 	fi
 	
 	start_interfaces 1
