@@ -291,7 +291,7 @@ load_driver() {
 
 	if [ `/sbin/modinfo ${1}-${2} | wc -l` -gt 1 ]; then
 		# driver is available
-		DRV_PARAM=`cat ${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.conf`
+		DRV_PARAM=`cat ${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.conf | tr '\n' ' '`
 		if [ ! -f ${DRIVER_FORCESTART_FILE} ] && is_management_interface_driver ${1} ; then
 			echo "Skipping driver ${1}: driver matches the management interface"
 			return
