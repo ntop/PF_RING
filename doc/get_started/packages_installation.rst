@@ -83,7 +83,7 @@ to improve the performance and absorbe traffic bursts:
    apt-get install pfring-dkms
    mkdir -p /etc/pf_ring
    echo "min_num_slots=65536" > /etc/pf_ring/pf_ring.conf
-   sudo systemctl restart pf_ring
+   systemctl restart pf_ring
 
 In order to use pf_ring with ZC drivers, you need first of all to figure out what is 
 the driver model of your network card. Please use ethtool -i <interface> for that. 
@@ -101,12 +101,12 @@ your actual driver family).
 .. code-block:: console
 
    apt-get install pfring-dkms pfring-drivers-zc-dkms
-   sudo touch /etc/pf_ring/pf_ring.conf
-   echo "node=0 hugepagenumber=1024" | sudo tee /etc/pf_ring/hugepages.conf 
-   sudo mkdir -p /etc/pf_ring/zc/ixgbe
-   echo "RSS=1,1" | sudo tee /etc/pf_ring/zc/ixgbe/ixgbe.conf 
-   sudo touch /etc/pf_ring/zc/ixgbe/ixgbe.start
-   sudo systemctl restart pf_ring
+   touch /etc/pf_ring/pf_ring.conf
+   echo "node=0 hugepagenumber=1024" | tee /etc/pf_ring/hugepages.conf 
+   mkdir -p /etc/pf_ring/zc/ixgbe
+   echo "RSS=1,1" | tee /etc/pf_ring/zc/ixgbe/ixgbe.conf 
+   touch /etc/pf_ring/zc/ixgbe/ixgbe.start
+   systemctl restart pf_ring
 
 Please note that in this configuration RSS is disabled (RSS=1 means single queue). 
 For learning more about RSS and enable multiple queues for hw traffic distribution 
@@ -131,14 +131,14 @@ if your system is using systemd run:
 
 .. code-block:: console
 
-   sudo systemctl restart pf_ring
+   systemctl restart pf_ring
    
 Otherwise you can use the init.d script:
 
 .. code-block:: console
 
-   sudo touch /etc/pf_ring/pf_ring.start
-   sudo /etc/init.d/pf_ring start
+   touch /etc/pf_ring/pf_ring.start
+   /etc/init.d/pf_ring start
 
 You can check that the ZC driver is actually running with:
 
@@ -151,7 +151,7 @@ Note: If you're trying to load a ZC driver on a card that you're currently using
 
 .. code-block:: console
 
-   sudo touch /etc/pf_ring/forcestart
+   touch /etc/pf_ring/forcestart
 
 Alternatively you can explicitly tell to the init script which are the interfaces you are using as management, and those that you want to use for packet capture, creating a configuration file /etc/pf_ring/interfaces.conf containing:
 
@@ -170,7 +170,45 @@ do is to create a /etc/pf_ring/post script as in the example below:
    echo "ifconfig eth0 192.168.1.1" > /etc/pf_ring/post
    chmod +x /etc/pf_ring/post
 
-   
+Virtual Functions Configuration
+-------------------------------
+
+PF_RING provides ZC drivers also for (ixgbe/ixgbevf and i40e/iavf) Virtual Function interfaces.
+Enabling and configuring Virtual Functions on a physical interface requires a few steps.
+
+First of all the kernel should be configured to enable the creation of Virtual Functions, by
+adding at least the *pci=assign-busses* parameter to the grub parameters. Example:
+
+.. code-block:: console
+
+   cat /etc/default/grub | grep GRUB_CMDLINE_LINUX_DEFAULT
+   GRUB_CMDLINE_LINUX_DEFAULT="iommu=1 msi=1 pci=assign-busses intel_iommu=on"
+
+This change needs to be applied with update-grub and the system should be restarted.
+
+.. code-block:: console
+
+   update-grub
+   reboot
+
+As second step the Virtual Functions should be created via /sys fs, by specifying the number of Virtual
+Function we want to enable for each physical interface. Some additional configuration via *ip* command
+is also required to run the Virtual Function in promiscuous mode (*trust* mode) or to assign a VLAN.
+This can be automated using *pre*/*post* scripts. Example:
+
+.. code-block:: console
+
+   cat /etc/pf_ring/zc/iavf/iavf.pre
+   echo '2' > /sys/bus/pci/devices/$(ethtool -i enp1s0f1 | grep bus-info | cut -d ' ' -f2)/sriov_numvfs
+   ip link set enp1s0f1 vf 0 vlan 10
+   ip link set dev enp1s0f1 vf 0 trust on  
+
+Add execution rights to the scritp to enable it:
+
+.. code-block:: console 
+
+   chmod +x /etc/pf_ring/zc/iavf/iavf.pre
+
 Traffic Balancer Configuration
 ------------------------------
 
