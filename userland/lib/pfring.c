@@ -650,9 +650,7 @@ int pfring_recv(pfring *ring, u_char** buffer, u_int buffer_len,
 
     ring->break_recv_loop = 0;
 
-#if defined(ENABLE_BPF) || defined(HAVE_PF_RING_FT)
 recv_next:
-#endif
 
     rc = ring->recv(ring, buffer, buffer_len, hdr, wait_for_incoming_packet);
 
@@ -665,7 +663,7 @@ recv_next:
         pfring_handle_ixia_hw_timestamp(*buffer, hdr);
       else if(ring->vss_apcon_timestamp_enabled)
         pfring_handle_vss_apcon_hw_timestamp(*buffer, hdr);
-      else if(ring->flags & PF_RING_ARISTA_TIMESTAMP)
+      else if(ring->flags & PF_RING_METAWATCH_TIMESTAMP)
         pfring_handle_metawatch_hw_timestamp(*buffer, hdr);
       else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
         if (pfring_handle_arista_hw_timestamp(*buffer, hdr) == 1)
