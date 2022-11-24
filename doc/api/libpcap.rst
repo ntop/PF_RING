@@ -25,7 +25,7 @@ of this library with no changes (linking only is required).
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~
 
-This section lists environment variables supported the extended pcap library
+This section lists environment variables supported by the extended pcap library
 in order to control the working mode without changing the pcap-based application.
 
 * PCAP_PF_RING_ACTIVE_POLL - set active polling (CPU spinning)
