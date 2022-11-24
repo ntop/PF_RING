@@ -9,4 +9,3 @@ API Documentation
     pfring
     pfring_zc
     pfring_ft
-    rrc
