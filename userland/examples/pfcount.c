@@ -760,39 +760,61 @@ void dummyProcessPacket(const struct pfring_pkthdr *h,
 
 /* *************************************** */
 
-void printDevs() {
+void printDevs(u_int8_t json) {
   pfring_if_t *dev;
   int i = 0;
 
   dev = pfring_findalldevs();
 
-  if (verbose)
+  if (json)
+    printf("{\"interfaces\":[");
+  else if (verbose)
     printf("Name\tSystemName\tModule\tMAC\tBusID\tNumaNode\tStatus\tLicense\tExpiration\nModuleVersion\n");
   else
     printf("Available devices (-i):\n");
 
   while (dev != NULL) {
-    if (verbose) {
-      printf("%s\t%s\t%s\t", 
-        dev->name, dev->system_name ? dev->system_name : "unknown", dev->module);
+    char mac[20];
 
-      if (dev->sn)
-        printf("%s", dev->sn);
-      else
-        printf("%02X:%02X:%02X:%02X:%02X:%02X", 
+    if (!dev->sn)
+      sprintf(mac, "%02X:%02X:%02X:%02X:%02X:%02X", 
           dev->mac[0] & 0xFF, dev->mac[1] & 0xFF, dev->mac[2] & 0xFF, 
           dev->mac[3] & 0xFF, dev->mac[4] & 0xFF, dev->mac[5] & 0xFF);
 
-      printf("\t%04X:%02X:%02X.%X\t%d\t%s\t%s\t%ld\t%s\n",
+    if (json) {
+      printf("{");
+      printf("\"name\":\"%s\",", dev->name);
+      printf("\"system_name\":\"%s\",", dev->system_name ? dev->system_name : "unknown");
+      printf("\"module\":\"%s\",", dev->module);
+      printf("\"sn\":\"%s\",", dev->sn ? dev->sn : mac);
+      printf("\"bus_id\":\"%04X:%02X:%02X.%X\",", dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function);
+      printf("\"numa_node\":\"%d\",", busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function));
+      printf("\"status\":\"%s\",", dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"));
+      printf("\"license\":\"%s\",", dev->license ? "Valid" : "NotFound");
+      printf("\"expiration\":\"%ld\",", dev->license_expiration);
+      printf("\"mod_version\":\"%s\"", dev->module_version ? dev->module_version : "");
+      printf("}");
+      if (dev->next)
+        printf(",");
+
+    } else if (verbose) {
+      printf("%s\t%s\t%s\t%s\t%04X:%02X:%02X.%X\t%d\t%s\t%s\t%ld\t%s\n",
+        dev->name, dev->system_name ? dev->system_name : "unknown", dev->module,
+        dev->sn ? dev->sn : mac,
         dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
         busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
         dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"), dev->license ? "Valid" : "NotFound", dev->license_expiration,
         dev->module_version ? dev->module_version : "");
+
     } else {
       printf(" %d. %s\n", i++, dev->name);
     }
+
     dev = dev->next;
   }
+
+  if (json)
+    printf("]}");
 }
 
 /* *************************************** */
@@ -869,6 +891,7 @@ void printHelp(void) {
          "                metawatch\tTimestamped packets by Arista 7130 MetaWatch series devices\n"
          "                arista\tTimestamped packets by Arista 7150 series devices\n");
   printf("-L              List all interfaces and exit (use -v for more info)\n");
+  printf("-I              Output system information (interfaces) in JSON format\n");
 }
 
 /* *************************************** */
@@ -1116,7 +1139,7 @@ int main(int argc, char* argv[]) {
   int snaplen = DEFAULT_SNAPLEN, rc;
   u_int clusterId = 0;
   u_int8_t enable_ixia_timestamp = 0, enable_arista_timestamp = 0, enable_metawatch_timestamp = 0;
-  u_int8_t list_interfaces = 0;
+  u_int8_t list_interfaces = 0, json_info = 0;
   u_int32_t flags = 0;
   int bind_core = -1;
   packet_direction direction = rx_and_tx_direction;
@@ -1128,7 +1151,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"Bhi:c:C:Fd:H:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MRTUK:0")) != '?') {
+  while((c = getopt(argc,argv,"Bhi:Ic:C:Fd:H:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MRTUK:0")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1185,6 +1208,9 @@ int main(int argc, char* argv[]) {
     case 'i':
       device = strdup(optarg);
       if(strcmp(device, "sysdig:") == 0) is_sysdig = 1;
+      break;
+    case 'I':
+      json_info = 1;
       break;
     case 'J':
       promisc = 0;
@@ -1292,8 +1318,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if (list_interfaces) {
-    printDevs();
+  if (list_interfaces || json_info) {
+    printDevs(json_info);
     exit(0);
   }
 
