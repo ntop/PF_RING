@@ -6528,7 +6528,9 @@ struct _kc_bpf_prog {
 	({ unsigned long long _tmp = (ll); do_div(_tmp, d); _tmp; })
 #endif /* DIV_ROUND_DOWN_ULL */
 #else /* > 4.14 */
+#ifndef HAVE_PF_RING
 #define HAVE_XDP_SUPPORT
+#endif
 #define HAVE_NDO_SETUP_TC_REMOVE_TC_TO_NETDEV
 #define HAVE_TCF_EXTS_HAS_ACTION
 #endif /* 4.14.0 */
@@ -6906,7 +6908,9 @@ ptp_read_system_postts(struct ptp_system_timestamp __always_unused *sts)
 #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2))
 #define HAVE_TC_INDIR_BLOCK
 #endif /* RHEL 8.2 */
+#ifndef INDIRECT_CALLABLE_DECLARE
 #define INDIRECT_CALLABLE_DECLARE(x) x
+#endif
 #else /* >= 5.0.0 */
 #define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
 #define HAVE_PTP_CLOCK_INFO_GETTIMEX64
