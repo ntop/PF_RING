@@ -7440,6 +7440,7 @@ static inline void net_prefetch(void *p)
 #else /* >= 8.6 */
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #define HAVE_ETHTOOL_COALESCE_EXTACK
+#define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
 #endif /* 9.0 */
 #endif /* 8.6 */
 #endif /* RHEL */
