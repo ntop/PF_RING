@@ -134,6 +134,14 @@
 #endif /* 8.6 */
 
 /*****************************************************************************/
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,7))
+#else /* >= 8.7 */
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0)) /* HAVE_PF_RING */
+#define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
+#endif
+#endif /* 8.7 */
+
+/*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #else /* >= 9.0 */
 #ifndef HAVE_PF_RING
