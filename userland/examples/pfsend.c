@@ -208,7 +208,7 @@ void printHelp(void) {
   printf("-8 <num>        Send the same packets <num> times before moving to the next\n");
   printf("-A <num>        Add <num> different packets (e.g. -b) every second\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
-  printf("-z              Randomize generated IPs sequence\n");
+  printf("-z              Randomize generated IPs sequence (requires -b)\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-W <ID>[,<ID>]  Forge VLAN packets with the specified VLAN ID (and QinQ ID if specified after comma)\n");
   printf("-L <num>        Forge VLAN packets with <num> different ids\n");
@@ -784,9 +784,16 @@ int main(int argc, char* argv[]) {
   if (pps < 0) /* flush for sending at the exact original pcap speed only, otherwise let pf_ring flush when needed) */
     flush = 1;
 
-  if (randomize && !on_the_fly_reforging)
-    randomize_packets();
-
+  if (randomize) {
+    if(reforge_ip == 0) {
+      randomize = 0;
+      fprintf(stderr, "WARNING: -z requires you to use -b: ignored\n");
+    } else {
+      if(!on_the_fly_reforging)
+	randomize_packets();
+    }
+  }
+  
   if(!verbose) {
     signal(SIGALRM, my_sigalarm);
     alarm(1);
@@ -886,6 +893,9 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
+    if(tosend == NULL)
+      tosend = pkt_head;
+    
     if(num_to_send > 0) i++;
   } /* for */
 
