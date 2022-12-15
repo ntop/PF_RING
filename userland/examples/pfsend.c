@@ -274,11 +274,11 @@ static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use
 /* *************************************** */
 
 static void randomize_packets() {
-  struct packet *tobemoved, *add_before, *prev, *tmp;
+  struct packet *tobemoved, *add_before, *prev, *tmp, *last;
   int j, n, moved_pkts = 0;
  
   // keep the first item in pkt_head and detach the second
-  tobemoved = pkt_head->next;
+  last = tobemoved = pkt_head->next;
   pkt_head->next = NULL;
   moved_pkts++;
 
@@ -301,8 +301,11 @@ static void randomize_packets() {
     tobemoved->next = add_before;
     moved_pkts++;
 
+    last = tobemoved;
     tobemoved = tmp;
   }
+
+  last->next = pkt_head;
 }
 
 /* *************************************** */
@@ -893,9 +896,6 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
-    if(tosend == NULL)
-      tosend = pkt_head;
-    
     if(num_to_send > 0) i++;
   } /* for */
 
