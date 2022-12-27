@@ -400,6 +400,7 @@ static unsigned int perfect_rules_hash_size = DEFAULT_RING_HASH_SIZE;
 static unsigned int enable_tx_capture = 1;
 static unsigned int enable_frag_coherence = 1;
 static unsigned int enable_ip_defrag = 0;
+static unsigned int keep_vlan_offload = 0;
 static unsigned int quick_mode = 0;
 static unsigned int force_ring_lock = 0;
 static unsigned int enable_debug = 0;
@@ -421,6 +422,7 @@ module_param(quick_mode, uint, 0644);
 module_param(force_ring_lock, uint, 0644);
 module_param(enable_debug, uint, 0644);
 module_param(transparent_mode, uint, 0644);
+module_param(keep_vlan_offload, uint, 0644);
 
 MODULE_PARM_DESC(min_num_slots, "Min number of ring slots");
 MODULE_PARM_DESC(perfect_rules_hash_size, "Perfect rules hash size");
@@ -429,6 +431,7 @@ MODULE_PARM_DESC(enable_frag_coherence, "Set to 1 to handle fragments (flow cohe
 MODULE_PARM_DESC(enable_ip_defrag,
 		 "Set to 1 to enable IP defragmentation"
 		 "(only rx traffic is defragmentead)");
+MODULE_PARM_DESC(keep_vlan_offload, "Set to 1 to keep vlan stripping (do not reinsert vlan)");
 MODULE_PARM_DESC(quick_mode,
 		 "Set to 1 to run at full speed but with up"
 		 "to one socket per interface");
@@ -3001,7 +3004,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 
     if(hdr->caplen > 0) {
 
-      if (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL) {
+      if (!keep_vlan_offload && (hdr->extended_hdr.flags & PKT_FLAGS_VLAN_HWACCEL)) {
 	/* VLAN-tagged packet with stripped VLAN tag */
         u_int16_t *b;
         struct vlan_ethhdr *v = vlan_eth_hdr(skb);
