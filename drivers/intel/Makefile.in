@@ -12,7 +12,7 @@ all:
 	cd $(IXGBE); make
 	cd $(IXGBEVF); make
 	cd $(I40E); make
-	cd $(FM10K); make
+	#cd $(FM10K); make
 	cd $(ICE); make
 
 clean:
@@ -21,7 +21,7 @@ clean:
 	cd $(IXGBE); make clean
 	cd $(IXGBEVF); make clean
 	cd $(I40E); make clean
-	cd $(FM10K); make clean
+	#cd $(FM10K); make clean
 	cd $(ICE); make clean
 	-/bin/rm *.deb *.rpm
 
@@ -46,8 +46,8 @@ dkms-deb: cleanup dkms-deb-virtual
 	cp /var/lib/dkms/ixgbevf-zc/*/deb/*.deb .
 	sudo make -f Makefile.dkms.i40e deb
 	cp /var/lib/dkms/i40e-zc/*/deb/*.deb .
-	sudo make -f Makefile.dkms.fm10k deb
-	cp /var/lib/dkms/fm10k-zc/*/deb/*.deb .
+	#sudo make -f Makefile.dkms.fm10k deb
+	#cp /var/lib/dkms/fm10k-zc/*/deb/*.deb .
 ifeq (@HAVE_ICE@,y)
 	sudo make -f Makefile.dkms.ice deb
 	cp /var/lib/dkms/ice-zc/*/deb/*.deb .
@@ -59,7 +59,7 @@ dkms-rpm: cleanup dkms-rpm-virtual
 	sudo make -f Makefile.dkms.ixgbe rpm
 	sudo make -f Makefile.dkms.ixgbevf rpm
 	sudo make -f Makefile.dkms.i40e rpm
-	sudo make -f Makefile.dkms.fm10k rpm
+	#sudo make -f Makefile.dkms.fm10k rpm
 ifeq (@HAVE_ICE@,y)
 	sudo make -f Makefile.dkms.ice rpm
 endif
