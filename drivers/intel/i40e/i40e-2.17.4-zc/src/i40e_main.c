@@ -7878,7 +7878,8 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 				(void *) rx_ring,
 				(void *) tx_ring,
 				wait_packet_function_ptr,
-				notify_function_ptr);
+				notify_function_ptr
+			);
 		}
 	}
 #endif
@@ -8096,8 +8097,8 @@ void i40e_down(struct i40e_vsi *vsi)
 			struct i40e_ring *rx_ring = vsi->rx_rings[i];
 			struct i40e_ring *tx_ring = vsi->tx_rings[i];
 			pf_ring_zc_dev_handler(remove_device_mapping,
-				NULL, // rx_info,
-				NULL, // tx_info,
+				NULL, /* rx_info */
+				NULL, /* tx_info */
 				NULL, /* Packet descriptors */
 				NULL, /* Packet descriptors */
 				(void*)pci_resource_start(pf->pdev, 0),
@@ -8111,8 +8112,8 @@ void i40e_down(struct i40e_vsi *vsi)
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 				(void*)rx_ring,
 				(void*)tx_ring,
-				NULL, // wait_packet_function_ptr
-				NULL // notify_function_ptr
+				NULL,
+				NULL
 			);
 		}
 	}

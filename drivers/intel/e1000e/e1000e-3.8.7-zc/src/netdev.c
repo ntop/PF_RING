@@ -4643,7 +4643,6 @@ static void e1000_configure(struct e1000_adapter *adapter)
 		tx_info.packet_memory_slot_len      = ALIGN(adapter->rx_buffer_len, cache_line_size);
 		tx_info.descr_packet_memory_tot_len = tx_ring->size;
 
-		// printk("%s(%d)=%lu\n", __FUNCTION__, i, adapter->netdev->mem_start);
 		pf_ring_zc_dev_handler(add_device_mapping,
 #ifdef ENABLE_RX_ZC
 				     &rx_info,
@@ -4665,13 +4664,11 @@ static void e1000_configure(struct e1000_adapter *adapter)
 				     (void*)rx_ring,
 				     (void*)tx_ring,
 #ifdef ENABLE_RX_ZC
-				     wait_packet_function_ptr,
+                                     wait_packet_function_ptr,
 #else
-				     NULL,
+                                     NULL,
 #endif
-				     notify_function_ptr);
-
-		//printk(KERN_INFO "[PF_RING] %s(%s, rx_ring=%p, tx_ring=%p)\n", __FUNCTION__, adapter->netdev->name, rx_ring, tx_ring);
+                                     notify_function_ptr);
 	}
 #endif
 }
@@ -5274,8 +5271,8 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 #ifdef HAVE_PF_RING
 	{
 		pf_ring_zc_dev_handler(remove_device_mapping,
-				     NULL, // rx_info,
-				     NULL, // tx_info,
+				     NULL, /* rx_info */
+				     NULL, /* tx_info */
 				     NULL, /* Packet descriptors */
 				     NULL, /* Packet descriptors */
 				     (void*)adapter->netdev->mem_start,
@@ -5287,10 +5284,11 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 				     adapter->netdev->dev_addr,
 				     &adapter->pfring_zc.packet_waitqueue,
 				     &adapter->pfring_zc.interrupt_received,
-				     (void*)adapter->rx_ring, (void*)adapter->tx_ring,
-				     NULL, // wait_packet_function_ptr
-				     NULL // notify_function_ptr
-				     );
+				     (void*)adapter->rx_ring,
+				     (void*)adapter->tx_ring,
+			 	     NULL,
+				     NULL
+		);
 	}
 #endif
 }

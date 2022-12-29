@@ -2693,7 +2693,12 @@ static struct sk_buff *i40e_run_xdp(struct i40e_ring *rx_ring,
 			rx_ring->xdp_stats.xdp_redirect_fail++;
 		break;
 	default:
+#ifdef NEED_NO_NETDEV_PROG_XDP_WARN_ACTION
 		bpf_warn_invalid_xdp_action(act);
+#else
+		bpf_warn_invalid_xdp_action(rx_ring->netdev, xdp_prog, act);
+#endif
+
 		/* fallthrough -- abort and drop */
 	case XDP_ABORTED:
 		trace_xdp_exception(rx_ring->netdev, xdp_prog, act);

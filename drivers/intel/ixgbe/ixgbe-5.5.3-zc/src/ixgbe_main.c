@@ -7607,8 +7607,8 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
 			pf_ring_zc_dev_handler(remove_device_mapping,
-			  NULL, // rx_info,
-			  NULL, // tx_info,
+			  NULL, /* rx_info */
+			  NULL, /* tx_info */
 			  NULL, /* Packet descriptors */
 			  NULL, /* Packet descriptors */
 			  NULL, /* mem_start */
@@ -7622,8 +7622,8 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) adapter->rx_ring[i],
 			  (void *) adapter->tx_ring[i],
-			  NULL, // wait_packet_function_ptr
-			  NULL // notify_function_ptr
+			  NULL,
+			  NULL
 			);
 		}
 	}

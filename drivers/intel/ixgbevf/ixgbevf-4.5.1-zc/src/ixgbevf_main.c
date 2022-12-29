@@ -3331,8 +3331,8 @@ void ixgbevf_down(struct ixgbevf_adapter *adapter)
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) adapter->rx_ring[i],
 			  (void *) adapter->tx_ring[i],
-			  NULL, /* wait_packet_function_ptr */
-			  NULL /* notify_function_ptr */
+			  NULL,
+			  NULL
 			);
 		}
 	}

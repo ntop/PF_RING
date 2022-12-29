@@ -6748,7 +6748,9 @@ void bitmap_from_arr32(unsigned long *bitmap, const u32 *buf, unsigned int nbits
 #endif /* !(RHEL >= 8.0) && !(SLES >= 12.5 && SLES < 15.0 || SLES >= 15.1) */
 #else /* >= 4.16 */
 #include <linux/nospec.h>
-//#define HAVE_XDP_BUFF_RXQ
+#ifndef HAVE_PF_RING
+#define HAVE_XDP_BUFF_RXQ
+#endif
 #define HAVE_TC_FLOWER_OFFLOAD_COMMON_EXTACK
 #define HAVE_TCF_MIRRED_DEV
 #define HAVE_VF_STATS_DROPPED
@@ -6932,7 +6934,9 @@ ptp_read_system_postts(struct ptp_system_timestamp __always_unused *sts)
 #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,2))
 #define HAVE_TC_INDIR_BLOCK
 #endif /* RHEL 8.2 */
+#ifndef INDIRECT_CALLABLE_DECLARE
 #define INDIRECT_CALLABLE_DECLARE(x) x
+#endif
 #else /* >= 5.0.0 */
 #define HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
 #define HAVE_PTP_CLOCK_INFO_GETTIMEX64

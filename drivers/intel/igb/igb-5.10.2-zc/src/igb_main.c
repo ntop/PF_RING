@@ -2172,8 +2172,8 @@ void igb_down(struct igb_adapter *adapter)
 
 		for (i = 0; i < adapter->num_rx_queues; i++) {
 			pf_ring_zc_dev_handler(remove_device_mapping,
-			  NULL, // rx_info,
-			  NULL, // tx_info,
+			  NULL, /* rx_info */
+			  NULL, /* tx_info */
 			  NULL, /* Packet descriptors */
 			  NULL, /* Packet descriptors */
 			  (void*)adapter->rx_ring[i]->netdev->mem_start,
@@ -2186,8 +2186,8 @@ void igb_down(struct igb_adapter *adapter)
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void*)adapter->rx_ring[i], (void*)adapter->tx_ring[i],
-			  NULL, // wait_packet_function_ptr
-			  NULL // notify_function_ptr
+			  NULL,
+			  NULL
 			);
 		}
 	}

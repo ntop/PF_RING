@@ -408,6 +408,7 @@ _kc_devlink_port_attrs_set(struct devlink_port *devlink_port,
 
 #endif /* NEED_DEVLINK_PORT_ATTRS_SET_STRUCT */
 
+#ifndef HAVE_PF_RING /* this code is not used and causing compile errors on latest kernels */
 /*
  * NEED_DEVLINK_ALLOC_SETS_DEV
  *
@@ -437,6 +438,7 @@ _kc_devlink_alloc(const struct devlink_ops *ops, size_t priv_size,
 }
 #define devlink_alloc _kc_devlink_alloc
 #endif /* NEED_DEVLINK_ALLOC_SETS_DEV */
+#endif
 
 #endif /* CONFIG_NET_DEVLINK */
 
