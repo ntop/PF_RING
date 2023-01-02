@@ -1,5 +1,5 @@
 /*
- * (C) 2003-22 - ntop 
+ * (C) 2003-23 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,7 +52,7 @@ u_int8_t verbose = 0;
 /* *************************************** */
 
 void printHelp(void) {
-  printf("ztime - (C) 2014-22 ntop.org\n");
+  printf("ztime - (C) 2014-23 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("An utility to set/adjust the hardware clock of a network adapter (when supported).\n\n");
   printf("Usage:   ztime -i <device> [-c <cluster id>]\n"
@@ -60,7 +60,7 @@ void printHelp(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
   printf("-c <cluster id> Cluster id\n");
-  printf("-s <time>       Set hardware timestamp (when supported). Format example: '2022-09-22 14:30:55.123456789'\n");
+  printf("-s <time>       Set hardware timestamp (when supported). Format example: '2022-09-23 14:30:55.123456789'\n");
   printf("-d <nsec>       Adjust hardware timestamp using a signed nsec delta (when supported)'\n");
   printf("-t              Send a test packet and get the transmission time\n");
   printf("-v              Verbose\n");

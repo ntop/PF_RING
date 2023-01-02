@@ -1,5 +1,5 @@
 /*
- * (C) 2003-20 - ntop 
+ * (C) 2003-23 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -174,7 +174,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfsend - (C) 2011-22 ntop.org\n");
+  printf("pfsend - (C) 2011-23 ntop.org\n");
   printf("Replay synthetic traffic, or a pcap, or a packet in hex format from standard input.\n\n"); 
   printf("pfsend -i out_dev [-a] [-f <.pcap file>] [-g <core_id>] [-h]\n"
          "       [-l <length>] [-n <num>] "

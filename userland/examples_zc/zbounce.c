@@ -1,5 +1,5 @@
 /*
- * (C) 2003-20 - ntop 
+ * (C) 2003-23 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -150,7 +150,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbounce - (C) 2014-22 ntop.org\n");
+  printf("zbounce - (C) 2014-23 ntop.org\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A packet forwarder application between interfaces.\n\n");
   printf("Usage:  zbounce -i <device> -o <device> -c <cluster id> [-b]\n"
