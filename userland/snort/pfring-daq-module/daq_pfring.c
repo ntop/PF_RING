@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 2010-21 ntop.org
+** Copyright (C) 2010-21 ntop
 **
 ** Authors: Luca Deri <deri@ntop.org>
 **          Alfredo Cardigliano <cardigliano@ntop.org>

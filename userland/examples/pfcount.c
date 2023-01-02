@@ -820,7 +820,7 @@ void printDevs(u_int8_t json) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount - (C) 2005-23 ntop.org\n\n");
+  printf("pfcount - (C) 2005-23 ntop\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"

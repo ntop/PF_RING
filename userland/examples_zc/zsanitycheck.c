@@ -54,7 +54,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zsanitycheck - (C) 2016 ntop.org\n");
+  printf("zsanitycheck - (C) 2016 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("-c <id>         Cluster ID\n");
   printf("-b <num>        Number of buffers to allocate\n");

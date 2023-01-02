@@ -168,7 +168,7 @@ void my_sigalarm(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount_multichannel\n(C) 2005-23 ntop.org\n\n");
+  printf("pfcount_multichannel\n(C) 2005-23 ntop\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name (No device@channel)\n");
   printf("-l <len>        Packet length\n");

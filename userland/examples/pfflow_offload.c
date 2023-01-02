@@ -149,7 +149,7 @@ void processBuffer(const struct pfring_pkthdr *h,
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow_offload - (C) 2017-23 ntop.org\n");
+  printf("pfflow_offload - (C) 2017-23 ntop\n");
   printf("Flow processing based on hardware offload\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");

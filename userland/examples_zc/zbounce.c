@@ -150,7 +150,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbounce - (C) 2014-23 ntop.org\n");
+  printf("zbounce - (C) 2014-23 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A packet forwarder application between interfaces.\n\n");
   printf("Usage:  zbounce -i <device> -o <device> -c <cluster id> [-b]\n"

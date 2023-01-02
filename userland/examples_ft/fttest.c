@@ -246,7 +246,7 @@ void packet_consumer() {
 /* *************************************** */
 
 void print_help(void) {
-  printf("fttest - (C) 2018 ntop.org\n");
+  printf("fttest - (C) 2018 ntop\n");
   printf("Flow processing based on PF_RING FT (Flow Table)\n\n");
   printf("-h              Print this help\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");

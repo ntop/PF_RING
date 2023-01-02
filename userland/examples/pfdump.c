@@ -134,7 +134,7 @@ char* etheraddr_string(const u_char *ep, char *buf) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfdump - (C) 2012 ntop.org and University of Twente\n\n");
+  printf("pfdump - (C) 2012 ntop and University of Twente\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use ethX@Y for channels\n");
   printf("-c <cluster id> Cluster id\n");

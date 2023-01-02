@@ -252,7 +252,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance_DC_ipc - (C) 2015 ntop.org\n");
+  printf("zbalance_DC_ipc - (C) 2015 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process balancing packets to multiple consumer processes,\n");
   printf("using multiple threads for packet filtering in a Divide-and-Conquer fashion.\n\n");

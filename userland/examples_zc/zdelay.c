@@ -216,7 +216,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zdelay - (C) 2021 ntop.org\n");
+  printf("zdelay - (C) 2021 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A packet forwarder application between interfaces, adding a configurable delay to forwarded traffic.\n\n");
   printf("Usage:  zdelay -i <device> -o <device> -c <cluster id> -d <delay usec> -s <link speed Mbps>\n\n");

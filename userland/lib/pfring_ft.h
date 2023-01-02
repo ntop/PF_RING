@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2018-2021 - ntop.org
+ * (C) 2018-2021 - ntop
  *
  *  http://www.ntop.org/
  *

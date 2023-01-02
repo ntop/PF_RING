@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2005-2018 - ntop.org
+ * (C) 2005-2018 - ntop
  *
  *
  * This program is free software; you can redistribute it and/or modify

@@ -99,7 +99,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfwrite - (C) 2003-23 ntop.org\n");
+  printf("pfwrite - (C) 2003-23 ntop\n");
   printf("-h              [Print help]\n");
   printf("-i <device>     [Device name]\n");
   printf("-w <dump file>  [Dump file path]\n");

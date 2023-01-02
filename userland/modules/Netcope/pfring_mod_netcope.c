@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2018-21 - ntop.org
+ * (C) 2018-21 - ntop
  *
  * Module for supporting Netcope NICs
  *

@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2015-21 - ntop.org
+ * (C) 2015-21 - ntop
  *
  * Module for supporting InveaTech NICs
  *
