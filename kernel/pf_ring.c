@@ -1,6 +1,6 @@
 /* ***************************************************************
  *
- * (C) 2004-23 - ntop.org
+ * (C) 2004-23 - ntop
  *
  * This code includes contributions courtesy of
  * - Amit D. Chaudhary <amit_ml@rajgad.com>
@@ -8916,7 +8916,7 @@ static int __init ring_init(void)
   int rc;
 
   printk("[PF_RING] Welcome to PF_RING %s ($Revision: %s$)\n"
-	 "(C) 2004-22 ntop.org\n",
+	 "(C) 2004-22 ntop\n",
 	 RING_VERSION, GIT_REV);
 
   printk("LINUX_VERSION_CODE %08X\n", LINUX_VERSION_CODE);
