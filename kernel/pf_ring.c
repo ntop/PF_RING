@@ -5844,12 +5844,12 @@ static int pf_ring_inject_packet_to_stack(struct net_device *netdev, struct msgh
   skb->protocol = eth_type_trans(skb, netdev);
   skb->queue_mapping = 0xffff;
 
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(5,18,0))
-  err = netif_rx_ni(skb);
-#else
+#if((LINUX_VERSION_CODE >= KERNEL_VERSION(5,18,0)) || (defined(REDHAT_PATCHED_KERNEL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))))
   local_bh_disable();
   err = netif_rx(skb);
   local_bh_enable();
+#else
+  err = netif_rx_ni(skb);
 #endif
 
   if(unlikely(debug_on(2) && err == NET_RX_SUCCESS))
