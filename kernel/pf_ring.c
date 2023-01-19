@@ -129,6 +129,12 @@
 #endif
 #endif
 
+#if defined(RHEL_RELEASE_CODE)
+#if(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(4,8))
+#define REDHAT_PATCHED_KERNEL
+#endif
+#endif
+
 #define I82599_HW_FILTERING_SUPPORT
 
 #include "linux/pf_ring.h"
@@ -139,16 +145,14 @@
 
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0))
 #define PDE_DATA(a) PDE(a)->data
+#elif((LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)) || (defined(REDHAT_PATCHED_KERNEL) && (LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0))))
+#define PDE_DATA(a) pde_data(a)
 #endif
 
 #if(LINUX_VERSION_CODE <= KERNEL_VERSION(4,16,0))
 #ifndef NETDEV_PRE_UP
 #define NETDEV_PRE_UP  0x000D
 #endif
-#endif
-
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0))
-#define PDE_DATA(a) pde_data(a)
 #endif
 
 /* ************************************************* */
@@ -406,12 +410,6 @@ static unsigned int force_ring_lock = 0;
 static unsigned int enable_debug = 0;
 static unsigned int transparent_mode = 0;
 static atomic_t ring_id_serial = ATOMIC_INIT(0);
-
-#if defined(RHEL_RELEASE_CODE)
-#if(RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(4,8))
-#define REDHAT_PATCHED_KERNEL
-#endif
-#endif
 
 module_param(min_num_slots, uint, 0644);
 module_param(perfect_rules_hash_size, uint, 0644);
