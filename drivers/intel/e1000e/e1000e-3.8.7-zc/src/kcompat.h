@@ -7437,12 +7437,14 @@ static inline void net_prefetch(void *p)
 /*****************************************************************************/
 #if RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE > 0) 
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,6))
-#else /* >= 8.6 */
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
+#elif (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #define HAVE_ETHTOOL_COALESCE_EXTACK
 #define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
-#endif /* 9.0 */
-#endif /* 8.6 */
+#elif (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
+#else /* >= 9.1 */
+#define HAVE_ETHTOOL_COALESCE_EXTACK
+#define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
+#endif
 #endif /* RHEL */
 
 #endif /* _KCOMPAT_H_ */
