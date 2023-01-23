@@ -151,6 +151,7 @@
 #undef HAVE_DEVLINK_REGISTER_SETS_DEV
 #undef HAVE_DEVLINK_RELOAD_ACTION_AND_LIMIT
 #undef HAVE_DEVLINK_PARAMS_PUBLISH
+#undef NEED_ETH_HW_ADDR_SET
 #endif /* 8.7 */
 
 /*****************************************************************************/
@@ -165,7 +166,6 @@
 /*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,1))
 #else /* >= 9.1 */
-#undef NEED_ETH_HW_ADDR_SET
 #define HAVE_ETHTOOL_COALESCE_EXTACK
 #define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
 #ifndef xdp_do_flush_map
