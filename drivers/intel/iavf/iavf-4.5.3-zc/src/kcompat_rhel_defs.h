@@ -145,28 +145,13 @@
 #endif /* 8.5 */
 
 /*****************************************************************************/
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,6))
-#else /* >= 8.6 */
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #define HAVE_ETHTOOL_COALESCE_EXTACK
-#endif /* < 9.0 */
-#undef NEED_ETH_HW_ADDR_SET
-#endif /* 8.6 */
-
-/*****************************************************************************/
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,7))
-#else /* >= 8.7 */
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
 #undef NEED_DEVLINK_ALLOC_SETS_DEV
 #undef HAVE_DEVLINK_PARAMS_PUBLISH
 #undef HAVE_DEVLINK_RELOAD_ACTION_AND_LIMIT
 #undef HAVE_DEVLINK_REGISTER_SETS_DEV
-#endif /* < 9.0 */
-#endif /* 8.7 */
-
-/*****************************************************************************/
-#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #else /* >= 9.0 */
 #define HAVE_XDP_BUFF_RXQ
 #define HAVE_NDO_ETH_IOCTL
@@ -175,5 +160,12 @@
 #undef HAVE_DEVLINK_RELOAD_ACTION_AND_LIMIT
 #undef HAVE_DEVLINK_REGISTER_SETS_DEV
 #endif /* 9.0 */
+
+/*****************************************************************************/
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,1))
+#else /* >= 9.1 */
+#define HAVE_ETHTOOL_COALESCE_EXTACK
+#define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
+#endif /* 9.1 */
 
 #endif /* _KCOMPAT_RHEL_DEFS_H_ */
