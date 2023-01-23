@@ -164,8 +164,12 @@
 /*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,1))
 #else /* >= 9.1 */
+#undef NEED_ETH_HW_ADDR_SET
 #define HAVE_ETHTOOL_COALESCE_EXTACK
 #define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
+#ifndef xdp_do_flush_map
+#define xdp_do_flush_map() do {} while (0)
+#endif
 #endif /* 9.1 */
 
 #endif /* _KCOMPAT_RHEL_DEFS_H_ */
