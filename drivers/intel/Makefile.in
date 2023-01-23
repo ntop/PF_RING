@@ -13,6 +13,7 @@ all:
 	cd $(IXGBEVF); make
 	cd $(I40E); make
 	cd $(ICE); make
+	cd $(IAVF); make
 
 clean:
 	cd $(E1000E); make clean
@@ -21,6 +22,7 @@ clean:
 	cd $(IXGBEVF); make clean
 	cd $(I40E); make clean
 	cd $(ICE); make clean
+	cd $(IAVF); make clean
 	-/bin/rm *.deb *.rpm
 
 cleanup:
