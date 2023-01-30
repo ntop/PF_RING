@@ -530,6 +530,7 @@ nbpf_node_t *nbpf_create_protocol_node(int proto) {
     case NBPF_Q_TCP:
     case NBPF_Q_UDP:
     case NBPF_Q_SCTP:
+    case NBPF_Q_ICMP:
       n->qualifiers.protocol = NBPF_Q_IP;
       break;
     default:
@@ -542,6 +543,7 @@ nbpf_node_t *nbpf_create_protocol_node(int proto) {
     case NBPF_Q_TCP:  n->protocol = 6;      break;
     case NBPF_Q_UDP:  n->protocol = 17;     break;
     case NBPF_Q_SCTP: n->protocol = 132;    break;
+    case NBPF_Q_ICMP: n->protocol = 1;      break;
     //default:     n->protocol = proto;  break;
   }
 

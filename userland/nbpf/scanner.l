@@ -74,6 +74,7 @@ ip	return IP;
 sctp	return SCTP;
 tcp	return TCP;
 udp	return UDP;
+icmp	return ICMP;
 ip6	return IPV6;
 
 host	return HOST;

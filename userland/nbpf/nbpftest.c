@@ -76,6 +76,7 @@ static char *proto_to_string(int protoq) {
   switch(protoq) {
     case NBPF_Q_LINK: return "Eth";
     case NBPF_Q_IP:   return "IP";
+    case NBPF_Q_ICMP: return "ICMP";
     case NBPF_Q_SCTP: return "SCTP";
     case NBPF_Q_TCP:  return "TCP";
     case NBPF_Q_UDP:  return "UDP";

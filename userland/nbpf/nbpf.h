@@ -85,6 +85,7 @@ nbpf_ip_addr;
 #define NBPF_Q_UDP		5
 #define NBPF_Q_IPV6		6
 #define NBPF_Q_GTP		7
+#define NBPF_Q_ICMP		8
 
 /* Direction qualifiers */
 #define NBPF_Q_SRC		1

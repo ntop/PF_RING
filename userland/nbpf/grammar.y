@@ -49,7 +49,7 @@ static void yyerror(const char *msg) {
 %token OUTER INNER
 %token DST SRC HOST
 %token NET NETMASK PORT PORTRANGE PROTO
-%token ARP RARP IP SCTP TCP UDP
+%token ARP RARP IP SCTP TCP UDP ICMP
 %token NUM
 %token DIR
 %token LINK
@@ -177,6 +177,7 @@ pname:	  LINK			{ $$ = NBPF_Q_LINK; }
 	| SCTP			{ $$ = NBPF_Q_SCTP; }
 	| TCP			{ $$ = NBPF_Q_TCP; }
 	| UDP			{ $$ = NBPF_Q_UDP; }
+	| ICMP			{ $$ = NBPF_Q_ICMP; }
 	| IPV6			{ $$ = NBPF_Q_IPV6; }
 	;
 other:	  VLAN pnum		{ $$.n = nbpf_create_vlan_node($2); }
