@@ -1,6 +1,93 @@
 # CHANGELOG
 
 ---------------------------------------
+2023-01-30 PF_RING 8.4
+
+* PF_RING Library
+ - New API pfring_get_ethtool_link_speed
+ - Add vlan_id to flow rule struct
+ - Add optimization flags to BPF filters compiled with pcap_compile
+ - Fix pfring_open_multichannel
+
+* PF_RING Kernel Module
+ - Add keep_vlan_offload option to avoid reinserting VLAN header on VLAN interfaces when used inline
+
+* ZC Library
+ - New ZC APIs (available on supported adapters)
+   - pfring_zc_get_device_clock
+   - pfring_zc_set_device_clock
+   - pfring_zc_adjust_device_clock
+   - pfring_zc_send_pkt_get_time
+ - Add new pfring_zc_run_fanout_v3 API to support more than 64 fan-out queues
+ - Add support for capturing stack packets, used by zcount and zbalance_ipc
+
+* PF_RING Capture Modules and ZC Drivers
+ - New iavf-zc driver to support i40e and ice Virtual Functions
+   - Support for VF trust mode on ice adapters (promisc with SR-IOV)
+ - Improve ice driver (E810 adapters)
+   - Update ice driver to v.1.9.11
+   - Add support to get time, set time, adjust time, send get time
+ - Improvei the NVIDIA/Mellanox (mlx) driver
+   - Extend hardware rules
+   - Add support for VLAN filtering
+   - Add set_default_hw_action API
+   - Fix reported link speed
+   - Fix bidirectional rules
+   - Fix pfring_poll support
+ - Improve the Napatech driver
+   - Add nanosecond timestamp capture when using the packet API in PCAP chunk mode
+ - Improve the ZC drivers API to support more callbacks
+ - Add socket extensions (getsockopt/setsockopt):
+   - SO_GET_DEV_STATS (get_stats ZC drivers callback)
+   - SO_GET_DEV_TX_TIME (get_tx_time ZC drivers callback)
+   - SO_SET_DEV_TIME (set_time ZC drivers callback)
+   - SO_SET_ADJ_TIME (adjust_time ZC drivers callback)
+ - Add management_only_mode to allow opening multiple sockets on the same ZC interface
+ - Update drivers to support latest RH 9.1, Ubuntu 22, Debian kernels
+
+* FT Library
+  - Fix double free
+
+* nBPF 
+ - Add icmp protocol primitive support
+
+* nPCAP
+ - Update npcap lib to support for nanosecond time in packet extraction
+
+* PF_RING-aware Libpcap/Tcpdump
+ - Update tcpdump to v.4.99.1
+ - Update libpcap to v.1.10.1
+
+* Examples
+ - Add ztime example
+   - Ability to set/adjust the card clock without capturing/transmitting traffic (external process)
+   - Test for the send-get-time feature
+ - pfsend
+   - Flush queued packets when waiting at real pcap rate and on shutdown
+   - Fix headers ranzomization 
+   - Fix crash with -z
+ - pfsend_multichannel
+   - Add support for controlling IPs generated
+ - pfcount
+   - Add -I option to print interface info in JSON format
+ - pfcount_multichannel
+   - Print full packet metadata with -v
+ - zbalance_ipc
+   - Add support for up to 128 queues with -m 1 and -m 2 (new v3 api) 
+   - Add -X option to capture TX traffic (standard driver only)
+   - Fix check for queues limit
+ - zdelay
+   - Fix queue size (power of 2)
+
+* Misc
+ - Add pfcount_multichannel and pfsend_multichannel to packages
+ - Service script (pf_ringctl)
+   - Add support for configuring RSS via ethtool
+   - Add pre/post scripts for ZC drivers
+   - Handle multi-line driver conf file
+ - Removed obsolete fm10k driver
+
+---------------------------------------
 2022-06-30 PF_RING 8.2
 
 * PF_RING Library
