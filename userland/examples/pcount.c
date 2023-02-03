@@ -349,6 +349,8 @@ void printHelp(void) {
       printf(" %d. %s [%s]\n", i++, devpointer->name, devpointer->description);
       devpointer = devpointer->next;
     }
+
+    pcap_freealldevs(devpointer);
   }
 }
 
