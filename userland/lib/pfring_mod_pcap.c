@@ -234,6 +234,7 @@ int pfring_mod_pcap_stats(pfring *ring, pfring_stat *stats) {
 int pfring_mod_pcap_set_bpf_filter(pfring *ring, char *bpfFilter) {
   pfring_pcap *pcap;
   struct bpf_program fcode;
+  int rc;
 
   if(ring->priv_data == NULL)
     return(-1);
@@ -246,7 +247,11 @@ int pfring_mod_pcap_set_bpf_filter(pfring *ring, char *bpfFilter) {
   if(pcap_compile(pcap->pd, &fcode, bpfFilter, 1, 0xFFFFFF00) < 0) {
     return(-1);
   } else {
-    if(pcap_setfilter(pcap->pd, &fcode) < 0)
+    rc = pcap_setfilter(pcap->pd, &fcode);
+
+    pcap_freecode(&fcode);
+
+    if (rc < 0)
       return(-1);
   }
 
