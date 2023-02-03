@@ -120,6 +120,7 @@ int main(int argc, char* argv[]) {
       if(pcap_setfilter(pd, &fcode) < 0) {
 	printf("pcap_setfilter error: '%s'\n", pcap_geterr(pd));
       }
+      pcap_freecode(&fcode);
     }
   }
 
