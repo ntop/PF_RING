@@ -49,6 +49,9 @@ int main(int argc, char* argv[]) {
     }
 
     printf("\n");
+
+    pcap_freealldevs(alldevs);
+
     sleep(3);
   }
 
