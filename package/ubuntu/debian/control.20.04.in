@@ -9,5 +9,5 @@ Build-Conflicts:
 Depends: @NDPI_DEP@, net-tools, kmod, ethtool, pciutils
 Package: pfring
 Architecture: @EXTN@
-Recommends: pfring-dkms (=@PFRING_VERS@)
+Recommends: pfring-dkms (=@PFRING_VERS@.@REVISION@)
 Description: PF_RING (http://www.ntop.org/pf_ring/) [@GIT_BRANCH@:@GIT_HASH@]
