@@ -11,7 +11,7 @@ Summary:	%{module_name} %{version} dkms package
 Name:		%{module_name}-dkms
 Version:	%{version}
 License:	%license
-Release:	@GIT_COMMIT_COUNT@
+Release:	dkms
 BuildArch:	noarch
 Group:		System/Kernel
 Requires: 	dkms >= 1.95, pfring = @VERS@-@REVISION@
