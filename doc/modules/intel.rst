@@ -27,5 +27,10 @@ This table below helps you understanding what features are delivered by each Int
 +---------------------------+------------+------------+------------+------------+-----------+-----------+------------+-----------+
 | TX Timestamp              |            |            |            |            |           |           |            |    Yes    |
 +---------------------------+------------+------------+------------+------------+-----------+-----------+------------+-----------+
-| ZC only (no kernel func.) |            |            |            |            |           |    Yes    |            |           |
+| Dual mode (Kernel and ZC) |    Yes     |    Yes     |    Yes     |    Yes     |    Yes    |           |    Yes     |    Yes    |
 +---------------------------+------------+------------+------------+------------+-----------+-----------+------------+-----------+
+
+Note:
+
+- Symmetric RSS: on some adapters (e.g. i40e) this depends on the firmware version, a message is dmesg is printed to warn about this when no symmetric support is detected.
+- Dual mode: ZC drivers supporting this mode can run as standard kernel drivers when there is no ZC socket running for the specific interface.
