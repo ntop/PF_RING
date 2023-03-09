@@ -230,7 +230,7 @@ int pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr)
     return -1; /* full packet only */
 
   if (pfring_read_arista_keyframe(buffer, hdr->len, &ns, &ticks) == 0) {
-    /* Thi was a keyframe */
+    /* This was a keyframe */
     return 1; /* skip this packet */
   } else {
     /* This is a packet, reading the timestamp */
