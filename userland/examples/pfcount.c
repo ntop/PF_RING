@@ -155,12 +155,15 @@ void print_stats() {
     thpt = ((double)8*nBytes)/(delta_last*1000);
 
     fprintf(stderr, "=========================\n"
-	    "Absolute Stats: [%s pkts total][%s pkts dropped][%.1f%% dropped]\n",
+	    "Absolute Stats: [%s pkts total][%s pkts dropped]",
 	    pfring_format_numbers((double)(nPkts + pfringStat.drop), buf2, sizeof(buf2), 0),
-	    pfring_format_numbers((double)(pfringStat.drop), buf3, sizeof(buf3), 0),
-	    pfringStat.drop == 0 ? 0 :
-	    (double)(pfringStat.drop*100)/(double)(nPkts + pfringStat.drop));
-    fprintf(stderr, "[%s %s rcvd][%s bytes rcvd]",
+	    pfring_format_numbers((double)(pfringStat.drop), buf3, sizeof(buf3), 0));
+
+    if (chunk_mode != 1) /* Compute drop rate in packet mode only (do not compute drop rate using pkts vs chunks) */
+      fprintf(stderr, "[%.1f%% dropped]",
+	    pfringStat.drop == 0 ? 0 : (double)(pfringStat.drop*100)/(double)(nPkts + pfringStat.drop));
+
+    fprintf(stderr, "\n[%s %s rcvd][%s bytes rcvd]",
 	    pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
             chunk_mode == 1 ? "chunks" : "pkts",
 	    pfring_format_numbers((double)nBytes, buf2, sizeof(buf2), 0));
