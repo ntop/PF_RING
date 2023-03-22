@@ -192,8 +192,11 @@ void printHelp(void) {
 void print_packet(pfring_zc_pkt_buff *buffer) {
   u_char *pkt_data = pfring_zc_pkt_buff_data(buffer, zq);
 
-  if (buffer->ts.tv_nsec)
-    printf("[%u.%u] [hash=%08X] ", buffer->ts.tv_sec, buffer->ts.tv_nsec, buffer->hash);
+  if (buffer->ts.tv_sec)
+    printf("[%u.%u] ", buffer->ts.tv_sec, buffer->ts.tv_nsec);
+
+  if (buffer->hash)
+    printf("[hash=%08X] ", buffer->hash);
 
   if (verbose == 1) {
     char bigbuf[4096];
@@ -219,8 +222,19 @@ void *packet_consumer_thread(void *user) {
     bind2core(bind_core);
 
   while(!do_shutdown) {
+#ifdef USE_BURST_API
+    if((n = pfring_zc_recv_pkt_burst(zq, buffers, BURST_LEN, wait_for_packet)) > 0) {
 
-#ifndef USE_BURST_API
+      if (unlikely(verbose))
+        for (i = 0; i < n; i++) 
+          print_packet(buffers[i]);
+
+      for (i = 0; i < n; i++) {
+        numPkts++;
+        numBytes += buffers[i]->len + 24; /* 8 Preamble + 4 CRC + 12 IFG */
+      }
+    }
+#else
     if(pfring_zc_recv_pkt(zq, &buffers[0], wait_for_packet) > 0) {
 
       if (unlikely(time_pulse)) {
@@ -244,20 +258,7 @@ void *packet_consumer_thread(void *user) {
       numPkts++;
       numBytes += buffers[0]->len + 24; /* 8 Preamble + 4 CRC + 12 IFG */
     }
-#else
-    if((n = pfring_zc_recv_pkt_burst(zq, buffers, BURST_LEN, wait_for_packet)) > 0) {
-
-      if (unlikely(verbose))
-        for (i = 0; i < n; i++) 
-          print_packet(buffers[i]);
-
-      for (i = 0; i < n; i++) {
-        numPkts++;
-        numBytes += buffers[i]->len + 24; /* 8 Preamble + 4 CRC + 12 IFG */
-      }
-    }
 #endif
-
   }
 
    pfring_zc_sync_queue(zq, rx_only);
