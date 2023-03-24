@@ -133,6 +133,7 @@ static u_int32_t wrapsum (u_int32_t sum) {
 
 static int compute_csum = 1;
 static int num_ips = 1;
+static int balance_source_ips = 1;
 
 static u_char matrix_buffer[
   sizeof(struct ether_header) + 
@@ -146,16 +147,27 @@ static void forge_udp_packet_fast(u_char *buffer, u_int packet_len, u_int idx) {
   struct compact_udp_hdr *udp_header;
   u_int32_t src_ip = 0x0A000000; /* 10.0.0.0 */ 
   u_int32_t dst_ip =  0xC0A80001; /* 192.168.0.1 */
+  u_int32_t base_ip;
   u_int16_t src_port = 2012, dst_port = 3000;
 
+  if (balance_source_ips)
+    base_ip = src_ip;
+  else
+    base_ip = dst_ip;
+
   if (num_ips == 0) {
-    src_ip |= idx & 0xFFFFFF;
+    base_ip |= idx & 0xFFFFFF;
   } else if (num_ips > 1) {
     if (POW2(num_ips))
-      src_ip |= idx & (num_ips - 1) & 0xFFFFFF;
+      base_ip |= idx & (num_ips - 1) & 0xFFFFFF;
     else
-      src_ip |= (idx % num_ips) & 0xFFFFFF;
+      base_ip |= (idx % num_ips) & 0xFFFFFF;
   }
+
+  if (balance_source_ips)
+    src_ip = base_ip;
+  else
+    dst_ip = base_ip;
 
 #if 0
   memset(buffer, 0, packet_len + 4);
@@ -274,8 +286,17 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     ip->ttl = 64;
     ip->frag_off = htons(0);
     ip->protocol = IPPROTO_UDP;
-    ip->daddr = dstaddr.s_addr;
-    ip->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ips)) & 0xFFFFFFFF);
+
+    if (balance_source_ips)
+      ip->daddr = dstaddr.s_addr;
+    else
+      ip->daddr = htonl((ntohl(dstaddr.s_addr) + ip_offset + (idx % num_ips)) & 0xFFFFFFFF);
+
+    if (balance_source_ips)
+      ip->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ips)) & 0xFFFFFFFF);
+    else
+      ip->saddr = srcaddr.s_addr;
+
     ip->check = wrapsum(in_cksum((unsigned char *) ip, ip_len, 0));
     addr = (u_char *) &ip->saddr;
     addr_len = sizeof(ip->saddr);

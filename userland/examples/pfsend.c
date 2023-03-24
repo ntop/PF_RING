@@ -201,6 +201,7 @@ void printHelp(void) {
   printf("-M <src MAC>    Reforge source MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-m <dst MAC>    Reforge destination MAC (format AA:BB:CC:DD:EE:FF)\n");
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
+  printf("-c <num>        Reforge destination IP with <num> different IPs (ignore -b)\n");
   printf("-t <num>        Reforge source port with <num> different ports per IP (-b)\n");
   printf("-S <ip>         Use <ip> as base source IP for -b (default: 10.0.0.1)\n");
   printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
@@ -242,8 +243,17 @@ static int reforge_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int use
     }
 
     ip_header = (struct ip_header *) &buffer[hdr.extended_hdr.parsed_pkt.offset.l3_offset];
-    ip_header->daddr = dstaddr.s_addr;
-    ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ips)) & 0xFFFFFFFF);
+
+    if (balance_source_ips)
+      ip_header->daddr = dstaddr.s_addr;
+    else
+      ip_header->daddr = htonl((ntohl(dstaddr.s_addr) + ip_offset + (idx % num_ips)) & 0xFFFFFFFF);
+
+    if (balance_source_ips)
+      ip_header->saddr = htonl((ntohl(srcaddr.s_addr) + ip_offset + (idx % num_ips)) & 0xFFFFFFFF);
+    else
+      ip_header->saddr = srcaddr.s_addr;
+
     ip_header->check = 0;
     ip_header->check = wrapsum(in_cksum((unsigned char *) ip_header, sizeof(struct ip_header), 0));
 
@@ -346,11 +356,14 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "A:b:B:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:")) != -1) {
+  while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:")) != -1) {
     switch(c) {
     case 'A':
       uniq_pkts_per_sec = atoi(optarg);
       break;
+    case 'c':
+      balance_source_ips = 0;
+      /* fall through */
     case 'b':
       num_ips = atoi(optarg);
       if(num_ips == 0) num_ips = 1;
