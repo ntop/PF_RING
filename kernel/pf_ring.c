@@ -3695,6 +3695,26 @@ int bpf_filter_skb(struct sk_buff *skb,
 
 /* ********************************** */
 
+int sample_packet(struct pf_ring_socket *pfr) {
+  if(pfr->pkts_to_sample <= 1) {
+    u_int32_t rnd = 0;
+
+    get_random_bytes(&rnd, sizeof(u_int32_t));
+    rnd = rnd % pfr->sample_rate;
+
+    pfr->pkts_to_sample = pfr->sample_rate - pfr->sample_rnd_shift + rnd;
+
+    pfr->sample_rnd_shift = rnd;
+
+    return 1; /* Pass packet */
+  } else {
+    pfr->pkts_to_sample--;
+    return 0; /* Discard packet */
+  }
+}
+
+/* ********************************** */
+
 u_int32_t default_rehash_rss_func(struct sk_buff *skb, struct pfring_pkthdr *hdr)
 {
   return hash_pkt_header(hdr, 0);
@@ -3805,12 +3825,9 @@ static int add_skb_to_ring(struct sk_buff *skb,
     if(pfr->sample_rate > 1) {
       spin_lock_bh(&pfr->ring_index_lock);
 
-      if(pfr->pktToSample <= 1) {
-	pfr->pktToSample = pfr->sample_rate;
-      } else {
+      if(!sample_packet(pfr)) {
+        /* Discard packet */
         pfr->slots_info->tot_pkts++;
-	pfr->pktToSample--;
-
 	spin_unlock_bh(&pfr->ring_index_lock);
 	atomic_dec(&pfr->num_ring_users);
 	return(-1);
@@ -4161,11 +4178,8 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
         if(pfr->sample_rate > 1) {
           spin_lock_bh(&pfr->ring_index_lock);
-          if(pfr->pktToSample <= 1) {
-            pfr->pktToSample = pfr->sample_rate;
-          } else {
+          if (!sample_packet(pfr)) {
             pfr->slots_info->tot_pkts++;
-            pfr->pktToSample--;
             rc = 0;
           }
           spin_unlock_bh(&pfr->ring_index_lock);
@@ -7957,7 +7971,7 @@ static int ring_getsockopt(struct socket *sock,
 	if(copy_to_user(optval, lowest_if_mac, ETH_ALEN))
 	  return(-EFAULT);
       } else {
-        char *dev_addr = pfr->ring_dev->dev->dev_addr;
+        const char *dev_addr = pfr->ring_dev->dev->dev_addr;
 
         if (dev_addr == NULL) /* e.g. 'any' device */
           dev_addr = empty_mac;
