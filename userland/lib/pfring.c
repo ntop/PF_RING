@@ -951,18 +951,21 @@ int pfring_get_card_settings(pfring *ring, pfring_card_settings *settings) {
 /* **************************************************** */
 
 int pfring_set_sampling_rate(pfring *ring, u_int32_t rate /* 1 = no sampling */) {
-  if(ring && ring->set_sampling_rate) {
-    int rc;
+  int rc = PF_RING_ERROR_NOT_SUPPORTED;
 
-    rc = ring->set_sampling_rate(ring, rate);
+  srand(time(NULL));
 
-    if (rc == 0)
-      ring->sampling_rate = rate;
+  if (ring) {
+    ring->sampling_rate = rate;
 
-    return(rc);
+    if(ring->set_sampling_rate) {
+      rc = ring->set_sampling_rate(ring, rate);
+    } else {
+      rc = 0;
+    }
   }
 
-  return(PF_RING_ERROR_NOT_SUPPORTED);
+  return rc;
 }
 
 /* **************************************************** */

@@ -325,15 +325,17 @@ struct __pfring {
   char *slots;
   char *device_name;
 
+  u_int32_t flags;
   u_int32_t caplen;
+
   u_int16_t slot_header_len;
   u_int16_t mtu /* 0 = unknown */;
-
   u_int32_t sampling_rate;
+
   u_int32_t sampling_counter;
+  u_int32_t sampling_rnd_shift;
 
   packet_slicing_level slicing_level;
-
   u_int32_t slicing_additional_bytes;
 
   int fd;
@@ -343,18 +345,16 @@ struct __pfring {
 
   u_int32_t poll_sleep;
   u_int16_t poll_duration;
-
   u_int8_t promisc;
   u_int8_t ft_enabled; /* PF_RING FT support enabled */
+
   u_int8_t reentrant;
   u_int8_t break_recv_loop;
-
-  u_long num_poll_calls;
+  u_int16_t __padding;
+  u_int32_t num_poll_calls;
 
   pfring_rwlock_t rx_lock;
   pfring_rwlock_t tx_lock;
-
-  u_int32_t flags;
 
   void *ft; /* PF_RING FT handle */
 
