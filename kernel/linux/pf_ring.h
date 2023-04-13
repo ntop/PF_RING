@@ -1310,7 +1310,9 @@ struct pf_ring_socket {
   u_char *ring_slots;       /* Points to ring_memory+sizeof(FlowSlotInfo) */
 
   /* Packet Sampling */
-  u_int32_t pktToSample, sample_rate;
+  u_int32_t sample_rate;
+  u_int32_t pkts_to_sample;
+  u_int32_t sample_rnd_shift;
 
   /* Virtual Filtering Device */
   virtual_filtering_device_element *v_filtering_dev;
