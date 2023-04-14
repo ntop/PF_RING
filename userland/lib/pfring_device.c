@@ -87,16 +87,29 @@ u_int64_t pfring_parse_channel_mask_string(char* chmask) {
 }
 
 pfring_device* pfring_parse_device_name(char* device_name) {
-  pfring_device* dev = (pfring_device *)malloc(sizeof(pfring_device));
-  dev->elems = NULL;
-  dev->channel_mask = RING_ANY_CHANNEL;
-  char *ch;
-
+  pfring_device* dev;
   u_int8_t is_braced = 0;
   u_int8_t is_in_vlan = 0;
   u_int16_t vlan_id = 0;
-  char *curr_ifname = (char *)malloc(IFNAMSIZ);
-  char *curr_ifname_end = curr_ifname;
+  char *curr_ifname;
+  char *curr_ifname_end;
+  char *ch;
+
+  dev = (pfring_device *) malloc(sizeof(pfring_device));
+  if (dev == NULL) {
+    return NULL;
+  }
+
+  dev->elems = NULL;
+  dev->channel_mask = RING_ANY_CHANNEL;
+
+  curr_ifname = (char *) malloc(IFNAMSIZ);
+  if (curr_ifname == NULL) {
+    pfring_device_free(dev);
+    return NULL;
+  }
+  curr_ifname_end = curr_ifname;
+
   for (ch = device_name; *ch != '\0'; ++ch) {
     if (is_braced) {
       if (*ch == ')') {
@@ -122,7 +135,11 @@ pfring_device* pfring_parse_device_name(char* device_name) {
       case ',':
         *curr_ifname_end = '\0';
         pfring_device_add_elem(dev, curr_ifname, vlan_id);
-        curr_ifname = (char *)malloc(IFNAMSIZ);
+        curr_ifname = (char *) malloc(IFNAMSIZ);
+        if (curr_ifname == NULL) {
+          pfring_device_free(dev);
+          return NULL;
+        }
         curr_ifname_end = curr_ifname;
         vlan_id = 0;
         is_in_vlan = 0;
@@ -139,6 +156,7 @@ __raw:
     *curr_ifname_end = *ch;
     curr_ifname_end ++;
     if ((curr_ifname_end - curr_ifname) >= IFNAMSIZ) {
+      pfring_device_free(dev);
       return NULL;
     }
   }
@@ -164,15 +182,20 @@ __channel_mask:
 
 void pfring_device_free(pfring_device* device) {
   pfring_device_elem *it, *to_free;
+
   if (!device) {
     return;
   }
-  for (it = device->elems; it != NULL;) {
-    free(it->ifname);
-    to_free = it;
-    it = it->next;
-    free(to_free);
+
+  if (device->elems) {
+    for (it = device->elems; it != NULL;) {
+      free(it->ifname);
+      to_free = it;
+      it = it->next;
+      free(to_free);
+    }
   }
+
   free(device);
 }
 
