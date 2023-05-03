@@ -109,7 +109,9 @@ static struct lcore_stats {
 } stats[RTE_MAX_LCORE];
 
 static const struct rte_eth_conf port_conf_default = {
+#ifdef RTE_FC_NONE
   .rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
+#endif
 };
 
 /* ************************************ */
@@ -162,10 +164,18 @@ static int port_init(void) {
 
     if (retval != 0) {
       printf("Error during getting device (port %u) info: %s\n", port_id, strerror(-retval));
+#ifdef DEV_RX_OFFLOAD_TIMESTAMP
     } else if (!(dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TIMESTAMP)) {
+#else
+    } else if (!(dev_info.rx_offload_capa & RTE_ETH_RX_OFFLOAD_TIMESTAMP)) {
+#endif
       printf("Port %u does not support hardware timestamping\n", port_id);
     } else {
-      port_conf.rxmode.offloads |= DEV_RX_OFFLOAD_TIMESTAMP; //RTE_ETH_RX_OFFLOAD_TIMESTAMP
+#ifdef DEV_RX_OFFLOAD_TIMESTAMP
+      port_conf.rxmode.offloads |= DEV_RX_OFFLOAD_TIMESTAMP;
+#else
+      port_conf.rxmode.offloads |= RTE_ETH_RX_OFFLOAD_TIMESTAMP;
+#endif
 
       rte_mbuf_dyn_rx_timestamp_register(&hwts_dynfield_offset, NULL);
 
@@ -173,7 +183,11 @@ static int port_init(void) {
         printf("Failed to register timestamp field\n");
     }
 
+#ifdef RTE_FC_NONE
     fc_conf.mode = RTE_FC_NONE;
+#else
+    fc_conf.mode = RTE_ETH_FC_NONE;
+#endif
     fc_conf.autoneg = 0;
 
     if (rte_eth_dev_flow_ctrl_set(port_id, &fc_conf) != 0)
@@ -181,24 +195,46 @@ static int port_init(void) {
 
     if (port_speed) {
       switch (port_speed) {
+#ifdef ETH_LINK_SPEED_1G
       case   1: port_conf.link_speeds = ETH_LINK_SPEED_1G;   break;
       case  10: port_conf.link_speeds = ETH_LINK_SPEED_10G;  break;
       case  25: port_conf.link_speeds = ETH_LINK_SPEED_25G;  break;
       case  40: port_conf.link_speeds = ETH_LINK_SPEED_40G;  break;
       case  50: port_conf.link_speeds = ETH_LINK_SPEED_50G;  break;
       case 100: port_conf.link_speeds = ETH_LINK_SPEED_100G; break;
+#else
+      case   1: port_conf.link_speeds = RTE_ETH_LINK_SPEED_1G;   break;
+      case  10: port_conf.link_speeds = RTE_ETH_LINK_SPEED_10G;  break;
+      case  25: port_conf.link_speeds = RTE_ETH_LINK_SPEED_25G;  break;
+      case  40: port_conf.link_speeds = RTE_ETH_LINK_SPEED_40G;  break;
+      case  50: port_conf.link_speeds = RTE_ETH_LINK_SPEED_50G;  break;
+      case 100: port_conf.link_speeds = RTE_ETH_LINK_SPEED_100G; break;
+#endif
       default: break;
       }
+#ifdef ETH_LINK_SPEED_FIXED
       port_conf.link_speeds |= ETH_LINK_SPEED_FIXED;
+#else
+      port_conf.link_speeds |= RTE_ETH_LINK_SPEED_FIXED;
+#endif
     }
 
     if (tx_csum_offload)
+#ifdef DEV_TX_OFFLOAD_IPV4_CKSUM
       port_conf.txmode.offloads = DEV_TX_OFFLOAD_IPV4_CKSUM | DEV_TX_OFFLOAD_UDP_CKSUM;
+#else
+      port_conf.txmode.offloads = RTE_ETH_TX_OFFLOAD_IPV4_CKSUM | RTE_ETH_TX_OFFLOAD_UDP_CKSUM;
+#endif
 
     if (num_queues > 1) {
       /* Configure RSS (on some adapters this has to be explicitly set) */
+#ifdef ETH_MQ_RX_RSS
       port_conf.rxmode.mq_mode = ETH_MQ_RX_RSS;
       port_conf.rx_adv_conf.rss_conf.rss_hf = (ETH_RSS_IP | ETH_RSS_TCP | ETH_RSS_UDP);
+#else
+      port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_RSS;
+      port_conf.rx_adv_conf.rss_conf.rss_hf = (RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP);
+#endif
     }
 
     retval = rte_eth_dev_configure(port_id, num_queues /* RX */, num_queues /* TX */, &port_conf);
@@ -360,7 +396,11 @@ static void tx_test(u_int8_t port_id, u_int16_t queue_id) {
           tx_test_pkt_len, stats[queue_id].tx_num_pkts + i);
         tx_bufs[i]->data_len = tx_bufs[i]->pkt_len = tx_test_pkt_len;
         if (tx_csum_offload)
+#ifdef PKT_TX_IP_CKSUM
           tx_bufs[i]->ol_flags |= PKT_TX_IP_CKSUM | PKT_TX_UDP_CKSUM;
+#else
+          tx_bufs[i]->ol_flags |= RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_UDP_CKSUM;
+#endif
       }
     }
 
@@ -965,9 +1005,19 @@ int main(int argc, char *argv[]) {
   signal(SIGALRM, my_sigalarm);
   alarm(ALARM_SLEEP);
 
-  rte_eal_mp_remote_launch(processing_thread, NULL, CALL_MASTER);
+  rte_eal_mp_remote_launch(processing_thread, NULL, 
+#ifdef CALL_MASTER
+    CALL_MASTER
+#else
+    CALL_MAIN
+#endif
+  );
 
+#ifdef RTE_LCORE_FOREACH_SLAVE
   RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+#else
+  RTE_LCORE_FOREACH_WORKER(lcore_id) {
+#endif
     rte_eal_wait_lcore(lcore_id);
   } 
 
