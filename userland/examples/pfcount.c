@@ -793,7 +793,7 @@ void printDevs(u_int8_t json) {
       printf("\"bus_id\":\"%04X:%02X:%02X.%X\",", dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function);
       printf("\"numa_node\":\"%d\",", busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function));
       printf("\"status\":\"%s\",", dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"));
-      printf("\"license\":\"%s\",", dev->license ? "Valid" : "NotFound");
+      printf("\"license\":\"%s\",", dev->license ? "Valid" : (dev->license_expiration ? "Expired" : "NotFound"));
       printf("\"expiration\":\"%ld\",", dev->license_expiration);
       printf("\"mod_version\":\"%s\"", dev->module_version ? dev->module_version : "");
       printf("}");
@@ -806,7 +806,9 @@ void printDevs(u_int8_t json) {
         dev->sn ? dev->sn : mac,
         dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
         busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
-        dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"), dev->license ? "Valid" : "NotFound", dev->license_expiration,
+        dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"), 
+        dev->license ? "Valid" : (dev->license_expiration ? "Expired" : "NotFound"), 
+        dev->license_expiration,
         dev->module_version ? dev->module_version : "");
 
     } else {
