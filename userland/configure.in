@@ -194,21 +194,6 @@ if test $MACHINE = "x86_64"; then
     fi
   fi
 
-  dnl> DAG
-  MOD_DAG_LIB="libs/libpfring_dag_$MACHINE$LIBARCH.a"
-  if test -f "lib/$MOD_DAG_LIB"; then
-    DAG_LIB="-lm -ldl" 
-    HAVE_DAG="-D HAVE_DAG"
-    DAG_OBJS=`ar t lib/$MOD_DAG_LIB | grep .o\$ | tr '\n' ' '`
-    DAG_DEP="extract_dag_lib"
-  fi
-
-  dnl> Exablaze
-  dnl> HAVE_EXABLAZE="-D HAVE_EXABLAZE"
-  dnl> EXABLAZE_OBJS=`ar t lib/$MOD_EXABLAZE_LIB | grep .o\$ | tr '\n' ' '`
-  dnl> EXABLAZE_DEP="extract_exablaze_lib"
-  dnl> EXABLAZE_LIB="-lexanic"
-
   dnl> Fiberblaze
   MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
   if test -f "lib/$MOD_FIBERBLAZE_LIB"; then
@@ -216,14 +201,6 @@ if test $MACHINE = "x86_64"; then
     HAVE_FIBERBLAZE="-D HAVE_FIBERBLAZE"
     FIBERBLAZE_OBJS=`ar t lib/$MOD_FIBERBLAZE_LIB | grep .o\$ | tr '\n' ' '`
     FIBERBLAZE_DEP="extract_fiberblaze_lib"
-  fi
-
-  dnl> Myricom
-  MOD_MYRICOM_LIB="libs/libpfring_myricom_$MACHINE$LIBARCH.a"
-  if test -f "lib/$MOD_MYRICOM_LIB"; then
-    HAVE_MYRICOM="-D HAVE_MYRICOM"
-    MYRICOM_OBJS=`ar t lib/$MOD_MYRICOM_LIB | grep .o\$ | tr '\n' ' '`
-    MYRICOM_DEP="extract_myricom_lib"
   fi
 
   dnl> Napatech
@@ -272,14 +249,6 @@ if test $MACHINE = "x86_64"; then
 
   else
     AC_MSG_RESULT(no)
-  fi
-
-  dnl> Netcope
-  MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE.a" #MOD_NETCOPE_LIB="libs/libpfring_netcope_$MACHINE$LIBARCH.a"
-  if test -f "lib/$MOD_NETCOPE_LIB"; then 
-    HAVE_NETCOPE="-D HAVE_NETCOPE"
-    NETCOPE_OBJS=`ar t lib/$MOD_NETCOPE_LIB | grep .o\$ | tr '\n' ' '`
-    NETCOPE_DEP="extract_netcope_lib"
   fi
 
 dnl> end of x86_64 check
@@ -385,27 +354,11 @@ AC_SUBST(ACCOLADE_OBJS)
 AC_SUBST(ACCOLADE_DEP)
 AC_SUBST(MOD_ACCOLADE_LIB)
 
-AC_SUBST(HAVE_DAG)
-AC_SUBST(DAG_OBJS)
-AC_SUBST(DAG_LIB)
-AC_SUBST(DAG_DEP)
-AC_SUBST(MOD_DAG_LIB)
-
-AC_SUBST(EXABLAZE_LIB)
-AC_SUBST(EXABLAZE_OBJS)
-AC_SUBST(EXABLAZE_DEP)
-AC_SUBST(HAVE_EXABLAZE)
-
 AC_SUBST(HAVE_FIBERBLAZE)
 AC_SUBST(FIBERBLAZE_OBJS)
 AC_SUBST(FIBERBLAZE_LIB)
 AC_SUBST(FIBERBLAZE_DEP)
 AC_SUBST(MOD_FIBERBLAZE_LIB)
-
-AC_SUBST(MYRICOM_OBJS)
-AC_SUBST(HAVE_MYRICOM)
-AC_SUBST(MOD_MYRICOM_LIB)
-AC_SUBST(MYRICOM_DEP)
 
 AC_SUBST(HAVE_NT)
 AC_SUBST(NT_OBJS)
@@ -417,11 +370,6 @@ AC_SUBST(MLX_OBJS)
 AC_SUBST(MLX_DEP)
 AC_SUBST(MOD_MLX_LIB)
 AC_SUBST(MLX_LIB)
-
-AC_SUBST(HAVE_NETCOPE)
-AC_SUBST(NETCOPE_OBJS)
-AC_SUBST(NETCOPE_DEP)
-AC_SUBST(MOD_NETCOPE_LIB)
 
 AC_SUBST(HAVE_BPF)
 AC_SUBST(BPF_INCLUDE)
