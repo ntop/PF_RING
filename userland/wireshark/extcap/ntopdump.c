@@ -279,8 +279,10 @@ void extcap_capture() {
   
   memset(&hdr, 0, sizeof(hdr));
   while(pfring_recv(pd, &buffer_p, 0, &hdr, 1 /* passive wait */) > 0) {
+    void *p = (void*)&hdr;
+    
     // fprintf(stdout, "."), fflush(stdout);
-    pcap_dump((u_char*)dumper, (struct pcap_pkthdr*)&hdr, buffer_p);
+    pcap_dump((u_char*)dumper, (struct pcap_pkthdr*)p, buffer_p);
   }
 
   pcap_dump_close(dumper);
