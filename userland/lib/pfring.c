@@ -50,44 +50,14 @@
 #include "pfring_mod_nt.h"
 #endif
 
-#ifdef HAVE_DAG
-/* Endace DAG */
-#include "pfring_mod_dag.h"
-#endif
-
 #ifdef HAVE_FIBERBLAZE
 /* Fiberblaze */
 #include "pfring_mod_fiberblaze.h"
 #endif
 
-#ifdef HAVE_ACCOLADE
-/* Accolade */
-#include "pfring_mod_accolade.h"
-#endif
-
-#ifdef HAVE_MYRICOM
-/* Myricom */
-#include "pfring_mod_myricom.h"
-#endif
-
 #ifdef HAVE_MLX
 /* Mellanox */
 #include "pfring_mod_mlx.h"
-#endif
-
-#ifdef HAVE_INVEATECH
-/* InveaTech */
-#include "pfring_mod_invea.h"
-#endif
-
-#ifdef HAVE_NETCOPE
-/* Netcope */
-#include "pfring_mod_netcope.h"
-#endif
-
-#ifdef HAVE_EXABLAZE
-/* Exablaze */
-#include "pfring_mod_exablaze.h"
 #endif
 
 #ifdef HAVE_NPCAP
@@ -136,14 +106,6 @@ static pfring_module_info pfring_module_list[] = {
 #endif
 #endif
 
-#ifdef HAVE_DAG
-  {
-    .name = "dag",
-    .open = pfring_dag_open,
-    .findalldevs = pfring_dag_findalldevs
-  },
-#endif
-
 #ifdef HAVE_FIBERBLAZE
   {
     .name = "fbcard",
@@ -160,51 +122,11 @@ static pfring_module_info pfring_module_list[] = {
   },
 #endif
 
-#ifdef HAVE_ACCOLADE
-  {
-    .name = "anic",
-    .open = pfring_anic_open,
-    .findalldevs = NULL
-  },
-#endif
-
-#ifdef HAVE_MYRICOM
-  {
-    .name = "myri",
-    .open = pfring_myri_open,
-    .findalldevs = pfring_myri_findalldevs
-  },
-#endif
-
 #ifdef HAVE_MLX
   {
     .name = "mlx",
     .open = pfring_mlx_open,
     .findalldevs = pfring_mlx_findalldevs
-  },
-#endif
-
-#ifdef HAVE_INVEATECH
-  {
-    .name = "invea",
-    .open = pfring_invea_open,
-    .findalldevs = NULL
-  },
-#endif
-
-#ifdef HAVE_NETCOPE
-  {
-    .name = "nsf",
-    .open = pfring_netcope_open,
-    .findalldevs = NULL
-  },
-#endif
-
-#ifdef HAVE_EXABLAZE
-  {
-    .name = "exanic",
-    .open = pfring_exablaze_open,
-    .findalldevs = NULL
   },
 #endif
 
