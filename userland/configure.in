@@ -175,25 +175,6 @@ if test $MACHINE = "x86_64"; then
   dnl> end of pthread_setaffinity_np check
   fi
 
-  dnl> Accolade
-  MOD_ACCOLADE_LIB="libs/libpfring_accolade_$MACHINE$LIBARCH.a"
-  if test -f "lib/$MOD_ACCOLADE_LIB"; then
-    HAVE_ACCOLADE="-D HAVE_ACCOLADE"
-    ACCOLADE_OBJS=`ar t lib/$MOD_ACCOLADE_LIB | grep .o\$ | tr '\n' ' '`
-    ACCOLADE_DEP="extract_accolade_lib"
-    if test ! -z "$DEBUG" ; then
-      AC_MSG_CHECKING([Accolade debug library])
-      MOD_ACCOLADE_LIB_DBG="libs/libpfring_accolade_${MACHINE}_dbg.a" 
-      if test -f "lib/${MOD_ACCOLADE_LIB_DBG}"; then
-        MOD_ACCOLADE_LIB=${MOD_ACCOLADE_LIB_DBG}
-        ACCOLADE_OBJS=`ar t lib/${MOD_ACCOLADE_LIB_DBG} | grep -F .o | tr '\n' ' '`
-        AC_MSG_RESULT(yes)
-      else
-        AC_MSG_RESULT(no)
-      fi
-    fi
-  fi
-
   dnl> Fiberblaze
   MOD_FIBERBLAZE_LIB="libs/libpfring_fiberblaze_$MACHINE$LIBARCH.a"
   if test -f "lib/$MOD_FIBERBLAZE_LIB"; then
@@ -348,11 +329,6 @@ AC_SUBST(AF_XDP_LIB)
 AC_SUBST(HAVE_AF_XDP)
 AC_SUBST(AF_XDP_OBJS)
 AC_SUBST(AF_XDP_DEP)
-
-AC_SUBST(HAVE_ACCOLADE)
-AC_SUBST(ACCOLADE_OBJS)
-AC_SUBST(ACCOLADE_DEP)
-AC_SUBST(MOD_ACCOLADE_LIB)
 
 AC_SUBST(HAVE_FIBERBLAZE)
 AC_SUBST(FIBERBLAZE_OBJS)

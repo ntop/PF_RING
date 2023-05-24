@@ -577,34 +577,6 @@ typedef struct {
 silicom_redirector_hw_rule;
 
 typedef enum {
-  accolade_drop,
-  accolade_pass
-} accolade_rule_action_type;
-
-/* Accolade supports mode 1 filtering on almost all cards (up to 32 rules),
- * and mode 2 filtering on selected adapters (up to 1K rules).
- * PF_RING automatically select mode 2 when available, and mode 1 as fallback.
- * Mode 1 and 2 support different fields, please refer to the fields description. */
-typedef struct {
-  accolade_rule_action_type action; /* in mode 2 this should be always the opposite of the default action */
-  u_int32_t port_mask; /* ports on which the rule is defined (default 0xf) - mode 1 only */
-  u_int8_t ip_version;
-  u_int8_t protocol; /* l4 */
-  u_int16_t vlan_id; /* mode 2 only (if vlan_id is set, mpls_label is ignored due to hw limitations) */
-  u_int32_t mpls_label; /* mode 2 only */
-  ip_addr src_addr, dst_addr;
-  u_int32_t src_addr_bits, dst_addr_bits;
-  u_int16_t src_port_low;
-  u_int16_t src_port_high; /* mode 1 only */
-  u_int16_t dst_port_low;
-  u_int16_t dst_port_high; /* mode 1 only */
-  u_int8_t l4_port_not; /* rule match if src_port_low/dst_port_low are defined and they do not match - mode 2 only */
-  u_int8_t steer_to_ring; /* steer matching traffic to the specified ring_id (instead of LB) */
-  u_int8_t ring_id; /* destination ring for action = pass */
-} __attribute__((packed))
-accolade_hw_rule;
-
-typedef enum {
   default_pass,
   default_drop
 } generic_default_action_type;
@@ -645,15 +617,13 @@ typedef enum {
   silicom_redirector_rule,
   generic_flow_id_rule,
   generic_flow_tuple_rule,
-  accolade_rule,
-  accolade_default
 } hw_filtering_rule_type;
 
 typedef struct {
   hw_filtering_rule_type rule_family_type;
 
   /* FILTERING_RULE_AUTO_RULE_ID to auto generate a rule ID
-   * Supported by Accolade and Mellanox */
+   * Supported by Mellanox */
   u_int16_t rule_id;
 
   /* Rule priority (when supported by the adapter)
@@ -666,7 +636,6 @@ typedef struct {
     silicom_redirector_hw_rule redirector_rule; /* Silicom Redirector (Intel) */
     generic_flow_id_hw_rule flow_id_rule;
     generic_flow_tuple_hw_rule flow_tuple_rule; /* Mellanox */
-    accolade_hw_rule accolade_rule; /* Accolade */
   } rule_family;
 } __attribute__((packed))
 hw_filtering_rule;
