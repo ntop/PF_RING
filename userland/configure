@@ -653,6 +653,7 @@ SYSLIBS
 HAVE_HYPERSCAN
 ZMQ_LIB
 HAVE_ZMQ
+HAVE_DL_REDIS
 REDIS_LIB
 HAVE_REDIS
 HAVE_NDPI
@@ -3461,9 +3462,22 @@ fi
   if test "x$ac_cv_lib_hiredis_redisCommand" = xyes; then
     if test "x$enable_redis" = "xyes"
 then :
-  REDIS_LIB="-lhiredis"; HAVE_REDIS="-D HAVE_REDIS"
+  REDIS_LIB="-lhiredis"; HAVE_REDIS="-D HAVE_REDIS"; HAVE_DL_REDIS="-DHAVE_DL_REDIS"
 fi
   fi
+fi
+
+if test "x$REDIS_LIB" = "x"; then
+         for ac_header in hiredis/hiredis.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "hiredis/hiredis.h" "ac_cv_header_hiredis_hiredis_h" "$ac_includes_default"
+if test "x$ac_cv_header_hiredis_hiredis_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_HIREDIS_HIREDIS_H 1" >>confdefs.h
+ HAVE_DL_REDIS="-DHAVE_DL_REDIS"
+fi
+
+done
 fi
 
 # Check whether --enable-zmq was given.
@@ -4168,6 +4182,8 @@ if test "x$ac_cv_header_linux_net_tstamp_h" = x""yes; then :
 fi
 
 NBPF_EXTRA_TARGETS="nbpftest"
+
+
 
 
 

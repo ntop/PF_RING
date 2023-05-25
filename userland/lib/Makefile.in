@@ -64,7 +64,7 @@ NBPF_OBJS = `$(AR) t ${NBPF_LIB} | grep -F .o | tr '\n' ' '`
 #
 # Object files
 #
-OBJS_MIN = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o \
+OBJS_MIN = pfring.o pfring_mod.o pfring_utils.o pfring_mod_stack.o pfring_hw_filtering.o pfring_runtime_manager.o \
 	   pfring_hw_timestamp.o pfring_mod_sysdig.o pfring_mod_pcap.o pfring_device.o ${PF_RING_ZC_OBJS} \
 	   ${AF_XDP_OBJS} ${FIBERBLAZE_OBJS} ${NT_OBJS} ${MLX_OBJS} ${NPCAP_OBJS}
 
@@ -83,7 +83,7 @@ ifeq ($(shell test $(GCC_MAJ_VERSION) -ge 5 && echo 1), 1)
 WFLAGS += -Wno-stringop-truncation -Wno-address-of-packed-member
 endif
 
-CFLAGS_MIN = @CFLAGS@ ${WFLAGS} -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_AF_XDP@ @HAVE_FIBERBLAZE@ @HAVE_BPF@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_MLX@ @HAVE_NPCAP@
+CFLAGS_MIN = @CFLAGS@ ${WFLAGS} -fPIC ${INCLUDE} @HAVE_PF_RING_ZC@ @HAVE_AF_XDP@ @HAVE_FIBERBLAZE@ @HAVE_BPF@ @HAVE_HW_TIMESTAMP@ @HAVE_NT@ @HAVE_MLX@ @HAVE_NPCAP@ @HAVE_DL_REDIS@
 CFLAGS += ${CFLAGS_MIN} @HAVE_PF_RING_FT@ 
 
 EXTRA_DEPS_MIN = extract_nbpf @PF_RING_ZC_DEP@ @AF_XDP_DEP@ @NT_DEP@ @MLX_DEP@ @FIBERBLAZE_DEP@ @NPCAP_DEP@

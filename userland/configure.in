@@ -43,8 +43,13 @@ AC_ARG_ENABLE([redis], AS_HELP_STRING([--enable-redis], [Enable Redis support in
 if test "x$enable_redis" = xyes; then
   AC_CHECK_LIB([hiredis], [redisCommand])
   if test "x$ac_cv_lib_hiredis_redisCommand" = xyes; then
-    AS_IF([test "x$enable_redis" = "xyes"], [REDIS_LIB="-lhiredis"; HAVE_REDIS="-D HAVE_REDIS"])
+    AS_IF([test "x$enable_redis" = "xyes"], [REDIS_LIB="-lhiredis"; HAVE_REDIS="-D HAVE_REDIS"; HAVE_DL_REDIS="-DHAVE_DL_REDIS"])
   fi
+fi
+
+dnl> Redis - enable at least dlopen support if header files are available
+if test "x$REDIS_LIB" = "x"; then
+  AC_CHECK_HEADERS(hiredis/hiredis.h, [HAVE_DL_REDIS="-DHAVE_DL_REDIS"])
 fi
 
 dnl> ZMQ - disabled by default
@@ -356,6 +361,8 @@ AC_SUBST(HAVE_NDPI)
 
 AC_SUBST(HAVE_REDIS)
 AC_SUBST(REDIS_LIB)
+
+AC_SUBST(HAVE_DL_REDIS)
 
 AC_SUBST(HAVE_ZMQ)
 AC_SUBST(ZMQ_LIB)

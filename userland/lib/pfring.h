@@ -365,6 +365,8 @@ struct __pfring {
 
   /* Semi-ZC devices (1-copy) */
   pfring *one_copy_rx_pfring;
+
+  pthread_t runtime_manager_thread;
 };
 
 /* ********************************* */

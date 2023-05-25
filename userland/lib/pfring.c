@@ -21,6 +21,7 @@
 
 #include "pfring.h"
 #include "pfring_priv.h"
+#include "pfring_runtime_manager.h"
 #include <net/ethernet.h>
 
 // #define RING_DEBUG
@@ -393,6 +394,11 @@ void pfring_close(pfring *ring) {
   pfring_shutdown(ring);
 
   pfring_sync_indexes_with_kernel(ring);
+
+  if (getenv("PF_RING_RUNTIME_MANAGER") != NULL)
+#ifdef HAVE_DL_REDIS
+    pfring_stop_runtime_manager(ring);
+#endif
 
   if(ring->close)
     ring->close(ring);
@@ -1227,10 +1233,22 @@ int pfring_enable_ring(pfring *ring) {
   if(ring && ring->enable_ring) {
     int rc;
 
-    if(ring->enabled) return(0);
+    if (ring->enabled)
+      return(0);
 
     rc = ring->enable_ring(ring);
-    if(rc == 0) ring->enabled = 1;
+    if (rc == 0) {
+      ring->enabled = 1;
+
+      if (getenv("PF_RING_RUNTIME_MANAGER") != NULL) {
+#ifdef HAVE_DL_REDIS
+        pfring_run_runtime_manager(ring);
+#else
+        fprintf(stderr, "*** Unable to start runtime manager (compiled without redis support) ***\n");
+#endif
+      }
+
+    }
 
     return rc;
   }
