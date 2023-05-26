@@ -11,6 +11,17 @@
  *
  */
 
+/*
+
+  Example:
+
+  redis-cli RPUSH pfring.filter.host.queue "+10.0.0.1" "+10.0.0.2" "+10.0.0.3"
+  redis-cli RPUSH pfring.filter.host.queue "-10.0.0.2"
+
+  PF_RING_RUNTIME_MANAGER="pfring.filter.host.queue" ./pfcount -i mlx:mlx5_0 -v 1
+
+ */
+
 #ifdef HAVE_DL_REDIS
 
 #include "pfring.h"
