@@ -20,7 +20,10 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <pthread.h>
+
 #include <hiredis/hiredis.h>
+
+#include "third_party/uthash.h"
 
 //#define REDIS_DEBUG
 #define RUNTIME_DEBUG
@@ -72,6 +75,105 @@ static int init_redis_lib() {
 
 /* ********************************* */
 
+typedef struct {
+  u_int32_t ip; /* TODO IPv6 */
+} host_hash_key_t;
+
+typedef struct {
+  u_int16_t rule_id;
+} host_hash_value_t;
+
+typedef struct {
+  host_hash_key_t key;
+  host_hash_value_t value;
+  UT_hash_handle hh;
+} host_hash_item_t;
+
+typedef struct {
+  host_hash_item_t *host_hash;
+  u_int32_t num_hosts;
+} hash_filter_t;
+
+static int hash_filter_add_host(hash_filter_t *hf, u_int32_t ip, host_hash_value_t *value) {
+  host_hash_item_t *hp = NULL;
+  
+  hp = (host_hash_item_t *) calloc(1, sizeof(host_hash_item_t));
+  hp->key.ip = ip;
+  memcpy(&hp->value, value, sizeof(host_hash_value_t));
+
+  HASH_ADD(hh, hf->host_hash, key, sizeof(host_hash_key_t), hp);
+  hf->num_hosts++;
+
+  return 0;
+}
+
+static int hash_filter_has_host(hash_filter_t *hf, u_int32_t ip, host_hash_value_t **value) {
+  host_hash_item_t *hp = NULL;
+  host_hash_item_t hk = { 0 };
+  
+  hk.key.ip = ip;
+
+  HASH_FIND(hh, hf->host_hash, &hk.key, sizeof(host_hash_key_t), hp);
+
+  if (hp != NULL)
+    *value = &hp->value;
+  else
+    *value = NULL;
+
+  return (hp != NULL);
+}
+
+static void hash_filter_delete_host(hash_filter_t *hf, u_int32_t ip) {
+  host_hash_item_t *hp = NULL;
+  host_hash_item_t hk = { 0 };
+
+  HASH_FIND(hh, hf->host_hash, &hk.key, sizeof(host_hash_key_t), hp);
+
+  if (hp != NULL) {
+    HASH_DEL(hf->host_hash, hp);
+    hf->num_hosts--;
+    free(hp);
+  }
+}
+
+static void hash_filter_destroy(hash_filter_t *hf) {
+  host_hash_item_t *hp = NULL, *htmp = NULL;
+
+  HASH_ITER(hh, hf->host_hash, hp, htmp) {
+    HASH_DEL(hf->host_hash, hp);
+    free(hp);
+  }
+}
+
+/* ********************************* */
+
+static int add_ip_pass_rule(pfring *ring, u_int32_t addr) {
+  hw_filtering_rule r = { 0 };
+  int rc = -1;
+
+  if (!addr) return rc;
+
+  r.priority = 0; /* Rule priority (0..2) */
+  r.rule_id = FILTERING_RULE_AUTO_RULE_ID; /* auto generate rule ID */
+  r.rule_family_type = generic_flow_tuple_rule;
+  r.rule_family.flow_tuple_rule.action = flow_pass_rule;
+  r.rule_family.flow_tuple_rule.ip_version = 4;
+  r.rule_family.flow_tuple_rule.src_ip.v4 = addr;
+
+  rc = pfring_add_hw_rule(ring, &r);
+  
+  if (rc < 0)
+    return rc;
+
+  return r.rule_id;
+}
+
+static void remove_ip_pass_rule(pfring *ring, u_int16_t rule_id) {
+  pfring_remove_hw_rule(ring, rule_id);
+}
+
+/* ********************************* */
+
 static redisContext* connect_to_redis(const char *host, u_int16_t port) {
   redisContext *ctx;
   struct timeval timeout = { 1, 500000 }; // 1.5 seconds
@@ -97,42 +199,18 @@ static void close_redis(redisContext *context) {
   redisFree(context);
 }
 
-static void add_ip_pass_rule(pfring *ring, char *ip) {
-  hw_filtering_rule r = { 0 };
-  u_int32_t addr = ntohl(inet_addr(ip));
-  int rc = -1;
-
-  if (!addr) goto print_rc;
-
-  r.priority = 0; /* Rule priority (0..2) */
-  r.rule_id = FILTERING_RULE_AUTO_RULE_ID; /* auto generate rule ID */
-  r.rule_family_type = generic_flow_tuple_rule;
-  r.rule_family.flow_tuple_rule.action = flow_pass_rule;
-  r.rule_family.flow_tuple_rule.ip_version = 4;
-  r.rule_family.flow_tuple_rule.src_ip.v4 = addr;
-  //r.rule_family.flow_tuple_rule.protocol = IPPROTO_UDP;
-
-  rc = pfring_add_hw_rule(ring, &r);
-
- print_rc:
-  if (rc < 0)
-    fprintf(stderr, "Failure adding rule '%s PASS': %d\n", ip, rc);
-  else
-    printf("Rule '%s PASS' added successfully\n", ip);
-}
-
 static void *dequeue_loop(void *__data) {
   pfring *ring = (pfring *) __data;
   redisContext *redis_context = NULL;
-  char buf[1024];
   char *queue_key;
+  hash_filter_t ht = { 0 };
+  int rc;
 
   /* Hardcoded configuration (TODO expose via env vars) */
   char *redis_host = "127.0.0.1";
   u_int16_t redis_port = 6379;
 
   queue_key = getenv("PF_RING_RUNTIME_MANAGER");
-
   if (queue_key == NULL)
     return NULL;
 
@@ -151,12 +229,52 @@ static void *dequeue_loop(void *__data) {
       redisReply *reply = redisCommand(redis_context, "LPOP %s", queue_key);
 
       if (reply && (redis_context->err == REDIS_OK)) {
-        if(reply->str) {
-          buf[0] = '\0';
-          snprintf(buf, sizeof(buf), "%s", reply->str);
+        if(reply->str && strlen(reply->str) > 1) {
+          char op = reply->str[0];
+          char *ip = &reply->str[1];
+          u_int32_t ip_addr = ntohl(inet_addr(ip));
 
-          //printf("> %s\n", buf);
-          add_ip_pass_rule(ring, buf);
+#ifdef RUNTIME_DEBUG
+          printf("[Runtime] > %s\n", reply->str);
+#endif
+
+          if (ip_addr) {
+            host_hash_value_t *info;
+            int found;
+
+            found = hash_filter_has_host(&ht, ip_addr, &info);
+
+            /* Add */
+            if (op == '+') {
+
+              if (!found) {
+                /* Add to the device */
+                rc = add_ip_pass_rule(ring, ip_addr);
+                if (rc < 0) {
+                  fprintf(stderr, "[Runtime] Failure adding rule '%s PASS': %d\n", ip, rc);
+                } else {
+                  host_hash_value_t value;
+                  value.rule_id = rc;
+//#ifdef RUNTIME_DEBUG
+                  printf("[Runtime] Rule '%s PASS' added successfully\n", ip);
+//#endif
+                  /* Add to the hashtable */
+                  hash_filter_add_host(&ht, ip_addr, &value);
+                }
+              }
+
+            /* Remove */
+            } else if (op == '-') {
+
+              if (found) {
+                /* Remove from the device by rule id */
+                remove_ip_pass_rule(ring, info->rule_id);
+                /* Remove from the hashtable */
+                hash_filter_delete_host(&ht, ip_addr);
+              }
+
+            }
+          }
 
           check_for_more_data = 1;
         }
@@ -174,6 +292,8 @@ static void *dequeue_loop(void *__data) {
 
   if (redis_context)
     close_redis(redis_context);
+
+  hash_filter_destroy(&ht);
 
 #ifdef RUNTIME_DEBUG
   printf("[Runtime] Terminate dequeue loop on %s\n", queue_key);
