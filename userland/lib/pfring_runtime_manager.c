@@ -26,7 +26,7 @@
 #include "third_party/uthash.h"
 
 //#define REDIS_DEBUG
-#define RUNTIME_DEBUG
+//#define RUNTIME_DEBUG
 
 /* ********************************* */
 
@@ -126,6 +126,8 @@ static int hash_filter_has_host(hash_filter_t *hf, u_int32_t ip, host_hash_value
 static void hash_filter_delete_host(hash_filter_t *hf, u_int32_t ip) {
   host_hash_item_t *hp = NULL;
   host_hash_item_t hk = { 0 };
+
+  hk.key.ip = ip;
 
   HASH_FIND(hh, hf->host_hash, &hk.key, sizeof(host_hash_key_t), hp);
 
@@ -255,11 +257,11 @@ static void *dequeue_loop(void *__data) {
                 } else {
                   host_hash_value_t value;
                   value.rule_id = rc;
+                  /* Add to the hashtable */
+                  hash_filter_add_host(&ht, ip_addr, &value);
 //#ifdef RUNTIME_DEBUG
                   printf("[Runtime] Rule '%s PASS' added successfully\n", ip);
 //#endif
-                  /* Add to the hashtable */
-                  hash_filter_add_host(&ht, ip_addr, &value);
                 }
               }
 
@@ -271,6 +273,9 @@ static void *dequeue_loop(void *__data) {
                 remove_ip_pass_rule(ring, info->rule_id);
                 /* Remove from the hashtable */
                 hash_filter_delete_host(&ht, ip_addr);
+//#ifdef RUNTIME_DEBUG
+                  printf("[Runtime] Rule '%s PASS' removed\n", ip);
+//#endif
               }
 
             }
