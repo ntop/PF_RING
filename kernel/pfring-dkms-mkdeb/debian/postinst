@@ -46,7 +46,11 @@ service_restart () {
 
 case "$1" in
 	configure)
-		if [ -f /.dockerenv ]; then exit 0; fi
+		CMDLINE=$(tr -d '\0' < /proc/1/cmdline)
+		if [ ! -z "${CMDLINE##*system*}" ] && [ ! -z "${CMDLINE##*init*}" ]; then
+			exit 0 # no init/systemd (in a container)
+		fi
+
 		dkms_configure
 		service_restart
 	;;

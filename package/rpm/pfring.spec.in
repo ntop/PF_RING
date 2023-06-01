@@ -175,7 +175,8 @@ case "$1" in
 esac
 
 %post
-if [ ! -f /.dockerenv ]; then
+CMDLINE=$(tr -d '\0' < /proc/1/cmdline) 
+if [ -z "${CMDLINE##*system*}" ] || [ -z "${CMDLINE##*init*}" ]; then # init/systemd (not a container)
 case "$1" in
   1)
     # install
@@ -199,7 +200,8 @@ fi
 /sbin/ldconfig > /dev/null 2>&1
 
 %postun
-if [ ! -f /.dockerenv ]; then
+CMDLINE=$(tr -d '\0' < /proc/1/cmdline) 
+if [ -z "${CMDLINE##*system*}" ] || [ -z "${CMDLINE##*init*}" ]; then # init/systemd (not a container)
 %if 0%{?centos_ver} != 6
   %systemd_postun_with_restart pf_ring.service cluster.service "cluster@*.service"
 %else
@@ -209,7 +211,8 @@ if [ ! -f /.dockerenv ]; then
 fi
 
 %preun
-if [ ! -f /.dockerenv ]; then
+CMDLINE=$(tr -d '\0' < /proc/1/cmdline) 
+if [ -z "${CMDLINE##*system*}" ] || [ -z "${CMDLINE##*init*}" ]; then # init/systemd (not a container)
 case "$1" in
   0)
     # un-install
