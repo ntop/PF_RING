@@ -270,9 +270,9 @@ static void *dequeue_loop(void *__data) {
                   value.rule_id = rc;
                   /* Add to the hashtable */
                   hash_filter_add_host(&ht, ip_addr, &value);
-//#ifdef RUNTIME_DEBUG
+#ifdef RUNTIME_DEBUG
                   printf("[Runtime] Rule '%s PASS' added successfully\n", ip);
-//#endif
+#endif
                 }
               }
 
@@ -284,9 +284,9 @@ static void *dequeue_loop(void *__data) {
                 remove_ip_pass_rule(ring, info->rule_id);
                 /* Remove from the hashtable */
                 hash_filter_delete_host(&ht, ip_addr);
-//#ifdef RUNTIME_DEBUG
+#ifdef RUNTIME_DEBUG
                   printf("[Runtime] Rule '%s PASS' removed\n", ip);
-//#endif
+#endif
               }
 
             }
