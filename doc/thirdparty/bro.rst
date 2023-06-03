@@ -1,7 +1,7 @@
 Using Zeek with PF_RING
 =======================
 
-In order to use Zeek (formerly known as Zeek) on top of pf_ring please follow this guide.
+In order to use Zeek (formerly known as Bro) on top of pf_ring please follow this guide.
 
 1. Install the "pfring" package (and optionally "pfring-drivers-zc-dkms"
 if you want to use ZC drivers) from http://packages.ntop.org as explained
@@ -16,8 +16,8 @@ been fixed on 4.x according to https://github.com/zeek/zeek/issues/1063.
 
 .. code-block:: console
 
-   wget https://download.zeek.org/zeek-3.0.7.tar.gz
-   tar xvzf zeek-3.0.7.tar.gz
+   wget https://download.zeek.org/zeek-5.2.2.tar.gz
+   tar xvzf zeek-5.2.2.tar.gz
 
 3. Configure and install Zeek:
 
