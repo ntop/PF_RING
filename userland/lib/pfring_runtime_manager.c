@@ -96,7 +96,8 @@ typedef struct {
 } host_hash_key_t;
 
 typedef struct {
-  u_int16_t rule_id;
+  u_int16_t rule_id_s;
+  u_int16_t rule_id_d;
 } host_hash_value_t;
 
 typedef struct {
@@ -175,7 +176,7 @@ static void hash_filter_destroy(hash_filter_t *hf) {
 /* ********************************* */
 /* ********************************* */
 
-static int add_ip_pass_rule(pfring *ring, host_hash_key_t *k) {
+static int add_ip_pass_rule(pfring *ring, host_hash_key_t *k, int direction) {
   hw_filtering_rule r = { 0 };
   int rc = -1;
 
@@ -186,10 +187,16 @@ static int add_ip_pass_rule(pfring *ring, host_hash_key_t *k) {
 
   if (k->ip_version == 4) {
     r.rule_family.flow_tuple_rule.ip_version = 4;
-    r.rule_family.flow_tuple_rule.src_ip.v4 = k->ip.v4;
+    if (direction == 0)
+      r.rule_family.flow_tuple_rule.src_ip.v4 = k->ip.v4;
+    else
+      r.rule_family.flow_tuple_rule.dst_ip.v4 = k->ip.v4;
   } else {
     r.rule_family.flow_tuple_rule.ip_version = 6;
-    memcpy(&r.rule_family.flow_tuple_rule.src_ip.v6, &k->ip.v6, sizeof(r.rule_family.flow_tuple_rule.src_ip.v6));
+    if (direction == 0)
+      memcpy(&r.rule_family.flow_tuple_rule.src_ip.v6, &k->ip.v6, sizeof(r.rule_family.flow_tuple_rule.src_ip.v6));
+    else
+      memcpy(&r.rule_family.flow_tuple_rule.dst_ip.v6, &k->ip.v6, sizeof(r.rule_family.flow_tuple_rule.dst_ip.v6));
   }
 
   rc = pfring_add_hw_rule(ring, &r);
@@ -331,7 +338,6 @@ static void *dequeue_loop(void *__data) {
   u_int16_t redis_port;
   u_int8_t redis_db_id;
   hash_filter_t ht = { 0 };
-  int rc;
 
   queue_key = getenv("PF_RING_RUNTIME_MANAGER");
   if (queue_key == NULL)
@@ -393,18 +399,28 @@ static void *dequeue_loop(void *__data) {
             if (op == '+') {
 
               if (!found) {
+                int rc_s, rc_d;
+
                 /* Add to the device */
-                rc = add_ip_pass_rule(ring, &k);
-                if (rc < 0) {
-                  fprintf(stderr, "[Runtime] Failure adding rule '%s PASS': %d\n", ip, rc);
+                rc_s = add_ip_pass_rule(ring, &k, 0);
+                if (rc_s < 0) {
+                  fprintf(stderr, "[Runtime] Failure adding rule '%s src PASS': %d\n", ip, rc_s);
                 } else {
-                  host_hash_value_t value;
-                  value.rule_id = rc;
-                  /* Add to the hashtable */
-                  hash_filter_add_host(&ht, &k, &value);
+                  rc_d = add_ip_pass_rule(ring, &k, 1);
+                  if (rc_d < 0) {
+                    remove_ip_pass_rule(ring, rc_s);
+                    fprintf(stderr, "[Runtime] Failure adding rule '%s dst PASS': %d\n", ip, rc_d);
+                  } else {
+
+                    host_hash_value_t value;
+                    value.rule_id_s = rc_s;
+                    value.rule_id_d = rc_d;
+                    /* Add to the hashtable */
+                    hash_filter_add_host(&ht, &k, &value);
 #ifdef RUNTIME_DEBUG
-                  printf("[Runtime] Rule '%s PASS' added successfully\n", ip);
+                    printf("[Runtime] Rule '%s PASS' added successfully\n", ip);
 #endif
+                  }
                 }
               }
 
@@ -413,7 +429,8 @@ static void *dequeue_loop(void *__data) {
 
               if (found) {
                 /* Remove from the device by rule id */
-                remove_ip_pass_rule(ring, info->rule_id);
+                remove_ip_pass_rule(ring, info->rule_id_s);
+                remove_ip_pass_rule(ring, info->rule_id_d);
                 /* Remove from the hashtable */
                 hash_filter_delete_host(&ht, &k);
 #ifdef RUNTIME_DEBUG
