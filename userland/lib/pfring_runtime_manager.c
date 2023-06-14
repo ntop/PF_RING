@@ -88,7 +88,11 @@ static int init_redis_lib() {
 /* ********************************* */
 
 typedef struct {
-  u_int32_t ip; /* TODO IPv6 */
+  union {
+    u_int32_t v4;
+    struct in6_addr v6;
+  } ip;
+  u_int8_t ip_version;
 } host_hash_key_t;
 
 typedef struct {
@@ -108,11 +112,12 @@ typedef struct {
 
 /* ********************************* */
 
-static int hash_filter_add_host(hash_filter_t *hf, u_int32_t ip, host_hash_value_t *value) {
+static int hash_filter_add_host(hash_filter_t *hf, host_hash_key_t *k, host_hash_value_t *value) {
   host_hash_item_t *hp = NULL;
   
   hp = (host_hash_item_t *) calloc(1, sizeof(host_hash_item_t));
-  hp->key.ip = ip;
+
+  memcpy(&hp->key,   k,     sizeof(host_hash_key_t));
   memcpy(&hp->value, value, sizeof(host_hash_value_t));
 
   HASH_ADD(hh, hf->host_hash, key, sizeof(host_hash_key_t), hp);
@@ -123,11 +128,11 @@ static int hash_filter_add_host(hash_filter_t *hf, u_int32_t ip, host_hash_value
 
 /* ********************************* */
 
-static int hash_filter_has_host(hash_filter_t *hf, u_int32_t ip, host_hash_value_t **value) {
+static int hash_filter_has_host(hash_filter_t *hf, host_hash_key_t *k, host_hash_value_t **value) {
   host_hash_item_t *hp = NULL;
   host_hash_item_t hk = { 0 };
   
-  hk.key.ip = ip;
+  memcpy(&hk.key, k, sizeof(host_hash_key_t));
 
   HASH_FIND(hh, hf->host_hash, &hk.key, sizeof(host_hash_key_t), hp);
 
@@ -141,11 +146,11 @@ static int hash_filter_has_host(hash_filter_t *hf, u_int32_t ip, host_hash_value
 
 /* ********************************* */
 
-static void hash_filter_delete_host(hash_filter_t *hf, u_int32_t ip) {
+static void hash_filter_delete_host(hash_filter_t *hf, host_hash_key_t *k) {
   host_hash_item_t *hp = NULL;
   host_hash_item_t hk = { 0 };
 
-  hk.key.ip = ip;
+  memcpy(&hk.key, k, sizeof(host_hash_key_t));
 
   HASH_FIND(hh, hf->host_hash, &hk.key, sizeof(host_hash_key_t), hp);
 
@@ -170,18 +175,22 @@ static void hash_filter_destroy(hash_filter_t *hf) {
 /* ********************************* */
 /* ********************************* */
 
-static int add_ip_pass_rule(pfring *ring, u_int32_t addr) {
+static int add_ip_pass_rule(pfring *ring, host_hash_key_t *k) {
   hw_filtering_rule r = { 0 };
   int rc = -1;
-
-  if (!addr) return rc;
 
   r.priority = 0; /* Rule priority (0..2) */
   r.rule_id = FILTERING_RULE_AUTO_RULE_ID; /* auto generate rule ID */
   r.rule_family_type = generic_flow_tuple_rule;
   r.rule_family.flow_tuple_rule.action = flow_pass_rule;
-  r.rule_family.flow_tuple_rule.ip_version = 4;
-  r.rule_family.flow_tuple_rule.src_ip.v4 = addr;
+
+  if (k->ip_version == 4) {
+    r.rule_family.flow_tuple_rule.ip_version = 4;
+    r.rule_family.flow_tuple_rule.src_ip.v4 = k->ip.v4;
+  } else {
+    r.rule_family.flow_tuple_rule.ip_version = 6;
+    memcpy(&r.rule_family.flow_tuple_rule.src_ip.v6, &k->ip.v6, sizeof(r.rule_family.flow_tuple_rule.src_ip.v6));
+  }
 
   rc = pfring_add_hw_rule(ring, &r);
   
@@ -357,31 +366,42 @@ static void *dequeue_loop(void *__data) {
         if(reply->str && strlen(reply->str) > 1) {
           char op = reply->str[0];
           char *ip = &reply->str[1];
-          u_int32_t ip_addr = ntohl(inet_addr(ip));
+          host_hash_key_t k = { 0 };
+          
+          if (strchr(ip, '.') != NULL) {
+            k.ip.v4 = ntohl(inet_addr(ip));
+            if (k.ip.v4)
+              k.ip_version = 4;
+          } else {
+            if (inet_pton(AF_INET6, ip, &k.ip.v6) <= 0)
+              printf("[Runtime] Failure parsing IP '%s'\n", ip);
+            else
+              k.ip_version = 6;
+          }
 
 #ifdef RUNTIME_DEBUG
           printf("[Runtime] > %s\n", reply->str);
 #endif
 
-          if (ip_addr) {
+          if (k.ip_version) {
             host_hash_value_t *info;
             int found;
 
-            found = hash_filter_has_host(&ht, ip_addr, &info);
+            found = hash_filter_has_host(&ht, &k, &info);
 
             /* Add */
             if (op == '+') {
 
               if (!found) {
                 /* Add to the device */
-                rc = add_ip_pass_rule(ring, ip_addr);
+                rc = add_ip_pass_rule(ring, &k);
                 if (rc < 0) {
                   fprintf(stderr, "[Runtime] Failure adding rule '%s PASS': %d\n", ip, rc);
                 } else {
                   host_hash_value_t value;
                   value.rule_id = rc;
                   /* Add to the hashtable */
-                  hash_filter_add_host(&ht, ip_addr, &value);
+                  hash_filter_add_host(&ht, &k, &value);
 #ifdef RUNTIME_DEBUG
                   printf("[Runtime] Rule '%s PASS' added successfully\n", ip);
 #endif
@@ -395,7 +415,7 @@ static void *dequeue_loop(void *__data) {
                 /* Remove from the device by rule id */
                 remove_ip_pass_rule(ring, info->rule_id);
                 /* Remove from the hashtable */
-                hash_filter_delete_host(&ht, ip_addr);
+                hash_filter_delete_host(&ht, &k);
 #ifdef RUNTIME_DEBUG
                   printf("[Runtime] Rule '%s PASS' removed\n", ip);
 #endif
