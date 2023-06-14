@@ -31,6 +31,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <ctype.h>
 
 #include <hiredis/hiredis.h>
 
@@ -105,6 +106,8 @@ typedef struct {
   u_int32_t num_hosts;
 } hash_filter_t;
 
+/* ********************************* */
+
 static int hash_filter_add_host(hash_filter_t *hf, u_int32_t ip, host_hash_value_t *value) {
   host_hash_item_t *hp = NULL;
   
@@ -117,6 +120,8 @@ static int hash_filter_add_host(hash_filter_t *hf, u_int32_t ip, host_hash_value
 
   return 0;
 }
+
+/* ********************************* */
 
 static int hash_filter_has_host(hash_filter_t *hf, u_int32_t ip, host_hash_value_t **value) {
   host_hash_item_t *hp = NULL;
@@ -134,6 +139,8 @@ static int hash_filter_has_host(hash_filter_t *hf, u_int32_t ip, host_hash_value
   return (hp != NULL);
 }
 
+/* ********************************* */
+
 static void hash_filter_delete_host(hash_filter_t *hf, u_int32_t ip) {
   host_hash_item_t *hp = NULL;
   host_hash_item_t hk = { 0 };
@@ -149,6 +156,8 @@ static void hash_filter_delete_host(hash_filter_t *hf, u_int32_t ip) {
   }
 }
 
+/* ********************************* */
+
 static void hash_filter_destroy(hash_filter_t *hf) {
   host_hash_item_t *hp = NULL, *htmp = NULL;
 
@@ -158,6 +167,7 @@ static void hash_filter_destroy(hash_filter_t *hf) {
   }
 }
 
+/* ********************************* */
 /* ********************************* */
 
 static int add_ip_pass_rule(pfring *ring, u_int32_t addr) {
@@ -181,13 +191,16 @@ static int add_ip_pass_rule(pfring *ring, u_int32_t addr) {
   return r.rule_id;
 }
 
+/* ********************************* */
+
 static void remove_ip_pass_rule(pfring *ring, u_int16_t rule_id) {
   pfring_remove_hw_rule(ring, rule_id);
 }
 
 /* ********************************* */
+/* ********************************* */
 
-static redisContext* connect_to_redis(const char *host, u_int16_t port) {
+static redisContext* connect_to_redis(const char *host, u_int16_t port, const char *password, u_int8_t db_id) {
   redisContext *ctx;
   struct timeval timeout = { 1, 500000 }; // 1.5 seconds
 
@@ -205,27 +218,126 @@ static redisContext* connect_to_redis(const char *host, u_int16_t port) {
     return NULL;
   }
 
+  if (password && strlen(password) > 0) {
+    redisReply *reply = (redisReply *) redisCommand(ctx, "AUTH %s", password);
+    if (reply) {
+      if (reply->type == REDIS_REPLY_ERROR)
+        fprintf(stderr, "* Redis authentication failed: %s\n", reply->str ? reply->str : "?");
+      freeReplyObject(reply);
+    }
+  }
+
+  if (db_id) {
+    redisReply *reply = (redisReply *)redisCommand(ctx, "SELECT %u", db_id);
+    if (reply) {
+      if (reply->type == REDIS_REPLY_ERROR)
+        fprintf(stderr, "* %s\n", reply->str ? reply->str : "?");
+      freeReplyObject(reply);
+    }
+  }
+
   return ctx;
 }
+
+/* ********************************* */
 
 static void close_redis(redisContext *context) {
   redisFree(context);
 }
 
+/* ********************************* */
+
+static int is_number(const char *s) {
+  int i, s_len = strlen(s);
+
+  if (s_len == 0)
+    return 0;
+
+  for (i = 0; i < s_len; i++)
+    if (!isdigit(s[i])) 
+      return 0;
+
+  return 1;
+}
+
+/* ********************************* */
+
+static void parse_redis_connection_settings(char *parameters, 
+    char *host, int host_len, u_int16_t *port, 
+    char *password, int password_len, u_int8_t *db_id) {
+  char buf[128] = {'\0'};
+  char *r;
+
+  /*
+    Supported formats (same as ntopng):
+    host:port
+    host@redis_instance
+    host:port@redis_instance
+    host:port:password@redis_instance
+  */
+
+  snprintf(buf, sizeof(buf), "%s", optarg);
+  r = strrchr(buf, '@');
+  if (r) {
+    char *idptr = &r[1];
+    if (is_number(idptr)) {
+      int id = atoi((const char *)idptr);
+      if (id < 0 || id > 0xff) {
+        fprintf(stderr, "* Redis DB ID provided with --redis|-r cannot be bigger than %u\n", 0xff);
+      } else {
+        *db_id = id;
+      }
+      (*r) = '\0';
+    }
+  }
+
+  if (strchr(buf, ':')) {
+    char *w, *c;
+
+    c = strtok_r(buf, ":", &w);
+
+    snprintf(host, host_len, "%s", c);
+
+    c = strtok_r(NULL, ":", &w);
+    if (c) *port = atoi(c);
+
+    c = strtok_r(NULL, "\0", &w);
+    if (c) snprintf(password, password_len, "%s", c);
+  } else if (strlen(buf) > 0) {
+    /* only the host */
+    snprintf(host, host_len, "%s", buf);
+  }
+}
+
+/* ********************************* */
+/* ********************************* */
+
 static void *dequeue_loop(void *__data) {
   pfring *ring = (pfring *) __data;
   redisContext *redis_context = NULL;
   char *queue_key;
+  char *connection_parameters;
+  char redis_host[128];
+  char redis_password[64];
+  u_int16_t redis_port;
+  u_int8_t redis_db_id;
   hash_filter_t ht = { 0 };
   int rc;
-
-  /* Hardcoded configuration (TODO expose via env vars) */
-  char *redis_host = "127.0.0.1";
-  u_int16_t redis_port = 6379;
 
   queue_key = getenv("PF_RING_RUNTIME_MANAGER");
   if (queue_key == NULL)
     return NULL;
+
+  /* Default connection settings */
+  snprintf(redis_host, sizeof(redis_host), "127.0.0.1");
+  redis_port = 6379;
+  redis_password[0] = '\0';
+  redis_db_id = 0;
+
+  connection_parameters = getenv("PF_RING_REDIS_SETTINGS");
+  if (connection_parameters != NULL)
+    parse_redis_connection_settings(connection_parameters, redis_host, sizeof(redis_host), &redis_port,
+      redis_password, sizeof(redis_password), &redis_db_id);
 
 #ifdef RUNTIME_DEBUG
   printf("[Runtime] Starting dequeue loop on %s\n", queue_key);
@@ -236,7 +348,7 @@ static void *dequeue_loop(void *__data) {
     int check_for_more_data = 0;
 
     if (redis_context == NULL)
-      redis_context = connect_to_redis(redis_host, redis_port);
+      redis_context = connect_to_redis(redis_host, redis_port, redis_password, redis_db_id);
 
     if (redis_context) {
       redisReply *reply = redisCommand(redis_context, "LPOP %s", queue_key);

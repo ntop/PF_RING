@@ -46,3 +46,26 @@ Example using redis-cli:
 
    redis-cli RPUSH pfring.mlx5_0.filter.host.queue "+10.0.0.1" "+10.0.0.2" "+10.0.0.3"
    redis-cli RPUSH pfring.mlx5_0.filter.host.queue "-10.0.0.2"
+
+Redis Connection Settings
+-------------------------
+
+By default, when enabling Runtime Filtering, PF_RING connects to Redis on localhost
+port 6379. This can be controlled through the PF_RING_REDIS_SETTINGS environment
+variable. Supported formats are:
+
+- host:port
+- host@redis_instance
+- host:port@redis_instance
+- host:port:password@redis_instance  
+
+Examples:
+
+.. code-block:: console
+
+   PF_RING_REDIS_SETTINGS="@2"
+   PF_RING_REDIS_SETTINGS="129.168.1.3"
+   PF_RING_REDIS_SETTINGS="129.168.1.3:6379@3"
+   PF_RING_REDIS_SETTINGS="129.168.1.3:6379:nt0pngPwD@0"
+   PF_RING_REDIS_SETTINGS="/var/run/redis/redis.sock"
+   PF_RING_REDIS_SETTINGS="/var/run/redis/redis.sock@2"
