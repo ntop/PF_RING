@@ -6258,6 +6258,9 @@ static void ixgbe_configure_dcb(struct ixgbe_adapter *adapter)
 	 */
 	if (!(adapter->flags & IXGBE_FLAG_DCB_ENABLED)) {
 		if (hw->mac.type == ixgbe_mac_82598EB) {
+#ifdef HAVE_NETIF_SET_TSO_MAX
+			netif_set_tso_max_size(netdev, 65536);
+#else
 #ifdef NETDEV_CAN_SET_GSO_MAX_SIZE
 			netif_set_gso_max_size(netdev, 65536);
 #else
@@ -6269,11 +6272,15 @@ static void ixgbe_configure_dcb(struct ixgbe_adapter *adapter)
 						     IXGBE_GSO_PARTIAL_FEATURES;
 #endif
 #endif /* NETDEV_CAN_SET_GSO_MAX_SIZE */
+#endif /* HAVE_NETIF_SET_TSO_MAX */
 		}
 		return;
 	}
 
 	if (hw->mac.type == ixgbe_mac_82598EB) {
+#ifdef HAVE_NETIF_SET_TSO_MAX
+		netif_set_tso_max_size(netdev, 32768);
+#else
 #ifdef NETDEV_CAN_SET_GSO_MAX_SIZE
 		netif_set_gso_max_size(netdev, 32768);
 #else
@@ -6284,6 +6291,7 @@ static void ixgbe_configure_dcb(struct ixgbe_adapter *adapter)
 		netdev->gso_partial_features = 0;
 #endif
 #endif /* NETDEV_CAN_SET_GSO_MAX_SIZE */
+#endif /* HAVE_NETIF_SET_TSO_MAX */
 	}
 
 #if IS_ENABLED(CONFIG_FCOE)
