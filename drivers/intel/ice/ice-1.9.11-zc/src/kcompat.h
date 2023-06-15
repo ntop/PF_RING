@@ -3519,6 +3519,27 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #endif /* HAVE_NAPI_BUSY_LOOP */
 #endif /* <5.11.0 */
 
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,0,0))
+
+#else
+
+#define HAVE_NETIF_SET_TSO_MAX
+#define HAVE_NDO_FDB_DEL_EXTACK
+
+static inline void
+_kc_netif_napi_add(struct net_device *dev, struct napi_struct *napi,
+                   int (*poll)(struct napi_struct *, int), int weight)
+{       
+        return netif_napi_add(dev, napi, poll);
+}
+#ifdef netif_napi_add
+#undef netif_napi_add
+#endif
+#define netif_napi_add _kc_netif_napi_add
+
+#endif
+
 /*
  * Load the implementations file which actually defines kcompat backports.
  * Legacy backports still exist in this file, but all new backports must be

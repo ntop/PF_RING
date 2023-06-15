@@ -7344,7 +7344,21 @@ ice_fdb_add(struct ndmsg *ndm, struct nlattr __always_unused *tb[],
 	return err;
 }
 
-#ifdef HAVE_NDO_FDB_ADD_VID
+#ifdef HAVE_NDO_FDB_DEL_EXTACK
+/**
+ * ice_fdb_del - delete an entry from the hardware database
+ * @ndm: the input from the stack
+ * @tb: pointer to array of nladdr (unused)
+ * @dev: the net device pointer
+ * @addr: the MAC address entry being added
+ * @vid: VLAN ID
+ * @extack: netlink extended ack
+ */
+static int
+ice_fdb_del(struct ndmsg *ndm, __always_unused struct nlattr *tb[],
+	    struct net_device *dev, const unsigned char *addr,
+	    __always_unused u16 vid, struct netlink_ext_ack *extack)
+#elif defined(HAVE_NDO_FDB_ADD_VID)
 /**
  * ice_fdb_del - delete an entry from the hardware database
  * @ndm: the input from the stack
