@@ -31,7 +31,7 @@ Example using pfcount:
 
 .. code-block:: console
 
-   PF_RING_RUNTIME_MANAGER="pfring.mlx5_0.filter.host.queue" pfcount -i mlx:mlx5_0
+   PF_RING_RUNTIME_MANAGER="pfring.mlx5_0.filter.host.queue" pfcount -i mlx:mlx5_0 -0
 
 Pushing Filters
 ---------------
@@ -69,3 +69,19 @@ Examples:
    PF_RING_REDIS_SETTINGS="129.168.1.3:6379:nt0pngPwD@0"
    PF_RING_REDIS_SETTINGS="/var/run/redis/redis.sock"
    PF_RING_REDIS_SETTINGS="/var/run/redis/redis.sock@2"
+
+Debugging
+---------
+
+In order to debug the Runtime Filtering component it is possible to enable logging
+of rules, with a message being printed to stderr every time a rule is added or removes.
+This can be enabled by setting the PF_RING_RUNTIME_MANAGER_DEBUG environment variable.
+
+Example
+
+.. code-block:: console
+
+  PF_RING_RUNTIME_MANAGER="pfring.mlx5_0.filter.host.queue" PF_RING_RUNTIME_MANAGER_DEBUG="1" pfcount -i mlx:mlx5_0
+
+
+
