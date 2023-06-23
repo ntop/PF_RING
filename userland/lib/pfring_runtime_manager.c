@@ -37,8 +37,7 @@
 
 #include "third_party/uthash.h"
 
-//#define REDIS_DEBUG
-//#define RUNTIME_DEBUG
+static int runtime_manager_debug = 0;
 
 /* ********************************* */
 
@@ -68,15 +67,12 @@ static int init_redis_lib() {
 
   for (i = 0; redis_function_ptr[i].name != NULL; i++) {
     if (redis_function_ptr[i].ptr == NULL) {
-#ifdef REDIS_DEBUG
-      printf("[REDIS] Unable to locate function %s\n", redis_function_ptr[i].name);
-#endif
+
+      if (runtime_manager_debug)
+        fprintf(stderr, "[Runtime] Unable to locate redis lib function %s\n", redis_function_ptr[i].name);
+
       all_right = -2;
       break;
-#ifdef REDIS_DEBUG
-    } else {
-      printf("[REDIS] Loaded function %s\n", redis_function_ptr[i].name);
-#endif
     }
   }
   
@@ -343,6 +339,9 @@ static void *dequeue_loop(void *__data) {
   if (queue_key == NULL)
     return NULL;
 
+  if (getenv("PF_RING_RUNTIME_MANAGER_DEBUG") != NULL)
+    runtime_manager_debug = 1;
+
   /* Default connection settings */
   snprintf(redis_host, sizeof(redis_host), "127.0.0.1");
   redis_port = 6379;
@@ -354,9 +353,7 @@ static void *dequeue_loop(void *__data) {
     parse_redis_connection_settings(connection_parameters, redis_host, sizeof(redis_host), &redis_port,
       redis_password, sizeof(redis_password), &redis_db_id);
 
-#ifdef RUNTIME_DEBUG
-  printf("[Runtime] Starting dequeue loop on %s\n", queue_key);
-#endif
+  //printf("[Runtime] Starting dequeue loop on %s\n", queue_key);
 
   /* Loop - dequeue rules from redis */
   while (!ring->is_shutting_down) {
@@ -385,9 +382,7 @@ static void *dequeue_loop(void *__data) {
               k.ip_version = 6;
           }
 
-#ifdef RUNTIME_DEBUG
-          printf("[Runtime] > %s\n", reply->str);
-#endif
+          //printf("[Runtime] > %s\n", reply->str);
 
           if (k.ip_version) {
             host_hash_value_t *info;
@@ -417,9 +412,9 @@ static void *dequeue_loop(void *__data) {
                     value.rule_id_d = rc_d;
                     /* Add to the hashtable */
                     hash_filter_add_host(&ht, &k, &value);
-#ifdef RUNTIME_DEBUG
-                    printf("[Runtime] Rule '%s PASS' added successfully\n", ip);
-#endif
+
+                    if (runtime_manager_debug)
+                      fprintf(stderr, "[Runtime] Rule '%s PASS' added successfully\n", ip);
                   }
                 }
               }
@@ -433,9 +428,9 @@ static void *dequeue_loop(void *__data) {
                 remove_ip_pass_rule(ring, info->rule_id_d);
                 /* Remove from the hashtable */
                 hash_filter_delete_host(&ht, &k);
-#ifdef RUNTIME_DEBUG
+
+                if (runtime_manager_debug)
                   printf("[Runtime] Rule '%s PASS' removed\n", ip);
-#endif
               }
 
             }
@@ -460,9 +455,7 @@ static void *dequeue_loop(void *__data) {
 
   hash_filter_destroy(&ht);
 
-#ifdef RUNTIME_DEBUG
-  printf("[Runtime] Terminate dequeue loop on %s\n", queue_key);
-#endif
+  //printf("[Runtime] Terminate dequeue loop on %s\n", queue_key);
 
   return NULL;
 }
