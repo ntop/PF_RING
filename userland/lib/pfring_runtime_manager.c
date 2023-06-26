@@ -69,7 +69,7 @@ static int init_redis_lib() {
     if (redis_function_ptr[i].ptr == NULL) {
 
       if (runtime_manager_debug)
-        fprintf(stderr, "[Runtime] Unable to locate redis lib function %s\n", redis_function_ptr[i].name);
+        fprintf(stderr, "[Runtime] Unable to locate hiredis lib (missing function %s)\n", redis_function_ptr[i].name);
 
       all_right = -2;
       break;
@@ -226,7 +226,7 @@ static redisContext* connect_to_redis(const char *host, u_int16_t port, const ch
     ctx = redisConnectWithTimeout(host, port, timeout);
 
   if (ctx->err) {
-    printf("[REDIS] Connection error: %s", ctx->errstr);
+    fprintf(stderr, "[REDIS] Connection error: %s [host: %s][port: %u]\n", ctx->errstr, host, port);
     return NULL;
   }
 
@@ -288,7 +288,7 @@ static void parse_redis_connection_settings(char *parameters,
     host:port:password@redis_instance
   */
 
-  snprintf(buf, sizeof(buf), "%s", optarg);
+  snprintf(buf, sizeof(buf), "%s", parameters);
   r = strrchr(buf, '@');
   if (r) {
     char *idptr = &r[1];
