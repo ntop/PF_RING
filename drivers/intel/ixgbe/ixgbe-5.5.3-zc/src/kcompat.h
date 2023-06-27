@@ -7392,6 +7392,12 @@ _kc_napi_busy_loop(unsigned int napi_id,
 
 #else
 
+#endif
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,0,0)) ||\
+   (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,8)))
+
 #define HAVE_NETIF_SET_TSO_MAX
 
 static inline void

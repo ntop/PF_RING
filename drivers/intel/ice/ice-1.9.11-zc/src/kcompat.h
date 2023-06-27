@@ -3527,6 +3527,11 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #define HAVE_NETIF_SET_TSO_MAX
 #define HAVE_NDO_FDB_DEL_EXTACK
 
+#endif
+
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,0,0)) ||\
+   (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8,8)))
 static inline void
 _kc_netif_napi_add(struct net_device *dev, struct napi_struct *napi,
                    int (*poll)(struct napi_struct *, int), int weight)
