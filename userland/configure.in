@@ -77,11 +77,9 @@ if test x$have_nl_3 = xyes ; then
   ])
 fi
 
-AR_X=
+AR_X="ar x"
 
 if test $MACHINE = "x86_64"; then
-  AR_X="ar x"
-
   dnl> Check for a modern pthread library
   AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
 
@@ -208,10 +206,14 @@ if test $MACHINE = "x86_64"; then
     fi
   fi
 
-  dnl> Mellanox
-  AC_MSG_CHECKING([Mellanox support])
-  MOD_MLX_LIB="libs/libpfring_mlx_${MACHINE}${LIBARCH}.a"
-  if test -f "lib/${MOD_MLX_LIB}"; then
+dnl> end of x86_64 check
+fi
+
+dnl> Mellanox
+AC_MSG_CHECKING([Mellanox support (x64 and aarch64)])
+MOD_MLX_LIB="libs/libpfring_mlx_${MACHINE}${LIBARCH}.a"
+
+if test -f "lib/${MOD_MLX_LIB}"; then
     HAVE_MLX="-D HAVE_MLX"
     MLX_OBJS=`ar t lib/${MOD_MLX_LIB} | grep -F .o | tr '\n' ' '`
     MLX_DEP="extract_mlx_lib"
@@ -233,12 +235,10 @@ if test $MACHINE = "x86_64"; then
       fi
     fi
 
-  else
-    AC_MSG_RESULT(no)
-  fi
-
-dnl> end of x86_64 check
+else
+   AC_MSG_RESULT(no)
 fi
+
 
 dnl> AF_XDP - Default enabled
 AC_ARG_ENABLE([xdp], AS_HELP_STRING([--disable-xdp], [Disable XDP/AF_XDP support in PF_RING]))
