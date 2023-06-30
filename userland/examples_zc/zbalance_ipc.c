@@ -40,7 +40,6 @@
 
 #include "pfring.h"
 #include "pfring_zc.h"
-#include "pfring_mod_sysdig.h"
 
 #include "zutils.c"
 
@@ -56,6 +55,7 @@
 #endif
 
 #define ALARM_SLEEP             1
+#define MAX_BALANCERS          16
 #define MAX_CARD_SLOTS      32768
 #define PREFETCH_BUFFERS        8
 #define QUEUE_LEN            8192
@@ -68,19 +68,26 @@
 #define EVENT_BUF_LEN (1024 * (EVENT_SIZE + 16))
 
 pfring_zc_cluster *zc;
-pfring_zc_worker *zw;
-pfring_zc_queue **inzqs;
-pfring_zc_queue **outzqs;
-pfring_zc_multi_queue *outzmq; /* fanout */
-pfring_zc_buffer_pool *wsp;
 
-u_int32_t num_devices = 0;
+struct {
+  u_int32_t num_devices;
+  u_int32_t num_real_devices;
+  u_int32_t num_in_queues;
+  char *device_list;
+  char **devices;
+  pfring_zc_worker *zw;
+  pfring_zc_queue **inzqs;
+  pfring_zc_queue **outzqs;
+  pfring_zc_multi_queue *outzmq; /* fanout */
+  pfring_zc_buffer_pool *wsp;
+} balancer[MAX_BALANCERS];
+
+u_int32_t num_balancers = 0;
 u_int32_t num_apps = 0;
 u_int32_t num_consumer_queues = 0;
 u_int32_t queue_len = QUEUE_LEN;
 u_int32_t pool_size = POOL_SIZE;
 u_int32_t instances_per_app[MAX_NUM_APP];
-char **devices = NULL;
 char **outdevs;
 
 int gtpc_fwd_queue = -1;
@@ -277,6 +284,7 @@ void print_stats() {
   char time_buf[128];
   double duration;
   int i;
+  int b;
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
@@ -287,28 +295,32 @@ void print_stats() {
 
   duration = delta_time(&end_time, &start_time);
 
-  for (i = 0; i < num_devices; i++)
-    if (pfring_zc_stats(inzqs[i], &stats) == 0)
-      tot_recv += stats.recv, tot_drop += stats.drop;
+  for (b = 0; b < num_balancers; b++)
+    for (i = 0; i < balancer[b].num_devices; i++)
+      if (pfring_zc_stats(balancer[b].inzqs[i], &stats) == 0)
+        tot_recv += stats.recv, tot_drop += stats.drop;
 
   if (!daemon_mode && !proc_stats_only) {
     trace(TRACE_INFO, "=========================");
     trace(TRACE_INFO, "Queue TX Stats (Packets sent to applications):");
   }
   
-  for (i = 0; i < num_consumer_queues; i++)
-    if (pfring_zc_stats(outzqs[i], &stats) == 0) {
-      tot_slave_sent += stats.sent, tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
+  for (b = 0; b < num_balancers; b++) {
+    for (i = 0; i < num_consumer_queues; i++) {
+      if (pfring_zc_stats(balancer[b].outzqs[i], &stats) == 0) {
+        tot_slave_sent += stats.sent, tot_slave_recv += stats.recv, tot_slave_drop += stats.drop;
       
-      if (!daemon_mode && !proc_stats_only)
-	trace(TRACE_INFO, "                   Queue %2u: %s pkts (%s drops)\n", i,
-	      pfring_format_numbers((double)stats.sent+stats.drop, buf1, sizeof(buf1), 0),
-	      pfring_format_numbers((double)stats.drop, buf2, sizeof(buf2), 0));      
+        if (!daemon_mode && !proc_stats_only)
+	  trace(TRACE_INFO, "                   Balancer %2u Queue %2u: %s pkts (%s drops)\n",
+                b, i,
+	        pfring_format_numbers((double)stats.sent+stats.drop, buf1, sizeof(buf1), 0),
+	        pfring_format_numbers((double)stats.drop, buf2, sizeof(buf2), 0));      
+      }
     }
+  }
   
   if (!daemon_mode && !proc_stats_only) {
-    trace(TRACE_INFO, "");
-    trace(TRACE_INFO, "Total Absolute Stats: Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
+    trace(TRACE_INFO, "Total Abs. Stats:  Recv %s pkts (%s drops) - Forwarded %s pkts (%s drops)\n", 
             pfring_format_numbers((double)tot_recv, buf1, sizeof(buf1), 0),
 	    pfring_format_numbers((double)tot_drop, buf2, sizeof(buf2), 0),
 	    pfring_format_numbers((double)tot_slave_sent, buf3, sizeof(buf3), 0),
@@ -326,7 +338,7 @@ void print_stats() {
     unsigned long long diff_slave_drop = tot_slave_drop - last_tot_slave_drop;
 
     if (!daemon_mode && !proc_stats_only) {
-      trace(TRACE_INFO, "Actual Stats:         Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
+      trace(TRACE_INFO, "Actual Stats:      Recv %s pps (%s drops) - Forwarded %s pps (%s drops)\n",
 	      pfring_format_numbers(((double)diff_recv/(double)(delta_msec/1000)),  buf1, sizeof(buf1), 1),
 	      pfring_format_numbers(((double)diff_drop/(double)(delta_msec/1000)),  buf2, sizeof(buf2), 1),
 	      pfring_format_numbers(((double)diff_slave_sent/(double)(delta_msec/1000)),  buf3, sizeof(buf3), 1),
@@ -361,14 +373,16 @@ void print_stats() {
   if (print_interface_stats) {
     int i;
     u_int64_t tot_if_recv = 0, tot_if_drop = 0;
-    for (i = 0; i < num_devices; i++) {
-      if (pfring_zc_stats(inzqs[i], &stats) == 0) {
-        tot_if_recv += stats.recv;
-        tot_if_drop += stats.drop;
-        if (!daemon_mode && !proc_stats_only) {
-          trace(TRACE_INFO, "                %s RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
-                  devices[i], stats.recv, stats.drop, 
-	          stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
+    for (b = 0; b < num_balancers; b++) {
+      for (i = 0; i < balancer[b].num_devices; i++) {
+        if (pfring_zc_stats(balancer[b].inzqs[i], &stats) == 0) {
+          tot_if_recv += stats.recv;
+          tot_if_drop += stats.drop;
+          if (!daemon_mode && !proc_stats_only) {
+            trace(TRACE_INFO, "                   %s RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
+                    balancer[b].devices[i], stats.recv, stats.drop, 
+	            stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
+          }
         }
       }
     }
@@ -380,25 +394,27 @@ void print_stats() {
 
     trace(TRACE_INFO, "Queue RX Stats (Packets read by applications):");
     
-    for (i = 0; i < num_consumer_queues; i++) {
-      if (pfring_zc_stats(outzqs[i], &stats) == 0) {
-        if (!daemon_mode && !proc_stats_only) {
-          trace(TRACE_INFO, "                   Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
-                  i, stats.recv, stats.drop, 
-	          stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
-        }
-        if (outdevs[i]) {
-          snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
-             "%s-TXPackets: %lu\n"
-  	     "%s-TXDropped: %lu\n",
-             outdevs[i], (long unsigned int) stats.sent, 
-	     outdevs[i], (long unsigned int) stats.drop);
-        } else {
-          snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
-             "Q%uPackets:    %lu\n"
-  	     "Q%uDropped:    %lu\n",
-             i, (long unsigned int) stats.recv, 
-	     i, (long unsigned int) stats.drop);
+    for (b = 0; b < num_balancers; b++) {
+      for (i = 0; i < num_consumer_queues; i++) {
+        if (pfring_zc_stats(balancer[b].outzqs[i], &stats) == 0) {
+          if (!daemon_mode && !proc_stats_only) {
+            trace(TRACE_INFO, "                   Balancer %2u Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
+                    b, i, stats.recv, stats.drop, 
+	            stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
+          }
+          if (outdevs[i]) {
+            snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
+               "%s-TXPackets: %lu\n"
+  	       "%s-TXDropped: %lu\n",
+               outdevs[i], (long unsigned int) stats.sent, 
+	       outdevs[i], (long unsigned int) stats.drop);
+          } else {
+            snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
+               "Q%uPackets:    %lu\n"
+  	       "Q%uDropped:    %lu\n",
+               i, (long unsigned int) stats.recv, 
+	       i, (long unsigned int) stats.drop);
+          }
         }
       }
     }
@@ -417,12 +433,21 @@ void print_stats() {
 
 /* ******************************** */
 
+void kill_workers() {
+  int b;
+
+  for (b = 0; b < num_balancers; b++)
+    pfring_zc_kill_worker(balancer[b].zw);
+}
+
+/* ******************************** */
+
 void sigproc(int sig) {
   static int called = 0;
   trace(TRACE_NORMAL, "Leaving...\n");
   if (called) return; else called = 1;
 
-  pfring_zc_kill_worker(zw);
+  kill_workers();
 
   do_shutdown = 1;
 
@@ -565,32 +590,42 @@ void on_bpf_files_modified(int sig) {
 
 void set_inzq_bpf() {
   if (in_bpf_file_list.modified) {
-    int i;
+    int b, i;
+
     in_bpf_file_list.modified = 0;
-    for (i = 0; i < num_devices; i++) {
-      if (!inzq_bpf[i])
-        continue;
-      pfring_zc_remove_bpf_filter(inzqs[i]);
-      if (pfring_zc_set_bpf_filter(inzqs[i], inzq_bpf[i]) != 0)
-        trace(TRACE_NORMAL, "inzqs[%d] bpf set error : '%s'", i, inzq_bpf[i]);
-      else
-        trace(TRACE_NORMAL, "inzqs[%d] bpf set : '%s'", i, inzq_bpf[i]);
+
+    for (b = 0; b < num_balancers; b++) {
+      for (i = 0; i < balancer[b].num_devices; i++) {
+        if (!inzq_bpf[i])
+          continue;
+
+        pfring_zc_remove_bpf_filter(balancer[b].inzqs[i]);
+        if (pfring_zc_set_bpf_filter(balancer[b].inzqs[i], inzq_bpf[i]) != 0)
+          trace(TRACE_NORMAL, "inzqs[%d] bpf set error : '%s'", i, inzq_bpf[i]);
+        else
+          trace(TRACE_NORMAL, "inzqs[%d] bpf set : '%s'", i, inzq_bpf[i]);
+      }
     }
   }
 }
 
 void set_outzq_bpf() {
   if (out_bpf_file_list.modified) {
-    int i;
+    int b, i;
+
     out_bpf_file_list.modified = 0;
-    for (i = 0; i < num_consumer_queues; i++) {
-      if (!outzq_bpf[i])
-        continue;
-      pfring_zc_remove_bpf_filter(outzqs[i]);
-      if (pfring_zc_set_bpf_filter(outzqs[i], outzq_bpf[i]) != 0)
-        trace(TRACE_NORMAL, "outzqs[%d] bpf set error : '%s'", i, outzq_bpf[i]);
-      else
-        trace(TRACE_NORMAL, "outzqs[%d] bpf set : '%s'", i, outzq_bpf[i]);
+
+    for (b = 0; b < num_balancers; b++) {
+      for (i = 0; i < num_consumer_queues; i++) {
+        if (!outzq_bpf[i])
+          continue;
+
+        pfring_zc_remove_bpf_filter(balancer[b].outzqs[i]);
+        if (pfring_zc_set_bpf_filter(balancer[b].outzqs[i], outzq_bpf[i]) != 0)
+          trace(TRACE_NORMAL, "balancer[b].outzqs[%d] bpf set error : '%s'", i, outzq_bpf[i]);
+        else
+          trace(TRACE_NORMAL, "balancer[b].outzqs[%d] bpf set : '%s'", i, outzq_bpf[i]);
+      }
     }
   }
 }
@@ -606,19 +641,22 @@ void printHelp(void) {
 	 "                 [-N <num>] [-a] [-q <len>] [-Q <sock list>] [-d] \n"
 	 "                 [-D <username>] [-P <pid file>] \n\n");
   printf("-h               Print this help\n");
-  printf("-i <device>      Device (comma-separated list) Note: use 'Q' as device name to create ingress sw queues\n");
+  printf("-i <device>      Capture device. Note:\n");
+  printf("                 - Use comma-separated list to aggregate multiple interfaces\n");
+  printf("                 - Use 'Q' as device name to create ingress sw queues\n");
+  printf("                 - Use multiple -i to instantiate multiple balancers on different interfaces\n");
   printf("-c <cluster id>  Cluster id\n");
   printf("-n <num inst>    Number of application instances\n"
          "                 In case of '-m 1' or '-m 4' it is possible to spread packets across multiple\n"
          "                 instances of multiple applications, using a comma-separated list\n");
   printf("-m <hash mode>   Hashing modes:\n"
          "                 0 - No hash: Round-Robin (default)\n"
-         "                 1 - Source/Dest IP hash (or Thread-ID in case of sysdig)\n"
+         "                 1 - Source/Dest IP hash\n"
          "                 2 - Fan-out\n"
          "                 3 - Fan-out (1st) + Round-Robin (2nd, 3rd, ..)\n"
          "                 4 - GTP hash (Inner Source/Dest IP/Port or Seq-Num or Outer Source/Dest IP/Port)\n"
          "                 5 - GRE hash (Inner or Outer Source/Dest IP)\n"
-         "                 6 - Interface X to queue X\n"
+         "                 6 - Interface X to queue X (not supported with multiple -i)\n"
          "                 7 - VLAN ID encapsulated in Ethernet type 0x8585 (see -Y). Queue is selected based on -M. Other Ethernet types to queue 0.\n");
   printf("-r <queue>:<dev> Replace egress queue <queue> with device <dev> (multiple -r can be specified)\n");
   printf("-M <vlans>       Comma-separated list of VLANs to map VLAN to egress queues (-m 7 only)\n");
@@ -632,7 +670,7 @@ void printHelp(void) {
   printf("-b <size>        Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
   printf("-w               Use hw aggregation when specifying multiple devices in -i (when supported)\n");
   printf("-W <sec>         Wait <sec> seconds before processing packets\n");
-  printf("-N <num>         Producer for n2disk multi-thread (<num> threads)\n");
+  printf("-N <num>         Producer for n2disk multi-thread with <num> threads (not supported with multiple -i)\n");
   printf("-a               Active packet wait\n");
   printf("-Q <sock list>   Enable VM support (comma-separated list of QEMU monitor sockets)\n");
   printf("-p               Print per-interface and per-queue absolute stats\n");
@@ -792,8 +830,8 @@ int64_t direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue
   u_int32_t ingress_id;
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
-  for (ingress_id = 0; ingress_id < num_devices; ingress_id++)
-    if (in_queue == inzqs[ingress_id]) break;
+  for (ingress_id = 0; ingress_id < balancer[0].num_devices; ingress_id++)
+    if (in_queue == balancer[0].inzqs[ingress_id]) break;
   return ingress_id % num_out_queues;
 }
 
@@ -841,16 +879,6 @@ int64_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
   if (++rr == num_out_queues) rr = 0;
   return rr;
-}
-
-/* *************************************** */
-
-int64_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
-  /* NOTE: pkt_handle->hash contains the CPU id */
-  struct sysdig_event_header *ev = (struct sysdig_event_header*)pfring_zc_pkt_buff_data(pkt_handle, in_queue); 
-  long num_out_queues = (long) user;
-
-  return(ev->thread_id % num_out_queues);
 }
 
 /* *************************************** */
@@ -973,8 +1001,8 @@ int64_t fo_multiapp_direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfr
 
   if (time_pulse) SET_TS_FROM_PULSE(pkt_handle, *pulse_timestamp_ns);
 
-  for (ingress_id = 0; ingress_id < num_devices; ingress_id++)
-    if (in_queue == inzqs[ingress_id]) break;
+  for (ingress_id = 0; ingress_id < balancer[0].num_devices; ingress_id++)
+    if (in_queue == balancer[0].inzqs[ingress_id]) break;
 
   for (i = 0; i < num_apps; i++) {
     app_instance = ingress_id % instances_per_app[i];
@@ -989,15 +1017,13 @@ int64_t fo_multiapp_direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfr
 
 int main(int argc, char* argv[]) {
   char c;
-  char *device = NULL;
   char *applications = NULL, *app, *app_pos = NULL;
   char *vm_sockets = NULL, *vm_sock; 
-  long i, j, off;
+  long b, i, j, off;
   int hash_mode = 0, hw_aggregation = 0;
   int num_additional_buffers = 0;
   pthread_t time_thread;
   int rc;
-  int num_real_devices = 0, num_in_queues = 0, num_outdevs = 0;
   char *pid_file = NULL;
   char *hugepages_mountpoint = NULL;
   int opt_argc;
@@ -1007,6 +1033,7 @@ int main(int argc, char* argv[]) {
   int num_consumer_queues_limit = 0, use_api_v3 = 0;
   u_int32_t cluster_flags = 0;
   u_int32_t rx_open_flags;
+  u_int32_t tot_num_buffers, num_outdevs = 0;
   const char *opt_string = "ab:c:dD:f:G:g:hi:Jl:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
@@ -1029,6 +1056,8 @@ int main(int argc, char* argv[]) {
   start_time.tv_sec = 0;
 
   rx_open_flags = PF_RING_ZC_DEVICE_CAPTURE_INJECTED;
+
+  memset(balancer, 0, sizeof(balancer));
 
   if (argc == 1) {
     if (load_args_from_file(DEFAULT_CONF_FILE, &opt_argc, &opt_argv) != 0) {
@@ -1081,7 +1110,10 @@ int main(int argc, char* argv[]) {
       printHelp();
       break;
     case 'i':
-      device = strdup(optarg);
+      if (num_balancers < MAX_BALANCERS) {
+        balancer[num_balancers].device_list = strdup(optarg);
+        num_balancers++;
+      }
       break;
     case 'l':
       trace_file = fopen(optarg, "w");
@@ -1178,10 +1210,12 @@ int main(int argc, char* argv[]) {
 #endif
     }
   }
- 
-  if (device == NULL) printHelp();
+
+  if (num_balancers == 0) printHelp();
   if (cluster_id < 0) printHelp();
   if (applications == NULL && hash_mode != 7) printHelp();
+  if (num_balancers > 1 && hash_mode == 6) printHelp();
+  if (num_balancers > 1 && n2disk_producer) printHelp();
 
   if (vlan_filter
 #ifdef HAVE_PF_RING_FT
@@ -1213,19 +1247,21 @@ int main(int argc, char* argv[]) {
     num_additional_buffers += (n2disk_threads * (N2DISK_CONSUMER_QUEUE_LEN + 1)) + N2DISK_PREFETCH_BUFFERS;
   }
 
-  if (!hw_aggregation) {
-    char *dev; 
-    dev = strtok(device, ",");
-    while(dev != NULL) {
-      devices = realloc(devices, sizeof(char *) * (num_devices+1));
-      devices[num_devices] = strdup(dev);
-      num_devices++;
-      dev = strtok(NULL, ",");
+  for (b = 0; b < num_balancers; b++) {
+    if (!hw_aggregation) {
+      char *dev; 
+      dev = strtok(balancer[b].device_list, ",");
+      while(dev != NULL) {
+        balancer[b].devices = realloc(balancer[b].devices, sizeof(char *) * (balancer[b].num_devices+1));
+        balancer[b].devices[balancer[b].num_devices] = strdup(dev);
+        balancer[b].num_devices++;
+        dev = strtok(NULL, ",");
+      }
+    } else {
+      balancer[b].devices = calloc(1, sizeof(char *));
+      balancer[b].devices[0] = balancer[b].device_list;
+      balancer[b].num_devices = 1;
     }
-  } else {
-    devices = calloc(1, sizeof(char *));
-    devices[0] = device;
-    num_devices = 1;
   }
 
   if (hash_mode == 7) {
@@ -1280,13 +1316,16 @@ int main(int argc, char* argv[]) {
       use_api_v3 = 1;
   }
 
-  for (i = 0; i < num_devices; i++) {
-    if (strcmp(devices[i], "Q") != 0) num_real_devices++;
-    else num_in_queues++;
+  for (b = 0; b < num_balancers; b++) {
+    for (j = 0; j < balancer[b].num_devices; j++) {
+      if (strcmp(balancer[b].devices[j], "Q") != 0) balancer[b].num_real_devices++;
+      else balancer[b].num_in_queues++;
+    }
+  
+    balancer[b].inzqs  = calloc(balancer[b].num_devices, sizeof(pfring_zc_queue *));
+    balancer[b].outzqs = calloc(num_consumer_queues,  sizeof(pfring_zc_queue *));
   }
 
-  inzqs  = calloc(num_devices, sizeof(pfring_zc_queue *));
-  outzqs = calloc(num_consumer_queues,  sizeof(pfring_zc_queue *));
   outdevs = calloc(num_consumer_queues,  sizeof(char *));
 
   optind = 1;
@@ -1305,6 +1344,8 @@ int main(int argc, char* argv[]) {
         }
       break;
       case 'r':
+        if (num_balancers > 1) printHelp();
+
         q_idx = atoi(optarg);
         if (q_idx < num_consumer_queues) {
           outdevs[q_idx] = strchr(optarg, ':');
@@ -1328,13 +1369,19 @@ int main(int argc, char* argv[]) {
   if (enable_vm_support)
     cluster_flags |= PF_RING_ZC_ENABLE_VM_SUPPORT;
 
+  tot_num_buffers = 0;
+  for (b = 0; b < num_balancers; b++) {
+    tot_num_buffers += (balancer[b].num_real_devices * MAX_CARD_SLOTS);
+    tot_num_buffers += (balancer[b].num_in_queues * (queue_len + IN_POOL_SIZE));
+    tot_num_buffers += (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers;
+    tot_num_buffers += (num_outdevs * MAX_CARD_SLOTS) - (num_outdevs * (queue_len /* replaced queues */ - 1 /* dummy queues */));
+  }
+
   zc = pfring_zc_create_cluster(
     cluster_id, 
-    max_packet_len(devices[0]),
+    max_packet_len(balancer[0].devices[0]),
     metadata_len,
-    (num_real_devices * MAX_CARD_SLOTS) + (num_in_queues * (queue_len + IN_POOL_SIZE)) 
-     + (num_consumer_queues * (queue_len + pool_size)) + PREFETCH_BUFFERS + num_additional_buffers
-     + (num_outdevs * MAX_CARD_SLOTS) - (num_outdevs * (queue_len /* replaced queues */ - 1 /* dummy queues */)), 
+    tot_num_buffers, 
     pfring_zc_numa_get_cpu_node(bind_worker_core),
     hugepages_mountpoint,
     cluster_flags 
@@ -1357,83 +1404,86 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  for (i = 0; i < num_devices; i++) {
-    if (strcmp(devices[i], "Q") != 0) {
+  for (b = 0; b < num_balancers; b++) {
+    for (i = 0; i < balancer[b].num_devices; i++) {
+      if (strcmp(balancer[b].devices[i], "Q") != 0) {
 
-      inzqs[i] = pfring_zc_open_device(zc, devices[i], rx_only, rx_open_flags);
+        balancer[b].inzqs[i] = pfring_zc_open_device(zc, balancer[b].devices[i], rx_only, rx_open_flags);
 
-      if (inzqs[i] == NULL) {
-        trace(TRACE_ERROR, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
-	        strerror(errno), devices[i]);
-        pfring_zc_destroy_cluster(zc);
-        return -1;
+        if (balancer[b].inzqs[i] == NULL) {
+          trace(TRACE_ERROR, "pfring_zc_open_device error [%s] Please check that %s is up and not already used\n",
+	          strerror(errno), balancer[b].devices[i]);
+          pfring_zc_destroy_cluster(zc);
+          return -1;
+        }
+
+      } else { /* create sw queue as ingress device */
+        pfring_zc_queue *ext_q = NULL;
+        pfring_zc_buffer_pool *ext_pool = NULL;
+
+        rc = pfring_zc_create_queue_pool_pair(zc, queue_len, IN_POOL_SIZE, &ext_q, &ext_pool);
+
+        if (rc < 0 || ext_q == NULL || ext_pool == NULL) {
+          trace(TRACE_ERROR, "pfring_zc_create_queue_pool_pair error [%s]\n", strerror(errno));                                             
+          pfring_zc_destroy_cluster(zc);
+          return -1;                                                                                                           
+        } 
+
+        balancer[b].inzqs[i] = ext_q;
       }
+    }
 
-    } else { /* create sw queue as ingress device */
+    for (i = 0; i < num_consumer_queues; i++) {
       pfring_zc_queue *ext_q = NULL;
       pfring_zc_buffer_pool *ext_pool = NULL;
 
-      rc = pfring_zc_create_queue_pool_pair(zc, queue_len, IN_POOL_SIZE, &ext_q, &ext_pool);
+      /*
+       * Note: in case of egress devices, we are creating 
+       * dummy queues anyway to keep numeration coherent
+       */
 
-      if (rc < 0 || ext_q == NULL || ext_pool == NULL) {
+      rc = pfring_zc_create_queue_pool_pair(zc,
+        outdevs[i] == NULL ? queue_len : 1,
+        outdevs[i] == NULL ? pool_size : 1,
+        &ext_q, &ext_pool);
+
+      if (rc < 0 || ext_q == NULL || ext_q == NULL) {
         trace(TRACE_ERROR, "pfring_zc_create_queue_pool_pair error [%s]\n", strerror(errno));                                             
         pfring_zc_destroy_cluster(zc);
         return -1;                                                                                                           
       } 
 
-      inzqs[i] = ext_q;
-    }
-  }
+      if (outdevs[i] != NULL) { /* Egress queue */
+        balancer[b].outzqs[i] = pfring_zc_open_device(zc, outdevs[i], tx_only, 0);
 
-  for (i = 0; i < num_consumer_queues; i++) {
-    pfring_zc_queue *ext_q = NULL;
-    pfring_zc_buffer_pool *ext_pool = NULL;
-
-    /*
-     * Note: in case of egress devices, we are creating 
-     * dummy queues anyway to keep numeration coherent
-     */
-
-    rc = pfring_zc_create_queue_pool_pair(zc,
-      outdevs[i] == NULL ? queue_len : 1,
-      outdevs[i] == NULL ? pool_size : 1,
-      &ext_q, &ext_pool);
-
-    if (rc < 0 || ext_q == NULL || ext_q == NULL) {
-      trace(TRACE_ERROR, "pfring_zc_create_queue_pool_pair error [%s]\n", strerror(errno));                                             
-      pfring_zc_destroy_cluster(zc);
-      return -1;                                                                                                           
-    } 
-
-    if (outdevs[i] != NULL) { /* Egress queue */
-      outzqs[i] = pfring_zc_open_device(zc, outdevs[i], tx_only, 0);
-
-      if (outzqs[i] == NULL) {
-        trace(TRACE_ERROR, "pfring_zc_open_device(%s) error [%s]\n", outdevs[i], strerror(errno));
-        pfring_zc_destroy_cluster(zc);
-        return -1;
+        if (balancer[b].outzqs[i] == NULL) {
+          trace(TRACE_ERROR, "pfring_zc_open_device(%s) error [%s]\n", outdevs[i], strerror(errno));
+          pfring_zc_destroy_cluster(zc);
+          return -1;
+        }
+      } else {
+        balancer[b].outzqs[i] = ext_q;
       }
-    } else {
-      outzqs[i] = ext_q;
+    }
+
+    balancer[b].wsp = pfring_zc_create_buffer_pool(zc, PREFETCH_BUFFERS);
+
+    if (balancer[b].wsp == NULL) {
+      trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
+      pfring_zc_destroy_cluster(zc);
+      return -1;
     }
   }
 
-  if ((inzq_bpf = init_inzq_bpf(&in_bpf_file_list, num_devices))) {
+  if ((inzq_bpf = init_inzq_bpf(&in_bpf_file_list, balancer[0].num_devices))) {
     set_inzq_bpf();
     idle_func = set_inzq_bpf;
     filter_func = packet_filtering_func;
   }
+
   if ((outzq_bpf = init_outzq_bpf(&out_bpf_file_list, num_consumer_queues))) {
     set_outzq_bpf();
     filter_func = packet_filtering_func;
-  }
-
-  wsp = pfring_zc_create_buffer_pool(zc, PREFETCH_BUFFERS);
-
-  if (wsp == NULL) {
-    trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
-    pfring_zc_destroy_cluster(zc);
-    return -1;
   }
 
   if (n2disk_producer) {
@@ -1457,7 +1507,7 @@ int main(int argc, char* argv[]) {
     }
 
     trace(TRACE_NORMAL, "Run n2disk10gzc with: -i %d@<queue id> --cluster-ipc-queues %s --cluster-ipc-pool %d --reader-threads <%d core ids>\n", 
-      cluster_id, queues_list, num_in_queues + num_consumer_queues + 1, n2disk_threads);
+      cluster_id, queues_list, balancer[0].num_in_queues + num_consumer_queues + 1, n2disk_threads);
   }
 
   if (enable_vm_support) {
@@ -1546,22 +1596,27 @@ int main(int argc, char* argv[]) {
 
   trace(TRACE_NORMAL, "Starting balancer with %d consumer queues..\n", num_consumer_queues);
 
-  if (num_in_queues > 0) {
-    trace(TRACE_NORMAL, "Run your traffic generator as follows:\n");
-    for (i = 0; i < num_in_queues; i++)
-      trace(TRACE_NORMAL, "\tzsend -i zc:%d@%lu\n", cluster_id, pfring_zc_get_queue_id(inzqs[i]));
-  }
+  for (b = 0; b < num_balancers; b++) {
+    if (num_balancers > 1)
+      trace(TRACE_NORMAL, "Balancer #%u:\n", b);
 
-  trace(TRACE_NORMAL, "Run your application instances as follows:\n");
-  off = 0;
-  for (i = 0; i < num_apps; i++) {
-    if (num_apps > 1) trace(TRACE_NORMAL, "Application %lu\n", i);
-    for (j = 0; j < instances_per_app[i]; j++) {
-      if (outdevs[off] == NULL)
-        trace(TRACE_NORMAL, "\tpfcount -i zc:%d@%lu\n", cluster_id, pfring_zc_get_queue_id(outzqs[off]));
-      else
-        trace(TRACE_NORMAL, "\t%s\n", outdevs[off]);
-      off++;
+    if (balancer[b].num_in_queues > 0) {
+      trace(TRACE_NORMAL, "Run your traffic generator as follows:\n");
+      for (i = 0; i < balancer[b].num_in_queues; i++)
+        trace(TRACE_NORMAL, "\tzsend -i zc:%d@%lu\n", cluster_id, pfring_zc_get_queue_id(balancer[b].inzqs[i]));
+    }
+
+    trace(TRACE_NORMAL, "Run your application instances as follows:\n");
+    off = 0;
+    for (i = 0; i < num_apps; i++) {
+      if (num_apps > 1) trace(TRACE_NORMAL, "Application %lu\n", i);
+      for (j = 0; j < instances_per_app[i]; j++) {
+        if (outdevs[off] == NULL)
+          trace(TRACE_NORMAL, "\tpfcount -i zc:%d@%lu\n", cluster_id, pfring_zc_get_queue_id(balancer[b].outzqs[off]));
+        else
+          trace(TRACE_NORMAL, "\t%s\n", outdevs[off]);
+        off++;
+      }
     }
   }
 
@@ -1584,22 +1639,14 @@ int main(int argc, char* argv[]) {
       case 0: distr_func = rr_distribution_func;
       break;
       case 1: 
-        if (strcmp(device, "sysdig") == 0) 
-          distr_func = sysdig_distribution_func; 
-        else if (time_pulse) 
+        if (time_pulse) 
           distr_func = ip_distribution_func; /* else built-in IP-based */
       break;
       case 4: 
-        if (strcmp(device, "sysdig") == 0) 
-          distr_func = sysdig_distribution_func; 
-        else 
-          distr_func = gtp_distribution_func;
+        distr_func = gtp_distribution_func;
       break;
       case 5: 
-        if (strcmp(device, "sysdig") == 0) 
-          distr_func = sysdig_distribution_func;  
-        else 
-          distr_func = gre_distribution_func;
+        distr_func = gre_distribution_func;
       break;
       case 6: 
         distr_func =  direct_distribution_func;
@@ -1609,29 +1656,34 @@ int main(int argc, char* argv[]) {
       break;
     }
 
-    zw = pfring_zc_run_balancer_v2(
-      inzqs, 
-      outzqs, 
-      num_devices, 
-      num_consumer_queues,
-      wsp,
-      round_robin_bursts_policy,
-      idle_func,
-      filter_func,
-      NULL,
-      distr_func,
-      (void *) ((long) num_consumer_queues),
-      !wait_for_packet, 
-      bind_worker_core
-    );
+    for (b = 0; b < num_balancers; b++) {
+      balancer[b].zw = pfring_zc_run_balancer_v2(
+        balancer[b].inzqs, 
+        balancer[b].outzqs, 
+        balancer[b].num_devices, 
+        num_consumer_queues,
+        balancer[b].wsp,
+        round_robin_bursts_policy,
+        idle_func,
+        filter_func,
+        NULL,
+        distr_func,
+        (void *) ((long) num_consumer_queues),
+        !wait_for_packet, 
+        bind_worker_core
+      );
+    }
 
   } else { /* fanout */
-    outzmq = pfring_zc_create_multi_queue(outzqs, num_consumer_queues);
 
-    if (outzmq == NULL) {
-      trace(TRACE_ERROR, "pfring_zc_create_multi_queue error [%s]\n", strerror(errno));
-      pfring_zc_destroy_cluster(zc);
-      return -1;
+    for (b = 0; b < num_balancers; b++) {
+      balancer[b].outzmq = pfring_zc_create_multi_queue(balancer[b].outzqs, num_consumer_queues);
+
+      if (balancer[b].outzmq == NULL) {
+        trace(TRACE_ERROR, "pfring_zc_create_multi_queue error [%s]\n", strerror(errno));
+        pfring_zc_destroy_cluster(zc);
+        return -1;
+      }
     }
 
     switch (hash_mode) {
@@ -1659,43 +1711,47 @@ int main(int argc, char* argv[]) {
       break;
     }
 
-    if (use_api_v3)
-      zw = pfring_zc_run_fanout_v3(
-        inzqs, 
-        outzmq, 
-        num_devices,
-        wsp,
-        round_robin_bursts_policy, 
-        idle_func,
-        filter_func,
-        NULL,
-        distr_func_v3,
-        (void *) ((long) num_consumer_queues),
-        !wait_for_packet, 
-        bind_worker_core
-      );
-    else
-      zw = pfring_zc_run_fanout_v2(
-        inzqs, 
-        outzmq, 
-        num_devices,
-        wsp,
-        round_robin_bursts_policy, 
-        idle_func,
-        filter_func,
-        NULL,
-        distr_func,
-        (void *) ((long) num_consumer_queues),
-        !wait_for_packet, 
-        bind_worker_core
-      );
+    for (b = 0; b < num_balancers; b++) {
+      if (use_api_v3)
+        balancer[b].zw = pfring_zc_run_fanout_v3(
+          balancer[b].inzqs, 
+          balancer[b].outzmq, 
+          balancer[b].num_devices,
+          balancer[b].wsp,
+          round_robin_bursts_policy, 
+          idle_func,
+          filter_func,
+          NULL,
+          distr_func_v3,
+          (void *) ((long) num_consumer_queues),
+          !wait_for_packet, 
+          bind_worker_core
+        );
+      else
+        balancer[b].zw = pfring_zc_run_fanout_v2(
+          balancer[b].inzqs, 
+          balancer[b].outzmq, 
+          balancer[b].num_devices,
+          balancer[b].wsp,
+          round_robin_bursts_policy, 
+          idle_func,
+          filter_func,
+          NULL,
+          distr_func,
+          (void *) ((long) num_consumer_queues),
+          !wait_for_packet, 
+          bind_worker_core
+        );
+    }
 
   }
 
-  if (zw == NULL) {
-    trace(TRACE_ERROR, "pfring_zc_run_balancer error [%s]", strerror(errno));
-    pfring_zc_destroy_cluster(zc);
-    return -1;
+  for (b = 0; b < num_balancers; b++) {
+    if (balancer[b].zw == NULL) {
+      trace(TRACE_ERROR, "pfring_zc_run_balancer error [%s]", strerror(errno));
+      pfring_zc_destroy_cluster(zc);
+      return -1;
+    }
   }
 
   /* Bind also main thread to the worker core */
