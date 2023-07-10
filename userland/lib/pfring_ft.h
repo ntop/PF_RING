@@ -1,6 +1,6 @@
 /*
  *
- * (C) 2018-2021 - ntop
+ * (C) 2018-2023 - ntop
  *
  *  http://www.ntop.org/
  *
@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 47
+#define FT_API_VERSION 53
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
