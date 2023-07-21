@@ -47,6 +47,12 @@ else
   LIBBPF_COPY=""
 fi
 
+if test -f /usr/bin/debsigs; then
+  SIGN_CMD="/usr/bin/debsigs"
+else
+  SIGN_CMD="dpkg-sig"
+fi
+
 dnl> The step below is necessary to make sure the package will work on the
 dnl> target system without having to deal with ldconfig
 dnl> if test -d /opt/accolade/lib/;  then sudo cp /opt/accolade/lib/libanic.so /usr/local/lib; fi
@@ -66,6 +72,7 @@ AC_SUBST(PRE_BUILD_EXAMPLES)
 AC_SUBST(NDPI_DEP)
 AC_SUBST(LIBBPF_DEST)
 AC_SUBST(LIBBPF_COPY)
+AC_SUBST(SIGN_CMD)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(debian/changelog)
