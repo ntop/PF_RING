@@ -46,9 +46,7 @@ if test "$CENTOS_RELEASE" -ne 6; then
 fi
 
 MAKE_SNORT=""
-if test "$CENTOS_RELEASE" -ne 8; then
-  MAKE_SNORT="make snort"
-fi
+dnl>MAKE_SNORT="make snort"
 
 RPM_SIGN_CMD="rpm --addsign"
 if test "$CENTOS_RELEASE" -ne 8; then

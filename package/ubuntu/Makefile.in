@@ -40,8 +40,8 @@ pre-build-core:
 	rm -rf $(HERE)/debian/pfring
 	mkdir -p debian/lib debian/usr/include/linux debian/usr/bin debian/usr/lib debian/usr/local/lib debian/usr/local/bin @LIBBPF_DEST@
 	cd $(PF_RING_HOME)/userland; ./configure --includedir=/usr/include --libdir=/usr/lib; make
-	cd $(PF_RING_HOME)/userland/snort/pfring-daq-module; autoreconf -ivf; ./configure; make; mkdir -p $(HERE)/debian/usr/local/lib/daq; cp $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.la $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.so $(HERE)/debian/usr/local/lib/daq
-	cd $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc; autoreconf -ivf; ./configure; make; mkdir -p $(HERE)/debian/usr/local/lib/daq; cp $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.la $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.so $(HERE)/debian/usr/local/lib/daq
+	#cd $(PF_RING_HOME)/userland/snort/pfring-daq-module; autoreconf -ivf; ./configure; make; mkdir -p $(HERE)/debian/usr/local/lib/daq; cp $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.la $(PF_RING_HOME)/userland/snort/pfring-daq-module/.libs/daq_pfring.so $(HERE)/debian/usr/local/lib/daq
+	#cd $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc; autoreconf -ivf; ./configure; make; mkdir -p $(HERE)/debian/usr/local/lib/daq; cp $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.la $(PF_RING_HOME)/userland/snort/pfring-daq-module-zc/.libs/daq_pfring_zc.so $(HERE)/debian/usr/local/lib/daq
 	cd $(PF_RING_HOME)/userland/lib; make install DESTDIR=$(HERE)/debian
 	cd $(PF_RING_HOME)/userland/libpcap; ./configure; make; cp libpcap* $(HERE)/debian/usr/local/lib/; cd $(HERE)/debian/usr/local/lib/; ln -sf $(shell ls $(PF_RING_HOME)/userland/libpcap/libpcap.so.* | xargs -n 1 basename) libpcap.so
 	cd $(PF_RING_HOME)/kernel/linux/; cp pf_ring.h $(HERE)/debian/usr/include/linux/
