@@ -4599,7 +4599,7 @@ pcap_read_pf_ring(pcap_t *handle, int max_packets, pcap_handler callback, u_char
 	if (pkts < max_packets)
 		goto pcap_read_pf_ring_next;
 
-	return 1;
+	return pkts;
 }
 #endif
 
