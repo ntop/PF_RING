@@ -50,7 +50,9 @@
 
 #define POW2(n) ((n & (n - 1)) == 0)
 
-#define MAX_PACKET_SIZE 16018
+/* Max MTU is 16K on Ethernet, 64K on loopback */
+//#define MAX_PACKET_SIZE 16018
+#define MAX_PACKET_SIZE 65535
 
 struct packet {
   u_int32_t id;

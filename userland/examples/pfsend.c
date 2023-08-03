@@ -98,10 +98,12 @@ u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int32_t pkt_loop = 0, pkt_loop_sent = 0, uniq_pkts_per_sec = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
+u_int32_t mtu = 1500;
 struct timeval lastTime, startTime;
 int reforge_ip = 0, on_the_fly_reforging = 0;
 int send_len = 60;
 int daemon_mode = 0;
+
 
 #define DEFAULT_DEVICE     "eth0"
 
@@ -406,6 +408,7 @@ int main(int argc, char* argv[]) {
     case 'l':
       send_len = atoi(optarg);
       if (send_len > MAX_PACKET_SIZE) send_len = MAX_PACKET_SIZE;
+      if (send_len > mtu) mtu = send_len;
       break;
     case 'L':
       forge_vlan = 1;
@@ -514,7 +517,7 @@ int main(int argc, char* argv[]) {
   if(bpfFilter != NULL)
     flags |= PF_RING_TX_BPF;
 
-  pd = pfring_open(device, 1500, flags);
+  pd = pfring_open(device, mtu, flags);
   if(pd == NULL) {
     printf("pfring_open error [%s] (pf_ring not loaded or interface %s is down ?)\n", 
            strerror(errno), device);
