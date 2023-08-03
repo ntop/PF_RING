@@ -73,6 +73,7 @@ struct {
   u_int32_t num_devices;
   u_int32_t num_real_devices;
   u_int32_t num_in_queues;
+  int bind_worker_core;
   char *device_list;
   char **devices;
   pfring_zc_worker *zw;
@@ -96,7 +97,6 @@ int gtpc_fwd_version = 0;
 int cluster_id = DEFAULT_CLUSTER_ID+4;
 int metadata_len = 0;
 
-int bind_worker_core = -1;
 int bind_time_pulse_core = -1;
 
 u_int32_t time_pulse_resolution = 0;
@@ -665,7 +665,7 @@ void printHelp(void) {
   printf("-S <core id>     Enable Time Pulse thread and bind it to a core\n");
   printf("-R <nsec>        Time resolution (nsec) when using Time Pulse thread\n"
          "                 Note: in non-time-sensitive applications use >= 100usec to reduce cpu load\n");
-  printf("-g <core id>     Bind this app to a core\n");
+  printf("-g <id[:id:..]>  Bind this app to a core (colon-separated list with multuple -i)\n");
   printf("-q <size>        Number of slots in each consumer queue (default: %u)\n", QUEUE_LEN);
   printf("-b <size>        Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
   printf("-w               Use hw aggregation when specifying multiple devices in -i (when supported)\n");
@@ -1018,7 +1018,8 @@ int64_t fo_multiapp_direct_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfr
 int main(int argc, char* argv[]) {
   char c;
   char *applications = NULL, *app, *app_pos = NULL;
-  char *vm_sockets = NULL, *vm_sock; 
+  char *vm_sockets = NULL, *vm_sock;
+  char *id;
   long b, i, j, off;
   int hash_mode = 0, hw_aggregation = 0;
   int num_additional_buffers = 0;
@@ -1052,12 +1053,15 @@ int main(int argc, char* argv[]) {
   pfring_zc_distribution_func distr_func = NULL;
   pfring_zc_distribution_func_v3 distr_func_v3 = NULL;
   pfring_zc_filtering_func filter_func = NULL;
+  u_int numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 
   start_time.tv_sec = 0;
 
   rx_open_flags = PF_RING_ZC_DEVICE_CAPTURE_INJECTED;
 
   memset(balancer, 0, sizeof(balancer));
+  for (b = 0; b < MAX_BALANCERS; b++)
+    balancer[b].bind_worker_core = -1;
 
   if (argc == 1) {
     if (load_args_from_file(DEFAULT_CONF_FILE, &opt_argc, &opt_argv) != 0) {
@@ -1104,7 +1108,13 @@ int main(int argc, char* argv[]) {
         append_bpf_file_list(&in_bpf_file_list, optarg);
       break;
     case 'g':
-      bind_worker_core = atoi(optarg);
+      b = 0;
+      id = strtok(optarg, ":");
+      while (id != NULL && b < MAX_BALANCERS) {
+        balancer[b].bind_worker_core = atoi(id) % numCPU;
+        b++;
+        id = strtok(NULL, ":");
+      }
       break;
     case 'h':
       printHelp();
@@ -1382,7 +1392,7 @@ int main(int argc, char* argv[]) {
     max_packet_len(balancer[0].devices[0]),
     metadata_len,
     tot_num_buffers, 
-    pfring_zc_numa_get_cpu_node(bind_worker_core),
+    pfring_zc_numa_get_cpu_node(balancer[0].bind_worker_core),
     hugepages_mountpoint,
     cluster_flags 
   );
@@ -1625,8 +1635,6 @@ int main(int argc, char* argv[]) {
     sleep(wait_time_sec);    
   }
 
-  trace(TRACE_NORMAL, "Running...");
-
   if (hash_mode == 0 || 
       ((hash_mode == 1 || 
         hash_mode == 4 || 
@@ -1657,6 +1665,9 @@ int main(int argc, char* argv[]) {
     }
 
     for (b = 0; b < num_balancers; b++) {
+
+      trace(TRACE_NORMAL, "Running balancer #%u on core %d...", b, balancer[b].bind_worker_core);
+
       balancer[b].zw = pfring_zc_run_balancer_v2(
         balancer[b].inzqs, 
         balancer[b].outzqs, 
@@ -1670,7 +1681,7 @@ int main(int argc, char* argv[]) {
         distr_func,
         (void *) ((long) num_consumer_queues),
         !wait_for_packet, 
-        bind_worker_core
+        balancer[b].bind_worker_core
       );
     }
 
@@ -1712,6 +1723,9 @@ int main(int argc, char* argv[]) {
     }
 
     for (b = 0; b < num_balancers; b++) {
+
+      trace(TRACE_NORMAL, "Running balancer #%u on core %d...", b, balancer[b].bind_worker_core);
+
       if (use_api_v3)
         balancer[b].zw = pfring_zc_run_fanout_v3(
           balancer[b].inzqs, 
@@ -1725,7 +1739,7 @@ int main(int argc, char* argv[]) {
           distr_func_v3,
           (void *) ((long) num_consumer_queues),
           !wait_for_packet, 
-          bind_worker_core
+          balancer[b].bind_worker_core
         );
       else
         balancer[b].zw = pfring_zc_run_fanout_v2(
@@ -1740,7 +1754,7 @@ int main(int argc, char* argv[]) {
           distr_func,
           (void *) ((long) num_consumer_queues),
           !wait_for_packet, 
-          bind_worker_core
+          balancer[b].bind_worker_core
         );
     }
 
@@ -1755,7 +1769,7 @@ int main(int argc, char* argv[]) {
   }
 
   /* Bind also main thread to the worker core */
-  bind2core(bind_worker_core);
+  bind2core(balancer[0].bind_worker_core);
   
   if (user != NULL) {
     if (drop_privileges(user) == 0)
