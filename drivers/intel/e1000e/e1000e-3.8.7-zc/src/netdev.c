@@ -4838,6 +4838,7 @@ static void e1000e_systim_reset(struct e1000_adapter *adapter)
 	if (!(adapter->flags & FLAG_HAS_HW_TIMESTAMP))
 		return;
 
+#ifndef HAVE_PTP_CLOCK_INFO_ADJFINE
 	if (info->adjfreq) {
 		/* restore the previous ptp frequency delta */
 		ret_val = info->adjfreq(info, adapter->ptp_delta);
@@ -4854,6 +4855,7 @@ static void e1000e_systim_reset(struct e1000_adapter *adapter)
 			 ret_val);
 		return;
 	}
+#endif
 
 	/* reset the systim ns time counter */
 	spin_lock_irqsave(&adapter->systim_lock, flags);

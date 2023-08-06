@@ -14,6 +14,7 @@
 #include <asm/tsc.h>
 #endif
 
+#ifndef HAVE_PTP_CLOCK_INFO_ADJFINE
 /**
  * e1000e_phc_adjfreq - adjust the frequency of the hardware clock
  * @ptp: ptp clock structure
@@ -66,6 +67,7 @@ static int e1000e_phc_adjfreq(struct ptp_clock_info *ptp, s32 delta)
 
 	return 0;
 }
+#endif
 
 /**
  * e1000e_phc_adjtime - Shift the time of the hardware clock
@@ -311,7 +313,9 @@ static const struct ptp_clock_info e1000e_ptp_clock_info = {
 	.n_pins		= 0,
 #endif
 	.pps		= 0,
+#ifndef HAVE_PTP_CLOCK_INFO_ADJFINE
 	.adjfreq	= e1000e_phc_adjfreq,
+#endif
 	.adjtime	= e1000e_phc_adjtime,
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 #ifdef HAVE_PTP_SYS_OFFSET_EXTENDED_IOCTL
