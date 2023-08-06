@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 2013 - 2021 Intel Corporation. */
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* Copyright (C) 2013-2023 Intel Corporation */
 
 /* this lets the macros that return timespec64 or structs compile cleanly with
  * W=2
@@ -68,7 +68,7 @@ static struct kobj_attribute ptp_pins_attribute = __ATTR(pins, 0660,
 
 enum i40e_ptp_gpio_pin_state {
 	end = -2,
-	invalid,
+	empty,
 	off,
 	in_A,
 	in_B,
@@ -348,29 +348,55 @@ static void i40e_ptp_convert_to_hwtstamp(struct skb_shared_hwtstamps *hwtstamps,
 	hwtstamps->hwtstamp = ns_to_ktime(timestamp);
 }
 
+#ifdef HAVE_PTP_CLOCK_INFO_ADJFINE
 /**
+ * i40e_ptp_adjfine - Adjust the PHC frequency
+ * @ptp: The PTP clock structure
+ * @scaled_ppm: Scaled parts per million adjustment from the base
+ *
+ * Adjust the frequency of the PHC by the indicated delta from the base
+ * frequency.
+ *
+ * Scaled parts per million is ppm with a 16 bit binary fractional field.
+ **/
+static int i40e_ptp_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
+#else
+/*
  * i40e_ptp_adjfreq - Adjust the PHC frequency
  * @ptp: The PTP clock structure
  * @ppb: Parts per billion adjustment from the base
  *
  * Adjust the frequency of the PHC by the indicated parts per billion from the
  * base frequency.
- **/
+ */
 static int i40e_ptp_adjfreq(struct ptp_clock_info *ptp, s32 ppb)
+#endif /* HAVE_PTP_CLOCK_INFO_ADJFINE */
 {
 	struct i40e_pf *pf = container_of(ptp, struct i40e_pf, ptp_caps);
 	struct i40e_hw *hw = &pf->hw;
 	u64 adj, freq, diff;
 	int neg_adj = 0;
 
+#ifdef HAVE_PTP_CLOCK_INFO_ADJFINE
+	if (scaled_ppm < 0) {
+		neg_adj = 1;
+		scaled_ppm = -scaled_ppm;
+	}
+#else
 	if (ppb < 0) {
 		neg_adj = 1;
 		ppb = -ppb;
 	}
+#endif
 
 	freq = I40E_PTP_40GB_INCVAL;
+#ifdef HAVE_PTP_CLOCK_INFO_ADJFINE
+	freq *= (u64)scaled_ppm;
+	diff = div64_u64(freq, 1000000ULL << 16);
+#else
 	freq *= ppb;
 	diff = div_u64(freq, 1000000000ULL);
+#endif
 
 	if (neg_adj)
 		adj = I40E_PTP_40GB_INCVAL - diff;
@@ -1205,11 +1231,19 @@ static int i40e_ptp_set_pins(struct i40e_pf *pf,
 	else if (pin_caps == CAN_DO_PINS)
 		return 0;
 
-	if (pins->sdp3_2 == invalid)
+	if ((pins->sdp3_2 < empty || pins->sdp3_2 > out_B) ||
+	    (pins->sdp3_3 < empty || pins->sdp3_3 > out_B) ||
+	    (pins->gpio_4 < empty || pins->gpio_4 > out_B)) {
+		dev_warn(&pf->pdev->dev,
+			 "The provided PTP configuration set contains meaningless values that may potentially pose a safety threat.\n");
+		return -EPERM;
+	}
+
+	if (pins->sdp3_2 == empty)
 		pins->sdp3_2 = pf->ptp_pins->sdp3_2;
-	if (pins->sdp3_3 == invalid)
+	if (pins->sdp3_3 == empty)
 		pins->sdp3_3 = pf->ptp_pins->sdp3_3;
-	if (pins->gpio_4 == invalid)
+	if (pins->gpio_4 == empty)
 		pins->gpio_4 = pf->ptp_pins->gpio_4;
 	while (i40e_ptp_pin_led_allowed_states[i].sdp3_2 != end) {
 		if (pins->sdp3_2 == i40e_ptp_pin_led_allowed_states[i].sdp3_2 &&
@@ -1399,7 +1433,7 @@ static int i40e_ptp_set_timestamp_mode(struct i40e_pf *pf,
 	case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 		if (!(pf->hw_features & I40E_HW_PTP_L4_CAPABLE))
 			return -ERANGE;
-		/* fall through */
+		fallthrough;
 	case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
 	case HWTSTAMP_FILTER_PTP_V2_L2_SYNC:
 	case HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ:
@@ -1558,7 +1592,11 @@ static long i40e_ptp_create_clock(struct i40e_pf *pf)
 		sizeof(pf->ptp_caps.name) - 1);
 	pf->ptp_caps.owner = THIS_MODULE;
 	pf->ptp_caps.max_adj = 999999999;
+#ifdef HAVE_PTP_CLOCK_INFO_ADJFINE
+	pf->ptp_caps.adjfine = i40e_ptp_adjfine;
+#else
 	pf->ptp_caps.adjfreq = i40e_ptp_adjfreq;
+#endif
 	pf->ptp_caps.adjtime = i40e_ptp_adjtime;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 	pf->ptp_caps.gettime64 = i40e_ptp_gettime;
