@@ -5565,10 +5565,28 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 
   debug_printk(2, "ring_bind() called\n");
 
-  /*
-   * Check legality
-   */
-  if (addr_len == sizeof(struct sockaddr)) {
+  if (addr_len == sizeof(struct sockaddr_ll)) { /* Safety check */
+
+    struct sockaddr_ll *sll = (struct sockaddr_ll *) sa;
+    int ifindex = sll->sll_ifindex;
+
+    if (sll->sll_family != PF_RING)
+      return(-EINVAL);
+
+    if(ifindex == ANY_IFINDEX ||
+       ifindex == NONE_IFINDEX)
+      net = NULL; /* any namespace*/
+
+    dev = pf_ring_device_ifindex_lookup(net, ifindex);
+
+    if (dev == NULL) {
+      printk("[PF_RING] bind: ifindex %d not found\n", ifindex);
+      return -EINVAL;
+    }
+
+#ifndef RING_USE_SOCKADDR_LL
+  } else if (addr_len == sizeof(struct sockaddr)) { /* Deprecated */
+
     char name[sizeof(sa->sa_data)+1];
 
     if (sa->sa_family != PF_RING)
@@ -5591,24 +5609,7 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
       printk("[PF_RING] bind: %s not found\n", name);
       return -EINVAL;
     }
-
-  } else if (addr_len == sizeof(struct sockaddr_ll)) {
-    struct sockaddr_ll *sll = (struct sockaddr_ll *) sa;
-    int ifindex = sll->sll_ifindex;
-
-    if (sll->sll_family != PF_RING)
-      return(-EINVAL);
-
-    if(ifindex == ANY_IFINDEX ||
-       ifindex == NONE_IFINDEX)
-      net = NULL; /* any namespace*/
-
-    dev = pf_ring_device_ifindex_lookup(net, ifindex);
-
-    if (dev == NULL) {
-      printk("[PF_RING] bind: ifindex %d not found\n", ifindex);
-      return -EINVAL;
-    }
+#endif
 
   } else {
     return(-EINVAL);

@@ -32,6 +32,8 @@
 #define RING_MAGIC
 #define RING_MAGIC_VALUE             0x88
 
+#define RING_USE_SOCKADDR_LL /* use sockaddr_ll instead of sockaddr */
+
 #define MIN_NUM_SLOTS                 512
 #define DEFAULT_NUM_SLOTS            4096
 #define DEFAULT_BUCKET_LEN            128

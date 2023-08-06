@@ -313,12 +313,10 @@ int pfring_mod_set_vlan_id(pfring *ring, u_int16_t vlan_id) {
 
 /* **************************************************** */
 
-#define USE_SOCKADDR_LL
-
 int pfring_mod_bind(pfring *ring, char *device_name) {
-#ifdef USE_SOCKADDR_LL
+#ifdef RING_USE_SOCKADDR_LL
   struct sockaddr_ll sll;
-#else
+#else /* deprecated */
   struct sockaddr sa;
 #endif
 
@@ -344,7 +342,7 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
   ring->sock_tx.sll_protocol = htons(ETH_P_ALL);
 
   for (it = device->elems; it != NULL; it=it->next) {
-#ifdef USE_SOCKADDR_LL
+#ifdef RING_USE_SOCKADDR_LL
     if (pfring_mod_get_device_ifindex(ring, it->ifname, &ifindex) == 0) {
       memset(&sll, 0, sizeof(sll));
 
@@ -356,7 +354,7 @@ int pfring_mod_bind(pfring *ring, char *device_name) {
     } else {
       rc = -1;
     }
-#else
+#else /* deprecated */
     memset(&sa, 0, sizeof(sa));
     sa.sa_family = PF_RING;
     if (strlen(it->ifname > sizeof(sa.sa_data))) {
