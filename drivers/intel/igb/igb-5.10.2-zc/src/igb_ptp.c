@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0
-/* Copyright(c) 2007 - 2022 Intel Corporation. */
+/* SPDX-License-Identifier: @SPDX@ */
+/* Copyright(c) 2007 - 2023 Intel Corporation. */
 
 /******************************************************************************
  Copyright(c) 2011 Richard Cochran <richardcochran@gmail.com> for some of the
@@ -67,6 +67,7 @@
 #define INCVALUE_82576_MASK		GENMASK(E1000_TIMINCA_16NS_SHIFT - 1, 0)
 #define INCVALUE_82576			(16u << IGB_82576_TSYNC_SHIFT)
 #define IGB_NBITS_82580			40
+#define IGB_82580_BASE_PERIOD		0x800000000
 
 /*
  * SYSTIM read access for the 82576
@@ -202,29 +203,22 @@ static void igb_ptp_systim_to_hwtstamp(struct igb_adapter *adapter,
  * PTP clock operations
  */
 
-static int igb_ptp_adjfreq_82576(struct ptp_clock_info *ptp, s32 ppb)
+/**
+ * igb_ptp_adjfine_82576
+ * @ptp: the ptp clock structure
+ * @scaled_ppm: scaled parts per million adjustment from base
+ *
+ * Adjust the frequency of the ptp cycle counter by the
+ * indicated scaled_ppm from the base frequency.
+ */
+static int igb_ptp_adjfine_82576(struct ptp_clock_info *ptp, long scaled_ppm)
 {
 	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
 					       ptp_caps);
 	struct e1000_hw *hw = &igb->hw;
-	int neg_adj = 0;
-	u64 rate;
-	u32 incvalue;
+	u64 incvalue;
 
-	if (ppb < 0) {
-		neg_adj = 1;
-		ppb = -ppb;
-	}
-	rate = ppb;
-	rate <<= 14;
-	rate = div_u64(rate, 1953125);
-
-	incvalue = 16 << IGB_82576_TSYNC_SHIFT;
-
-	if (neg_adj)
-		incvalue -= rate;
-	else
-		incvalue += rate;
+	incvalue = adjust_by_scaled_ppm(INCVALUE_82576, scaled_ppm);
 
 	E1000_WRITE_REG(hw, E1000_TIMINCA, INCPERIOD_82576
 			| (incvalue & INCVALUE_82576_MASK));
@@ -232,22 +226,51 @@ static int igb_ptp_adjfreq_82576(struct ptp_clock_info *ptp, s32 ppb)
 	return 0;
 }
 
-static int igb_ptp_adjfreq_82580(struct ptp_clock_info *ptp, s32 ppb)
+#ifndef HAVE_PTP_CLOCK_INFO_ADJFINE
+/**
+ * igb_ptp_adjfreq_82576 - Adjust the frequency of the clock
+ * @ptp: the driver's PTP info structure
+ * @ppb: Parts per billion adjustment from the base
+ *
+ * Adjust the frequency of the clock by the indicated parts per billion from the
+ * base frequency.
+ */
+static int igb_ptp_adjfreq_82576(struct ptp_clock_info *ptp, s32 ppb)
+{
+	long scaled_ppm;
+
+	/*
+	 * We want to calculate
+	 *
+	 *    scaled_ppm = ppb * 2^16 / 1000
+	 *
+	 * which simplifies to
+	 *
+	 *    scaled_ppm = ppb * 2^13 / 125
+	 */
+	scaled_ppm = ((long)ppb << 13) / 125;
+	return ixgbe_ptp_adjfine_82576(info, scaled_ppm);
+}
+#endif /* HAVE_PTP_CLOCK_INFO_ADJFINE */
+
+/**
+ * igb_ptp_adjfine_82580
+ * @ptp: the ptp clock structure
+ * @scaled_ppm: scaled parts per million adjustment from base
+ *
+ * Adjust the frequency of the ptp cycle counter by the
+ * indicated scaled_ppm from the base frequency.
+ */
+static int igb_ptp_adjfine_82580(struct ptp_clock_info *ptp, long scaled_ppm)
 {
 	struct igb_adapter *igb = container_of(ptp, struct igb_adapter,
 					       ptp_caps);
 	struct e1000_hw *hw = &igb->hw;
-	int neg_adj = 0;
+	bool neg_adj;
 	u64 rate;
 	u32 inca;
 
-	if (ppb < 0) {
-		neg_adj = 1;
-		ppb = -ppb;
-	}
-	rate = ppb;
-	rate <<= 26;
-	rate = div_u64(rate, 1953125);
+	neg_adj = diff_by_scaled_ppm(IGB_82580_BASE_PERIOD, scaled_ppm, &rate);
 
 	/* At 2.5G speeds, the TIMINCA register on I354 updates the clock 2.5x
 	 * as quickly. Account for this by dividing the adjustment by 2.5.
@@ -270,6 +293,33 @@ static int igb_ptp_adjfreq_82580(struct ptp_clock_info *ptp, s32 ppb)
 
 	return 0;
 }
+
+#ifndef HAVE_PTP_CLOCK_INFO_ADJFINE
+/**
+ * igb_ptp_adjfreq_82580 - Adjust the frequency of the clock
+ * @ptp: the driver's PTP info structure
+ * @ppb: Parts per billion adjustment from the base
+ *
+ * Adjust the frequency of the clock by the indicated parts per billion from the
+ * base frequency.
+ */
+static int igb_ptp_adjfreq_82580(struct ptp_clock_info *ptp, s32 ppb)
+{
+	long scaled_ppm;
+
+	/*
+	 * We want to calculate
+	 *
+	 *    scaled_ppm = ppb * 2^16 / 1000
+	 *
+	 * which simplifies to
+	 *
+	 *    scaled_ppm = ppb * 2^13 / 125
+	 */
+	scaled_ppm = ((long)ppb << 13) / 125;
+	return igb_ptp_adjfine_82580(info, scaled_ppm);
+}
+#endif /* HAVE_PTP_CLOCK_INFO_ADJFINE */
 
 static int igb_ptp_adjtime_82576(struct ptp_clock_info *ptp, s64 delta)
 {
@@ -452,7 +502,7 @@ void igb_ptp_tx_work(struct work_struct *work)
 				   IGB_PTP_TX_TIMEOUT)) {
 		dev_kfree_skb_any(adapter->ptp_tx_skb);
 		adapter->ptp_tx_skb = NULL;
-		clear_bit_unlock(__IGB_PTP_TX_IN_PROGRESS, &adapter->state);
+		clear_bit_unlock(__IGB_PTP_TX_IN_PROGRESS, adapter->state);
 		adapter->tx_hwtstamp_timeouts++;
 		dev_warn(&adapter->pdev->dev, "clearing Tx timestamp hang\n");
 		return;
@@ -542,7 +592,7 @@ void igb_ptp_tx_hwtstamp(struct igb_adapter *adapter)
 	skb_tstamp_tx(adapter->ptp_tx_skb, &shhwtstamps);
 	dev_kfree_skb_any(adapter->ptp_tx_skb);
 	adapter->ptp_tx_skb = NULL;
-	clear_bit_unlock(__IGB_PTP_TX_IN_PROGRESS, &adapter->state);
+	clear_bit_unlock(__IGB_PTP_TX_IN_PROGRESS, adapter->state);
 }
 
 /**
@@ -833,7 +883,11 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.max_adj = 999999881;
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.pps = 0;
+#ifdef HAVE_PTP_CLOCK_INFO_ADJFINE
+		adapter->ptp_caps.adjfine = igb_ptp_adjfine_82576;
+#else
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82576;
+#endif /* HAVE_PTP_CLOCK_INFO_ADJFINE */
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_82576;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = igb_ptp_gettime_82576;
@@ -859,7 +913,11 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.max_adj = 62499999;
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.pps = 0;
+#ifdef HAVE_PTP_CLOCK_INFO_ADJFINE
+		adapter->ptp_caps.adjfine = igb_ptp_adjfine_82580;
+#else
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82580;
+#endif /* HAVE_PTP_CLOCK_INFO_ADJFINE */
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_82576;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = igb_ptp_gettime_82576;
@@ -883,7 +941,11 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.max_adj = 62499999;
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.pps = 0;
+#ifdef HAVE_PTP_CLOCK_INFO_ADJFINE
+		adapter->ptp_caps.adjfine = igb_ptp_adjfine_82580;
+#else
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82580;
+#endif /* HAVE_PTP_CLOCK_INFO_ADJFINE */
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_i210;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = igb_ptp_gettime_i210;
@@ -970,7 +1032,7 @@ void igb_ptp_stop(struct igb_adapter *adapter)
 	if (adapter->ptp_tx_skb) {
 		dev_kfree_skb_any(adapter->ptp_tx_skb);
 		adapter->ptp_tx_skb = NULL;
-		clear_bit_unlock(__IGB_PTP_TX_IN_PROGRESS, &adapter->state);
+		clear_bit_unlock(__IGB_PTP_TX_IN_PROGRESS, adapter->state);
 	}
 
 	if (adapter->ptp_clock) {
