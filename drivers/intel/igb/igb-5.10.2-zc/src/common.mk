@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: @SPDX@
-# Copyright(c) 2007 - 2023 Intel Corporation.
+# SPDX-License-Identifier: GPL-2.0
+# Copyright(c) 2007 - 2022 Intel Corporation.
 
 #
 # common Makefile rules useful for out-of-tree Linux driver builds
@@ -106,7 +106,7 @@ ifneq ($(and $(SIGN_FILE_EXISTS),$(PRIV_KEY_EXISTS),$(PUB_KEY_EXISTS)),)
     echo "*** Is public key present: ${PUB_KEY_EXISTS}" ;
   info_signed_modules += echo "*** All files are present, signing driver." ;
   sign_driver = $(shell ${SCRIPT_PATH}/sign-file sha256 intel-linux-key.key \
-                        intel-linux-key.crt ${DRIVER}.ko)
+                        intel-linux-key.crt i40e.ko)
 else
   info_signed_modules += echo "*** Files are missing, cannot sign driver." ;
   sign_driver =
@@ -199,7 +199,6 @@ warn_signed_modules += \
     echo "*** disabled for this build." ;
 endif # CONFIG_MODULE_SIG_ALL=y
 ifeq (${CONFIG_MODULE_SIG_FORCE},1)
-  warn_signed_modules += \
     echo "warning: The target kernel has CONFIG_MODULE_SIG_FORCE enabled," ; \
     echo "warning: but the signing key cannot be found. The module must" ; \
     echo "warning: be signed manually using 'scripts/sign-file'." ;
@@ -336,14 +335,6 @@ minimum_kver_check = $(eval $(call _minimum_kver_check,${1},${2},${3}))
 # refactor it into the new layout.
 
 ifneq ($(wildcard ./kcompat_defs.h),)
-# call script that populates defines automatically
-#
-# since is_kcompat_defined() is a macro, it's "computed" before any target
-# recipe, kcompat_generated_defs.h is needed prior to that, so needs to be
-# generated also via $(shell) call, which makes error handling ugly
-$(if $(shell KSRC=${KSRC} OUT=kcompat_generated_defs.h CONFFILE=${CONFIG_FILE} \
-    bash kcompat-generator.sh && echo ok), , $(error kcompat-generator.sh failed))
-
 KCOMPAT_DEFINITIONS := $(shell ${CC} ${EXTRA_CFLAGS} -E -dM \
                                      -I${KOBJ}/include \
                                      -I${KOBJ}/include/generated/uapi \
@@ -419,9 +410,8 @@ export INSTALL_MOD_DIR ?= updates/drivers/net/ethernet/intel/${DRIVER}
 # If the check_aux_bus script exists, then this driver depends on the
 # auxiliary module. Run the script to determine if we need to include
 # auxiliary files with this build.
-CHECK_AUX_BUS ?= ../scripts/check_aux_bus
-ifneq ($(call test_file,${CHECK_AUX_BUS}),)
-NEED_AUX_BUS := $(shell ${CHECK_AUX_BUS} --ksrc="${KSRC}" --build-kernel="${BUILD_KERNEL}" >/dev/null 2>&1; echo $$?)
+ifneq ($(call test_file,../scripts/check_aux_bus),)
+NEED_AUX_BUS := $(shell ../scripts/check_aux_bus --ksrc="${KSRC}" --build-kernel="${BUILD_KERNEL}" >/dev/null 2>&1; echo $$?)
 endif # check_aux_bus exists
 
 # The out-of-tree auxiliary module we ship should be moved into this
@@ -430,14 +420,13 @@ export INSTALL_AUX_DIR ?= updates/drivers/net/ethernet/intel/auxiliary
 
 # If we're installing auxiliary bus out-of-tree, the following steps are
 # necessary to ensure the relevant files get put in place.
-AUX_BUS_HEADER ?= linux/auxiliary_bus.h
 ifeq (${NEED_AUX_BUS},2)
 define auxiliary_post_install
-	install -D -m 644 Module.symvers ${INSTALL_MOD_PATH}/lib/modules/${KVER}/extern-symvers/intel_auxiliary.symvers
+	install -D -m 644 Module.symvers ${INSTALL_MOD_PATH}/lib/modules/${KVER}/extern-symvers/auxiliary.symvers
 	install -d ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}
-	mv -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_MOD_DIR}/intel_auxiliary.ko* \
-	      ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/
-	install -D -m 644 ${AUX_BUS_HEADER} ${INSTALL_MOD_PATH}/${KSRC}/include/linux/auxiliary_bus.h
+	mv -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_MOD_DIR}/auxiliary.ko \
+	      ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/auxiliary.ko
+	install -D -m 644 linux/auxiliary_bus.h ${INSTALL_MOD_PATH}/${KSRC}/include/linux/auxiliary_bus.h
 endef
 else
 auxiliary_post_install =
@@ -445,17 +434,14 @@ endif
 
 ifeq (${NEED_AUX_BUS},2)
 define auxiliary_post_uninstall
-	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/extern-symvers/intel_auxiliary.symvers
-	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/intel_auxiliary.ko*
+	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/extern-symvers/auxiliary.symvers
+	rm -f ${INSTALL_MOD_PATH}/lib/modules/${KVER}/${INSTALL_AUX_DIR}/auxiliary.ko
 	rm -f ${INSTALL_MOD_PATH}/${KSRC}/include/linux/auxiliary_bus.h
 endef
 else
 auxiliary_post_uninstall =
 endif
 
-ifeq (${NEED_AUX_BUS},2)
-EXTRA_CFLAGS += -DUSE_INTEL_AUX_BUS
-endif
 ######################
 # Kernel Build Macro #
 ######################
