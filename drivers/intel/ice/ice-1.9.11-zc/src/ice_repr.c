@@ -323,7 +323,9 @@ static const struct net_device_ops ice_repr_netdev_ops = {
 	.ndo_change_mtu = ice_repr_change_mtu,
 #endif /* HAVE_RHEL7_EXTENDED_MIN_MAX_MTU */
 #ifdef HAVE_DEVLINK_PORT_ATTR_PCI_VF
+#ifdef HAVE_NDO_GET_DEVLINK_PORT
 	.ndo_get_devlink_port = ice_repr_get_devlink_port,
+#endif
 #endif /* HAVE_DEVLINK_PORT_ATTR_PCI_VF */
 #ifdef HAVE_TC_SETUP_CLSFLOWER
 #ifdef HAVE_RHEL7_NETDEV_OPS_EXT_NDO_SETUP_TC
@@ -443,7 +445,11 @@ static int ice_repr_add(struct ice_vf *vf)
 
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
 #ifdef HAVE_DEVLINK_PORT_ATTR_PCI_VF
-	devlink_port_type_eth_set(&vf->devlink_port, repr->netdev);
+	devlink_port_type_eth_set(&vf->devlink_port
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0))
+	, repr->netdev
+#endif
+	);
 #endif /* HAVE_DEVLINK_PORT_ATTR_PCI_VF */
 #endif /* CONFIG_NET_DEVLINK */
 

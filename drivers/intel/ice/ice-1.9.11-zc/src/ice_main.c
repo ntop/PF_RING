@@ -5783,7 +5783,11 @@ static int ice_register_netdev(struct ice_pf *pf)
 	if (err)
 		goto err_devlink_create;
 
-	devlink_port_type_eth_set(&pf->devlink_port, vsi->netdev);
+	devlink_port_type_eth_set(&pf->devlink_port
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6,2,0))
+	, vsi->netdev
+#endif
+	);
 #endif /* CONFIG_NET_DEVLINK */
 
 	return 0;

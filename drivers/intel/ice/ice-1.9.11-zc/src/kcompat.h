@@ -3545,6 +3545,14 @@ _kc_netif_napi_add(struct net_device *dev, struct napi_struct *napi,
 
 #endif
 
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,2,0))
+#ifdef HAVE_NDO_GET_DEVLINK_PORT
+#undef HAVE_NDO_GET_DEVLINK_PORT
+#endif
+#define NO_DEVLINK_INFO_DRIVER_NAME_PUT
+#endif
+
 /*
  * Load the implementations file which actually defines kcompat backports.
  * Legacy backports still exist in this file, but all new backports must be

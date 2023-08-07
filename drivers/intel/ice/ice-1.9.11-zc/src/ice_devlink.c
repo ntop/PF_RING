@@ -357,11 +357,13 @@ static int ice_devlink_info_get(struct devlink *devlink,
 		}
 	}
 
+#ifndef NO_DEVLINK_INFO_DRIVER_NAME_PUT
 	err = devlink_info_driver_name_put(req, KBUILD_MODNAME);
 	if (err) {
 		NL_SET_ERR_MSG_MOD(extack, "Unable to set driver name");
 		goto out_free_ctx;
 	}
+#endif
 
 	ice_info_get_dsn(pf, ctx);
 
