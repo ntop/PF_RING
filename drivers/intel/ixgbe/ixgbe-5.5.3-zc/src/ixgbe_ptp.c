@@ -1260,7 +1260,9 @@ static long ixgbe_ptp_create_clock(struct ixgbe_adapter *adapter)
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.n_per_out = 0;
 		adapter->ptp_caps.pps = 1;
+#ifndef NO_PTP_CLOCK_INFO_ADJFREQ
 		adapter->ptp_caps.adjfreq = ixgbe_ptp_adjfreq_82599;
+#endif
 		adapter->ptp_caps.adjtime = ixgbe_ptp_adjtime_timecounter;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = ixgbe_ptp_gettime64_timecounter;
@@ -1282,7 +1284,9 @@ static long ixgbe_ptp_create_clock(struct ixgbe_adapter *adapter)
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.n_per_out = 0;
 		adapter->ptp_caps.pps = 0;
+#ifndef NO_PTP_CLOCK_INFO_ADJFREQ
 		adapter->ptp_caps.adjfreq = ixgbe_ptp_adjfreq_82599;
+#endif
 		adapter->ptp_caps.adjtime = ixgbe_ptp_adjtime_timecounter;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = ixgbe_ptp_gettime64_timecounter;
@@ -1303,7 +1307,9 @@ static long ixgbe_ptp_create_clock(struct ixgbe_adapter *adapter)
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.n_per_out = 0;
 		adapter->ptp_caps.pps = 0;
+#ifndef NO_PTP_CLOCK_INFO_ADJFREQ
 		adapter->ptp_caps.adjfreq = ixgbe_ptp_adjfreq_X550;
+#endif
 		adapter->ptp_caps.adjtime = ixgbe_ptp_adjtime_timecounter;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = ixgbe_ptp_gettime64_timecounter;

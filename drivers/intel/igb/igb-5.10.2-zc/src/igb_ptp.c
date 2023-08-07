@@ -833,7 +833,9 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.max_adj = 999999881;
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.pps = 0;
+#ifndef NO_PTP_CLOCK_INFO_ADJFREQ
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82576;
+#endif
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_82576;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = igb_ptp_gettime_82576;
@@ -859,7 +861,9 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.max_adj = 62499999;
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.pps = 0;
+#ifndef NO_PTP_CLOCK_INFO_ADJFREQ
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82580;
+#endif
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_82576;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = igb_ptp_gettime_82576;
@@ -883,7 +887,9 @@ void igb_ptp_init(struct igb_adapter *adapter)
 		adapter->ptp_caps.max_adj = 62499999;
 		adapter->ptp_caps.n_ext_ts = 0;
 		adapter->ptp_caps.pps = 0;
+#ifndef NO_PTP_CLOCK_INFO_ADJFREQ
 		adapter->ptp_caps.adjfreq = igb_ptp_adjfreq_82580;
+#endif
 		adapter->ptp_caps.adjtime = igb_ptp_adjtime_i210;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 		adapter->ptp_caps.gettime64 = igb_ptp_gettime_i210;

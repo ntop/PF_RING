@@ -7413,6 +7413,11 @@ _kc_netif_napi_add(struct net_device *dev, struct napi_struct *napi,
 
 #endif
 
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,2,0))
+#define NO_PTP_CLOCK_INFO_ADJFREQ
+#endif
+
 /*
  * Load the implementations file which actually defines kcompat backports.
  * Legacy backports still exist in this file, but all new backports must be

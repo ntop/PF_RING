@@ -1558,7 +1558,9 @@ static long i40e_ptp_create_clock(struct i40e_pf *pf)
 		sizeof(pf->ptp_caps.name) - 1);
 	pf->ptp_caps.owner = THIS_MODULE;
 	pf->ptp_caps.max_adj = 999999999;
+#ifndef NO_PTP_CLOCK_INFO_ADJFREQ
 	pf->ptp_caps.adjfreq = i40e_ptp_adjfreq;
+#endif
 	pf->ptp_caps.adjtime = i40e_ptp_adjtime;
 #ifdef HAVE_PTP_CLOCK_INFO_GETTIME64
 	pf->ptp_caps.gettime64 = i40e_ptp_gettime;
