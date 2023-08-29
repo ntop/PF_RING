@@ -1,6 +1,51 @@
 # CHANGELOG
 
 ---------------------------------------
+2023-09-01 PF_RING 8.6
+
+* PF_RING Library
+ - New Runtime Manager for injecting and removing filtering rules to the socket via Redis
+ - Fix memory leaks in PCAP module
+ - Fix caplen/MTU on loopback capture
+
+* PF_RING Kernel Module
+ - Add support for probabilistic sampling with kernel capture
+
+* FT Library
+ - Improve application protocol guess with nDPI
+
+* PF_RING Capture Modules and ZC Drivers
+ - Add initial support for NVIDIA/Mellanox BlueField
+ - Add Napatech ns timestamp in PCAP mode
+ - Add support for probabilistic sampling with userspace capture
+ - Optimize hw timestamping on ice adapters (Intel E810)
+ - Fix timestamp support when using the ZC burst API with ice adapters
+ - Fix drivers compilation on Kernel 6.x
+ - Fix drivers compilation on RH 8.8
+
+* nPCAP
+ - Fix memory corruption with big index files
+
+* PF_RING-aware Libpcap/Tcpdump
+ - Fix pcap_read_pf_ring return code (number of packets)
+
+* Examples
+ - zbalance_ipc: add support for multiple balancer threads when using NVIDIA/Mellanox adapters
+ - pfsend: add -c option to balance on dest ip rather than src up
+ - pfcount: compute drop rate in packet mode only
+ - pfcount: report expired licenses
+ - Fix ftflow_dpdk compilation on DPDK 22 or later
+ - Fix memory leaks in pcount, alldevs, preflect, ftflow_pcap, 
+
+* Misc
+ - Add support for Debian 12
+ - Add libelf and libbpf dependencies to packages
+ - Add sbsigntool dependency which includes kmodsign required by dkms
+ - Add revision to pfring-dkms dependency in packages
+ - Fix check for init/systemd presence
+ - Cleanup support for legacy adapters
+
+---------------------------------------
 2023-01-30 PF_RING 8.4
 
 * PF_RING Library
