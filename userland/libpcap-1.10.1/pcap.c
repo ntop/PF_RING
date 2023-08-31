@@ -4125,6 +4125,15 @@ pcap_inject(pcap_t *p, const void *buf, size_t size)
 		return (PCAP_ERROR);
 	}
 
+#ifdef HAVE_PF_RING
+	if (p->ring != NULL) {
+	  if (!p->ring->enabled)
+	    pfring_enable_ring(p->ring);
+	  
+	  return(pfring_send(p->ring, (char*)buf, (u_int)size, 1 /* flush */));
+	}
+#endif
+	
 	return (p->inject_op(p, buf, (int)size));
 }
 
