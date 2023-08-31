@@ -27,6 +27,7 @@
  - Fix memory corruption with big index files
 
 * PF_RING-aware Libpcap/Tcpdump
+ - Add PF_RING support to pcap_inject
  - Fix pcap_read_pf_ring return code (number of packets)
 
 * Examples
