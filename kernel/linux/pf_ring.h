@@ -23,8 +23,8 @@
 #endif /* __KERNEL__ */
 
 /* Versioning */
-#define RING_VERSION                "8.5.0"
-#define RING_VERSION_NUM           0x080500
+#define RING_VERSION                "8.6.0"
+#define RING_VERSION_NUM           0x080600
 
 /* Increment whenever we change slot or packet header layout (e.g. we add/move a field) */
 #define RING_FLOWSLOT_VERSION          20
