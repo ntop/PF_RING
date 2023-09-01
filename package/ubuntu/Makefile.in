@@ -52,7 +52,7 @@ pre-build-core:
 
 pre-build-examples:
 	cd $(PF_RING_HOME)/userland/tcpdump; ./configure; make; cp tcpdump $(HERE)/debian/usr/local/bin
-	cd $(PF_RING_HOME)/userland/examples; cp pfcount pfsend pfcount_multichannel pfsend_multichannel pfwrite $(HERE)/debian/usr/bin
+	cd $(PF_RING_HOME)/userland/examples; cp pfcount pfsend pfcount_multichannel pfsend_multichannel pfwrite pfbridge $(HERE)/debian/usr/bin
 	cd $(PF_RING_HOME)/userland/examples_zc; cp zbalance_ipc zsend zcount zcount_ipc $(HERE)/debian/usr/bin
 	cd $(PF_RING_HOME)/userland/examples_ft; cp ftflow $(HERE)/debian/usr/bin
 	cd $(PF_RING_HOME)/tools; cp n2if $(HERE)/debian/usr/bin
