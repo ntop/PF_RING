@@ -42,6 +42,7 @@
 
 #include "pfring.h"
 #include "pfutils.c"
+#include "third-party/patricia.c"
 
 struct ip_header {
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -91,9 +92,9 @@ struct tcp_header {
 } __attribute__((packed));
 
 struct packet *pkt_head = NULL;
-pfring  *pd;
+pfring  *pd, *twin_pd = NULL;
 pfring_stat pfringStats;
-char *device = NULL;
+char *device = NULL, *twin_device = NULL, *cidr = NULL;
 u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int32_t pkt_loop = 0, pkt_loop_sent = 0, uniq_pkts_per_sec = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
@@ -103,7 +104,7 @@ struct timeval lastTime, startTime;
 int reforge_ip = 0, on_the_fly_reforging = 0;
 int send_len = 60;
 int daemon_mode = 0;
-
+patricia_tree_t *patricia_v4 = NULL;
 
 #define DEFAULT_DEVICE     "eth0"
 
@@ -192,8 +193,9 @@ void printHelp(void) {
   printf("-f <.pcap file> Send packets as read from a pcap file\n");
   printf("-B <BPF>        Send packets matching the provided BPF filter only\n");
   printf("-g <core_id>    Bind this app to a core\n");
+  printf("-G <cidr>       Use packits belonging to the CIDR to the twin device\n");
   printf("-h              Print this help\n");
-  printf("-i <device>     Device name. Use device\n");
+  printf("-i <device>     Egress device name. Repeat it to specify the twin device (see -G)\n");
   printf("-l <length>     Packet length to send. Ignored with -f\n");
   printf("-n <num>        Num pkts to send (use 0 for infinite)\n");
 #if !(defined(__arm__) || defined(__mips__))
@@ -322,6 +324,90 @@ static void randomize_packets() {
 
 /* *************************************** */
 
+pfring* open_device(char *name, u_int32_t flags, int watermark) {
+  pfring *pfd = pfring_open(name, mtu, flags);
+  
+  if(pfd == NULL) {
+    printf("pfring_open error [%s] (pf_ring not loaded or interface %s is down ?)\n", 
+           strerror(errno), name);
+    return(NULL);
+  } else {
+    u_int32_t version;
+
+    pfring_set_application_name(pfd, "pfsend");
+    pfring_version(pfd, &version);
+
+    printf("Using PF_RING v.%d.%d.%d on %s\n", (version & 0xFFFF0000) >> 16,
+	   (version & 0x0000FF00) >> 8, version & 0x000000FF,
+	   name);
+  }
+
+  if(watermark > 0) {
+    int rc;
+
+    if((rc = pfring_set_tx_watermark(pfd, watermark)) < 0) {
+      if (rc == PF_RING_ERROR_NOT_SUPPORTED)
+        printf("pfring_set_tx_watermark() now supported on %s\n", name);
+      else
+        printf("pfring_set_tx_watermark() failed [rc=%d]\n", rc);
+    }
+  }
+
+  return(pfd);
+}
+
+/* ****************************************************** */
+
+int fill_prefix_v4(prefix_t *p, const struct in_addr *a, int b, int mb) {
+  memset(p, 0, sizeof(prefix_t));
+
+  if(b < 0 || b > mb)
+    return(-1);
+
+  p->add.sin.s_addr = a->s_addr, p->family = AF_INET, p->bitlen = b, p->ref_count = 0;
+
+  return(0);
+}
+
+/* *************************************** */
+
+u_int8_t compute_packet_index(u_char *pkt, u_int pkt_len) {
+  struct pfring_pkthdr hdr;
+  
+  memset(&hdr, 0, sizeof(hdr));
+  hdr.len = hdr.caplen = pkt_len;
+
+  if (pfring_parse_pkt(pkt, &hdr, 3, 0, 0) < 3) {
+    fprintf(stderr, "Parse error\n");
+    return(0); 
+  }
+
+  if(hdr.extended_hdr.parsed_pkt.ip_version == 4) {
+    prefix_t prefix;
+    struct in_addr addr;
+    patricia_node_t *node;
+    
+    addr.s_addr = htonl(hdr.extended_hdr.parsed_pkt.ipv4_src);
+    fill_prefix_v4(&prefix, &addr, 32, 32);
+    node = patricia_search_best(patricia_v4, &prefix);
+    if(node) return(1);
+    
+    addr.s_addr = htonl(hdr.extended_hdr.parsed_pkt.ipv4_dst);
+    fill_prefix_v4(&prefix, &addr, 32, 32);
+    node = patricia_search_best(patricia_v4, &prefix);
+    if(node) return(1);
+  } else {
+#if 0
+    hdr.extended_hdr.parsed_pkt.ipv6_src;
+    hdr.extended_hdr.parsed_pkt.ipv6_dst;
+#endif
+  }
+  
+  return(0);
+}
+
+/* *************************************** */
+
 int main(int argc, char* argv[]) {
   char *pcap_in = NULL, path[255] = { 0 };
   int c, i, n, verbose = 0, active_poll = 0;
@@ -358,7 +444,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:")) != -1) {
+  while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:G:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:")) != -1) {
     switch(c) {
     case 'A':
       uniq_pkts_per_sec = atoi(optarg);
@@ -380,11 +466,17 @@ int main(int argc, char* argv[]) {
       inet_aton(optarg, &dstaddr);
       reforge_ip = 1;
       break;
+    case 'G':
+      cidr = strdup(optarg);
+      break;
     case 'h':
       printHelp();
       break;
     case 'i':
-      device = strdup(optarg);
+      if(device == NULL)
+	device = strdup(optarg);
+      else
+	twin_device = strdup(optarg);
       break;
     case 'f':
       pcap_in = strdup(optarg);
@@ -501,6 +593,41 @@ int main(int argc, char* argv[]) {
       || optind < argc /* Extra argument */)
     printHelp();
 
+  if((cidr && (twin_device == NULL))
+     || ((cidr == NULL) && (twin_device != NULL))) {
+    printf("Warning: ignored -G/-i as both of them need to be specified simultaneously\n");
+    cidr = NULL, twin_device = NULL;
+  }
+
+  if(cidr != NULL) {
+    /* 192.168.0.0/16,10.0.0.0/8 */
+    char *item, *tmp;
+
+    patricia_v4 = patricia_new(32 /* IPv4 */);
+    
+    item = strtok_r(cidr, ",", &tmp);
+
+    while(item != NULL) {
+      prefix_t prefix;
+      char *tmp1, *net = strtok_r(item, "/", &tmp1);
+      int slash = 32;
+      in_addr_t a;
+      
+      if(net) {
+	char *s = strtok_r(NULL, "/", &tmp1);
+
+	if(s != NULL)
+	  slash = atoi(s);
+      }
+
+      a = inet_addr(net);
+      fill_prefix_v4(&prefix, (const struct in_addr *)&a, slash, 32);
+      patricia_lookup(patricia_v4, &prefix);
+
+      item = strtok_r(NULL, ",", &tmp);
+    }
+  }
+  
   if (num_uniq_pkts > 1000000 && !on_the_fly_reforging)
     printf("Warning: please use -O to reduce memory preallocation when many IPs are configured with -b\n");
 
@@ -517,32 +644,14 @@ int main(int argc, char* argv[]) {
   if(bpfFilter != NULL)
     flags |= PF_RING_TX_BPF;
 
-  pd = pfring_open(device, mtu, flags);
-  if(pd == NULL) {
-    printf("pfring_open error [%s] (pf_ring not loaded or interface %s is down ?)\n", 
-           strerror(errno), device);
+  if((pd = open_device(device, flags, watermark)) == NULL)
     return(-1);
-  } else {
-    u_int32_t version;
 
-    pfring_set_application_name(pd, "pfsend");
-    pfring_version(pd, &version);
-
-    printf("Using PF_RING v.%d.%d.%d\n", (version & 0xFFFF0000) >> 16,
-	   (version & 0x0000FF00) >> 8, version & 0x000000FF);
+  if(twin_device) {
+    if((twin_pd = open_device(twin_device, flags, watermark)) == NULL)
+      return(-1);
   }
-
-  if(watermark > 0) {
-    int rc;
-
-    if((rc = pfring_set_tx_watermark(pd, watermark)) < 0) {
-      if (rc == PF_RING_ERROR_NOT_SUPPORTED)
-        printf("pfring_set_tx_watermark() now supported on %s\n", device);
-      else
-        printf("pfring_set_tx_watermark() failed [rc=%d]\n", rc);
-    }
-  }
-
+  
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
   signal(SIGINT, sigproc);
@@ -615,6 +724,11 @@ int main(int argc, char* argv[]) {
             plen = 60;
           p->len = plen;
 
+	  if(cidr != NULL)
+	    p->iface_index = compute_packet_index(pkt, plen);
+	  else
+	    p->iface_index = 0;
+
           p->id = num_pcap_pkts;
 	  p->ticks_from_beginning = (((h->ts.tv_sec - beginning.tv_sec) * 1000000) + (h->ts.tv_usec - beginning.tv_usec)) * hz / 1000000;
 	  p->next = NULL;
@@ -662,6 +776,7 @@ int main(int argc, char* argv[]) {
       if (num_pcap_pkts == 0) {
         printf("Pcap file %s is empty\n", pcap_in);
         pfring_close(pd);
+	if(twin_pd) pfring_close(twin_pd);
         return(-1);
       }
 
@@ -679,6 +794,7 @@ int main(int argc, char* argv[]) {
     } else {
       printf("Unable to open file %s\n", pcap_in);
       pfring_close(pd);
+      if(twin_pd) pfring_close(twin_pd);
       return(-1);
     }
   } else {
@@ -720,6 +836,11 @@ int main(int argc, char* argv[]) {
 
       memcpy(p->pkt, buffer, send_len);
 
+      if(cidr != NULL)
+	p->iface_index = compute_packet_index(buffer, send_len);
+      else
+	p->iface_index = 0;
+      
       if (last != NULL) last->next = p;
       last = p;
 
@@ -775,13 +896,22 @@ int main(int argc, char* argv[]) {
   if(pfring_enable_ring(pd) != 0) {
     printf("Unable to enable ring :-(\n");
     pfring_close(pd);
+    if(twin_pd) pfring_close(twin_pd);
     return(-1);
+  } else if(twin_pd) {
+    pfring_enable_ring(twin_pd);
   }
-
+  
   if(bpfFilter != NULL) {
     rc = pfring_set_bpf_filter(pd, bpfFilter);
     if(rc != 0)
       fprintf(stderr, "pfring_set_bpf_filter(%s) returned %d\n", bpfFilter, rc);
+    else if(twin_pd) {
+      rc = pfring_set_bpf_filter(twin_pd, bpfFilter);
+
+      if(rc != 0)
+	fprintf(stderr, "pfring_set_bpf_filter(%s) returned %d\n", bpfFilter, rc);
+    }      
   }
 
   tosend = pkt_head;
@@ -834,7 +964,7 @@ int main(int argc, char* argv[]) {
         reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
     }
 
-    rc = pfring_send(pd, (char *) tosend->pkt, tosend->len, flush);
+    rc = pfring_send((tosend->iface_index == 0) ? pd : twin_pd, (char *) tosend->pkt, tosend->len, flush);
 
     if (unlikely(verbose))
       printf("[%d] pfring_send(%d) returned %d\n", i, tosend->len, rc);
@@ -922,7 +1052,9 @@ int main(int argc, char* argv[]) {
 
  close_socket:
   pfring_close(pd);
-
+  if(twin_pd) pfring_close(twin_pd);
+  if(patricia_v4) patricia_destroy(patricia_v4, NULL);
+  
   if (pidFileName)
     remove_pid_file(pidFileName);
 

@@ -59,6 +59,7 @@ struct packet {
   u_int16_t len;
   u_int64_t ticks_from_beginning;
   u_char *pkt;
+  u_int8_t iface_index; /* In case of multisend */
   struct packet *next;
 };
 

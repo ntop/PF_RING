@@ -1,0 +1,131 @@
+/*
+ * patricia_typedef.h
+ *
+ * Copyright (C) 2011-22 - ntop.org
+ *
+ * This file is part of nDPI, an open source deep packet inspection
+ * library based on the OpenDPI and PACE technology by ipoque GmbH
+ *
+ * nDPI is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * nDPI is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with nDPI.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+/*
+ * $Id: patricia.h,v 1.6 2005/12/07 20:53:01 dplonka Exp $
+ * Dave Plonka <plonka@doit.wisc.edu>
+ *
+ * This product includes software developed by the University of Michigan,
+ * Merit Network, Inc., and their contributors.
+ *
+ * This file had been called "radix.h" in the MRT sources.
+ *
+ * I renamed it to "patricia.h" since it's not an implementation of a general
+ * radix trie.  Also, pulled in various requirements from "mrt.h" and added
+ * some other things it could be used as a standalone API.
+
+ https://github.com/deepfield/MRT/blob/master/COPYRIGHT
+
+ Copyright (c) 1999-2013
+
+ The Regents of the University of Michigan ("The Regents") and Merit
+ Network, Inc.
+
+ Redistributions of source code must retain the above copyright notice,
+ this list of conditions and the following disclaimer.
+
+ Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+#ifndef _PATRICIA_TYPEDEF_H_
+#define _PATRICIA_TYPEDEF_H_
+
+#define UV16_MAX_USER_VALUES  2
+
+struct patricia_uv16 {
+  u_int16_t user_value, additional_user_value;
+};
+
+struct patricia_uv16_list {
+  struct patricia_uv16 value;
+  struct patricia_uv16_list *next;
+};
+
+struct patricia_uv32 {
+  u_int32_t user_value, additional_user_value;
+};
+
+/* pointer to user data (ex. route flap info) */
+union patricia_node_value_t { 
+  /* User-defined values */
+  union {
+    struct patricia_uv16 uv16[UV16_MAX_USER_VALUES];      
+    struct patricia_uv32 uv32;    
+    u_int64_t uv64;    
+    void *user_data;
+  } u;
+};
+
+typedef struct _prefix_t {
+  u_int16_t family;		/* AF_INET | AF_INET6 */
+  u_int16_t bitlen;		/* same as mask? */
+  int ref_count;		/* reference count */
+  union {
+    struct in_addr sin;
+    struct in6_addr sin6;
+    u_int8_t mac[6];
+  } add;
+} prefix_t;
+
+
+typedef struct _patricia_node_t {
+  u_int16_t bit;			/* flag if this node used */
+  prefix_t *prefix;		/* who we are in patricia tree */
+  struct _patricia_node_t *l, *r;	/* left and right children */
+  struct _patricia_node_t *parent;/* may be used */
+  void *data;			/* pointer to data */
+  void *custom_user_data;       /* pointer to custom userdata */
+  union patricia_node_value_t value;
+} patricia_node_t;
+
+typedef void (*void_fn_t)(void *data);
+typedef void (*void_fn2_t)(prefix_t *prefix, void *data);
+typedef void (*void_fn3_t)(patricia_node_t *node, void *data, void *user_data);
+
+struct patricia_tree_stats {
+  u_int64_t n_search;
+  u_int64_t n_found;
+};
+
+typedef struct _patricia_tree_t {
+  patricia_node_t 	*head;
+  u_int16_t		maxbits;	/* for IP, 32 bit addresses */
+  int num_active_node;		/* for debug purpose */
+  struct patricia_tree_stats stats;
+} patricia_tree_t;
+
+#endif /* _PATRICIA_TYPEDEF_H_ */
