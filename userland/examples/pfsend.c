@@ -378,7 +378,7 @@ u_int8_t compute_packet_index(u_char *pkt, u_int pkt_len) {
   hdr.len = hdr.caplen = pkt_len;
 
   if (pfring_parse_pkt(pkt, &hdr, 3, 0, 0) < 3) {
-    fprintf(stderr, "Parse error\n");
+    /* fprintf(stderr, "Parse error\n"); */
     return(0); 
   }
 
@@ -386,18 +386,23 @@ u_int8_t compute_packet_index(u_char *pkt, u_int pkt_len) {
     prefix_t prefix;
     struct in_addr addr;
     patricia_node_t *node;
-    
+
+    /* Match source IP */
     addr.s_addr = htonl(hdr.extended_hdr.parsed_pkt.ipv4_src);
     fill_prefix_v4(&prefix, &addr, 32, 32);
     node = patricia_search_best(patricia_v4, &prefix);
     if(node) return(1);
-    
+
+#if 0
+    /* Match destination IP */
     addr.s_addr = htonl(hdr.extended_hdr.parsed_pkt.ipv4_dst);
     fill_prefix_v4(&prefix, &addr, 32, 32);
     node = patricia_search_best(patricia_v4, &prefix);
     if(node) return(1);
+#endif
   } else {
 #if 0
+    /* TODO IPv6 support */
     hdr.extended_hdr.parsed_pkt.ipv6_src;
     hdr.extended_hdr.parsed_pkt.ipv6_dst;
 #endif
