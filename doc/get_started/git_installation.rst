@@ -74,7 +74,7 @@ and load the corresponding driver using the *load_driver.sh* script in the drive
 .. code-block:: console
 
    cd PF_RING/drivers/intel
-   make
+   ./configure && make
    cd ixgbe/ixgbe-*-zc/src
    sudo ./load_driver.sh
 
