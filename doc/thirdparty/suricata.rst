@@ -34,6 +34,8 @@ Installation
    suricata --build-info | grep PF_RING
    PF_RING support:                         yes
 
+Note: to fix compilation errors on Suricata 7.x it may be required to set the CFLAGS="-D_GNU_SOURCE" environment variable when running configure.
+
 Standard Mode
 -------------
 
