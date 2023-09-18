@@ -100,6 +100,10 @@
 #include <linux/proc_fs.h>
 #include <linux/if_arp.h>
 #include <linux/if_vlan.h>
+#include <linux/pci.h>
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(6,3,0))
+#include <linux/textsearch.h>
+#endif
 #include <net/xfrm.h>
 #include <net/sock.h>
 #include <asm/io.h>		/* needed for virt_to_phys() */
@@ -110,7 +114,6 @@
 #include <net/ipv6.h>
 #include <net/net_namespace.h>
 #include <net/netns/generic.h>
-#include <linux/pci.h>
 #include <asm/shmparam.h>
 
 #ifndef UTS_RELEASE
