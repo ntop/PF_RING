@@ -536,13 +536,13 @@ intel_82599_perfect_filter_hw_rule;
 
 /*
   Rules are defined per port. Each redirector device
-  has 4 ports (numbeder 0..3):
+  has 4 ports (numbered 0..3):
 
-  0   +--------------+   2   +--------------+
+         0   +--------------+   2   +--------------+
   LAN  <===> |              | <===> |   1/10G      |
-  |  Redirector  |       |   Ethernet   |
+             |  Redirector  |       |   Ethernet   |
   LAN  <===> |    Switch    | <===> |   Adapter    |
-  1   +--------------+   3   +--------------+
+         1   +--------------+   3   +--------------+
 
   Drop Rule
   Discard incoming packets matching the filter
