@@ -4,8 +4,7 @@ FAMILY=igb
 
 #service udev start
 
-systemctl stop pf_ring
-sleep 1
+#systemctl stop pf_ring
 
 # Remove old modules (if loaded)
 rmmod igb
