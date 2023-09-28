@@ -71,13 +71,13 @@
 #define SO_REHASH_RSS_PACKET             119
 #define SO_SET_FILTERING_SAMPLING_RATE   120
 #define SO_SET_POLL_WATERMARK_TIMEOUT    121
-#define SO_SET_DEV_TIME			 122
-#define SO_ADJ_DEV_TIME			 123
+#define SO_SET_DEV_TIME                  122
+#define SO_ADJ_DEV_TIME                  123
 #define SO_SHUTDOWN_RING                 124
 #define SO_PURGE_IDLE_RULES              125 /* inactivity (sec) */
 #define SO_SET_SOCKET_MODE               126
 #define SO_USE_SHORT_PKT_HEADER          127
-#define SO_CONTROL_DEV_QUEUE		 128
+#define SO_CONTROL_DEV_QUEUE             128
 #define SO_ENABLE_RX_PACKET_BOUNCE       131
 #define SO_SET_APPL_STATS                133
 #define SO_SET_STACK_INJECTION_MODE      134 /* stack injection/interception from userspace */
@@ -108,14 +108,14 @@
 #define SO_GET_DEVICE_IFINDEX            185
 #define SO_GET_APPL_STATS_FILE_NAME      186
 #define SO_GET_LINK_STATUS               187
-#define SO_GET_DEV_TX_TIME		 188
-#define SO_GET_DEV_STATS		 189
+#define SO_GET_DEV_TX_TIME               188
+#define SO_GET_DEV_STATS                 189
 #define SO_SELECT_ZC_DEVICE              190
 
 /* Error codes */
 #define PF_RING_ERROR_GENERIC              -1
 #define PF_RING_ERROR_INVALID_ARGUMENT     -2
-#define PF_RING_ERROR_NO_PKT_AVAILABLE	   -3
+#define PF_RING_ERROR_NO_PKT_AVAILABLE     -3
 #define PF_RING_ERROR_NO_TX_SLOT_AVAILABLE -4
 #define PF_RING_ERROR_WRONG_CONFIGURATION  -5
 #define PF_RING_ERROR_END_OF_DEMO_MODE     -6
@@ -148,19 +148,19 @@
 typedef long __kernel_time_t;
 
 struct timeval {
-  __kernel_time_t		tv_sec;		/* seconds */
-  __kernel_suseconds_t	tv_usec;	/* microseconds */
+  __kernel_time_t      tv_sec;  /* seconds */
+  __kernel_suseconds_t tv_usec; /* microseconds */
 };
 
 struct timespec {
-  __kernel_time_t	tv_sec;			/* seconds */
-  long		tv_nsec;		/* nanoseconds */
+  __kernel_time_t      tv_sec;  /* seconds */
+  long                 tv_nsec; /* nanoseconds */
 };
 
 struct timespec ns_to_timespec(const s64 nsec);
 struct timeval ns_to_timeval(const s64 nsec);
 
-#define ktime_to_timeval(kt)		ns_to_timeval((kt))
+#define ktime_to_timeval(kt) ns_to_timeval((kt))
 
 #endif
 
@@ -212,15 +212,15 @@ struct eth_vlan_hdr {
   u_int16_t h_proto;   /* packet type ID field */
 } __attribute__((packed));
 
-#define NEXTHDR_HOP     	  0
-#define NEXTHDR_IPV6    	 41
-#define NEXTHDR_ROUTING 	 43
-#define NEXTHDR_FRAGMENT	 44
-#define NEXTHDR_ESP     	 50
-#define NEXTHDR_AUTH    	 51
-#define NEXTHDR_NONE    	 59
-#define NEXTHDR_DEST    	 60
-#define NEXTHDR_MOBILITY	135
+#define NEXTHDR_HOP               0
+#define NEXTHDR_IPV6             41
+#define NEXTHDR_ROUTING          43
+#define NEXTHDR_FRAGMENT         44
+#define NEXTHDR_ESP              50
+#define NEXTHDR_AUTH             51
+#define NEXTHDR_NONE             59
+#define NEXTHDR_DEST             60
+#define NEXTHDR_MOBILITY        135
 
 struct kcompact_ipv6_hdr {
   u_int32_t         flow_lbl:24,
@@ -346,13 +346,13 @@ struct pkt_parsing_info {
 
 #define UNKNOWN_INTERFACE          -1
 #define FAKE_PACKET                -2 /* It indicates that the returned packet
-					 is faked, and that the info is basically
-					 a message from PF_RING
-				      */
+                                         is faked, and that the info is basically
+                                         a message from PF_RING
+                                      */
 
 struct pfring_extended_pkthdr {
   u_int64_t timestamp_ns;  /* Packet timestamp at ns precision. Note that if your NIC supports
-			      hardware timestamp, this is the place to read timestamp from */
+                              hardware timestamp, this is the place to read timestamp from */
 #define PKT_FLAGS_CHECKSUM_OFFLOAD    1 << 0 /* IP/TCP checksum offload enabled */
 #define PKT_FLAGS_CHECKSUM_OK         1 << 1 /* Valid checksum (with IP/TCP checksum offload enabled) */
 #define PKT_FLAGS_IP_MORE_FRAG        1 << 2 /* IP More fragments flag set */
@@ -369,7 +369,7 @@ struct pfring_extended_pkthdr {
   u_int16_t device_id;     /* Device ID (when exported by devices like Arista MetaWatch) */
 
   int32_t  if_index;       /* index of the interface on which the packet has been received.
-			      It can be also used to report other information */
+                              It can be also used to report other information */
 
   u_int32_t pkt_hash;      /* Hash based on the packet header */
 
@@ -377,7 +377,7 @@ struct pfring_extended_pkthdr {
 
   struct {
     int32_t bounce_interface; /* Interface Id where this packet will bounce after processing
-			         if its values is other than UNKNOWN_INTERFACE */
+                                 if its values is other than UNKNOWN_INTERFACE */
     struct sk_buff *reserved; /* Kernel only pointer */
   } tx;
 
@@ -424,9 +424,9 @@ void term_lockless_list(lockless_list *l, u_int8_t free_memory);
 typedef struct {
   int32_t if_index;                    /* Index of the interface on which the packet has been received */
   u_int8_t smac[ETH_ALEN], dmac[ETH_ALEN]; /* Use '0' (zero-ed MAC address) for any MAC address.
-					      This is applied to both source and destination. */
+                                              This is applied to both source and destination. */
   u_int16_t vlan_id;                   /* Use 0 for any vlan */
-  u_int16_t eth_type;		       /* Use 0 for any ethernet type */
+  u_int16_t eth_type;                       /* Use 0 for any ethernet type */
   u_int8_t  proto;                     /* Use 0 for any l3 protocol */
   ip_addr   shost, dhost;              /* User '0' for any host. This is applied to both source and destination. */
   ip_addr   shost_mask, dhost_mask;    /* IPv4/6 network mask */
@@ -452,7 +452,7 @@ typedef struct {
   } tunnel;
 
   char payload_pattern[32];         /* If strlen(payload_pattern) > 0, the packet payload
-				       must match the specified pattern */
+                                       must match the specified pattern */
 } __attribute__((packed))
 filtering_rule_extended_fields;
 
@@ -502,9 +502,9 @@ typedef struct {
 
   rule_action_behaviour rule_action; /* What to do in case of match */
   u_int8_t balance_id, balance_pool; /* If balance_pool > 0, then pass the packet above only if the
-					(hash(proto, sip, sport, dip, dport) % balance_pool) = balance_id */
-  u_int8_t locked;		     /* Do not purge with pfring_purge_idle_rules() */
-  u_int8_t bidirectional;	     /* Swap peers when checking if they match the rule. Default: monodir */
+                                        (hash(proto, sip, sport, dip, dport) % balance_pool) = balance_id */
+  u_int8_t locked;                     /* Do not purge with pfring_purge_idle_rules() */
+  u_int8_t bidirectional;             /* Swap peers when checking if they match the rule. Default: monodir */
   filtering_rule_core_fields     core_fields;
   filtering_rule_extended_fields extended_fields;
   char reflector_device_name[REFLECTOR_NAME_LEN];
@@ -651,25 +651,25 @@ hw_filtering_rule;
 #define ETHTOOL_PFRING_SRXFTRLINS 0x10000032
 
 #if defined(I82599_HW_FILTERING_SUPPORT) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,40))
-#define	FLOW_EXT 0x80000000
+#define        FLOW_EXT 0x80000000
 union _kcompat_ethtool_flow_union {
-  struct ethtool_tcpip4_spec		tcp_ip4_spec;
-  struct ethtool_usrip4_spec		usr_ip4_spec;
-  __u8					hdata[60];
+  struct ethtool_tcpip4_spec                tcp_ip4_spec;
+  struct ethtool_usrip4_spec                usr_ip4_spec;
+  __u8                                        hdata[60];
 };
 struct _kcompat_ethtool_flow_ext {
-  __be16	vlan_etype;
-  __be16	vlan_tci;
-  __be32	data[2];
+  __be16        vlan_etype;
+  __be16        vlan_tci;
+  __be32        data[2];
 };
 struct _kcompat_ethtool_rx_flow_spec {
-  __u32		flow_type;
+  __u32                flow_type;
   union _kcompat_ethtool_flow_union h_u;
   struct _kcompat_ethtool_flow_ext h_ext;
   union _kcompat_ethtool_flow_union m_u;
   struct _kcompat_ethtool_flow_ext m_ext;
-  __u64		ring_cookie;
-  __u32		location;
+  __u64                ring_cookie;
+  __u32                location;
 };
 #define ethtool_rx_flow_spec _kcompat_ethtool_rx_flow_spec
 #endif /* defined(I82599_HW_FILTERING_SUPPORT) && (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,40)) */
@@ -732,11 +732,11 @@ extern struct pf_ring_socket *pfr; /* Forward */
 /* *********************************** */
 
 typedef int (*five_tuple_rule_handler)(struct pf_ring_socket *pfr,
-				       hw_filtering_rule *rule,
-				       hw_filtering_rule_command request);
+                                       hw_filtering_rule *rule,
+                                       hw_filtering_rule_command request);
 typedef int (*perfect_filter_hw_rule_handler)(struct pf_ring_socket *pfr,
-					      hw_filtering_rule *rule,
-					      hw_filtering_rule_command request);
+                                              hw_filtering_rule *rule,
+                                              hw_filtering_rule_command request);
 
 typedef struct {
   five_tuple_rule_handler five_tuple_handler;
@@ -854,7 +854,7 @@ struct ring_sock {
   struct pf_ring_socket *pf_ring_sk;
   /* FIXX Do we really need the following items? */
   //struct packet_type    prot_hook;
-  //spinlock_t		bind_lock;
+  //spinlock_t                bind_lock;
 };
 #endif
 
@@ -1377,30 +1377,30 @@ typedef struct {
 /* Exported functions - used by drivers */
 
 int pf_ring_skb_ring_handler(struct sk_buff *skb,
-			     u_int8_t recv_packet,
-			     u_int8_t real_skb /* 1=real skb, 0=faked skb */,
-			     int32_t channel_id,
-			     u_int32_t num_rx_channels);
+                             u_int8_t recv_packet,
+                             u_int8_t real_skb /* 1=real skb, 0=faked skb */,
+                             int32_t channel_id,
+                             u_int32_t num_rx_channels);
 
 /* ZC driver API */
 
 void pf_ring_zc_dev_handler(zc_dev_operation operation,
-			    zc_dev_callbacks *callbacks,
-			    zc_dev_ring_info *rx_info,
-			    zc_dev_ring_info *tx_info,
-			    void *rx_descr_packet_memory,
-			    void *tx_descr_packet_memory,
-			    void *phys_card_memory,
-			    u_int32_t phys_card_memory_len,
-			    u_int32_t channel_id,
-			    struct net_device *dev,
-			    struct device *hwdev,
-			    zc_dev_model device_model,
-			    u_char *device_address,
-			    wait_queue_head_t *packet_waitqueue,
-			    u_int8_t *interrupt_received,
-			    void *rx_adapter_ptr,
-			    void *tx_adapter_ptr);
+                            zc_dev_callbacks *callbacks,
+                            zc_dev_ring_info *rx_info,
+                            zc_dev_ring_info *tx_info,
+                            void *rx_descr_packet_memory,
+                            void *tx_descr_packet_memory,
+                            void *phys_card_memory,
+                            u_int32_t phys_card_memory_len,
+                            u_int32_t channel_id,
+                            struct net_device *dev,
+                            struct device *hwdev,
+                            zc_dev_model device_model,
+                            u_char *device_address,
+                            wait_queue_head_t *packet_waitqueue,
+                            u_int8_t *interrupt_received,
+                            void *rx_adapter_ptr,
+                            void *tx_adapter_ptr);
 
 #endif /* __KERNEL__  */
 
