@@ -73,20 +73,19 @@
 
 #undef STATIC_KEY_INIT_TRUE
 
-	{ .enabled = { 1 },					\
-	  { .type = 1UL } }
+//	{ .enabled = { 1 }, { .type = 1UL } }
 
 #undef STATIC_KEY_INIT_FALSE
 
-	{ .enabled = { 0 } }
+//	{ .enabled = { 0 } }
 
 #undef STATIC_KEY_TRUE_INIT
 
-	/* (struct static_key_true) */ { .key = STATIC_KEY_INIT_TRUE }
+//	/* (struct static_key_true) */ { .key = STATIC_KEY_INIT_TRUE }
 
 #undef STATIC_KEY_FALSE_INIT
 
-	/* (struct static_key_false) */ { .key = STATIC_KEY_INIT_FALSE }
+//	/* (struct static_key_false) */ { .key = STATIC_KEY_INIT_FALSE }
 
 #ifdef HAVE_JUMP_LABEL
 /* dd_key_init() is used (indirectly) with arg like "(STATIC_KEY_INIT_FALSE)"
