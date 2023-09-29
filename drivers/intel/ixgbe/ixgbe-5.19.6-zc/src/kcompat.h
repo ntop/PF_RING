@@ -38,7 +38,9 @@
 #include <linux/udp.h>
 #include <linux/vmalloc.h>
 
-
+#ifndef VXLAN_HEADROOM
+#define VXLAN_HEADROOM (20 + 8 + 8 + 14)
+#endif
 
 #ifndef IEEE_8021QAZ_APP_SEL_DSCP
 #define IEEE_8021QAZ_APP_SEL_DSCP	5
