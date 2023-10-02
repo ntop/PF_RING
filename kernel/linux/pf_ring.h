@@ -26,8 +26,9 @@
 #define RING_VERSION                "8.7.0"
 #define RING_VERSION_NUM           0x080700
 
-/* Increment whenever we change slot or packet header layout (e.g. we add/move a field) */
-#define RING_FLOWSLOT_VERSION          20
+/* Increment whenever there is a change in some shared data structure
+ * between kernel and userspace, including ioctl or packet header layout */
+#define RING_FLOWSLOT_VERSION          21
 
 #define RING_MAGIC
 #define RING_MAGIC_VALUE             0x88
