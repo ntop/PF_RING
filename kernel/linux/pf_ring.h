@@ -998,6 +998,8 @@ typedef enum {
 struct add_to_cluster {
   u_int16_t cluster_id;
   u_int16_t queue_id;
+#define CLUSTER_OPTION_RELAXED_DISTRIBUTION (1<<0)
+  u_int32_t options;
   cluster_type the_type;
 } __attribute__((packed));
 
@@ -1062,10 +1064,12 @@ typedef enum {
  */
 struct ring_cluster {
   u_int32_t      cluster_id; /* 0 = no cluster */
-  u_int16_t      num_cluster_elements;
+  u_int16_t      num_cluster_queues;
   u_int16_t      max_queue_index;
+  u_int16_t      hashing_id;
+  u_int8_t       relaxed_distribution;
+  u_int8_t       padding;
   cluster_type   hashing_mode;
-  u_short        hashing_id;
   struct sock    *sk[MAX_CLUSTER_QUEUES];
 };
 

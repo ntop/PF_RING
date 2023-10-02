@@ -263,7 +263,7 @@ struct __pfring {
   int       (*get_selectable_fd)            (pfring *);
   int       (*set_direction)                (pfring *, packet_direction);
   int       (*set_socket_mode)              (pfring *, socket_mode);
-  int       (*set_cluster_consumer)         (pfring *, u_int16_t, u_int16_t, cluster_type);
+  int       (*set_cluster_consumer)         (pfring *, u_int16_t, u_int16_t, cluster_type, u_int32_t);
   int       (*remove_from_cluster)          (pfring *);
   int       (*set_master_id)                (pfring *, u_int32_t);
   int       (*set_master)                   (pfring *, pfring *);
@@ -776,9 +776,10 @@ int pfring_set_socket_mode(pfring *ring, socket_mode mode);
  * @param cluster_id A numeric identifier of the cluster to which the ring will be bound.
  * @param queue_id Index of the consumer queue (0 .. MAX_CLUSTER_QUEUES-1). Use MAX_CLUSTER_QUEUES or bigger to get the first available queue.
  * @param the_type  The cluster type (2-tuple, 4-tuple, 5-tuple, tcp only 5-tuple, 6-tuple flow or Round-Robin).
+ * @param options Cluster options (flags). CLUSTER_OPTION_RELAXED_DISTRIBUTION to deliver packet to the first available queue if a consumer is down.
  * @return 0 on success, a negative value otherwise.
  */
-int pfring_set_cluster_consumer(pfring *ring, u_int16_t cluster_id, u_int16_t queue_id, cluster_type the_type);
+int pfring_set_cluster_consumer(pfring *ring, u_int16_t cluster_id, u_int16_t queue_id, cluster_type the_type, u_int32_t options);
 
 /**
  * Deprecated: use pfring_set_cluster_consumer.

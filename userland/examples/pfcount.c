@@ -1362,7 +1362,9 @@ int main(int argc, char* argv[]) {
   }
 
   if(cluster_id > 0) {
-    rc = pfring_set_cluster_consumer(pd, cluster_id, cluster_queue_id, cluster_hash_type);
+    u_int32_t cluster_options = 0;
+    cluster_options |= CLUSTER_OPTION_RELAXED_DISTRIBUTION;
+    rc = pfring_set_cluster_consumer(pd, cluster_id, cluster_queue_id, cluster_hash_type, cluster_options);
     fprintf(stderr, "pfring_set_cluster_consumer returned %d\n", rc);
   }
 

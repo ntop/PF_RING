@@ -621,11 +621,12 @@ int pfring_mod_set_master(pfring *ring, pfring *master) {
 /* ******************************* */
 
 int pfring_mod_set_cluster_consumer(pfring *ring, u_int16_t cluster_id, u_int16_t queue_id,
-    cluster_type the_type) {
+    cluster_type the_type, u_int32_t options) {
   struct add_to_cluster cluster;
   cluster.cluster_id = cluster_id;
   cluster.queue_id = queue_id;
   cluster.the_type = the_type;
+  cluster.options = options;
 
   return(setsockopt(ring->fd, 0, SO_ADD_TO_CLUSTER, &cluster, sizeof(cluster)));
 }
