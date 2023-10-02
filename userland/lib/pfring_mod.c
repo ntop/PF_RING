@@ -224,7 +224,7 @@ int pfring_mod_open(pfring *ring) {
   ring->get_selectable_fd = pfring_mod_get_selectable_fd;
   ring->set_direction = pfring_mod_set_direction;
   ring->set_socket_mode = pfring_mod_set_socket_mode;
-  ring->set_cluster = pfring_mod_set_cluster;
+  ring->set_cluster_consumer = pfring_mod_set_cluster_consumer;
   ring->remove_from_cluster = pfring_mod_remove_from_cluster;
   ring->set_master_id = pfring_mod_set_master_id;
   ring->set_master = pfring_mod_set_master;
@@ -620,13 +620,15 @@ int pfring_mod_set_master(pfring *ring, pfring *master) {
 
 /* ******************************* */
 
-int pfring_mod_set_cluster(pfring *ring, u_int clusterId, cluster_type the_type) {
+int pfring_mod_set_cluster_consumer(pfring *ring, u_int16_t cluster_id, u_int16_t queue_id,
+    cluster_type the_type) {
   struct add_to_cluster cluster;
-  cluster.clusterId = clusterId, cluster.the_type = the_type;
+  cluster.cluster_id = cluster_id;
+  cluster.queue_id = queue_id;
+  cluster.the_type = the_type;
 
   return(setsockopt(ring->fd, 0, SO_ADD_TO_CLUSTER, &cluster, sizeof(cluster)));
 }
-
 
 /* ******************************* */
 

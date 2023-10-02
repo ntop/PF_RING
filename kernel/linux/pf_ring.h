@@ -41,6 +41,8 @@
 
 #define MAX_NUM_RING_SOCKETS          256
 
+#define MAX_CLUSTER_QUEUES             64
+
 /* Watermark */
 #define DEFAULT_MIN_PKT_QUEUED        128
 #define DEFAULT_POLL_WATERMARK_TIMEOUT  0
@@ -993,7 +995,8 @@ typedef enum {
 #define MAX_CLUSTER_TYPE_ID cluster_per_flow_ip_with_dup_tuple
 
 struct add_to_cluster {
-  u_int clusterId;
+  u_int16_t cluster_id;
+  u_int16_t queue_id;
   cluster_type the_type;
 } __attribute__((packed));
 
@@ -1049,8 +1052,6 @@ typedef enum {
 #endif
 #endif
 
-#define CLUSTER_LEN       64
-
 /*
  * A ring cluster is used group together rings used by various applications
  * so that they look, from the PF_RING point of view, as a single ring.
@@ -1060,10 +1061,11 @@ typedef enum {
  */
 struct ring_cluster {
   u_int32_t      cluster_id; /* 0 = no cluster */
-  u_int32_t      num_cluster_elements;
+  u_int16_t      num_cluster_elements;
+  u_int16_t      max_queue_index;
   cluster_type   hashing_mode;
   u_short        hashing_id;
-  struct sock    *sk[CLUSTER_LEN];
+  struct sock    *sk[MAX_CLUSTER_QUEUES];
 };
 
 /*

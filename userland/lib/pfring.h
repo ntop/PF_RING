@@ -263,7 +263,7 @@ struct __pfring {
   int       (*get_selectable_fd)            (pfring *);
   int       (*set_direction)                (pfring *, packet_direction);
   int       (*set_socket_mode)              (pfring *, socket_mode);
-  int       (*set_cluster)                  (pfring *, u_int, cluster_type);
+  int       (*set_cluster_consumer)         (pfring *, u_int16_t, u_int16_t, cluster_type);
   int       (*remove_from_cluster)          (pfring *);
   int       (*set_master_id)                (pfring *, u_int32_t);
   int       (*set_master)                   (pfring *, pfring *);
@@ -773,9 +773,15 @@ int pfring_set_socket_mode(pfring *ring, socket_mode mode);
  * Clustering is also available with the PF_RING-aware libpcap via the PCAP_PF_RING_CLUSTER_ID environment variable (Round-Robin by default, 
  * per-flow via the PCAP_PF_RING_USE_CLUSTER_PER_FLOW environment variable). 
  * @param ring The  PF_RING handle to be cluster. 
- * @param clusterId A numeric identifier of the cluster to which the ring will be bound.
+ * @param cluster_id A numeric identifier of the cluster to which the ring will be bound.
+ * @param queue_id Index of the consumer queue (0 .. MAX_CLUSTER_QUEUES-1). Use MAX_CLUSTER_QUEUES or bigger to get the first available queue.
  * @param the_type  The cluster type (2-tuple, 4-tuple, 5-tuple, tcp only 5-tuple, 6-tuple flow or Round-Robin).
  * @return 0 on success, a negative value otherwise.
+ */
+int pfring_set_cluster_consumer(pfring *ring, u_int16_t cluster_id, u_int16_t queue_id, cluster_type the_type);
+
+/**
+ * Deprecated: use pfring_set_cluster_consumer.
  */
 int pfring_set_cluster(pfring *ring, u_int clusterId, cluster_type the_type);
 

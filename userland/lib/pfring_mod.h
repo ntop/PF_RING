@@ -41,7 +41,8 @@ int pfring_mod_set_filtering_sampling_rate(pfring *ring, u_int32_t rate);
 int pfring_mod_get_selectable_fd(pfring *ring);
 int pfring_mod_set_direction(pfring *ring, packet_direction direction);
 int pfring_mod_set_socket_mode(pfring *ring, socket_mode mode);
-int pfring_mod_set_cluster(pfring *ring, u_int clusterId, cluster_type the_type);
+int pfring_mod_set_cluster_consumer(pfring *ring, u_int16_t cluster_id, u_int16_t queue_id,
+                                    cluster_type the_type);
 int pfring_mod_remove_from_cluster(pfring *ring);
 int pfring_mod_set_master_id(pfring *ring, u_int32_t master_id);
 int pfring_mod_set_master(pfring *ring, pfring *master);

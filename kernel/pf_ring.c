@@ -4084,7 +4084,6 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
                             int32_t channel_id,
                             u_int32_t num_rx_channels)
 {
-  struct sock *skElement;
   int rc = 0, is_ip_pkt = 0, room_available = 0;
   struct pfring_pkthdr hdr;
   int displ = 0;
@@ -4263,13 +4262,19 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
       /* [2] Check socket clusters */
       cluster_ptr = (ring_cluster_element*)lockless_list_get_first(&ring_cluster_list, &last_list_idx);
       while(cluster_ptr != NULL) {
-        struct pf_ring_socket *pfr;
+        /* Number of consumers attached */
+        u_int16_t num_cluster_elements = cluster_ptr->cluster.num_cluster_elements;
+        /* Number of logical queues (consider consumers setting arbitrary queue indexes) */
+        u_int16_t num_logical_cluster_elements = cluster_ptr->cluster.max_queue_index + 1;
+        
+#if 0 /* Do we really need this? num_cluster_elements is updated under ring_cluster_lock */
         u_short num_cluster_elements =
-  #if(LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0))
           ACCESS_ONCE(cluster_ptr->cluster.num_cluster_elements);
-  #else
+#else
           READ_ONCE(cluster_ptr->cluster.num_cluster_elements);
-  #endif
+#endif
+#endif
 
         if(num_cluster_elements > 0) {
           u_short num_iterations;
@@ -4301,7 +4306,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
                 /* add hash to cache */
                 add_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
                                     hdr.extended_hdr.parsed_pkt.ipv4_dst,
-                                    ip_id, skb_hash % num_cluster_elements);
+                                    ip_id, skb_hash % num_logical_cluster_elements);
               } else if(fragment_not_first) {
                 /* fragment, but not the first: read hash from cache */
                 skb_hash = get_fragment_app_id(hdr.extended_hdr.parsed_pkt.ipv4_src,
@@ -4316,7 +4321,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
             }
           }
 
-          cluster_element_idx = skb_hash % num_cluster_elements;
+          cluster_element_idx = skb_hash % num_logical_cluster_elements;
 
         iterate_cluster_elements:
           /*
@@ -4327,12 +4332,12 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
             then we give up :-(
           */
           for(num_iterations = 0;
-              num_iterations < num_cluster_elements;
+              num_iterations < num_logical_cluster_elements;
               num_iterations++) {
-              skElement = cluster_ptr->cluster.sk[cluster_element_idx];
+              struct sock *skElement = cluster_ptr->cluster.sk[cluster_element_idx];
 
               if(skElement != NULL) {
-                  pfr = ring_sk(skElement);
+                  struct pf_ring_socket *pfr = ring_sk(skElement);
 
                   if(pfr != NULL
                      && net_eq(dev_net(skb->dev), sock_net(skElement)) /* same namespace */
@@ -4364,7 +4369,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
                     } else if((cluster_ptr->cluster.hashing_mode != cluster_round_robin)
                               /* We're the last element of the cluster so no further cluster element to check */
-                              || ((num_iterations + 1) >= num_cluster_elements)) {
+                              || ((num_iterations + 1) >= num_logical_cluster_elements)) {
                       pfr->slots_info->tot_pkts++, pfr->slots_info->tot_lost++;
                     }
                   }
@@ -4373,7 +4378,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
               if(cluster_ptr->cluster.hashing_mode != cluster_round_robin)
                 break;
               else
-                cluster_element_idx = (cluster_element_idx + 1) % num_cluster_elements;
+                cluster_element_idx = (cluster_element_idx + 1) % num_logical_cluster_elements;
           } /* for */
 
           if((cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple)
@@ -4382,7 +4387,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
                                                                 | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
                                                                 | HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN);
 
-            new_cluster_element_idx %= num_cluster_elements;
+            new_cluster_element_idx %= num_logical_cluster_elements;
 
             if(new_cluster_element_idx != cluster_element_idx) {
               cluster_element_idx = new_cluster_element_idx, num_ip_flow_iterations = 1;
@@ -6100,14 +6105,31 @@ unsigned int ring_poll(struct file *file,
 
 /* ************************************* */
 
-int add_sock_to_cluster_list(ring_cluster_element *el, struct sock *sk)
+int get_first_available_cluster_queue(ring_cluster_element *el)
+{
+  int i;
+
+  for(i = 0; i < MAX_CLUSTER_QUEUES; i++)
+    if (el->cluster.sk[i] == NULL)
+      return i;
+
+  return -1;
+}
+
+/* ************************************* */
+
+int add_sock_to_cluster_list(ring_cluster_element *el, struct sock *sk, u_int16_t consumer_id)
 {
   struct pf_ring_socket *pfr = ring_sk(sk);
+  int queue_id = -1;
 
-  if(el->cluster.num_cluster_elements == CLUSTER_LEN)
-    return(-1);        /* Cluster full */
+  if(el->cluster.num_cluster_elements == MAX_CLUSTER_QUEUES) {
+    /* Cluster full */
+    return(-1);
+  }
 
   if (el->cluster.num_cluster_elements > 0) {
+    /* There is already some consumer, checking compatibility */
     struct sock *first_sk = el->cluster.sk[0];
     struct pf_ring_socket *first_pfr = ring_sk(first_sk);
     if (!bitmap_equal(first_pfr->pf_dev_mask, pfr->pf_dev_mask, MAX_NUM_DEV_IDX)) {
@@ -6117,9 +6139,29 @@ int add_sock_to_cluster_list(ring_cluster_element *el, struct sock *sk)
     }
   }
 
-  ring_sk(sk)->cluster_id = el->cluster.cluster_id;
-  el->cluster.sk[el->cluster.num_cluster_elements] = sk;
+  pfr->cluster_id = el->cluster.cluster_id;
+
+  if (consumer_id >= MAX_CLUSTER_QUEUES) {
+    /* auto select queue */
+    queue_id = get_first_available_cluster_queue(el);
+  } else {
+    /* ID provided, check if available */
+    if (el->cluster.sk[consumer_id] == NULL)
+      queue_id = consumer_id;
+  }
+
+  if (queue_id < 0 || el->cluster.sk[queue_id] != NULL) {
+    printk("[PF_RING] Error: cluster queue is not available or all queues are in use\n");
+    return(-EINVAL);
+  }
+
+  el->cluster.sk[queue_id] = sk;
   el->cluster.num_cluster_elements++;
+
+  if (queue_id > el->cluster.max_queue_index) {
+    el->cluster.max_queue_index = queue_id;
+  }
+
   return(0);
 }
 
@@ -6127,25 +6169,16 @@ int add_sock_to_cluster_list(ring_cluster_element *el, struct sock *sk)
 
 int remove_from_cluster_list(struct ring_cluster *el, struct sock *sock)
 {
-  int i, j;
+  int i;
 
-  for(i = 0; i < CLUSTER_LEN; i++)
+  for(i = 0; i < MAX_CLUSTER_QUEUES; i++) {
     if(el->sk[i] == sock) {
+      /* Found - removing */
       el->num_cluster_elements--;
-
-      if(el->num_cluster_elements > 0) {
-        /* The cluster contains other elements */
-        for(j = i; j < CLUSTER_LEN - 1; j++)
-          el->sk[j] = el->sk[j + 1];
-
-        el->sk[CLUSTER_LEN - 1] = NULL;
-      } else {
-        /* Empty cluster */
-        memset(el->sk, 0, sizeof(el->sk));
-      }
-
+      el->sk[i] = NULL;
       return(0);
     }
+  }
 
   return(-1); /* Not found */
 }
@@ -6236,15 +6269,15 @@ static int set_master_ring(struct sock *sock,
 
 static int add_sock_to_cluster(struct sock *sock,
                                struct pf_ring_socket *pfr,
-                               struct add_to_cluster *cluster)
+                               struct add_to_cluster *consumer_info)
 {
   ring_cluster_element *cluster_ptr;
   u_int32_t last_list_idx;
   int rc;
 
-  debug_printk(2, "--> add_sock_to_cluster(%d)\n", cluster->clusterId);
+  debug_printk(2, "--> add_sock_to_cluster(%d)\n", consumer_info->cluster_id);
 
-  if(cluster->clusterId == 0 /* 0 = No Cluster */ )
+  if(consumer_info->cluster_id == 0 /* 0 = No Cluster */ )
     return(-EINVAL);
 
   if(pfr->cluster_id != 0)
@@ -6255,10 +6288,10 @@ static int add_sock_to_cluster(struct sock *sock,
   cluster_ptr = (ring_cluster_element*)lockless_list_get_first(&ring_cluster_list, &last_list_idx);
 
   while(cluster_ptr != NULL) {
-    if(cluster_ptr->cluster.cluster_id == cluster->clusterId) {
+    if(cluster_ptr->cluster.cluster_id == consumer_info->cluster_id) {
 
       /* Cluster already present, adding socket */
-      rc = add_sock_to_cluster_list(cluster_ptr, sock);
+      rc = add_sock_to_cluster_list(cluster_ptr, sock, consumer_info->queue_id);
 
       write_unlock_bh(&ring_cluster_lock);
       return(rc);
@@ -6276,14 +6309,14 @@ static int add_sock_to_cluster(struct sock *sock,
 
   INIT_LIST_HEAD(&cluster_ptr->list);
 
-  cluster_ptr->cluster.cluster_id = cluster->clusterId;
-  cluster_ptr->cluster.num_cluster_elements = 1;
-  cluster_ptr->cluster.hashing_mode = cluster->the_type; /* Default */
+  cluster_ptr->cluster.cluster_id = consumer_info->cluster_id;
+  cluster_ptr->cluster.num_cluster_elements = 0;
+  cluster_ptr->cluster.hashing_mode = consumer_info->the_type; /* Default */
   cluster_ptr->cluster.hashing_id = 0;
-
   memset(cluster_ptr->cluster.sk, 0, sizeof(cluster_ptr->cluster.sk));
-  cluster_ptr->cluster.sk[0] = sock;
-  pfr->cluster_id = cluster->clusterId;
+
+  rc = add_sock_to_cluster_list(cluster_ptr, sock, consumer_info->queue_id);
+
   lockless_list_add(&ring_cluster_list, cluster_ptr);
 
   write_unlock_bh(&ring_cluster_lock);

@@ -994,11 +994,18 @@ int pfring_set_socket_mode(pfring *ring, socket_mode mode) {
 
 /* **************************************************** */
 
-int pfring_set_cluster(pfring *ring, u_int clusterId, cluster_type the_type) {
-  if(ring && ring->set_cluster)
-    return ring->set_cluster(ring, clusterId, the_type);
+int pfring_set_cluster_consumer(pfring *ring, u_int16_t cluster_id, u_int16_t queue_id,
+    cluster_type the_type) {
+  if(ring && ring->set_cluster_consumer)
+    return ring->set_cluster_consumer(ring, cluster_id, queue_id, the_type);
 
   return(PF_RING_ERROR_NOT_SUPPORTED);
+}
+
+/* **************************************************** */
+
+int pfring_set_cluster(pfring *ring, u_int clusterId, cluster_type the_type) {
+  return pfring_set_cluster_consumer(ring, clusterId, MAX_CLUSTER_QUEUES, the_type);
 }
 
 /* **************************************************** */
