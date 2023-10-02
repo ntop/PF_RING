@@ -95,15 +95,15 @@ int pfring_mod_stack_open(pfring *ring) {
 
   /* Only send (inject) and recv (intercept tx) are supported, resetting unused func ptrs */
   /* ring->set_direction       = NULL; Leaving this call for compatibility, however calling this is not required */
-  ring->set_cluster         = NULL; 
-  ring->remove_from_cluster = NULL; 
-  ring->set_master_id       = NULL; 
-  ring->set_master          = NULL; 
-  ring->enable_rss_rehash   = NULL; 
-  ring->set_virtual_device  = NULL; 
-  ring->add_hw_rule         = NULL; 
-  ring->remove_hw_rule      = NULL; 
-  ring->send_last_rx_packet = NULL;
+  ring->set_cluster_consumer = NULL; 
+  ring->remove_from_cluster  = NULL; 
+  ring->set_master_id        = NULL; 
+  ring->set_master           = NULL; 
+  ring->enable_rss_rehash    = NULL; 
+  ring->set_virtual_device   = NULL; 
+  ring->add_hw_rule          = NULL; 
+  ring->remove_hw_rule       = NULL; 
+  ring->send_last_rx_packet  = NULL;
 
   return 0;
 }
