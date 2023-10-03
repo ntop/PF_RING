@@ -105,6 +105,12 @@ int reforge_ip = 0, on_the_fly_reforging = 0;
 int send_len = 60;
 int daemon_mode = 0;
 patricia_tree_t *patricia_v4 = NULL;
+#if !(defined(__arm__) || defined(__mips__))
+double pps = 0;
+double gbps = 0;
+ticks tick_delta = 0;
+u_int8_t tick_delta_adjusted = 0;
+#endif
 
 #define DEFAULT_DEVICE     "eth0"
 
@@ -152,6 +158,13 @@ void print_stats() {
 	   (long unsigned int) currentThpt,
 	   (long unsigned int) currentThptBits);
   pfring_set_application_stats(pd, statsBuf);
+
+  /* Adjust rate */
+  if (pps > 0 && !tick_delta_adjusted) {
+    double pps_delta = pps - currentThpt;
+    tick_delta = tick_delta - (tick_delta * (pps_delta / pps));
+    tick_delta_adjusted = 1;
+  }
 
   memcpy(&lastTime, &now, sizeof(now));
   last_num_pkt_good_sent = num_pkt_good_sent, last_num_bytes_good_sent = num_bytes_good_sent;
@@ -421,10 +434,9 @@ int main(int argc, char* argv[]) {
   u_int32_t num_to_send = 0;
   int bind_core = -1;
   u_int16_t cpu_percentage = 0;
-  double pps = 0;
 #if !(defined(__arm__) || defined(__mips__))
-  double gbit_s = 0, td;
-  ticks tick_start = 0, tick_delta = 0, tick_prev = 0;
+  double td;
+  ticks tick_start = 0, tick_prev = 0;
 #endif
   u_int32_t uniq_pkts_limit = 0;
   ticks hz = 0;
@@ -521,7 +533,7 @@ int main(int argc, char* argv[]) {
       break;
 #if !(defined(__arm__) || defined(__mips__))
     case 'r':
-      sscanf(optarg, "%lf", &gbit_s);
+      sscanf(optarg, "%lf", &gbps);
       break;
     case 'p':
       sscanf(optarg, "%lf", &pps);
@@ -668,7 +680,7 @@ int main(int argc, char* argv[]) {
     send_len = 62; /* min len with IPv6 */
 
 #if !(defined(__arm__) || defined(__mips__))
-  if(gbit_s != 0 || pps != 0 || uniq_pkts_per_sec) {
+  if(gbps != 0 || pps != 0 || uniq_pkts_per_sec) {
     /* computing usleep delay */
     tick_start = getticks();
     usleep(1);
@@ -866,10 +878,10 @@ int main(int argc, char* argv[]) {
   }
 
 #if !(defined(__arm__) || defined(__mips__))
-  if(gbit_s > 0) {
+  if(gbps > 0) {
     /* computing max rate */
-    pps = ((gbit_s * 1000000000) / 8 /*byte*/) / (8 /*Preamble*/ + send_len + 4 /*CRC*/ + 12 /*IFG*/);
-  } else if (gbit_s < 0) {
+    pps = ((gbps * 1000000000) / 8 /*byte*/) / (8 /*Preamble*/ + send_len + 4 /*CRC*/ + 12 /*IFG*/);
+  } else if (gbps < 0) {
     /* capture rate */
     pps = -1;
   } /* else use pps */
@@ -878,8 +890,8 @@ int main(int argc, char* argv[]) {
     td = (double) (hz / pps);
     tick_delta = (ticks)td;
 
-    if (gbit_s > 0)
-      printf("Rate set to %.2f Gbit/s, %d-byte packets, %.2f pps\n", gbit_s, (send_len + 4 /*CRC*/), pps);
+    if (gbps > 0)
+      printf("Rate set to %.2f Gbit/s, %d-byte packets, %.2f pps\n", gbps, (send_len + 4 /*CRC*/), pps);
     else
       printf("Rate set to %.2f pps\n", pps);
   }
@@ -933,10 +945,10 @@ int main(int argc, char* argv[]) {
 #if !(defined(__arm__) || defined(__mips__))
   if(pps != 0 || uniq_pkts_per_sec)
     tick_start = tick_prev = getticks();
-#endif
 
   if (pps < 0) /* flush for sending at the exact original pcap speed only, otherwise let pf_ring flush when needed) */
     flush = 1;
+#endif
 
   if (randomize) {
     if(reforge_ip == 0) {
