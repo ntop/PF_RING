@@ -204,6 +204,7 @@ void print_packet(pfring_zc_pkt_buff *buffer) {
     fputs(bigbuf, stdout);
   } else {
     int i;
+    printf("[len=%u] ", buffer->len);
     for(i = 0; i < buffer->len; i++)
       printf("%02X ", pkt_data[i]);
     printf("\n");
