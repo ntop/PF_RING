@@ -108,8 +108,8 @@ patricia_tree_t *patricia_v4 = NULL;
 #if !(defined(__arm__) || defined(__mips__))
 double pps = 0;
 double gbps = 0;
-ticks tick_delta = 0;
-u_int8_t tick_delta_adjusted = 0;
+ticks inter_frame_ticks = 0;
+u_int8_t inter_frame_ticks_adjusted = 0;
 #endif
 
 #define DEFAULT_DEVICE     "eth0"
@@ -160,10 +160,10 @@ void print_stats() {
   pfring_set_application_stats(pd, statsBuf);
 
   /* Adjust rate */
-  if (pps > 0 && !tick_delta_adjusted) {
+  if (pps > 0 && !inter_frame_ticks_adjusted) {
     double pps_delta = pps - currentThpt;
-    tick_delta = tick_delta - (tick_delta * (pps_delta / pps));
-    tick_delta_adjusted = 1;
+    inter_frame_ticks = inter_frame_ticks - (inter_frame_ticks * (pps_delta / pps));
+    inter_frame_ticks_adjusted = 1;
   }
 
   memcpy(&lastTime, &now, sizeof(now));
@@ -436,7 +436,7 @@ int main(int argc, char* argv[]) {
   u_int16_t cpu_percentage = 0;
 #if !(defined(__arm__) || defined(__mips__))
   double td;
-  ticks tick_start = 0, tick_prev = 0;
+  ticks tick_start = 0, tick_prev = 0, tick_delta = 0;
 #endif
   u_int32_t uniq_pkts_limit = 0;
   ticks hz = 0;
@@ -888,7 +888,7 @@ int main(int argc, char* argv[]) {
 
   if (pps > 0 || uniq_pkts_per_sec) {
     td = (double) (hz / pps);
-    tick_delta = (ticks)td;
+    inter_frame_ticks = (ticks)td;
 
     if (gbps > 0)
       printf("Rate set to %.2f Gbit/s, %d-byte packets, %.2f pps\n", gbps, (send_len + 4 /*CRC*/), pps);
@@ -1023,7 +1023,7 @@ int main(int argc, char* argv[]) {
     if(pps > 0) {
       int tx_syncronized = 0;
       /* rate set */
-      while((getticks() - tick_start) < (num_pkt_good_sent * tick_delta)) {
+      while((getticks() - tick_start) < (num_pkt_good_sent * inter_frame_ticks)) {
         if (!tx_syncronized) {
           pfring_flush_tx_packets(pd);
           tx_syncronized = 1;
