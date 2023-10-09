@@ -44,6 +44,8 @@
 #include "pfutils.c"
 #include "third-party/patricia.c"
 
+#define COMPUTE_RATE_ONTHEFLY
+
 struct ip_header {
 #if BYTE_ORDER == LITTLE_ENDIAN
   u_int32_t	ihl:4,		/* header length */
@@ -109,6 +111,7 @@ patricia_tree_t *patricia_v4 = NULL;
 double pps = 0;
 double gbps = 0;
 ticks inter_frame_ticks = 0;
+ticks kbyte_ticks = 0;
 u_int8_t inter_frame_ticks_adjusted = 0;
 #endif
 
@@ -160,9 +163,17 @@ void print_stats() {
   pfring_set_application_stats(pd, statsBuf);
 
   /* Adjust rate */
-  if (pps > 0 && !inter_frame_ticks_adjusted) {
-    double pps_delta = pps - currentThpt;
-    inter_frame_ticks = inter_frame_ticks - (inter_frame_ticks * (pps_delta / pps));
+  if (!inter_frame_ticks_adjusted && last_num_pkt_good_sent /* second iteration */) {
+#ifdef COMPUTE_RATE_ONTHEFLY
+    if (gbps > 0) {
+      double gbps_delta = gbps - (currentThptBits / 1000000000);
+      kbyte_ticks = kbyte_ticks - (kbyte_ticks * (gbps_delta / gbps));
+    } else
+#endif
+    if (pps > 0) {
+      double pps_delta = pps - currentThpt;
+      inter_frame_ticks = inter_frame_ticks - (inter_frame_ticks * (pps_delta / pps));
+    }
     inter_frame_ticks_adjusted = 1;
   }
 
@@ -435,7 +446,6 @@ int main(int argc, char* argv[]) {
   int bind_core = -1;
   u_int16_t cpu_percentage = 0;
 #if !(defined(__arm__) || defined(__mips__))
-  double td;
   ticks tick_start = 0, tick_prev = 0, tick_delta = 0;
 #endif
   u_int32_t uniq_pkts_limit = 0;
@@ -886,8 +896,18 @@ int main(int argc, char* argv[]) {
     pps = -1;
   } /* else use pps */
 
+#ifdef COMPUTE_RATE_ONTHEFLY
+  if (gbps > 0) {
+    double kbyte_sec = (gbps * 1000000) /* kbps*/ / 8;
+    double td = (double) (hz / kbyte_sec);
+    kbyte_ticks = (ticks) td;
+
+    printf("Rate set to %.2f Gbit/s, %.2f kB/s\n", gbps, kbyte_sec);
+
+  } else
+#endif
   if (pps > 0 || uniq_pkts_per_sec) {
-    td = (double) (hz / pps);
+    double td = (double) (hz / pps);
     inter_frame_ticks = (ticks)td;
 
     if (gbps > 0)
@@ -1020,9 +1040,22 @@ int main(int argc, char* argv[]) {
     }
 
 #if !(defined(__arm__) || defined(__mips__))
+#ifdef COMPUTE_RATE_ONTHEFLY
+    if (gbps > 0) {
+      int tx_syncronized = 0;
+      /* gbps rate set */
+      while((getticks() - tick_start) < ((num_bytes_good_sent >> 10 /* /1024 */) * kbyte_ticks)) {
+        if (!tx_syncronized) {
+          pfring_flush_tx_packets(pd);
+          tx_syncronized = 1;
+        }
+        if (unlikely(do_shutdown)) break;
+      }
+    } else
+#endif
     if(pps > 0) {
       int tx_syncronized = 0;
-      /* rate set */
+      /* pps or gbps rate set */
       while((getticks() - tick_start) < (num_pkt_good_sent * inter_frame_ticks)) {
         if (!tx_syncronized) {
           pfring_flush_tx_packets(pd);
