@@ -44,8 +44,6 @@
 #include "pfutils.c"
 #include "third-party/patricia.c"
 
-#define COMPUTE_RATE_ONTHEFLY
-
 struct ip_header {
 #if BYTE_ORDER == LITTLE_ENDIAN
   u_int32_t	ihl:4,		/* header length */
@@ -164,13 +162,10 @@ void print_stats() {
 
   /* Adjust rate */
   if (!inter_frame_ticks_adjusted && last_num_pkt_good_sent /* second iteration */) {
-#ifdef COMPUTE_RATE_ONTHEFLY
     if (gbps > 0) {
       double gbps_delta = gbps - (currentThptBits / 1000000000);
       kbyte_ticks = kbyte_ticks - (kbyte_ticks * (gbps_delta / gbps));
-    } else
-#endif
-    if (pps > 0) {
+    } else if (pps > 0) {
       double pps_delta = pps - currentThpt;
       inter_frame_ticks = inter_frame_ticks - (inter_frame_ticks * (pps_delta / pps));
     }
@@ -888,15 +883,9 @@ int main(int argc, char* argv[]) {
   }
 
 #if !(defined(__arm__) || defined(__mips__))
-  if(gbps > 0) {
-    /* computing max rate */
-    pps = ((gbps * 1000000000) / 8 /*byte*/) / (8 /*Preamble*/ + send_len + 4 /*CRC*/ + 12 /*IFG*/);
-  } else if (gbps < 0) {
-    /* capture rate */
-    pps = -1;
-  } /* else use pps */
+  if (gbps < 0)
+    pps = -1; /* real pcap rate */
 
-#ifdef COMPUTE_RATE_ONTHEFLY
   if (gbps > 0) {
     double kbyte_sec = (gbps * 1000000) /* kbps*/ / 8;
     double td = (double) (hz / kbyte_sec);
@@ -904,16 +893,11 @@ int main(int argc, char* argv[]) {
 
     printf("Rate set to %.2f Gbit/s, %.2f kB/s\n", gbps, kbyte_sec);
 
-  } else
-#endif
-  if (pps > 0 || uniq_pkts_per_sec) {
+  } else if (pps > 0 || uniq_pkts_per_sec) {
     double td = (double) (hz / pps);
     inter_frame_ticks = (ticks)td;
 
-    if (gbps > 0)
-      printf("Rate set to %.2f Gbit/s, %d-byte packets, %.2f pps\n", gbps, (send_len + 4 /*CRC*/), pps);
-    else
-      printf("Rate set to %.2f pps\n", pps);
+    printf("Rate set to %.2f pps\n", pps);
   }
 #endif
 
@@ -963,7 +947,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Dumping statistics on %s\n", path);
 
 #if !(defined(__arm__) || defined(__mips__))
-  if(pps != 0 || uniq_pkts_per_sec)
+  if(pps != 0 || gbps != 0 || uniq_pkts_per_sec)
     tick_start = tick_prev = getticks();
 
   if (pps < 0) /* flush for sending at the exact original pcap speed only, otherwise let pf_ring flush when needed) */
@@ -1040,7 +1024,6 @@ int main(int argc, char* argv[]) {
     }
 
 #if !(defined(__arm__) || defined(__mips__))
-#ifdef COMPUTE_RATE_ONTHEFLY
     if (gbps > 0) {
       int tx_syncronized = 0;
       /* gbps rate set */
@@ -1051,9 +1034,7 @@ int main(int argc, char* argv[]) {
         }
         if (unlikely(do_shutdown)) break;
       }
-    } else
-#endif
-    if(pps > 0) {
+    } else if(pps > 0) {
       int tx_syncronized = 0;
       /* pps or gbps rate set */
       while((getticks() - tick_start) < (num_pkt_good_sent * inter_frame_ticks)) {
