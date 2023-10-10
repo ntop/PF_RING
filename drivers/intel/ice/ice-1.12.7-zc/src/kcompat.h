@@ -47,6 +47,7 @@
 
 #define HAVE_PF_RING_NO_RDMA
 #define HAVE_PF_RING_NO_LAG
+#define HAVE_PF_RING_NO_AUX
 
 #define PCI_DEVICE_CACHE_LINE_SIZE             0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES       8
