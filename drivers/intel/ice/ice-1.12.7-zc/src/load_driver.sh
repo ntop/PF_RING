@@ -13,6 +13,7 @@ insmod ../../../../../kernel/pf_ring.ko
 #modprobe ptp
 #modprobe vxlan
 #modprobe configfs
+modprobe gnss
 
 mkdir -p /lib/firmware/updates/intel/ice/ddp
 cp -f ../ddp/ice-1.3.35.0.pkg /lib/firmware/updates/intel/ice/ddp/ice.pkg
