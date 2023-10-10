@@ -2,6 +2,9 @@
 # Makefile for the Intel(R) 10GbE PCI Express Linux Network Driver
 #
 
+BUILD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+include $(BUILD_DIR)common.mk
+
 obj-m += ixgbe.o
 
 ixgbe-objs := ixgbe_main.o \
