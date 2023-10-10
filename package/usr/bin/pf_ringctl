@@ -365,6 +365,7 @@ load_zc() {
 	/sbin/modprobe vxlan > /dev/null 2>&1
 	/sbin/modprobe dca > /dev/null 2>&1
 	/sbin/modprobe configfs > /dev/null 2>&1
+	/sbin/modprobe gnss > /dev/null 2>&1
 
 	# load dkms drivers
 	# search for file under /etc/pf_ring/zc/{e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice}/{e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice}.conf
