@@ -9,6 +9,7 @@ add: veryclean
 	sed -i -e 's/ice\.o/ice_zc.o/' -e 's/ice-/ice_zc-/' /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Kbuild /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Makefile
 	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@.@REVISION@' /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Makefile
+	sed -i -e 's/\.\.\/scripts\/check_aux_bus/.\/check_aux_bus/' /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/common.mk
 	cp dkms.conf.@ICE@ /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @ICE@-zc -v @ICE_VERSION@.@REVISION@
 
