@@ -3,6 +3,7 @@ all: install
 add: veryclean
 	\/bin/rm -rf /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@
 	mkdir -p /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
+	cp @ICE@/@ICE@-@ICE_VERSION@-zc/scripts/check_aux_bus /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
 	cd @ICE@/@ICE@-@ICE_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
 	cp ../../kernel/linux/pf_ring.h /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
 	sed -i -e 's/ice\.o/ice_zc.o/' -e 's/ice-/ice_zc-/' /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/Kbuild
