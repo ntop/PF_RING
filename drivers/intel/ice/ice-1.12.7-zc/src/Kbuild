@@ -87,6 +87,12 @@ endif
 # HAVE_PF_RING_NO_RDMA
 #obj-m += auxiliary.o
 
+# LM support is only enabled if the kernel has features for LM v1 protocol.
+# If the kernel lacks the necessary infrastructure, LM support will be disabled.
+ifeq ($(call is_kcompat_defined,HAVE_LMV1_SUPPORT),1)
+export ENABLE_LM_SUPPORT := 1
+endif
+
 EXTRA_CFLAGS += -DHAVE_PF_RING
 KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
 
