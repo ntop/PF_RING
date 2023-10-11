@@ -5,6 +5,9 @@
 # Makefile for the Intel(R) Ethernet Connection E800 (ice.ko) driver
 #
 
+BUILD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+include $(BUILD_DIR)common.mk
+
 obj-m += ice.o
 
 ice-objs := ice_main.o		\
