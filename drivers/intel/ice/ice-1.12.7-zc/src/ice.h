@@ -75,15 +75,11 @@
 #include "ice_common.h"
 #include "ice_flow.h"
 #include "ice_sched.h"
-#ifdef HAVE_PF_RING
-#include "auxiliary_bus.h"
-#else
 #ifdef USE_INTEL_AUX_BUS
-#include "linux/auxiliary_bus.h"
+#include "auxiliary_bus.h"
 #else
 #include <linux/auxiliary_bus.h>
 #endif /* USE_INTEL_AUX_BUS */
-#endif
 #include <linux/idr.h>
 #include "ice_idc_int.h"
 #include "virtchnl.h"
