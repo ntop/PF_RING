@@ -2870,6 +2870,7 @@ void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
 #define pci_info(pdev, fmt, arg...)	dev_info(&(pdev)->dev, fmt, ##arg)
 #define pci_dbg(pdev, fmt, arg...)	dev_dbg(&(pdev)->dev, fmt, ##arg)
 
+#ifndef HAVE_PF_RING
 #ifndef array_index_nospec
 static inline unsigned long _kc_array_index_mask_nospec(unsigned long index,
 							unsigned long size)
@@ -2895,6 +2896,7 @@ static inline unsigned long _kc_array_index_mask_nospec(unsigned long index,
 	(typeof(_i)) (_i & _mask);					\
 })
 #endif /* array_index_nospec */
+#endif
 #ifndef sizeof_field
 #define sizeof_field(TYPE, MEMBER) (sizeof((((TYPE *)0)->MEMBER)))
 #endif /* sizeof_field */
