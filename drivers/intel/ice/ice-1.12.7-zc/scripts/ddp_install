@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mkdir -p /lib/firmware/updates/intel/ice/ddp
+cp ice.pkg /lib/firmware/updates/intel/ice/ddp/

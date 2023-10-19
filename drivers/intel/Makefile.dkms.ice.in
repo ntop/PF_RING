@@ -4,6 +4,7 @@ add: veryclean
 	\/bin/rm -rf /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@
 	mkdir -p /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
 	cp @ICE@/@ICE@-@ICE_VERSION@-zc/ddp/ice-1.3.35.0.pkg /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/ice.pkg
+	cp @ICE@/@ICE@-@ICE_VERSION@-zc/scripts/ddp_install /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
 	cp @ICE@/@ICE@-@ICE_VERSION@-zc/scripts/check_aux_bus /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
 	cd @ICE@/@ICE@-@ICE_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
 	cp ../../kernel/linux/pf_ring.h /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/
