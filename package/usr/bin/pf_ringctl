@@ -274,9 +274,10 @@ configure_rss() {
 	# Setting configured number of RSS queues (or default)
 	INTERFACES=$(cat /proc/net/dev|grep ':'|grep -v 'lo'|grep -v 'sit'|awk -F":" '{print $1}'|tr -d ' ')
 	for IF in $INTERFACES ; do
-		D_MATCH=$(ethtool -i $IF|grep "$D\$"|wc -l)
+		D_MATCH=$(ethtool -i $IF|grep "${D}\$"|wc -l)
+		D_ZC_MATCH=$(ethtool -i $IF|grep "${D}_zc\$"|wc -l)
 
-		if [ "$D_MATCH" -eq 1 ]; then
+		if [ "$D_MATCH" -eq 1 ] || [ "$D_ZC_MATCH" -eq 1 ]; then
 			RSS=$(cat ${PF_RING_CONFIG_DIR}/${F}/${C}/${C}.conf 2>/dev/null | grep RSS | cut -d'=' -f2 | cut -d',' -f1)
 			if [ -z "${RSS}" ]; then
 				RSS=$DEF_RSS
