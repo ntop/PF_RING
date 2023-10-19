@@ -18,6 +18,7 @@ build: add
 	dkms build -m @ICE@-zc -v @ICE_VERSION@.@REVISION@
 
 install: build
+	mkdir -p /lib/firmware/updates/intel/ice/ddp
 	cp /usr/src/@ICE@-zc-@ICE_VERSION@.@REVISION@/ice.pkg /lib/firmware/updates/intel/ice/ddp/ice.pkg
 	dkms install --force -m @ICE@-zc -v @ICE_VERSION@.@REVISION@
 
