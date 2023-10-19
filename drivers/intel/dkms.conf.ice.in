@@ -1,7 +1,7 @@
 PACKAGE_NAME="@ICE@_zc"
 PACKAGE_VERSION="@ICE_VERSION@"
 MAKE[0]="make BUILD_KERNEL=${kernelver}"
-PRE_INSTALL="ddp_install"
+PRE_INSTALL="/bin/bash ddp_install"
 CLEAN="make clean"
 BUILT_MODULE_NAME[0]="@ICE@_zc"
 DEST_MODULE_LOCATION[0]="/updates"
