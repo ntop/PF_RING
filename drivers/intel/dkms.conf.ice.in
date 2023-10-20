@@ -1,7 +1,6 @@
 PACKAGE_NAME="@ICE@_zc"
 PACKAGE_VERSION="@ICE_VERSION@"
 MAKE[0]="make BUILD_KERNEL=${kernelver}"
-MAKE[1]="chmod +x ddp_install"
 PRE_INSTALL="ddp_install"
 CLEAN="make clean"
 BUILT_MODULE_NAME[0]="@ICE@_zc"
