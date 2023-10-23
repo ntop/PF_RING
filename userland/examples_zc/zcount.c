@@ -163,7 +163,7 @@ void sigproc(int sig) {
 
 void printHelp(void) {
   printf("zcount - (C) 2014-23 ntop\n");
-  printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
+  printf("Using PF_RING v.%s\n", pfring_zc_version());
   printf("A simple packet counter application.\n\n");
   printf("Usage:   zcount -i <device> -c <cluster id>\n"
 	 "                [-h] [-g <core id>] [-R] [-H] [-S <core id>] [-v] [-a] [-t]\n\n");

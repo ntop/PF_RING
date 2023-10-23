@@ -1332,11 +1332,16 @@ int main(int argc, char* argv[]) {
     pfring_set_application_name(pd, "pfcount");
     pfring_version(pd, &version);
 
-    if (!quiet)
-      printf("Using PF_RING v.%d.%d.%d\n",
+    if (!quiet) {
+      printf("Using PF_RING ");
+#ifdef HAVE_PF_RING_ZC
+      printf("v.%s ", pfring_zc_version());
+#endif
+      printf("kernel module v.%d.%d.%d\n",
              (version & 0xFFFF0000) >> 16,
              (version & 0x0000FF00) >> 8,
              version & 0x000000FF);
+    }
   }
 
   if (enable_hw_timestamp) {
