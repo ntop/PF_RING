@@ -1,6 +1,31 @@
 # CHANGELOG
 
 ---------------------------------------
+2023-10-23 PF_RING 8.6.1
+
+* PF_RING Library
+ - New pfring_set_cluster_consumer API to set a kernel cluster with (optional) consumer queue id and support for options (pfring_set_cluster() is set as deprecated)
+
+* PF_RING Kernel Module
+ - Implement 'relaxed' distribution mode in the kernel cluster to deliver packets to the first available queue if a consumer is down (CLUSTER_OPTION_RELAXED_DISTRIBUTION)
+ - Support for kernel 6.4+
+
+* PF_RING Capture Modules and ZC Drivers
+ - New ice zc driver v.1.12.7
+ - New ixgbe zc driver v.5.19.6
+ - New igb zc driver v.5.14.16
+ - Add auto DDP install in ice dkms packages
+
+* Examples
+ - pfsend:
+   - Add -G for seding traffic on two interfaces (one per direcion)
+   - Improve TX rate precision adjust the transmission rate to compensate cpu freq fluctuations
+ - pfcount: print both lib and kernel module versions
+
+* Misc
+ - Fix hugepages file parsing (/etc/hugepages.conf)
+
+---------------------------------------
 2023-09-01 PF_RING 8.6
 
 * PF_RING Library
