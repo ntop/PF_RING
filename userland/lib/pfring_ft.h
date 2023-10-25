@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 53
+#define FT_API_VERSION 59
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -257,6 +257,12 @@ typedef struct {
   u_int64_t packets;          /**< Number of processed packets */
   u_int64_t bytes;            /**< Total number of packet bytes */
 } pfring_ft_stats;
+
+typedef struct {
+  u_int32_t num_buffered_records;
+  u_int32_t exported_flows;
+  u_int32_t dropped_flows;
+} pfring_ft_export_stats;
 
 /*** Callbacks prototypes ***/
 
@@ -572,6 +578,17 @@ pfring_ft_zmq_export_stats(
   u_int16_t if_speed,
   const char *if_ip,
   const char *management_ip
+);
+
+/**
+ * Get ZMQ export stats
+ * @param table The flow table handle.
+ * @param stats The ZMQ stats (out).
+ */
+void
+pfring_ft_zmq_get_stats(
+  pfring_ft_table *table,
+  pfring_ft_export_stats *stats
 );
 
 /**
