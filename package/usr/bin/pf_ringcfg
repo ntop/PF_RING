@@ -207,7 +207,7 @@ print_interfaces() {
 		elif is_supported_by_zc ${DRIVER}; then
 			INFO="[Supported by ZC]"
 		elif is_supported_by_other ${DRIVER}; then
-			INFO="[Supported by ZC]"
+			INFO="[Running ZC]"
 		else
 			INFO="[Linux Driver]"
 		fi
