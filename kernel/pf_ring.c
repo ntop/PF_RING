@@ -6024,7 +6024,7 @@ static int ring_sendmsg(struct socket *sock,
 /* ************************************* */
 
 unsigned int ring_poll(struct file *file,
-                       struct socket *sock, poll_table * wait)
+                       struct socket *sock, poll_table *wait)
 {
   struct pf_ring_socket *pfr = ring_sk(sock->sk);
   int rc, mask = 0;
@@ -6046,8 +6046,13 @@ unsigned int ring_poll(struct file *file,
       spin_unlock_bh(&pfr->tx.consume_tx_packets_lock);
     }
 
-    if(num_queued_pkts(pfr) < pfr->poll_num_pkts_watermark /* || pfr->num_poll_calls == 1 */)
-      poll_wait(file, &pfr->ring_slots_waitqueue, wait);
+    /* Note:
+     * - always call poll_wait as it adds the "file to the list
+     *   of those that can wake up the process.
+     * - epoll function expects that whenever poll is called
+     *   poll_wait is also called, otherwise epoll would timeout
+     */
+    poll_wait(file, &pfr->ring_slots_waitqueue, wait);
 
     /* Flush the queue when watermark reached */
     if(num_queued_pkts(pfr) >= pfr->poll_num_pkts_watermark) {
@@ -6055,13 +6060,13 @@ unsigned int ring_poll(struct file *file,
       pfr->queue_nonempty_timestamp=0;
     }
 
-    if( pfr->poll_watermark_timeout > 0 ) {
+    if(pfr->poll_watermark_timeout > 0) {
       /* Flush the queue also in case its not empty but timeout passed */
-      if( num_queued_pkts(pfr) > 0 ) {
+      if(num_queued_pkts(pfr) > 0) {
         now = jiffies;
-        if( pfr->queue_nonempty_timestamp == 0 ) {
+        if(pfr->queue_nonempty_timestamp == 0) {
           pfr->queue_nonempty_timestamp = now;
-        } else if( (jiffies_to_msecs(now - pfr->queue_nonempty_timestamp) >= (u_long)pfr->poll_watermark_timeout) ) {
+        } else if((jiffies_to_msecs(now - pfr->queue_nonempty_timestamp) >= (u_long)pfr->poll_watermark_timeout)) {
             debug_printk(2, "[ring_id=%u] Flushing queue (num_queued_pkts=%llu, now=%lu, queue_nonempty_timestamp=%lu, diff=%u, pfr->poll_watermark_timeout=%u)\n",
                       pfr->ring_id, num_queued_pkts(pfr), now, pfr->queue_nonempty_timestamp, jiffies_to_msecs(now - pfr->queue_nonempty_timestamp), pfr->poll_watermark_timeout);
             mask |= POLLIN | POLLRDNORM;
