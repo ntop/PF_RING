@@ -3036,6 +3036,14 @@ static int i40e_change_mtu(struct net_device *netdev, int new_mtu)
 	int max_frame = new_mtu + I40E_PACKET_HDR_PAD;
 	struct i40e_vsi *vsi = np->vsi;
 	struct i40e_pf *pf = vsi->back;
+#ifdef HAVE_PF_RING
+	struct i40e_pf *adapter = i40e_netdev_to_pf(netdev);
+
+	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0) {
+		printk("[PF_RING-ZC] %s: trying to change the MTU on %s while in use\n", __FUNCTION__, netdev->name); 
+		return -EBUSY;
+	}
+#endif
 
 	/* MTU < 68 is an error and causes problems on some kernels */
 	if ((new_mtu < 68) || (max_frame > I40E_MAX_RXBUFFER))
