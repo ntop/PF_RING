@@ -1548,14 +1548,13 @@ static bool ice_enable_custom_tx(struct ice_pf *pf)
 			"Hierarchical QoS configuration is not supported because DCB is configured. Please disable these features and try again\n");
 		return false;
 	}
-#ifndef HAVE_PF_RING_NO_RDMA
+
 	if (ice_is_aux_ena(pf) &&
 	    ice_is_rdma_aux_loaded(pf)) {
 		dev_err(dev,
 			"Hierarchical QoS configuration is not supported because RDMA is configured. Please disable these features and try again\n");
 		return false;
 	}
-#endif
 
 	pi->is_custom_tx_enabled = true;
 

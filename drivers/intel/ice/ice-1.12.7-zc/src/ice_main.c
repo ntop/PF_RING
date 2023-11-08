@@ -136,9 +136,7 @@ struct device *ice_hw_to_dev(struct ice_hw *hw)
 }
 
 struct workqueue_struct *ice_wq;
-#ifndef HAVE_PF_RING_NO_LAG
 struct workqueue_struct *ice_lag_wq;
-#endif
 
 static const struct net_device_ops ice_netdev_recovery_ops;
 static const struct net_device_ops ice_netdev_safe_mode_ops;
@@ -989,9 +987,7 @@ static void
 ice_prepare_for_reset(struct ice_pf *pf, enum ice_reset_req reset_type)
 {
 	struct ice_hw *hw = &pf->hw;
-#ifndef HAVE_PF_RING_NO_RDMA
 	struct iidc_event *event;
-#endif
 #ifdef HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO
 	struct ice_vsi *vsi;
 #endif /* HAVE_TC_CB_AND_SETUP_QDISC_MQPRIO */
@@ -1007,7 +1003,6 @@ ice_prepare_for_reset(struct ice_pf *pf, enum ice_reset_req reset_type)
 	/* Make sure the miscellaneous IRQ handler sees that reset started */
 	synchronize_irq(ice_get_irq_num(pf, pf->oicr_idx));
 
-#ifndef HAVE_PF_RING_NO_RDMA
 	/* if alloc of event fails, we still need to perform the reset,
 	 * can't fail on this, so warn on failure and move on
 	 **/
@@ -1020,7 +1015,6 @@ ice_prepare_for_reset(struct ice_pf *pf, enum ice_reset_req reset_type)
 		dev_warn(ice_pf_to_dev(pf), "Failed to notify auxiliary drivers of reset\n");
 	}
 	ice_unplug_aux_devs(pf);
-#endif
 
 	/* Notify VFs of impending reset */
 	if (ice_check_sq_alive(hw, &hw->mailboxq))
@@ -2126,9 +2120,7 @@ ice_link_event(struct ice_pf *pf, struct ice_port_info *pi, bool link_up,
 {
 	struct device *dev = ice_pf_to_dev(pf);
 	struct ice_phy_info *phy_info;
-#ifndef HAVE_PF_RING_NO_RDMA
 	struct iidc_event *iev;
-#endif
 	struct ice_vsi *vsi;
 	u16 old_link_speed;
 	bool old_link;
@@ -2157,7 +2149,6 @@ ice_link_event(struct ice_pf *pf, struct ice_port_info *pi, bool link_up,
 	if (phy_info->link_info.link_info & ICE_AQ_LINK_UP)
 		link_up = true;
 
-#ifndef HAVE_PF_RING_NO_RDMA
 	iev = kzalloc(sizeof(*iev), GFP_KERNEL);
 	if (!iev)
 		return -ENOMEM;
@@ -2166,7 +2157,6 @@ ice_link_event(struct ice_pf *pf, struct ice_port_info *pi, bool link_up,
 	iev->info.link_up = link_up;
 	ice_send_event_to_auxs(pf, iev);
 	kfree(iev);
-#endif
 
 	vsi = ice_get_main_vsi(pf);
 	if (!vsi || !vsi->port_info)
@@ -3655,7 +3645,6 @@ static void ice_service_task(struct work_struct *work)
 		ice_service_task_complete(pf);
 		return;
 	}
-#ifndef HAVE_PF_RING_NO_RDMA
 	if (test_and_clear_bit(ICE_AUX_ERR_PENDING, pf->state)) {
 		struct iidc_event *event;
 
@@ -3685,7 +3674,6 @@ static void ice_service_task(struct work_struct *work)
 	if (test_and_clear_bit(ICE_FLAG_PLUG_AUX_DEV, pf->flags)) {
 		ice_plug_aux_devs(pf);
 	}
-#endif
 
 	/* If we are in FW recovery mode, need to exit service tasks here */
 	if (test_bit(ICE_RECOVERY_MODE, pf->state))
@@ -6599,11 +6587,8 @@ static int ice_init_features(struct ice_pf *pf)
 	}
 
 #ifdef HAVE_NETDEV_UPPER_INFO
-#ifndef HAVE_PF_RING_NO_LAG
 	if (ice_init_lag(pf))
 		dev_warn(dev, "Failed to init link aggregation support\n");
-#endif
-
 #endif /* HAVE_NETDEV_UPPER_INFO */
 	ice_config_health_events(pf, true);
 
@@ -6620,9 +6605,7 @@ static void ice_deinit_features(struct ice_pf *pf)
 		ice_deinit_siov_res(pf);
 
 #ifdef HAVE_NETDEV_UPPER_INFO
-#ifndef HAVE_PF_RING_NO_LAG
 	ice_deinit_lag(pf);
-#endif
 #endif /* HAVE_NETDEV_UPPER_INFO */
 
 	if (test_bit(ICE_FLAG_FD_ENA, pf->flags))
@@ -7006,11 +6989,9 @@ int ice_load(struct ice_pf *pf)
 	if (err)
 		goto err_start_eth;
 
-#ifndef HAVE_PF_RING_NO_RDMA
 	err = ice_init_peer(pf);
 	if (err)
 		goto err_init_peer;
-#endif
 
 	ice_init_features(pf);
 	ice_service_task_restart(pf);
@@ -7019,9 +7000,7 @@ int ice_load(struct ice_pf *pf)
 
 	return 0;
 
-#ifndef HAVE_PF_RING_NO_RDMA
 err_init_peer:
-#endif
 	ice_vsi_close(ice_get_main_vsi(pf));
 err_start_eth:
 	ice_vsi_decfg(ice_get_main_vsi(pf));
@@ -7040,10 +7019,8 @@ void ice_unload(struct ice_pf *pf)
 	struct ice_vsi *vsi = ice_get_main_vsi(pf);
 
 	ice_deinit_features(pf);
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_unplug_aux_devs(pf);
 	ice_deinit_peer(pf);
-#endif
 	ice_stop_eth(vsi);
 	/* clear requested queues, to allow new MSI-X value to apply */
 	if (vsi->req_rxq > pf->msix.eth || vsi->req_txq > pf->msix.eth) {
@@ -7159,11 +7136,9 @@ ice_probe(struct pci_dev *pdev, const struct pci_device_id __always_unused *ent)
 	if (err)
 		goto err_init_eth;
 
-#ifndef HAVE_PF_RING_NO_RDMA
 	err = ice_init_peer(pf);
 	if (err)
 		goto err_init_peer;
-#endif
 
 	err = ice_init_features(pf);
 	if (err)
@@ -7171,10 +7146,8 @@ ice_probe(struct pci_dev *pdev, const struct pci_device_id __always_unused *ent)
 	return 0;
 
 err_init_features:
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_deinit_peer(pf);
 err_init_peer:
-#endif
 	ice_deinit_eth(pf);
 err_init_eth:
 	ice_deinit_devlink(pf);
@@ -7286,9 +7259,7 @@ static void ice_remove(struct pci_dev *pdev)
 		set_bit(ICE_VF_RESETS_DISABLED, pf->state);
 		ice_free_vfs(pf);
 	}
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_remove_peer(pf);
-#endif
 	ice_service_task_stop(pf);
 
 	ice_aq_cancel_waiting_tasks(pf);
@@ -7297,9 +7268,7 @@ static void ice_remove(struct pci_dev *pdev)
 	ice_setup_mc_magic_wake(pf);
 	ice_deinit_features(pf);
 	ice_deinit_devlink(pf);
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_deinit_peer(pf);
-#endif
 	ice_deinit_eth(pf);
 	ice_deinit(pf);
 
@@ -7443,9 +7412,7 @@ static int __maybe_unused ice_suspend(struct device *dev)
 	 */
 	disabled = ice_service_task_stop(pf);
 
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_unplug_aux_devs(pf);
-#endif
 
 	/* Already suspended?, then there is nothing to do */
 	if (test_and_set_bit(ICE_SUSPENDED, pf->state)) {
@@ -7526,9 +7493,7 @@ static int __maybe_unused ice_resume(struct device *dev)
 	if (ret)
 		ice_dev_err_errno(dev, ret, "Cannot restore interrupt scheme");
 
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_cdev_info_refresh_msix(pf);
-#endif
 
 	clear_bit(ICE_DOWN, pf->state);
 	/* Now perform PF reset and rebuild */
@@ -7808,13 +7773,12 @@ static int __init ice_module_init(void)
 		return -ENOMEM;
 	}
 
-#ifndef HAVE_PF_RING_NO_LAG
 	ice_lag_wq = alloc_ordered_workqueue("ice_lag_wq", 0);
 	if (!ice_lag_wq) {
 		pr_err("Failed to create LAG workqueue\n");
 		return -ENOMEM;
 	}
-#endif
+
 #ifdef HAVE_RHEL7_PCI_DRIVER_RH
 	/* The size member must be initialized in the driver via a call to
 	 * set_pci_driver_rh_size before pci_register_driver is called
@@ -7829,9 +7793,7 @@ static int __init ice_module_init(void)
 	if (status) {
 		pr_err("failed to register PCI driver, err %d\n", status);
 		destroy_workqueue(ice_wq);
-#ifndef HAVE_PF_RING_NO_LAG
 		destroy_workqueue(ice_lag_wq);
-#endif
 		ice_debugfs_exit();
 	}
 
@@ -7849,9 +7811,7 @@ static void __exit ice_module_exit(void)
 {
 	pci_unregister_driver(&ice_driver);
 	destroy_workqueue(ice_wq);
-#ifndef HAVE_PF_RING_NO_LAG
 	destroy_workqueue(ice_lag_wq);
-#endif
 	ice_debugfs_exit();
 	pr_info("module unloaded\n");
 }
@@ -10663,10 +10623,8 @@ static void ice_rebuild(struct ice_pf *pf, enum ice_reset_req reset_type)
 		dev_err(dev, "No PF_VSI to update aux drivers\n");
 		goto err_vsi_rebuild;
 	}
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_cdev_info_update_vsi(ice_find_cdev_info_by_id(pf, IIDC_RDMA_ID),
 				 vsi);
-#endif
 #ifdef HAVE_NDO_DFWD_OPS
 	if (test_bit(ICE_FLAG_MACVLAN_ENA, pf->flags)) {
 		err = ice_vsi_rebuild_by_type(pf, ICE_VSI_OFFLOAD_MACVLAN);

@@ -6,8 +6,6 @@
 #include "ice_peer_support.h"
 #include "ice_idc_int.h"
 
-#ifndef HAVE_PF_RING_NO_RDMA
-
 static int peer_alloc_cdev_info(struct ice_pf *pf)
 {
 	struct device *dev = ice_pf_to_dev(pf);
@@ -68,4 +66,3 @@ void ice_remove_peer(struct ice_pf *pf)
 	ice_unplug_aux_devs(pf);
 }
 
-#endif

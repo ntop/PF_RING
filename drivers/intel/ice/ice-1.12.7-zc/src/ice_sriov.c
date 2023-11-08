@@ -202,18 +202,14 @@ void ice_free_vfs(struct ice_pf *pf)
 		ice_dis_vf_qs(vf);
 
 		if (test_bit(ICE_VF_STATE_INIT, vf->vf_states)) {
-#ifndef HAVE_PF_RING_NO_RDMA
 			u16 abs_vf_id = ice_abs_vf_id(hw, vf->vf_id);
 			struct iidc_core_dev_info *rcdi;
-#endif
 
 			/* disable VF qp mappings and set VF disable state */
 			ice_dis_vf_mappings(vf);
 			set_bit(ICE_VF_STATE_DIS, vf->vf_states);
-#ifndef HAVE_PF_RING_NO_RDMA
 			rcdi = ice_find_cdev_info_by_id(pf, IIDC_RDMA_ID);
 			ice_send_vf_reset_to_aux(rcdi, abs_vf_id);
-#endif
 			ice_free_vf_res(vf);
 		}
 

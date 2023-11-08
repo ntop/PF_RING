@@ -124,7 +124,6 @@ endif
 
 
 ifeq (${NEED_AUX_BUS},2)
-# HAVE_PF_RING_NO_RDMA
 #intel_auxiliary-objs := auxiliary.o
 #obj-m += intel_auxiliary.o
 endif

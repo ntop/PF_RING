@@ -747,10 +747,8 @@ int ice_reset_vf(struct ice_vf *vf, u32 flags)
 
 	/* Set VF disable bit state here, before triggering reset */
 	set_bit(ICE_VF_STATE_DIS, vf->vf_states);
-#ifndef HAVE_PF_RING_NO_RDMA
 	ice_send_vf_reset_to_aux(ice_find_cdev_info_by_id(pf, IIDC_RDMA_ID),
 				 ice_abs_vf_id(&pf->hw, vf->vf_id));
-#endif
 	ice_trigger_vf_reset(vf, flags & ICE_VF_RESET_VFLR, false);
 
 	if (ice_dcf_get_state(pf) == ICE_DCF_STATE_ON)

@@ -84,7 +84,6 @@ ice-vfio-pci-y := ice_vfio_pci.o
 ice-$(CONFIG_VFIO_PCI_CORE:m=y) += ice_migration.o
 endif
 
-# HAVE_PF_RING_NO_RDMA
 #obj-m += auxiliary.o
 
 # LM support is only enabled if the kernel has features for LM v1 protocol.

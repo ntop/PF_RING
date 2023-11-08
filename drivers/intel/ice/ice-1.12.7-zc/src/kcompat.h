@@ -45,10 +45,6 @@
 //#define ICE_RX_TAIL_RESET
 #define ICE_USER_TO_KERNEL_RESET
 
-#define HAVE_PF_RING_NO_RDMA
-#define HAVE_PF_RING_NO_LAG
-#define HAVE_PF_RING_NO_AUX
-
 #define PCI_DEVICE_CACHE_LINE_SIZE             0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES       8
 #define ICE_MAX_NIC                            64
@@ -2218,7 +2214,9 @@ int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
 #endif
 #endif /* < 4.8.0 */
 #define HAVE_NETIF_NAPI_ADD_CALLS_NAPI_HASH_ADD
+#ifndef HAVE_PF_RING /* Disable LAG support */
 #define HAVE_NETDEV_UPPER_INFO
+#endif
 #endif /* 4.5.0 */
 
 /*****************************************************************************/
