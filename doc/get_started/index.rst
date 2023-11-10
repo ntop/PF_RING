@@ -5,5 +5,5 @@ Get Started
     :maxdepth: 2
     :numbered:
 
-    git_installation
     packages_installation
+    git_installation
