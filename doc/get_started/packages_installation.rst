@@ -13,8 +13,8 @@ package, to automate the kernel module and drivers loading. Alternatively please
 note that it is possible to automatically configure PF_RING and drivers using the
 *pf_ringcfg* script (since PF_RING 7.5) or through the nBox GUI.
 
-Configuration Wizard
---------------------
+Configuration Wizard (pf_ringcfg)
+---------------------------------
 
 Since PF_RING 7.5, the pfring package includes the *pf_ringcfg* script that can be
 used to automatically create a configuration for the PF_RING kernel module and drivers.
@@ -81,7 +81,6 @@ to improve the performance and absorbe traffic bursts:
 .. code-block:: console
 
    apt-get install pfring-dkms
-   mkdir -p /etc/pf_ring
    echo "min_num_slots=65536" > /etc/pf_ring/pf_ring.conf
    systemctl restart pf_ring
 
@@ -101,11 +100,10 @@ your actual driver family).
 .. code-block:: console
 
    apt-get install pfring-dkms pfring-drivers-zc-dkms
-   touch /etc/pf_ring/pf_ring.conf
-   echo "node=0 hugepagenumber=1024" | tee /etc/pf_ring/hugepages.conf 
    mkdir -p /etc/pf_ring/zc/ixgbe
    echo "RSS=1,1" | tee /etc/pf_ring/zc/ixgbe/ixgbe.conf 
    touch /etc/pf_ring/zc/ixgbe/ixgbe.start
+   echo "node=0 hugepagenumber=1024" | tee /etc/pf_ring/hugepages.conf 
    systemctl restart pf_ring
 
 Please note that in this configuration RSS is disabled (RSS=1 means single queue). 
