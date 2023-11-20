@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 59
+#define FT_API_VERSION 65
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -40,6 +40,7 @@ struct ndpi_flow_struct;
 #define PFRING_FT_ACTION_DISCARD 2
 #define PFRING_FT_ACTION_USER_1  3
 #define PFRING_FT_ACTION_USER_2  4
+#define PFRING_FT_ACTION_SLICE   5
 
 typedef u_int8_t pfring_ft_action;
 
