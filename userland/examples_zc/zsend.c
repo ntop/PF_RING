@@ -71,8 +71,6 @@ u_int8_t use_pkt_burst_api = 0;
 int pkts_offset = 0;
 u_int num_pcap_pkts = 0;
 int reforge_mac = 0;
-u_int8_t n2disk_producer = 0;
-u_int32_t n2disk_threads;
 pcap_t *pt = NULL;
 u_int max_pkt_len = 60;
 u_char stdin_packet[9000];
@@ -232,7 +230,6 @@ void printHelp(void) {
   printf("-l <len>        Packet len (bytes)\n");
   printf("-n <num>        Number of packets\n");
   printf("-b <num>        Number of different IPs\n");
-  printf("-N <num>        Simulate a producer for n2disk multi-thread (<num> threads)\n");
   printf("-S <core id>    Append timestamp to packets, bind time-pulse thread to a core\n");
   printf("-P <core id>    Use a time-pulse thread to control transmission rate, bind the thread to a core\n");
   printf("-z              Use burst API\n");
@@ -513,7 +510,7 @@ int main(int argc, char* argv[]) {
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ab:c:f:g:hi:m:n:o:p:r:l:zDN:S:P:Q:")) != '?') {
+  while((c = getopt(argc,argv,"ab:c:f:g:hi:m:n:o:p:r:l:zDS:P:Q:")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -585,10 +582,6 @@ int main(int argc, char* argv[]) {
       enable_vm_support = 1;
       vm_sock = strdup(optarg);
       break;
-    case 'N':
-      n2disk_producer = 1;
-      n2disk_threads = atoi(optarg);
-      break;
     case 'S':
       append_timestamp = 1;
       bind_time_pulse_core = atoi(optarg);
@@ -599,9 +592,6 @@ int main(int argc, char* argv[]) {
       break;
     }
   }
-
-  if (n2disk_producer) 
-    device = NULL;
 
   if(pt)
     append_timestamp = 0;
@@ -617,13 +607,6 @@ int main(int argc, char* argv[]) {
   if (stdin_packet_len > 0)
     packet_len = stdin_packet_len;
 
-  if (n2disk_producer) {
-    if (device != NULL || ipc_q_attach) printHelp();
-    if (n2disk_threads < 1) printHelp();
-    metadata_len = N2DISK_METADATA;
-    num_consumer_buffers += (n2disk_threads * (N2DISK_CONSUMER_QUEUE_LEN + 1)) + N2DISK_PREFETCH_BUFFERS;
-  }
- 
   if (!ipc_q_attach) {
     if (device != NULL)
       num_queue_buffers = MAX_CARD_SLOTS;
@@ -671,31 +654,15 @@ int main(int argc, char* argv[]) {
         return -1;
       }
 
-      if (pfring_zc_create_buffer_pool(zc, n2disk_producer ? (N2DISK_PREFETCH_BUFFERS + n2disk_threads) : 1) == NULL) {
+      if (pfring_zc_create_buffer_pool(zc, 1) == NULL) {
         fprintf(stderr, "pfring_zc_create_buffer_pool error\n");
         return -1;
       }
    
       fprintf(stderr, "Sending packets to cluster %u queue %u\n", cluster_id, 0);
 
-      if (n2disk_producer) {
-        char queues_list[256];
-        queues_list[0] = '\0';
-
-        for (i = 0; i < n2disk_threads; i++) {
-          if(pfring_zc_create_queue(zc, N2DISK_CONSUMER_QUEUE_LEN) == NULL) {
-            fprintf(stderr, "pfring_zc_create_queue error [%s]\n", strerror(errno));
-            return -1;
-          }
-          sprintf(&queues_list[strlen(queues_list)], "%d,", i+1);
-        }
-        queues_list[strlen(queues_list)-1] = '\0';
-
-        fprintf(stderr, "Run n2disk with: --cluster-ipc-attach --cluster-id %d --cluster-ipc-queues %s --cluster-ipc-pool 0\n", cluster_id, queues_list);
-      } else {
-        fprintf(stderr, "Run your consumer application as follows:\n");
-        fprintf(stderr, "\tpfcount -i zc:%d@%d\n", cluster_id, 0);
-      }
+      fprintf(stderr, "Run your consumer application as follows:\n");
+      fprintf(stderr, "\tpfcount -i zc:%d@%d\n", cluster_id, 0);
     }
 
     if (enable_vm_support) {

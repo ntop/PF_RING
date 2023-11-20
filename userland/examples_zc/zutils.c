@@ -28,10 +28,6 @@
 
 /* *************************************** */
 
-#define N2DISK_METADATA             16
-#define N2DISK_CONSUMER_QUEUE_LEN 8192
-#define N2DISK_PREFETCH_BUFFERS     32
-
 #define MAX_NUM_OPTIONS             64
 
 #define DEFAULT_CLUSTER_ID          99

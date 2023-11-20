@@ -106,9 +106,6 @@ static struct timeval start_time;
 u_int8_t wait_for_packet = 1, enable_vm_support = 0, time_pulse = 0, print_interface_stats = 0, proc_stats_only = 0, daemon_mode = 0;
 volatile u_int8_t do_shutdown = 0;
 
-u_int8_t n2disk_producer = 0;
-u_int32_t n2disk_threads;
-
 char *vlan_filter = NULL;
 bitmap64_t(allowed_vlans, 1024);
 
@@ -670,7 +667,6 @@ void printHelp(void) {
   printf("-b <size>        Number of buffers in each consumer pool (default: %u)\n", POOL_SIZE);
   printf("-w               Use hw aggregation when specifying multiple devices in -i (when supported)\n");
   printf("-W <sec>         Wait <sec> seconds before processing packets\n");
-  printf("-N <num>         Producer for n2disk multi-thread with <num> threads (not supported with multiple -i)\n");
   printf("-a               Active packet wait\n");
   printf("-Q <sock list>   Enable VM support (comma-separated list of QEMU monitor sockets)\n");
   printf("-p               Print per-interface and per-queue absolute stats\n");
@@ -1035,7 +1031,7 @@ int main(int argc, char* argv[]) {
   u_int32_t cluster_flags = 0;
   u_int32_t rx_open_flags;
   u_int32_t tot_num_buffers, num_outdevs = 0;
-  const char *opt_string = "ab:c:dD:f:G:g:hi:Jl:m:M:n:N:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
+  const char *opt_string = "ab:c:dD:f:G:g:hi:Jl:m:M:n:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -1143,10 +1139,6 @@ int main(int argc, char* argv[]) {
     case 'n':
       applications = strdup(optarg);
       break;
-    case 'N':
-      n2disk_producer = 1;
-      n2disk_threads = atoi(optarg);
-      break;
     case 'p':
       print_interface_stats = 1;
       break;
@@ -1225,7 +1217,6 @@ int main(int argc, char* argv[]) {
   if (cluster_id < 0) printHelp();
   if (applications == NULL && hash_mode != 7) printHelp();
   if (num_balancers > 1 && hash_mode == 6) printHelp();
-  if (num_balancers > 1 && n2disk_producer) printHelp();
 
   if (vlan_filter
 #ifdef HAVE_PF_RING_FT
@@ -1249,12 +1240,6 @@ int main(int argc, char* argv[]) {
       }
       vlan = strtok(NULL, ",");
     }
-  }
-
-  if (n2disk_producer) {
-    if (n2disk_threads < 1) printHelp();
-    metadata_len = N2DISK_METADATA;
-    num_additional_buffers += (n2disk_threads * (N2DISK_CONSUMER_QUEUE_LEN + 1)) + N2DISK_PREFETCH_BUFFERS;
   }
 
   for (b = 0; b < num_balancers; b++) {
@@ -1494,30 +1479,6 @@ int main(int argc, char* argv[]) {
   if ((outzq_bpf = init_outzq_bpf(&out_bpf_file_list, num_consumer_queues))) {
     set_outzq_bpf();
     filter_func = packet_filtering_func;
-  }
-
-  if (n2disk_producer) {
-    char queues_list[256];
-    queues_list[0] = '\0';
-
-    for (i = 0; i < n2disk_threads; i++) {
-      if (pfring_zc_create_queue(zc, N2DISK_CONSUMER_QUEUE_LEN) == NULL) {
-        trace(TRACE_ERROR, "pfring_zc_create_queue error [%s]\n", strerror(errno));
-        pfring_zc_destroy_cluster(zc);
-        return -1;
-      }
-      sprintf(&queues_list[strlen(queues_list)], "%ld,", i + num_consumer_queues);
-    }
-    queues_list[strlen(queues_list)-1] = '\0';
-
-    if (pfring_zc_create_buffer_pool(zc, N2DISK_PREFETCH_BUFFERS + n2disk_threads) == NULL) {
-      trace(TRACE_ERROR, "pfring_zc_create_buffer_pool error\n");
-      pfring_zc_destroy_cluster(zc);
-      return -1;
-    }
-
-    trace(TRACE_NORMAL, "Run n2disk10gzc with: -i %d@<queue id> --cluster-ipc-queues %s --cluster-ipc-pool %d --reader-threads <%d core ids>\n", 
-      cluster_id, queues_list, balancer[0].num_in_queues + num_consumer_queues + 1, n2disk_threads);
   }
 
   if (enable_vm_support) {
