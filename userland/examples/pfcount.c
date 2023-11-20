@@ -563,11 +563,10 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
     char bigbuf[4096], pbuf[64];;
     u_int len;
 
-    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d][hash=%u]%s",
+    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s[if_index=%d][hash=%u]",
 	     h->extended_hdr.rx_direction ? "[RX]" : "[TX]",
 	     h->extended_hdr.if_index,
-	     h->extended_hdr.pkt_hash,
-	     (h->extended_hdr.flags & PKT_FLAGS_FLOW_OFFLOAD_MARKER) ? "[MARKED]" : "");
+	     h->extended_hdr.pkt_hash);
 
     if (h->extended_hdr.process.pid)
       snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "[pid=%u (%s)]",
