@@ -1317,7 +1317,6 @@ int main(int argc, char* argv[]) {
   if(asymm_rss)               flags |= PF_RING_ZC_NOT_REPROGRAM_RSS;
   else                        flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   if(rss_q_0_only)            flags |= PF_RING_ZC_NOT_REPROGRAM_RSS | PF_RING_ZC_FIXED_RSS_Q_0;
-  /* flags |= PF_RING_FLOW_OFFLOAD | PF_RING_FLOW_OFFLOAD_NOUPDATES;  to receive FlowID on supported adapters*/
   /* flags |= PF_RING_USERSPACE_BPF; to force userspace BPF even with kernel capture  */
 
   pd = pfring_open(device, snaplen, flags);
