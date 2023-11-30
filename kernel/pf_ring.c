@@ -507,6 +507,11 @@ static inline int32_t ifindex_to_pf_index(pf_ring_net *netns,
   ifindex_map_item *ifindex_map = netns->ifindex_map;
   int i;
 
+  if (netns == NULL) {
+    printk("[PF_RING] Failure converting ifindex to PF index (netns is null)\n");
+    return -1;
+  }
+
   if (ifindex < MAX_NUM_DEV_IDX &&
       ifindex_map[ifindex].set &&
       ifindex_map[ifindex].direct_mapping)
@@ -524,8 +529,17 @@ static inline int32_t ifindex_to_pf_index(pf_ring_net *netns,
 
 static inline int32_t pf_index_to_ifindex(pf_ring_net *netns,
                                           int32_t pf_index) {
-  ifindex_map_item *ifindex_map = netns->ifindex_map;
-  if (ifindex_map[pf_index].set)
+  ifindex_map_item *ifindex_map;
+
+  if (netns == NULL) {
+    printk("[PF_RING] Failure converting PF index to ifindex (netns is null)\n");
+    return -1;
+  }
+
+  ifindex_map = netns->ifindex_map;
+
+  if (pf_index < MAX_NUM_DEV_IDX /* safety cehck */ &&
+      ifindex_map[pf_index].set)
     return ifindex_map[pf_index].ifindex;
 
   return -1;
@@ -534,8 +548,17 @@ static inline int32_t pf_index_to_ifindex(pf_ring_net *netns,
 /* ************************************************** */
 
 static int32_t map_ifindex(pf_ring_net *netns, int32_t ifindex) {
-  ifindex_map_item *ifindex_map = netns->ifindex_map;
-  int32_t i = ifindex_to_pf_index(netns, ifindex);
+  ifindex_map_item *ifindex_map;
+  int32_t i;
+
+  if (netns == NULL) {
+    printk("[PF_RING] Failure map'ing ifindex (netns is null)\n");
+    return -1;
+  }
+
+  ifindex_map = netns->ifindex_map;
+
+  i = ifindex_to_pf_index(netns, ifindex);
 
   if (i >= 0)
     return i;
@@ -562,8 +585,18 @@ static int32_t map_ifindex(pf_ring_net *netns, int32_t ifindex) {
 /* ************************************************** */
 
 static void unmap_ifindex(pf_ring_net *netns, int32_t ifindex) {
-  ifindex_map_item *ifindex_map = netns->ifindex_map;
-  int32_t i = ifindex_to_pf_index(netns, ifindex);
+  ifindex_map_item *ifindex_map;
+  int32_t i;
+
+  if (netns == NULL) {
+    printk("[PF_RING] Failure unmap'ing ifindex (netns is null)\n");
+    return;
+  }
+ 
+  ifindex_map = netns->ifindex_map;
+
+  i = ifindex_to_pf_index(netns, ifindex);
+
   if (i >= 0) {
     ifindex_map[i].ifindex = 0;
     ifindex_map[i].direct_mapping = 0;
