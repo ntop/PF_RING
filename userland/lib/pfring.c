@@ -1515,10 +1515,11 @@ void pfring_freealldevs(pfring_if_t *list) {
   pfring_if_t *tmp = list;
   while (tmp) {
     list = list->next;
-    if (tmp->name)        free(tmp->name);
-    if (tmp->system_name) free(tmp->system_name);
-    if (tmp->module)      free(tmp->module);
-    if (tmp->sn)          free(tmp->sn);
+    if (tmp->name)           free(tmp->name);
+    if (tmp->system_name)    free(tmp->system_name);
+    if (tmp->module)         free(tmp->module);
+    if (tmp->module_version) free(tmp->module_version);
+    if (tmp->sn)             free(tmp->sn);
     free(tmp);
     tmp = list;
   }
