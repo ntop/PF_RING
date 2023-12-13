@@ -5415,7 +5415,7 @@ static int ring_release(struct socket *sock)
               int i;
               /* Reset quick mode for all channels */
               for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
-                u_int64_t channel_id_bit = 1 << i;
+                u_int64_t channel_id_bit = (u_int64_t) 1 << i;
                 if((pfr->channel_id_mask & channel_id_bit) && netns->quick_mode_rings[dev_index][i] == pfr)
                   netns->quick_mode_rings[dev_index][i] = NULL;
               }
