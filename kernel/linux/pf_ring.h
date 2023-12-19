@@ -832,7 +832,7 @@ FlowSlotInfo;
 
 #ifdef __KERNEL__
 FlowSlotInfo *getRingPtr(void);
-int allocateRing(char *deviceName, u_int numSlots, u_int bucketLen, u_int sampleRate);
+int allocateRing(char *deviceName, u_int32_t numSlots, u_int32_t bucketLen, u_int32_t sampleRate);
 unsigned int pollRing(struct file *fp, struct poll_table_struct * wait);
 void deallocateRing(void);
 #endif /* __KERNEL__ */
@@ -1138,7 +1138,7 @@ typedef struct {
   /* ZC */
   u_int8_t is_zc_device;
   zc_dev_model zc_dev_model;
-  u_int num_zc_dev_rx_queues; /* 0 for non ZC devices */
+  u_int32_t num_zc_dev_rx_queues; /* 0 for non ZC devices */
   u_int32_t num_zc_rx_slots;
   u_int32_t num_zc_tx_slots;
 

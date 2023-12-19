@@ -320,7 +320,7 @@ static DEFINE_SPINLOCK(cluster_fragments_lock);
 
 /* List of all ZC devices */
 static struct list_head zc_devices_list;
-static u_int zc_devices_list_size = 0;
+static u_int32_t zc_devices_list_size = 0;
 
 /* List of generic cluster referees */
 static struct list_head cluster_referee_list;
@@ -452,7 +452,7 @@ MODULE_PARM_DESC(transparent_mode,
 
 /* ***************** Legacy code ************************ */
 
-u_int get_num_rx_queues(struct net_device *dev)
+u_int32_t get_num_rx_queues(struct net_device *dev)
 {
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
   /* FIXX now sure why we are taking the min here, it may depend on the way old kernels
@@ -470,7 +470,7 @@ u_int get_num_rx_queues(struct net_device *dev)
 
 /* ************************************************** */
 
-u_int lock_rss_queues(struct net_device *dev)
+u_int32_t lock_rss_queues(struct net_device *dev)
 {
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38)) && defined(CONFIG_RPS)
   return (dev->real_num_rx_queues > 1) || (dev->real_num_tx_queues > 1);
@@ -1872,7 +1872,7 @@ static u_int32_t compute_ring_actual_min_num_slots(u_int64_t tot_mem, u_int32_t 
  */
 static int ring_alloc_mem(struct sock *sk)
 {
-  u_int slot_len;
+  u_int32_t slot_len;
   u_int64_t tot_mem;
   struct pf_ring_socket *pfr = ring_sk(sk);
   u_int32_t num_slots = min_num_slots;
@@ -2126,13 +2126,13 @@ static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t fla
 
 /* ******************************************************* */
 
-static int parse_raw_pkt(u_char *data, u_int data_len,
+static int parse_raw_pkt(u_char *data, u_int32_t data_len,
                          struct pfring_pkthdr *hdr,
                          u_int16_t *ip_id)
 {
   struct ethhdr *eh = (struct ethhdr *)data;
-  u_int16_t displ = sizeof(struct ethhdr), ip_len, fragment_offset = 0, tunnel_offset = 0;
-  u_int16_t tunnel_len;
+  u_int32_t displ = sizeof(struct ethhdr), ip_len, fragment_offset = 0, tunnel_offset = 0;
+  u_int32_t tunnel_len;
 
   memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
 
@@ -2588,7 +2588,7 @@ static int parse_pkt(struct sk_buff *skb,
                      u_int16_t *ip_id)
 {
   u_char buffer[128]; /* Enough for standard and tunneled headers */
-  int data_len = min((u_int16_t)(skb->len + skb_displ), (u_int16_t)sizeof(buffer));
+  int data_len = min((int) skb->len + skb_displ, (int) sizeof(buffer));
   u_int16_t vlan_id;
   int rc;
 
@@ -4760,7 +4760,7 @@ void unreserve_memory(unsigned long base, unsigned long mem_len)
     ClearPageReserved(page);
 }
 
-static void free_contiguous_memory(unsigned long mem, u_int mem_len)
+static void free_contiguous_memory(unsigned long mem, u_int32_t mem_len)
 {
   if(mem != 0) {
     unreserve_memory(mem, mem_len);
@@ -4782,7 +4782,7 @@ static unsigned long __get_free_pages_node(int nid, gfp_t gfp_mask, unsigned int
   return (unsigned long) page_address(page);
 }
 
-static unsigned long alloc_contiguous_memory(u_int mem_len, int node)
+static unsigned long alloc_contiguous_memory(u_int32_t mem_len, int node)
 {
   unsigned long mem = 0;
 
@@ -4805,7 +4805,7 @@ static unsigned long alloc_contiguous_memory(u_int mem_len, int node)
 static struct dma_memory_info *allocate_extra_dma_memory(struct device *hwdev,
                                                          u_int32_t num_slots, u_int32_t slot_len, u_int32_t chunk_len)
 {
-  u_int i, num_slots_per_chunk, num_chunks;
+  u_int32_t i, num_slots_per_chunk, num_chunks;
   struct dma_memory_info *dma_memory;
   int numa_node =
 #ifdef CONFIG_NUMA
@@ -4867,8 +4867,8 @@ static struct dma_memory_info *allocate_extra_dma_memory(struct device *hwdev,
 
   /* Mapping DMA slots */
   for(i=0; i < dma_memory->num_slots; i++) {
-    u_int chunk_id = i / num_slots_per_chunk;
-    u_int offset = (i % num_slots_per_chunk) * dma_memory->slot_len;
+    u_int32_t chunk_id = i / num_slots_per_chunk;
+    u_int32_t offset = (i % num_slots_per_chunk) * dma_memory->slot_len;
     char *slot;
 
     if(!dma_memory->virtual_addr[chunk_id])
@@ -4904,7 +4904,7 @@ static struct dma_memory_info *allocate_extra_dma_memory(struct device *hwdev,
 
 static void free_extra_dma_memory(struct dma_memory_info *dma_memory)
 {
-  u_int i;
+  u_int32_t i;
 
   /* Unmapping DMA addresses */
   if(dma_memory->dma_addr) {
@@ -5672,7 +5672,7 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 /* ************************************* */
 
 static int do_memory_mmap(struct vm_area_struct *vma, unsigned long start_off, unsigned long size,
-                          char *ptr, u_int ptr_pg_off, u_int flags, int mode)
+                          char *ptr, u_int32_t ptr_pg_off, u_int32_t flags, int mode)
 {
   unsigned long start;
 
@@ -6591,7 +6591,7 @@ static int pfring_release_zc_dev(struct pf_ring_socket *pfr)
 
 static int get_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host, u_int16_t fragment_id, u_int8_t more_fragments)
 {
-  u_int hash_id = fragment_id % NUM_FRAGMENTS_HASH_SLOTS;
+  u_int32_t hash_id = fragment_id % NUM_FRAGMENTS_HASH_SLOTS;
   struct list_head *ptr, *tmp_ptr;
   u_int8_t app_id = -1;
 
@@ -6660,7 +6660,7 @@ static void purge_idle_fragment_cache(void)
 static void add_fragment_app_id(u_int32_t ipv4_src_host, u_int32_t ipv4_dst_host,
                                 u_int16_t fragment_id, u_int8_t app_id)
 {
-  u_int hash_id = fragment_id % NUM_FRAGMENTS_HASH_SLOTS;
+  u_int32_t hash_id = fragment_id % NUM_FRAGMENTS_HASH_SLOTS;
   struct list_head *ptr, *tmp_ptr;
   struct hash_fragment_node *frag;
 
@@ -8159,7 +8159,7 @@ static int ring_getsockopt(struct socket *sock,
         }
 
         {
-          u_int i;
+          u_int32_t i;
 
           for(i=0; i<len; i++) loobpack_test_buffer[i] = i;
         }
@@ -8207,7 +8207,7 @@ static int ring_getsockopt(struct socket *sock,
   case SO_GET_APPL_STATS_FILE_NAME:
     {
       char path[255];
-      u_int slen;
+      u_int32_t slen;
 
       snprintf(path, sizeof(path)-1,
                "/proc/net/pf_ring/stats/%s", pfr->sock_proc_stats_name);
@@ -8295,8 +8295,8 @@ void pf_ring_zc_dev_register(zc_dev_callbacks *callbacks,
                              void          *rx_descr_packet_memory,
                              void          *tx_descr_packet_memory,
                              void          *phys_card_memory,
-                             u_int          phys_card_memory_len,
-                             u_int channel_id,
+                             u_int32_t          phys_card_memory_len,
+                             u_int32_t channel_id,
                              struct net_device *dev,
                              struct device *hwdev,
                              zc_dev_model device_model,
@@ -8374,7 +8374,7 @@ void pf_ring_zc_dev_register(zc_dev_callbacks *callbacks,
 
 /* ************************************* */
 
-void pf_ring_zc_dev_unregister(struct net_device *dev, u_int channel_id)
+void pf_ring_zc_dev_unregister(struct net_device *dev, u_int32_t channel_id)
 {
   zc_dev_list *entry;
   int i;
@@ -8407,8 +8407,8 @@ void pf_ring_zc_dev_handler(zc_dev_operation operation,
                             void          *rx_descr_packet_memory,
                             void          *tx_descr_packet_memory,
                             void          *phys_card_memory,
-                            u_int          phys_card_memory_len,
-                            u_int channel_id,
+                            u_int32_t      phys_card_memory_len,
+                            u_int32_t channel_id,
                             struct net_device *dev,
                             struct device *hwdev,
                             zc_dev_model device_model,
