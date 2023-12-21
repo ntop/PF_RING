@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 65
+#define FT_API_VERSION 71
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -37,10 +37,10 @@ struct ndpi_flow_struct;
 
 #define PFRING_FT_ACTION_DEFAULT 0
 #define PFRING_FT_ACTION_FORWARD 1
-#define PFRING_FT_ACTION_DISCARD 2
+#define PFRING_FT_ACTION_DISCARD 2 /**< Discard packet due to filter or shunt */
 #define PFRING_FT_ACTION_USER_1  3
 #define PFRING_FT_ACTION_USER_2  4
-#define PFRING_FT_ACTION_SLICE   5
+#define PFRING_FT_ACTION_SLICE   5 /**< Slice packet headers */
 
 typedef u_int8_t pfring_ft_action;
 
