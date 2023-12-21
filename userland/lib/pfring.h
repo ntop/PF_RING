@@ -64,7 +64,7 @@
 #include <librdi.h>
 #endif
 
-#define MAX_CAPLEN             65535
+#define MAX_CAPLEN             65600 /* L2 + IP + Max IP payload (65535) + alignment */
 #define PAGE_SIZE               4096
 
 #define DEFAULT_POLL_DURATION   500
