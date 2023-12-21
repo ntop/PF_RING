@@ -232,6 +232,7 @@ static int num_vlan = 1;
 static int forge_payload = 0;
 static char srcmac[6] = { 0 }, dstmac[6] = { 0 };
 static struct in_addr srcaddr = { 0 }, dstaddr = { 0 };
+static char packet_content = 0;
 
 static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int ip_version) {
   struct eth_vlan_hdr *vlan;
@@ -242,7 +243,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
   int l2_len, ip_len, addr_len, i, payload_off;
 
   /* Reset packet */
-  memset(buffer, 0, buffer_len);
+  memset(buffer, packet_content, buffer_len);
 
   l2_len = sizeof(struct ether_header);
 

@@ -236,6 +236,7 @@ void printHelp(void) {
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-W <ID>[,<ID>]  Forge VLAN packets with the specified VLAN ID (and QinQ ID if specified after comma)\n");
   printf("-L <num>        Forge VLAN packets with <num> different ids\n");
+  printf("-0 <char>       Fill packet payload with the specified character (default: 0)\n");
   printf("-F              Force flush for each packet (to avoid bursts, expect low performance)\n");
   printf("-w <watermark>  TX watermark (low value=low latency) [not effective on ZC]\n");
   printf("-d              Daemon mode\n");
@@ -466,7 +467,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:G:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:")) != -1) {
+  while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:G:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:0:")) != -1) {
     switch(c) {
     case 'A':
       uniq_pkts_per_sec = atoi(optarg);
@@ -604,6 +605,9 @@ int main(int argc, char* argv[]) {
       break;
     case '8':
       pkt_loop = atoi(optarg);
+      break;
+    case '0':
+      packet_content = optarg[0];
       break;
     default:
       printHelp();
