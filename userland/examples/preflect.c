@@ -58,7 +58,7 @@ void dummyProcesssPacket(u_char *_deviceId,
 
 void printHelp(void) {
 
-  printf("preflect\n(C) 2010-23 ntop\n");
+  printf("preflect\n(C) 2010-24 ntop\n");
   printf("-h              [Print help]\n");
   printf("-i <device>     [In device name]\n");
   printf("-o <device>     [Out device name]\n");

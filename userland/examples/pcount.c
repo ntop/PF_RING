@@ -332,7 +332,7 @@ void printHelp(void) {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_if_t *devpointer;
 
-  printf("pcount\n(C) 2003-23 ntop\n");
+  printf("pcount\n(C) 2003-24 ntop\n");
   printf("-h              Print help\n");
   printf("-i <device>     Device name\n");
   printf("-f <filter>     pcap filter\n");

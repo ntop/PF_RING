@@ -196,7 +196,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfsend - (C) 2011-23 ntop\n");
+  printf("pfsend - (C) 2011-24 ntop\n");
   printf("Replay synthetic traffic, or a pcap, or a packet in hex format from standard input.\n\n"); 
   printf("pfsend -i out_dev [-a] [-f <.pcap file>] [-g <core_id>] [-h]\n"
          "       [-l <length>] [-n <num>] "
