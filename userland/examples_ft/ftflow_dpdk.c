@@ -560,7 +560,7 @@ static int processing_thread(__attribute__((unused)) void *arg) {
 /* ************************************ */
 
 static void print_help(void) {
-  printf("ftflow_dpdk - (C) 2018-23 ntop\n");
+  printf("ftflow_dpdk - (C) 2018-24 ntop\n");
   printf("Usage: ftflow_dpdk [EAL options] -- [options]\n");
   printf("-p <id>[,<id>]  Port id (up to 2 ports are supported)\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");

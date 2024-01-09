@@ -211,7 +211,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zsend - (C) 2014-23 ntop\n");
+  printf("zsend - (C) 2014-24 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A traffic generator able to replay synthetic udp packets or hex from standard input.\n"); 
   printf("Usage:    zsend -i <device> -c <cluster id>\n"

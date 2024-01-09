@@ -241,7 +241,7 @@ void process_packet(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char
 /* *************************************** */
 
 void print_help(void) {
-  printf("ftflow_pcap - (C) 2018-23 ntop\n");
+  printf("ftflow_pcap - (C) 2018-24 ntop\n");
   printf("-h              Print help\n");
   printf("-i <device>     Device name or PCAP file\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");

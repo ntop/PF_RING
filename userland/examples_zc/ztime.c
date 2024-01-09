@@ -52,7 +52,7 @@ u_int8_t verbose = 0;
 /* *************************************** */
 
 void printHelp(void) {
-  printf("ztime - (C) 2014-23 ntop\n");
+  printf("ztime - (C) 2014-24 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("An utility to set/adjust the hardware clock of a network adapter (when supported).\n\n");
   printf("Usage:   ztime -i <device> [-c <cluster id>]\n"

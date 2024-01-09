@@ -630,7 +630,7 @@ void set_outzq_bpf() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zbalance_ipc - (C) 2014-23 ntop\n");
+  printf("zbalance_ipc - (C) 2014-24 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process balancing packets to multiple consumer processes.\n\n");
   printf("Usage: zbalance_ipc -i <device> -c <cluster id> -n <num inst>\n"

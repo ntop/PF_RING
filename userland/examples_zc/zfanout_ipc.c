@@ -187,7 +187,7 @@ void sigproc(int sig) {
 /* ******************************** */
 
 void printHelp(void) {
-  printf("zfanout_ipc - (C) 2014-23 ntop\n");
+  printf("zfanout_ipc - (C) 2014-24 ntop\n");
   printf("Using PFRING_ZC v.%s\n", pfring_zc_version());
   printf("A master process sending all ingress packets to all the consumer processes (e.g. zcount_ipc -c <cluster id> -i <consumer id>).\n");
   printf("Note: this is an alternative to zbalance -m 2\n\n");
