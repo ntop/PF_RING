@@ -20,6 +20,8 @@ SHELL := $(shell which bash)
 src ?= $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 readlink = $(shell readlink -f ${1})
 
+#HAVE_PF_RING_DKMS BUILD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 # helper functions for converting kernel version to version codes
 get_kver = $(or $(word ${2},$(subst ., ,${1})),0)
 get_kvercode = $(shell [ "${1}" -ge 0 -a "${1}" -le 255 2>/dev/null ] && \
@@ -420,6 +422,7 @@ export INSTALL_MOD_DIR ?= updates/drivers/net/ethernet/intel/${DRIVER}
 # If the check_aux_bus script exists, then this driver depends on the
 # auxiliary module. Run the script to determine if we need to include
 # auxiliary files with this build.
+#HAVE_PF_RING_DKMS CHECK_AUX_BUS ?= ${BUILD_DIR}/check_aux_bus
 CHECK_AUX_BUS ?= ../scripts/check_aux_bus
 ifneq ($(call test_file,${CHECK_AUX_BUS}),)
 NEED_AUX_BUS := $(shell ${CHECK_AUX_BUS} --ksrc="${KSRC}" --build-kernel="${BUILD_KERNEL}" >/dev/null 2>&1; echo $$?)
