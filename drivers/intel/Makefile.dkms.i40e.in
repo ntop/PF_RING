@@ -3,6 +3,7 @@ all: install
 add: veryclean
 	\/bin/rm -rf /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@
 	mkdir -p /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
+	cp @I40E@/@I40E@-@I40E_VERSION@-zc/scripts/check_aux_bus /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	cd @I40E@/@I40E@-@I40E_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	cp ../../kernel/linux/pf_ring.h /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/
 	sed -i -e 's/i40e\.o/i40e_zc.o/' -e 's/i40e-/i40e_zc-/' /usr/src/@I40E@-zc-@I40E_VERSION@.@REVISION@/Kbuild

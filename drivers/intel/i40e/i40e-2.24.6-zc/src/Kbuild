@@ -28,6 +28,9 @@
 # Makefile for the Intel(R) Ethernet Connection XL710 (i40e.ko) driver
 #
 
+BUILD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+include $(BUILD_DIR)common.mk
+
 obj-m += i40e.o
 
 i40e-objs := i40e_main.o \
@@ -54,6 +57,12 @@ CFLAGS_i40e_main.o := -I$(src)
 #i40e-$(CONFIG_DCB) += i40e_dcb.o i40e_dcb_nl.o
 
 #i40e-$(CONFIG_FCOE:m=y) += i40e_fcoe.o
+
+ifeq (${NEED_AUX_BUS},2)
+#obj-m += auxiliary.o
+intel_auxiliary-objs := auxiliary.o
+obj-m += intel_auxiliary.o
+endif
 
 EXTRA_CFLAGS += -DHAVE_PF_RING
 KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
