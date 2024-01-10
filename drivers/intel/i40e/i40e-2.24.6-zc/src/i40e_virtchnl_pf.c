@@ -6661,8 +6661,6 @@ int i40e_get_vf_stats(struct net_device *netdev, int vf_id,
 #endif /* HAVE_VF_STATS */
 #endif /* IFLA_VF_MAX */
 #ifdef HAVE_NDO_SET_VF_LINK_STATE
-#ifdef CONFIG_DCB
-#ifdef CONFIG_PCI_IOV
 /**
  * i40e_configure_vf_link
  * @vf: VF
@@ -6739,6 +6737,8 @@ error_out:
 	return ret;
 }
 
+#ifdef CONFIG_DCB
+#ifdef CONFIG_PCI_IOV
 /**
  * i40e_enable_vf_queues
  * @vsi: PCI device information struct
