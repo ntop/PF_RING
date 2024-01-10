@@ -10,7 +10,11 @@
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
 #ifdef USE_INTEL_AUX_BUS
+#ifdef HAVE_PF_RING
+#include "auxiliary_bus.h"
+#else
 #include "linux/auxiliary_bus.h"
+#endif
 #else
 #include <linux/auxiliary_bus.h>
 #endif /* USE_INTEL_AUX_BUS */

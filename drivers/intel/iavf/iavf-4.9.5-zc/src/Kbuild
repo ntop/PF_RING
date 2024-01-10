@@ -2,6 +2,9 @@
 # Makefile for the Intel Ethernet Adaptive Virtual Function Driver
 #
 
+BUILD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+include $(BUILD_DIR)common.mk
+
 obj-m += iavf.o
 
 iavf-objs := iavf_main.o \
@@ -17,6 +20,12 @@ iavf-objs := iavf_main.o \
 	iavf_ptp.o
 
 CFLAGS_iavf_main.o := -I$(src)
+
+ifeq (${NEED_AUX_BUS},2)
+#obj-m += auxiliary.o
+intel_auxiliary-objs := auxiliary.o
+obj-m += intel_auxiliary.o
+endif
 
 EXTRA_CFLAGS += -DHAVE_PF_RING
 KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
