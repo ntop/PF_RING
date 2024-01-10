@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: GPL-2.0
-/* Copyright (c) 2013, Intel Corporation. */
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* Copyright (C) 2013-2023 Intel Corporation */
 
 #include <linux/prefetch.h>
+
 #include "iavf.h"
 #include "iavf_trace.h"
 #include "iavf_prototype.h"
@@ -16,7 +17,8 @@ extern int kernel_only_adapter[IAVF_MAX_NIC];
 int wake_up_pfring_zc_socket(struct iavf_ring *rx_ring); /* iavf_main.c */
 #endif
 
-static __le64 build_ctob(u32 td_cmd, u32 td_offset, unsigned int size, u32 td_tag)
+static inline __le64 build_ctob(u32 td_cmd, u32 td_offset, unsigned int size,
+				u32 td_tag)
 {
 	return cpu_to_le64(IAVF_TX_DESC_DTYPE_DATA |
 			   ((u64)td_cmd  << IAVF_TXD_QW1_CMD_SHIFT) |
@@ -111,9 +113,12 @@ void iavf_free_tx_resources(struct iavf_ring *tx_ring)
 }
 
 /**
- * iavf_get_tx_pending - how many tx descriptors not processed
+ * iavf_get_tx_pending - how many Tx descriptors not processed
  * @ring: the ring of descriptors
- * @in_sw: use SW variables
+ * @in_sw: is tx_pending being checked in SW or HW
+ *
+ * Since there is no access to the ring head register
+ * in XL710, we need to use our local copies
  **/
 u32 iavf_get_tx_pending(struct iavf_ring *ring, bool in_sw)
 {
@@ -245,7 +250,7 @@ void iavf_detect_recover_hung(struct iavf_vsi *vsi)
 			 */
 			smp_rmb();
 			tx_ring->tx_stats.prev_pkt_ctr =
-			    iavf_get_tx_pending(tx_ring, true) ? packets : -1;
+			  iavf_get_tx_pending(tx_ring, true) ? packets : -1;
 		}
 	}
 }
@@ -324,8 +329,8 @@ static bool iavf_clean_tx_irq(struct iavf_vsi *vsi,
 		total_bytes += tx_buf->bytecount;
 		total_packets += tx_buf->gso_segs;
 
-		/* free the skb/XDP data */
-			napi_consume_skb(tx_buf->skb, napi_budget);
+		/* free the skb */
+		napi_consume_skb(tx_buf->skb, napi_budget);
 
 		/* unmap skb header data */
 		dma_unmap_single(tx_ring->dev,
@@ -454,7 +459,8 @@ static void iavf_enable_wb_on_itr(struct iavf_vsi *vsi,
 	q_vector->arm_wb_state = true;
 }
 
-static bool iavf_container_is_rx(struct iavf_q_vector *q_vector, struct iavf_ring_container *rc)
+static inline bool iavf_container_is_rx(struct iavf_q_vector *q_vector,
+					struct iavf_ring_container *rc)
 {
 	return &q_vector->rx == rc;
 }
@@ -720,32 +726,6 @@ clear_counts:
 
 	rc->total_bytes = 0;
 	rc->total_packets = 0;
-}
-
-/**
- * iavf_reuse_rx_page - page flip buffer and store it back on the ring
- * @rx_ring: rx descriptor ring to store buffers on
- * @old_buff: donor buffer to have page reused
- *
- * Synchronizes page for reuse by the adapter
- **/
-static void iavf_reuse_rx_page(struct iavf_ring *rx_ring,
-			       struct iavf_rx_buffer *old_buff)
-{
-	struct iavf_rx_buffer *new_buff;
-	u16 nta = rx_ring->next_to_alloc;
-
-	new_buff = &rx_ring->rx_bi[nta];
-
-	/* update, and store next to alloc */
-	nta++;
-	rx_ring->next_to_alloc = (nta < rx_ring->count) ? nta : 0;
-
-	/* transfer page from old buffer to new buffer */
-	new_buff->dma		= old_buff->dma;
-	new_buff->page		= old_buff->page;
-	new_buff->page_offset	= old_buff->page_offset;
-	new_buff->pagecnt_bias	= old_buff->pagecnt_bias;
 }
 
 /**
@@ -1273,7 +1253,7 @@ iavf_rx_csum(struct iavf_vsi *vsi, struct sk_buff *skb,
 	case IAVF_RX_PTYPE_INNER_PROT_UDP:
 	case IAVF_RX_PTYPE_INNER_PROT_SCTP:
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
-		/* fall through */
+		fallthrough;
 	default:
 		break;
 	}
@@ -1563,6 +1543,32 @@ static bool iavf_page_is_reusable(struct page *page)
 }
 
 /**
+ * iavf_reuse_rx_page - page flip buffer and store it back on the ring
+ * @rx_ring: rx descriptor ring to store buffers on
+ * @old_buff: donor buffer to have page reused
+ *
+ * Synchronizes page for reuse by the adapter
+ **/
+static void iavf_reuse_rx_page(struct iavf_ring *rx_ring,
+			       struct iavf_rx_buffer *old_buff)
+{
+	struct iavf_rx_buffer *new_buff;
+	u16 nta = rx_ring->next_to_alloc;
+
+	new_buff = &rx_ring->rx_bi[nta];
+
+	/* update, and store next to alloc */
+	nta++;
+	rx_ring->next_to_alloc = (nta < rx_ring->count) ? nta : 0;
+
+	/* transfer page from old buffer to new buffer */
+	new_buff->dma		= old_buff->dma;
+	new_buff->page		= old_buff->page;
+	new_buff->page_offset	= old_buff->page_offset;
+	new_buff->pagecnt_bias	= old_buff->pagecnt_bias;
+}
+
+/**
  * iavf_can_reuse_rx_page - Determine if this page can be reused by
  * the adapter for another receive
  *
@@ -1648,11 +1654,12 @@ static void iavf_add_rx_frag(struct iavf_ring *rx_ring,
 #if (PAGE_SIZE < 8192)
 	unsigned int truesize = iavf_rx_pg_size(rx_ring) / 2;
 #else
-	unsigned int truesize =	SKB_DATA_ALIGN(size + iavf_rx_offset(rx_ring));
+	unsigned int truesize = SKB_DATA_ALIGN(size + iavf_rx_offset(rx_ring));
 #endif
 
 	if (!size)
 		return;
+
 	skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags, rx_buffer->page,
 			rx_buffer->page_offset, size, truesize);
 
@@ -2301,7 +2308,7 @@ static int iavf_clean_rx_irq(struct iavf_ring *rx_ring, int budget)
 	return failure ? budget : (int)total_rx_packets;
 }
 
-static u32 iavf_buildreg_itr(const int type, u16 itr)
+static inline u32 iavf_buildreg_itr(const int type, u16 itr)
 {
 	u32 val;
 
@@ -2347,7 +2354,8 @@ static u32 iavf_buildreg_itr(const int type, u16 itr)
 #ifndef HAVE_PF_RING
 static
 #endif
-void iavf_update_enable_itr(struct iavf_vsi *vsi, struct iavf_q_vector *q_vector)
+inline void iavf_update_enable_itr(struct iavf_vsi *vsi,
+					  struct iavf_q_vector *q_vector)
 {
 	struct iavf_hw *hw = &vsi->back->hw;
 	u32 intval;
@@ -2402,6 +2410,7 @@ void iavf_update_enable_itr(struct iavf_vsi *vsi, struct iavf_q_vector *q_vector
 		if (q_vector->itr_countdown)
 			q_vector->itr_countdown--;
 	}
+
 do_write:
 	if (!test_bit(__IAVF_VSI_DOWN, vsi->state))
 		wr32(hw, INT_DYN_CTL(hw, q_vector->reg_idx), intval);
@@ -2673,6 +2682,7 @@ int iavf_napi_poll(struct napi_struct *napi, int budget)
 			/* Tell napi that we are done polling */
 			napi_complete_done(napi, work_done);
 			q_vector->ch_stats.intr_en_not_clean_complete++;
+
 			/* Force an interrupt */
 			iavf_force_wb(vsi, q_vector);
 
@@ -2807,8 +2817,7 @@ bypass:
  * otherwise  returns 0 to indicate the flags has been set properly.
  **/
 static void iavf_tx_prepare_vlan_flags(struct sk_buff *skb,
-				       struct iavf_ring *tx_ring,
-				       u32 *flags)
+				       struct iavf_ring *tx_ring, u32 *flags)
 {
 	u32  tx_flags = 0;
 
@@ -2995,7 +3004,7 @@ static int iavf_tso(struct iavf_tx_buffer *first, u8 *hdr_len,
 		gso_segs = DIV_ROUND_UP(skb->len - *hdr_len, 64);
 	}
 #endif
-	/* update gso size and bytecount with header size */
+	/* update GSO size and bytecount with header size */
 	first->gso_segs = gso_segs;
 	first->bytecount += (first->gso_segs - 1) * *hdr_len;
 
@@ -3189,7 +3198,7 @@ static int iavf_tx_enable_csum(struct sk_buff *skb, u32 *tx_flags,
 		offset |= (sizeof(struct sctphdr) >> 2) <<
 			  IAVF_TX_DESC_LENGTH_L4_FC_LEN_SHIFT;
 #ifdef IAVF_ADD_PROBES
-			tx_ring->vsi->back->tx_sctp_cso++;
+		tx_ring->vsi->back->tx_sctp_cso++;
 #endif
 #endif /* HAVE_SCTP */
 		break;
@@ -3199,7 +3208,7 @@ static int iavf_tx_enable_csum(struct sk_buff *skb, u32 *tx_flags,
 		offset |= (sizeof(struct udphdr) >> 2) <<
 			  IAVF_TX_DESC_LENGTH_L4_FC_LEN_SHIFT;
 #ifdef IAVF_ADD_PROBES
-			tx_ring->vsi->back->tx_udp_cso++;
+		tx_ring->vsi->back->tx_udp_cso++;
 #endif
 		break;
 	default:
@@ -3297,29 +3306,6 @@ static void iavf_create_tx_ctx(struct iavf_ring *tx_ring,
 }
 
 /**
- * __iavf_maybe_stop_tx - 2nd level check for tx stop conditions
- * @tx_ring: the ring to be checked
- * @size:    the size buffer we want to assure is available
- *
- * Returns -EBUSY if a stop is needed, else 0
- **/
-int __iavf_maybe_stop_tx(struct iavf_ring *tx_ring, int size)
-{
-	netif_stop_subqueue(tx_ring->netdev, tx_ring->queue_index);
-	/* Memory barrier before checking head and tail */
-	smp_mb();
-
-	/* Check again in a case another CPU has just made room available. */
-	if (likely(IAVF_DESC_UNUSED(tx_ring) < size))
-		return -EBUSY;
-
-	/* A reprieve! - use start_queue because it doesn't call schedule */
-	netif_start_subqueue(tx_ring->netdev, tx_ring->queue_index);
-	++tx_ring->tx_stats.restart_queue;
-	return 0;
-}
-
-/**
  * __iavf_chk_linearize - Check if there are more than 8 buffers per packet
  * @skb:      send buffer
  *
@@ -3401,6 +3387,29 @@ bool __iavf_chk_linearize(struct sk_buff *skb)
 	}
 
 	return false;
+}
+
+/**
+ * __iavf_maybe_stop_tx - 2nd level check for tx stop conditions
+ * @tx_ring: the ring to be checked
+ * @size:    the size buffer we want to assure is available
+ *
+ * Returns -EBUSY if a stop is needed, else 0
+ **/
+int __iavf_maybe_stop_tx(struct iavf_ring *tx_ring, int size)
+{
+	netif_stop_subqueue(tx_ring->netdev, tx_ring->queue_index);
+	/* Memory barrier before checking head and tail */
+	smp_mb();
+
+	/* Check again in a case another CPU has just made room available. */
+	if (likely(IAVF_DESC_UNUSED(tx_ring) < size))
+		return -EBUSY;
+
+	/* A reprieve! - use start_queue because it doesn't call schedule */
+	netif_start_subqueue(tx_ring->netdev, tx_ring->queue_index);
+	++tx_ring->tx_stats.restart_queue;
+	return 0;
 }
 
 /**
@@ -3533,7 +3542,6 @@ static int iavf_tx_map(struct iavf_ring *tx_ring, struct sk_buff *skb,
 #ifdef HAVE_SKB_XMIT_MORE
 	if (netif_xmit_stopped(txring_txq(tx_ring)) || !netdev_xmit_more()) {
 		writel(i, tx_ring->tail);
-
 #ifndef SPIN_UNLOCK_IMPLIES_MMIOWB
 		/* We need this mmiowb on IA64/Altix systems where wmb() isn't
 		 * guaranteed to synchronize I/O.
@@ -3583,8 +3591,6 @@ dma_error:
 	return -EIO;
 }
 
-
-
 /**
  * iavf_xmit_frame_ring - Sends buffer on Tx ring
  * @skb:     send buffer
@@ -3598,12 +3604,13 @@ static netdev_tx_t iavf_xmit_frame_ring(struct sk_buff *skb,
 	u64 cd_type_cmd_tso_mss = IAVF_TX_DESC_DTYPE_CONTEXT;
 	u32 cd_tunneling = 0, cd_l2tag2 = 0;
 	struct iavf_tx_buffer *first;
-	int tso, tstamp, count;
 	u32 td_offset = 0;
 	u32 tx_flags = 0;
 	__be16 protocol;
 	u32 td_cmd = 0;
 	u8 hdr_len = 0;
+	int tso, count;
+	int tstamp;
 
 	/* prefetch the data, we'll need it later */
 	prefetch(skb->data);
@@ -3654,6 +3661,9 @@ static netdev_tx_t iavf_xmit_frame_ring(struct sk_buff *skb,
 		tx_flags |= IAVF_TX_FLAGS_IPV4;
 	else if (protocol == htons(ETH_P_IPV6))
 		tx_flags |= IAVF_TX_FLAGS_IPV6;
+	else if (protocol == htons(ETH_P_LLDP))
+		cd_type_cmd_tso_mss |= IAVF_TX_CTX_DESC_SWTCH_UPLINK <<
+			IAVF_TXD_CTX_QW1_CMD_SHIFT;
 
 	tso = iavf_tso(first, &hdr_len, &cd_type_cmd_tso_mss);
 
@@ -3680,7 +3690,7 @@ static netdev_tx_t iavf_xmit_frame_ring(struct sk_buff *skb,
 
 	if (iavf_tx_map(tx_ring, skb, first, tx_flags, hdr_len,
 			td_cmd, td_offset))
-		goto cleanup_tx_tstamp;
+		goto cleanup_ret;
 
 #ifndef HAVE_TRANS_START_IN_QUEUE
 	tx_ring->netdev->trans_start = jiffies;
@@ -3691,7 +3701,7 @@ out_drop:
 	iavf_trace(xmit_frame_ring_drop, first->skb, tx_ring);
 	dev_kfree_skb_any(first->skb);
 	first->skb = NULL;
-cleanup_tx_tstamp:
+cleanup_ret:
 	if (unlikely(tx_flags & IAVF_TX_FLAGS_TSTAMP)) {
 		struct iavf_adapter *adapter = netdev_priv(tx_ring->netdev);
 
@@ -3704,13 +3714,13 @@ cleanup_tx_tstamp:
 }
 
 /**
- * iavf_lan_xmit_frame - Selects the correct VSI and Tx queue to send buffer
+ * iavf_xmit_frame - Selects the correct VSI and Tx queue to send buffer
  * @skb:    send buffer
  * @netdev: network interface device structure
  *
  * Returns NETDEV_TX_OK if sent, else an error code
  **/
-netdev_tx_t iavf_lan_xmit_frame(struct sk_buff *skb, struct net_device *netdev)
+netdev_tx_t iavf_xmit_frame(struct sk_buff *skb, struct net_device *netdev)
 {
 	struct iavf_adapter *adapter = netdev_priv(netdev);
 	struct iavf_ring *tx_ring = &adapter->tx_rings[skb->queue_mapping];
@@ -3737,4 +3747,3 @@ netdev_tx_t iavf_lan_xmit_frame(struct sk_buff *skb, struct net_device *netdev)
 
 	return iavf_xmit_frame_ring(skb, tx_ring);
 }
-
