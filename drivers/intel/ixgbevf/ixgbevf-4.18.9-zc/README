@@ -1,0 +1,429 @@
+
+ixgbevf Linux* Virtual Function (VF) Driver for Intel(R) Ethernet Network
+Connection
+================================================================================
+
+July 29, 2021
+
+================================================================================
+
+Contents
+--------
+
+- Overview
+- Identifying Your Adapter
+- Building and Installation
+- Additional Configurations
+- Known Issues
+- Support
+- License
+
+
+Overview
+========
+This virtual function driver supports kernel versions 2.6.x and newer.
+
+The associated Physical Function (PF) driver for this driver is ixgbe.
+
+The MTU size set on a VF should match the MTU size set on the PF. A mismatch in
+MTU sizes may cause unexpected results.
+
+SR-IOV requires the correct platform and OS support.
+
+The guest OS loading this driver must support MSI-X interrupts.
+
+This driver is only supported as a loadable module at this time. Intel is not
+supplying patches against the kernel source to allow for static linking of the
+drivers.
+
+
+For questions related to hardware requirements, refer to the documentation
+supplied with your Intel adapter. All hardware requirements listed apply to use
+with Linux.
+
+Driver information can be obtained using ethtool, lspci, and ip. Instructions
+on updating ethtool can be found in the section Additional Configurations later
+in this document.
+
+VLANs: There is a limit of a total of 64 shared VLANs to 1 or more VFs.
+
+A version of the driver may already be included by your distribution and/or the
+kernel.org kernel.
+
+
+Related Documentation
+=====================
+
+See the "Intel(R) Ethernet Adapters and Devices User Guide" for additional
+information on features. It is available on the Intel website at either of the
+following:
+
+- https://cdrdv2.intel.com/v1/dl/getContent/705831
+-
+https://www.intel.com/content/www/us/en/download/19373/adapter-user-guide-for-in
+tel-ethernet-adapters.html
+
+
+Identifying Your Adapter
+========================
+For information on how to identify your adapter, and for the latest Intel
+network drivers, refer to the Intel Support website:
+http://www.intel.com/support
+
+
+Building and Installation
+=========================
+
+To manually build the driver
+----------------------------
+1. Move the virtual function driver tar file to the directory of your choice.
+   For example, use '/home/username/ixgbevf' or '/usr/local/src/ixgbevf'.
+
+2. Untar/unzip the archive, where <x.x.x> is the version number for the
+   driver tar file:
+
+   # tar zxf ixgbevf-<x.x.x>.tar.gz
+
+3. Change to the driver src directory, where <x.x.x> is the version number
+   for the driver tar:
+
+   # cd ixgbevf-<x.x.x>/src/
+
+4. Compile the driver module:
+
+   # make install
+
+   The binary will be installed as:
+   /lib/modules/<KERNEL
+VER>/updates/drivers/net/ethernet/intel/ixgbevf/ixgbevf.ko
+
+   The install location listed above is the default location. This may differ
+   for various Linux distributions.
+
+5. Load the module using the modprobe command.
+
+   To check the version of the driver and then load it:
+
+   # modinfo ixgbevf
+   # modprobe ixgbevf
+
+   Alternately, make sure that any older ixgbevf drivers are removed from the
+   kernel before loading the new module:
+
+   # rmmod ixgbevf; modprobe ixgbevf
+
+6. Assign an IP address to the interface by entering the following,
+   where <ethX> is the interface name that was shown in dmesg after modprobe:
+
+   # ip address add <IP_address>/<netmask bits> dev <ethX>
+
+7. Verify that the interface works. Enter the following, where IP_address
+   is the IP address for another machine on the same subnet as the interface
+   that is being tested:
+
+   # ping <IP_address>
+
+Note: For certain distributions like (but not limited to) Red Hat Enterprise
+Linux 7 and Ubuntu, once the driver is installed, you may need to update the
+initrd/initramfs file to prevent the OS loading old versions of the ixgbevf
+driver.
+   For Red Hat distributions:
+	# dracut --force
+
+   For Ubuntu:
+	# update-initramfs -u
+
+ 
+To build a binary RPM package of this driver
+--------------------------------------------
+Note: RPM functionality has only been tested in Red Hat distributions.
+
+1. Run the following command, where <x.x.x> is the version number for the
+   driver tar file.
+
+   # rpmbuild -tb ixgbevf-<x.x.x>.tar.gz
+
+   NOTE: For the build to work properly, the currently running kernel MUST
+   match the version and configuration of the installed kernel sources. If
+   you have just recompiled the kernel, reboot the system before building.
+
+2. After building the RPM, the last few lines of the tool output contain the
+   location of the RPM file that was built. Install the RPM with one of the
+   following commands, where <RPM> is the location of the RPM file:
+
+   # rpm -Uvh <RPM>
+       or
+   # dnf/yum localinstall <RPM>
+
+NOTES:
+- To compile the driver on some kernel/arch combinations, you may need to
+install a package with the development version of libelf (e.g. libelf-dev,
+libelf-devel, elfutils-libelf-devel).
+- When compiling an out-of-tree driver, details will vary by distribution.
+However, you will usually need a kernel-devel RPM or some RPM that provides the
+kernel headers at a minimum. The RPM kernel-devel will usually fill in the link
+at /lib/modules/'uname -r'/build.
+
+
+Command Line Parameters
+=======================
+If the driver is built as a module, enter optional parameters on the command
+line with the following syntax:
+
+# modprobe ixgbevf [<option>=<VAL1>,<VAL2>,...]
+
+There needs to be a <VAL#> for each network port in the system supported by
+this driver. The values will be applied to each instance, in function order.
+For example:
+
+
+- The default value for each parameter is generally the recommended setting,
+unless otherwise noted.
+
+
+InterruptThrottleRate
+---------------------
+Valid Range:
+0=off
+1=dynamic
+<min_ITR>-<max_ITR>
+Use ethtool to control InterruptThrottleRate, as shown below:
+
+# ethtool -C <ethX> rx-usecs N
+  where N is the time in microseconds between each interrupt.
+
+Interrupt Throttle Rate controls the number of interrupts each interrupt
+vector can generate per second. Increasing ITR lowers latency at the cost of
+increased CPU utilization, though it may help throughput in some circumstances.
+0 = Setting InterruptThrottleRate to 0 turns off any interrupt moderation
+  and may improve small packet latency. However, this is generally not
+  suitable for bulk throughput traffic due to the increased CPU utilization
+  of the higher interrupt rate.
+  NOTES:
+  - On 82599, and X540, and X550-based adapters, disabling InterruptThrottleRate
+    will also result in the driver disabling HW RSC.
+  - On 82598-based adapters, disabling InterruptThrottleRate will also
+    result in disabling LRO (Large Receive Offloads).
+1 = Setting InterruptThrottleRate to Dynamic mode attempts to moderate
+  interrupts per vector while maintaining very low latency. This can
+  sometimes cause extra CPU utilization. If planning on deploying ixgbevf
+  in a latency sensitive environment, this parameter should be considered.
+<min_ITR>-<max_ITR> = 956-488281
+  Setting InterruptThrottleRate to a value greater or equal to <min_ITR>
+  will program the adapter to send at most that many interrupts
+  per second, even if more packets have come in. This reduces interrupt load
+  on the system and can lower CPU utilization under heavy load, but will
+  increase latency as packets are not processed as quickly.
+
+
+
+Additional Features and Configurations
+======================================
+
+Configuring the Driver on Different Distributions
+-------------------------------------------------
+Configuring a network driver to load properly when the system is started is
+distribution dependent. Typically, the configuration process involves adding an
+alias line to /etc/modules.conf or /etc/modprobe.conf as well as editing other
+system startup scripts and/or configuration files. Many popular Linux
+distributions ship with tools to make these changes for you. To learn the
+proper way to configure a network device for your system, refer to your
+distribution documentation. If during this process you are asked for the driver
+or module name, the name for the Base Driver is ixgbevf.
+
+For example, if you install the ixgbevf driver for two adapters (eth0 and eth1)
+and want to set the interrupt mode to MSI-X and MSI, respectively, add the
+following to modules.conf or /etc/modprobe.conf:
+  alias eth0 ixgbevf
+  alias eth1 ixgbevf
+  options ixgbevf IntMode=2,1
+
+
+Viewing Link Messages
+---------------------
+Link messages will not be displayed to the console if the distribution is
+restricting system messages. In order to see network driver link messages on
+your console, set dmesg to eight by entering the following:
+
+# dmesg -n 8
+
+NOTE: This setting is not saved across reboots.
+
+
+ethtool
+-------
+The driver utilizes the ethtool interface for driver configuration and
+diagnostics, as well as displaying statistical information. The latest ethtool
+version is required for this functionality. Download it at:
+https://kernel.org/pub/software/network/ethtool/
+
+
+MACVLAN
+-------
+This driver supports MACVLAN. Kernel support for MACVLAN can be tested by
+checking if the MACVLAN driver is loaded. You can run 'lsmod | grep macvlan' to
+see if the MACVLAN driver is loaded or run 'modprobe macvlan' to try to load
+the MACVLAN driver.
+
+NOTE:
+- In passthru mode, you can only set up one MACVLAN device. It will inherit the
+MAC address of the underlying PF (Physical Function) device.
+
+
+NAPI
+----
+This driver supports NAPI (Rx polling mode). For more information on NAPI, see
+https://docs.kernel.org/networking/napi.html.
+
+
+Known Issues/Troubleshooting
+============================
+
+Hardware Issues
+---------------
+For known hardware and troubleshooting issues, either refer to the "Release
+Notes" in your User Guide, or for more detailed information, go to
+http://www.intel.com.
+
+In the search box enter your devices controller ID followed by "spec update"
+(i.e., 82599 spec update). The specification update file has complete
+information on known hardware issues.
+
+
+Software Issues
+---------------
+NOTE: After installing the driver, if your Intel Ethernet Network Connection
+is not working, verify that you have installed the correct driver.
+
+
+Compiling the Driver
+--------------------
+When trying to compile the driver by running make install, the following error
+may occur: "Linux kernel source not configured - missing version.h"
+
+To solve this issue, create the version.h file by going to the Linux source
+tree and entering:
+
+# make include/linux/version.h
+
+
+MAC address of Virtual Function changes unexpectedly
+----------------------------------------------------
+If a Virtual Function's MAC address is not assigned in the host, then the VF
+(virtual function) driver will use a random MAC address. This random MAC
+address may change each time the VF driver is reloaded. You can assign a static
+MAC address in the host machine. This static MAC address will survive a VF
+driver reload.
+
+
+dmesg: Unable to start - perhaps the PF Driver isn't up yet
+-----------------------------------------------------------
+This message is posted when the PF interface is down when you try to change the
+number of Tx or Rx queues on the VF interface. To resolve the issue, bring the
+PF interface up and reload the VF driver.
+
+
+SR-IOV virtual functions have identical MAC addresses
+-----------------------------------------------------
+When you create multiple SR-IOV virtual functions, the VFs may have identical
+MAC addresses. Only one VF will pass traffic, and all traffic on other VFs with
+identical MAC addresses will fail. This is related to the
+"MACAddressPolicy=persistent" setting in
+/usr/lib/systemd/network/99-default.link.
+
+To resolve this issue, edit the /usr/lib/systemd/network/99-default.link file
+and change the MACAddressPolicy line to "MACAddressPolicy=none". For more
+information, see the systemd.link man page.
+
+
+Multiple Interfaces on Same Ethernet Broadcast Network
+------------------------------------------------------
+Due to the default ARP behavior on Linux, it is not possible to have one system
+on two IP networks in the same Ethernet broadcast domain (non-partitioned
+switch) behave as expected. All Ethernet interfaces will respond to IP traffic
+for any IP address assigned to the system. This results in unbalanced receive
+traffic.
+
+If you have multiple interfaces in a server, either turn on ARP filtering by
+entering the following:
+
+# echo 1 > /proc/sys/net/ipv4/conf/all/arp_filter
+
+This only works if your kernel's version is higher than 2.4.5.
+
+NOTE: This setting is not saved across reboots. The configuration change can be
+made permanent by adding the following line to the file /etc/sysctl.conf:
+
+  net.ipv4.conf.all.arp_filter = 1
+
+Another alternative is to install the interfaces in separate broadcast domains
+(either in different switches or in a switch partitioned to VLANs).
+
+
+Build Error with Asianux 3.0 - Redefinition of typedef 'irq_handler_t'
+----------------------------------------------------------------------
+Some systems may experience build issues due to the redefinition of
+irq_handler_t. To resolve this issue, build the driver (step 4 above) using the
+command:
+
+# make CFLAGS_EXTRA=-DAX_RELEASE_CODE=1 install
+
+
+Rx Page Allocation Errors
+-------------------------
+'Page allocation failure. order:0' errors may occur under stress with kernels
+2.6.25 and newer. This is caused by the way the Linux kernel reports this
+stressed condition.
+
+
+Host May Reboot after Removing PF when VF is Active in Guest
+------------------------------------------------------------
+Using kernel versions earlier than 3.2, do not unload the PF driver with
+active VFs. Doing this will cause your VFs to stop working until you reload
+the PF driver and may cause a spontaneous reboot of your system.
+
+Prior to unloading the PF driver, you must first ensure that all VFs are
+no longer active. Do this by shutting down all VMs and unloading the VF driver.
+
+
+Support
+=======
+For general information, go to the Intel support website at:
+http://www.intel.com/support/
+
+or the Intel Wired Networking project hosted by Sourceforge at:
+http://sourceforge.net/projects/e1000
+
+If an issue is identified with the released source code on a supported kernel
+with a supported adapter, email the specific information related to the issue
+to e1000-devel@lists.sf.net.
+
+
+License
+=======
+This program is free software; you can redistribute it and/or modify it under
+the terms and conditions of the GNU General Public License, version 2, as
+published by the Free Software Foundation.
+
+This program is distributed in the hope it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
+St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+The full GNU General Public License is included in this distribution in the
+file called "COPYING".
+
+Copyright(c) 1999 - 2021 Intel Corporation.
+
+
+Trademarks
+==========
+Intel is a trademark or registered trademark of Intel Corporation or its
+subsidiaries in the United States and/or other countries.
+
+* Other names and brands may be claimed as the property of others.
+
+
