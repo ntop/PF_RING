@@ -70,10 +70,10 @@ void my_sigalarm(int sig) {
 /* ****************************************************** */
 
 int main(int argc, char* argv[]) {
-  pfring *a_ring, *b_ring;
+  pfring *a_ring = NULL, *b_ring = NULL;
   char *a_dev = NULL, *b_dev = NULL, c;
   u_int8_t verbose = 0, use_pfring_send = 0;
-  int a_ifindex, b_ifindex;
+  int a_ifindex = 0, b_ifindex = 0;
   int bind_core = -1;
   u_int16_t watermark = 1;
   char *bpfFilter = NULL;
@@ -108,16 +108,17 @@ int main(int argc, char* argv[]) {
     }
   }  
 
-  if ((!a_dev) || (!b_dev)) {
+  if ((!a_dev) || 
+      (!b_dev && !(strncmp(a_dev, "nt:", 3) == 0 && !use_pfring_send))) {
     printf("You must specify two devices!\n");
     return -1;
   }
 
-  if(strcmp(a_dev, b_dev) == 0) {
+  if (a_dev && b_dev &&
+      strcmp(a_dev, b_dev) == 0) {
     printf("Bridge devices must be different!\n");
     return -1;
   }
-
 
   /* Device A */
   if((a_ring = pfring_open(a_dev, MAX_PKT_LEN, 
@@ -147,24 +148,27 @@ int main(int argc, char* argv[]) {
 
   /* Device B */
 
-  if((b_ring = pfring_open(b_dev, MAX_PKT_LEN, 
-                 PF_RING_PROMISC | 
-                 PF_RING_LONG_HEADER)) == NULL) {
-    printf("pfring_open error for %s [%s]\n", b_dev, strerror(errno));
-    pfring_close(a_ring);
-    return(-1);
-  }
+  if (!(strncmp(a_dev, "nt:", 3) == 0 && !use_pfring_send)) {
+    if((b_ring = pfring_open(b_dev, MAX_PKT_LEN, 
+                   PF_RING_PROMISC | 
+                   PF_RING_LONG_HEADER)) == NULL) {
+      printf("pfring_open error for %s [%s]\n", b_dev, strerror(errno));
+      pfring_close(a_ring);
+      return(-1);
+    }
 
-  pfring_set_application_name(b_ring, "pfbridge-b");
-  pfring_set_socket_mode(b_ring, send_only_mode);
-  pfring_get_bound_device_ifindex(b_ring, &b_ifindex);
+    pfring_set_application_name(b_ring, "pfbridge-b");
+    pfring_set_socket_mode(b_ring, send_only_mode);
+    pfring_get_bound_device_ifindex(b_ring, &b_ifindex);
+  }
   
   /* Enable Sockets */
 
   if (pfring_enable_ring(a_ring) != 0) {
     printf("Unable enabling ring 'a' :-(\n");
     pfring_close(a_ring);
-    pfring_close(b_ring);
+    if (b_ring != NULL)
+      pfring_close(b_ring);
     return(-1);
   }
 
@@ -176,7 +180,8 @@ int main(int argc, char* argv[]) {
       return(-1);
     }
   } else {
-    pfring_close(b_ring);
+    if (b_ring != NULL)
+      pfring_close(b_ring);
   }
 
   signal(SIGALRM, my_sigalarm);
@@ -215,7 +220,8 @@ int main(int argc, char* argv[]) {
   }
 
   pfring_close(a_ring);
-  if(use_pfring_send) pfring_close(b_ring);
+  if (b_ring != NULL)
+    pfring_close(b_ring);
   
   return(0);
 }
