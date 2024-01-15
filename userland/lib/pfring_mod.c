@@ -1035,6 +1035,9 @@ int pfring_mod_send_last_rx_packet(pfring *ring, int tx_interface_id) {
   if(!ring->tx.enabled_rx_packet_send)
     return(PF_RING_ERROR_WRONG_CONFIGURATION);
 
+  if(unlikely(ring->reentrant || (!ring->long_header)))
+    return(PF_RING_ERROR_NOT_SUPPORTED);
+
   if(ring->tx.last_received_hdr == NULL)
     return(PF_RING_ERROR_NO_PKT_AVAILABLE); /* We have not yet read a single packet */
   

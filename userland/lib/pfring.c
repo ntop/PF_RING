@@ -1391,11 +1391,10 @@ int pfring_send_last_rx_packet(pfring *ring, int tx_interface_id) {
     We can't send the last packet with multithread as the concept of "last"
     does not apply here having threads that compete for packets
   */
-  if(unlikely(ring->reentrant || (!ring->long_header)))
-    return(PF_RING_ERROR_NOT_SUPPORTED);
 
-  if(ring && ring->send_last_rx_packet)
+  if(ring && ring->send_last_rx_packet) {
     return(ring->send_last_rx_packet(ring, tx_interface_id));
+  }
 
   return(PF_RING_ERROR_NOT_SUPPORTED);
 }
