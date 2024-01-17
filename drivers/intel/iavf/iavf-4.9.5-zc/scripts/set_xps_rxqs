@@ -1,0 +1,56 @@
+#!/bin/bash
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (C) 2019 - 2023 Intel Corporation
+#
+# Script to setup mechanism for Tx queue selection based on Rx queue(s) map.
+# This is done by configuring Rx queue(s) map per Tx queue via sysfs. This
+# Rx queue(s) map is used during selection of Tx queue in
+# data path (net/core/dev.c:get_xps_queue).
+#
+# typical usage is (as root):
+# set_xps_rxqs <ethX>
+#
+# to get help:
+# set_xps_rxqs
+
+iface=$1
+
+if [ -z "$iface" ]; then
+	echo "Usage: $0 <interface>"
+	exit 1
+fi
+
+CHECK () {
+	"$@"
+	if [ $? -ne 0 ]; then
+		echo "Error in command ${1}, execution aborted, but some changes may have already been made!" >&2
+		exit 1
+	fi
+}
+
+CPUMASK () {
+	cpu=$1
+	if [ $cpu -ge 32 ]; then
+		mask_fill=""
+		mask_zero="00000000"
+		let "pow = $cpu / 32"
+		for ((i=1; i<=pow; i++)); do
+			mask_fill="${mask_fill},${mask_zero}"
+		done
+
+		let "cpu -= 32 * $pow"
+		mask_tmp=$((1 << cpu))
+		mask=$(printf "%X%s" $mask_tmp $mask_fill)
+	else
+		mask_tmp=$((1 << cpu))
+		mask=$(printf "%X" $mask_tmp)
+	fi
+	echo $mask
+}
+
+for i in /sys/class/net/$iface/queues/tx-*/xps_rxqs; do
+	j=$(echo $i | cut -d'/' -f7 | cut -d'-' -f2)
+	mask=$(CPUMASK $j)
+	echo ${mask} > $i
+	CHECK echo ${mask} > $i
+done
