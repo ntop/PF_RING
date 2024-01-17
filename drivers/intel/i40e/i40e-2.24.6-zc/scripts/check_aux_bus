@@ -1,0 +1,235 @@
+#!/bin/bash
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (C) 2021 - 2023 Intel Corporation
+#
+# Helper script to detect if auxiliary bus support. This script
+#
+# returns 0 when:
+# - CONFIG_AUXILIARY_BUS=y
+# - auxiliary_bus.h was found
+#
+# Returning 0 means the driver build/install doesn't need OOT
+# auxiliary bus
+#
+# returns 1 when:
+#	- CONFIG_AUXILIARY_BUS=n (or any value that's not "=y")
+#	- kernel configuration was incorrect
+#	- kernel configuration file was not found
+#
+# Returning 1 means something bad/unexpected happened and the
+# driver build/install should treat this as a failure
+#
+# returns 2 when:
+#	-  When OOT auxiliary is needed regardless if a previous OOT
+#	   auxiliary was already. This is done because the driver
+#	   always needs to build against auxiliary.o to avoid
+#	   warnings/errors since auxiliary.o is built-in to the
+#	   driver's makefile
+#
+# Returning 2 means the driver build/install needs OOT auxiliary
+# bus
+#
+# returns 3 when:
+#	- A file and/or directory does not exist
+#
+# Returning 3 means something bad/unexpected happened and the
+# driver build/install should treat this as a failure
+#
+# Note: when ksrc and build-kernel are both specified on the
+# command line and build-kernel is not in the same location
+# as ksrc, then ksrc takes precedence. For example:
+# 	./check_aux_bus --ksrc=/lib/modules/5.8.0/source --build-kernel=5.10.0
+#
+# In this case the kernel config file won't be searched for and
+# the script will only check to see if the in-tree/OOT auxiliary_bus.h
+# file exists at ksrc.
+
+msg()
+{
+	if [ $verbose == 1 ]; then
+		echo -e $1
+	fi
+}
+
+exit_builtin_auxiliary_enabled() { exit 0; }
+exit_kconfig_invalid() { exit 1; }
+exit_need_oot_auxiliary() { exit 2; }
+exit_not_found_failure() { exit 3; }
+
+find_aux_bus_inc()
+{
+	aux_bus_inc=$(find -L ${ksrc} -name "auxiliary_bus.h")
+	msg "auxiliary_bus.h location: ${aux_bus_inc}"
+}
+
+LINUX_INCLUDE_DIR="include/linux"
+
+set_build_kernel()
+{
+	build_kernel=$(uname -r)
+}
+
+find_kernel_source()
+{
+	# All the default places to look for kernel source
+	test_dirs=(/lib/modules/${build_kernel}/source \
+		   /lib/modules/${build_kernel}/build \
+		   /usr/src/linux-${build_kernel} \
+		   /usr/src/linux-$(echo ${build_kernel} | sed 's/-.*//') \
+		   /usr/src/kernel-headers-${build_kernel} \
+		   /usr/src/kernel-source-${build_kernel} \
+		   /usr/src/linux-$(echo ${build_kernel} | sed 's/\([0-9]*\.[0-9]*\)\..*/\1/') \
+		   /usr/src/linux \
+		   /usr/src/kernels/${build_kernel} \
+		   /usr/src/kernels)
+
+	# Save the first valid kernel source path
+	for dir in "${test_dirs[@]}"; do
+		if [ -d ${dir}/${LINUX_INCLUDE_DIR} ]; then
+			ksrc=${dir}
+			break
+		fi
+	done
+
+	if [ -z ${ksrc} ]; then
+		echo "*** Kernel header files not in any of the expected locations."
+		echo "*** Install the appropriate kernel development package, e.g."
+		echo "kernel-devel, for building kernel modules and try again"
+		exit_not_found_failure
+	fi
+}
+
+find_config_file()
+{
+	# only search for kernel .config file if build_kernel is pointing
+	# in the same tree as ksrc (see not about ksrc and build_kernel
+	# both set in the scripts header comment)
+	if [[ "$ksrc" != *"/lib/modules/${build_kernel}"* ]]; then
+		msg "ksrc=$ksrc not the same as location generated from build_kernel=\"/lib/modules/${build_kernel}\", not searching for kernel .config file"
+	else
+		kbuild_dir="/lib/modules/${build_kernel}/build"
+
+		file_locations=(${kbuild_dir}/include/generated/autoconf.h \
+				${kbuild_dir}/include/linux/autoconf.h \
+				/boot/bmlinux.autoconf.h)
+
+		for file in "${file_locations[@]}"; do
+			if [ -f ${file} ]; then
+				kconfig=${file}
+				break
+			fi
+		done
+
+		if [ -z ${kconfig} ]; then
+			msg "Kernel config file not found at any of the expected locations."
+		fi
+	fi
+}
+
+get_config_auxiliary_bus()
+{
+	# CONFIG_AUXILIARY_BUS=0 corresponds to CONFIG_AUXILIARY_BUS=n
+	# CONFIG_AUXILIARY_BUS=1 corresponds to CONFIG_AUXILIARY_BUS=y
+	# CONFIG_AUXILIARY_BUS= corresponds to CONFIG_AUXILIARY_BUS not available in the kernel
+	CONFIG_AUXILIARY_BUS=$(grep CONFIG_AUXILIARY_BUS ${kconfig} | awk -F" " '{print $3}')
+	msg "CONFIG_AUXILIARY_BUS=${CONFIG_AUXILIARY_BUS}"
+}
+
+ksrc=""
+build_kernel=""
+verbose=0
+
+usage()
+{
+	script=$(basename $0)
+	echo -e "usage:"
+	echo -e "\t$script [options]"
+	echo -e "\n\toptions:"
+	echo -e "\t -v, --verbose"
+	echo -e "\t -h, --help"
+	echo -e "\n\trun script against specified kernel source"
+	echo -e "\t -k, --ksrc \"/lib/modules/5.12.0/source\""
+	echo -e "\n\trun script with kernel version (kernel version used to find kernel source programatically)"
+	echo -e "\t -b, --build-kernel \"5.8.0\""
+}
+
+options=$(getopt -o "k:b:vh" --long ksrc:,build-kernel:,verbose,help -- "$@")
+eval set -- "$options"
+while :; do
+	case $1 in
+	-k|--ksrc) ksrc=$2; shift;;
+	-b|--build-kernel) build_kernel=$2; shift;;
+	-v|--verbose) verbose=1 ;;
+	-h|--help) usage && exit 0;;
+	--) shift; break;;
+	 esac
+	 shift
+done
+
+if [ $verbose == 1 ]; then
+	set -x
+fi
+
+# both build_kernel and ksrc are unset so programatically determine build_kernel
+if [ -z $build_kernel ] && [ -z $ksrc ]; then
+	set_build_kernel
+fi
+
+# only programatically search for kernel source if ksrc not set on command line
+if [ -z $ksrc ]; then
+	find_kernel_source
+fi
+
+find_config_file
+
+if [ ! -z $kconfig ]; then
+	# if we found the kernel .config file then exit the script based on various
+	# conditions that depend on the CONFIG_AUXILIARY_BUS string being found
+	get_config_auxiliary_bus
+
+	if [ -z "$CONFIG_AUXILIARY_BUS" ]; then
+		msg "CONFIG_AUXILIARY_BUS not found in ${kconfig}."
+		# CONFIG_AUXILIARY_BUS string was not found, so OOT auxiliary is needed
+		exit_need_oot_auxiliary
+	elif [ "$CONFIG_AUXILIARY_BUS" = "1" ]; then
+		msg "CONFIG_AUXILIARY_BUS=y in ${kconfig}."
+		# CONFIG_AUXILIARY_BUS=y, so OOT auxiliary is not needed
+		exit_builtin_auxiliary_enabled
+	else
+		msg ""
+		msg "kernel $build_kernel supports auxiliary bus, but CONFIG_AUXILIARY_BUS"
+		msg "is not set in ${kconfig}. Rebuild your kernel with"
+		msg "CONFIG_AUXILIARY_BUS=y"
+		msg ""
+		# CONFIG_AUXILIARY_BUS is not "=y", but the string was found, so report
+		# the failure so it can be used to fail build/install
+		exit_kconfig_invalid
+	fi
+else
+	if [ ! -d ${ksrc}/${LINUX_INCLUDE_DIR} ] && [ ! -d ${ksrc}/source/${LINUX_INCLUDE_DIR} ]; then
+		echo "${ksrc}/${LINUX_INCLUDE_DIR} and ${ksrc}/source/${LINUX_INCLUDE_DIR} do not exist"
+		exit_not_found_failure
+	fi
+
+	# We didn't find a kernel .config file, so check to see if auxiliary_bus.h
+	# is found in the kernel source include directory
+	find_aux_bus_inc
+
+	if [ -f "$aux_bus_inc" ]; then
+		# AUXILIARY_MODULE_PREFIX is defined only in out-of-tree auxiliary bus
+		if [ $(grep -c AUXILIARY_MODULE_PREFIX $aux_bus_inc) -eq 0 ]; then
+			msg "in-tree auxiliary_bus.h found at ${ksrc}/${LINUX_INCLUDE_DIR}"
+			# If auxiliary_bus.h is included at ${ksrc} and it isn't our OOT version, then
+			# don't build OOT auxiliary as part of the driver makefile
+			exit_builtin_auxiliary_enabled
+		else
+			msg "OOT auxiliary_bus.h found at ${ksrc}/${LINUX_INCLUDE_DIR}"
+			# If auxiliary bus is included at ${ksrc} and it is our OOT version, then
+			# build OOT auxiliary as part of the driver makefile
+			exit_need_oot_auxiliary
+		fi
+	else
+		msg "auxiliary_bus.h not found at ${ksrc}/${LINUX_INCLUDE_DIR}"
+		exit_need_oot_auxiliary
+	fi
+fi
