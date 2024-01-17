@@ -3,11 +3,13 @@ all: install
 add: veryclean
 	\/bin/rm -rf /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@
 	mkdir -p /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/
+	cp @IAVF@/@IAVF@-@IAVF_VERSION@-zc/scripts/check_aux_bus /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/
 	cd @IAVF@/@IAVF@-@IAVF_VERSION@-zc/src/ ; make clean; cp -r * /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/
 	cp ../../kernel/linux/pf_ring.h /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/
 	sed -i -e 's/iavf\.o/iavf_zc.o/' -e 's/iavf-/iavf_zc-/' /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Kbuild
 	mv /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Kbuild /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Makefile
 	sed -i '1iPF_RING_PATH=\/usr\/src\/pfring-@PF_RING_VERSION@.@REVISION@' /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/Makefile
+	sed -i -e 's/#HAVE_PF_RING_DKMS //' /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/common.mk
 	cp dkms.conf.@IAVF@ /usr/src/@IAVF@-zc-@IAVF_VERSION@.@REVISION@/dkms.conf 
 	dkms add -m @IAVF@-zc -v @IAVF_VERSION@.@REVISION@
 
