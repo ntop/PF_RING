@@ -8496,9 +8496,9 @@ static struct proto_ops ring_ops = {
   .getname = sock_no_getname,
   .listen = sock_no_listen,
   .shutdown = sock_no_shutdown,
-  #if(LINUX_VERSION_CODE < KERNEL_VERSION(6,5,3))
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,5,3))
   .sendpage = sock_no_sendpage,
-  #endif
+#endif
 
   /* Now the operations that really occur. */
   .release = ring_release,
