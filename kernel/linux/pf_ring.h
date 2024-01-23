@@ -41,7 +41,7 @@
 #define DEFAULT_BUCKET_LEN            128
 #define MAX_NUM_DEVICES               256
 
-#define MAX_NUM_RING_SOCKETS          256
+#define MAX_NUM_RING_SOCKETS          512
 
 #define MAX_CLUSTER_QUEUES             64
 
