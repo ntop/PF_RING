@@ -7138,13 +7138,13 @@ static int ring_setsockopt(struct socket *sock,
 
     /* Everything seems to work thus let's set the values */
 
-    if (pfr->num_rx_channels >= 64) {
-      printk("[PF_RING] Detected number of channels is too big (num_rx_channels = %d)",
-        pfr->num_rx_channels);
+    if (pfr->num_rx_channels >= MAX_NUM_RX_CHANNELS) {
+      printk("[PF_RING] Detected number of channels (%d) is too big, max %d supported",
+        pfr->num_rx_channels, MAX_NUM_RX_CHANNELS);
     }
 
     for (i = 0; i < pfr->num_rx_channels; i++) {
-      if (i < 64) { /* safety check (mask is 64 bit) */
+      if (i < MAX_NUM_RX_CHANNELS) { /* safety check (do not exceed mask size) */
         u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << i);
 
         if(channel_id_mask & channel_id_bit) {
