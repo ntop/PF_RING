@@ -502,6 +502,15 @@ void msleep(unsigned int msecs)
 
 /* ************************************************** */
 
+static inline u_int64_t get_channel_id_bit_mask(u_int32_t channel_id) {
+  if (channel_id >= MAX_NUM_RX_CHANNELS) /* safety check */
+    channel_id = MAX_NUM_RX_CHANNELS-1;
+
+  return ((u_int64_t) ((u_int64_t) 1) << channel_id);
+}
+
+/* ************************************************** */
+
 static inline int32_t ifindex_to_pf_index(pf_ring_net *netns,
                                           int32_t ifindex) {
   ifindex_map_item *ifindex_map = netns->ifindex_map;
@@ -3096,14 +3105,13 @@ static inline int add_pkt_to_ring(struct sk_buff *skb,
                                   int offset)
 {
   struct pf_ring_socket *pfr = (_pfr->master_ring != NULL) ? _pfr->master_ring : _pfr;
-  u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << channel_id);
 
   if((!pfr->ring_active) || (!skb))
     return(0);
 
   if((pfr->channel_id_mask != RING_ANY_CHANNEL)
      && (channel_id != -1 /* any channel */)
-     && (!(pfr->channel_id_mask & channel_id_bit)))
+     && (!(pfr->channel_id_mask & get_channel_id_bit_mask(channel_id))))
     return(0); /* Wrong channel */
 
   if(real_skb)
@@ -3723,6 +3731,23 @@ u_int32_t default_rehash_rss_func(struct sk_buff *skb, struct pfring_pkthdr *hdr
 
 /* ********************************** */
 
+void set_ring_num_channels(struct pf_ring_socket *pfr, u_int32_t num_rx_channels) {
+  u_int32_t n = num_rx_channels;
+
+  if (n > MAX_NUM_RX_CHANNELS) {
+    n = MAX_NUM_RX_CHANNELS;
+    if (pfr->num_rx_channels != n) { /* print on first update only */
+       printk("[PF_RING] Detected number of channels (%d) is too big, max %d supported",
+         num_rx_channels, MAX_NUM_RX_CHANNELS);
+    }
+  }
+
+  if (pfr->num_rx_channels != n)
+    pfr->num_rx_channels = n;
+}
+
+/* ********************************** */
+
 /*
  * Add the specified skb to the ring so that userland apps
  * can use the packet.
@@ -3756,8 +3781,8 @@ static int add_skb_to_ring(struct sk_buff *skb,
   if((!pfring_enabled) || ((!pfr->ring_active) && (pfr->master_ring == NULL)))
     return(-1);
 
-  if(pfr->num_rx_channels != num_rx_channels) /* Constantly updated */
-    pfr->num_rx_channels = num_rx_channels;
+  set_ring_num_channels(pfr, num_rx_channels); /* Constantly updated */
+
   hdr->extended_hdr.parsed_pkt.last_matched_rule_id = (u_int16_t)-1;
 
   atomic_inc(&pfr->num_ring_users);
@@ -5382,8 +5407,7 @@ static int ring_release(struct socket *sock)
               int i;
               /* Reset quick mode for all channels */
               for(i=0; i<MAX_NUM_RX_CHANNELS; i++) {
-                u_int64_t channel_id_bit = (u_int64_t) 1 << i;
-                if((pfr->channel_id_mask & channel_id_bit) && netns->quick_mode_rings[dev_index][i] == pfr)
+                if((pfr->channel_id_mask & get_channel_id_bit_mask(i)) && netns->quick_mode_rings[dev_index][i] == pfr)
                   netns->quick_mode_rings[dev_index][i] = NULL;
               }
             }
@@ -5561,7 +5585,7 @@ static int packet_ring_bind(struct sock *sk, pf_ring_device *dev)
 
   pfr->last_bind_dev = dev;
 
-  pfr->num_rx_channels = get_num_rx_queues(pfr->ring_dev->dev);
+  set_ring_num_channels(pfr, get_num_rx_queues(pfr->ring_dev->dev));
 
   if(dev == &any_device_element && !quick_mode) {
     netns->num_any_rings++;
@@ -7089,9 +7113,7 @@ static int ring_setsockopt(struct socket *sock,
 
     if(quick_mode) {
       for (i = 0; i < pfr->num_rx_channels; i++) {
-        u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << i);
-
-        if(channel_id_mask & channel_id_bit) {
+        if(channel_id_mask & get_channel_id_bit_mask(i)) {
           if(netns->quick_mode_rings[dev_index][i] != NULL)
             return(-EINVAL); /* Socket already bound on this device */
         }
@@ -7100,16 +7122,9 @@ static int ring_setsockopt(struct socket *sock,
 
     /* Everything seems to work thus let's set the values */
 
-    if (pfr->num_rx_channels >= 64) {
-      printk("[PF_RING] Detected number of channels is too big (num_rx_channels = %d)",
-        pfr->num_rx_channels);
-    }
-
     for (i = 0; i < pfr->num_rx_channels; i++) {
-      if (i < 64) { /* safety check (mask is 64 bit) */
-        u_int64_t channel_id_bit = ((u_int64_t) ((u_int64_t) 1) << i);
-
-        if(channel_id_mask & channel_id_bit) {
+      if (i < MAX_NUM_RX_CHANNELS) { /* safety check (do not exceed mask size) */
+        if(channel_id_mask & get_channel_id_bit_mask(i)) {
           debug_printk(2, "Setting channel %d\n", i);
 
           if(quick_mode) {
