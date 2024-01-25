@@ -8,8 +8,6 @@
 #ifdef HAVE_NETDEV_UPPER_INFO
 #include "ice_lag.h"
 
-#ifndef HAVE_PF_RING_NO_LAG
-
 static DEFINE_IDA(ice_lag_ida);
 
 /**
@@ -92,7 +90,6 @@ struct ice_lag *ice_lag_find_primary(struct ice_lag *lag)
 	return primary_lag;
 }
 
-#ifndef HAVE_PF_RING_NO_RDMA
 /**
  * ice_plug_aux_dev_lock - plug aux dev while handling lag mutex lock
  * @cdev: pointer to struct for aux device
@@ -119,7 +116,6 @@ static void ice_unplug_aux_dev_lock(struct iidc_core_dev_info *cdev,
 	ice_unplug_aux_dev(cdev);
 	mutex_lock(&lag->pf->lag_mutex);
 }
-#endif
 
 #define ICE_LAG_NUM_RULES		0x1
 #define ICE_LAG_LA_VSI_S		3
@@ -584,7 +580,6 @@ static void ice_display_lag_info(struct ice_lag *lag)
 		bonded, upper, role, primary);
 }
 
-#ifndef HAVE_PF_RING_NO_RDMA
 /**
  * ice_is_bond_rdma_cap - check bond netdevs for RDMA compliance
  * @lag: pointer to local lag struct
@@ -687,7 +682,6 @@ unplug_out:
 	ice_clear_rdma_cap(lag->pf);
 	ice_unplug_aux_dev_lock(cdev, lag);
 }
-#endif
 
 /**
  * ice_lag_info_event - handle NETDEV_BONDING_INFO event
@@ -1714,5 +1708,3 @@ void ice_deinit_lag(struct ice_pf *pf)
 	pf->lag = NULL;
 }
 #endif /* HAVE_NETDEV_UPPER_INFO */
-
-#endif /* HAVE_PF_RING_NO_LAG */

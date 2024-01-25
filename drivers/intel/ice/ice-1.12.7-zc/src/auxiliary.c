@@ -10,7 +10,11 @@
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 #include <linux/string.h>
+#ifdef HAVE_PF_RING
+#include "auxiliary_bus.h"
+#else
 #include "linux/auxiliary_bus.h"
+#endif
 #include "auxiliary_compat.h"
 
 static const struct auxiliary_device_id *auxiliary_match_id(const struct auxiliary_device_id *id,

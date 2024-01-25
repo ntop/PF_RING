@@ -84,8 +84,11 @@ ice-vfio-pci-y := ice_vfio_pci.o
 ice-$(CONFIG_VFIO_PCI_CORE:m=y) += ice_migration.o
 endif
 
-# HAVE_PF_RING_NO_RDMA
+ifeq (${NEED_AUX_BUS},2)
 #obj-m += auxiliary.o
+intel_auxiliary-objs := auxiliary.o
+obj-m += intel_auxiliary.o
+endif
 
 # LM support is only enabled if the kernel has features for LM v1 protocol.
 # If the kernel lacks the necessary infrastructure, LM support will be disabled.

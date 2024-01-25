@@ -4887,7 +4887,6 @@ err:
 	ice_dev_err_errno(ice_pf_to_dev(pf), err, "PTP reset failed");
 }
 
-#ifndef HAVE_PF_RING_NO_AUX
 /**
  * ice_ptp_aux_dev_to_aux_pf - Get auxiliary PF handle for the auxiliary device
  * @aux_dev: auxiliary device to get the auxiliary PF for
@@ -5008,7 +5007,6 @@ ice_ptp_auxbus_create_id_table(struct ice_pf *pf, const char *name)
 
 	return ids;
 }
-#endif
 
 /**
  * ice_ptp_register_auxbus_driver - Register PTP auxiliary bus driver
@@ -5016,7 +5014,6 @@ ice_ptp_auxbus_create_id_table(struct ice_pf *pf, const char *name)
  */
 static int ice_ptp_register_auxbus_driver(struct ice_pf *pf)
 {
-#ifndef HAVE_PF_RING_NO_AUX
 	struct auxiliary_driver *aux_driver;
 	struct ice_ptp *ptp;
 	struct device *dev;
@@ -5050,9 +5047,6 @@ static int ice_ptp_register_auxbus_driver(struct ice_pf *pf)
 	}
 
 	return err;
-#else
-	return 0;
-#endif
 }
 
 /**
@@ -5061,12 +5055,10 @@ static int ice_ptp_register_auxbus_driver(struct ice_pf *pf)
  */
 static void ice_ptp_unregister_auxbus_driver(struct ice_pf *pf)
 {
-#ifndef HAVE_PF_RING_NO_AUX
 	struct auxiliary_driver *aux_driver = &pf->ptp.ports_owner.aux_driver;
 
 	auxiliary_driver_unregister(aux_driver);
 	devm_kfree(ice_pf_to_dev(pf), (void *)aux_driver->id_table);
-#endif
 }
 
 /**
@@ -5078,18 +5070,13 @@ static void ice_ptp_unregister_auxbus_driver(struct ice_pf *pf)
  */
 int ice_ptp_clock_index(struct ice_pf *pf)
 {
-#ifndef HAVE_PF_RING_NO_AUX
 	struct auxiliary_device *aux_dev;
-#endif
 	struct ice_pf *owner_pf;
 	struct ptp_clock *clock;
 
-#ifndef HAVE_PF_RING_NO_AUX
 	aux_dev = &pf->ptp.port.aux_dev;
 	owner_pf = ice_ptp_aux_dev_to_owner_pf(aux_dev);
-#else
-	owner_pf = pf;
-#endif
+
 	if (!owner_pf)
 		return -1;
 	clock = owner_pf->ptp.clock;
@@ -5283,7 +5270,6 @@ static int ice_ptp_init_port(struct ice_pf *pf, struct ice_ptp_port *ptp_port)
 	return err;
 }
 
-#ifndef HAVE_PF_RING_NO_AUX
 /**
  * ice_ptp_release_auxbus_device
  * @dev: device that utilizes the auxbus
@@ -5351,7 +5337,6 @@ static void ice_ptp_remove_auxbus_device(struct ice_pf *pf)
 
 	memset(aux_dev, 0, sizeof(*aux_dev));
 }
-#endif
 
 /**
  * ice_ptp_init_tx_interrupt_mode - Initialize device Tx interrupt mode
@@ -5417,11 +5402,9 @@ void ice_ptp_init(struct ice_pf *pf)
 	}
 
 	ptp->port.port_num = hw->pf_id;
-#ifndef HAVE_PF_RING_NO_AUX
 	err = ice_ptp_create_auxbus_device(pf);
 	if (err)
 		goto err_auxdrv;
-#endif
 
 	err = ice_ptp_init_port(pf, &ptp->port);
 	if (err)
@@ -5449,10 +5432,8 @@ void ice_ptp_init(struct ice_pf *pf)
 	return;
 
 err_auxdev:
-#ifndef HAVE_PF_RING_NO_AUX
 	ice_ptp_remove_auxbus_device(pf);
 err_auxdrv:
-#endif
 	if (ice_pf_src_tmr_owned(pf))
 		ice_ptp_unregister_auxbus_driver(pf);
 err:
@@ -5482,9 +5463,7 @@ void ice_ptp_release(struct ice_pf *pf)
 	/* Disable timestamping for both Tx and Rx */
 	ice_ptp_cfg_timestamp(pf, false);
 
-#ifndef HAVE_PF_RING_NO_AUX
 	ice_ptp_remove_auxbus_device(pf);
-#endif
 	ice_ptp_release_tx_tracker(pf, &pf->ptp.port.tx);
 
 	clear_bit(ICE_FLAG_PTP, pf->flags);

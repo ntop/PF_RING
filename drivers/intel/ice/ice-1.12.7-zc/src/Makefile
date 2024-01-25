@@ -122,11 +122,9 @@ ice-vfio-pci-y := ice_vfio_pci.o
 ice-$(CONFIG_VFIO_PCI_CORE:m=y) += ice_migration.o
 endif
 
-
 ifeq (${NEED_AUX_BUS},2)
-# HAVE_PF_RING_NO_RDMA
-#intel_auxiliary-objs := auxiliary.o
-#obj-m += intel_auxiliary.o
+intel_auxiliary-objs := auxiliary.o
+obj-m += intel_auxiliary.o
 endif
 
 else	# ifneq($(KERNELRELEASE),)

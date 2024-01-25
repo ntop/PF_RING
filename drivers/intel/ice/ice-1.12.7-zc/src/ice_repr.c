@@ -572,11 +572,9 @@ int ice_repr_add_for_all_vfs(struct ice_pf *pf)
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
 #ifdef HAVE_DEVLINK_RATE_NODE_CREATE
 	/* only export if RDMA and DCB disabled */
-#ifndef HAVE_PF_RING_NO_RDMA
 	if (ice_is_aux_ena(pf) &&
 	    ice_is_rdma_aux_loaded(pf))
 		return 0;
-#endif
 	if (ice_is_dcb_active(pf))
 		return 0;
 	devlink = priv_to_devlink(pf);
