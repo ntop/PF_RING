@@ -84,9 +84,9 @@ struct compact_ip_hdr {
 };
 
 struct compact_ipv6_hdr {
-  u_int32_t		flow_lbl:24,
-  			priority:4,
-			version:4;
+  u_int8_t		priority:4,
+  			version:4;
+  u_int8_t		flow_lbl[3];
   u_int16_t		payload_len;
   u_int8_t		nexthdr;
   u_int8_t		hop_limit;
@@ -277,6 +277,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
     addr = (u_char *) ip6->saddr;
     addr_len = sizeof(ip6->saddr);
     payload_off = l2_len + sizeof(struct compact_ipv6_hdr);
+
   } else {
     buffer[l2_len-2] = 0x08, buffer[l2_len-1] = 0x00;
     ip = (struct compact_ip_hdr *) &buffer[l2_len];
