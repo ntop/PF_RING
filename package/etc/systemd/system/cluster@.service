@@ -6,6 +6,9 @@ Requires=pf_ring.service
 [Service]
 Type=simple
 
+Environment=UNIT_NAME=%N
+Environment=INSTANCE_NAME=%i
+
 ExecStartPre=/bin/sh -c '/bin/sed "/-d$\\|-P=.*/s/^/#/" /etc/cluster/cluster-%i.conf > /run/cluster-%i.conf'
 ExecStartPre=/bin/sh -c '/bin/echo "$(/bin/date) cluster %i StartPre" >> /var/log/ntop-systemd.log'
 
