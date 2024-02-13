@@ -94,7 +94,7 @@ zdelay: zdelay.o ${LIBPFRING} Makefile
 ztime: ztime.o ${LIBPFRING} Makefile
 	${CC} ${CFLAGS} ztime.o ${LIBS} -o $@
 
-install:
+install: $(TARGETS)
 ifneq (@HAVE_PF_RING_ZC@,)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp $(TARGETS) $(DESTDIR)/usr/bin/
