@@ -127,7 +127,7 @@ pfsystest: pfsystest.o ${LIBPFRING}
 pftimeline: pftimeline.o ${LIBPFRING}
 	${CC} ${CFLAGS} pftimeline.o ${LIBS} -o $@
 
-install:
+install: $(TARGETS)
 	mkdir -p $(DESTDIR)/usr/bin
 	cp $(TARGETS) $(DESTDIR)/usr/bin/
 
