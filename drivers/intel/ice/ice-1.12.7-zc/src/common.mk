@@ -436,7 +436,9 @@ export INSTALL_AUX_DIR ?= updates/drivers/net/ethernet/intel/auxiliary
 
 # If we're installing auxiliary bus out-of-tree, the following steps are
 # necessary to ensure the relevant files get put in place.
-AUX_BUS_HEADER ?= linux/auxiliary_bus.h
+#HAVE_PF_RING
+#AUX_BUS_HEADER ?= linux/auxiliary_bus.h
+AUX_BUS_HEADER ?= auxiliary_bus.h
 ifeq (${NEED_AUX_BUS},2)
 define auxiliary_post_install
 	install -D -m 644 Module.symvers ${INSTALL_MOD_PATH}/lib/modules/${KVER}/extern-symvers/intel_auxiliary.symvers

@@ -19,7 +19,16 @@ ICE_VERSION=1.12.7
 PF_RING_VERSION=`../../package/version.sh --release`
 REVISION=`../../package/version.sh --revision`
 
+HAS_AUX_BUS=`./ice/ice-$ICE_VERSION-zc/scripts/check_aux_bus && echo 1 || echo 0`
+
 KERNEL_VERS_MAJ=`uname -r |cut -d. -f1`
+
+if test "$HAS_AUX_BUS" = "0"; then
+  # BUILT_MODULE_NAME[1]="intel_auxiliary"
+  AUX_BUILT_MODULE_NAME='BUILT_MODULE_NAME@<:@1@:>@="intel_auxiliary"'
+  # DEST_MODULE_LOCATION[1]="/updates"
+  AUX_DEST_MODULE_LOCATION='DEST_MODULE_LOCATION@<:@1@:>@="/updates"'
+fi
 
 if test "$KERNEL_VERS_MAJ" = "2"; then
   # Kernel 2.6
@@ -46,6 +55,8 @@ AC_SUBST(IAVF)
 AC_SUBST(IAVF_VERSION)
 AC_SUBST(ICE)
 AC_SUBST(ICE_VERSION)
+AC_SUBST(AUX_BUILT_MODULE_NAME)
+AC_SUBST(AUX_DEST_MODULE_LOCATION)
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(Makefile.dkms.e1000e)
