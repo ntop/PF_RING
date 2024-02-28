@@ -318,7 +318,9 @@ load_driver() {
 				/sbin/modprobe -r i40iw 2>/dev/null
 			fi
 			if [ ${1} == "ice" ]; then
-				/sbin/modprobe -r irdma 2>/dev/null
+				# Note: modprobe -r also unloads i40e (dependency)
+				#/sbin/modprobe -r irdma 2>/dev/null
+				/usr/sbin/rmmod irdma 2>/dev/null
 			fi
 
 			/sbin/modprobe -r ${1}
