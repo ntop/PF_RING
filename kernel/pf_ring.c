@@ -158,6 +158,18 @@
 #endif
 #endif
 
+/*
+  pfring_mod_bind() needs to specify the interface
+	name using struct sockaddr that is defined as
+
+  struct sockaddr { ushort sa_family; char sa_data[14]; };
+
+  so the total interface name length is 13 chars (plus \0 trailer).
+  Since sa_data size is arbitrary, define a more precise size for
+  PF_RING socket use.
+*/
+#define RING_SA_DATA_LEN 14
+
 /* ************************************************* */
 
 #if(LINUX_VERSION_CODE >= KERNEL_VERSION(5,6,0))
@@ -1074,7 +1086,7 @@ pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char
           so the total interface name length is 13 chars (plus \0 trailer).
           The check below is to trap this case.
          */
-        || ((l >= 13) && (strncmp(dev_ptr->device_name, name, 13) == 0)))
+        || ((l >= RING_SA_DATA_LEN - 1) && (strncmp(dev_ptr->device_name, name, RING_SA_DATA_LEN - 1) == 0)))
        && device_net_eq(dev_ptr, net))
       return dev_ptr;
   }
@@ -5662,15 +5674,15 @@ static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
 #ifndef RING_USE_SOCKADDR_LL
   } else if (addr_len == sizeof(struct sockaddr)) { /* Deprecated */
 
-    char name[sizeof(sa->sa_data)+1];
+    char name[RING_SA_DATA_LEN];
 
     if (sa->sa_family != PF_RING)
       return(-EINVAL);
 
-    memcpy(name, sa->sa_data, sizeof(sa->sa_data));
+    memcpy(name, sa->sa_data, RING_SA_DATA_LEN - 1);
 
     /* Add trailing zero if missing */
-    name[sizeof(name)-1] = '\0';
+    name[RING_SA_DATA_LEN-1] = '\0';
 
     debug_printk(2, "searching device %s\n", name);
 
