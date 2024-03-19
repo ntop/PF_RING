@@ -158,17 +158,13 @@
 #endif
 #endif
 
+#ifndef RING_USE_SOCKADDR_LL
 /*
-  pfring_mod_bind() needs to specify the interface
-	name using struct sockaddr that is defined as
-
-  struct sockaddr { ushort sa_family; char sa_data[14]; };
-
-  so the total interface name length is 13 chars (plus \0 trailer).
   Since sa_data size is arbitrary, define a more precise size for
   PF_RING socket use.
 */
 #define RING_SA_DATA_LEN 14
+#endif
 
 /* ************************************************* */
 
@@ -1072,11 +1068,14 @@ pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex) {
 
 pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char *name) {
   struct list_head *ptr, *tmp_ptr;
+#ifndef RING_USE_SOCKADDR_LL
   int l = strlen(name);
+#endif
 
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
     pf_ring_device *dev_ptr = list_entry(ptr, pf_ring_device, device_list);
-    if(((strcmp(dev_ptr->device_name, name) == 0)
+    if((strcmp(dev_ptr->device_name, name) == 0
+#ifndef RING_USE_SOCKADDR_LL
         /*
           The problem is that pfring_mod_bind() needs to specify the interface
           name using struct sockaddr that is defined as
@@ -1086,7 +1085,9 @@ pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char
           so the total interface name length is 13 chars (plus \0 trailer).
           The check below is to trap this case.
          */
-        || ((l >= RING_SA_DATA_LEN - 1) && (strncmp(dev_ptr->device_name, name, RING_SA_DATA_LEN - 1) == 0)))
+        || ((l >= RING_SA_DATA_LEN - 1) && (strncmp(dev_ptr->device_name, name, RING_SA_DATA_LEN - 1) == 0))
+#endif
+       )
        && device_net_eq(dev_ptr, net))
       return dev_ptr;
   }
