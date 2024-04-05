@@ -687,6 +687,46 @@ struct pfring_timespec {
   u_int32_t tv_nsec;
 } __attribute__((packed));
 
+/* *********************************** */
+
+typedef struct {
+  u_int64_t flow_id;
+
+#if 0
+  u_int16_t vlan_id;
+
+  u_int8_t ip_version;
+  u_int8_t l4_protocol;
+
+  u_int8_t tos;
+  u_int8_t tcp_flags;
+
+  ip_addr src_ip;
+  ip_addr dst_ip;
+
+  u_int16_t src_port;
+  u_int16_t dst_port;
+#endif
+
+  u_int8_t cause;
+  u_int8_t reserved0;
+  u_int16_t reserved1;
+
+  u_int16_t flags_a;
+  u_int16_t flags_b;
+
+  u_int32_t packets_a;
+  u_int32_t packets_b;
+  u_int64_t bytes_a;
+  u_int64_t bytes_b;
+
+  struct pfring_timespec last_seen;
+} __attribute__((packed))
+pfring_flow_update;
+
+/* *********************************** */
+
+/* Deprecated (Accolade) */
 typedef struct {
   u_int32_t flow_id;
 
@@ -718,6 +758,7 @@ typedef struct {
 } __attribute__((packed))
 generic_flow_update;
 
+/* Deprecated (Accolade) */
 typedef struct {
   generic_flow_rule_action_type action;
   u_int32_t flow_id;
