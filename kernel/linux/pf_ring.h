@@ -361,6 +361,9 @@ struct pfring_extended_pkthdr {
 #define PKT_FLAGS_IP_MORE_FRAG        1 << 2 /* IP More fragments flag set */
 #define PKT_FLAGS_IP_FRAG_OFFSET      1 << 3 /* IP fragment offset set (not 0) */
 #define PKT_FLAGS_VLAN_HWACCEL        1 << 4 /* VLAN stripped by hw */
+#define PKT_FLAGS_FLOW_HIT            1 << 5 /* PF_RING_FLOW_OFFLOAD: flow hit */
+#define PKT_FLAGS_FLOW_MISS           1 << 6 /* PF_RING_FLOW_OFFLOAD: flow miss */
+#define PKT_FLAGS_FLOW_UNHANDLED      1 << 7 /* PF_RING_FLOW_OFFLOAD: flow unhandled */
   u_int32_t flags;
 
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
@@ -689,6 +692,7 @@ struct pfring_timespec {
 
 /* *********************************** */
 
+/* Used by PF_RING_FLOW_OFFLOAD (Napatech Flow Manager) */
 typedef struct {
   u_int64_t flow_id;
 
@@ -708,6 +712,11 @@ typedef struct {
   u_int16_t dst_port;
 #endif
 
+#define PF_RING_FLOW_UPDATE_CAUSE_SW 0
+#define PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT 1
+#define PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM 2
+#define PF_RING_FLOW_UPDATE_CAUSE_PROBE 4
+#define PF_RING_FLOW_UPDATE_CAUSE_UNKNOWN 5
   u_int8_t cause;
   u_int8_t reserved0;
   u_int16_t reserved1;
