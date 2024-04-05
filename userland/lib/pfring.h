@@ -541,7 +541,7 @@ int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
 		       u_int8_t level /* 1..4 */, u_int8_t add_timestamp, u_int8_t add_hash);
 
 /**
- * This call returns an incoming packet when available. 
+ * This call returns an flow when PF_RING_FLOW_OFFLOAD is enabled (supported adapters only). 
  * @param ring       The PF_RING handle where we perform the check.
  * @param flowr      A struct to be filled with flow metadata.
  * @param hdr        A memory area where the packet header will be copied.
