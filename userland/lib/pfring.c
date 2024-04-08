@@ -659,6 +659,28 @@ int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
 
 /* **************************************************** */
 
+int pfring_recv_flow(pfring *ring, pfring_flow_update *flow, u_int8_t wait_for_flows) {
+  if (likely(ring
+	     && ring->enabled
+	     && ring->recv_flow
+	     && ring->mode != send_only_mode)) {
+
+    if (unlikely(ring->reentrant))
+      return PF_RING_ERROR_INVALID_ARGUMENT;
+
+    ring->break_recv_loop = 0;
+
+    return ring->recv_flow(ring, flow, wait_for_flows);
+  }
+
+  if (!ring->enabled)
+    return PF_RING_ERROR_RING_NOT_ENABLED;
+
+  return PF_RING_ERROR_NOT_SUPPORTED;
+}
+
+/* **************************************************** */
+
 int pfring_get_metadata(pfring *ring, u_char **metadata, u_int32_t *metadata_len) {
   if(ring && ring->get_metadata)
     return ring->get_metadata(ring, metadata, metadata_len);
