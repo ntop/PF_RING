@@ -71,6 +71,24 @@ void sigproc(int sig) {
 void processFlow(pfring_flow_update *flow){
   if (!quiet) {
     printf("Flow Update ID = %lu\n", flow->flow_id);
+
+    switch (flow->cause) {
+      case PF_RING_FLOW_UPDATE_CAUSE_SW:
+        printf("Flow removed (by FlowWrite)\n");
+        break;
+      case PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT:
+        printf("Flow removed (timeout)\n");
+        break;
+      case PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM:
+        printf("Flow removed (TCP termination)\n");
+        break;
+      case PF_RING_FLOW_UPDATE_CAUSE_PROBE:
+        printf("Flow removed (Software probe?)\n");
+        break;
+      default:
+        printf("Flow removed: unknown cause\n");
+        break;
+    }
   }
 }
 
@@ -80,15 +98,16 @@ void processPacket(const struct pfring_pkthdr *h,
 		   const u_char *p, const u_char *user_bytes) {
   char buffer[256];
 
-  if (h->extended_hdr.flags & PKT_FLAGS_FLOW_HIT) {
-    //TODO
-  } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_MISS) {
-    //TODO
-  } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_UNHANDLED) {
-    //TODO
-  }
-
   if (!quiet) {
+
+    if (h->extended_hdr.flags & PKT_FLAGS_FLOW_HIT) {
+      printf("Packet - flow hit\n");
+    } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_MISS) {
+      printf("Packet - flow miss\n");
+    } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_UNHANDLED) {
+      printf("Packet - flow unhandled\n");
+    }
+
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->len);
   }
@@ -129,7 +148,8 @@ void packet_consumer() {
       if (do_shutdown)
         break;
 
-      sched_yield();
+      usleep(1);
+      //sched_yield();
     }
   }
 }
