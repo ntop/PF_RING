@@ -2174,6 +2174,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
     struct eth_vlan_hdr *vh;
 
     hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+    if (data_len < hdr->extended_hdr.parsed_pkt.offset.vlan_offset + sizeof(struct eth_vlan_hdr)) return(0);
     vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
     hdr->extended_hdr.parsed_pkt.vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
     hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
@@ -2181,6 +2182,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
 
     if(hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_8021Q /* 802.1q (VLAN) */) { /* QinQ */
       hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
+      if (data_len < hdr->extended_hdr.parsed_pkt.offset.vlan_offset + sizeof(struct eth_vlan_hdr)) return(0);
       vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
       hdr->extended_hdr.parsed_pkt.qinq_vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
       hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
@@ -2190,6 +2192,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
         if ((displ + sizeof(struct eth_vlan_hdr)) >= data_len)
           return(0);
         hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
+        if (data_len < hdr->extended_hdr.parsed_pkt.offset.vlan_offset  + sizeof(struct eth_vlan_hdr)) return(0);
         vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
         hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
         displ += sizeof(struct eth_vlan_hdr);
@@ -2206,6 +2209,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
       if ((displ + 4) >= data_len)
         return(0);
 
+      if (data_len < displ + 4) return(0);
       tag = htonl(*((u_int32_t *) (&data[displ])));
 
       if(tag & 0x00000100) /* Found last MPLS tag */
@@ -2217,6 +2221,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
     if(i == max_tags) /* max tags reached for MPLS packet */
       return(0);
 
+    if (data_len < displ + 2) return(0);
     iph_start = htons(*((u_int16_t *) (&data[displ])));
 
     if((iph_start & 0x4000) == 0x4000) { /* Found IP4 Packet after tags */
@@ -2260,6 +2265,9 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
     if(data_len < hdr->extended_hdr.parsed_pkt.offset.l3_offset + sizeof(struct kcompact_ipv6_hdr)) return(0);
 
     ipv6 = (struct kcompact_ipv6_hdr*)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
+
+    if (ipv6->version != 6 || ipv6->payload_len > data_len) return (0);
+
     ip_len = sizeof(struct kcompact_ipv6_hdr);
 
     /* Values of IPv6 addresses are stored as network byte order */
@@ -2492,10 +2500,9 @@ parse_tunnel_ip:
         }
       }
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {    /* GRE */
+      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct gre_header)) return(1);
       struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       int gre_offset;
-
-      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct gre_header)) return(1);
 
       gre->flags_and_version = ntohs(gre->flags_and_version);
       gre->proto = ntohs(gre->proto);
@@ -2575,6 +2582,7 @@ parse_tunnel_ip:
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_ICMP) {  /* ICMP */
       struct icmphdr *icmp;
 
+      if(data_len < (hdr->extended_hdr.parsed_pkt.offset.l4_offset+sizeof(struct icmphdr))) return(1);
       icmp = (struct icmphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       hdr->extended_hdr.parsed_pkt.icmp_type = icmp->type;
       hdr->extended_hdr.parsed_pkt.icmp_code = icmp->code;
@@ -2583,6 +2591,7 @@ parse_tunnel_ip:
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) { /* SCTP */
       struct sctphdr *sctp;
 
+      if(data_len < (hdr->extended_hdr.parsed_pkt.offset.l4_offset+sizeof(struct sctphdr))) return(1);
       sctp = (struct sctphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(sctp->source);
       hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(sctp->dest);
