@@ -100,24 +100,28 @@ void processPacket(const struct pfring_pkthdr *h,
 
   if (!quiet) {
 
-    if (h->extended_hdr.flags & PKT_FLAGS_FLOW_HIT) {
-      printf("Packet - flow hit\n");
-    } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_MISS) {
-      printf("Packet - flow miss\n");
-    } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_UNHANDLED) {
-      printf("Packet - flow unhandled\n");
-    }
-
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->len);
+
+    printf("%s ", buffer);
+
+    if (h->extended_hdr.flags & PKT_FLAGS_FLOW_HIT) {
+      printf("[HIT]");
+    } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_MISS) {
+      printf("[MISS]");
+    } else if (h->extended_hdr.flags & PKT_FLAGS_FLOW_UNHANDLED) {
+      printf("[UNHANDLED]");
+    } else {
+      printf("[-]");
+    }
+
+    printf("\n");
   }
 
 #if 0
   /* TODO Discard all future packets for this flow */
-  hw_filtering_rule r;
+  hw_filtering_rule r = { 0 };
   r.rule_family_type = generic_flow_id_rule;
-  r.rule_family.flow_id_rule.action = flow_drop_rule;
-  r.rule_family.flow_id_rule.thread = 0;
   r.rule_family.flow_id_rule.flow_id = flow_id;
   pfring_add_hw_rule(pd, &r);
 #endif

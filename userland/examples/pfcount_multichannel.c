@@ -239,7 +239,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, long threadId)
     else buflen += snprintf(&bigbuf[buflen], BUFSIZE - buflen, "[eth_type=0x%04X]", eth_type);
 
     buflen += snprintf(&bigbuf[buflen], BUFSIZE - buflen, "[caplen=%d][len=%d]"
-      "[eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]\n",
+      "[eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]",
       h->caplen, h->len,
       h->extended_hdr.parsed_pkt.offset.eth_offset,
       h->extended_hdr.parsed_pkt.offset.l3_offset,
@@ -247,6 +247,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, long threadId)
       h->extended_hdr.parsed_pkt.offset.payload_offset);
   }
   fputs(bigbuf, stdout);
+  fputs("\n", stdout);
 }
 
 /* ****************************************************** */
