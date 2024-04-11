@@ -131,13 +131,16 @@ void processPacket(const struct pfring_pkthdr *h,
 
     r->action = flow_drop_rule; /* flow_pass_rule / flow_drop_rule */
     r->flow_id = flow_id++;
+    r->ip_version = h->extended_hdr.parsed_pkt.ip_version;
     r->src_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
     r->dst_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_dst;
     r->src_port = h->extended_hdr.parsed_pkt.l4_src_port;
     r->dst_port = h->extended_hdr.parsed_pkt.l4_dst_port;
     r->protocol = h->extended_hdr.parsed_pkt.l3_proto; 
 
-    pfring_add_hw_rule(pd, &rule);
+    if (pfring_add_hw_rule(pd, &rule) < 0) {
+      fprintf(stderr, "pfring_add_hw_rule failure\n");
+    }
   }
 }
 

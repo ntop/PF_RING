@@ -589,7 +589,8 @@ typedef enum {
   flow_drop_rule,
   flow_mark_rule,
   flow_pass_rule,
-  flow_steer_rule
+  flow_steer_rule,
+  flow_unlearn_rule
 } generic_flow_rule_action_type;
 
 /* Deprecated (Accolade) */
