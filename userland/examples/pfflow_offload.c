@@ -51,7 +51,7 @@
 #define NO_ZC_BUFFER_LEN 9018
 
 pfring *pd = NULL;
-u_int8_t do_shutdown = 0, wait_for_packet = 1, quiet = 0, verbose = 0;
+u_int8_t do_shutdown = 0, add_rules = 0, quiet = 0, verbose = 0;
 
 /* ************************************ */
 
@@ -70,23 +70,21 @@ void sigproc(int sig) {
 
 void processFlow(pfring_flow_update *flow){
   if (!quiet) {
-    printf("Flow Update ID = %lu\n", flow->flow_id);
-
     switch (flow->cause) {
       case PF_RING_FLOW_UPDATE_CAUSE_SW:
-        printf("Flow removed (by FlowWrite)\n");
+        printf("Flow #%lu removed (by FlowWrite)\n", flow->flow_id);
         break;
       case PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT:
-        printf("Flow removed (timeout)\n");
+        printf("Flow #%lu removed (timeout)\n", flow->flow_id);
         break;
       case PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM:
-        printf("Flow removed (TCP termination)\n");
+        printf("Flow #%lu removed (TCP termination)\n", flow->flow_id);
         break;
       case PF_RING_FLOW_UPDATE_CAUSE_PROBE:
-        printf("Flow removed (Software probe?)\n");
+        printf("Flow #%lu removed (Software probe?)\n", flow->flow_id);
         break;
       default:
-        printf("Flow removed: unknown cause\n");
+        printf("Flow #%lu removed: unknown cause\n", flow->flow_id);
         break;
     }
   }
@@ -124,12 +122,12 @@ void processPacket(const struct pfring_pkthdr *h,
 
   /* Discard all future packets for this flow */
 
-  if (h->extended_hdr.parsed_pkt.ip_version == 4) {
+  if (add_rules && h->extended_hdr.parsed_pkt.ip_version == 4 /* TODO IPv6 */) {
     hw_filtering_rule rule = { 0 };
     generic_flow_tuple_hw_rule *r = &rule.rule_family.flow_tuple_rule;
     rule.rule_family_type = generic_flow_tuple_rule;
 
-    r->action = flow_drop_rule; /* flow_pass_rule / flow_drop_rule */
+    r->action = ((add_rules == 1) ? flow_drop_rule : flow_pass_rule);
     r->flow_id = flow_id++;
     r->ip_version = h->extended_hdr.parsed_pkt.ip_version;
     r->src_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
@@ -182,7 +180,7 @@ void printHelp(void) {
   printf("Flow processing based on hardware offload (Napatech Flow Manager)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
-  printf("-r              Disable raw packets (flow updates only)\n");
+  printf("-r <1|2>        Add hardware flow rules to Drop (1) or Pass (2) packets\n");
 }
 
 /* *************************************** */
@@ -196,13 +194,10 @@ int main(int argc, char* argv[]) {
 
   flags |= PF_RING_FLOW_OFFLOAD;
 
-  while ((c = getopt(argc,argv,"ag:hi:")) != '?') {
+  while ((c = getopt(argc,argv,"g:hi:r:")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
-    case 'a':
-      wait_for_packet = 0;
-      break;
     case 'g':
       bind_core = atoi(optarg);
       break;
@@ -212,6 +207,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'i':
       device = strdup(optarg);
+      break;
+    case 'r':
+      add_rules = atoi(optarg);
       break;
     }
   }
@@ -260,7 +258,6 @@ int main(int argc, char* argv[]) {
   if (bind_core >= 0)
     bind2core(bind_core);
 
-  //pfring_loop(pd, processPacket, (u_char*)NULL, wait_for_packet);
   packet_consumer();
 
   sleep(1);
