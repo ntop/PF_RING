@@ -592,19 +592,21 @@ typedef enum {
   flow_steer_rule
 } generic_flow_rule_action_type;
 
+/* Deprecated (Accolade) */
 typedef struct {
   generic_flow_rule_action_type action;
-  u_int32_t flow_id; /* flow id from flow metadata */
-  u_int32_t thread; /* id of the thread setting the rule */
+  u_int64_t flow_id; /* flow id from flow metadata */
+  u_int32_t thread; /* id of the thread setting the rule - deprecated */
 } __attribute__((packed))
 generic_flow_id_hw_rule;
 
+/* Mellanox, Napatech */
 typedef struct {
   generic_flow_rule_action_type action;
   ip_addr src_ip;
   ip_addr dst_ip;
-  ip_addr src_ip_mask;
-  ip_addr dst_ip_mask;
+  ip_addr src_ip_mask; /* deprecated */
+  ip_addr dst_ip_mask; /* deprecated */
   u_int16_t src_port;
   u_int16_t dst_port;
   u_int16_t vlan_id;
@@ -612,6 +614,7 @@ typedef struct {
   u_int8_t protocol;
   u_int8_t interface; /* from extended_hdr.if_index */
   u_int8_t queue_id; /* with action == flow_steer_rule */
+  u_int64_t flow_id; /* Napatech Flow Manager only */
 } __attribute__((packed))
 generic_flow_tuple_hw_rule;
 
