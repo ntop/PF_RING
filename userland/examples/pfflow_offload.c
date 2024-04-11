@@ -97,6 +97,7 @@ void processFlow(pfring_flow_update *flow){
 void processPacket(const struct pfring_pkthdr *h,
 		   const u_char *p, const u_char *user_bytes) {
   char buffer[256];
+  static u_int64_t flow_id = 0;
 
   if (!quiet) {
 
@@ -118,13 +119,26 @@ void processPacket(const struct pfring_pkthdr *h,
     printf("\n");
   }
 
-#if 0
-  /* TODO Discard all future packets for this flow */
-  hw_filtering_rule r = { 0 };
-  r.rule_family_type = generic_flow_id_rule;
-  r.rule_family.flow_id_rule.flow_id = flow_id;
-  pfring_add_hw_rule(pd, &r);
-#endif
+  memset((void *) &h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
+  pfring_parse_pkt((u_char *) p, (struct pfring_pkthdr *) h, 5, 0, 1);
+
+  /* Discard all future packets for this flow */
+
+  if (h->extended_hdr.parsed_pkt.ip_version == 4) {
+    hw_filtering_rule rule = { 0 };
+    generic_flow_tuple_hw_rule *r = &rule.rule_family.flow_tuple_rule;
+    rule.rule_family_type = generic_flow_tuple_rule;
+
+    r->action = flow_drop_rule; /* flow_pass_rule / flow_drop_rule */
+    r->flow_id = flow_id++;
+    r->src_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
+    r->dst_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_dst;
+    r->src_port = h->extended_hdr.parsed_pkt.l4_src_port;
+    r->dst_port = h->extended_hdr.parsed_pkt.l4_dst_port;
+    r->protocol = h->extended_hdr.parsed_pkt.l3_proto; 
+
+    pfring_add_hw_rule(pd, &rule);
+  }
 }
 
 /* *************************************** */
