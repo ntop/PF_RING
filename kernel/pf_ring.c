@@ -2559,9 +2559,11 @@ parse_tunnel_ip:
         }
       }
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {    /* GRE */
-      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct gre_header)) return(1);
-      struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+      struct gre_header *gre;
       int gre_offset;
+
+      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct gre_header)) return(1);
+      gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
 
       gre->flags_and_version = ntohs(gre->flags_and_version);
       gre->proto = ntohs(gre->proto);
