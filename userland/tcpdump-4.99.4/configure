@@ -4180,6 +4180,7 @@ fi
 
 done
 
+LIBS="$LIBS ../lib/libpfring.a -lpthread `../lib/pfring_config --libs`"
 
 case "$host_os" in
 
