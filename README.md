@@ -1,4 +1,4 @@
-![pfring][pfring_logo] ![ntop][ntop_logo]
+![pfring][pfring_logo]
 # PF_RING™
 
 [![Build Status](https://travis-ci.org/ntop/PF_RING.png?branch=dev)](https://travis-ci.org/ntop/PF_RING)
