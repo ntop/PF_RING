@@ -455,7 +455,6 @@ int main(int argc, char* argv[]) {
   int randomize = 0;
   int reforging_idx;
   int stdin_packet_len = 0;
-  int num_ports = 1;
   u_int ip_v = 4;
   int flush = 0;
   char *bpfFilter = NULL;
@@ -943,8 +942,9 @@ int main(int argc, char* argv[]) {
   i = 0;
   reforging_idx = 0;
 
-  if (uniq_pkts_per_sec) /* init limit */
+  if (uniq_pkts_per_sec) { /* init limit */
     uniq_pkts_limit = uniq_pkts_per_sec;
+  }
 
   pfring_set_application_stats(pd, "Statistics not yet computed: please try again...");
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
