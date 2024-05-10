@@ -376,6 +376,10 @@ int main(int argc, char* argv[]) {
   if (strncmp(device, "nt:", 3) == 0) {
     for (i = 0; i < num_channels; i++) {
       ring[i] = pfring_open(device, 1536, flags);
+      if (ring[i] == NULL) {
+        fprintf(stderr, "pfring_open failure\n");
+        return(-1);
+      }
     }
   } else {
     num_channels = pfring_open_multichannel(device, 1536, flags, ring);
