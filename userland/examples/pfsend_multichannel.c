@@ -175,6 +175,7 @@ void printHelp(void) {
   printf("-b <num>        Reforge source IP with <num> different IPs (balanced traffic)\n");
   printf("-S <ip>         Use <ip> as base source IP for -b (default: 10.0.0.1)\n");
   printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
+  printf("-C <channels>   Set number of channels on adapters with no RSS on TX (Napatech)\n");
   printf("-g <id:id...>   Specifies the thread affinity mask. Each <id> represents\n"
 	 "                the core id where the i-th will bind. Example: -g 7:6:5:4\n"
 	 "                binds thread <device>@0 on coreId 7, <device>@1 on coreId 6\n"
@@ -308,7 +309,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc,argv,"hi:l:vb:g:D:S:")) != -1) {
+  while((c = getopt(argc,argv,"hi:l:vb:g:C:D:S:")) != -1) {
     switch(c) {
     case 'b':
       num_ips = atoi(optarg);
@@ -330,6 +331,9 @@ int main(int argc, char* argv[]) {
       break;
     case 'g':
       bind_mask = strdup(optarg);
+      break;
+    case 'C':
+      num_channels = atoi(optarg);
       break;
     case 'D':
       inet_aton(optarg, &dstaddr);
@@ -369,7 +373,13 @@ int main(int argc, char* argv[]) {
 
   flags |= PF_RING_PROMISC; /* hardcode: promisc=1 */
 
-  num_channels = pfring_open_multichannel(device, 1536, flags, ring);
+  if (strncmp(device, "nt:", 3) == 0) {
+    for (i = 0; i < num_channels; i++) {
+      ring[i] = pfring_open(device, 1536, flags);
+    }
+  } else {
+    num_channels = pfring_open_multichannel(device, 1536, flags, ring);
+  }
   
   if(num_channels <= 0) {
     fprintf(stderr, "pfring_open_multichannel() returned %d [%s]\n", num_channels, strerror(errno));
