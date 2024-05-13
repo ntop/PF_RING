@@ -445,6 +445,7 @@ int main(int argc, char* argv[]) {
   ticks tick_start = 0, tick_prev = 0, tick_delta = 0;
 #endif
   u_int32_t uniq_pkts_limit = 0;
+  u_int32_t on_the_fly_sent = 0;
   ticks hz = 0;
   struct packet *tosend;
   int num_uniq_pkts = 1, watermark = 0;
@@ -984,9 +985,9 @@ int main(int argc, char* argv[]) {
 
     if (on_the_fly_reforging) {
       if (stdin_packet_len <= 0)
-        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
+        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + on_the_fly_sent, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
       else
-        reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
+        reforge_packet(tosend->pkt, tosend->len, reforging_idx + on_the_fly_sent, 1); 
     }
 
     rc = pfring_send((tosend->iface_index == 0) ? pd : twin_pd, (char *) tosend->pkt, tosend->len, flush);
@@ -1013,9 +1014,12 @@ int main(int argc, char* argv[]) {
       goto redo;
     }
 
-    if (randomize && on_the_fly_reforging) {
-      n = random() & 0xF;
-      reforging_idx += n;
+    if (on_the_fly_reforging) {
+      on_the_fly_sent++;
+      if (randomize) {
+        n = random() & 0xF;
+        reforging_idx += n;
+      }
     }
 
     if (pkt_loop && ++pkt_loop_sent < pkt_loop) {
@@ -1074,6 +1078,8 @@ int main(int argc, char* argv[]) {
       /* check the uniq packets limit */
       if (tosend->id >= uniq_pkts_limit)
         tosend = pkt_head;
+      if (on_the_fly_reforging && on_the_fly_sent >= uniq_pkts_limit)
+        on_the_fly_sent = 0;
     }
 #endif
 
