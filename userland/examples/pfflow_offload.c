@@ -47,11 +47,116 @@
 
 #include "pfutils.c"
 
+#define ALARM_SLEEP      1
 #define DEFAULT_DEVICE   "nt:0"
 #define NO_ZC_BUFFER_LEN 9018
+#define MAX_NUM_THREADS  64
 
 pfring *pd = NULL;
+int num_threads = 1;
+static struct timeval startTime;
 u_int8_t do_shutdown = 0, add_rules = 0, quiet = 0, verbose = 0;
+
+struct app_stats {
+  u_int64_t numPkts[MAX_NUM_THREADS];
+  u_int64_t numBytes[MAX_NUM_THREADS];
+};
+
+struct app_stats *stats = NULL;
+
+/* ************************************ */
+
+void print_stats() {
+  pfring_stat pfringStat;
+  struct timeval endTime;
+  double delta_last;
+  static u_int8_t print_all;
+  static u_int64_t lastPkts = 0;
+  static u_int64_t lastBytes = 0;
+  double diff, bytesDiff;
+  static struct timeval lastTime;
+  char buf[256], buf1[64], buf2[64], buf3[64], buf4[64], timebuf[128];
+  u_int64_t delta_abs;
+
+  if(startTime.tv_sec == 0) {
+    gettimeofday(&startTime, NULL);
+    print_all = 0;
+  } else
+    print_all = 1;
+
+  gettimeofday(&endTime, NULL);
+  delta_last = delta_time(&endTime, &startTime);
+
+  if(pfring_stats(pd, &pfringStat) >= 0) {
+    double thpt;
+    int i;
+    unsigned long long nBytes = 0, nPkts = 0;
+
+    for(i=0; i < num_threads; i++) {
+      nBytes += stats->numBytes[i];
+      nPkts += stats->numPkts[i];
+    }
+
+    delta_abs = delta_time(&endTime, &startTime);
+    snprintf(buf, sizeof(buf),
+             "Duration: %s\n"
+             "Packets:  %lu\n"
+             "Dropped:  %lu\n"
+             "Bytes:    %lu\n",
+             msec2dhmsm(delta_abs, timebuf, sizeof(timebuf)),
+             (long unsigned int) nPkts,
+             (long unsigned int) pfringStat.drop,
+             (long unsigned int) nBytes);
+    pfring_set_application_stats(pd, buf);
+
+    thpt = ((double)8*nBytes)/(delta_last*1000);
+
+    fprintf(stderr, "=========================\n"
+	    "Absolute Stats: [%s pkts total][%s pkts dropped]",
+	    pfring_format_numbers((double)(nPkts + pfringStat.drop), buf2, sizeof(buf2), 0),
+	    pfring_format_numbers((double)(pfringStat.drop), buf3, sizeof(buf3), 0));
+
+    fprintf(stderr, "[%.1f%% dropped]",
+	    pfringStat.drop == 0 ? 0 : (double)(pfringStat.drop*100)/(double)(nPkts + pfringStat.drop));
+
+    fprintf(stderr, "\n[%s %s rcvd][%s bytes rcvd]",
+	    pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
+            "pkts",
+	    pfring_format_numbers((double)nBytes, buf2, sizeof(buf2), 0));
+
+    if(print_all)
+      fprintf(stderr, "[%s %s/sec][%s Mbit/sec]\n",
+	      pfring_format_numbers((double)(nPkts*1000)/delta_last, buf1, sizeof(buf1), 1),
+              "pkt",
+	      pfring_format_numbers(thpt, buf2, sizeof(buf2), 1));
+    else
+      fprintf(stderr, "\n");
+
+    if(print_all && (lastTime.tv_sec > 0)) {
+      delta_last = delta_time(&endTime, &lastTime);
+      diff = nPkts-lastPkts;
+      bytesDiff = nBytes - lastBytes;
+      bytesDiff /= (1000*1000*1000)/8;
+
+      snprintf(buf, sizeof(buf),
+	      "Actual Stats: [%s %s rcvd][%s ms][%s %s][%s Gbps]",
+	      pfring_format_numbers(diff, buf4, sizeof(buf4), 0),
+              "pkts",
+	      pfring_format_numbers(delta_last, buf1, sizeof(buf1), 1),
+	      pfring_format_numbers(((double)diff/(double)(delta_last/1000)),  buf2, sizeof(buf2), 1),
+              "pps",
+	      pfring_format_numbers(((double)bytesDiff/(double)(delta_last/1000)),  buf3, sizeof(buf3), 1));
+
+      fprintf(stderr, "=========================\n%s\n", buf);
+    }
+
+    lastPkts = nPkts, lastBytes = nBytes;
+  }
+
+  lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
+
+  fprintf(stderr, "=========================\n\n");
+}
 
 /* ************************************ */
 
@@ -63,13 +168,16 @@ void sigproc(int sig) {
 
   do_shutdown = 1;
 
+  if (!quiet)
+    print_stats();
+
   pfring_breakloop(pd);
 }
 
 /* ******************************** */
 
 void processFlow(pfring_flow_update *flow){
-  if (!quiet) {
+  if (verbose) {
     switch (flow->cause) {
       case PF_RING_FLOW_UPDATE_CAUSE_SW:
         printf("Flow #%lu removed (by FlowWrite)\n", flow->flow_id);
@@ -96,8 +204,12 @@ void processPacket(const struct pfring_pkthdr *h,
 		   const u_char *p, const u_char *user_bytes) {
   char buffer[256];
   static u_int64_t flow_id = 0;
+  int threadId = 0;
 
-  if (!quiet) {
+  stats->numPkts[threadId]++;
+  stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
+
+  if (verbose) {
 
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->len);
@@ -155,10 +267,12 @@ void packet_consumer() {
 
   while(!do_shutdown) {
 
+#if 0
     while (!do_shutdown && pfring_recv_flow(pd, &flow, 0) > 0) {
       /* Process flow */
       processFlow(&flow);
     }
+#endif
 
     if (pfring_recv(pd, &buffer_p, NO_ZC_BUFFER_LEN, &hdr, 0) > 0) {
       /* Process packet */
@@ -181,6 +295,19 @@ void printHelp(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
   printf("-r <1|2>        Add hardware flow rules to Drop (1) or Pass (2) packets\n");
+  printf("-v              Verbose\n");
+  printf("-q              Quiet\n");
+}
+
+/* *************************************** */
+
+void my_sigalarm(int sig) {
+  if (do_shutdown)
+    return;
+
+  print_stats();
+  alarm(ALARM_SLEEP);
+  signal(SIGALRM, my_sigalarm);
 }
 
 /* *************************************** */
@@ -194,7 +321,7 @@ int main(int argc, char* argv[]) {
 
   flags |= PF_RING_FLOW_OFFLOAD;
 
-  while ((c = getopt(argc,argv,"g:hi:r:")) != '?') {
+  while ((c = getopt(argc,argv,"g:hi:r:vq")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -211,11 +338,21 @@ int main(int argc, char* argv[]) {
     case 'r':
       add_rules = atoi(optarg);
       break;
+    case 'v':
+      verbose = 1;
+      break;
+    case 'q':
+      quiet = 1;
+      break;
     }
   }
 
   if (device == NULL) device = DEFAULT_DEVICE;
+
   bind2node(bind_core);
+
+  if ((stats = calloc(1, sizeof(struct app_stats))) == NULL)
+    return -1;
 
   promisc = 1;
 
@@ -248,6 +385,13 @@ int main(int argc, char* argv[]) {
 
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
+
+  startTime.tv_sec = 0;
+
+  if(!verbose && !quiet) {
+    signal(SIGALRM, my_sigalarm);
+    alarm(ALARM_SLEEP);
+  }
 
  if (pfring_enable_ring(pd) != 0) {
     printf("Unable to enable ring :-(\n");
