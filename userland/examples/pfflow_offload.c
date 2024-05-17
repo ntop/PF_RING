@@ -73,9 +73,10 @@ void print_stats() {
   static u_int8_t print_all;
   static u_int64_t lastPkts = 0;
   static u_int64_t lastBytes = 0;
-  double diff, bytesDiff;
+  static u_int64_t lastDrops = 0;
+  double pktDiff, dropDiff, bytesDiff;
   static struct timeval lastTime;
-  char buf[256], buf1[64], buf2[64], buf3[64], buf4[64], timebuf[128];
+  char buf[256], buf1[64], buf2[64], buf3[64], buf4[64], buf5[64], timebuf[128];
   u_int64_t delta_abs;
 
   if(startTime.tv_sec == 0) {
@@ -119,38 +120,36 @@ void print_stats() {
     fprintf(stderr, "[%.1f%% dropped]",
 	    pfringStat.drop == 0 ? 0 : (double)(pfringStat.drop*100)/(double)(nPkts + pfringStat.drop));
 
-    fprintf(stderr, "\n[%s %s rcvd][%s bytes rcvd]",
+    fprintf(stderr, "\n[%s pkts rcvd][%s bytes rcvd]",
 	    pfring_format_numbers((double)nPkts, buf1, sizeof(buf1), 0),
-            "pkts",
 	    pfring_format_numbers((double)nBytes, buf2, sizeof(buf2), 0));
 
     if(print_all)
-      fprintf(stderr, "[%s %s/sec][%s Mbit/sec]\n",
+      fprintf(stderr, "[%s pps][%s Mbit/sec]\n",
 	      pfring_format_numbers((double)(nPkts*1000)/delta_last, buf1, sizeof(buf1), 1),
-              "pkt",
 	      pfring_format_numbers(thpt, buf2, sizeof(buf2), 1));
     else
       fprintf(stderr, "\n");
 
     if(print_all && (lastTime.tv_sec > 0)) {
       delta_last = delta_time(&endTime, &lastTime);
-      diff = nPkts-lastPkts;
+      pktDiff = nPkts-lastPkts;
+      dropDiff = pfringStat.drop-lastDrops;
       bytesDiff = nBytes - lastBytes;
       bytesDiff /= (1000*1000*1000)/8;
 
       snprintf(buf, sizeof(buf),
-	      "Actual Stats: [%s %s rcvd][%s ms][%s %s][%s Gbps]",
-	      pfring_format_numbers(diff, buf4, sizeof(buf4), 0),
-              "pkts",
+	      "Actual Stats: [%s pkts rcvd][%s ms][%s pps][%s Gbps][%s drop/sec]",
+	      pfring_format_numbers(pktDiff, buf5, sizeof(buf5), 0),
 	      pfring_format_numbers(delta_last, buf1, sizeof(buf1), 1),
-	      pfring_format_numbers(((double)diff/(double)(delta_last/1000)),  buf2, sizeof(buf2), 1),
-              "pps",
-	      pfring_format_numbers(((double)bytesDiff/(double)(delta_last/1000)),  buf3, sizeof(buf3), 1));
+	      pfring_format_numbers(((double)pktDiff/(double)(delta_last/1000)),  buf2, sizeof(buf2), 1),
+	      pfring_format_numbers(((double)bytesDiff/(double)(delta_last/1000)),  buf4, sizeof(buf4), 1),
+	      pfring_format_numbers(((double)dropDiff/(double)(delta_last/1000)),  buf3, sizeof(buf3), 1));
 
       fprintf(stderr, "=========================\n%s\n", buf);
     }
 
-    lastPkts = nPkts, lastBytes = nBytes;
+    lastPkts = nPkts, lastBytes = nBytes, lastDrops = pfringStat.drop;
   }
 
   lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
@@ -207,7 +206,7 @@ void processPacket(const struct pfring_pkthdr *h,
   int threadId = 0;
 
   stats->numPkts[threadId]++;
-  stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */;
+  stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */ + 1000;
 
   if (verbose) {
 
@@ -295,6 +294,7 @@ void printHelp(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
   printf("-r <1|2>        Add hardware flow rules to Drop (1) or Pass (2) packets\n");
+  printf("-g <core>       CPU core affinity\n");
   printf("-v              Verbose\n");
   printf("-q              Quiet\n");
 }
