@@ -74,7 +74,7 @@ dkms-rpm:
 
 clean:
 	$(MAKE) -C $(KERNEL_SRC) SUBDIRS=$(HERE) clean || true
-	\rm -f *~ Module.symvers Module.markers modules.order *#
+	\rm -f *~ Module.symvers Module.markers modules.order
 
 install:
 	mkdir -p $(INSTDIR)
