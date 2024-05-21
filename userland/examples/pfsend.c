@@ -97,6 +97,7 @@ pfring_stat pfringStats;
 char *device = NULL, *twin_device = NULL, *cidr = NULL;
 u_int8_t wait_for_packet = 1, do_shutdown = 0;
 u_int32_t pkt_loop = 0, pkt_loop_sent = 0, uniq_pkts_per_sec = 0;
+u_int32_t uniq_k_pkts_per_pkts = 1, uniq_pkts_per_pkts = 0;
 u_int64_t num_pkt_good_sent = 0, last_num_pkt_good_sent = 0;
 u_int64_t num_bytes_good_sent = 0, last_num_bytes_good_sent = 0;
 u_int32_t mtu = 1500;
@@ -230,8 +231,10 @@ void printHelp(void) {
   printf("-D <ip>         Use <ip> as destination IP (default: 192.168.0.1)\n");
   printf("-V <version>    Generate IP version <version> packets (default: 4, mixed: 0)\n");
   printf("-8 <num>        Send the same packets <num> times before moving to the next\n");
-  printf("-A <num>        Add <num> different packets (e.g. -b) every second\n");
   printf("-O              On the fly reforging instead of preprocessing (-b)\n");
+  printf("-A <num>        Add <num> different packets every second up to -b\n");
+  printf("-U <num>        Add K more different packets (-K) every <num> packets up to -b\n");
+  printf("-K <num>        Add <num> more different packets every -U packets up to -b\n");
   printf("-z              Randomize generated IPs sequence (requires -b)\n");
   printf("-o <num>        Offset for generated IPs (-b) or packets in pcap (-f)\n");
   printf("-W <ID>[,<ID>]  Forge VLAN packets with the specified VLAN ID (and QinQ ID if specified after comma)\n");
@@ -444,7 +447,9 @@ int main(int argc, char* argv[]) {
 #if !(defined(__arm__) || defined(__mips__))
   ticks tick_start = 0, tick_prev = 0, tick_delta = 0;
 #endif
-  u_int32_t uniq_pkts_limit = 0;
+  u_int64_t curr_uniq_pkts_limit = 0;
+  u_int64_t on_the_fly_sent = 0;
+  u_int64_t uniq_pkts_per_pkts_cnt = 0;
   ticks hz = 0;
   struct packet *tosend;
   int num_uniq_pkts = 1, watermark = 0;
@@ -455,7 +460,6 @@ int main(int argc, char* argv[]) {
   int randomize = 0;
   int reforging_idx;
   int stdin_packet_len = 0;
-  int num_ports = 1;
   u_int ip_v = 4;
   int flush = 0;
   char *bpfFilter = NULL;
@@ -467,7 +471,7 @@ int main(int argc, char* argv[]) {
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
 
-  while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:G:l:L:o:Oaf:Fr:vm:M:p:P:S:t:V:w:W:z8:0:")) != -1) {
+  while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:G:l:L:o:Oaf:Fr:vm:M:p:P:S:t:K:U:V:w:W:z8:0:")) != -1) {
     switch(c) {
     case 'A':
       uniq_pkts_per_sec = atoi(optarg);
@@ -574,6 +578,12 @@ int main(int argc, char* argv[]) {
       break;
     case 'P':
       pidFileName = strdup(optarg);
+      break;
+    case 'K':
+      uniq_k_pkts_per_pkts = atoi(optarg);
+      break;
+    case 'U':
+      uniq_pkts_per_pkts = atoi(optarg);
       break;
     case 'V':
       ip_v = atoi(optarg);
@@ -943,8 +953,11 @@ int main(int argc, char* argv[]) {
   i = 0;
   reforging_idx = 0;
 
-  if (uniq_pkts_per_sec) /* init limit */
-    uniq_pkts_limit = uniq_pkts_per_sec;
+  if (uniq_pkts_per_sec) { /* init limit */
+    curr_uniq_pkts_limit = uniq_pkts_per_sec;
+  } else if (uniq_pkts_per_pkts) {
+    curr_uniq_pkts_limit = 1;
+  }
 
   pfring_set_application_stats(pd, "Statistics not yet computed: please try again...");
   if(pfring_get_appl_stats_file_name(pd, path, sizeof(path)) != NULL)
@@ -984,9 +997,9 @@ int main(int argc, char* argv[]) {
 
     if (on_the_fly_reforging) {
       if (stdin_packet_len <= 0)
-        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
+        forge_udp_packet(tosend->pkt, tosend->len, reforging_idx + on_the_fly_sent, (ip_v != 4 && ip_v != 6) ? (i&0x1 ? 6 : 4) : ip_v);
       else
-        reforge_packet(tosend->pkt, tosend->len, reforging_idx + num_pkt_good_sent, 1); 
+        reforge_packet(tosend->pkt, tosend->len, reforging_idx + on_the_fly_sent, 1); 
     }
 
     rc = pfring_send((tosend->iface_index == 0) ? pd : twin_pd, (char *) tosend->pkt, tosend->len, flush);
@@ -1013,9 +1026,12 @@ int main(int argc, char* argv[]) {
       goto redo;
     }
 
-    if (randomize && on_the_fly_reforging) {
-      n = random() & 0xF;
-      reforging_idx += n;
+    if (on_the_fly_reforging) {
+      on_the_fly_sent++;
+      if (randomize) {
+        n = random() & 0xF;
+        reforging_idx += n;
+      }
     }
 
     if (pkt_loop && ++pkt_loop_sent < pkt_loop) {
@@ -1062,19 +1078,36 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    /* add N uniq packets per second */
-    if (uniq_pkts_per_sec) {
-      if (uniq_pkts_limit < num_uniq_pkts) {
-        if (getticks() - tick_prev > hz) {
-          /* 1s elapsed, add N uniq packets */
-          uniq_pkts_limit += uniq_pkts_per_sec;
-          tick_prev = getticks();
+    if (uniq_pkts_per_sec || uniq_pkts_per_pkts) {
+
+      if (curr_uniq_pkts_limit < num_uniq_pkts) {
+        if (uniq_pkts_per_sec) {
+          /* add N uniq packets per second */
+          if (getticks() - tick_prev > hz) {
+            /* 1s elapsed, add N uniq packets */
+            curr_uniq_pkts_limit += uniq_pkts_per_sec;
+            tick_prev = getticks();
+          }
+        } else if (uniq_pkts_per_pkts) {
+          /* add K more uniq packet every N packets */
+          uniq_pkts_per_pkts_cnt++;
+          if (uniq_pkts_per_pkts_cnt >= uniq_pkts_per_pkts) {
+            uniq_pkts_per_pkts_cnt = 0;
+            curr_uniq_pkts_limit += uniq_k_pkts_per_pkts;
+          }
         }
       }
+
       /* check the uniq packets limit */
-      if (tosend->id >= uniq_pkts_limit)
+      if (tosend->id >= curr_uniq_pkts_limit)
         tosend = pkt_head;
+
+      if (on_the_fly_reforging) {
+        if (on_the_fly_sent >= curr_uniq_pkts_limit)
+          on_the_fly_sent = 0;
+      }
     }
+
 #endif
 
     if(num_to_send > 0) i++;

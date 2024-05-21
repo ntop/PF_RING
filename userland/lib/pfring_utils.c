@@ -702,7 +702,7 @@ int pfring_print_parsed_pkt(char *buff, u_int buff_len, const u_char *p, const s
   }
 
   buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
-    " [caplen=%d][len=%d][eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]\n",
+    " [caplen=%d][len=%d][eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]",
     h->caplen, h->len, 
     h->extended_hdr.parsed_pkt.offset.eth_offset,
     h->extended_hdr.parsed_pkt.offset.l3_offset,

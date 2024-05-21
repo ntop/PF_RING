@@ -361,6 +361,9 @@ struct pfring_extended_pkthdr {
 #define PKT_FLAGS_IP_MORE_FRAG        1 << 2 /* IP More fragments flag set */
 #define PKT_FLAGS_IP_FRAG_OFFSET      1 << 3 /* IP fragment offset set (not 0) */
 #define PKT_FLAGS_VLAN_HWACCEL        1 << 4 /* VLAN stripped by hw */
+#define PKT_FLAGS_FLOW_HIT            1 << 5 /* PF_RING_FLOW_OFFLOAD: flow hit */
+#define PKT_FLAGS_FLOW_MISS           1 << 6 /* PF_RING_FLOW_OFFLOAD: flow miss */
+#define PKT_FLAGS_FLOW_UNHANDLED      1 << 7 /* PF_RING_FLOW_OFFLOAD: flow unhandled */
   u_int32_t flags;
 
   u_int8_t rx_direction;   /* 1=RX: packet received by the NIC, 0=TX: packet transmitted by the NIC */
@@ -586,22 +589,25 @@ typedef enum {
   flow_drop_rule,
   flow_mark_rule,
   flow_pass_rule,
-  flow_steer_rule
+  flow_steer_rule,
+  flow_unlearn_rule
 } generic_flow_rule_action_type;
 
+/* Deprecated (Accolade) */
 typedef struct {
   generic_flow_rule_action_type action;
-  u_int32_t flow_id; /* flow id from flow metadata */
-  u_int32_t thread; /* id of the thread setting the rule */
+  u_int64_t flow_id; /* flow id from flow metadata */
+  u_int32_t thread; /* id of the thread setting the rule - deprecated */
 } __attribute__((packed))
 generic_flow_id_hw_rule;
 
+/* Mellanox, Napatech */
 typedef struct {
   generic_flow_rule_action_type action;
   ip_addr src_ip;
   ip_addr dst_ip;
-  ip_addr src_ip_mask;
-  ip_addr dst_ip_mask;
+  ip_addr src_ip_mask; /* deprecated */
+  ip_addr dst_ip_mask; /* deprecated */
   u_int16_t src_port;
   u_int16_t dst_port;
   u_int16_t vlan_id;
@@ -609,6 +615,7 @@ typedef struct {
   u_int8_t protocol;
   u_int8_t interface; /* from extended_hdr.if_index */
   u_int8_t queue_id; /* with action == flow_steer_rule */
+  u_int64_t flow_id; /* Napatech Flow Manager only */
 } __attribute__((packed))
 generic_flow_tuple_hw_rule;
 
@@ -687,6 +694,52 @@ struct pfring_timespec {
   u_int32_t tv_nsec;
 } __attribute__((packed));
 
+/* *********************************** */
+
+/* Used by PF_RING_FLOW_OFFLOAD (Napatech Flow Manager) */
+typedef struct {
+  u_int64_t flow_id;
+
+#if 0
+  u_int16_t vlan_id;
+
+  u_int8_t ip_version;
+  u_int8_t l4_protocol;
+
+  u_int8_t tos;
+  u_int8_t tcp_flags;
+
+  ip_addr src_ip;
+  ip_addr dst_ip;
+
+  u_int16_t src_port;
+  u_int16_t dst_port;
+#endif
+
+#define PF_RING_FLOW_UPDATE_CAUSE_SW 0
+#define PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT 1
+#define PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM 2
+#define PF_RING_FLOW_UPDATE_CAUSE_PROBE 4
+#define PF_RING_FLOW_UPDATE_CAUSE_UNKNOWN 5
+  u_int8_t cause;
+  u_int8_t reserved0;
+  u_int16_t reserved1;
+
+  u_int16_t flags_a;
+  u_int16_t flags_b;
+
+  u_int32_t packets_a;
+  u_int32_t packets_b;
+  u_int64_t bytes_a;
+  u_int64_t bytes_b;
+
+  struct pfring_timespec last_seen;
+} __attribute__((packed))
+pfring_flow_update;
+
+/* *********************************** */
+
+/* Deprecated (Accolade) */
 typedef struct {
   u_int32_t flow_id;
 
@@ -718,6 +771,7 @@ typedef struct {
 } __attribute__((packed))
 generic_flow_update;
 
+/* Deprecated (Accolade) */
 typedef struct {
   generic_flow_rule_action_type action;
   u_int32_t flow_id;

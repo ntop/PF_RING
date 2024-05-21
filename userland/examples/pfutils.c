@@ -136,6 +136,7 @@ static u_int32_t wrapsum (u_int32_t sum) {
 
 static int compute_csum = 1;
 static int num_ips = 1;
+static int num_ports = 1;
 static int balance_source_ips = 1;
 
 static u_char matrix_buffer[
@@ -309,7 +310,7 @@ static void forge_udp_packet(u_char *buffer, u_int buffer_len, u_int idx, u_int 
   }
 
   udp = (struct compact_udp_hdr *)(buffer + l2_len + ip_len);
-  udp->sport = htons(2012 + (idx / num_ips));
+  udp->sport = htons(2012 + ((num_ports > 1) ? (idx / num_ips) : 0));
   udp->dport = htons(3000);
   udp->len = htons(buffer_len - l2_len - ip_len);
   udp->check = 0; /* It must be 0 to compute the checksum */

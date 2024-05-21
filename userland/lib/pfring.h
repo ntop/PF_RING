@@ -306,6 +306,7 @@ struct __pfring {
   int       (*register_zerocopy_tx_ring)    (pfring *, pfring *);
   int       (*recv_chunk)                   (pfring *, void **, pfring_chunk_info *, u_int8_t); 
   int       (*recv_burst)                   (pfring *, pfring_packet_info *, u_int8_t, u_int8_t); 
+  int       (*recv_flow)                    (pfring *, pfring_flow_update *, u_int8_t);
   int       (*set_bound_dev_name)           (pfring *, char *);
   int       (*get_metadata)         	    (pfring *, u_char **, u_int32_t *);
   u_int32_t (*get_interface_speed)	    (pfring *);
@@ -388,7 +389,7 @@ struct __pfring {
 #define PF_RING_ZC_NOT_REPROGRAM_RSS   (1 << 14) /**< pfring_open() flag: Do not touch/reprogram hw RSS */ 
 #define PF_RING_VSS_APCON_TIMESTAMP    (1 << 15) /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
 #define PF_RING_ZC_IPONLY_RSS	       (1 << 16) /**< pfring_open() flag: Compute RSS on src/dst IP only (not 4-tuple) */ 
-#define PF_RING_FLOW_OFFLOAD	       (1 << 17) /**< pfring_open() flag: Deprecated */ 
+#define PF_RING_FLOW_OFFLOAD	       (1 << 17) /**< pfring_open() flag: Enable Flow offload (Flow Manager on Napatech) */ 
 #define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Deprecated */
 #define PF_RING_FLOW_OFFLOAD_NORAWDATA (1 << 19) /**< pfring_open() flag: Deprecated */
 #define PF_RING_L7_FILTERING	       (1 << 20) /**< pfring_open() flag: Enable L7 filtering support based on PF_RING FT (Flow Table with nDPI support) */
@@ -538,6 +539,16 @@ int pfring_recv_burst(pfring *ring, pfring_packet_info *packets, u_int8_t num_pa
 int pfring_recv_parsed(pfring *ring, u_char** buffer, u_int buffer_len,
 		       struct pfring_pkthdr *hdr, u_int8_t wait_for_incoming_packet,
 		       u_int8_t level /* 1..4 */, u_int8_t add_timestamp, u_int8_t add_hash);
+
+/**
+ * This call returns an flow when PF_RING_FLOW_OFFLOAD is enabled (supported adapters only). 
+ * @param ring       The PF_RING handle where we perform the check.
+ * @param flowr      A struct to be filled with flow metadata.
+ * @param hdr        A memory area where the packet header will be copied.
+ * @param wait_for_flows If 0 we simply check the flow availability, otherwise the call is blocked until a packet is available. 
+ * @return 0 in case of no flow being received (non-blocking), 1 in case of success, -1 in case of error.
+ */
+int pfring_recv_flow(pfring *ring, pfring_flow_update *flow, u_int8_t wait_for_flows);
 
 /**
  * Get metadata for the last captured packet, if any. This is usually used with ZC SPSC queues for reading packet metadata.

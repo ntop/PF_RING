@@ -451,6 +451,65 @@ MODULE_PARM_DESC(transparent_mode,
 
 /* ********************************** */
 
+u_int32_t get_num_rx_queues(struct net_device *dev);
+u_int32_t lock_rss_queues(struct net_device *dev);
+pf_ring_net *netns_lookup(struct net *net);
+pf_ring_net *netns_add(struct net *net);
+pf_ring_device *pf_ring_device_ifindex_lookup(struct net *net, int ifindex);
+pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char *name);
+int check_perfect_rules(struct sk_buff *skb,
+                        struct pf_ring_socket *pfr,
+                        struct pfring_pkthdr *hdr,
+                        int *fwd_pkt,
+                        int displ,
+                        sw_filtering_hash_bucket **p_hash_bucket);
+int check_wildcard_rules(struct sk_buff *skb,
+                         struct pf_ring_socket *pfr,
+                         struct pfring_pkthdr *hdr,
+                         int *fwd_pkt,
+                         int displ);
+int bpf_filter_skb(struct sk_buff *skb,
+                   struct pf_ring_socket *pfr,
+                   int displ);
+int sample_packet(struct pf_ring_socket *pfr);
+u_int32_t default_rehash_rss_func(struct sk_buff *skb, struct pfring_pkthdr *hdr);
+void set_ring_num_channels(struct pf_ring_socket *pfr, u_int32_t num_rx_channels);
+void register_device_handler(void);
+void unregister_device_handler(void);
+void reserve_memory(unsigned long base, unsigned long mem_len);
+void unreserve_memory(unsigned long base, unsigned long mem_len);
+unsigned int ring_poll(struct file *file,
+                       struct socket *sock, poll_table *wait);
+ring_cluster_element *cluster_lookup(u_int32_t cluster_id);
+int get_first_available_cluster_queue(ring_cluster_element *el);
+struct pf_ring_socket *get_first_cluster_consumer(ring_cluster_element *el);
+int add_sock_to_cluster_list(ring_cluster_element *el, struct sock *sk, u_int16_t consumer_id);
+int remove_from_cluster_list(struct ring_cluster *cluster_ptr, struct sock *sock);
+int setSocketStats(struct pf_ring_socket *pfr);
+void pf_ring_zc_dev_register(zc_dev_callbacks *callbacks,
+                             zc_dev_ring_info *rx_info,
+                             zc_dev_ring_info *tx_info,
+                             void *rx_descr_packet_memory,
+                             void *tx_descr_packet_memory,
+                             void *phys_card_memory,
+                             u_int32_t phys_card_memory_len,
+                             u_int32_t channel_id,
+                             struct net_device *dev,
+                             struct device *hwdev,
+                             zc_dev_model device_model,
+                             u_char *device_address,
+                             wait_queue_head_t *packet_waitqueue,
+                             u_int8_t *interrupt_received,
+                             void *rx_adapter,
+                             void *tx_adapter);
+void pf_ring_zc_dev_unregister(struct net_device *dev, u_int32_t channel_id);
+void remove_device_from_proc(pf_ring_net *netns, pf_ring_device *dev_ptr);
+void remove_device_from_ring_list(struct net_device *dev);
+void add_device_to_proc(pf_ring_net *netns, pf_ring_device *dev_ptr);
+int add_device_to_ring_list(struct net_device *dev, int32_t dev_index);
+
+/* ********************************** */
+
 #define MIN_QUEUED_PKTS      64
 #define MAX_QUEUE_LOOPS      64
 
@@ -2174,6 +2233,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
     struct eth_vlan_hdr *vh;
 
     hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+    if (data_len < hdr->extended_hdr.parsed_pkt.offset.vlan_offset + sizeof(struct eth_vlan_hdr)) return(0);
     vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
     hdr->extended_hdr.parsed_pkt.vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
     hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
@@ -2181,6 +2241,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
 
     if(hdr->extended_hdr.parsed_pkt.eth_type == ETH_P_8021Q /* 802.1q (VLAN) */) { /* QinQ */
       hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
+      if (data_len < hdr->extended_hdr.parsed_pkt.offset.vlan_offset + sizeof(struct eth_vlan_hdr)) return(0);
       vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
       hdr->extended_hdr.parsed_pkt.qinq_vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK;
       hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
@@ -2190,6 +2251,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
         if ((displ + sizeof(struct eth_vlan_hdr)) >= data_len)
           return(0);
         hdr->extended_hdr.parsed_pkt.offset.vlan_offset += sizeof(struct eth_vlan_hdr);
+        if (data_len < hdr->extended_hdr.parsed_pkt.offset.vlan_offset  + sizeof(struct eth_vlan_hdr)) return(0);
         vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
         hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
         displ += sizeof(struct eth_vlan_hdr);
@@ -2206,6 +2268,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
       if ((displ + 4) >= data_len)
         return(0);
 
+      if (data_len < displ + 4) return(0);
       tag = htonl(*((u_int32_t *) (&data[displ])));
 
       if(tag & 0x00000100) /* Found last MPLS tag */
@@ -2217,6 +2280,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
     if(i == max_tags) /* max tags reached for MPLS packet */
       return(0);
 
+    if (data_len < displ + 2) return(0);
     iph_start = htons(*((u_int16_t *) (&data[displ])));
 
     if((iph_start & 0x4000) == 0x4000) { /* Found IP4 Packet after tags */
@@ -2260,6 +2324,9 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
     if(data_len < hdr->extended_hdr.parsed_pkt.offset.l3_offset + sizeof(struct kcompact_ipv6_hdr)) return(0);
 
     ipv6 = (struct kcompact_ipv6_hdr*)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
+
+    if (ipv6->version != 6 || ipv6->payload_len > data_len) return (0);
+
     ip_len = sizeof(struct kcompact_ipv6_hdr);
 
     /* Values of IPv6 addresses are stored as network byte order */
@@ -2492,10 +2559,11 @@ parse_tunnel_ip:
         }
       }
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {    /* GRE */
-      struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
+      struct gre_header *gre;
       int gre_offset;
 
       if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct gre_header)) return(1);
+      gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
 
       gre->flags_and_version = ntohs(gre->flags_and_version);
       gre->proto = ntohs(gre->proto);
@@ -2575,6 +2643,7 @@ parse_tunnel_ip:
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_ICMP) {  /* ICMP */
       struct icmphdr *icmp;
 
+      if(data_len < (hdr->extended_hdr.parsed_pkt.offset.l4_offset+sizeof(struct icmphdr))) return(1);
       icmp = (struct icmphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       hdr->extended_hdr.parsed_pkt.icmp_type = icmp->type;
       hdr->extended_hdr.parsed_pkt.icmp_code = icmp->code;
@@ -2583,6 +2652,7 @@ parse_tunnel_ip:
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_SCTP) { /* SCTP */
       struct sctphdr *sctp;
 
+      if(data_len < (hdr->extended_hdr.parsed_pkt.offset.l4_offset+sizeof(struct sctphdr))) return(1);
       sctp = (struct sctphdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
       hdr->extended_hdr.parsed_pkt.l4_src_port = ntohs(sctp->source);
       hdr->extended_hdr.parsed_pkt.l4_dst_port = ntohs(sctp->dest);

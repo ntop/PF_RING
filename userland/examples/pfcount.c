@@ -576,7 +576,7 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
     pfring_print_parsed_pkt(bigbuf, sizeof(bigbuf), p, h);
     len = strlen(bigbuf);
 
-    if(len > 0) bigbuf[len-1] = '\0';
+    if(len > 0) bigbuf[len] = '\0';
 
     snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "%s", bigbuf);
   } else {

@@ -16,6 +16,11 @@ modprobe ptp
 modprobe vxlan
 modprobe configfs
 
+INTEL_AUX=./intel_auxiliary.ko
+if [ -f $INTEL_AUX ]; then
+	insmod $INTEL_AUX
+fi
+
 # Load the driver
 insmod ./i40e.ko
 
