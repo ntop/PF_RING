@@ -7462,6 +7462,20 @@ _kc_netif_napi_add(struct net_device *dev, struct napi_struct *napi,
 #endif
 
 /*****************************************************************************/
+/* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
+
+#define HAVE_HW_TIME_STAMP
+#define strlcpy(...) (void)(strscpy(__VA_ARGS__))
+static inline int pci_enable_pcie_error_reporting(struct pci_dev __always_unused *dev)
+{
+	return 0;
+}
+#define pci_disable_pcie_error_reporting(dev) do {} while (0)
+
+#endif
+
+/*****************************************************************************/
 #if RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE > 0) 
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,6))
 #elif (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))

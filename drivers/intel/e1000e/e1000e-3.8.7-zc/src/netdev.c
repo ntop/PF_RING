@@ -7516,8 +7516,8 @@ static int e1000_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
 #if defined(SIOCSHWTSTAMP) && defined(HAVE_HW_TIME_STAMP)
 	case SIOCSHWTSTAMP:
 		return e1000e_hwtstamp_set(netdev, ifr);
-#endif
-#ifdef SIOCGHWTSTAMP
+//#endif
+//#ifdef SIOCGHWTSTAMP
 	case SIOCGHWTSTAMP:
 		return e1000e_hwtstamp_get(netdev, ifr);
 #endif
