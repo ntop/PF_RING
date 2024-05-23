@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (C) 2018-2023 Intel Corporation
+# Copyright (C) 2013-2024 Intel Corporation
 
 set -Eeuo pipefail
 
@@ -88,8 +88,13 @@ function gen-devlink() {
 	gen HAVE_DEVLINK_PORT_NEW if method port_new of devlink_ops in "$dh"
 	gen HAVE_DEVLINK_PORT_OPS if struct devlink_port_ops in "$dh"
 	gen HAVE_DEVLINK_PORT_SPLIT if method port_split of devlink_ops in "$dh"
+	gen HAVE_DEVLINK_PORT_SPLIT if method port_split of devlink_port_ops in "$dh"
 	gen HAVE_DEVLINK_PORT_SPLIT_EXTACK if method port_split of devlink_ops matches extack in "$dh"
+	gen HAVE_DEVLINK_PORT_SPLIT_EXTACK if method port_split of devlink_port_ops matches extack in "$dh"
+	gen HAVE_DEVLINK_PORT_SPLIT_IN_OPS if method port_split of devlink_ops in "$dh"
+	gen HAVE_DEVLINK_PORT_SPLIT_IN_PORT_OPS if method port_split of devlink_port_ops in "$dh"
 	gen HAVE_DEVLINK_PORT_SPLIT_PORT_STRUCT if method port_split of devlink_ops matches devlink_port in "$dh"
+	gen HAVE_DEVLINK_PORT_SPLIT_PORT_STRUCT if method port_split of devlink_port_ops matches devlink_port in "$dh"
 	gen HAVE_DEVLINK_PORT_TYPE_ETH_HAS_NETDEV if fun devlink_port_type_eth_set matches 'struct net_device' in "$dh"
 	gen HAVE_DEVLINK_RATE_NODE_CREATE if fun devl_rate_node_create in "$dh"
 	# keep devlink_region_ops body in variable, to not look 4 times for
@@ -102,7 +107,9 @@ function gen-devlink() {
 	gen HAVE_DEVLINK_REGISTER_SETS_DEV if fun devlink_register matches 'struct device' in "$dh"
 	gen HAVE_DEVLINK_RELOAD_ENABLE_DISABLE if fun devlink_reload_enable in "$dh"
 	gen HAVE_DEVLINK_SET_FEATURES  if fun devlink_set_features in "$dh"
+	gen HAVE_DEVL_HEALTH_REPORTER_DESTROY if fun devl_health_reporter_destroy in "$dh"
 	gen HAVE_DEVL_PORT_REGISTER if fun devl_port_register in "$dh"
+	gen NEED_DEVLINK_HEALTH_DEFAULT_AUTO_RECOVER if fun devlink_health_reporter_create matches auto_recover in "$dh"
 	gen NEED_DEVLINK_RESOURCES_UNREGISTER_NO_RESOURCE if fun devlink_resources_unregister matches 'struct devlink_resource \\*' in "$dh"
 	gen NEED_DEVLINK_TO_DEV  if fun devlink_to_dev absent in "$dh"
 	gen NEED_DEVLINK_UNLOCKED_RESOURCE if fun devl_resource_size_get absent in "$dh"
@@ -116,6 +123,8 @@ function gen-ethtool() {
 	ueth='include/uapi/linux/ethtool.h'
 	gen HAVE_ETHTOOL_COALESCE_EXTACK if method get_coalesce of ethtool_ops matches 'struct kernel_ethtool_coalesce \\*' in "$eth"
 	gen HAVE_ETHTOOL_EXTENDED_RINGPARAMS if method get_ringparam of ethtool_ops matches 'struct kernel_ethtool_ringparam \\*' in "$eth"
+	gen HAVE_ETHTOOL_KEEE if struct ethtool_keee in "$eth"
+	gen HAVE_ETHTOOL_RXFH_PARAM if struct ethtool_rxfh_param in "$eth"
 	gen NEED_ETHTOOL_SPRINTF if fun ethtool_sprintf absent in "$eth"
 	gen HAVE_ETHTOOL_FLOW_RSS if macro FLOW_RSS in "$ueth"
 }
@@ -161,8 +170,7 @@ function gen-netdevice() {
 	gen HAVE_NDO_EXTENDED_SET_TX_MAXRATE if method ndo_set_tx_maxrate of net_device_ops_extended in "$ndh"
 	gen HAVE_NDO_FDB_ADD_VID    if method ndo_fdb_del of net_device_ops matches 'u16 vid' in "$ndh"
 	gen HAVE_NDO_FDB_DEL_EXTACK if method ndo_fdb_del of net_device_ops matches extack in "$ndh"
-	# PF_RING Note: the below is commented out as gen() is also matching __rh_deprecated_ndo_get_devlink_port which is wrong
-	#gen HAVE_NDO_GET_DEVLINK_PORT if method ndo_get_devlink_port of net_device_ops in "$ndh"
+	gen HAVE_NDO_GET_DEVLINK_PORT if method ndo_get_devlink_port of net_device_ops in "$ndh"
 	gen HAVE_NDO_UDP_TUNNEL_CALLBACK if method ndo_udp_tunnel_add of net_device_ops in "$ndh"
 	gen HAVE_NETDEV_EXTENDED_MIN_MAX_MTU if struct net_device_extended matches min_mtu in "$ndh"
 	gen HAVE_NETDEV_MIN_MAX_MTU if struct net_device matches min_mtu in "$ndh"
@@ -189,18 +197,20 @@ function gen-pci() {
 function gen-other() {
 	pciaerh='include/linux/aer.h'
 	ush='include/linux/u64_stats_sync.h'
+	gen HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING if fun pci_enable_pcie_error_reporting in "$pciaerh"
 	gen NEED_PCI_AER_CLEAR_NONFATAL_STATUS if fun pci_aer_clear_nonfatal_status absent in "$pciaerh"
-	gen NEED_PCI_ENABLE_PCIE_ERROR_REPORTING if fun pci_enable_pcie_error_reporting absent in "$pciaerh"
 	gen NEED_BITMAP_COPY_CLEAR_TAIL if fun bitmap_copy_clear_tail absent in include/linux/bitmap.h
 	gen NEED_BITMAP_FROM_ARR32 if fun bitmap_from_arr32 absent in include/linux/bitmap.h
 	gen NEED_BITMAP_TO_ARR32 if fun bitmap_to_arr32 absent in include/linux/bitmap.h
 	gen NEED_ASSIGN_BIT if fun assign_bit absent in include/linux/bitops.h
+	gen NEED___STRUCT_SIZE if macro __struct_size absent in include/linux/compiler_types.h include/linux/fortify-string.h
 	gen HAVE_COMPLETION_RAW_SPINLOCK if struct completion matches 'struct swait_queue_head' in include/linux/completion.h
 	gen NEED_IS_CONSTEXPR if macro __is_constexpr absent in include/linux/const.h include/linux/minmax.h include/linux/kernel.h
 	gen NEED_DEBUGFS_LOOKUP if fun debugfs_lookup absent in include/linux/debugfs.h
 	gen NEED_DEBUGFS_LOOKUP_AND_REMOVE if fun debugfs_lookup_and_remove absent in include/linux/debugfs.h
 	gen NEED_ETH_HW_ADDR_SET if fun eth_hw_addr_set absent in include/linux/etherdevice.h
 	gen NEED_FIND_NEXT_BIT_WRAP if fun find_next_bit_wrap absent in include/linux/find.h
+	gen HAVE_FS_FILE_DENTRY if fun file_dentry in include/linux/fs.h
 	gen HAVE_HWMON_DEVICE_REGISTER_WITH_INFO if fun hwmon_device_register_with_info in include/linux/hwmon.h
 	gen NEED_HWMON_CHANNEL_INFO if macro HWMON_CHANNEL_INFO absent in include/linux/hwmon.h
 	gen HAVE_IOMMU_DEV_FEAT_AUX if enum iommu_dev_features matches IOMMU_DEV_FEAT_AUX in include/linux/iommu.h
@@ -210,9 +220,11 @@ function gen-other() {
 	gen NEED_DECLARE_STATIC_KEY_FALSE if macro DECLARE_STATIC_KEY_FALSE absent in include/linux/jump_label.h include/linux/jump_label_type.h
 	gen NEED_LOWER_16_BITS if macro lower_16_bits absent in include/linux/kernel.h
 	gen NEED_UPPER_16_BITS if macro upper_16_bits absent in include/linux/kernel.h
+	gen NEED_LIST_COUNT_NODES if fun list_count_nodes absent in include/linux/list.h
 	gen NEED_MUL_U64_U64_DIV_U64 if fun mul_u64_u64_div_u64 absent in include/linux/math64.h
 	gen HAVE_MDEV_GET_DRVDATA if fun mdev_get_drvdata in include/linux/mdev.h
 	gen HAVE_MDEV_REGISTER_PARENT if fun mdev_register_parent in include/linux/mdev.h
+	gen HAVE_NO_STRSCPY if fun strscpy absent in include/linux/string.h
 	gen NEED_DEV_PM_DOMAIN_ATTACH if fun dev_pm_domain_attach absent in include/linux/pm_domain.h include/linux/pm.h
 	gen NEED_DEV_PM_DOMAIN_DETACH if fun dev_pm_domain_detach absent in include/linux/pm_domain.h include/linux/pm.h
 	gen NEED_PTP_CLASSIFY_RAW if fun ptp_classify_raw absent in include/linux/ptp_classify.h

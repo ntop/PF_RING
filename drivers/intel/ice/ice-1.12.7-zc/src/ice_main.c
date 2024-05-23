@@ -1552,7 +1552,9 @@ static void ice_remove_recovery_mode(struct ice_pf *pf)
 
 	ice_reset(&pf->hw, ICE_RESET_PFR);
 	ice_unmap_all_hw_addr(pf);
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pf->pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 }
 
 /**
@@ -7072,7 +7074,9 @@ ice_probe(struct pci_dev *pdev, const struct pci_device_id __always_unused *ent)
 		goto err_dma;
 	}
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_enable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_set_master(pdev);
 
 	pf->pdev = pdev;
@@ -7156,7 +7160,9 @@ err_init_devlink:
 	ice_clear_interrupt_scheme(pf);
 err_init:
 	ice_unmap_all_hw_addr(pf);
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_disable_device(pdev);
 err_dma:
 	return err;
@@ -7282,7 +7288,9 @@ static void ice_remove(struct pci_dev *pdev)
 	pci_wait_for_pending_transaction(pdev);
 	ice_unmap_all_hw_addr(pf);
 	ice_clear_interrupt_scheme(pf);
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_disable_device(pdev);
 
 }
