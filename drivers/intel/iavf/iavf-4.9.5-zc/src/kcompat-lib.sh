@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (C) 2013-2023 Intel Corporation
+# Copyright (C) 2013-2024 Intel Corporation
 
 # to be sourced
 
@@ -290,4 +290,22 @@ function gen() {
 				print "#define", define
 		}
 	' <<< "$body"
+}
+
+# tell if given flag is enabled in .config
+# return 0 if given flag is enabled, 1 otherwise
+# inputs:
+# $1 - flag to check (whole word, without _MODULE suffix)
+# env flag $CONFFILE
+#
+# there are two "config" formats supported, to ease up integrators lifes
+# .config (without leading #~ prefix):
+#~ # CONFIG_ACPI_EC_DEBUGFS is not set
+#~ CONFIG_ACPI_AC=y
+#~ CONFIG_ACPI_VIDEO=m
+# and autoconf.h, which would be:
+#~ #define CONFIG_ACPI_AC 1
+#~ #define CONFIG_ACPI_VIDEO_MODULE 1
+function config_has() {
+	grep -qE "^(#define )?$1((_MODULE)? 1|=m|=y)$" "$CONFFILE"
 }

@@ -562,9 +562,15 @@ exit:
  * If any errors happen during the write call, a negative error value should be
  * returned instead of the number of characters that were written.
  */
+#ifdef HAVE_TTY_OP_WRITE_SIZE_T
+static ssize_t
+iavf_gnss_tty_write(struct tty_struct *tty,
+		    const u8 *buf, size_t count)
+#else
 static int
 iavf_gnss_tty_write(struct tty_struct *tty,
 		    const unsigned char *buf, int count)
+#endif
 {
 	struct iavf_gnss_write_buf *write_buf;
 	struct iavf_gnss_serial *gnss_serial;

@@ -1120,8 +1120,12 @@ static u32 iavf_get_rxfh_indir_size(struct net_device *netdev)
  * Reads the indirection table directly from the hardware. Always returns 0.
  **/
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int iavf_get_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh)
+#else
 static int iavf_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key,
 			 u8 *hfunc)
+#endif
 #else
 static int iavf_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 #endif
@@ -1130,18 +1134,34 @@ static int iavf_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 	u16 i;
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	rxfh->hfunc = ETH_RSS_HASH_TOP;
+#else
 	if (hfunc)
 		*hfunc = ETH_RSS_HASH_TOP;
-
+#endif
 #endif
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->key)
+		memcpy(rxfh->key, adapter->rss_key, adapter->rss_key_size);
+#else
 	if (key)
 		memcpy(key, adapter->rss_key, adapter->rss_key_size);
+#endif
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->indir)
+#else
 	if (indir)
+#endif
 		/* Each 32 bits pointed by 'indir' is stored with a lut entry */
 		for (i = 0; i < adapter->rss_lut_size; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+			rxfh->indir[i] = (u32)adapter->rss_lut[i];
+#else
 			indir[i] = (u32)adapter->rss_lut[i];
+#endif
 
 	return 0;
 }
@@ -1157,8 +1177,13 @@ static int iavf_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
  * returns 0 after programming the table.
  **/
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int iavf_set_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh,
+	      struct netlink_ext_ack *extack)
+#else
 static int iavf_set_rxfh(struct net_device *netdev, const u32 *indir,
 			   const u8 *key, const u8 hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #else
 #ifdef HAVE_RXFH_NONCONST
 static int iavf_set_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
@@ -1181,28 +1206,59 @@ static int iavf_set_rxfh(struct net_device *netdev, const u32 *indir,
 
 #ifdef HAVE_RXFH_HASHFUNC
 	/* Only support toeplitz hash function */
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->hfunc != ETH_RSS_HASH_NO_CHANGE && rxfh->hfunc != ETH_RSS_HASH_TOP)
+#else
 	if (hfunc != ETH_RSS_HASH_NO_CHANGE && hfunc != ETH_RSS_HASH_TOP)
+#endif
 		return -EOPNOTSUPP;
 #endif
 
-	if (indir) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->indir)
+#else
+	if (indir)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
+	{
 		/* Verify user input. */
 		for (i = 0; i < adapter->rss_lut_size; i++) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+			if (rxfh->indir[i] >= adapter->num_active_queues)
+#else
 			if (indir[i] >= adapter->num_active_queues)
+#endif
 				return -EINVAL;
 		}
 	}
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (!rxfh->key && !rxfh->indir)
+#else
 	if (!key && !indir)
+#endif
 		return 0;
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->key)
+		memcpy(adapter->rss_key, rxfh->key, adapter->rss_key_size);
+#else
 	if (key)
 		memcpy(adapter->rss_key, key, adapter->rss_key_size);
+#endif
 
-	if (indir) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->indir)
+#else
+	if (indir)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
+	{
 		/* Each 32 bits pointed by 'indir' is stored with a lut entry */
 		for (i = 0; i < adapter->rss_lut_size; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+			adapter->rss_lut[i] = (u8)(rxfh->indir[i]);
+#else
 			adapter->rss_lut[i] = (u8)(indir[i]);
+#endif
 	}
 
 	return iavf_config_rss(adapter);

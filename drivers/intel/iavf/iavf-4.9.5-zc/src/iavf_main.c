@@ -6033,7 +6033,9 @@ static int iavf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		goto err_pci_reg;
 	}
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_enable_pcie_error_reporting(pdev);
+#endif
 
 	pci_set_master(pdev);
 
@@ -6411,7 +6413,9 @@ static void iavf_remove(struct pci_dev *pdev)
 
 	free_netdev(netdev);
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif
 
 	pci_disable_device(pdev);
 }
