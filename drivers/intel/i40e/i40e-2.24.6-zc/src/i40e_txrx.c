@@ -2938,7 +2938,7 @@ void i40e_finalize_xdp_rx(struct i40e_ring *rx_ring,
 			  unsigned int xdp_res)
 {
 	if (xdp_res & I40E_XDP_REDIR)
-		xdp_do_flush_map();
+		xdp_do_flush(); //xdp_do_flush_map();
 
 	if (xdp_res & I40E_XDP_TX) {
 		struct i40e_ring *xdp_ring =

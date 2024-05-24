@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Copyright (C) 2013-2023 Intel Corporation */
+/* Copyright (C) 2013-2024 Intel Corporation */
 
 #ifndef _KCOMPAT_H_
 #define _KCOMPAT_H_
@@ -54,8 +54,6 @@
 #ifndef IEEE_8021QAZ_APP_SEL_DSCP
 #define IEEE_8021QAZ_APP_SEL_DSCP	5
 #endif
-
-
 
 #ifndef NSEC_PER_MSEC
 #define NSEC_PER_MSEC 1000000L
@@ -2359,11 +2357,6 @@ void _kc_pci_restore_state(struct pci_dev *);
 void _kc_free_netdev(struct net_device *);
 #define free_netdev(netdev) _kc_free_netdev(netdev)
 #endif
-static inline int pci_enable_pcie_error_reporting(struct pci_dev __always_unused *dev)
-{
-	return 0;
-}
-#define pci_disable_pcie_error_reporting(dev) do {} while (0)
 #define pci_cleanup_aer_uncorrect_error_status(dev) do {} while (0)
 
 void *_kc_kmemdup(const void *src, size_t len, unsigned gfp);
@@ -4302,10 +4295,6 @@ void _kc_skb_add_rx_frag(struct sk_buff * skb, int i, struct page *page,
 /*****************************************************************************/
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0) )
 
-#ifndef SIZE_MAX
-#define SIZE_MAX (~(size_t)0)
-#endif
-
 #ifndef BITS_PER_LONG_LONG
 #define BITS_PER_LONG_LONG 64
 #endif
@@ -6072,7 +6061,9 @@ int _kc_kstrtobool(const char *s, bool *res);
 #else /* >= 4.6.0 */
 #define HAVE_PAGE_COUNT_BULK_UPDATE
 #define HAVE_ETHTOOL_FLOW_UNION_IP6_SPEC
+#ifdef CONFIG_X86
 #define HAVE_PTP_CROSSTIMESTAMP
+#endif
 #define HAVE_TC_SETUP_CLSFLOWER
 #define HAVE_TC_SETUP_CLSU32
 #endif /* 4.6.0 */
@@ -6324,7 +6315,6 @@ static inline void __page_frag_cache_drain(struct page *page,
  */
 #define HAVE_NAPI_STATE_IN_BUSY_POLL
 #define HAVE_TCF_MIRRED_EGRESS_REDIRECT
-#define HAVE_PTP_CLOCK_INFO_ADJFINE
 #endif /* 4.10.0 */
 
 /*****************************************************************************/
@@ -6705,14 +6695,10 @@ void _kc_pcie_print_link_status(struct pci_dev *dev);
 
 /*****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0))
-#include "kcompat_overflow.h"
-
 #if (SLE_VERSION_CODE < SLE_VERSION(15,1,0))
 #define firmware_request_nowarn	request_firmware_direct
 #endif /* SLES < 15.1 */
-
 #else
-#include <linux/overflow.h>
 #include <net/xdp_sock.h>
 #define HAVE_XDP_FRAME_STRUCT
 #define HAVE_XDP_SOCK
@@ -7005,8 +6991,6 @@ u64 _kc_pci_get_dsn(struct pci_dev *dev);
 /* RHEL >= 8.4 */
 #define HAVE_XDP_BUFF_FRAME_SZ
 #endif
-#define flex_array_size(p, member, count) \
-	array_size(count, sizeof(*(p)->member) + __must_be_array((p)->member))
 #else /* >= 5.8.0 */
 #define HAVE_TC_FLOW_INDIR_DEV
 #define HAVE_TC_FLOW_INDIR_BLOCK_CLEANUP
@@ -7078,6 +7062,14 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0))
 #define HAVE_GRO_HEADER
 #endif /* >=5.12.0 */
+
+/*****************************************************************************/
+/* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
+
+#define strlcpy(...) (ssize_t)(strscpy(__VA_ARGS__))
+
+#endif
 
 /*****************************************************************************/
 /*

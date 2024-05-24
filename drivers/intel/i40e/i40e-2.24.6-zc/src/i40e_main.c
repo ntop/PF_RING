@@ -18095,7 +18095,9 @@ static int i40e_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 			 "pci_request_mem_regions failed %d\n", err);
 		goto err_pci_reg;
 	}
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_enable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_set_master(pdev);
 
 	/* Now that we have a PCI connection, we need to do the
@@ -18717,7 +18719,9 @@ err_pf_reset:
 err_ioremap:
 	kfree(pf);
 err_pf_alloc:
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_release_mem_regions(pdev);
 err_pci_reg:
 err_dma:
@@ -18893,7 +18897,9 @@ debug_mode_clear:
 	kfree(pf);
 	pci_release_mem_regions(pdev);
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_disable_device(pdev);
 }
 
