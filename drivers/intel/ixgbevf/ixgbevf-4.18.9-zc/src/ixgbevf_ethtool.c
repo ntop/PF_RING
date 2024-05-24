@@ -1513,8 +1513,12 @@ static u32 ixgbevf_get_rxfh_key_size(struct net_device *netdev)
 }
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int ixgbevf_get_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh)
+#else
 static int ixgbevf_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key,
 			    u8 *hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #else
 static int ixgbevf_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 #endif
@@ -1523,35 +1527,67 @@ static int ixgbevf_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 	int err = 0;
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	rxfh->hfunc = ETH_RSS_HASH_TOP;
+#else
 	if (hfunc)
 		*hfunc = ETH_RSS_HASH_TOP;
-
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #endif
 	if (adapter->hw.mac.type >= ixgbe_mac_X550_vf) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		if (rxfh->key)
+			memcpy(rxfh->key, adapter->rss_key,
+			       ixgbevf_get_rxfh_key_size(netdev));
+#else
 		if (key)
 			memcpy(key, adapter->rss_key,
 			       ixgbevf_get_rxfh_key_size(netdev));
+#endif
 
-		if (indir) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		if (rxfh->indir)
+#else
+		if (indir)
+#endif
+		{
 			int i;
 
 			for (i = 0; i < IXGBEVF_X550_VFRETA_SIZE; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+				rxfh->indir[i] = adapter->rss_indir_tbl[i];
+#else
 				indir[i] = adapter->rss_indir_tbl[i];
+#endif
 		}
 	} else {
 		/* If neither indirection table nor hash key was requested
 		 *  - just return a success avoiding taking any locks.
 		 */
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		if (!rxfh->indir && !rxfh->key)
+#else
 		if (!indir && !key)
+#endif
 			return 0;
 
 		spin_lock_bh(&adapter->mbx_lock);
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		if (rxfh->indir)
+			err = ixgbevf_get_reta_locked(&adapter->hw, rxfh->indir,
+						      adapter->num_rx_queues);
+
+		if (!err && rxfh->key)
+			err = ixgbevf_get_rss_key_locked(&adapter->hw, rxfh->key);
+#else
 		if (indir)
 			err = ixgbevf_get_reta_locked(&adapter->hw, indir,
 						      adapter->num_rx_queues);
 
 		if (!err && key)
 			err = ixgbevf_get_rss_key_locked(&adapter->hw, key);
+#endif
+
 
 		spin_unlock_bh(&adapter->mbx_lock);
 	}

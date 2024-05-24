@@ -5805,7 +5805,9 @@ static int __devinit ixgbevf_probe(struct pci_dev *pdev,
 		goto err_pci_reg;
 	}
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_enable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 
 	pci_set_master(pdev);
 
@@ -6077,7 +6079,9 @@ static void __devexit ixgbevf_remove(struct pci_dev *pdev)
 	disable_dev = !test_and_set_bit(__IXGBEVF_DISABLED, &adapter->state);
 	free_netdev(netdev);
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 
 	if (disable_dev)
 		pci_disable_device(pdev);
