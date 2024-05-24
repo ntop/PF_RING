@@ -6982,9 +6982,11 @@ _kc_napi_busy_loop(unsigned int napi_id,
 /*****************************************************************************/
 /* HAVE_PF_RING */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
-
 #define strlcpy(...) (void)(strscpy(__VA_ARGS__))
+#endif
 
+#ifndef xdp_do_flush_map
+#define xdp_do_flush_map() do {} while (0)
 #endif
 
 /*****************************************************************************/
