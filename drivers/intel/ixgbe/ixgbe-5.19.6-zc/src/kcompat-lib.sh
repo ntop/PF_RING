@@ -36,6 +36,8 @@ function filter-out-bad-files() {
 	fi
 	local any=0 diagmsgs=/dev/stderr re=$'[\t \n]'
 	[ -n "${QUIET_COMPAT-}" ] && diagmsgs=/dev/null
+	# HAVE_PF_RING
+	diagmsgs=/dev/null
 	for x in "$@"; do
 		if [ -e "$x" ]; then
 			if [[ "$x" =~ $re ]]; then
