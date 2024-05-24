@@ -7065,10 +7065,14 @@ _kc_napi_busy_loop(unsigned int napi_id,
 
 /*****************************************************************************/
 /* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,16,0))
+#include <net/xdp.h>
+#endif
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0))
+#include "kcompat_overflow.h" 
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
-
 #define strlcpy(...) (ssize_t)(strscpy(__VA_ARGS__))
-
 #endif
 
 /*****************************************************************************/

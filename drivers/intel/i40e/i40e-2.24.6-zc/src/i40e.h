@@ -38,10 +38,6 @@
 #include <linux/if_vlan.h>
 #include <linux/if_bridge.h>
 
-#ifdef HAVE_PF_RING
-#include <net/xdp.h>
-#endif
-
 /* AF_XDP is currently only supported in kernel versions 4.20 to 5.1,
  * and only on redhat */
 #include  <linux/version.h>
