@@ -7090,6 +7090,14 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #endif /* >=5.12.0 */
 
 /*****************************************************************************/
+/* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
+
+#define strlcpy(...) (void)(strscpy(__VA_ARGS__))
+
+#endif
+
+/*****************************************************************************/
 /*
  * Load the implementations file which actually defines kcompat backports.
  * Legacy backports still exist in this file, but all new backports must be
