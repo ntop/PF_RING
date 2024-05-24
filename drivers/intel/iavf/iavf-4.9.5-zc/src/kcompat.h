@@ -39,7 +39,6 @@
 #include <linux/vmalloc.h>
 
 #ifdef HAVE_PF_RING
-#include <net/xdp.h>
 //#define HAVE_PF_RING_NO_RDMA
 #define HAVE_PF_RING_ONLY /* No kernel mode even when ZC is not in use */
 #define IAVF_MAX_NIC 64
@@ -6981,6 +6980,9 @@ _kc_napi_busy_loop(unsigned int napi_id,
 
 /*****************************************************************************/
 /* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,16,0))
+#include <net/xdp.h>
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
 #define strlcpy(...) (void)(strscpy(__VA_ARGS__))
 #endif
