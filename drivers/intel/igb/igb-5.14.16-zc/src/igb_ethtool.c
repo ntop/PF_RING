@@ -3494,8 +3494,11 @@ static u32 igb_get_rxfh_indir_size(struct net_device *netdev)
 
 #if (defined(ETHTOOL_GRSSH) && !defined(HAVE_ETHTOOL_GSRSSH))
 #ifdef HAVE_RXFH_HASHFUNC
-static int igb_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key,
-			u8 *hfunc)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int igb_get_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh)
+#else
+static int igb_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key,	u8 *hfunc)
+#endif /* HAVE_RXFH_HASHFUNC */
 #else
 static int igb_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 #endif /* HAVE_RXFH_HASHFUNC */
@@ -3508,15 +3511,27 @@ static int igb_get_rxfh_indir(struct net_device *netdev, u32 *indir)
 
 #if (defined(ETHTOOL_GRSSH) && !defined(HAVE_ETHTOOL_GSRSSH) \
      && defined(HAVE_RXFH_HASHFUNC))
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	rxfh->hfunc = ETH_RSS_HASH_TOP;
+#else
 	if (hfunc)
 		*hfunc = ETH_RSS_HASH_TOP;
-
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #endif
+
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (!rxfh->indir)
+#else
 	if (!indir)
+#endif
 		return 0;
 
 	for (i = 0; i < IGB_RETA_SIZE; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		rxfh->indir[i] = adapter->rss_indir_tbl[i];
+#else
 		indir[i] = adapter->rss_indir_tbl[i];
+#endif
 
 	return 0;
 }
@@ -3575,8 +3590,13 @@ void igb_write_rss_indir_tbl(struct igb_adapter *adapter)
 #ifdef HAVE_ETHTOOL_GRXFHINDIR_SIZE
 #if (defined(ETHTOOL_GRSSH) && !defined(HAVE_ETHTOOL_GSRSSH))
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int igb_set_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh,
+	      struct netlink_ext_ack *extack)
+#else
 static int igb_set_rxfh(struct net_device *netdev, const u32 *indir,
 			      const u8 *key, const u8 hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #else
 static int igb_set_rxfh(struct net_device *netdev, const u32 *indir,
 			      const u8 *key)
@@ -3604,12 +3624,20 @@ static int igb_set_rxfh_indir(struct net_device *netdev, const u32 *indir)
 
 	/* Verify user input. */
 	for (i = 0; i < IGB_RETA_SIZE; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		if (rxfh->indir[i] >= num_queues)
+#else
 		if (indir[i] >= num_queues)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 			return -EINVAL;
 
 
 	for (i = 0; i < IGB_RETA_SIZE; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		adapter->rss_indir_tbl[i] = rxfh->indir[i];
+#else
 		adapter->rss_indir_tbl[i] = indir[i];
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 
 	igb_write_rss_indir_tbl(adapter);
 

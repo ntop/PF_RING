@@ -1,9 +1,6 @@
 #!/bin/bash
-# SPDX-License-Identifier: @SPDX@
-# Copyright(c) 2007 - 2023 Intel Corporation.
-
-
-
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2013-2024 Intel Corporation
 
 # to be sourced
 
@@ -39,10 +36,6 @@ function filter-out-bad-files() {
 	fi
 	local any=0 diagmsgs=/dev/stderr re=$'[\t \n]'
 	[ -n "${QUIET_COMPAT-}" ] && diagmsgs=/dev/null
-	
-	# HAVE_PF_RING
-	diagmsgs=/dev/null
-	
 	for x in "$@"; do
 		if [ -e "$x" ]; then
 			if [[ "$x" =~ $re ]]; then
@@ -111,7 +104,7 @@ function find-fun-decl() {
 function find-enum-decl() {
 	test $# -ge 2
 	local what end
-	what="/^$WB*enum $1"' \{$/'
+	what="/^$WB*enum$WB+$1"' \{$/'
 	end='/\};$/'
 	shift
 	find-decl "$what" "$end" "$@"
@@ -121,7 +114,7 @@ function find-enum-decl() {
 function find-struct-decl() {
 	test $# -ge 2
 	local what end
-	what="/^$WB*struct $1"' \{$/'
+	what="/^$WB*struct$WB+$1"' \{$/'
 	end='/^\};$/' # that's (^) different from enum-decl
 	shift
 	find-decl "$what" "$end" "$@"
@@ -132,8 +125,21 @@ function find-macro-decl() {
 	test $# -ge 2
 	local what end
 	# only unindented defines, only whole-word match
-	what="/^#define $1"'([ \t\(]|$)/'
-	end=1 # only first line (bumping to bigger number does not bring more ;)
+	what="/^#define$WB+$1"'([ \t\(]|$)/'
+	end=1 # only first line; use find-macro-implementation-decl for full body
+	shift
+	find-decl "$what" "$end" "$@"
+}
+
+# yield full macro implementation
+function find-macro-implementation-decl() {
+	test $# -ge 2
+	local what end
+	# only unindented defines, only whole-word match
+	what="/^#define$WB+$1"'([ \t\(]|$)/'
+	# full implementation, until a line not ending in a backslash.
+	# Does not handle macros with comments embedded within the definition.
+	end='/[^\\]$/'
 	shift
 	find-decl "$what" "$end" "$@"
 }
@@ -161,9 +167,14 @@ function find-typedef-decl() {
 #   NAME is the name for what we are looking for;
 #
 #   KIND specifies what kind of declaration/definition we are looking for,
-#      could be: fun, enum, struct, method, macro, typedef
+#      could be: fun, enum, struct, method, macro, typedef,
+#      'implementation of macro'
 #   for KIND=method, we are looking for function ptr named METHOD in struct
 #     named NAME (two optional args are then necessary (METHOD & of));
+#
+#   for KIND='implementation of macro' we are looking for the full
+#     implementation of the macro, not just its first line. This is usually
+#     combined with "matches" or "lacks".
 #
 #   next [optional] args could be used:
 #     matches PATTERN - use to grep for the PATTERN within definition
@@ -181,7 +192,7 @@ function find-typedef-decl() {
 #  <list-of-files> is just space-separate list of files to look in,
 #    single (-) for stdin.
 #
-# PATTERN is awk pattern, will be wrapped by two slashes (/)
+# PATTERN is an awk pattern, will be wrapped by two slashes (/)
 function gen() {
 	test $# -ge 6 || die 20 "too few arguments, $# given, at least 6 needed"
 	local define if_kw kind name in_kw # mandatory
@@ -205,6 +216,16 @@ function gen() {
 		name="$3"
 		shift 3
 		[ "$of_kw" != of ] && die 23 "$src_line: 'of' keyword expected, '$of_kw' given"
+	;;
+	implementation)
+		test $# -ge 5 || die 28 "$src_line: too few arguments, $orig_args_cnt given, at least 8 needed"
+		of_kw="$1"
+		kind="$2"
+		name="$3"
+		shift 3
+		[ "$of_kw" != of ] && die 29 "$src_line: 'of' keyword expected, '$of_kw' given"
+		[ "$kind" != macro ] && die 30 "$src_line: implementation only supports 'macro', '$kind' given"
+		kind=macro-implementation
 	;;
 	*) die 24 "$src_line: unknown KIND ($kind) to look for" ;;
 	esac
@@ -233,7 +254,7 @@ function gen() {
 
 	local first_decl=
 	if [ "$kind" = method ]; then
-		first_decl="$(find-struct-decl "$name" "$@")" || exit 28
+		first_decl="$(find-struct-decl "$name" "$@")" || exit 40
 		# prepare params for next lookup phase
 		set -- - # overwrite $@ to be single dash (-)
 		name="$method_name"
@@ -245,8 +266,23 @@ function gen() {
 
 	# lookup the NAME
 	local body
-	body="$(find-$kind-decl "$name" "$@" <<< "$first_decl")" || exit 29
+	body="$(find-$kind-decl "$name" "$@" <<< "$first_decl")" || exit 41
 	awk -v define="$define" -v pattern="$pattern" -v "$operator"=1 '
+		BEGIN {
+			# prepend "identifier boundary" to pattern, also append
+			# it, but only for patterns not ending with such already
+			#
+			# eg: "foo" -> "\bfoo\b"
+			#     "struct foo *" -> "\bstruct foo *"
+
+			# Note that mawk does not support "\b", so we have our
+			# own approximation, NI
+			NI = "[^A-Za-z0-9_]" # "Not an Indentifier"
+
+			if (!match(pattern, NI "$"))
+				pattern = pattern "(" NI "|$)"
+			pattern = "(^|" NI ")" pattern
+		}
 		/./ { not_empty = 1 }
 		$0 ~ pattern { found = 1 }
 		END {
@@ -254,4 +290,22 @@ function gen() {
 				print "#define", define
 		}
 	' <<< "$body"
+}
+
+# tell if given flag is enabled in .config
+# return 0 if given flag is enabled, 1 otherwise
+# inputs:
+# $1 - flag to check (whole word, without _MODULE suffix)
+# env flag $CONFFILE
+#
+# there are two "config" formats supported, to ease up integrators lifes
+# .config (without leading #~ prefix):
+#~ # CONFIG_ACPI_EC_DEBUGFS is not set
+#~ CONFIG_ACPI_AC=y
+#~ CONFIG_ACPI_VIDEO=m
+# and autoconf.h, which would be:
+#~ #define CONFIG_ACPI_AC 1
+#~ #define CONFIG_ACPI_VIDEO_MODULE 1
+function config_has() {
+	grep -qE "^(#define )?$1((_MODULE)? 1|=m|=y)$" "$CONFFILE"
 }
