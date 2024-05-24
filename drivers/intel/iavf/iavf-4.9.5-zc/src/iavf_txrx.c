@@ -2286,7 +2286,11 @@ static int iavf_clean_rx_irq(struct iavf_ring *rx_ring, int budget)
 	}
 
 	if (xdp_xmit & IAVF_XDP_REDIR)
-		xdp_do_flush(); //xdp_do_flush_map();
+#ifdef HAVE_XDP_DO_FLUSH_MAP
+		xdp_do_flush_map();
+#else
+		xdp_do_flush();
+#endif
 
 	if (xdp_xmit & IAVF_XDP_TX) {
 		struct iavf_ring *xdp_ring =

@@ -132,6 +132,7 @@ function gen-ethtool() {
 function gen-filter() {
 	fh='include/linux/filter.h'
 	gen NEED_NO_NETDEV_PROG_XDP_WARN_ACTION if fun bpf_warn_invalid_xdp_action lacks 'struct net_device \\*' in "$fh"
+	gen HAVE_XDP_DO_FLUSH_MAP if fun xdp_do_flush_map in "$fh"
 	gen NEED_XDP_DO_FLUSH if fun xdp_do_flush absent in "$fh"
 }
 
