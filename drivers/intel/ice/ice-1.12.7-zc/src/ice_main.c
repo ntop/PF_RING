@@ -8858,6 +8858,14 @@ u64 ice_ptp_ticks2ns(struct ice_pf *pf, u64 ticks);
 u64 ice_ptp_ns2ticks(struct ice_pf *pf, u64 ns);
 u64 ice_ptp_extend_40b_ts(struct ice_pf *pf, u64 in_tstamp);
 
+int ring_is_not_empty(struct ice_rx_ring *rx_ring);
+int wait_packet_callback(void *data, int mode);
+int wake_up_pfring_zc_socket(struct ice_rx_ring *rx_ring);
+int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use); 
+int set_time_callback(void *rx_adapter, u_int64_t time_ns);
+int adjust_time_callback(void *rx_adapter, int64_t offset_ns);
+int get_tx_time_callback(void *tx_adapter, u_int64_t *time_ns);
+
 int ring_is_not_empty(struct ice_rx_ring *rx_ring) {
 	union ice_32b_rx_flex_desc *rx_desc;
 	u16 stat_err_bits;
