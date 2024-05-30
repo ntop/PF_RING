@@ -14,7 +14,7 @@
  * @size: size of memory requested
  * @alignment: what to align the allocation to
  **/
-inline int iavf_allocate_dma_mem_d(struct iavf_hw *hw,
+inline enum iavf_status iavf_allocate_dma_mem_d(struct iavf_hw *hw,
 				   struct iavf_dma_mem *mem,
 				   __always_unused enum iavf_memory_type mtype,
 				   u64 size, u32 alignment)
@@ -40,7 +40,7 @@ inline int iavf_allocate_dma_mem_d(struct iavf_hw *hw,
  * @hw:   pointer to the HW structure
  * @mem:  ptr to mem struct to free
  **/
-inline int iavf_free_dma_mem_d(struct iavf_hw *hw, struct iavf_dma_mem *mem)
+inline enum iavf_status iavf_free_dma_mem_d(struct iavf_hw *hw, struct iavf_dma_mem *mem)
 {
 	struct iavf_adapter *nf = (struct iavf_adapter *)hw->back;
 
@@ -58,7 +58,7 @@ inline int iavf_free_dma_mem_d(struct iavf_hw *hw, struct iavf_dma_mem *mem)
  * @mem:  ptr to mem struct to fill out
  * @size: size of memory requested
  **/
-inline int iavf_allocate_virt_mem_d(struct iavf_hw *hw,
+inline enum iavf_status iavf_allocate_virt_mem_d(struct iavf_hw *hw,
 				    struct iavf_virt_mem *mem,
 				    u32 size)
 {
@@ -76,7 +76,7 @@ inline int iavf_allocate_virt_mem_d(struct iavf_hw *hw,
  * @hw:   pointer to the HW structure
  * @mem:  ptr to mem struct to free
  **/
-inline int iavf_free_virt_mem_d(struct iavf_hw *hw, struct iavf_virt_mem *mem)
+inline enum iavf_status iavf_free_virt_mem_d(struct iavf_hw *hw, struct iavf_virt_mem *mem)
 {
 	/* it's ok to kfree a NULL pointer */
 	kfree(mem->va);

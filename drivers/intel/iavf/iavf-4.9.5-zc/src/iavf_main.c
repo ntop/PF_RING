@@ -1351,6 +1351,12 @@ static void iavf_napi_disable_all(struct iavf_adapter *adapter)
 
 #ifdef HAVE_PF_RING
 
+int ring_is_not_empty(struct iavf_ring *rx_ring);
+int wait_packet_function_ptr(void *data, int mode);
+int wake_up_pfring_zc_socket(struct iavf_ring *rx_ring);
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use); 
+int get_stats_function_ptr(void *rx_adapter, u_int64_t *rx_missed);
+
 int ring_is_not_empty(struct iavf_ring *rx_ring) {
 	union iavf_rx_desc *rx_desc;
 	u64 qword;
@@ -1649,7 +1655,7 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
 				intel_i40e_vf,
-				rx_ring->netdev->dev_addr,
+				(unsigned char *)rx_ring->netdev->dev_addr,
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 				(void *) rx_ring,
@@ -1757,7 +1763,7 @@ void iavf_down(struct iavf_adapter *adapter)
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
 				intel_i40e_vf,
-				rx_ring->netdev->dev_addr,
+				(unsigned char *)rx_ring->netdev->dev_addr,
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 				(void*)rx_ring,
@@ -4506,7 +4512,7 @@ static int iavf_parse_cls_flower(struct iavf_adapter *adapter,
 	      BIT(FLOW_DISSECTOR_KEY_ENC_KEYID) |
 #endif /* HAVE_TC_FLOWER_ENC */
 	      BIT(FLOW_DISSECTOR_KEY_PORTS))) {
-		dev_err(&adapter->pdev->dev, "Unsupported key used: 0x%x\n",
+		dev_err(&adapter->pdev->dev, "Unsupported key used: 0x%llx\n",
 			dissector->used_keys);
 		return -EOPNOTSUPP;
 	}
