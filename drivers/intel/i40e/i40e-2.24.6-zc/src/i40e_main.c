@@ -4790,6 +4790,12 @@ int i40e_add_del_cloud_filter(struct i40e_vsi *vsi,
 
 #ifdef HAVE_PF_RING
 
+int ring_is_not_empty(struct i40e_ring *rx_ring);
+void i40e_update_enable_itr(struct i40e_vsi *vsi, struct i40e_q_vector *q_vector);
+int wait_packet_function_ptr(void *data, int mode);
+int wake_up_pfring_zc_socket(struct i40e_ring *rx_ring);
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use);
+
 #if 0
 /**
  * i40e_irq_dynamic_disable - Disable default interrupt generation settings
@@ -4845,8 +4851,6 @@ int ring_is_not_empty(struct i40e_ring *rx_ring) {
 
 	return 0;
 }
-
-void i40e_update_enable_itr(struct i40e_vsi *vsi, struct i40e_q_vector *q_vector);
 
 int wait_packet_function_ptr(void *data, int mode)
 {
@@ -8212,7 +8216,7 @@ static int i40e_up_complete(struct i40e_vsi *vsi)
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
 				intel_i40e,
-				rx_ring->netdev->dev_addr,
+				(unsigned char*)rx_ring->netdev->dev_addr,
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 				(void *) rx_ring,
@@ -8446,7 +8450,7 @@ void i40e_down(struct i40e_vsi *vsi)
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
 				intel_i40e,
-				rx_ring->netdev->dev_addr,
+				(unsigned char*)rx_ring->netdev->dev_addr,
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 				(void*)rx_ring,

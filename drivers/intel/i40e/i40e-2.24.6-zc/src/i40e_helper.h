@@ -14,7 +14,7 @@
  * @size: size of memory requested
  * @alignment: what to align the allocation to
  **/
-inline int i40e_allocate_dma_mem_d(struct i40e_hw *hw,
+inline i40e_status i40e_allocate_dma_mem_d(struct i40e_hw *hw,
 				   struct i40e_dma_mem *mem,
 				   __always_unused enum i40e_memory_type mtype,
 				   u64 size, u32 alignment)
@@ -40,7 +40,7 @@ inline int i40e_allocate_dma_mem_d(struct i40e_hw *hw,
  * @hw:   pointer to the HW structure
  * @mem:  ptr to mem struct to free
  **/
-inline int i40e_free_dma_mem_d(struct i40e_hw *hw, struct i40e_dma_mem *mem)
+inline i40e_status i40e_free_dma_mem_d(struct i40e_hw *hw, struct i40e_dma_mem *mem)
 {
 	struct i40e_pf *nf = (struct i40e_pf *)hw->back;
 
@@ -58,7 +58,7 @@ inline int i40e_free_dma_mem_d(struct i40e_hw *hw, struct i40e_dma_mem *mem)
  * @mem:  ptr to mem struct to fill out
  * @size: size of memory requested
  **/
-inline int i40e_allocate_virt_mem_d(struct i40e_hw *hw,
+inline i40e_status i40e_allocate_virt_mem_d(struct i40e_hw *hw,
 				    struct i40e_virt_mem *mem,
 				    u32 size)
 {
@@ -76,7 +76,7 @@ inline int i40e_allocate_virt_mem_d(struct i40e_hw *hw,
  * @hw:   pointer to the HW structure
  * @mem:  ptr to mem struct to free
  **/
-inline int i40e_free_virt_mem_d(struct i40e_hw *hw, struct i40e_virt_mem *mem)
+inline i40e_status i40e_free_virt_mem_d(struct i40e_hw *hw, struct i40e_virt_mem *mem)
 {
 	/* it's ok to kfree a NULL pointer */
 	kfree(mem->va);
