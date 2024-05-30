@@ -1368,6 +1368,14 @@ static void ixgbe_clean_tx_ring(struct ixgbe_ring *tx_ring);
 
 static unsigned long ixgbe_get_completion_timeout(struct ixgbe_adapter *adapter);
 
+void __ixgbe_enable_rx_queue(struct ixgbe_adapter *adapter, int i);
+void __ixgbe_disable_rx_queue(struct ixgbe_adapter *adapter, int i);
+int ring_is_not_empty(struct ixgbe_ring *rx_ring);
+int wait_packet_function_ptr(void *data, int mode);
+int wake_up_pfring_zc_socket(struct ixgbe_ring *rx_ring);
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use);
+zc_dev_model pfring_zc_dev_model(struct ixgbe_hw *hw);
+
 void __ixgbe_enable_rx_queue(struct ixgbe_adapter *adapter, int i)
 {
 	unsigned long wait_delay, delay_interval;
@@ -7046,7 +7054,7 @@ static void ixgbe_configure(struct ixgbe_adapter *adapter)
 			  rx_ring->netdev,
 			  rx_ring->dev, /* for DMA mapping */
 			  pfring_zc_dev_model(hw),
-			  rx_ring->netdev->dev_addr,
+			  (unsigned char *)rx_ring->netdev->dev_addr,
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) rx_ring,
@@ -7848,7 +7856,7 @@ void ixgbe_down(struct ixgbe_adapter *adapter)
 			  adapter->rx_ring[i]->netdev,
 			  adapter->rx_ring[i]->dev, /* for DMA mapping */
 			  pfring_zc_dev_model(hw),
-			  adapter->rx_ring[i]->netdev->dev_addr,
+			  (unsigned char *)adapter->rx_ring[i]->netdev->dev_addr,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) adapter->rx_ring[i],
