@@ -396,12 +396,15 @@ int fill_prefix_v4(prefix_t *p, const struct in_addr *a, int b, int mb) {
 
 u_int8_t compute_packet_index(u_char *pkt, u_int pkt_len) {
   struct pfring_pkthdr hdr;
-  
+  int rc;
+
   memset(&hdr, 0, sizeof(hdr));
   hdr.len = hdr.caplen = pkt_len;
 
-  if (pfring_parse_pkt(pkt, &hdr, 3, 0, 0) < 3) {
-    /* fprintf(stderr, "Parse error\n"); */
+  rc = pfring_parse_pkt(pkt, &hdr, 3, 0, 0);
+
+  if (rc < 3) {
+    //fprintf(stderr, "Parse error (%d)\n", rc);
     return(0); 
   }
 
@@ -470,6 +473,11 @@ int main(int argc, char* argv[]) {
 
   srcaddr.s_addr = 0x0100000A /* 10.0.0.1 */;
   dstaddr.s_addr = 0x0100A8C0 /* 192.168.0.1 */;
+
+  dstmac[0] = 0x0, dstmac[1] = 0x1, dstmac[2] = 0x2;
+  dstmac[3] = 0x3, dstmac[4] = 0x4, dstmac[5] = 0x5;
+  srcmac[0] = 0x0, srcmac[1] = 0x1, srcmac[2] = 0x2;
+  srcmac[3] = 0x4, srcmac[4] = 0x5, srcmac[5] = 0x6;
 
   while((c = getopt(argc, argv, "A:b:B:c:dD:hi:n:g:G:l:L:o:Oaf:Fr:vm:M:p:P:S:t:K:U:V:w:W:z8:0:")) != -1) {
     switch(c) {
@@ -753,11 +761,17 @@ int main(int argc, char* argv[]) {
 	if(p) {
           int plen, oplen;
 
-          plen = oplen = h->caplen;
+          plen = h->caplen;
           if (datalink == DLT_LINUX_SLL)
-            plen -= 2, oplen -= 2;
+            plen -= 2;
+          else if (datalink == DLT_RAW)
+            plen += 14;
+
+          oplen = plen;
+
           if (plen < 60)
             plen = 60;
+
           p->len = plen;
 
 	  if(cidr != NULL)
@@ -777,6 +791,12 @@ int main(int argc, char* argv[]) {
             if (datalink == DLT_LINUX_SLL) {
 	      memcpy(p->pkt, pkt, 12);
               memcpy(&p->pkt[12], &pkt[14], oplen - 14);
+            } else if (datalink == DLT_RAW) {
+              struct ether_header *eth_hdr = (struct ether_header *) p->pkt;
+              memcpy(eth_hdr->ether_dhost, dstmac, 6);
+              memcpy(eth_hdr->ether_shost, srcmac, 6);
+              eth_hdr->ether_type = htons(0x0800) /* IPv4 */;
+              memcpy(&p->pkt[14], pkt, oplen - 14);
 	    } else {
 	      memcpy(p->pkt, pkt, oplen);
             }
