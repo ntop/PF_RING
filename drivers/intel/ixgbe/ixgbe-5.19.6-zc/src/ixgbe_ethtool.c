@@ -4375,8 +4375,12 @@ static void ixgbe_get_reta(struct ixgbe_adapter *adapter, u32 *indir)
 }
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int ixgbe_get_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh)
+#else
 static int ixgbe_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key,
 			  u8 *hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #else
 static int ixgbe_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 #endif
@@ -4384,22 +4388,41 @@ static int ixgbe_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	rxfh->hfunc = ETH_RSS_HASH_TOP;
+#else
 	if (hfunc)
 		*hfunc = ETH_RSS_HASH_TOP;
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #endif
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->indir)
+		ixgbe_get_reta(adapter, rxfh->indir);
+#else
 	if (indir)
 		ixgbe_get_reta(adapter, indir);
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->key)
+		memcpy(rxfh->key, adapter->rss_key, ixgbe_get_rxfh_key_size(netdev));
+#else
 	if (key)
 		memcpy(key, adapter->rss_key, ixgbe_get_rxfh_key_size(netdev));
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 
 	return 0;
 }
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int ixgbe_set_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh,
+	      struct netlink_ext_ack *extack)
+#else
 static int ixgbe_set_rxfh(struct net_device *netdev, const u32 *indir,
 			  const u8 *key, const u8 hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #else
 #ifdef HAVE_RXFH_NONCONST
 static int ixgbe_set_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
@@ -4414,12 +4437,20 @@ static int ixgbe_set_rxfh(struct net_device *netdev, const u32 *indir,
 	u32 reta_entries = ixgbe_rss_indir_tbl_entries(adapter);
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->hfunc)
+#else
 	if (hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 		return -EINVAL;
 #endif
 
 	/* Fill out the redirection table */
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->indir) {
+#else
 	if (indir) {
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 		int max_queues = min_t(int, adapter->num_rx_queues,
 				       ixgbe_rss_indir_tbl_max(adapter));
 
@@ -4430,18 +4461,31 @@ static int ixgbe_set_rxfh(struct net_device *netdev, const u32 *indir,
 
 		/* Verify user input. */
 		for (i = 0; i < reta_entries; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+			if (rxfh->indir[i] >= max_queues)
+#else
 			if (indir[i] >= max_queues)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 				return -EINVAL;
 
 		for (i = 0; i < reta_entries; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+			adapter->rss_indir_tbl[i] = rxfh->indir[i];
+#else
 			adapter->rss_indir_tbl[i] = indir[i];
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 
 		ixgbe_store_reta(adapter);
 	}
 
 	/* Fill out the rss hash key */
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->key) {
+		memcpy(adapter->rss_key, rxfh->key, ixgbe_get_rxfh_key_size(netdev));
+#else
 	if (key) {
 		memcpy(adapter->rss_key, key, ixgbe_get_rxfh_key_size(netdev));
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 		ixgbe_store_key(adapter);
 	}
 

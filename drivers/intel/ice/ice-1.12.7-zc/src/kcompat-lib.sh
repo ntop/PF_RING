@@ -1,6 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-2.0-only
-# Copyright (C) 2018-2023 Intel Corporation
+# Copyright (C) 2013-2024 Intel Corporation
 
 # to be sourced
 
@@ -36,6 +36,8 @@ function filter-out-bad-files() {
 	fi
 	local any=0 diagmsgs=/dev/stderr re=$'[\t \n]'
 	[ -n "${QUIET_COMPAT-}" ] && diagmsgs=/dev/null
+	# HAVE_PF_RING
+	diagmsgs=/dev/null
 	for x in "$@"; do
 		if [ -e "$x" ]; then
 			if [[ "$x" =~ $re ]]; then

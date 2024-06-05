@@ -1539,6 +1539,13 @@ static void igb_get_hw_control(struct igb_adapter *adapter)
 #define IGB_PCI_DEVICE_CACHE_LINE_SIZE	     0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES	8
 
+u16 igb_read_pci_cfg_word(struct e1000_hw *hw, u32 reg);
+int ring_is_not_empty(struct igb_ring *rx_ring);
+int wait_packet_function_ptr(void *data, int mode);
+int wake_up_pfring_zc_socket(struct igb_ring *rx_ring);
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use);
+zc_dev_model pfring_zc_dev_model(struct e1000_hw *hw);
+
 u16 igb_read_pci_cfg_word(struct e1000_hw *hw, u32 reg)
 {
 	u16 value;
@@ -1829,7 +1836,7 @@ static void igb_configure(struct igb_adapter *adapter)
 			  rx_ring->netdev,
 			  rx_ring->dev, /* for DMA mapping */
 			  pfring_zc_dev_model(&adapter->hw),
-			  rx_ring->netdev->dev_addr,
+			  (unsigned char *)rx_ring->netdev->dev_addr,
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void*)rx_ring,
@@ -2187,7 +2194,7 @@ void igb_down(struct igb_adapter *adapter)
 			  adapter->rx_ring[i]->netdev,
 			  adapter->rx_ring[i]->dev, /* for DMA mapping */
 			  pfring_zc_dev_model(hw),
-			  adapter->rx_ring[i]->netdev->dev_addr,
+			  (unsigned char *)adapter->rx_ring[i]->netdev->dev_addr,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void*)adapter->rx_ring[i], (void*)adapter->tx_ring[i]
@@ -3103,7 +3110,9 @@ static int igb_probe(struct pci_dev *pdev,
 	if (err)
 		goto err_pci_reg;
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_enable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 
 	pci_set_master(pdev);
 
@@ -3775,7 +3784,9 @@ static void igb_remove(struct pci_dev *pdev)
 	kfree(adapter->shadow_vfta);
 	free_netdev(netdev);
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 
 	pci_disable_device(pdev);
 }

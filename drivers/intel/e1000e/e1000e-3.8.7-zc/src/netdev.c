@@ -124,6 +124,8 @@ static const struct e1000_reg_info e1000_reg_info_tbl[] = {
 	{0, NULL}
 };
 
+u16 e1000e_read_pci_cfg_word(struct e1000_adapter *adapter, u32 reg);
+
 /**
  * __ew32_prepare - prepare to write to MAC CSR register on certain parts
  * @hw: pointer to the HW structure
@@ -4368,8 +4370,14 @@ static int e1000e_config_hwtstamp(struct e1000_adapter *adapter,
 #endif /* HAVE_HW_TIME_STAMP */
 
 #ifdef HAVE_PF_RING
+
 #define E1000_PCI_DEVICE_CACHE_LINE_SIZE     0x0C
 #define PCI_DEVICE_CACHE_LINE_SIZE_BYTES	8
+
+int wait_packet_function_ptr(void *data, int mode);
+void disable_receives(struct e1000_adapter *adapter);
+void enable_receives(struct e1000_adapter *adapter);
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use);
 
 u16 e1000e_read_pci_cfg_word(struct e1000_adapter *adapter, u32 reg)
 {
@@ -4665,7 +4673,7 @@ static void e1000_configure(struct e1000_adapter *adapter)
 				     adapter->netdev,
 				     &adapter->pdev->dev, /* for DMA mapping */
 				     intel_e1000e,
-				     adapter->netdev->dev_addr,
+				     (unsigned char *)adapter->netdev->dev_addr,
 				     &adapter->pfring_zc.packet_waitqueue,
 				     &adapter->pfring_zc.interrupt_received,
 				     (void*)rx_ring,
@@ -4829,11 +4837,13 @@ static void e1000_flush_desc_rings(struct e1000_adapter *adapter)
 static void e1000e_systim_reset(struct e1000_adapter *adapter)
 {
 #ifdef HAVE_PTP_1588_CLOCK
+	unsigned long flags;
+#ifndef HAVE_PTP_CLOCK_INFO_ADJFINE
 	struct ptp_clock_info *info = &adapter->ptp_clock_info;
 	struct e1000_hw *hw = &adapter->hw;
-	unsigned long flags;
 	u32 timinca;
 	s32 ret_val;
+#endif
 
 	if (!(adapter->flags & FLAG_HAS_HW_TIMESTAMP))
 		return;
@@ -5286,7 +5296,7 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 				     adapter->netdev,
 				     &adapter->pdev->dev, /* for DMA mapping */
 				     intel_e1000e,
-				     adapter->netdev->dev_addr,
+				     (unsigned char *)adapter->netdev->dev_addr,
 				     &adapter->pfring_zc.packet_waitqueue,
 				     &adapter->pfring_zc.interrupt_received,
 				     (void*)adapter->rx_ring,
@@ -5834,8 +5844,8 @@ static int e1000_set_mac(struct net_device *netdev, void *p)
 	if (!is_valid_ether_addr((unsigned char *)(addr->sa_data)))
 		return -EADDRNOTAVAIL;
 
-	memcpy(netdev->dev_addr, addr->sa_data, netdev->addr_len);
-	memcpy(adapter->hw.mac.addr, addr->sa_data, netdev->addr_len);
+	memcpy((void*)netdev->dev_addr, addr->sa_data, netdev->addr_len);
+	memcpy((void*)adapter->hw.mac.addr, addr->sa_data, netdev->addr_len);
 
 	hw->mac.ops.rar_set(&adapter->hw, adapter->hw.mac.addr, 0);
 
@@ -7516,8 +7526,8 @@ static int e1000_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
 #if defined(SIOCSHWTSTAMP) && defined(HAVE_HW_TIME_STAMP)
 	case SIOCSHWTSTAMP:
 		return e1000e_hwtstamp_set(netdev, ifr);
-#endif
-#ifdef SIOCGHWTSTAMP
+//#endif
+//#ifdef SIOCGHWTSTAMP
 	case SIOCGHWTSTAMP:
 		return e1000e_hwtstamp_get(netdev, ifr);
 #endif
@@ -9119,9 +9129,9 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		dev_err(pci_dev_to_dev(pdev),
 			"NVM Read Error while reading MAC address\n");
 
-	memcpy(netdev->dev_addr, adapter->hw.mac.addr, netdev->addr_len);
+	memcpy((void*)netdev->dev_addr, adapter->hw.mac.addr, netdev->addr_len);
 #ifdef ETHTOOL_GPERMADDR
-	memcpy(netdev->perm_addr, adapter->hw.mac.addr, netdev->addr_len);
+	memcpy((void*)netdev->perm_addr, adapter->hw.mac.addr, netdev->addr_len);
 #endif
 
 	if (!is_valid_ether_addr(netdev->dev_addr)) {

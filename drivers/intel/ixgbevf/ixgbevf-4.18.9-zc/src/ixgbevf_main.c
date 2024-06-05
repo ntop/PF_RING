@@ -888,6 +888,12 @@ static void ixgbevf_configure_tx_ring(struct ixgbevf_adapter *adapter, struct ix
 static void ixgbevf_clean_rx_ring(struct ixgbevf_ring *rx_ring);
 static void ixgbevf_clean_tx_ring(struct ixgbevf_ring *tx_ring);
 
+int ring_is_not_empty(struct ixgbevf_ring *rx_ring);
+int wait_packet_function_ptr(void *data, int mode);
+int wake_up_pfring_zc_socket(struct ixgbevf_ring *rx_ring);
+int notify_function_ptr(void *rx_data, void *tx_data, u_int8_t device_in_use); 
+zc_dev_model pfring_zc_dev_model(struct ixgbe_hw *hw);
+
 int ring_is_not_empty(struct ixgbevf_ring *rx_ring) {
 	union ixgbe_adv_rx_desc *rx_desc;
 	u32 staterr;
@@ -3035,7 +3041,7 @@ static void ixgbevf_configure(struct ixgbevf_adapter *adapter)
 			  rx_ring->netdev,
 			  rx_ring->dev, /* for DMA mapping */
 			  pfring_zc_dev_model(hw),
-			  rx_ring->netdev->dev_addr,
+			  (unsigned char *)rx_ring->netdev->dev_addr,
 			  &rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) rx_ring,
@@ -3382,7 +3388,7 @@ void ixgbevf_down(struct ixgbevf_adapter *adapter)
 			  adapter->rx_ring[i]->netdev,
 			  adapter->rx_ring[i]->dev, /* for DMA mapping */
 			  pfring_zc_dev_model(hw),
-			  adapter->rx_ring[i]->netdev->dev_addr,
+			  (unsigned char *)adapter->rx_ring[i]->netdev->dev_addr,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.packet_waitqueue,
 			  &adapter->rx_ring[i]->pfring_zc.rx_tx.rx.interrupt_received,
 			  (void *) adapter->rx_ring[i],
@@ -5805,7 +5811,9 @@ static int __devinit ixgbevf_probe(struct pci_dev *pdev,
 		goto err_pci_reg;
 	}
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_enable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 
 	pci_set_master(pdev);
 
@@ -6077,7 +6085,9 @@ static void __devexit ixgbevf_remove(struct pci_dev *pdev)
 	disable_dev = !test_and_set_bit(__IXGBEVF_DISABLED, &adapter->state);
 	free_netdev(netdev);
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 
 	if (disable_dev)
 		pci_disable_device(pdev);

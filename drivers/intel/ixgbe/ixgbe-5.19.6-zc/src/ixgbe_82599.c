@@ -35,6 +35,8 @@ STATIC s32 ixgbe_read_i2c_byte_82599(struct ixgbe_hw *hw, u8 byte_offset,
 STATIC s32 ixgbe_write_i2c_byte_82599(struct ixgbe_hw *hw, u8 byte_offset,
 					u8 dev_addr, u8 data);
 
+s32 ixgbe_ftqf_add_filter(struct ixgbe_hw *hw, u8 proto, u32 saddr, u16 sport, u32 daddr, u16 dport, u8 rx_queue, u8 filter_id);
+
 void ixgbe_init_mac_link_ops_82599(struct ixgbe_hw *hw)
 {
 	struct ixgbe_mac_info *mac = &hw->mac;

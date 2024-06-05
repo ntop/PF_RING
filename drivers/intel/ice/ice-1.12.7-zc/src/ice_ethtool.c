@@ -4740,8 +4740,13 @@ static u32 ice_get_rxfh_indir_size(struct net_device *netdev)
  *
  * Reads the indirection table directly from the hardware.
  */
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int
+ice_get_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh)
+#else
 static int
 ice_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key, u8 *hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #else
 static int ice_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 #endif
@@ -4753,11 +4758,19 @@ static int ice_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 	u8 *lut;
 
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	rxfh->hfunc = ETH_RSS_HASH_TOP;
+#else
 	if (hfunc)
 		*hfunc = ETH_RSS_HASH_TOP;
 #endif
+#endif
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (!rxfh->indir)
+#else
 	if (!indir)
+#endif
 		return 0;
 
 	if (!test_bit(ICE_FLAG_RSS_ENA, pf->flags)) {
@@ -4770,7 +4783,11 @@ static int ice_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 	if (!lut)
 		return -ENOMEM;
 
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	err = ice_get_rss_key(vsi, rxfh->key);
+#else
 	err = ice_get_rss_key(vsi, key);
+#endif
 	if (err)
 		goto out;
 
@@ -4779,7 +4796,11 @@ static int ice_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 		goto out;
 
 	for (i = 0; i < vsi->rss_table_size; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		rxfh->indir[i] = (u32)(lut[i]);
+#else
 		indir[i] = (u32)(lut[i]);
+#endif
 
 out:
 	kfree(lut);
@@ -4797,9 +4818,15 @@ out:
  * Returns -EINVAL if the table specifies an invalid queue ID, otherwise
  * returns 0 after programming the table.
  */
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+static int
+ice_set_rxfh(struct net_device *netdev, struct ethtool_rxfh_param *rxfh,
+	      struct netlink_ext_ack *extack)
+#else
 static int
 ice_set_rxfh(struct net_device *netdev, const u32 *indir, const u8 *key,
 	     const u8 hfunc)
+#endif /* HAVE_ETHTOOL_RXFH_PARAM */
 #elif defined(HAVE_RXFH_NONCONST)
 static int ice_set_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
 #else
@@ -4815,7 +4842,11 @@ ice_set_rxfh(struct net_device *netdev, const u32 *indir, const u8 *key)
 
 	dev = ice_pf_to_dev(pf);
 #ifdef HAVE_RXFH_HASHFUNC
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->hfunc != ETH_RSS_HASH_NO_CHANGE && rxfh->hfunc != ETH_RSS_HASH_TOP)
+#else
 	if (hfunc != ETH_RSS_HASH_NO_CHANGE && hfunc != ETH_RSS_HASH_TOP)
+#endif
 		return -EOPNOTSUPP;
 #endif
 
@@ -4826,11 +4857,20 @@ ice_set_rxfh(struct net_device *netdev, const u32 *indir, const u8 *key)
 	}
 
 	/* Verify user input. */
-	if (indir) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->indir) 
+#else
+	if (indir) 
+#endif
+	{
 		int i;
 
 		for (i = 0; i < vsi->rss_table_size; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+			if (rxfh->indir[i] >= vsi->rss_size)
+#else
 			if (indir[i] >= vsi->rss_size)
+#endif
 				return -EINVAL;
 	}
 
@@ -4841,7 +4881,12 @@ ice_set_rxfh(struct net_device *netdev, const u32 *indir, const u8 *key)
 	}
 
 #endif /* NETIF_F_HW_TC */
-	if (key) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->key)
+#else
+	if (key)
+#endif
+	{
 		if (!vsi->rss_hkey_user) {
 			vsi->rss_hkey_user = devm_kzalloc(dev,
 							  ICE_VSIQF_HKEY_ARRAY_SIZE,
@@ -4849,7 +4894,11 @@ ice_set_rxfh(struct net_device *netdev, const u32 *indir, const u8 *key)
 			if (!vsi->rss_hkey_user)
 				return -ENOMEM;
 		}
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+		memcpy(vsi->rss_hkey_user, rxfh->key, ICE_VSIQF_HKEY_ARRAY_SIZE);
+#else
 		memcpy(vsi->rss_hkey_user, key, ICE_VSIQF_HKEY_ARRAY_SIZE);
+#endif
 
 		err = ice_set_rss_key(vsi, vsi->rss_hkey_user);
 		if (err)
@@ -4864,11 +4913,20 @@ ice_set_rxfh(struct net_device *netdev, const u32 *indir, const u8 *key)
 	}
 
 	/* Each 32 bits pointed by 'indir' is stored with a lut entry */
-	if (indir) {
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+	if (rxfh->indir)
+#else
+	if (indir)
+#endif
+	{
 		int i;
 
 		for (i = 0; i < vsi->rss_table_size; i++)
+#ifdef HAVE_ETHTOOL_RXFH_PARAM
+			vsi->rss_lut_user[i] = (u8)(rxfh->indir[i]);
+#else
 			vsi->rss_lut_user[i] = (u8)(indir[i]);
+#endif
 	} else {
 		ice_fill_rss_lut(vsi->rss_lut_user, vsi->rss_table_size,
 				 vsi->rss_size);

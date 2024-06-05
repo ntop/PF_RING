@@ -2005,8 +2005,10 @@ static const struct devlink_ops ice_devlink_ops = {
 	.reload_up = ice_devlink_reload_up,
 #endif /* HAVE_DEVLINK_RELOAD_ACTION_AND_LIMIT */
 #ifdef HAVE_DEVLINK_PORT_SPLIT
+#ifdef HAVE_DEVLINK_PORT_SPLIT_IN_OPS
 	.port_split = ice_devlink_port_split,
 	.port_unsplit = ice_devlink_port_unsplit,
+#endif
 #endif /* HAVE_DEVLINK_PORT_SPLIT */
 	.eswitch_mode_get = ice_eswitch_mode_get,
 	.eswitch_mode_set = ice_eswitch_mode_set,
@@ -2668,49 +2670,32 @@ ice_mdd_reporter_dump(struct devlink_health_reporter *reporter,
 	struct ice_pf *pf = devlink_health_reporter_priv(reporter);
 	struct ice_mdd_reporter *mdd_reporter = &pf->mdd_reporter;
 	struct ice_mdd_event *mdd_event;
-	int err;
 
-	err = devlink_fmsg_u32_pair_put(fmsg, "count",
+	devlink_fmsg_u32_pair_put(fmsg, "count",
 					mdd_reporter->count);
-	if (err)
-		return err;
 
 	list_for_each_entry(mdd_event, &mdd_reporter->event_list, list) {
 		char *src;
 
-		err = devlink_fmsg_obj_nest_start(fmsg);
-		if (err)
-			return err;
+		devlink_fmsg_obj_nest_start(fmsg);
 
 		src = ICE_MDD_SRC_TO_STR(mdd_event->src);
 
-		err = devlink_fmsg_string_pair_put(fmsg, "src", src);
-		if (err)
-			return err;
+		devlink_fmsg_string_pair_put(fmsg, "src", src);
 
-		err = devlink_fmsg_u8_pair_put(fmsg, "pf_num",
+		devlink_fmsg_u8_pair_put(fmsg, "pf_num",
 					       mdd_event->pf_num);
-		if (err)
-			return err;
 
-		err = devlink_fmsg_u32_pair_put(fmsg, "mdd_vf_num",
+		devlink_fmsg_u32_pair_put(fmsg, "mdd_vf_num",
 						mdd_event->vf_num);
-		if (err)
-			return err;
 
-		err = devlink_fmsg_u8_pair_put(fmsg, "mdd_event",
+		devlink_fmsg_u8_pair_put(fmsg, "mdd_event",
 					       mdd_event->event);
-		if (err)
-			return err;
 
-		err = devlink_fmsg_u32_pair_put(fmsg, "mdd_queue",
+		devlink_fmsg_u32_pair_put(fmsg, "mdd_queue",
 						mdd_event->queue);
-		if (err)
-			return err;
 
-		err = devlink_fmsg_obj_nest_end(fmsg);
-		if (err)
-			return err;
+		devlink_fmsg_obj_nest_end(fmsg);
 	}
 
 	return 0;

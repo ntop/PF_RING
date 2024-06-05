@@ -1,6 +1,6 @@
 #!/bin/bash
-# SPDX-License-Identifier: GPL-2.0
-# Copyright(c) 1999 - 2023 Intel Corporation.
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2013-2024 Intel Corporation
 
 # to be sourced
 
@@ -36,6 +36,8 @@ function filter-out-bad-files() {
 	fi
 	local any=0 diagmsgs=/dev/stderr re=$'[\t \n]'
 	[ -n "${QUIET_COMPAT-}" ] && diagmsgs=/dev/null
+	# HAVE_PF_RING
+	diagmsgs=/dev/null
 	for x in "$@"; do
 		if [ -e "$x" ]; then
 			if [[ "$x" =~ $re ]]; then
@@ -192,7 +194,7 @@ function find-typedef-decl() {
 #  <list-of-files> is just space-separate list of files to look in,
 #    single (-) for stdin.
 #
-# PATTERN is awk pattern, will be wrapped by two slashes (/)
+# PATTERN is an awk pattern, will be wrapped by two slashes (/)
 function gen() {
 	test $# -ge 6 || die 20 "too few arguments, $# given, at least 6 needed"
 	local define if_kw kind name in_kw # mandatory
@@ -254,7 +256,7 @@ function gen() {
 
 	local first_decl=
 	if [ "$kind" = method ]; then
-		first_decl="$(find-struct-decl "$name" "$@")" || exit 28
+		first_decl="$(find-struct-decl "$name" "$@")" || exit 40
 		# prepare params for next lookup phase
 		set -- - # overwrite $@ to be single dash (-)
 		name="$method_name"
@@ -266,8 +268,23 @@ function gen() {
 
 	# lookup the NAME
 	local body
-	body="$(find-$kind-decl "$name" "$@" <<< "$first_decl")" || exit 29
+	body="$(find-$kind-decl "$name" "$@" <<< "$first_decl")" || exit 41
 	awk -v define="$define" -v pattern="$pattern" -v "$operator"=1 '
+		BEGIN {
+			# prepend "identifier boundary" to pattern, also append
+			# it, but only for patterns not ending with such already
+			#
+			# eg: "foo" -> "\bfoo\b"
+			#     "struct foo *" -> "\bstruct foo *"
+
+			# Note that mawk does not support "\b", so we have our
+			# own approximation, NI
+			NI = "[^A-Za-z0-9_]" # "Not an Indentifier"
+
+			if (!match(pattern, NI "$"))
+				pattern = pattern "(" NI "|$)"
+			pattern = "(^|" NI ")" pattern
+		}
 		/./ { not_empty = 1 }
 		$0 ~ pattern { found = 1 }
 		END {
@@ -275,4 +292,22 @@ function gen() {
 				print "#define", define
 		}
 	' <<< "$body"
+}
+
+# tell if given flag is enabled in .config
+# return 0 if given flag is enabled, 1 otherwise
+# inputs:
+# $1 - flag to check (whole word, without _MODULE suffix)
+# env flag $CONFFILE
+#
+# there are two "config" formats supported, to ease up integrators lifes
+# .config (without leading #~ prefix):
+#~ # CONFIG_ACPI_EC_DEBUGFS is not set
+#~ CONFIG_ACPI_AC=y
+#~ CONFIG_ACPI_VIDEO=m
+# and autoconf.h, which would be:
+#~ #define CONFIG_ACPI_AC 1
+#~ #define CONFIG_ACPI_VIDEO_MODULE 1
+function config_has() {
+	grep -qE "^(#define )?$1((_MODULE)? 1|=m|=y)$" "$CONFFILE"
 }

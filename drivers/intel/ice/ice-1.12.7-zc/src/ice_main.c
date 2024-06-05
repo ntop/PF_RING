@@ -1552,7 +1552,9 @@ static void ice_remove_recovery_mode(struct ice_pf *pf)
 
 	ice_reset(&pf->hw, ICE_RESET_PFR);
 	ice_unmap_all_hw_addr(pf);
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pf->pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 }
 
 /**
@@ -7072,7 +7074,9 @@ ice_probe(struct pci_dev *pdev, const struct pci_device_id __always_unused *ent)
 		goto err_dma;
 	}
 
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_enable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_set_master(pdev);
 
 	pf->pdev = pdev;
@@ -7156,7 +7160,9 @@ err_init_devlink:
 	ice_clear_interrupt_scheme(pf);
 err_init:
 	ice_unmap_all_hw_addr(pf);
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_disable_device(pdev);
 err_dma:
 	return err;
@@ -7282,7 +7288,9 @@ static void ice_remove(struct pci_dev *pdev)
 	pci_wait_for_pending_transaction(pdev);
 	ice_unmap_all_hw_addr(pf);
 	ice_clear_interrupt_scheme(pf);
+#ifdef HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING
 	pci_disable_pcie_error_reporting(pdev);
+#endif /* HAVE_PCI_ENABLE_PCIE_ERROR_REPORTING */
 	pci_disable_device(pdev);
 
 }
@@ -8849,6 +8857,14 @@ void ice_enable_interrupt(struct ice_q_vector *q_vector);
 u64 ice_ptp_ticks2ns(struct ice_pf *pf, u64 ticks);
 u64 ice_ptp_ns2ticks(struct ice_pf *pf, u64 ns);
 u64 ice_ptp_extend_40b_ts(struct ice_pf *pf, u64 in_tstamp);
+
+int ring_is_not_empty(struct ice_rx_ring *rx_ring);
+int wait_packet_callback(void *data, int mode);
+int wake_up_pfring_zc_socket(struct ice_rx_ring *rx_ring);
+int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use); 
+int set_time_callback(void *rx_adapter, u_int64_t time_ns);
+int adjust_time_callback(void *rx_adapter, int64_t offset_ns);
+int get_tx_time_callback(void *tx_adapter, u_int64_t *time_ns);
 
 int ring_is_not_empty(struct ice_rx_ring *rx_ring) {
 	union ice_32b_rx_flex_desc *rx_desc;

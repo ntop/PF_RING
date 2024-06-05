@@ -2059,6 +2059,8 @@ static u32 ice_buildreg_itr(u16 itr_idx, u16 itr)
  */
 #ifndef HAVE_PF_RING
 static
+#else
+void ice_enable_interrupt(struct ice_q_vector *q_vector);
 #endif
 void ice_enable_interrupt(struct ice_q_vector *q_vector)
 {
