@@ -7477,15 +7477,29 @@ static inline int pci_enable_pcie_error_reporting(struct pci_dev __always_unused
 
 /*****************************************************************************/
 #if RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE > 0) 
+
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(8,6))
+
 #elif (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #define HAVE_ETHTOOL_COALESCE_EXTACK
 #define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
-#elif (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
+
 #else /* >= 9.1 */
 #define HAVE_ETHTOOL_COALESCE_EXTACK
 #define HAVE_ETHTOOL_EXTENDED_RINGPARAMS
+
+#if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,4)) /* >= 9.1 && < 9.4*/
+
+#else /* >= 9.4 */
+static inline int pci_enable_pcie_error_reporting(struct pci_dev __always_unused *dev)
+{
+        return 0;
+}
+#define pci_disable_pcie_error_reporting(dev) do {} while (0)
 #endif
+
+#endif
+
 #endif /* RHEL */
 
 #endif /* _KCOMPAT_H_ */
