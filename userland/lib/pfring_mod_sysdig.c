@@ -536,7 +536,7 @@ int pfring_mod_sysdig_get_bound_device_ifindex(pfring *ring, int *if_index) {
   The currently accepted syntax is "evt.type=X or evt.type=Y ..." that is a subset
   of the syntax supported by the sysdig command
 */
-int pfring_mod_sysdig_set_bpf_filter(pfring *ring, char *filter_buffer) {
+int pfring_mod_sysdig_set_bpf_filter(pfring *ring, const char *filter_buffer) {
   u_int32_t device_id;
   pfring_sysdig *sysdig;
   char *filter, *item, *where;

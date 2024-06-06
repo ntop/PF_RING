@@ -1317,7 +1317,7 @@ int pfring_next_pkt_raw_timestamp(pfring *ring, u_int64_t *ts) {
 
 /* **************************************************** */
 
-int pfring_set_bpf_filter(pfring *ring, char *filter_buffer) {
+int pfring_set_bpf_filter(pfring *ring, const char *filter_buffer) {
   int rc = PF_RING_ERROR_NOT_SUPPORTED;
 
   if (!ring)

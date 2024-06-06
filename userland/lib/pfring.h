@@ -295,7 +295,7 @@ struct __pfring {
   int       (*enable_ring)                  (pfring *);
   int       (*disable_ring)                 (pfring *);
   void      (*shutdown)                     (pfring *);
-  int       (*set_bpf_filter)               (pfring *, char *);
+  int       (*set_bpf_filter)               (pfring *, const char *);
   int       (*remove_bpf_filter)            (pfring *);
   int       (*get_device_clock)             (pfring *, struct timespec *);
   int       (*set_device_clock)             (pfring *, struct timespec *);
@@ -1055,7 +1055,7 @@ int pfring_disable_ring(pfring *ring);
  * @param filter_buffer The filter to set.
  * @return 0 on success, a negative value otherwise.
  */
-int pfring_set_bpf_filter(pfring *ring, char *filter_buffer);
+int pfring_set_bpf_filter(pfring *ring, const char *filter_buffer);
 
 /**
  * Remove the BPF filter. 
@@ -1377,7 +1377,7 @@ void pfring_freealldevs(pfring_if_t *list);
 
 /* ********************************* */
 
-int pfring_parse_bpf_filter(char *filter_buffer, u_int caplen,
+int pfring_parse_bpf_filter(const char *filter_buffer, u_int caplen,
  #ifdef BPF_RELEASE
                             struct bpf_program
 #else
