@@ -313,7 +313,7 @@ int  pfring_mod_sysdig_set_socket_mode(pfring *ring, socket_mode mode);
 int  pfring_mod_sysdig_set_poll_watermark(pfring *ring, u_int16_t watermark);
 int  pfring_mod_sysdig_stats(pfring *ring, pfring_stat *stats);
 int  pfring_mod_sysdig_get_bound_device_ifindex(pfring *ring, int *if_index);
-int  pfring_mod_sysdig_set_bpf_filter(pfring *ring, char *filter_buffer);
+int  pfring_mod_sysdig_set_bpf_filter(pfring *ring, const char *filter_buffer);
 int  pfring_mod_sysdig_remove_bpf_filter(pfring *ring);
 
 /* Public functions */

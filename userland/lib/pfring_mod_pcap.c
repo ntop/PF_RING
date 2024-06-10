@@ -231,7 +231,7 @@ int pfring_mod_pcap_stats(pfring *ring, pfring_stat *stats) {
 
 /* **************************************************** */
 
-int pfring_mod_pcap_set_bpf_filter(pfring *ring, char *bpfFilter) {
+int pfring_mod_pcap_set_bpf_filter(pfring *ring, const char *bpfFilter) {
   pfring_pcap *pcap;
   struct bpf_program fcode;
   int rc;

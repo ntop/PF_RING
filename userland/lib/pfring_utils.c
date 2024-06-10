@@ -851,7 +851,7 @@ int pfring_get_mtu_size(pfring* ring) {
 
 /* *************************************** */
 
-int pfring_parse_bpf_filter(char *filter_buffer, u_int caplen,
+int pfring_parse_bpf_filter(const char *filter_buffer, u_int caplen,
 #ifdef BPF_RELEASE
                             struct bpf_program
 #else
