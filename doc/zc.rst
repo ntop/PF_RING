@@ -15,13 +15,14 @@ functionality may be missing, including in kernel packet filtering (PF_RING filt
 BPF filters instead are evaluated in userspace, adding overhead to the application and
 should be avoided when processing high rate traffic.
 
-With PF_RING ZC you can achieve 1/10G wire-rate at any packet size and create 
+With PF_RING ZC you can achieve 1 to 100G wire-rate at any packet size and create 
 inter-process and inter-VM clusters (PF_RING ZC is not just a driver, it provides a 
-simple yet powerful API). It can be considered as the successor of DNA/LibZero
-that offers a single and consistent API based on the lessons learnt on the past 
-few years.
+simple yet powerful API).
 
 Sample applications for testing are available in userland/examples_zc.
+
+PF_RING ZC for Intel
+====================
 
 These drivers, available in PF_RING/drivers/, are standard drivers with support for the 
 PF_RING ZC library. They can be used as standard kernel drivers or in zero-copy 
@@ -46,8 +47,10 @@ acceleration).
 Supported Cards
 ---------------
 
-In order to exploit ZC, you need a PF_RING aware driver with ZC support, identified by 
-the '-zc' suffix. Three driver families are currently available:
+In order to exploit ZC, you need a PF_RING aware driver with ZC support.
+
+The below ZC drivers for Intel adapters supporting full zero-copy RX and TX are currently
+available:
 
 - 1 Gbit
 
@@ -82,8 +85,14 @@ or use the *load_driver.sh* script provided with the drivers as explained in the
 * the PF_RING kernel module must be loaded before the ZC driver (systemd and load_driver.sh takes care of this)
 * ZC drivers need hugepages (the load_driver.sh script takes care of hugepages configuration). For more informations please read the `Hugepages Support <http://www.ntop.org/guides/pf_ring/hugepages.html>`_ section.
 
-ZC API
-------
+Other Drivers
+=============
+
+PF_RING ZC supports other adapters in addition to Intel, including NVIDIA/Mellanox and Napatech.
+For the full list please refer to the Drivers and Modules section.
+
+ZC Library/API
+==============
 
 PF_RING ZC (Zero Copy) is a flexible packet processing framework that allows you to 
 achieve 1/10 Gbit line-rate packet processing (both RX and TX) at any packet size. 
