@@ -53,7 +53,7 @@ typedef struct { // TODO add instance data here
 int nbpf_rdif_reset(int unit); //TODO needs to be moved to driver init
 
 nbpf_rdif_handle_t *nbpf_rdif_init(char *ifname);
-int nbpf_rdif_set_filter(nbpf_rdif_handle_t *handle, char *bpf);
+int nbpf_rdif_set_filter(nbpf_rdif_handle_t *handle, const char *bpf);
 void nbpf_rdif_destroy(nbpf_rdif_handle_t *handle);
 
 #endif

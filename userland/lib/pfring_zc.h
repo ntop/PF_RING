@@ -543,7 +543,7 @@ pfring_zc_adjust_device_clock(
 int
 pfring_zc_set_bpf_filter(
   pfring_zc_queue *queue,
-  char *filter
+  const char *filter
 );
 
 /**
