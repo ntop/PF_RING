@@ -51,6 +51,12 @@ In order to open a stream you should specify nt:stream<ID>, example:
 
    pfcount -i nt:stream0
 
+In case of multiple adapters, it is possible to specify the adapter id for the stream with nt:<adapter ID>:stream<ID>, example:
+
+.. code-block:: console
+
+   pfcount -i nt:1:stream0
+
 Streams with port aggregation or distribution (similar to RSS) can be created using the ntpl tool (ntpl -e "<command>")
 
 Note: it is possible to open the same stream from multiple applications at the same time (the slowest consumer will
