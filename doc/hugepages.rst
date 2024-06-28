@@ -15,6 +15,12 @@ For the impatient
 
 _Warning: If you accidentally exceed the amount of available RAM, the kernel will round down to the highest number of hugepages possible and grind your system to a halt._
 
+How to configure Hugepages permanently
+--------------------------------------
+
+As explained in the `installation <get_started/packages_installation.html#manual-configuration>`_ section, you need to edit the `/etc/pf_ring/hugepages.conf` file and specify the Hugepages settings there.
+
+
 The whole story
 ---------------
 
