@@ -1,7 +1,7 @@
-Mellanox Support
-================
+NVIDIA/Mellanox Support
+=======================
 
-PF_RING (8.1 or newer) includes native support for Mellanox ConnectX-4, ConnectX-5 and ConnectX-6 adapters.
+PF_RING (8.1 or newer) includes native support for NVIDIA/Mellanox ConnectX-4, ConnectX-5 and ConnectX-6 adapters.
 Both packet capture (including RSS, packet hash, hardware timestamp support) and transmission are supported.
 
 Prerequisite
