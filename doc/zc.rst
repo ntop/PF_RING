@@ -22,7 +22,7 @@ simple yet powerful API).
 Sample applications for testing are available in userland/examples_zc.
 
 PF_RING ZC for Intel
-====================
+--------------------
 
 These drivers, available in PF_RING/drivers/, are standard drivers with support for the 
 PF_RING ZC library. They can be used as standard kernel drivers or in zero-copy 
@@ -45,7 +45,7 @@ Note: if you omit 'zc:' you will open the device in standard PF_RING kernel mode
 acceleration).
 
 Supported Cards
----------------
+~~~~~~~~~~~~~~~
 
 In order to exploit ZC, you need a PF_RING aware driver with ZC support.
 
@@ -86,13 +86,13 @@ or use the *load_driver.sh* script provided with the drivers as explained in the
 * ZC drivers need hugepages (the load_driver.sh script takes care of hugepages configuration). For more informations please read the `Hugepages Support <http://www.ntop.org/guides/pf_ring/hugepages.html>`_ section.
 
 Other Drivers
-=============
+-------------
 
 PF_RING ZC supports other adapters in addition to Intel, including NVIDIA/Mellanox and Napatech.
 For the full list please refer to the Drivers and Modules section.
 
 ZC Library/API
-==============
+--------------
 
 PF_RING ZC (Zero Copy) is a flexible packet processing framework that allows you to 
 achieve 1/10 Gbit line-rate packet processing (both RX and TX) at any packet size. 
