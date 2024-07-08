@@ -18,6 +18,16 @@ empty packets. Example:
    [RX][if_index=0][hash=4294967295][00:00:00:00:00:00 -> 00:00:00:00:00:00] [eth_type=0x0000] [caplen=1536][len=65531][eth_offset=0][l3_offset=14][l4_offset=0][payload_offset=0]
    [RX][if_index=0][hash=4294967295][00:00:00:00:00:00 -> 00:00:00:00:00:00] [eth_type=0x0000] [caplen=1536][len=65531][eth_offset=0][l3_offset=14][l4_offset=0][payload_offset=0]
 
+It is also possible to verify this by looking at dmesg for IOMMU or DMAR related messages.
+Example:
+
+.. code-block:: console
+
+   [232592.844165] DMAR: DRHD: handling fault status reg 202
+   [232592.845073] DMAR: [DMA Write NO_PASID] Request device [b3:00.0] fault addr 0xa6dd9000 [fault reason 0x05] PTE Write access is not set
+   [232592.846495] DMAR: [DMA Write NO_PASID] Request device [b3:00.0] fault addr 0xb3b9f000 [fault reason 0x05] PTE Write access is not set
+   [232592.847911] DMAR: [DMA Write NO_PASID] Request device [b3:00.0] fault addr 0xb96bd000 [fault reason 0x05] PTE Write access is not set
+
 In order to fix this you need to disable IOMMU support.
 
 1. (Optional) Set 'IOMMU' (or VT-d / Virtualization Support) to 'Disabled' in the BIOS.
