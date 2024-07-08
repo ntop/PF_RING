@@ -21,6 +21,7 @@ PF_RING is a high speed packet capture library that turns a commodity PC into an
    hugepages
    capabilities
    amd
+   intel
 
 .. toctree::
    :maxdepth: 2
