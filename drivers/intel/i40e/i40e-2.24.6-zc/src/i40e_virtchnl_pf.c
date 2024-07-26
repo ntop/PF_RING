@@ -3317,7 +3317,8 @@ static int i40e_vc_config_queues_msg(struct i40e_vf *vf, u8 *msg)
 	vsi_id = qci->vsi_id;
 
 	for (i = 0; i < qci->num_queue_pairs; i++) {
-		qpi = &qci->qpair[i];
+		struct virtchnl_queue_pair_info *qpi_array = qci->qpair;
+		qpi = &qpi_array[i];
 
 		if (!vf->adq_enabled) {
 			if (!i40e_vc_isvalid_queue_id(vf, vsi_id,
@@ -3867,7 +3868,8 @@ static inline int i40e_check_vf_permission(struct i40e_vf *vf,
 
 	for (i = 0; i < al->num_elements; i++) {
 		struct i40e_mac_filter *f;
-		u8 *addr = al->list[i].addr;
+		struct virtchnl_ether_addr *ether_addr_array = al->list;
+		u8 *addr = ether_addr_array[i].addr;
 
 		if (is_broadcast_ether_addr(addr) ||
 		    is_zero_ether_addr(addr)) {
@@ -4074,27 +4076,28 @@ static int i40e_add_vf_mac_filters(struct i40e_vf *vf,
 	/* add new addresses to the list */
 	for (i = 0; i < al->num_elements; i++) {
 		struct i40e_mac_filter *f;
+		struct virtchnl_ether_addr *ether_addr_array = al->list;
 
-		f = i40e_find_mac(vsi, al->list[i].addr);
+		f = i40e_find_mac(vsi, ether_addr_array[i].addr);
 		if (!f) {
-			f = i40e_add_mac_filter(vsi, al->list[i].addr);
+			f = i40e_add_mac_filter(vsi, ether_addr_array[i].addr);
 			if (!f) {
 				dev_err(&pf->pdev->dev,
 					"Unable to add MAC filter %pM for VF %d\n",
-					al->list[i].addr, vf->vf_id);
+					ether_addr_array[i].addr, vf->vf_id);
 				ret = I40E_ERR_PARAM;
 				spin_unlock_bh(&vsi->mac_filter_hash_lock);
 				goto error_param;
 			}
 
-			ret = i40e_add_vmmac_to_list(vf, al->list[i].addr);
+			ret = i40e_add_vmmac_to_list(vf, ether_addr_array[i].addr);
 			if (ret) {
 				spin_unlock_bh(&vsi->mac_filter_hash_lock);
 				goto error_param;
 			}
 		}
 
-		i40e_update_vf_mac_addr(vf, &al->list[i]);
+		i40e_update_vf_mac_addr(vf, &ether_addr_array[i]);
 	}
 	spin_unlock_bh(&vsi->mac_filter_hash_lock);
 
