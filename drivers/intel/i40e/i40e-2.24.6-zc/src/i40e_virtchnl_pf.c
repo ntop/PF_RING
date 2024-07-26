@@ -4180,25 +4180,26 @@ static int i40e_del_vf_mac_filters(struct i40e_vf *vf,
 	spin_lock_bh(&vsi->mac_filter_hash_lock);
 	/* delete addresses from the list */
 	for (i = 0; i < al->num_elements; i++) {
-		if (ether_addr_equal(al->list[i].addr,
+		struct virtchnl_ether_addr *ether_addr_array = al->list;
+		if (ether_addr_equal(ether_addr_array[i].addr,
 				     vf->default_lan_addr.addr) &&
 		    (vf->trusted || !vf->pf_set_mac)) {
 			was_unimac_deleted = true;
 			is_legacy_unimac =
-				i40e_is_vc_addr_legacy(&al->list[i]);
+				i40e_is_vc_addr_legacy(&ether_addr_array[i]);
 		}
 
-		if (is_broadcast_ether_addr(al->list[i].addr) ||
-		    is_zero_ether_addr(al->list[i].addr) ||
-		    i40e_del_mac_filter(vsi, al->list[i].addr)) {
+		if (is_broadcast_ether_addr(ether_addr_array[i].addr) ||
+		    is_zero_ether_addr(ether_addr_array[i].addr) ||
+		    i40e_del_mac_filter(vsi, ether_addr_array[i].addr)) {
 			dev_err(&pf->pdev->dev, "Invalid MAC addr %pM for VF %d\n",
-				al->list[i].addr, vf->vf_id);
+				ether_addr_array[i].addr, vf->vf_id);
 			ret = I40E_ERR_INVALID_MAC_ADDR;
 			spin_unlock_bh(&vsi->mac_filter_hash_lock);
 			goto error_param;
 		}
 
-		i40e_del_vmmac_from_list(vf, al->list[i].addr);
+		i40e_del_vmmac_from_list(vf, ether_addr_array[i].addr);
 	}
 	spin_unlock_bh(&vsi->mac_filter_hash_lock);
 
