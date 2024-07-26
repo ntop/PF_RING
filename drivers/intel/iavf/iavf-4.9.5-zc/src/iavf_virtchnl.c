@@ -834,6 +834,7 @@ void iavf_map_queues(struct iavf_adapter *adapter)
 	struct virtchnl_vector_map *vecmap;
 	int v_idx, q_vectors, len;
 	struct iavf_q_vector *q_vector;
+	struct virtchnl_vector_map *vector_map_array;
 
 	if (adapter->current_op != VIRTCHNL_OP_UNKNOWN) {
 		/* bail because we already have a command pending */
@@ -858,12 +859,14 @@ void iavf_map_queues(struct iavf_adapter *adapter)
 	if (!vimi)
 		return;
 
+	vector_map_array = vimi->vecmap;
+
 	vimi->num_vectors = adapter->num_msix_vectors;
 	/* Queue vectors first */
 	for (v_idx = 0; v_idx < q_vectors; v_idx++) {
 		unsigned long map;
 		q_vector = &adapter->q_vectors[v_idx];
-		vecmap = &vimi->vecmap[v_idx];
+		vecmap = &vector_map_array[v_idx];
 
 		vecmap->vsi_id = adapter->vsi_res->vsi_id;
 		vecmap->vector_id = v_idx + NONQ_VECS;
@@ -874,7 +877,7 @@ void iavf_map_queues(struct iavf_adapter *adapter)
 		vecmap->txitr_idx = IAVF_TX_ITR;
 	}
 	/* Misc vector last - this is only for AdminQ messages */
-	vecmap = &vimi->vecmap[v_idx];
+	vecmap = &vector_map_array[v_idx];
 	vecmap->vsi_id = adapter->vsi_res->vsi_id;
 	vecmap->vector_id = 0;
 	vecmap->txq_map = 0;
