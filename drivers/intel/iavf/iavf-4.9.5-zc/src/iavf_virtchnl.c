@@ -995,15 +995,17 @@ void iavf_add_ether_addrs(struct iavf_adapter *adapter)
 	veal->num_elements = count;
 	i = 0;
 	list_for_each_entry(f, &adapter->mac_filter_list, list) {
+		struct virtchnl_ether_addr *ether_addr_array = &veal->list[0];
+
 		if (i == count)
 			break;
 		if (is_primary && !(f->is_primary && f->add))
 			continue;
 		if (!f->add)
 			continue;
-		ether_addr_copy(veal->list[i].addr,
+		ether_addr_copy(ether_addr_array[i].addr,
 				f->macaddr);
-		iavf_set_mac_addr_type(&veal->list[i], f);
+		iavf_set_mac_addr_type(&ether_addr_array[i], f);
 		f->add = false;
 		i++;
 	}

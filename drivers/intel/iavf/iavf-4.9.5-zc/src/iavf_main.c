@@ -4512,7 +4512,7 @@ static int iavf_parse_cls_flower(struct iavf_adapter *adapter,
 	      BIT(FLOW_DISSECTOR_KEY_ENC_KEYID) |
 #endif /* HAVE_TC_FLOWER_ENC */
 	      BIT(FLOW_DISSECTOR_KEY_PORTS))) {
-		dev_err(&adapter->pdev->dev, "Unsupported key used: 0x%llx\n",
+		dev_err(&adapter->pdev->dev, "Unsupported key used: 0x%x\n",
 			dissector->used_keys);
 		return -EOPNOTSUPP;
 	}
