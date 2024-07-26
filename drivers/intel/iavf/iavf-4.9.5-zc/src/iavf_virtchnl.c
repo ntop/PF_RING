@@ -1077,13 +1077,14 @@ void iavf_del_ether_addrs(struct iavf_adapter *adapter)
 	veal->num_elements = count;
 	list_for_each_entry_safe(f, ftmp, &adapter->mac_filter_list, list) {
 		if (f->remove) {
-			ether_addr_copy(veal->list[i].addr, f->macaddr);
-			iavf_set_mac_addr_type(&veal->list[i], f);
+			struct virtchnl_ether_addr *ether_addr_array = &veal->list[0];
+			if (i == count)
+				break;
+			ether_addr_copy(ether_addr_array[i].addr, f->macaddr);
+			iavf_set_mac_addr_type(&ether_addr_array[i], f);
 			i++;
 			list_del(&f->list);
 			kfree(f);
-			if (i == count)
-				break;
 		}
 	}
 	if (!more)
