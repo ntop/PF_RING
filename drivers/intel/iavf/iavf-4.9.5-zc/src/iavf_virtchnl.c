@@ -993,7 +993,10 @@ void iavf_add_ether_addrs(struct iavf_adapter *adapter)
 
 	veal->vsi_id = adapter->vsi_res->vsi_id;
 	veal->num_elements = count;
+	i = 0;
 	list_for_each_entry(f, &adapter->mac_filter_list, list) {
+		if (i == count)
+			break;
 		if (is_primary && !(f->is_primary && f->add))
 			continue;
 		if (!f->add)
@@ -1003,9 +1006,6 @@ void iavf_add_ether_addrs(struct iavf_adapter *adapter)
 		iavf_set_mac_addr_type(&veal->list[i], f);
 		f->add = false;
 		i++;
-
-		if (i == count)
-			break;
 	}
 
 	if (!is_more)
