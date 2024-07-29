@@ -1390,10 +1390,12 @@ int wait_packet_function_ptr(void *data, int mode)
 	struct iavf_ring *rx_ring = (struct iavf_ring*) data;
 	int new_packets;
 
+	/*
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s: enter [mode=%d/%s][queue=%d][next_to_clean=%u][next_to_use=%d][rx-ring=%p]\n",
 		       __FUNCTION__, mode, mode == 1 ? "enable int" : "disable int",
 		       rx_ring->queue_index, rx_ring->next_to_clean, rx_ring->next_to_use, rx_ring);
+	*/
 
 	if (mode == 1 /* Enable interrupt */) {
 		new_packets = ring_is_not_empty(rx_ring);
@@ -1429,8 +1431,10 @@ int wake_up_pfring_zc_socket(struct iavf_ring *rx_ring)
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_received = 1;
 				rx_ring->pfring_zc.rx_tx.rx.interrupt_enabled = 0; /* napi disables them */
 				wake_up_interruptible(&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue);
+				/*
 				if (unlikely(enable_debug))
 					printk("[PF_RING-ZC] %s: Waking up socket [queue=%d]\n", __FUNCTION__, rx_ring->q_vector->v_idx);
+				*/
 				return 1;
 			}
 		}

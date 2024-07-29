@@ -293,10 +293,12 @@ static bool iavf_clean_tx_irq(struct iavf_vsi *vsi,
 #ifdef HAVE_PF_RING
 	struct iavf_adapter *adapter = netdev_priv(tx_ring->netdev);
 
+	/*
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", 
 	        	__FUNCTION__, tx_ring->netdev->name,
 	        	atomic_read(&adapter->pfring_zc.usage_counter));
+	*/
 
 	if (atomic_read(&adapter->pfring_zc.usage_counter) > 0)
 		return true;
