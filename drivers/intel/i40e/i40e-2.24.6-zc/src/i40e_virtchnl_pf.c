@@ -3453,7 +3453,8 @@ static int i40e_vc_config_irq_map_msg(struct i40e_vf *vf, u8 *msg)
 	}
 
 	for (i = 0; i < irqmap_info->num_vectors; i++) {
-		map = &irqmap_info->vecmap[i];
+		struct virtchnl_vector_map *vecmap_array = irqmap_info->vecmap;
+		map = &vecmap_array[i];
 		/* validate msg params */
 		if (!i40e_vc_isvalid_vector_id(vf, map->vector_id) ||
 		    !i40e_vc_isvalid_vsi_id(vf, map->vsi_id)) {
@@ -4483,11 +4484,13 @@ static int i40e_vc_config_rss_lut(struct i40e_vf *vf, u8 *msg)
 		goto err;
 	}
 
-	for (i = 0; i < vrl->lut_entries; i++)
-		if (vrl->lut[i] >= vf->num_queue_pairs) {
+	for (i = 0; i < vrl->lut_entries; i++) {
+		u8 *lut_array = vrl->lut;
+		if (lut_array[i] >= vf->num_queue_pairs) {
 			aq_ret = I40E_ERR_PARAM;
 			goto err;
 		}
+	}
 
 	vsi = pf->vsi[vf->lan_vsi_idx];
 	aq_ret = i40e_config_rss(vsi, NULL, vrl->lut,
