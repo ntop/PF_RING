@@ -1060,8 +1060,10 @@ bool iavf_alloc_rx_buffers(struct iavf_ring *rx_ring, u16 cleaned_count)
 
 #ifdef HAVE_PF_RING
 #ifdef HAVE_PF_RING_ONLY
-	if (!kernel_only_adapter[adapter->instance])
+	if (!kernel_only_adapter[adapter->instance]) {
+		iavf_release_rx_desc(rx_ring, 0 /* set tail to 0 */);
 		return true;
+	}
 #endif
 	if (unlikely(enable_debug))
 		printk("[PF_RING-ZC] %s(%s) prefilling rx ring with %u/%u skbuff\n",

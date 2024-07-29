@@ -1579,6 +1579,11 @@ static void iavf_enable_adapter(struct iavf_adapter *adapter)
 	iavf_napi_enable_all(adapter);
 
 	adapter->aq_required |= IAVF_FLAG_AQ_ENABLE_QUEUES;
+
+#ifdef HAVE_PF_RING
+	if (unlikely(enable_debug))
+		printk("[PF_RING-ZC] %s: enabling adapter [RX Tail=%u]", __FUNCTION__, readl(adapter->rx_rings[0].tail));
+#endif
 }
 
 /**
