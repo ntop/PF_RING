@@ -197,6 +197,8 @@ void processFlow(pfring_ft_flow *flow, void *user){
     ndpi_protocol ndpi_proto;
     ndpi_serializer serializer;
     u_int buffer_len;
+  
+    ndpi_init_serializer(&serializer, ndpi_serialization_format_json);
  
     ndpi_proto.master_protocol = v->l7_protocol.master_protocol;
     ndpi_proto.app_protocol = v->l7_protocol.app_protocol;
