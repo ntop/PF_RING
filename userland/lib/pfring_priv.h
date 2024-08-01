@@ -54,8 +54,18 @@
 /* ********************************* */
 
 /* See also __builtin_prefetch
- * http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html */
+ * http://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
+ * [x86] https://elixir.bootlin.com/dpdk/v24.07/source/lib/eal/x86/include/rte_prefetch.h
+ * [ARM] https://elixir.bootlin.com/dpdk/v24.07/source/lib/eal/arm/include/rte_prefetch_64.h
+*/
+#if defined(__i386__) || defined(__x86_64__)
 #define prefetch(x) __asm volatile("prefetcht0 %0" :: "m" (*(const unsigned long *)x));
+#elif defined(__aarch64__)
+#define prefetch(x) __asm volatile("PRFM PLDL1KEEP, [%0]" : : "r" (*(const unsigned long *)x));
+#else
+#define prefetch(x) ();
+#warning "Unable to define prefetch for your architecture"
+#endif
 
 /* ********************************* */
 
