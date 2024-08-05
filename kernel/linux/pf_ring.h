@@ -23,8 +23,8 @@
 #endif /* __KERNEL__ */
 
 /* Versioning */
-#define RING_VERSION                "8.7.0"
-#define RING_VERSION_NUM           0x080700
+#define RING_VERSION                "8.8.0"
+#define RING_VERSION_NUM           0x080800
 
 /* Increment whenever there is a change in some shared data structure
  * between kernel and userspace, including ioctl or packet header layout */
