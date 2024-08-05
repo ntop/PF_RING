@@ -1,6 +1,65 @@
 # CHANGELOG
 
 ---------------------------------------
+2024-08-05 PF_RING 8.8
+
+* Key Features
+ - Support for Napatech Flow Manager
+ - Support for NVIDIA BlueField 2/3
+
+* PF_RING Library
+ - Add pfring_flow_update struct and pfring_recv_flow
+ - Add PF_RING_FLOW_OFFLOAD flag to enable Flow Table offload on supported adapters
+ - Add PF_RING_FLOW_OFFLOAD_AUTO_UNLEARN to control tcp auto unlearn
+ - Add PF_RING_KEEP_CRC flag (required by Napatech)
+ - Fix pfring_zc_send_pkt_multi return code
+
+* PF_RING Kernel Module
+ - Add flow_id to generic_flow_tuple_hw_rule
+ - Fix crash with more than 64 rss queues
+ - Various minor fixes 
+
+* FT Library
+ - Add pfring_ft_zmq_get_stats API
+ - Add slice action
+
+* PF_RING Capture Modules and ZC Drivers
+ - Add support for Napatech Flow Manager (Flow Table offload)
+ - Add support for NVIDIA BlueField (ARM64)
+ - Add jumbo support for ice-zc
+ - Add support for Napatech zero-copy forwarding (pfring_send_last_rx_packet)
+ - Fix all Intel drivers compilation on latest kernels (including Ubuntu 24)
+   - ixgbevf-zc driver update v.4.18.9
+   - i40e-zc driver update v.2.24.6
+   - iavf-zc driver update v.4.9.5
+ - Extend Napatech interface name to support adapter ID
+ - Fix drop counter on NVIDIA/Mellanox Connect-X (read phy discards in addition to buffer discards)
+ - Fix crash with more than 64 rss queues
+ - Fix iavf (i40e VF) ring initialization
+ - Fix driver dependency intel_auxiliary
+ 
+* PF_RING-aware Libpcap/Tcpdump
+ - New pfring-aware tcpdump 4.99.4
+
+* Examples
+ - New pfflow_offload sample app with support for Napatech Flow Manager
+ - pfsend
+   - Fix ipv6 packet forging
+   - Add eth header when replaying RAW capture files
+   - Add -U / -K options to control flow distribution
+   - Fix on the fly packets generation
+   - Fix -A when -O is used
+ - pfsend_multichannel
+   - Add -C to support multiple TX channels with Napatech
+ - pfbridge
+   - Add support for Napatech zero-copy forwarding
+
+* Misc
+ - Improve pf_ringctl to auto generate hugepages.conf based on numa nodes
+ - Change MAX_CAPLEN to 65600 to correctly handle max jumbo packet size
+ - Remove deprecated code for Accolade and fm10k
+
+---------------------------------------
 2023-10-23 PF_RING 8.6.1
 
 * PF_RING Library
