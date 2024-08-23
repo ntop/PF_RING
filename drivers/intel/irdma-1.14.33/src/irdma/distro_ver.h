@@ -1,0 +1,194 @@
+/* SPDX-License-Identifier: GPL-2.0 or Linux-OpenIB */
+/* Copyright (c) 2015 - 2024 Intel Corporation */
+#ifndef DISTRO_VER_H
+#define DISTRO_VER_H
+
+#ifndef LINUX_VERSION_CODE
+#include <linux/version.h>
+#else
+#define KERNEL_VERSION(a, b, c) (((a) << 16) + ((b) << 8) + (c))
+#endif
+
+#if defined(RHEL_RELEASE_CODE)
+
+#if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 2)) && (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(10, 0))
+#define RHEL_9_2 /* Assume any 9.X greater than 9.2 will also work with current 9.2 defines */
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(9, 1))
+#define RHEL_9_1
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(9, 0))
+#define RHEL_9_0
+#endif
+
+#if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 8)) && (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9, 0))
+#define RHEL_8_8 /* Assume any 8.X greater than 8.8 will also work with current 8.8 defines */
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 7))
+#define RHEL_8_7
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 6))
+#define RHEL_8_6
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 5))
+#define RHEL_8_5
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 4))
+#define RHEL_8_4
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 3))
+#define RHEL_8_3
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 9))
+#define RHEL_7_9
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 2))
+#define RHEL_8_2
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 1))
+#define RHEL_8_1
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 8))
+#define RHEL_7_8
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 7))
+#define RHEL_7_7
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(8, 0))
+#define RHEL_8_0
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 6))
+#define RHEL_7_6
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 5))
+#define RHEL_7_5
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 4))
+#define RHEL_7_4
+#endif
+
+#if (RHEL_RELEASE_CODE == RHEL_RELEASE_VERSION(7, 2))
+#define RHEL_7_2
+#endif
+
+#endif /* RHEL_RELEASE_CODE */
+
+#ifdef CONFIG_SUSE_KERNEL
+#ifndef SLE_VERSION
+#define SLE_VERSION(a, b, c)	KERNEL_VERSION(a, b, c)
+#endif
+#define SLE_LOCALVERSION(a, b, c) KERNEL_VERSION(a, b, c)
+
+#if (LINUX_VERSION_CODE == KERNEL_VERSION(4, 12, 14) && \
+	(SLE_LOCALVERSION_CODE == SLE_LOCALVERSION(94, 41, 0) || \
+	(SLE_LOCALVERSION_CODE >= SLE_LOCALVERSION(95, 0, 0) && \
+	SLE_LOCALVERSION_CODE < SLE_LOCALVERSION(96, 0, 0))))
+/* SLES12 SP4 GM is 4.12.14-94.41 and update kernel is 4.12.14-95.x. */
+#define SLE_VERSION_CODE SLE_VERSION(12, 4, 0)
+#define SLES_12_SP_4
+#elif (LINUX_VERSION_CODE == KERNEL_VERSION(4, 12, 14) && \
+	SLE_LOCALVERSION_CODE >= SLE_LOCALVERSION(25, 23, 0))
+/* SLES15 SP1 Beta1 is 4.12.14-25.23 */
+#define SLE_VERSION_CODE SLE_VERSION(15, 1, 0)
+#define SLES_15_SP_1
+#endif
+
+#if (LINUX_VERSION_CODE == KERNEL_VERSION(4, 12, 14) && \
+	(SLE_LOCALVERSION_CODE == SLE_LOCALVERSION(23, 0, 0) || \
+	 SLE_LOCALVERSION_CODE == SLE_LOCALVERSION(2, 0, 0) || \
+	 SLE_LOCALVERSION_CODE == SLE_LOCALVERSION(136, 0, 0) || \
+	 (SLE_LOCALVERSION_CODE >= SLE_LOCALVERSION(25, 0, 0) && \
+	  SLE_LOCALVERSION_CODE < SLE_LOCALVERSION(25, 23, 0))))
+#define SLE_VERSION_CODE SLE_VERSION(15, 0, 0)
+#define SLES_15
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 21)
+#if SLE_LOCALVERSION_CODE >= SLE_LOCALVERSION(150600ULL, 0, 0)
+#define SLES_15_SP_6
+#elif SLE_LOCALVERSION_CODE >= SLE_LOCALVERSION(150500ULL, 0, 0)
+#define SLES_15_SP_5
+#else
+#define SLES_15_SP_4
+#endif
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 3, 18)
+#if SLE_LOCALVERSION_CODE >= SLE_LOCALVERSION(46, 0, 0)
+#define SLES_15_SP_3
+#else
+#define SLE_VERSION_CODE SLE_VERSION(15, 2, 0)
+#define SLES_15_SP_2
+#endif
+#endif
+
+#if ((LINUX_VERSION_CODE == KERNEL_VERSION(4, 4, 73) || \
+	LINUX_VERSION_CODE == KERNEL_VERSION(4, 4, 82) || \
+	LINUX_VERSION_CODE == KERNEL_VERSION(4, 4, 92)) || \
+	(LINUX_VERSION_CODE == KERNEL_VERSION(4, 4, 103) && \
+	(SLE_LOCALVERSION_CODE == SLE_LOCALVERSION(6, 33, 0) || \
+	 SLE_LOCALVERSION_CODE == SLE_LOCALVERSION(6, 38, 0))) || \
+	 (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 114) && \
+	  LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0) && \
+	  SLE_LOCALVERSION_CODE >= SLE_LOCALVERSION(94, 0, 0) && \
+	  SLE_LOCALVERSION_CODE <  SLE_LOCALVERSION(95, 0, 0)))
+/* SLES12 SP3 GM is 4.4.73-5 and update kernels are 4.4.82-6.3.
+ * SLES12 SP3 updates not conflicting with SP2 are: 4.4.{82,92}
+ * SLES12 SP3 updates conflicting with SP2 are:
+ * - 4.4.103-6.33.1, 4.4.103-6.38.1
+ * - 4.4.{114,120}-94.nn.y
+ */
+#define SLE_VERSION_CODE SLE_VERSION(12, 3, 0)
+#define SLES_12_SP_3
+#endif /* LINUX_VERSION_CODE == KERNEL_VERSION(x,y,z) */
+
+#endif /* CONFIG_SUSE_KERENL */
+
+#ifdef UTS_UBUNTU_RELEASE_ABI
+#define UBUNTU_VERSION_CODE (((~0xFF & LINUX_VERSION_CODE) << 8) + \
+			     UTS_UBUNTU_RELEASE_ABI)
+
+#define UBUNTU_VERSION(a, b, c, d) ((KERNEL_VERSION(a, b, 0) << 8) + (d))
+
+#if (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(6, 8, 0, 22))
+#define UBUNTU_2404
+#elif (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(5, 15, 0, 25))
+#define UBUNTU_2204
+#elif (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(5, 11, 0, 27))
+#define UBUNTU_200403
+#elif (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(5, 8, 0, 48))
+#define UBUNTU_200402
+#elif (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(5, 4, 0, 139))
+#define UBUNTU_200405
+#elif (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(5, 4, 0, 100))
+#define UBUNTU_200404
+#elif (UBUNTU_VERSION_CODE >= UBUNTU_VERSION(5, 4, 0, 26))
+#define UBUNTU_2004
+#else
+#define UBUNTU_1804
+#endif
+#endif /* UTS_UBUNTU_RELEASE_ABI */
+
+#if !defined(UTS_UBUNTU_RELEASE_ABI) && !defined(RHEL_RELEASE_CODE) && !defined(CONFIG_SUSE_KERNEL)
+#ifdef UTS_RELEASE
+#if LINUX_VERSION_CODE == KERNEL_VERSION(5, 4, 17)
+#define ORACLE_REL
+#endif
+#endif /* UTS_RELEASE */
+#endif /* !defined(UTS_UBUNTU_RELEASE_ABI) && !defined(RHEL_RELEASE_CODE) && !defined(CONFIG_SUSE_KERNEL) */
+
+#endif /* DISTRO_VER_H */
