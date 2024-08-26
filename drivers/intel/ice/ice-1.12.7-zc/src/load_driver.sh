@@ -3,6 +3,7 @@
 FAMILY=ice
 
 # Remove old modules (if loaded)
+rmmod irdma
 rmmod ice
 rmmod pf_ring
 
