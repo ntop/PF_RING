@@ -20,7 +20,7 @@ empty packets, or just being killed due to bad memory access. Examples:
 
 .. code-block:: console
 
-   # pfcount -i zc:enp179s0f0 -v 1
+   # pfcount -i zc:enp179s0f0
    Killed
 
 It is also possible to verify this by looking at dmesg for IOMMU or DMAR related messages.
