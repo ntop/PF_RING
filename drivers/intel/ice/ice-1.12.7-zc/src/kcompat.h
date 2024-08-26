@@ -43,6 +43,7 @@
 #define ICE_ZC_IRQ
 #define ICE_TX_ENABLE
 //#define ICE_RX_TAIL_RESET
+#define ICE_INIT_V2
 #define ICE_USER_TO_KERNEL_RESET
 
 #define PCI_DEVICE_CACHE_LINE_SIZE             0x0C

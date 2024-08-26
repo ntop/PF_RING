@@ -1734,7 +1734,11 @@ int ice_clean_rx_irq(struct ice_rx_ring *rx_ring, int budget)
 	//	printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", __FUNCTION__, rx_ring->netdev->name,
         //		atomic_read(&ice_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter));
 
+#ifdef ICE_INIT_V2
+	if (atomic_read(&rx_ring->pfring_zc.queue_in_use) > 0) {
+#else
 	if (rx_ring->netdev && atomic_read(&ice_netdev_to_pf(rx_ring->netdev)->pfring_zc.usage_counter) > 0) {
+#endif
 		wake_up_pfring_zc_socket(rx_ring);
 		/* Note: returning budget napi will call us again (keeping interrupts disabled),
 		 * returning budget-1 will tell napi that we are done (this usually also reenable interrupts, not with ZC) */
