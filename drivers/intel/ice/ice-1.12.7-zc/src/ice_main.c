@@ -9019,8 +9019,10 @@ int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use)
 		if ((n = atomic_inc_return(&adapter->pfring_zc.usage_counter)) == 1 /* first interface user */) {
 			try_module_get(THIS_MODULE); /* ++ */
 
+#ifndef ICE_INIT_V2
 			/* wait for ice_clean_rx_irq to complete the current receive if any */
 			usleep_range(100, 200);  
+#endif
 
 			/* Stopping all queues in kernel space on first user - this avoids receiving
 			 * high-pps traffic in kernel space in promiscuous mode */
@@ -9033,6 +9035,25 @@ int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use)
 
 			/* Wait enough to make sure there is no concurrent insertion */
 			usleep_range(100, 200);
+
+#ifdef ICE_INIT_V2
+			/*
+			 * Initialization steps:
+			 * 1. increase and check interface usage counter
+			 * 2. disable all the queues
+			 * 3. wait a bit to let the kernel driver (ice_clean_rx_irq) dequeue enqueued packets
+			 * 4. cleanup the ring
+			 */
+
+			ice_for_each_rxq(vsi, i) {
+				struct ice_rx_ring *rx_ring_i = vsi->rx_rings[i];
+
+				atomic_inc_return(&rx_ring_i->pfring_zc.queue_in_use);
+			}
+
+			/* Wait enough to make sure there is no concurrent insertion */
+			usleep_range(100, 200);
+#endif
 
 			ice_for_each_rxq(vsi, i) {
 				struct ice_rx_ring *rx_ring_i = vsi->rx_rings[i];
@@ -9057,10 +9078,11 @@ int notify_callback(void *rx_data, void *tx_data, u_int8_t device_in_use)
 			}
 		}
 
-    
+#ifndef ICE_INIT_V2
 		if (rx_ring != NULL && atomic_inc_return(&rx_ring->pfring_zc.queue_in_use) == 1 /* first queue user */) {
 
 		}
+#endif
 
 #ifdef ICE_TX_ENABLE
 		if (tx_ring != NULL && atomic_inc_return(&tx_ring->pfring_zc.queue_in_use) == 1 /* first user */) {
