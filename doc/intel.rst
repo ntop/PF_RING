@@ -9,14 +9,19 @@ ZC drivers for directly moving packets with DMA.
 On Intel usually everything works just out of the box. However, depending on the
 CPU, BIOS and kernel, it may happen to experience a similar issue on Intel CPUs.
 
-The symptom consists of the application being unable to capture traffic or capture
-empty packets. Example:
+The symptom consists of the application being unable to capture traffic, capture
+empty packets, or just being killed due to bad memory access. Examples:
 
 .. code-block:: console
 
    # pfcount -i zc:enp179s0f0 -v 1
    [RX][if_index=0][hash=4294967295][00:00:00:00:00:00 -> 00:00:00:00:00:00] [eth_type=0x0000] [caplen=1536][len=65531][eth_offset=0][l3_offset=14][l4_offset=0][payload_offset=0]
    [RX][if_index=0][hash=4294967295][00:00:00:00:00:00 -> 00:00:00:00:00:00] [eth_type=0x0000] [caplen=1536][len=65531][eth_offset=0][l3_offset=14][l4_offset=0][payload_offset=0]
+
+.. code-block:: console
+
+   # pfcount -i zc:enp179s0f0 -v 1
+   Killed
 
 It is also possible to verify this by looking at dmesg for IOMMU or DMAR related messages.
 Example:
