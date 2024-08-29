@@ -61,7 +61,6 @@ typedef enum {
 } pfring_ft_flow_status;
 
 #define PF_RING_FT_FLOW_FLAGS_L7_GUESS    (1 <<  0) /**< pfring_ft_flow_value.flags: detected L7 protocol is a guess. */
-#define PF_RING_FT_FLOW_FLAGS_IGNORE_VLAN (1 <<  1) /**< pfring_ft_flow_value.flags: do not include vlan in flow key. */
 
 typedef struct {
   u_int32_t num_protocols; /**< Number of supported L7 protocols */
@@ -292,6 +291,7 @@ typedef void
 #define PFRING_FT_TABLE_FLAGS_DPI_EXTRA (1 << 1) /**< pfring_ft_create_table() flag: enable nDPI extra dissection (more flow metadata) */
 #define PFRING_FT_DECODE_TUNNELS        (1 << 2) /**< pfring_ft_create_table() flag: decode tunnels (GTP, L2TP, CAPWAP) */
 #define PFRING_FT_IGNORE_HW_HASH        (1 << 3) /**< pfring_ft_create_table() flag: ignore hw packet hash (e.g. when it's asymmetric leading to one flow per direction) */
+#define PFRING_FT_IGNORE_VLAN           (1 << 4) /**< pfring_ft_create_table() flag: do not include vlan in flow key */
 
 /**
  * Create a new flow table.
