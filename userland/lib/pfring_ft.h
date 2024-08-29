@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 71
+#define FT_API_VERSION 77
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -60,7 +60,8 @@ typedef enum {
   PFRING_FT_FLOW_STATUS_OVERFLOW        /**< Exported from those with higher inactivity to make room */
 } pfring_ft_flow_status;
 
-#define PF_RING_FT_FLOW_FLAGS_L7_GUESS (1 <<  0) /**< pfring_ft_flow_value.flags: detected L7 protocol is a guess. */
+#define PF_RING_FT_FLOW_FLAGS_L7_GUESS    (1 <<  0) /**< pfring_ft_flow_value.flags: detected L7 protocol is a guess. */
+#define PF_RING_FT_FLOW_FLAGS_IGNORE_VLAN (1 <<  1) /**< pfring_ft_flow_value.flags: do not include vlan in flow key. */
 
 typedef struct {
   u_int32_t num_protocols; /**< Number of supported L7 protocols */
