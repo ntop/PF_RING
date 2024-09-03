@@ -387,6 +387,7 @@ void print_help(void) {
   printf("-h              Print this help\n");
   printf("-i <device>     Device name\n");
   printf("-7              Enable L7 protocol detection (nDPI)\n");
+  printf("-f <bpf>        Capture filter (BPF)\n");
   printf("-F <file>       Load filtering/shunting rules from file\n");
   printf("-p <file>       Load nDPI custom protocols from file\n");
   printf("-c <file>       Load nDPI categories by host from file\n");
@@ -419,8 +420,9 @@ int main(int argc, char* argv[]) {
   packet_direction direction = rx_and_tx_direction;
   pthread_t time_thread;
   u_int8_t ignore_hw_hash = 0;
+  char *filter = NULL;
 
-  while ((c = getopt(argc,argv,"c:dEg:hHi:p:qvF:s:S:tV7")) != '?') {
+  while ((c = getopt(argc,argv,"c:dEf:g:hHi:p:qvF:s:S:tV7")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -437,6 +439,9 @@ int main(int argc, char* argv[]) {
       enable_l7_extra = 1;
       break;
 #endif
+    case 'f':
+      filter = strdup(optarg);
+      break;
     case 'g':
       bind_core = atoi(optarg);
       break;
@@ -556,7 +561,7 @@ int main(int argc, char* argv[]) {
 
   promisc = 1;
 
-  if (promisc)      flags |= PF_RING_PROMISC;
+  if (promisc)     flags |= PF_RING_PROMISC;
   if (!time_pulse) flags |= PF_RING_TIMESTAMP; /* needed for flow processing */
 
   pd = pfring_open(device, snaplen, flags);
@@ -583,6 +588,14 @@ int main(int argc, char* argv[]) {
 
   if ((rc = pfring_set_socket_mode(pd, recv_only_mode)) != 0)
     fprintf(stderr, "pfring_set_socket_mode returned [rc=%d]\n", rc);
+
+  if (filter != NULL) {
+    rc = pfring_set_bpf_filter(pd, filter);
+    if (rc != 0)
+      fprintf(stderr, "pfring_set_bpf_filter(%s) returned %d\n", filter, rc);
+    else if (!quiet)
+      printf("Successfully set BPF filter '%s'\n", filter);
+  }
 
   signal(SIGINT, sigproc);
   signal(SIGTERM, sigproc);
