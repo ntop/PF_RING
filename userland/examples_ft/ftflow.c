@@ -60,7 +60,7 @@ pfring *pd = NULL;
 pfring_ft_table *ft = NULL;
 int bind_core = -1;
 int bind_time_pulse_core = -1;
-u_int8_t quiet = 0, verbose = 0, stats_only = 0;
+u_int8_t quiet = 0, verbose = 0, stats_only = 0, log_time = 1;
 u_int8_t time_pulse = 0, enable_l7 = 0, do_shutdown = 0;
 u_int64_t num_pkts = 0, num_bytes = 0, num_flows = 0;
 #ifdef PRINT_NDPI_INFO
@@ -215,6 +215,16 @@ const char *status_to_string(pfring_ft_flow_status status) {
 
 /* ******************************** */
 
+void print_time() {
+  time_t now = time(NULL);
+  struct tm* tm_info = localtime(&now);
+  char time_buff[26];
+  strftime(time_buff, sizeof(time_buff), "%H:%M:%S", tm_info);
+  printf("%s ", time_buff);
+}
+
+/* ******************************** */
+
 /* This callback is called when a flow expires */
 void processFlow(pfring_ft_flow *flow, void *user){
   pfring_ft_flow_key *k;
@@ -232,6 +242,9 @@ void processFlow(pfring_ft_flow *flow, void *user){
     ip1 = (char *) inet_ntop(AF_INET6, &k->saddr.v6, buf1, sizeof(buf1));
     ip2 = (char *) inet_ntop(AF_INET6, &k->daddr.v6, buf2, sizeof(buf2));
   }
+
+  if (log_time)
+    print_time();
 
   printf("[Flow] ");
 
@@ -319,6 +332,8 @@ void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char
     char buffer[256];
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->caplen);
+    if (log_time)
+      print_time();
     printf("[Packet]%s %s", action == PFRING_FT_ACTION_DISCARD ? " [discard]" : "", buffer);
   }
 }
