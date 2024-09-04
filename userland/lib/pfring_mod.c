@@ -946,7 +946,7 @@ int pfring_mod_set_bpf_filter(pfring *ring, const char *filter_buffer) {
 #ifdef ENABLE_BPF
   pcap_t *p;
   struct bpf_program filter;
-  struct sock_fprog  fcode;
+  struct sock_fprog  fcode = { 0 };
 #ifdef SKF_AD_VLAN_TAG_PRESENT
   int bpf_extensions;
   socklen_t len = sizeof(bpf_extensions);
