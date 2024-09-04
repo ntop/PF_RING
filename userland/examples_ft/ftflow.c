@@ -48,6 +48,10 @@
 
 #include "ftutils.c"
 
+// #define TEST_CALLBACK_NEW_FLOW
+// #define TEST_CALLBACK_L7_DETECTED
+// #define TEST_CALLBACK_FLOW_PACKET
+
 #define ALARM_SLEEP 1
 #define DEFAULT_DEVICE "eth0"
 
@@ -174,17 +178,18 @@ void my_sigalarm(int sig) {
 
 /* ******************************** */
 
-/* This callback is called after a packet has been processed
+#ifdef TEST_CALLBACK_FLOW_PACKET
+/* This callback is called after a packet has been processed */
 void processFlowPacket(const u_char *data, pfring_ft_packet_metadata *metadata,
 		       pfring_ft_flow *flow, void *user) {
-  //fprintf(stderr, "Processing packet [payloadLen: %u]\n", metadata->payload_len);
+  // fprintf(stderr, "Processing packet [payloadLen: %u]\n", metadata->payload_len);
 
   // Marking the flow to discard all packets (this can be used to implement custom filtering policies)
   // pfring_ft_flow_set_action(flow, PFRING_FT_ACTION_DISCARD);
 }
-*/
+#endif
 
-/* ******************************** */
+/* ****************************************************** */
 
 const char *action_to_string(pfring_ft_action action) {
   switch (action) {
@@ -306,6 +311,38 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
   pfring_ft_flow_free(flow);
 }
+
+/* ******************************** */
+
+#ifdef TEST_CALLBACK_NEW_FLOW
+/* This callback is called when a new flow is created */
+void processNewFlow(pfring_ft_flow *flow, void *user){
+
+  if (log_time)
+    print_time();
+
+  printf("[New Flow]\n");
+}
+#endif
+
+/* ******************************** */
+
+#ifdef TEST_CALLBACK_L7_DETECTED
+void l7Detected(const u_char *data, pfring_ft_packet_metadata *metadata, pfring_ft_flow *flow, void *user) {
+  pfring_ft_flow_value *v;
+  char buf[32];
+
+  if (enable_l7) {
+    v = pfring_ft_flow_get_value(flow);
+
+    if (log_time)
+      print_time();
+
+    printf("[Detected] l7: %s, category: %u, tunnelType: %u\n",
+	   pfring_ft_l7_protocol_name(ft, &v->l7_protocol, buf, sizeof(buf)), v->l7_protocol.category, v->tunnel_type);
+  }
+}
+#endif
 
 /* ******************************** */
 
@@ -542,9 +579,20 @@ int main(int argc, char* argv[]) {
   if (!stats_only)
     pfring_ft_set_flow_export_callback(ft, processFlow, NULL);
 
-  /* Example of callback for packets that have been successfully processed
+#ifdef TEST_CALLBACK_NEW_FLOW
+  /* Example of callback for new flows */
+  pfring_ft_set_new_flow_callback(ft, processNewFlow, NULL);
+#endif
+
+#ifdef TEST_CALLBACK_L7_DETECTED
+  /* Example of callback for L7 detected */
+  pfring_ft_set_l7_detected_callback(ft, l7Detected, NULL);
+#endif
+
+#ifdef TEST_CALLBACK_FLOW_PACKET
+  /* Example of callback for packets that have been successfully processed */
   pfring_ft_set_flow_packet_callback(ft, processFlowPacket, NULL);
-  */
+#endif
 
   if (protocols_file) {
     rc = pfring_ft_load_ndpi_protocols(ft, protocols_file);
