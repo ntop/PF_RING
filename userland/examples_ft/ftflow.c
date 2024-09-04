@@ -311,7 +311,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
 
 void process_packet(const struct pfring_pkthdr *h, const u_char *p, const u_char *user_bytes) {
   pfring_ft_pcap_pkthdr *hdr = (pfring_ft_pcap_pkthdr *) h;
-  pfring_ft_ext_pkthdr ext_hdr;
+  pfring_ft_ext_pkthdr ext_hdr = { 0 };
   u_int64_t ts;
   pfring_ft_action action;
 
@@ -655,6 +655,11 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "%lu exported flows\n", num_flows);
 
   pfring_ft_destroy_table(ft);
+
+  if (categories_file)    { free(categories_file);    categories_file = NULL;    }
+  if (configuration_file) { free(configuration_file); configuration_file = NULL; }
+  if (device)             { free(device);             device = NULL;             }
+  if (protocols_file)     { free(protocols_file);     protocols_file = NULL;     }
 
   return 0;
 }
