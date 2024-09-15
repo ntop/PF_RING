@@ -187,6 +187,7 @@ print_drivers() {
 }
 
 print_interfaces() {
+        MLX_FOUND=0
 	INTERFACES=($(cat /proc/net/dev | grep ':' | cut -d ':' -f 1|grep -v 'lo' | tr '\n' ' '| sed 's/  / /g'))
 	for IF in ${INTERFACES[@]} ; do
 
@@ -207,6 +208,9 @@ print_interfaces() {
 		elif is_supported_by_zc ${DRIVER}; then
 			INFO="[Supported by ZC]"
 		elif is_supported_by_other ${DRIVER}; then
+		        if [[ "${DRIVER}" == "mlx5_core" ]]; then
+			    MLX_FOUND=1
+			fi
 			INFO="[Running ZC]"
 		else
 			INFO="[Linux Driver]"
@@ -215,6 +219,17 @@ print_interfaces() {
 		printf "Name: %-20s Driver: %-10s RSS: %-8s %-15s" "${IF}" "${DRIVER}" "${ACTUAL_RSS_QUEUES}" "${INFO}"
 		echo ""
 	done
+
+	if [[ "${MLX_FOUND}" == 1 ]]; then
+	    if hash ibv_devinfo 2>/dev/null; then
+		# Nothing to do
+		echo -n ""
+	    else
+		echo "[!] You need to install the Mellanox driver in order to use ZC"
+		echo ""
+		install_mlx_driver
+	    fi
+	fi
 }
 
 count_by_driver() {
