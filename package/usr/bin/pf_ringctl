@@ -7,10 +7,19 @@ DISTRO="unknown"
 if [ -f /lib/lsb/init-functions ]; then
 	DISTRO="debian"
 	. /lib/lsb/init-functions
-fi
-if [ -f /etc/init.d/functions ]; then
-	DISTRO="centos"
+elif [ -f /etc/init.d/functions ]; then
+	DISTRO="rh"
 	. /etc/init.d/functions
+elif [ -e /etc/redhat-release ]; then
+	DISTRO="rh"
+	echo_failure() {
+		echo -n "[FAILURE]"
+		echo -ne "\r"
+	}
+	echo_success() {
+		echo -n "[ OK ]"
+		echo -ne "\r"
+	}
 fi
 
 PF_RING="pf_ring"
@@ -62,7 +71,7 @@ function dkms_installed {
 		if [ `dpkg -l | grep $1-zc-dkms | wc -l` -gt 0 ]; then
 			return 0
 		fi
-	elif [ ${DISTRO} == "centos" ]; then
+	elif [ ${DISTRO} == "rh" ]; then
 		if [ `rpm -qa | grep $1-zc | wc -l` -gt 0 ]; then
 			return 0
 		fi
@@ -90,16 +99,16 @@ check_pf_ring() {
 			log_failure_msg "${MSG}"
 			log_end_msg $ERROR
 			exit 99
-		elif [ ${DISTRO} == "centos" ]; then
+		elif [ ${DISTRO} == "rh" ]; then
 			echo -n ${MSG} 
 			echo_failure; echo
 			exit 99
 		fi
 	elif [ ${WARNING} -gt 0 ]; then
 		[ ${DISTRO} == "debian" ] && log_daemon_msg "${MSG}"
-		[ ${DISTRO} == "centos" ] && echo -n "${MSG}"
+		[ ${DISTRO} == "rh" ] && echo -n "${MSG}"
 		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-		[ ${DISTRO} == "centos" ] && echo_success && echo
+		[ ${DISTRO} == "rh" ] && echo_success && echo
 	fi
 
 	return $RETVAL
@@ -119,7 +128,7 @@ rebuild_dkms() {
 	if [ ${DISTRO} == "debian" ]; then
 		SUFFIX="-dkms"
 		MOD_VERSION=`dpkg -l | grep ${1}${SUFFIX} | awk '{print $3}'`
-	elif [ ${DISTRO} == "centos" ]; then
+	elif [ ${DISTRO} == "rh" ]; then
 		SUFFIX=""
 		if [ ${1} == "pfring" ]; then
 			SUFFIX="-dkms"
@@ -483,7 +492,7 @@ start_pf_ring() {
 
 	if [ ! -d /var/lib/dkms/pfring ]; then
 		[ ${DISTRO} == "debian" ] && log_daemon_msg "PF_RING kernel module not installed, please install pfring-dkms"
-		[ ${DISTRO} == "centos" ] && echo "PF_RING kernel module not installed, please install pfring-dkms"
+		[ ${DISTRO} == "rh" ] && echo "PF_RING kernel module not installed, please install pfring-dkms"
 		return
 	fi
 
@@ -493,12 +502,12 @@ start_pf_ring() {
 		
 		echo "PF_RING not enabled: please touch /etc/pf_ring/pf_ring.start"
 		[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-		[ ${DISTRO} == "centos" ] && echo_success && echo
+		[ ${DISTRO} == "rh" ] && echo_success && echo
 		return
 	fi
 
 	[ ${DISTRO} == "debian" ] && log_daemon_msg "Starting PF_RING module"
-	[ ${DISTRO} == "centos" ] && echo -n "Starting PF_RING module: "
+	[ ${DISTRO} == "rh" ] && echo -n "Starting PF_RING module: "
 
 	# Set CPU freq to performance useful in particular
 	# on CPUs with aggressive scaling such as Intel E5
@@ -543,7 +552,7 @@ start_pf_ring() {
 				log_failure_msg "${MSG}"
 				log_end_msg $ERROR
 				exit 99
-			elif [ ${DISTRO} == "centos" ]; then
+			elif [ ${DISTRO} == "rh" ]; then
 				echo -n ${MSG} 
 				echo_failure; echo
 				exit 99
@@ -576,14 +585,13 @@ start_pf_ring() {
 	start_interfaces 1
 
 	[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-	[ ${DISTRO} == "centos" ] && echo_success && echo
+	[ ${DISTRO} == "rh" ] && echo_success && echo
 }
-
 
 stop_pf_ring() {
 
 	[ ${DISTRO} == "debian" ] && log_daemon_msg "Stopping PF_RING module"
-	[ ${DISTRO} == "centos" ] && echo -n "Stopping PF_RING module: "
+	[ ${DISTRO} == "rh" ] && echo -n "Stopping PF_RING module: "
 
 	check_pf_ring stop
 
@@ -645,12 +653,12 @@ stop_pf_ring() {
 	if [ ${NUM} -gt 0 ]; then
 		MSG="unable to unload PF_RING module"
 			[ ${DISTRO} == "debian" ] && log_failure_msg "$MSG"
-			[ ${DISTRO} == "centos" ] && echo_failure
+			[ ${DISTRO} == "rh" ] && echo_failure
 			ERROR=1
 	fi
 	fi
 	[ ${DISTRO} == "debian" ] && log_end_msg $ERROR
-	[ ${DISTRO} == "centos" ] && echo_success && echo
+	[ ${DISTRO} == "rh" ] && echo_success && echo
 }
 
 check_driver_status() {
