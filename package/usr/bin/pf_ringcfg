@@ -21,10 +21,19 @@ DISTRO="unknown"
 if [ -f /lib/lsb/init-functions ]; then
 	DISTRO="debian"
 	. /lib/lsb/init-functions
-fi
-if [ -f /etc/init.d/functions ]; then
-	DISTRO="centos"
+elif [ -f /etc/init.d/functions ]; then
+	DISTRO="rh"
 	. /etc/init.d/functions
+elif [ -e /etc/redhat-release ]; then
+	DISTRO="rh"
+	echo_failure() {
+		echo -n "[FAILURE]"
+		echo -ne "\r"
+	}
+	echo_success() {
+		echo -n "[ OK ]"
+		echo -ne "\r"
+	}
 fi
 
 if [[ $EUID -ne 0 ]]; then
@@ -37,7 +46,7 @@ pfring_installed() {
 		if [ `dpkg -l | grep pfring-dkms | wc -l` -gt 0 ]; then
 			return 0
 		fi
-	elif [ ${DISTRO} == "centos" ]; then
+	elif [ ${DISTRO} == "rh" ]; then
 		if [ `rpm -qa | grep pfring-dkms | wc -l` -gt 0 ]; then
 			return 0
 		fi
@@ -51,7 +60,7 @@ zc_driver_installed() {
 		if [ `dpkg -l | grep ${MODEL}-zc-dkms | wc -l` -gt 0 ]; then
 			return 0
 		fi
-	elif [ ${DISTRO} == "centos" ]; then
+	elif [ ${DISTRO} == "rh" ]; then
 		if [ `rpm -qa | grep ${MODEL}-zc | wc -l` -gt 0 ]; then
 			return 0
 		fi
@@ -64,7 +73,7 @@ install_pfring() {
 		apt-get clean all
 		apt-get update
 		apt-get install pfring-dkms
-	elif [ ${DISTRO} == "centos" ]; then
+	elif [ ${DISTRO} == "rh" ]; then
 		yum clean all
 		yum update
 		yum install pfring-dkms
@@ -78,7 +87,7 @@ install_zc_driver() {
 		apt-get clean all
 		apt-get update
 		apt-get install pfring-dkms ${MODEL}-zc-dkms
-	elif [ ${DISTRO} == "centos" ]; then
+	elif [ ${DISTRO} == "rh" ]; then
 		yum clean all
 		yum update
 		yum install pfring-dkms ${MODEL}-zc
