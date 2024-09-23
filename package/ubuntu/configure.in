@@ -23,13 +23,13 @@ PRE_BUILD_EXAMPLES="pre-build-examples"
 PRE_DEP="pre"
 if test $MACHINE = "x86_64"; then
    EXTN="amd64"
+elif test $MACHINE = "aarch64"; then
+   EXTN="arm64"
+elif test $MACHINE = "i686"; then 
+   EXTN="i386"
 else
-   if test $MACHINE = "i686"; then 
-     EXTN="i386"
-   else
      PRE_DEP=""
      PRE_BUILD_EXAMPLES=""
-   fi
 fi
 
 if [ test -d $HOME/nDPI ]; then
