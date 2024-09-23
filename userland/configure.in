@@ -79,14 +79,14 @@ fi
 
 AR_X="ar x"
 
-if test $MACHINE = "x86_64"; then
+if [[ $MACHINE == "x86_64" ]] || [[ $MACHINE == "aarch64" ]]; then
   dnl> Check for a modern pthread library
   AC_CHECK_LIB(pthread, pthread_setaffinity_np, AC_DEFINE_UNQUOTED(HAVE_PTHREAD_SETAFFINITY_NP, 1, [libc has pthread_setaffinity_np]))
 
   if test "x$ac_cv_lib_pthread_pthread_setaffinity_np" = xyes; then
 
     AC_MSG_CHECKING([PF_RING ZC support])
-    PF_RING_ZC_LIB="libs/libpfring_zc_${MACHINE}${LIBARCH}.a"
+    PF_RING_ZC_LIB="libs/libpfring_zc_${MACHINE}${LIBARCH}.a"    
     if test -f lib/$PF_RING_ZC_LIB; then
       HAVE_PF_RING_ZC="-D HAVE_PF_RING_ZC"
       PF_RING_ZC_OBJS=`ar t lib/${PF_RING_ZC_LIB} | grep -F .o | tr '\n' ' '`
