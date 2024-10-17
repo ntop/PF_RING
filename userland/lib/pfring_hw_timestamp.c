@@ -131,11 +131,11 @@ int pfring_handle_ixia_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) {
 
 /* ********************************* */
 
-static u_int64_t last_arista_keyframe_nsec = 0;
-static u_int32_t last_arista_keyframe_ticks = 0;
+static u_int64_t last_arista_7150_keyframe_nsec = 0;
+static u_int32_t last_arista_7150_keyframe_ticks = 0;
 
-int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len,
-                                u_int64_t *ns_ts, u_int32_t *ticks_ts) {
+int pfring_read_arista_7150_keyframe(u_char *buffer, u_int32_t buffer_len,
+				     u_int64_t *ns_ts, u_int32_t *ticks_ts) {
   struct arista_7150_keyframe_hw_ts *kf;
   u_char bcmac[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
   struct ethhdr *eh = (struct ethhdr*) buffer;
@@ -176,8 +176,8 @@ int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len,
   ns = be64toh(kf->utc_nsec);
   t = ntohl(kf->asic_time.ticks);
 
-  last_arista_keyframe_nsec = ns;
-  last_arista_keyframe_ticks = t;
+  last_arista_7150_keyframe_nsec = ns;
+  last_arista_7150_keyframe_ticks = t;
 
   if (unlikely(debug_ts)) 
     printf("[ARISTA][Key-Frame] Ticks: %u UTC: %ju.%ju\n", t, ns/1000000000, ns%1000000000);
@@ -190,8 +190,8 @@ int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len,
 
 /* ********************************* */
 
-int pfring_read_arista_hw_timestamp(u_char *buffer, 
-				    u_int32_t buffer_len, u_int64_t *ns_ts) {
+int pfring_read_arista_7150_hw_timestamp(u_char *buffer, 
+					 u_int32_t buffer_len, u_int64_t *ns_ts) {
   struct arista_7150_pkt_hw_ts *fcsts;
   u_int32_t ticks;
   double delta_ticks = 0, delta_nsec;
@@ -201,15 +201,15 @@ int pfring_read_arista_hw_timestamp(u_char *buffer,
 
   ticks = ntohl(fcsts->asic.ticks);
 
-  if (last_arista_keyframe_ticks) {
-    if (ticks >= last_arista_keyframe_ticks)
-      delta_ticks = ticks - last_arista_keyframe_ticks;
+  if (last_arista_7150_keyframe_ticks) {
+    if (ticks >= last_arista_7150_keyframe_ticks)
+      delta_ticks = ticks - last_arista_7150_keyframe_ticks;
     else
       delta_ticks = 0x7FFFFFFF; /* 31 bit ticks ts */
 
     delta_nsec = delta_ticks * 2.857; /* Clock rate is 350Mhz - Tick length 20.0/7.0 */
 
-    ns = last_arista_keyframe_nsec + delta_nsec;
+    ns = last_arista_7150_keyframe_nsec + delta_nsec;
   }
 
   if (unlikely(debug_ts)) 
@@ -222,6 +222,37 @@ int pfring_read_arista_hw_timestamp(u_char *buffer,
 
 /* ********************************* */
 
+int pfring_read_arista_7280_hw_timestamp(u_char *buffer, struct pfring_pkthdr *hdr) {
+  struct ethhdr *eh = (struct ethhdr *) buffer;
+  struct arista_7280_pkt_hw_ts *fcsts;
+  u_int16_t eth_type;
+  u_int64_t ns;
+  u_int32_t tv_sec, tv_nsec;
+
+  eth_type = ntohs(eh->h_proto);
+
+  if (eth_type != 0xd28b /* Arista 7280 */)
+    return -1;
+
+  fcsts = (struct arista_7280_pkt_hw_ts *) &buffer[sizeof(struct ethhdr)];
+
+  tv_sec = ntohl(fcsts->ts.tv_sec);
+  tv_nsec = ntohl(fcsts->ts.tv_nsec);
+
+  hdr->ts.tv_sec = tv_sec;
+  hdr->ts.tv_usec = tv_nsec/1000;
+
+  ns = (((u_int64_t) tv_sec) * 1000000000) + tv_nsec;
+  hdr->extended_hdr.timestamp_ns = ns;
+
+  if (unlikely(debug_ts)) 
+    printf("[ARISTA][Packet] UTC: %u.%uns\n", tv_sec, tv_nsec);
+
+  return 0;
+}
+
+/* ********************************* */
+
 int pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr) {
   u_int64_t ns;
   u_int32_t ticks;
@@ -229,12 +260,17 @@ int pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr)
   if(unlikely(hdr->caplen != hdr->len))
     return -1; /* full packet only */
 
-  if (pfring_read_arista_keyframe(buffer, hdr->len, &ns, &ticks) == 0) {
+  if (pfring_read_arista_7280_hw_timestamp(buffer, hdr) == 0) {
+    /* This is a 7280 timestamped packet */
+    return 0;
+
+  } else if (pfring_read_arista_7150_keyframe(buffer, hdr->len, &ns, &ticks) == 0) {
     /* This was a keyframe */
     return 1; /* skip this packet */
+
   } else {
-    /* This is a packet, reading the timestamp */
-    pfring_read_arista_hw_timestamp(buffer, hdr->len, &ns);
+    /* This is a 7150 timestamped packet, reading the timestamp */
+    pfring_read_arista_7150_hw_timestamp(buffer, hdr->len, &ns);
     hdr->caplen = hdr->len = hdr->len - sizeof(struct arista_7150_pkt_hw_ts);
     hdr->ts.tv_sec = ns/1000000000;
     hdr->ts.tv_usec = (ns%1000000000)/1000;

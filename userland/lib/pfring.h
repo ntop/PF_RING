@@ -1322,7 +1322,7 @@ int pfring_handle_metawatch_hw_timestamp(u_char* buffer, struct pfring_pkthdr *h
  * @param ticks_ts          The ticks will be placed here.
  * @return 0 on success, a negative number otherwise.
  */
-int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts, u_int32_t *ticks_ts);
+int pfring_read_arista_7150_keyframe(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts, u_int32_t *ticks_ts);
 
 /**
  * Reads a ARISTA-formatted timestamp from an incoming packet and puts it into the timestamp variable.
@@ -1331,7 +1331,7 @@ int pfring_read_arista_keyframe(u_char *buffer, u_int32_t buffer_len, u_int64_t 
  * @param ns_ts             If found the hardware timestamp will be placed here
  * @return The length of the ARISTA timestamp.
  */
-int pfring_read_arista_hw_timestamp(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts);
+int pfring_read_arista_7150_hw_timestamp(u_char *buffer, u_int32_t buffer_len, u_int64_t *ns_ts);
 
 /**
  * Strip a ARISTA-formatted timestamp from an incoming packet. If the timestamp is found, the

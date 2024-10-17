@@ -228,8 +228,11 @@ static int __pfring_parse_tunneled_pkt(u_char *data, struct pfring_pkthdr *hdr, 
 int pfring_parse_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int8_t level /* L2..L4, 5 (tunnel) */,
 		     u_int8_t add_timestamp /* 0,1 */, u_int8_t add_hash /* 0,1 */) {
   struct ethhdr *eh = (struct ethhdr*) data;
-  u_int32_t data_len = hdr->caplen, displ = 0, ip_len;
-  u_int16_t analyzed = 0, fragment_offset = 0;
+  u_int32_t data_len = hdr->caplen;
+  u_int32_t displ = sizeof(struct ethhdr);
+  u_int32_t ip_len;
+  u_int16_t analyzed = 0;
+  u_int16_t fragment_offset = 0;
 
   hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id = NO_TUNNEL_ID;
 
@@ -248,13 +251,19 @@ int pfring_parse_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int8_t level /* 
   hdr->extended_hdr.parsed_pkt.offset.vlan_offset = 0;
   hdr->extended_hdr.parsed_pkt.vlan_id = 0; /* Any VLAN */
 
+  if (hdr->extended_hdr.parsed_pkt.eth_type == 0xd28b /* Arista 7280 */) {
+    struct ethhdr *dummy_eh = (struct ethhdr *) &data[sizeof(struct ethhdr)];
+    displ += 14;
+    hdr->extended_hdr.parsed_pkt.eth_type = ntohs(dummy_eh->h_proto);
+  }
+
 #ifndef VLAN_VID_MASK
 #define VLAN_VID_MASK 0x0fff
 #endif
 
   if (hdr->extended_hdr.parsed_pkt.eth_type == 0x8100 /* 802.1q (VLAN) */) {
     struct eth_vlan_hdr *vh;
-    hdr->extended_hdr.parsed_pkt.offset.vlan_offset = sizeof(struct ethhdr);
+    hdr->extended_hdr.parsed_pkt.offset.vlan_offset = displ;
     vh = (struct eth_vlan_hdr *) &data[hdr->extended_hdr.parsed_pkt.offset.vlan_offset];
     hdr->extended_hdr.parsed_pkt.vlan_id = ntohs(vh->h_vlan_id) & VLAN_VID_MASK /* 0x0fff */;
     hdr->extended_hdr.parsed_pkt.eth_type = ntohs(vh->h_proto);
@@ -274,7 +283,7 @@ int pfring_parse_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int8_t level /* 
     }
   }
 
-  hdr->extended_hdr.parsed_pkt.offset.l3_offset = hdr->extended_hdr.parsed_pkt.offset.eth_offset + displ + sizeof(struct ethhdr);
+  hdr->extended_hdr.parsed_pkt.offset.l3_offset = hdr->extended_hdr.parsed_pkt.offset.eth_offset + displ;
 
  L3:
 
