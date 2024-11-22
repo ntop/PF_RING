@@ -1,7 +1,7 @@
 AF_XDP Support
 ==============
 
-PF_RING since version 7.5 (note: 7.9 is actually recommended) includes support for AF_XDP adapters,
+PF_RING (7.9 or later) includes support for AF_XDP adapters,
 when compiling from source code this is enabled by default (unless the *--disable-xdp*
 configure flag is specified).
 
