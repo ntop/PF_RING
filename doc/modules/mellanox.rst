@@ -42,6 +42,11 @@ Recommended firmware versions are:
  - ConnectX-6: >= 20.27.0090
  - ConnectX-6 Dx: >= 22.27.0090
 
+Bluefield adapters are also supported. Please note that this module
+only detects RDMA capable devices. If some devices are not RDMA-capable
+they might not appear in the list of recognized interfaces when running
+use pfcount -L -v 1.
+
 Configuration
 -------------
 
