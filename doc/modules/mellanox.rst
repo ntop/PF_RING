@@ -45,7 +45,7 @@ Recommended firmware versions are:
 Bluefield adapters are also supported. Please note that this module
 only detects RDMA capable devices. If some devices are not RDMA-capable
 they might not appear in the list of recognized interfaces when running
-use pfcount -L -v 1.
+pfcount -L -v 1 on Bluefield.
 
 Configuration
 -------------
