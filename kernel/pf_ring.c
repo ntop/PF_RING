@@ -5790,8 +5790,7 @@ static int do_memory_mmap(struct vm_area_struct *vma, unsigned long start_off, u
   unsigned long start;
 
   /* we do not want to have this area swapped out, lock it */
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0) && \
-    !(defined(REDHAT_PATCHED_KERNEL) && RHEL_MAJOR == 9 && RHEL_MINOR == 5))
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,3,0) && !(defined(REDHAT_PATCHED_KERNEL) && RHEL_MAJOR >= 9))
   vma->vm_flags |= flags;
 #else
   vm_flags_set(vma, flags);
