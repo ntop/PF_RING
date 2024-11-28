@@ -8098,10 +8098,16 @@ void i40e_print_link_message(struct i40e_vsi *vsi, bool isup)
 			    "NIC Link is Up, %sbps Full Duplex, Requested FEC: %s, Negotiated FEC: %s, Autoneg: %s, Flow Control: %s\n",
 			    speed, req_fec, fec, an, fc);
 	} else {
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee edata;
+
+		memzero_explicit(&edata, sizeof(edata));
+#else
 		struct ethtool_eee edata;
 
 		edata.supported = 0;
 		edata.eee_enabled = false;
+#endif
 		if (vsi->netdev->ethtool_ops->get_eee)
 			vsi->netdev->ethtool_ops->get_eee(vsi->netdev, &edata);
 

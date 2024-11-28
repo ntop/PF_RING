@@ -7196,7 +7196,36 @@ static int i40e_get_module_eeprom(struct net_device *netdev,
 #endif /* ETHTOOL_GMODULEINFO */
 
 #ifdef ETHTOOL_GEEE
-static int i40e_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
+
+#ifdef HAVE_ETHTOOL_KEEE
+static void i40e_eee_capability_to_kedata_supported(__le16 eee_capability_,
+						    unsigned long *supported)
+{
+	const int eee_capability = le16_to_cpu(eee_capability_);
+	static const int lut[] = {
+		ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+		ETHTOOL_LINK_MODE_1000baseT_Full_BIT,
+		ETHTOOL_LINK_MODE_10000baseT_Full_BIT,
+		ETHTOOL_LINK_MODE_1000baseKX_Full_BIT,
+		ETHTOOL_LINK_MODE_10000baseKX4_Full_BIT,
+		ETHTOOL_LINK_MODE_10000baseKR_Full_BIT,
+		ETHTOOL_LINK_MODE_40000baseKR4_Full_BIT,
+	};
+
+	linkmode_zero(supported);
+	for (unsigned int i = ARRAY_SIZE(lut); i--; )
+		if (eee_capability & BIT(i + 1))
+			linkmode_set_bit(lut[i], supported);
+}
+#endif
+
+static int i40e_get_eee(struct net_device *netdev,
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+		)
 {
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
 	struct i40e_aq_get_phy_abilities_resp phy_cfg;
@@ -7216,17 +7245,31 @@ static int i40e_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 	if (phy_cfg.eee_capability == 0)
 		return -EOPNOTSUPP;
 
+#ifdef HAVE_ETHTOOL_KEEE
+	i40e_eee_capability_to_kedata_supported(phy_cfg.eee_capability,
+						edata->supported);
+	linkmode_copy(edata->lp_advertised, edata->supported);
+#else
 	edata->supported = SUPPORTED_Autoneg;
 	edata->lp_advertised = edata->supported;
+#endif
 
 	/* Get current configuration */
 	status = i40e_aq_get_phy_capabilities(hw, false, false, &phy_cfg, NULL);
 	if (status)
 		return -EAGAIN;
 
+#ifdef HAVE_ETHTOOL_KEEE
+	linkmode_zero(edata->advertised);
+	if (phy_cfg.eee_capability)
+		linkmode_copy(edata->advertised, edata->supported);
+	edata->eee_enabled = !!phy_cfg.eee_capability;
+	edata->tx_lpi_enabled = pf->stats.tx_lpi_status;
+#else
 	edata->advertised = phy_cfg.eee_capability ? SUPPORTED_Autoneg : 0U;
 	edata->eee_enabled = !!edata->advertised;
 	edata->tx_lpi_enabled = pf->stats.tx_lpi_status;
+#endif
 
 	edata->eee_active = pf->stats.tx_lpi_status && pf->stats.rx_lpi_status;
 
@@ -7236,7 +7279,12 @@ static int i40e_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 
 #ifdef ETHTOOL_SEEE
 static int i40e_is_eee_param_supported(struct net_device *netdev,
-				       struct ethtool_eee *edata)
+#ifdef HAVE_ETHTOOL_KEEE
+				       struct ethtool_keee *edata
+#else
+				       struct ethtool_eee *edata
+#endif
+				       )
 {
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
 	struct i40e_vsi *vsi = np->vsi;
@@ -7245,7 +7293,11 @@ static int i40e_is_eee_param_supported(struct net_device *netdev,
 		u32 value;
 		const char *name;
 	} param[] = {
+#ifdef HAVE_ETHTOOL_KEEE
+		{!!(edata->advertised[0] & ~edata->supported[0]), "advertise"},
+#else
 		{edata->advertised & ~SUPPORTED_Autoneg, "advertise"},
+#endif
 		{edata->tx_lpi_timer, "tx-timer"},
 		{edata->tx_lpi_enabled != pf->stats.tx_lpi_status, "tx-lpi"}
 	};
@@ -7263,7 +7315,13 @@ static int i40e_is_eee_param_supported(struct net_device *netdev,
 	return 0;
 }
 
-static int i40e_set_eee(struct net_device *netdev, struct ethtool_eee *edata)
+static int i40e_set_eee(struct net_device *netdev,
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+		)
 {
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
 	struct i40e_aq_get_phy_abilities_resp abilities;
