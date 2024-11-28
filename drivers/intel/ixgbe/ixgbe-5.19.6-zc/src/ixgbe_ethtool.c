@@ -4739,6 +4739,18 @@ static int ixgbe_get_module_eeprom(struct net_device *dev,
 
 #ifdef ETHTOOL_GEEE
 
+#ifdef HAVE_ETHTOOL_KEEE
+static const struct {
+	ixgbe_link_speed mac_speed;
+	u32 link_mode;
+} ixgbe_ls_map[] = {
+	{ IXGBE_LINK_SPEED_10_FULL, ETHTOOL_LINK_MODE_10baseT_Full_BIT },
+	{ IXGBE_LINK_SPEED_100_FULL, ETHTOOL_LINK_MODE_100baseT_Full_BIT },
+	{ IXGBE_LINK_SPEED_1GB_FULL, ETHTOOL_LINK_MODE_1000baseT_Full_BIT },
+	{ IXGBE_LINK_SPEED_2_5GB_FULL, ETHTOOL_LINK_MODE_2500baseX_Full_BIT },
+	{ IXGBE_LINK_SPEED_10GB_FULL, ETHTOOL_LINK_MODE_10000baseT_Full_BIT },
+};
+#else
 static const struct {
 	ixgbe_link_speed mac_speed;
 	u32 supported;
@@ -4749,7 +4761,21 @@ static const struct {
 	{ IXGBE_LINK_SPEED_2_5GB_FULL, SUPPORTED_2500baseX_Full },
 	{ IXGBE_LINK_SPEED_10GB_FULL, SUPPORTED_10000baseT_Full },
 };
+#endif
 
+#ifdef HAVE_ETHTOOL_KEEE
+static const struct {
+	u32 lp_advertised;
+	u32 link_mode;
+} ixgbe_lp_map[] = {
+	{ FW_PHY_ACT_UD_2_100M_TX_EEE, ETHTOOL_LINK_MODE_100baseT_Full_BIT },
+	{ FW_PHY_ACT_UD_2_1G_T_EEE, ETHTOOL_LINK_MODE_1000baseT_Full_BIT },
+	{ FW_PHY_ACT_UD_2_10G_T_EEE, ETHTOOL_LINK_MODE_10000baseT_Full_BIT },
+	{ FW_PHY_ACT_UD_2_1G_KX_EEE, ETHTOOL_LINK_MODE_1000baseKX_Full_BIT },
+	{ FW_PHY_ACT_UD_2_10G_KX4_EEE, ETHTOOL_LINK_MODE_10000baseKX4_Full_BIT },
+	{ FW_PHY_ACT_UD_2_10G_KR_EEE, ETHTOOL_LINK_MODE_10000baseKR_Full_BIT},
+};
+#else
 static const struct {
 	u32 lp_advertised;
 	u32 mac_speed;
@@ -4761,10 +4787,20 @@ static const struct {
 	{ FW_PHY_ACT_UD_2_10G_KX4_EEE, SUPPORTED_10000baseKX4_Full },
 	{ FW_PHY_ACT_UD_2_10G_KR_EEE, SUPPORTED_10000baseKR_Full},
 };
+#endif
 
 static int
-ixgbe_get_eee_fw(struct ixgbe_adapter *adapter, struct ethtool_eee *edata)
+ixgbe_get_eee_fw(struct ixgbe_adapter *adapter,
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+	)
 {
+#ifdef HAVE_ETHTOOL_KEEE
+	__ETHTOOL_DECLARE_LINK_MODE_MASK(common);
+#endif
 	u32 info[FW_PHY_ACT_DATA_COUNT] = { 0 };
 	struct ixgbe_hw *hw = &adapter->hw;
 	s32 rc;
@@ -4774,33 +4810,69 @@ ixgbe_get_eee_fw(struct ixgbe_adapter *adapter, struct ethtool_eee *edata)
 	if (rc)
 		return rc;
 
+#ifndef HAVE_ETHTOOL_KEEE
 	edata->lp_advertised = 0;
+#endif
 	for (i = 0; i < ARRAY_SIZE(ixgbe_lp_map); ++i) {
 		if (info[0] & ixgbe_lp_map[i].lp_advertised)
+#ifdef HAVE_ETHTOOL_KEEE
+			linkmode_set_bit(ixgbe_lp_map[i].link_mode,
+					 edata->lp_advertised);
+#else
 			edata->lp_advertised |= ixgbe_lp_map[i].mac_speed;
+#endif
 	}
 
+#ifndef HAVE_ETHTOOL_KEEE
 	edata->supported = 0;
+#endif
 	for (i = 0; i < ARRAY_SIZE(ixgbe_ls_map); ++i) {
 		if (hw->phy.eee_speeds_supported & ixgbe_ls_map[i].mac_speed)
+#ifdef HAVE_ETHTOOL_KEEE
+			linkmode_set_bit(ixgbe_lp_map[i].link_mode,
+					 edata->supported);
+#else
 			edata->supported |= ixgbe_ls_map[i].supported;
+#endif
 	}
 
+#ifndef HAVE_ETHTOOL_KEEE
 	edata->advertised = 0;
+#endif
 	for (i = 0; i < ARRAY_SIZE(ixgbe_ls_map); ++i) {
 		if (hw->phy.eee_speeds_advertised & ixgbe_ls_map[i].mac_speed)
+#ifdef HAVE_ETHTOOL_KEEE
+			linkmode_set_bit(ixgbe_lp_map[i].link_mode,
+					 edata->advertised);
+#else
 			edata->advertised |= ixgbe_ls_map[i].supported;
+#endif
 	}
 
+#ifdef HAVE_ETHTOOL_KEEE
+	edata->eee_enabled = !linkmode_empty(edata->advertised);
+	edata->tx_lpi_enabled = edata->eee_enabled;
+
+	linkmode_and(common, edata->advertised, edata->lp_advertised);
+	edata->eee_active = !linkmode_empty(common);
+#else
 	edata->eee_enabled = !!edata->advertised;
 	edata->tx_lpi_enabled = edata->eee_enabled;
+
 	if (edata->advertised & edata->lp_advertised)
 		edata->eee_active = true;
+#endif
 
 	return 0;
 }
 
-static int ixgbe_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
+static int ixgbe_get_eee(struct net_device *netdev, 
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+	)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	struct ixgbe_hw *hw = &adapter->hw;
@@ -4820,23 +4892,74 @@ static int ixgbe_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 #endif /* ETHTOOL_GEEE */
 
 #ifdef ETHTOOL_SEEE
-static int ixgbe_set_eee(struct net_device *netdev, struct ethtool_eee *edata)
+static int ixgbe_set_eee(struct net_device *netdev,
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+		)
 {
 	struct ixgbe_adapter *adapter = netdev_priv(netdev);
 	struct ixgbe_hw *hw = &adapter->hw;
+#ifdef HAVE_ETHTOOL_KEEE
+	struct ethtool_keee eee_data; /* structure storing current eee settings */
+#else
 	struct ethtool_eee eee_data; /* structure storing current eee settings */
+#endif
 	s32 ret_val;
 
 	if (!(hw->mac.ops.setup_eee &&
 	    (adapter->flags2 & IXGBE_FLAG2_EEE_CAPABLE)))
 		return -EOPNOTSUPP;
 
+#ifdef HAVE_ETHTOOL_KEEE
+	memset(&eee_data, 0, sizeof(struct ethtool_keee));
+#else
 	memset(&eee_data, 0, sizeof(struct ethtool_eee));
+#endif
 
 	ret_val = ixgbe_get_eee(netdev, &eee_data);
 	if (ret_val)
 		return ret_val;
 
+#ifdef HAVE_ETHTOOL_KEEE
+	if (eee_data.eee_enabled && !edata->eee_enabled) {
+		if (eee_data.tx_lpi_enabled != edata->tx_lpi_enabled) {
+			e_err(drv, "Setting EEE tx-lpi is not supported\n");
+			return -EINVAL;
+		}
+
+		if (eee_data.tx_lpi_timer != edata->tx_lpi_timer) {
+			e_err(drv,
+			      "Setting EEE Tx LPI timer is not supported\n");
+			return -EINVAL;
+		}
+
+		if (!linkmode_equal(eee_data.advertised, edata->advertised)) {
+			e_err(drv,
+			      "Setting EEE advertised speeds is not supported\n");
+			return -EINVAL;
+		}
+	}
+
+	if (eee_data.eee_enabled != edata->eee_enabled) {
+		if (edata->eee_enabled) {
+			adapter->flags2 |= IXGBE_FLAG2_EEE_ENABLED;
+			hw->phy.eee_speeds_advertised =
+						   hw->phy.eee_speeds_supported;
+		} else {
+			adapter->flags2 &= ~IXGBE_FLAG2_EEE_ENABLED;
+			hw->phy.eee_speeds_advertised = 0;
+		}
+
+		/* reset link */
+		if (netif_running(netdev))
+			ixgbe_reinit_locked(adapter);
+		else
+			ixgbe_reset(adapter);
+	}
+#else
 	if (eee_data.tx_lpi_enabled != edata->tx_lpi_enabled) {
 		e_dev_err("Setting EEE tx-lpi is not supported\n");
 		return -EINVAL;
@@ -4869,6 +4992,7 @@ static int ixgbe_set_eee(struct net_device *netdev, struct ethtool_eee *edata)
 		ixgbe_reinit_locked(adapter);
 	else
 		ixgbe_reset(adapter);
+#endif
 
 	return 0;
 }
