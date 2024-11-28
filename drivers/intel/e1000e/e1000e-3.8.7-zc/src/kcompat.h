@@ -7496,6 +7496,11 @@ static inline int pci_enable_pcie_error_reporting(struct pci_dev __always_unused
         return 0;
 }
 #define pci_disable_pcie_error_reporting(dev) do {} while (0)
+
+#if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,5))
+#define HAVE_ETHTOOL_KEEE
+#endif
+
 #endif
 
 #endif

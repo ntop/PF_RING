@@ -2643,7 +2643,13 @@ static int e1000_get_rxnfc(struct net_device *netdev,
 #endif /* ETHTOOL_GRXRINGS */
 
 #ifdef ETHTOOL_GEEE
-static int e1000e_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
+static int e1000e_get_eee(struct net_device *netdev,
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+		)
 {
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
@@ -2680,16 +2686,28 @@ static int e1000e_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 	ret_val = e1000_read_emi_reg_locked(hw, cap_addr, &phy_data);
 	if (ret_val)
 		goto release;
+#ifdef HAVE_ETHTOOL_KEEE
+	mii_eee_cap1_mod_linkmode_t(edata->supported, phy_data);
+#else
 	edata->supported = mmd_eee_cap_to_ethtool_sup_t(phy_data);
+#endif
 
 	/* EEE Advertised */
+#ifdef HAVE_ETHTOOL_KEEE
+	mii_eee_cap1_mod_linkmode_t(edata->advertised, adapter->eee_advert);
+#else
 	edata->advertised = mmd_eee_adv_to_ethtool_adv_t(adapter->eee_advert);
+#endif
 
 	/* EEE Link Partner Advertised */
 	ret_val = e1000_read_emi_reg_locked(hw, lpa_addr, &phy_data);
 	if (ret_val)
 		goto release;
+#ifdef HAVE_ETHTOOL_KEEE
+	mii_eee_cap1_mod_linkmode_t(edata->lp_advertised, phy_data);
+#else
 	edata->lp_advertised = mmd_eee_adv_to_ethtool_adv_t(phy_data);
+#endif
 
 	/* EEE PCS Status */
 	ret_val = e1000_read_emi_reg_locked(hw, pcs_stat_addr, &phy_data);
@@ -2721,11 +2739,23 @@ release:
 #endif /* ETHTOOL_GEEE */
 
 #ifdef ETHTOOL_SEEE
-static int e1000e_set_eee(struct net_device *netdev, struct ethtool_eee *edata)
+static int e1000e_set_eee(struct net_device *netdev,
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+		)
 {
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
+#ifdef HAVE_ETHTOOL_KEEE
+	__ETHTOOL_DECLARE_LINK_MODE_MASK(supported) = {};
+	__ETHTOOL_DECLARE_LINK_MODE_MASK(tmp) = {};
+	struct ethtool_keee eee_curr;
+#else
 	struct ethtool_eee eee_curr;
+#endif
 	s32 ret_val;
 
 	ret_val = e1000e_get_eee(netdev, &eee_curr);
@@ -2742,12 +2772,25 @@ static int e1000e_set_eee(struct net_device *netdev, struct ethtool_eee *edata)
 		return -EINVAL;
 	}
 
+#ifdef HAVE_ETHTOOL_KEEE
+	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT,
+			 supported);
+	linkmode_set_bit(ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+			 supported);
+
+	if (linkmode_andnot(tmp, edata->advertised, supported)) {
+#else
 	if (edata->advertised & ~(ADVERTISE_100_FULL | ADVERTISE_1000_FULL)) {
+#endif
 		e_err("EEE advertisement supports only 100TX and/or 1000T full-duplex\n");
 		return -EINVAL;
 	}
 
+#ifdef HAVE_ETHTOOL_KEEE
+	adapter->eee_advert = linkmode_to_mii_eee_cap1_t(edata->advertised);
+#else
 	adapter->eee_advert = ethtool_adv_to_mmd_eee_adv_t(edata->advertised);
+#endif
 
 	hw->dev_spec.ich8lan.eee_disable = !edata->eee_enabled;
 
