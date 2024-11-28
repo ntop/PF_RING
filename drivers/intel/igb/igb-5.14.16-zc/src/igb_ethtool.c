@@ -2873,7 +2873,13 @@ static void igb_get_dmac(struct net_device *netdev,
 #endif
 
 #ifdef ETHTOOL_GEEE
-static int igb_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
+static int igb_get_eee(struct net_device *netdev, 
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+		)
 {
 	struct igb_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
@@ -2884,12 +2890,22 @@ static int igb_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 	    (hw->phy.media_type != e1000_media_type_copper))
 		return -EOPNOTSUPP;
 
+#ifdef HAVE_ETHTOOL_KEEE
+	linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT, edata->supported);
+	linkmode_set_bit(ETHTOOL_LINK_MODE_100baseT_Full_BIT, edata->supported);
+#else
 	edata->supported = (SUPPORTED_1000baseT_Full |
 			    SUPPORTED_100baseT_Full);
+#endif
 
 	if (!hw->dev_spec._82575.eee_disable)
+#ifdef HAVE_ETHTOOL_KEEE
+		mii_eee_cap1_mod_linkmode_t(edata->advertised,
+					    adapter->eee_advert);
+#else
 		edata->advertised =
 			mmd_eee_adv_to_ethtool_adv_t(adapter->eee_advert);
+#endif
 
 	/* The IPCNFG and EEER registers are not supported on I354. */
 	if (hw->mac.type == e1000_i354) {
@@ -2915,7 +2931,11 @@ static int igb_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 		if (ret_val)
 			return -ENODATA;
 
+#ifdef HAVE_ETHTOOL_KEEE
+		mii_eee_cap1_mod_linkmode_t(edata->lp_advertised, phy_data);
+#else
 		edata->lp_advertised = mmd_eee_adv_to_ethtool_adv_t(phy_data);
+#endif
 
 		break;
 	case e1000_i354:
@@ -2927,7 +2947,11 @@ static int igb_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 		if (ret_val)
 			return -ENODATA;
 
+#ifdef HAVE_ETHTOOL_KEEE
+		mii_eee_cap1_mod_linkmode_t(edata->lp_advertised, phy_data);
+#else
 		edata->lp_advertised = mmd_eee_adv_to_ethtool_adv_t(phy_data);
+#endif
 
 		break;
 	default:
@@ -2948,7 +2972,11 @@ static int igb_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 		edata->eee_enabled = false;
 		edata->eee_active = false;
 		edata->tx_lpi_enabled = false;
+#ifdef HAVE_ETHTOOL_KEEE
+		linkmode_zero(edata->advertised);
+#else
 		edata->advertised &= ~edata->advertised;
+#endif
 	}
 
 	return 0;
@@ -2957,11 +2985,22 @@ static int igb_get_eee(struct net_device *netdev, struct ethtool_eee *edata)
 
 #ifdef ETHTOOL_SEEE
 static int igb_set_eee(struct net_device *netdev,
-		       struct ethtool_eee *edata)
+#ifdef HAVE_ETHTOOL_KEEE
+		struct ethtool_keee *edata
+#else
+		struct ethtool_eee *edata
+#endif
+		)
 {
 	struct igb_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
+#ifdef HAVE_ETHTOOL_KEEE
+	__ETHTOOL_DECLARE_LINK_MODE_MASK(supported) = {};
+	__ETHTOOL_DECLARE_LINK_MODE_MASK(tmp) = {};
+	struct ethtool_keee eee_curr;
+#else
 	struct ethtool_eee eee_curr;
+#endif
 	bool adv1g_eee = true, adv100m_eee = true;
 	s32 ret_val;
 
@@ -2987,22 +3026,43 @@ static int igb_set_eee(struct net_device *netdev,
 			return -EINVAL;
 		}
 
+#ifdef HAVE_ETHTOOL_KEEE
+		linkmode_set_bit(ETHTOOL_LINK_MODE_1000baseT_Full_BIT,
+				 supported);
+		linkmode_set_bit(ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+				 supported);
+		if (linkmode_andnot(tmp, edata->advertised, supported)) {
+#else
 		if (!edata->advertised || (edata->advertised &
 				 ~(ADVERTISE_100_FULL | ADVERTISE_1000_FULL))) {
+#endif
 			dev_err(pci_dev_to_dev(adapter->pdev),
 				"EEE Advertisement supports 100Base-Tx Full Duplex(0x08) 1000Base-T Full Duplex(0x20) or both(0x28)\n");
 			return -EINVAL;
 		}
+
+#ifdef HAVE_ETHTOOL_KEEE
+		adv100m_eee = linkmode_test_bit(
+			ETHTOOL_LINK_MODE_100baseT_Full_BIT,
+			edata->advertised);
+		adv1g_eee = linkmode_test_bit(
+			ETHTOOL_LINK_MODE_1000baseT_Full_BIT,
+			edata->advertised);
+#else
 		adv100m_eee = !!(edata->advertised & ADVERTISE_100_FULL);
 		adv1g_eee = !!(edata->advertised & ADVERTISE_1000_FULL);
-
+#endif
 	} else if (!edata->eee_enabled) {
 		dev_err(pci_dev_to_dev(adapter->pdev),
 			"Setting EEE options is not supported with EEE disabled\n");
 			return -EINVAL;
 		}
 
+#ifdef HAVE_ETHTOOL_KEEE
+	adapter->eee_advert = linkmode_to_mii_eee_cap1_t(edata->advertised);
+#else
 	adapter->eee_advert = ethtool_adv_to_mmd_eee_adv_t(edata->advertised);
+#endif
 
 	if (hw->dev_spec._82575.eee_disable != !edata->eee_enabled) {
 		hw->dev_spec._82575.eee_disable = !edata->eee_enabled;
