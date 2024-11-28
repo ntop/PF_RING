@@ -1382,8 +1382,12 @@ ice_construct_skb(struct ice_rx_ring *rx_ring, struct ice_rx_buf *rx_buf,
 	net_prefetch(xdp->data);
 
 	/* allocate a skb to store the frags */
+#if 1
+	skb = napi_alloc_skb(&rx_ring->q_vector->napi, ICE_RX_HDR_SIZE);
+#else
 	skb = __napi_alloc_skb(&rx_ring->q_vector->napi, ICE_RX_HDR_SIZE,
 			       GFP_ATOMIC | __GFP_NOWARN);
+#endif
 	if (unlikely(!skb))
 		return NULL;
 

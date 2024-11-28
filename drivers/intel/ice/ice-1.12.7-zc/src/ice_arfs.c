@@ -411,6 +411,9 @@ ice_arfs_build_entry(struct ice_vsi *vsi, const struct flow_keys *fk,
 #endif /* ICE_ADD_PROBES */
 
 	arfs_entry->flow_id = flow_id;
+#ifndef RPS_NO_FILTER
+#define RPS_NO_FILTER 0xffff
+#endif
 	fltr_info->fltr_id =
 		atomic_inc_return(vsi->arfs_last_fltr_id) % RPS_NO_FILTER;
 
