@@ -168,6 +168,21 @@ do is to create a /etc/pf_ring/post script as in the example below:
    echo "ifconfig eth0 192.168.1.1" > /etc/pf_ring/post
    chmod +x /etc/pf_ring/post
 
+Offloads
+--------
+
+The pf_ring service by default turns off all offloads for the network interfaces on the machine,
+as those offloads modify packets (e.g. the GRO merges multiple packets together in a single one)
+and this behaviur is not desirable when monitoring traffic as that leads to bad metrics 
+(e.g. number of packets on the wire, packet size, etc). However, this may affect the performance 
+when using the interfaces for host connectivity, and can be disabled by creating a `keepoffload`
+file (if pf_ring is already running, reboot the machine to make it effective).
+
+.. code-block:: console
+
+   touch /etc/pf_ring/keepoffload
+
+
 Virtual Functions Configuration
 -------------------------------
 
