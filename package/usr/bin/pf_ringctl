@@ -36,6 +36,7 @@ MTU_CONFIG="${PF_RING_CONFIG_DIR}/mtu.conf"
 FORCESTART=0
 FORCESTART_FILE="${PF_RING_CONFIG_DIR}/pf_ring.start"
 DRIVER_FORCESTART_FILE="${PF_RING_CONFIG_DIR}/forcestart" # touch to load zc even if it matches the management
+DRIVER_KEEPOFFLOAD_FILE="${PF_RING_CONFIG_DIR}/keepoffload" # touch to keep offload settings on the interfaces
 DO_NOT_LOAD_HUGEPAGES=0 # set to 1 to disable hugepages preallocation
 LOAD_HUGEPAGES=0
 INTERFACES_CONFIG="${PF_RING_CONFIG_DIR}/interfaces.conf"
@@ -257,8 +258,11 @@ start_interfaces() {
 		fi
 
 		if [ $SETUP_FOR_PACKET_CAPTURE -eq 1 ] && ! is_management_interface $D_PHYSIF ; then
-			# Disabling offloads
-			/sbin/ethtool -K "${D}" sg off tso off gso off gro off > /dev/null 2>&1
+
+			if [ ! -f ${DRIVER_KEEPOFFLOAD_FILE} ]; then
+				# Disabling offloads
+				/sbin/ethtool -K "${D}" sg off tso off gso off gro off > /dev/null 2>&1
+			fi
 
 			# Disabling VLAN stripping
 			/sbin/ethtool -K "${D}" rxvlan off > /dev/null 2>&1
