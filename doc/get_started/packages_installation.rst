@@ -175,8 +175,12 @@ The pf_ring service by default turns off all offloads for the network interfaces
 as those offloads modify packets (e.g. the GRO merges multiple packets together in a single one)
 and this behaviur is not desirable when monitoring traffic as that leads to bad metrics 
 (e.g. number of packets on the wire, packet size, etc). However, this may affect the performance 
-when using the interfaces for host connectivity, and can be disabled by creating a `keepoffload`
-file (if pf_ring is already running, reboot the machine to make it effective).
+when using the interfaces for host connectivity.
+Please note that pf_ring does not turn off offload settings for the management interface (when
+configured with MANAGEMENT_INTERFACES in /etc/pf_ring/interfaces.conf as described above, or
+automatically detected otherwise). However it is possible to completely disable this for all
+interfaces by creating a `keepoffload` file (if pf_ring is already running, reboot the machine 
+to make it effective).
 
 .. code-block:: console
 
