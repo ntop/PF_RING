@@ -16,7 +16,6 @@ Below you can find a comparison of NIC features supported by PF_RING.
     pcap
     stack
     timeline
-    sysdig
 
 Supported NICs Comparison
 -------------------------
