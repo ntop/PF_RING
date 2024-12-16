@@ -38,7 +38,6 @@
 
 #include "pfring.h"
 #include "pfring_zc.h"
-#include "pfring_mod_sysdig.h"
 
 #include "zutils.c"
 

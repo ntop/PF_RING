@@ -38,7 +38,6 @@
 
 #include "pfring.h"
 #include "pfring_zc.h"
-#include "pfring_mod_sysdig.h"
 
 #include "zutils.c"
 
@@ -178,22 +177,13 @@ void *packet_consumer_thread(void *_id) {
 
       if (unlikely(g->verbose)) {
         u_char *pkt_data = pfring_zc_pkt_buff_data(buffer, zq);
-
+	int i;
+	
         if (buffer->ts.tv_nsec)
           printf("[%u.%u] ", buffer->ts.tv_sec, buffer->ts.tv_nsec);
-
-	if(g->dump_as_sysdig_event) {
-	  struct sysdig_event_header *ev = (struct sysdig_event_header*)pkt_data;
-
-	  printf("[cpu_id=%u][tid=%lu][%u|%s]",
-		 buffer->hash, ev->thread_id,
-		 ev->event_type, sysdig_event2name(ev->event_type));		 
-	} else {
-	  int i;
-
-	  for(i = 0; i < buffer->len; i++)
-	    printf("%02X ", pkt_data[i]);
-	}
+	
+	for(i = 0; i < buffer->len; i++)
+	  printf("%02X ", pkt_data[i]);      
 
         printf("\n");
       }

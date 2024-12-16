@@ -38,7 +38,6 @@
 
 #include "pfring.h"
 #include "pfring_zc.h"
-#include "pfring_mod_sysdig.h"
 
 #include "zutils.c"
 
@@ -170,7 +169,7 @@ void printHelp(void) {
   printf("-c <cluster id> Cluster id\n");
   printf("-m <hash mode>  Hashing modes:\n"
          "                0 - No hash: Round-Robin (default)\n"
-         "                1 - IP hash or TID (thread id) in case of '-i sysdig'\n"
+         "                1 - IP hash\n"
          "                2 - Fan-out\n");
   printf("-r <id>         Balancer thread core affinity\n");
   printf("-g <id:id...>   Consumer threads core affinity mask\n");
@@ -218,16 +217,6 @@ int64_t rr_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in
   long num_out_queues = (long) user;
   if (++rr == num_out_queues) rr = 0;
   return rr;
-}
-
-/* *************************************** */
-
-int64_t sysdig_distribution_func(pfring_zc_pkt_buff *pkt_handle, pfring_zc_queue *in_queue, void *user) {
-  /* NOTE: pkt_handle->hash contains the CPU id */
-  struct sysdig_event_header *ev = (struct sysdig_event_header*)pfring_zc_pkt_buff_data(pkt_handle, in_queue); 
-  long num_out_queues = (long) user;
-
-  return(ev->thread_id % num_out_queues);
 }
 
 /* *************************************** */
@@ -362,10 +351,7 @@ int main(int argc, char* argv[]) {
   if (hash_mode < 2) { /* balancer */
     pfring_zc_distribution_func func;
 
-    if(strcmp(device, "sysdig") == 0)
-      func = (hash_mode == 0) ? rr_distribution_func : sysdig_distribution_func;
-    else
-      func = (hash_mode == 0) ? rr_distribution_func : NULL /* built-in IP-based  */;
+    func = (hash_mode == 0) ? rr_distribution_func : NULL /* built-in IP-based  */;
       
     zw = pfring_zc_run_balancer(
 				inzq, 

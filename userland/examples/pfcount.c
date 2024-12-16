@@ -47,8 +47,6 @@
 
 #include "pfutils.c"
 
-#include "pfring_mod_sysdig.h"
-
 #include "third-party/sort.c"
 #include "third-party/node.c"
 #include "third-party/ahocorasick.c"
@@ -71,7 +69,7 @@ pcap_dumper_t *dumper = NULL;
 u_int string_id = 1;
 char *out_pcap_file = NULL;
 FILE *match_dumper = NULL;
-u_int8_t do_close_dump = 0, is_sysdig = 0, chunk_mode = 0, check_ts = 0;
+u_int8_t do_close_dump = 0, chunk_mode = 0, check_ts = 0;
 u_int8_t check_seq_ip = 0, asymm_rss = 0, burst_mode = 0, rss_q_0_only = 0;
 int num_packets = 0;
 time_t last_ts = 0;
@@ -549,16 +547,6 @@ void print_packet(const struct pfring_pkthdr *h, const u_char *p, u_int8_t dump_
            s / 3600, (s % 3600) / 60, s % 60,
            usec, nsec);
 
-  if(is_sysdig) {
-    struct sysdig_event_header *ev = (struct sysdig_event_header*)p;
-
-    snprintf(&dump_str[strlen(dump_str)], sizeof(dump_str)-strlen(dump_str), "[cpu_id=%u][tid=%lu][%u|%s]",
-	     h->extended_hdr.if_index, (long unsigned int)ev->thread_id, 
-	     ev->event_type, sysdig_event2name(ev->event_type));
-    printf("%s\n", dump_str);
-    return;
-  }
-
   if(use_extended_pkt_header) {
     char bigbuf[4096], pbuf[64];;
     u_int len;
@@ -782,7 +770,6 @@ void printHelp(void) {
   printf("-b <cpu %%>        CPU pergentage priority (0-99)\n");
   printf("-a                Active packet wait\n");
   printf("-N <num>          Read <num> packets and exit\n");
-  printf("-q                Force printing packets as sysdig events with -v\n");
   printf("-m                Long packet header (with PF_RING extensions)\n");
   printf("-r                Rehash RSS packets\n");
   printf("-c <cluster id>   Cluster ID (kernel clustering)\n");
@@ -1093,7 +1080,7 @@ int main(int argc, char* argv[]) {
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 
-  while((c = getopt(argc,argv,"Bhi:Ic:C:Fd:H:Jl:Lv:ae:n:w:o:p:P:qb:rg:u:mtsSx:f:z:N:MQ:RTUK:0")) != '?') {
+  while((c = getopt(argc,argv,"Bhi:Ic:C:Fd:H:Jl:Lv:ae:n:w:o:p:P:b:rg:u:mtsSx:f:z:N:MQ:RTUK:0")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -1149,7 +1136,6 @@ int main(int argc, char* argv[]) {
       break;
     case 'i':
       device = strdup(optarg);
-      if(strcmp(device, "sysdig:") == 0) is_sysdig = 1;
       break;
     case 'I':
       json_info = 1;
@@ -1184,9 +1170,6 @@ int main(int argc, char* argv[]) {
       break;
     case 'P':
       rule_priority = atoi(optarg);
-      break;
-    case 'q':
-      is_sysdig = 1;
       break;
     case 'Q':
       cluster_queue_id = atoi(optarg);
@@ -1411,19 +1394,16 @@ int main(int argc, char* argv[]) {
   }
 
   if (!quiet) {
-    if(is_sysdig) {
-      printf("Capturing from sysdig\n");
-    } else {
-      int ifindex = -1;
-      u_char mac_address[6] = { 0 };
-      rc = pfring_get_bound_device_address(pd, mac_address);
-      pfring_get_bound_device_ifindex(pd, &ifindex);
-      printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
-             device, rc == 0 ? etheraddr_string(mac_address, buf) : "unknown",
-             ifindex, pfring_get_interface_speed(pd));
-      printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));
-      printf("# Polling threads:    %d\n", num_threads);
-    }
+    int ifindex = -1;
+    u_char mac_address[6] = { 0 };
+    
+    rc = pfring_get_bound_device_address(pd, mac_address);
+    pfring_get_bound_device_ifindex(pd, &ifindex);
+    printf("Capturing from %s [mac: %s][if_index: %d][speed: %uMb/s]\n",
+	   device, rc == 0 ? etheraddr_string(mac_address, buf) : "unknown",
+	   ifindex, pfring_get_interface_speed(pd));
+    printf("# Device RX channels: %d\n", pfring_get_num_rx_channels(pd));
+    printf("# Polling threads:    %d\n", num_threads);    
   }
 
   sample_filtering_rules();

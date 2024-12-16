@@ -32,7 +32,6 @@
 
 #include "pfring_mod.h"
 #include "pfring_mod_stack.h"
-#include "pfring_mod_sysdig.h"
 #include "pfring_mod_pcap.h"
 
 #ifndef DLT_EN10MB
@@ -84,11 +83,6 @@ static pfring_module_info pfring_module_list[] = {
   {
     .name = "stack",
     .open = pfring_mod_stack_open,
-    .findalldevs = NULL
-  },
-  {
-    .name = "sysdig",
-    .open = pfring_mod_sysdig_open,
     .findalldevs = NULL
   },
   {
