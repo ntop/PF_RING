@@ -57,7 +57,7 @@ struct volatile_globals {
   unsigned long long numPkts;
   unsigned long long numBytes;
   int wait_for_packet;
-  u_int8_t verbose, dump_as_sysdig_event;
+  u_int8_t verbose;
   volatile int do_shutdown;
 };
 
@@ -152,7 +152,6 @@ void printHelp(void) {
   printf("-a              Active packet wait\n");
   printf("-f <bpf>        Set a BPF filter\n");
   printf("-v              Verbose: print packet data\n");
-  printf("-s              In case of -v dump the buffer as sysdig event instead of packet bytes\n");
   printf("-t              Touch payload (to force packet load on cache)\n");
   printf("-u              Guest VM (master on the host)\n");
   exit(-1);
@@ -204,12 +203,12 @@ int main(int argc, char* argv[]) {
   char c;
   int cluster_id = DEFAULT_CLUSTER_ID+1, queue_id = -1;
   pthread_t my_thread;
-  int wait_for_packet = 1, verbose = 0, dump_as_sysdig_event = 0;
+  int wait_for_packet = 1, verbose = 0;
   char *filter = NULL;
 
   startTime.tv_sec = 0;
 
-  while((c = getopt(argc,argv,"ac:f:g:hi:svut")) != '?') {
+  while((c = getopt(argc,argv,"ac:f:g:hi:vut")) != '?') {
     if((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -230,9 +229,6 @@ int main(int argc, char* argv[]) {
       break;
     case 'g':
       bind_core = atoi(optarg);
-      break;
-    case 's':
-      dump_as_sysdig_event = 1;
       break;
     case 'v':
       verbose = 1;
@@ -255,7 +251,6 @@ int main(int argc, char* argv[]) {
   globals = calloc(1, sizeof(*globals));
   globals->wait_for_packet = wait_for_packet;
   globals->verbose = verbose;
-  globals->dump_as_sysdig_event = dump_as_sysdig_event;
   globals->numPkts = 0;
   globals->numBytes = 0;
   globals->do_shutdown = 0;
