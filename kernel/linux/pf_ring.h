@@ -1086,6 +1086,7 @@ struct lock_cluster_object_info {
   u_int32_t object_type;
   u_int32_t object_id;
   u_int32_t lock_mask;
+  u_int32_t reserved; /* used by VMs to pass the op */
   u_int32_t locked_mask; /* out */
 } __attribute__((packed));
 
