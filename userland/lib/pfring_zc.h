@@ -1047,6 +1047,48 @@ pfring_zc_ipc_detach_queue(
   pfring_zc_queue *queue
 );
 
+/**
+ * Check if a (rx or tx) queue is locked by another (live or dead) process.
+ * This function opens a new pfring file descriptor.
+ * @param cluster_id The cluster identifier.
+ * @param queue_id   The queue identifier.
+ * @param queue_mode The direction to open, RX or TX.
+ * @return           1 is the queue is in use, 0 otherwise, -1 on failure checking.
+ */
+int
+pfring_zc_ipc_queue_in_use(
+  u_int32_t cluster_id,
+  u_int32_t queue_id,
+  pfring_zc_queue_mode queue_mode
+);
+
+/**
+ * Check if a (rx or tx) queue is locked by another (live or dead) process.
+ * This function uses the file descriptor from a cluster handle.
+ * @param cluster    The cluster handle.
+ * @param queue_id   The queue identifier.
+ * @param queue_mode The direction to open, RX or TX.
+ * @return           1 is the queue is in use, 0 otherwise, -1 on failure checking.
+ */
+int
+pfring_zc_ipc_queue_in_use_from_cluster(
+  pfring_zc_cluster *cluster,
+  u_int32_t queue_id,
+  pfring_zc_queue_mode queue_mode
+);
+
+/**
+ * Check if a (rx or tx) queue is locked by another (live or dead) process.
+ * @param queue      The queue handle.
+ * @param queue_mode The direction to open, RX or TX.
+ * @return           1 is the queue is in use, 0 otherwise, -1 on failure checking.
+ */
+int
+pfring_zc_ipc_queue_in_use_from_queue(
+  pfring_zc_queue *queue,
+  pfring_zc_queue_mode queue_mode
+);
+
 /* **************************************************************************************** */
 
 /**

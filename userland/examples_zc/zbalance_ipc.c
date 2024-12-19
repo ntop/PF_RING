@@ -280,8 +280,7 @@ void print_stats() {
   char stats_buf[1024];
   char time_buf[128];
   double duration;
-  int i;
-  int b;
+  int i, b, in_use;
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
@@ -394,10 +393,12 @@ void print_stats() {
     for (b = 0; b < num_balancers; b++) {
       for (i = 0; i < num_consumer_queues; i++) {
         if (pfring_zc_stats(balancer[b].outzqs[i], &stats) == 0) {
+          in_use = pfring_zc_ipc_queue_in_use_from_queue(balancer[b].outzqs[i], rx_only);
           if (!daemon_mode && !proc_stats_only) {
-            trace(TRACE_INFO, "                   Balancer %2u Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%)\n", 
+            trace(TRACE_INFO, "                   Balancer %2u Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%) %s\n", 
                     b, i, stats.recv, stats.drop, 
-	            stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)));
+	            stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)),
+                    in_use == 1 ? "Locked" : (in_use == 0 ? "Not-in-use" : ""));
           }
           if (outdevs[i]) {
             snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
@@ -412,6 +413,9 @@ void print_stats() {
                i, (long unsigned int) stats.recv, 
 	       i, (long unsigned int) stats.drop);
           }
+          if (in_use != -1)
+            snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf), 
+               "Q%uLocked:     %s\n", i, in_use ? "Yes" : "No");
         }
       }
     }
