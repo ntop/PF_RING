@@ -5123,6 +5123,8 @@ unlock:
   return 0;
 }
 
+/* *********************************************** */
+
 static void remove_cluster_referee(struct pf_ring_socket *pfr)
 {
   struct list_head *ptr, *tmp_ptr;
@@ -5167,6 +5169,8 @@ static void remove_cluster_referee(struct pf_ring_socket *pfr)
 
   pfr->cluster_referee = NULL;
 }
+
+/* *********************************************** */
 
 static int publish_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_id,
                                  u_int32_t object_type, u_int32_t object_id)
@@ -5223,6 +5227,60 @@ unlock:
 
   return rc;
 }
+
+/* *********************************************** */
+
+static int get_cluster_object_info(struct pf_ring_socket *pfr, u_int32_t cluster_id,
+                                   u_int32_t object_type, u_int32_t object_id, u_int32_t *locked_mask)
+{
+  struct list_head *ptr, *tmp_ptr;
+  struct cluster_referee *entry, *cr = NULL;
+  struct list_head *obj_ptr, *obj_tmp_ptr;
+  cluster_object *obj_entry, *c_obj = NULL;
+  int rc = -1;
+
+  *locked_mask = 0;
+
+  mutex_lock(&cluster_referee_lock);
+
+  list_for_each_safe(ptr, tmp_ptr, &cluster_referee_list) {
+    entry = list_entry(ptr, struct cluster_referee, list);
+    if(entry->id == cluster_id) {
+      cr = entry;
+      break;
+    }
+  }
+
+  if(cr == NULL) {
+    debug_printk(2, "cluster %u not found\n", cluster_id);
+    goto unlock;
+  }
+
+  /* adding locked objects to the cluster */
+  list_for_each_safe(obj_ptr, obj_tmp_ptr, &cr->objects_list) {
+    obj_entry = list_entry(obj_ptr, cluster_object, list);
+
+    if(obj_entry->object_type == object_type && obj_entry->object_id == object_id) {
+      c_obj = obj_entry;
+      *locked_mask = c_obj->lock_bitmap;
+      break;
+    }
+  }
+
+  if(c_obj == NULL) {
+    debug_printk(2, "object %u.%u not in the public list of cluster %u\n", object_type, object_id, cluster_id);
+    goto unlock;
+  }
+
+  rc = 0;
+
+unlock:
+  mutex_unlock(&cluster_referee_lock);
+
+  return rc;
+}
+
+/* *********************************************** */
 
 static int lock_cluster_object(struct pf_ring_socket *pfr, u_int32_t cluster_id,
                                u_int32_t object_type, u_int32_t object_id, u_int32_t lock_mask)
@@ -8383,6 +8441,25 @@ static int ring_getsockopt(struct socket *sock,
       }
 
       if(copy_to_user(optval, &rx_missed, sizeof(rx_missed))) {
+        return(-EFAULT);
+      }
+    }
+    break;
+
+  case SO_GET_CLUSTER_OBJECT_INFO:
+    {
+      struct lock_cluster_object_info lcoi;
+
+      if(len < sizeof(lcoi))
+        return(-EINVAL);
+
+      if(copy_from_user(&lcoi, optval, sizeof(lcoi)))
+        return(-EFAULT);
+
+      if(get_cluster_object_info(pfr, lcoi.cluster_id, lcoi.object_type, lcoi.object_id, &lcoi.locked_mask) < 0)
+        return(-EINVAL);
+
+      if(copy_to_user(optval, &lcoi, sizeof(lcoi))) {
         return(-EFAULT);
       }
     }

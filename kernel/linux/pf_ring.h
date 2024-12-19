@@ -114,6 +114,7 @@
 #define SO_GET_DEV_TX_TIME               188
 #define SO_GET_DEV_STATS                 189
 #define SO_SELECT_ZC_DEVICE              190
+#define SO_GET_CLUSTER_OBJECT_INFO       191
 
 /* Error codes */
 #define PF_RING_ERROR_GENERIC              -1
@@ -1085,7 +1086,7 @@ struct lock_cluster_object_info {
   u_int32_t object_type;
   u_int32_t object_id;
   u_int32_t lock_mask;
-  u_int32_t reserved;
+  u_int32_t locked_mask; /* out */
 } __attribute__((packed));
 
 /* ************************************************* */
