@@ -398,7 +398,7 @@ void print_stats() {
             trace(TRACE_INFO, "                   Balancer %2u Queue %2u: RX %lu pkts Dropped %lu pkts (%.1f %%) %s\n", 
                     b, i, stats.recv, stats.drop, 
 	            stats.recv == 0 ? 0 : ((double)(stats.drop*100)/(double)(stats.recv + stats.drop)),
-                    in_use == 1 ? "Locked" : (in_use == 0 ? "Not-in-use" : ""));
+                    in_use == 1 ? "In-Use" : (in_use == 0 ? "Not-In-Use" : ""));
           }
           if (outdevs[i]) {
             snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf),
@@ -415,7 +415,7 @@ void print_stats() {
           }
           if (in_use != -1)
             snprintf(&stats_buf[strlen(stats_buf)], sizeof(stats_buf)-strlen(stats_buf), 
-               "Q%uLocked:     %s\n", i, in_use ? "Yes" : "No");
+               "Q%uStatus:     %s\n", i, in_use ? "In-Use" : "Not-In-Use");
         }
       }
     }
