@@ -256,7 +256,6 @@ int pfring_mod_open(pfring *ring) {
   ring->remove_bpf_filter = pfring_mod_remove_bpf_filter;
   ring->shutdown = pfring_mod_shutdown;
   ring->send_last_rx_packet = pfring_mod_send_last_rx_packet;
-  ring->set_bound_dev_name = pfring_mod_set_bound_dev_name;
   ring->get_interface_speed = pfring_mod_get_interface_speed;
 
   ring->poll_duration = DEFAULT_POLL_DURATION;
@@ -1056,8 +1055,11 @@ void pfring_mod_shutdown(pfring *ring) {
 /* **************************************************** */
 
 int pfring_mod_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
-   return(setsockopt(ring->fd, 0, SO_SET_CUSTOM_BOUND_DEV_NAME, 
-		     custom_dev_name, strlen(custom_dev_name)));
+  if (!custom_dev_name)
+    return PF_RING_ERROR_INVALID_ARGUMENT;
+
+  return(setsockopt(ring->fd, 0, SO_SET_CUSTOM_BOUND_DEV_NAME, 
+		    custom_dev_name, strlen(custom_dev_name)));
 }
 
 /* *************************************** */

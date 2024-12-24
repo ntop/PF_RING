@@ -272,7 +272,9 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   }
 
   /* default */
-  if(!mod_found) {
+  if(mod_found) {
+    pfring_set_bound_dev_name(ring, ring->device_name);
+  } else {
     ring->device_name = strdup(device_name ? device_name : "any");
     if (ring->device_name == NULL) {
       errno = ENOMEM;
@@ -1487,10 +1489,13 @@ int pfring_recv_chunk(pfring *ring, void **chunk, pfring_chunk_info *chunk_info,
 /* **************************************************** */
 
 int pfring_set_bound_dev_name(pfring *ring, char *custom_dev_name) {
-  if(ring && ring->set_bound_dev_name)
-    return(ring->set_bound_dev_name(ring, custom_dev_name));
+  if(!ring)
+    return(PF_RING_ERROR_INVALID_ARGUMENT);
 
-  return(PF_RING_ERROR_NOT_SUPPORTED);
+  /* Note: set_bound_dev_name is defined by pfring_mod only
+   * All other modules should use it (the pf_ring socket is always created) */
+
+  return pfring_mod_set_bound_dev_name(ring, custom_dev_name);
 }
 
 /* **************************************************** */

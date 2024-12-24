@@ -307,7 +307,6 @@ struct __pfring {
   int       (*recv_chunk)                   (pfring *, void **, pfring_chunk_info *, u_int8_t); 
   int       (*recv_burst)                   (pfring *, pfring_packet_info *, u_int8_t, u_int8_t); 
   int       (*recv_flow)                    (pfring *, pfring_flow_update *, u_int8_t);
-  int       (*set_bound_dev_name)           (pfring *, char *);
   int       (*get_metadata)         	    (pfring *, u_char **, u_int32_t *);
   u_int32_t (*get_interface_speed)	    (pfring *);
   int       (*get_link_type)		    (pfring *);
