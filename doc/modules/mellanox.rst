@@ -101,6 +101,13 @@ interface. Example for 4 queues:
 
    ethtool -L enp1s0f0 combined 4
 
+Alternatively the number of queues can be configured on the application itself through
+environment variable (PF_RING_RSS).
+
+.. code-block:: console
+
+   PF_RING_RSS=4 pfcount_multichannel -i mlx:mlx5_0
+
 In order to capture traffic from a queue, mlx:<device>@<queue> should be used as interface
 name. Example with queue 0:
 
