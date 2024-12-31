@@ -21,7 +21,7 @@ replaced by software distribution using ZC.
 
 In order to configure the number of queues, you can use the RSS parameter at 
 insmod time (if you are installing PF_RING ZC drivers from packages you can 
-use the configuration file as explained in README.apt_rpm_packages), passing 
+use the configuration file as explained in the installation instructions), passing 
 a comma-separated list (one per interface) of numbers (number of queues per
 interface). Examples:
 
@@ -67,6 +67,32 @@ below:
 .. code-block:: console
 
    ethtool -X <if> weight 1 0 0 0
+
+When using PF_RING ZC, RSS is reconfigured by the PF_RING ZC driver on most Intel 
+adapter families. However, on some adapters (e.g. *ice* adapters) PF_RING ZC keeps 
+the RSS configuration created by the linux driver and ethtool should be used to 
+tune RSS settings. For example, to set packet hashing based on the 4-tuple on *ice*
+adapters, which is source and destination IP and port (default), it is possible to use:
+
+.. code-block:: console
+
+   ethtool -N enp1s0f1 rx-flow-hash tcp4 sdfn
+   ethtool -N enp1s0f1 rx-flow-hash udp4 sdfn
+
+Or to set packet hashing based on the 2-tuple, which is source and destination IP only
+it is possible to use:
+
+.. code-block:: console
+
+   ethtool -N enp1s0f1 rx-flow-hash tcp4 sd
+   ethtool -N enp1s0f1 rx-flow-hash udp4 sd
+
+Where in 'sdnf' and 'sd':
+
+- s: Source IP address
+- d: Destination IP address
+- f: Source port
+- n: Destination port
 
 Naming convention
 ~~~~~~~~~~~~~~~~~
