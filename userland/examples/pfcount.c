@@ -1,5 +1,5 @@
 /*
- * (C) 2003-23 - ntop 
+ * (C) 2003-25 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -748,7 +748,7 @@ void printDevs(u_int8_t json) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount - (C) 2005-24 ntop\n\n");
+  printf("pfcount - (C) 2005-25 ntop\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n"
 	 "                - ethX@Y for channels\n"
