@@ -507,8 +507,10 @@ static char* read_bpf_file(const char* filename) {
     }
     close(fd);
     return buf;
-  } else
+  } else {
+    trace(TRACE_ERROR, "Unable to open BPF file");
     return NULL;
+  }
 }
 
 // signal-safety function
@@ -520,25 +522,29 @@ static void read_bpf_file_list(struct bpf_file_list* list) {
     if (buf && strcmp(node->expression, buf)) {
       list->modified = 1;
       strcpy(node->expression, buf);
-      trace(TRACE_NORMAL, "bpf file '%s' : '%s'\n", node->filename, node->expression);
+      trace(TRACE_NORMAL, "BPF (from '%s'): '%s'\n", node->filename, node->expression);
     }
   }
 }
 
-static char** init_inzq_bpf(struct bpf_file_list* list, size_t qlen) {
+static char **init_inzq_bpf(struct bpf_file_list* list, size_t qlen) {
   int i;
   struct bpf_file_node* node;
-  char** zq_bpf;
+  char **zq_bpf;
+
   if (!list->head)
     return NULL;
+
   zq_bpf = calloc(qlen, sizeof(char*));
+
   // same bpf for all inzq for now
   node = list->head;
   for (i = 0; i < qlen; i++) {
     zq_bpf[i] = node->expression;
-    trace(TRACE_NORMAL, "inqzs[%d] bpf file : %s\n", i, node->filename);
+    trace(TRACE_NORMAL, "inqzs[%d] BPF file: %s\n", i, node->filename);
   }
   read_bpf_file_list(list);
+
   return zq_bpf;
 }
 
@@ -561,7 +567,7 @@ static char** init_outzq_bpf(struct bpf_file_list* list, size_t qlen) {
       i = atoi(queue_index);
       if (i < qlen) {
         zq_bpf[i] = node->expression;
-        trace(TRACE_NORMAL, "outzqs[%d] bpf file : %s\n", i, node->filename);
+        trace(TRACE_NORMAL, "outzqs[%d] BPF file: %s\n", i, node->filename);
       } else {
         trace(TRACE_ERROR, "outzq number(%d) must be less than %d\n", i, num_consumer_queues);
         continue;
@@ -589,7 +595,7 @@ void on_bpf_files_modified(int sig) {
 // - idle_func alone is not enough because if traffic is too busy, it may not be called.
 // that's why we need both filter_func and idle_func, either of them is always called.
 
-void set_inzq_bpf() {
+int set_inzq_bpf() {
   if (in_bpf_file_list.modified) {
     int b, i;
 
@@ -601,13 +607,17 @@ void set_inzq_bpf() {
           continue;
 
         pfring_zc_remove_bpf_filter(balancer[b].inzqs[i]);
-        if (pfring_zc_set_bpf_filter(balancer[b].inzqs[i], inzq_bpf[i]) != 0)
-          trace(TRACE_NORMAL, "inzqs[%d] bpf set error : '%s'", i, inzq_bpf[i]);
-        else
-          trace(TRACE_NORMAL, "inzqs[%d] bpf set : '%s'", i, inzq_bpf[i]);
+        if (pfring_zc_set_bpf_filter(balancer[b].inzqs[i], inzq_bpf[i]) != 0) {
+          trace(TRACE_NORMAL, "inzqs[%d] Failure setting BPF filter: '%s'", i, inzq_bpf[i]);
+          return -1;
+        } else {
+          trace(TRACE_NORMAL, "inzqs[%d] BPF set successfully: '%s'", i, inzq_bpf[i]);
+        }
       }
     }
   }
+
+  return 0;
 }
 
 void set_outzq_bpf() {
@@ -623,9 +633,9 @@ void set_outzq_bpf() {
 
         pfring_zc_remove_bpf_filter(balancer[b].outzqs[i]);
         if (pfring_zc_set_bpf_filter(balancer[b].outzqs[i], outzq_bpf[i]) != 0)
-          trace(TRACE_NORMAL, "balancer[b].outzqs[%d] bpf set error : '%s'", i, outzq_bpf[i]);
+          trace(TRACE_NORMAL, "balancer[b].outzqs[%d] Failure setting BPF filter: '%s'", i, outzq_bpf[i]);
         else
-          trace(TRACE_NORMAL, "balancer[b].outzqs[%d] bpf set : '%s'", i, outzq_bpf[i]);
+          trace(TRACE_NORMAL, "balancer[b].outzqs[%d] BPF set successfully: '%s'", i, outzq_bpf[i]);
       }
     }
   }
@@ -679,8 +689,8 @@ void printHelp(void) {
   printf("-D <username>    Drop privileges\n");
   printf("-P <pid file>    Write pid to the specified file (daemon mode only)\n");
   printf("-u <mountpoint>  Hugepages mount point for packet memory allocation\n");
-  printf("-f <bpf file>    Set a BPF filter for input queue (this may affect the performance!)\n");
-  printf("                 <bpf file> contains a single-line BPF expression which can be updated at runtime by sending a SIGUSR1\n");
+  printf("-f <BPF file>    Set a BPF filter for input queue (this may affect the performance!)\n");
+  printf("                 <BPF file> contains a single-line BPF expression which can be updated at runtime by sending a SIGUSR1\n");
   printf("                 It is possible to set a BPF filter for output queues by specifying @<queue id list> (e.g. -f bpf1@0,1,2)\n");
   printf("                 Note: this option can be specified multiple times\n");
   printf("-x <vlans>       Set a VLAN filter (comma-separated list of VLAN ID)\n");
@@ -702,7 +712,7 @@ void printHelp(void) {
 
 /* *************************************** */
 
-void idle_func() {
+void set_inzq_bpf_on_idle_func() {
   if (inzq_bpf)
     set_inzq_bpf();
 }
@@ -1475,8 +1485,13 @@ int main(int argc, char* argv[]) {
   }
 
   if ((inzq_bpf = init_inzq_bpf(&in_bpf_file_list, balancer[0].num_devices))) {
-    set_inzq_bpf();
-    idle_func = set_inzq_bpf;
+
+    if (set_inzq_bpf() != 0) {
+      pfring_zc_destroy_cluster(zc);
+      return -1;
+    }
+
+    idle_func = set_inzq_bpf_on_idle_func;
     filter_func = packet_filtering_func;
   }
 
