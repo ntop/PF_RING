@@ -656,6 +656,7 @@ void printHelp(void) {
   printf("                 - Use comma-separated list to aggregate multiple interfaces\n");
   printf("                 - Use 'Q' as device name to create ingress sw queues\n");
   printf("                 - Use multiple -i to instantiate multiple balancers on different interfaces\n");
+  printf("-0               Disable RSS (send all traffic to queue 0, even if RSS is enabled)\n"); 
   printf("-c <cluster id>  Cluster id\n");
   printf("-n <num inst>    Number of application instances\n"
          "                 In case of '-m 1' or '-m 4' it is possible to spread packets across multiple\n"
@@ -1045,7 +1046,7 @@ int main(int argc, char* argv[]) {
   u_int32_t cluster_flags = 0;
   u_int32_t rx_open_flags;
   u_int32_t tot_num_buffers, num_outdevs = 0;
-  const char *opt_string = "ab:c:dD:f:G:g:hi:Jl:m:M:n:pr:Q:q:P:R:S:u:wvx:Y:zW:X"
+  const char *opt_string = "ab:c:dD:f:G:g:hi:Jl:m:M:n:pr:Q:q:P:R:S:u:wvx:Y:zW:X0"
 #ifdef HAVE_PF_RING_FT
     "TC:O:"
 #endif
@@ -1224,6 +1225,9 @@ int main(int argc, char* argv[]) {
       time_pulse = 1; /* forcing time-pulse to handle rules expiration */
     break;
 #endif
+    case '0':
+      rx_open_flags |= PF_RING_ZC_DEVICE_FIXED_RSS_Q_0;
+    break;
     }
   }
 
