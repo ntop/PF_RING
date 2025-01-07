@@ -3981,18 +3981,20 @@ static u64 ice_parse_hash_flds(struct ethtool_rxnfc *nfc)
 	u64 hfld = ICE_HASH_INVALID;
 
 #ifdef HAVE_PF_RING
+	if (pppoe_rss) {
+		hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
+		hfld |= ICE_FLOW_HASH_FLD_PPPOE_SESS_ID; /* PPPoE Session ID */
+		return hfld;
+	}
+
 	if (nfc->data & RXH_L2DA) {
-	        hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
-	        hfld |= ICE_FLOW_HASH_FLD_ETH_DA; /* Destination MAC Addr */
+		hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
+		hfld |= ICE_FLOW_HASH_FLD_ETH_DA; /* Destination MAC Addr */
 	}
 
 	if (nfc->data & RXH_VLAN) {
-	        hfld |= ICE_FLOW_HASH_FLD_S_VLAN; /* Source VLAN */
-	        hfld |= ICE_FLOW_HASH_FLD_C_VLAN; /* QinQ */
-	}
-
-	if (pppoe_rss) {
-		hfld |= ICE_FLOW_HASH_FLD_PPPOE_SESS_ID; /* PPPoE Session ID */
+		hfld |= ICE_FLOW_HASH_FLD_S_VLAN; /* Source VLAN */
+		hfld |= ICE_FLOW_HASH_FLD_C_VLAN; /* QinQ */
 	}
 #endif
 
