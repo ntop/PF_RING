@@ -39,6 +39,10 @@ MODULE_PARM_DESC(RSS,
 int enable_debug = 0;
 module_param(enable_debug, int, 0644);
 MODULE_PARM_DESC(debug, "PF_RING debug (0=none, 1=enabled)");
+
+int pppoe_rss = 0;
+module_param(pppoe_rss, int, 0644);
+MODULE_PARM_DESC(debug, "Enable PPPoE Session ID hash in RSS (0=disabled, 1=enabled)");
 #endif /* HAVE_PF_RING */
 
 #define DRV_VERSION_MAJOR 1
