@@ -1,0 +1,19 @@
+AC_INIT([Makefile.in], 1.0)
+
+
+RELEASE=`../package/version.sh --release`
+VERSION=`../package/version.sh --version`
+REVISION=`../package/version.sh --revision`
+GIT_HASH=`../package/version.sh --hash`
+YEAR=`date +"%Y"`
+
+AC_SUBST(RELEASE)
+AC_SUBST(VERSION)
+AC_SUBST(REVISION)
+AC_SUBST(GIT_HASH)
+AC_SUBST(YEAR)
+
+AC_CONFIG_FILES(Makefile)
+AC_CONFIG_FILES(conf.py)
+
+AC_OUTPUT
