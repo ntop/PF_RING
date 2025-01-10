@@ -43,10 +43,6 @@ MODULE_PARM_DESC(enable_debug, "PF_RING debug (0=none, 1=enabled)");
 int rss_scheme = 0;
 module_param(rss_scheme, int, 0644);
 MODULE_PARM_DESC(rss_scheme, "Select RSS Hash Scheme (0=Symmetric Toeplitz, 1=Asymmetric Toeplitz, 2=Simple XOR)");
-
-int pppoe_rss = 0;
-module_param(pppoe_rss, int, 0644);
-MODULE_PARM_DESC(pppoe_rss, "Enable PPPoE Session ID hash in RSS (0=disabled, 1=enabled)");
 #endif /* HAVE_PF_RING */
 
 #define DRV_VERSION_MAJOR 1

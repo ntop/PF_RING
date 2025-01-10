@@ -10,10 +10,6 @@
 #include "ice_dcb_lib.h"
 #include "ice_dcb_nl.h"
 
-#ifdef HAVE_PF_RING
-extern int pppoe_rss;
-#endif
-
 static int ice_q_stats_len(struct net_device *netdev)
 {
 	struct ice_netdev_priv *np = netdev_priv(netdev);
@@ -3953,8 +3949,6 @@ static u32 ice_parse_hdrs(struct ethtool_rxnfc *nfc)
 #define ICE_FLOW_HASH_FLD_ETH_DA       BIT_ULL(ICE_FLOW_FIELD_IDX_ETH_DA)
 #define ICE_FLOW_HASH_FLD_S_VLAN       BIT_ULL(ICE_FLOW_FIELD_IDX_S_VLAN)
 #define ICE_FLOW_HASH_FLD_C_VLAN       BIT_ULL(ICE_FLOW_FIELD_IDX_C_VLAN)
-#define ICE_FLOW_HASH_FLD_PPPOE_SESS_ID \
-       BIT_ULL(ICE_FLOW_FIELD_IDX_PPPOE_SESS_ID)
 #endif
 #define ICE_FLOW_HASH_FLD_IPV4_SA	BIT_ULL(ICE_FLOW_FIELD_IDX_IPV4_SA)
 #define ICE_FLOW_HASH_FLD_IPV6_SA	BIT_ULL(ICE_FLOW_FIELD_IDX_IPV6_SA)
@@ -3981,14 +3975,8 @@ static u64 ice_parse_hash_flds(struct ethtool_rxnfc *nfc)
 	u64 hfld = ICE_HASH_INVALID;
 
 #ifdef HAVE_PF_RING
-	if (pppoe_rss) {
-		hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
-		hfld |= ICE_FLOW_HASH_FLD_PPPOE_SESS_ID; /* PPPoE Session ID */
-		return hfld;
-	}
-
 	if (nfc->data & RXH_L2DA) {
-		hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
+		//hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
 		hfld |= ICE_FLOW_HASH_FLD_ETH_DA; /* Destination MAC Addr */
 	}
 
