@@ -94,6 +94,34 @@ Where in 'sdnf' and 'sd':
 - f: Source port
 - n: Destination port
 
+RSS with GTP
+~~~~~~~~~~~~
+
+When it comes to process GTP traffic at scale, and we want to leverage on RSS
+to distribute the packet processing load, using a basic RSS configuration
+is often not a viable solution. Let's assume for instance that we want to process
+GTP-C traffic using a dediceted process, and load balance GTP-U traffic to
+multiple processes or threads: this is possible using an advanced RSS configuration
+combined with flow steering. In order to achieve this just follow the steps below:
+
+1. Configure the card with 8 (or any number of) RX queues.
+
+.. code-block:: console
+
+   ethtool --set-channels <if> combined 8
+
+2. Send all GTP-C traffic to the first queue. We use the flow director for this.
+
+.. code-block:: console
+
+   ethtool -U <if> flow-type udp4 src-port 2123 action 0
+
+2. Distribute all non GTP-C traffic to the other queues.
+
+.. code-block:: console
+
+   ethtool -X <if> weight 0 1 1 1 1 1 1 1
+
 Naming convention
 ~~~~~~~~~~~~~~~~~
 
