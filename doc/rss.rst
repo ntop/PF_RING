@@ -110,7 +110,8 @@ combined with flow steering. In order to achieve this just follow the steps belo
 
    ethtool --set-channels <if> combined 8
 
-2. Send all GTP-C traffic to the first queue. We use the flow director for this.
+2. Send all GTP-C traffic to the first queue. We use the flow director for this,
+supported on most Intel (e.g. E810) and NVIDIA/Mellanox (ConnectX) adapters.
 
 .. code-block:: console
 
