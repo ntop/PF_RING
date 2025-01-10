@@ -116,11 +116,15 @@ combined with flow steering. In order to achieve this just follow the steps belo
 
    ethtool -U <if> flow-type udp4 src-port 2123 action 0
 
+(Note: "action 0" means "steer to queue 0")
+
 2. Distribute all non GTP-C traffic to the other queues.
 
 .. code-block:: console
 
    ethtool -X <if> weight 0 1 1 1 1 1 1 1
+
+(Note: traffic is distributed with queues with weight != 0)
 
 Naming convention
 ~~~~~~~~~~~~~~~~~
