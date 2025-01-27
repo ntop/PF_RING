@@ -46,7 +46,6 @@
 #include "pfutils.c"
 
 #define ALARM_SLEEP             1
-#define DEFAULT_SNAPLEN       128
 #define MAX_NUM_THREADS        64
 
 struct thread_stats {
@@ -67,7 +66,7 @@ struct thread_stats {
 struct packet *pkt_head = NULL;
 
 int verbose = 0, num_channels = 1;
-int send_len = DEFAULT_SNAPLEN;
+int send_len = 60;
 u_int ip_v = 4;
 
 struct timeval startTime;
@@ -84,13 +83,17 @@ void print_stats() {
   struct timeval endTime;
   double delta_abs;
   static u_int64_t lastPkts[MAX_NUM_THREADS] = { 0 };
-  u_int64_t diff;
-  static struct timeval lastTime;
-  int i;
-  unsigned long long bytes_sent = 0, pkt_sent = 0;
+  static u_int64_t lastBytes[MAX_NUM_THREADS] = { 0 };
+  u_int64_t pkt_diff;
+  u_int64_t bytes_diff;
+  unsigned long long pkt_sent = 0;
   unsigned long long pkt_sent_last = 0;
+  unsigned long long bytes_sent = 0;
+  unsigned long long bytes_sent_last = 0;
   double pkt_thpt = 0, tot_thpt = 0, delta_last;
   char buf1[64];
+  static struct timeval lastTime;
+  int i;
 
   if(startTime.tv_sec == 0) {
     gettimeofday(&startTime, NULL);
@@ -102,8 +105,9 @@ void print_stats() {
   delta_last = delta_time(&endTime, &lastTime);
 
   for(i=0; i < num_channels; i++) {
-    bytes_sent += threads[i].numBytes, pkt_sent += threads[i].numPkts;
-    double thpt = ((double)8*threads[i].numBytes)/(delta_abs*1000);
+    bytes_sent += threads[i].numBytes;
+    pkt_sent   += threads[i].numPkts;
+    double thpt = ((double)threads[i].numBytes*8)/(delta_abs*1000);
 
     fprintf(stderr, "=========================\n"
             "Absolute Stats: [channel=%d][%u pkts][%s pps][%.2f Mbit/sec]\n",
@@ -114,17 +118,22 @@ void print_stats() {
     if(lastTime.tv_sec > 0) {
       double pps;
 	
-      diff = threads[i].numPkts-lastPkts[i];
-      pkt_sent_last += diff;
-      tot_thpt += thpt;
-      pps = ((double)diff/(double)(delta_last/1000));
-      fprintf(stderr, "Actual Stats:   [channel=%d][%llu pkts][%.1f ms][%s pps]\n",
-	      i, (long long unsigned int)diff, delta_last,
-	      pfring_format_numbers(((double)diff/(double)(delta_last/1000)), buf1, sizeof(buf1), 1));
+      pkt_diff = threads[i].numPkts-lastPkts[i];
+      pkt_sent_last += pkt_diff;
+      pps = ((double)pkt_diff/(double)(delta_last/1000));
+      bytes_diff = threads[i].numBytes-lastBytes[i];
+      bytes_sent_last += bytes_diff;
+      thpt = (((double)bytes_diff*8)/(double)(delta_last*1000));
+      fprintf(stderr, "Actual Stats:   [channel=%d][%llu pkts][%.1f ms][%s pps][%.2f Mbit/sec]\n",
+	      i, (long long unsigned int)pkt_diff, delta_last,
+	      pfring_format_numbers(((double)pkt_diff/(double)(delta_last/1000)), buf1, sizeof(buf1), 1),
+              thpt);
       pkt_thpt += pps;
+      tot_thpt += thpt;
     }
 
     lastPkts[i] = threads[i].numPkts;
+    lastBytes[i] = threads[i].numBytes;
   }
 
   lastTime.tv_sec = endTime.tv_sec, lastTime.tv_usec = endTime.tv_usec;
