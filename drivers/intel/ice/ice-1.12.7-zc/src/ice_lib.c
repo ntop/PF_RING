@@ -12,6 +12,7 @@
 
 #ifdef HAVE_PF_RING
 extern int RSS[ICE_MAX_NIC];
+extern int rss_scheme;
 extern int enable_debug;
 #endif
 
@@ -2318,7 +2319,12 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 	 * 11b = Reserved
 	*/
 	reg = rd32(hw, VSIQF_HASH_CTL(vsi->vsi_num));
-	reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (1 << VSIQF_HASH_CTL_HASH_SCHEME_S);
+	if (rss_scheme == 1) /* Asymmetric Toeplitz */
+		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (0);
+	else if (rss_scheme == 2) /* Simple XOR */
+		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (2 << VSIQF_HASH_CTL_HASH_SCHEME_S);
+	else /* Symmetric Toeplitz (Default) */
+		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (1 << VSIQF_HASH_CTL_HASH_SCHEME_S);
 	wr32(hw, VSIQF_HASH_CTL(vsi->vsi_num), reg); 
 #endif
 

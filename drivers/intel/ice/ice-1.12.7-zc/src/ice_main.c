@@ -38,7 +38,11 @@ MODULE_PARM_DESC(RSS,
 
 int enable_debug = 0;
 module_param(enable_debug, int, 0644);
-MODULE_PARM_DESC(debug, "PF_RING debug (0=none, 1=enabled)");
+MODULE_PARM_DESC(enable_debug, "PF_RING debug (0=none, 1=enabled)");
+
+int rss_scheme = 0;
+module_param(rss_scheme, int, 0644);
+MODULE_PARM_DESC(rss_scheme, "Select RSS Hash Scheme (0=Symmetric Toeplitz, 1=Asymmetric Toeplitz, 2=Simple XOR)");
 #endif /* HAVE_PF_RING */
 
 #define DRV_VERSION_MAJOR 1
