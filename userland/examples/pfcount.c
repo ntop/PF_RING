@@ -695,7 +695,7 @@ void printDevs(u_int8_t json) {
   if (json)
     printf("{\"interfaces\":[");
   else if (verbose)
-    printf("Name\tSystemName\tModule\tMAC\tBusID\tNumaNode\tStatus\tLicense\tExpiration\nModuleVersion\n");
+    printf("Name\tSystemName\tModule\tMAC\tBusID\tNumaNode\tStatus\tLicense\tExpiration\tModuleVersion\n");
   else
     printf("Available devices (-i):\n");
 
