@@ -695,7 +695,7 @@ void printDevs(u_int8_t json) {
   if (json)
     printf("{\"interfaces\":[");
   else if (verbose)
-    printf("Name\tSystemName\tModule\tMAC\tBusID\tNumaNode\tStatus\tLicense\tExpiration\tModuleVersion\n");
+    printf("Name\tSystemName\tModule\tMAC\tIfIndex\tBusID\tNumaNode\tStatus\tLicense\tExpiration\tModuleVersion\n");
   else
     printf("Available devices (-i):\n");
 
@@ -712,6 +712,7 @@ void printDevs(u_int8_t json) {
       printf("\"name\":\"%s\",", dev->name);
       printf("\"system_name\":\"%s\",", dev->system_name ? dev->system_name : "unknown");
       printf("\"module\":\"%s\",", dev->module);
+      printf("\"ifindex\":\"%d\",", dev->ifindex > 0 ? dev->ifindex : -1);
       printf("\"sn\":\"%s\",", dev->sn ? dev->sn : mac);
       printf("\"bus_id\":\"%04X:%02X:%02X.%X\",", dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function);
       printf("\"numa_node\":\"%d\",", busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function));
@@ -724,9 +725,10 @@ void printDevs(u_int8_t json) {
         printf(",");
 
     } else if (verbose) {
-      printf("%s\t%s\t%s\t%s\t%04X:%02X:%02X.%X\t%d\t%s\t%s\t%ld\t%s\n",
+      printf("%s\t%s\t%s\t%s\t%d\t%04X:%02X:%02X.%X\t%d\t%s\t%s\t%ld\t%s\n",
         dev->name, dev->system_name ? dev->system_name : "unknown", dev->module,
         dev->sn ? dev->sn : mac,
+        dev->ifindex > 0 ? dev->ifindex : -1,
         dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
         busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
         dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"), 

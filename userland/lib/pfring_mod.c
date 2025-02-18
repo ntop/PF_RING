@@ -1090,6 +1090,25 @@ static void __read_device_bus_id(char *device_name, pfring_if_t *dev) {
 
 /* *************************************** */
 
+static int __get_iface_ifindex(const char *ifname) {
+  int sockfd;
+  struct ifreq ifr;
+
+  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (sockfd < 0)
+    return -1;
+
+  memset(&ifr, 0, sizeof(ifr));
+  strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name)-1);
+
+  if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1)
+    return -1;
+
+  return ifr.ifr_ifindex;
+}
+
+/* *************************************** */
+
 pfring_if_t *pfring_mod_findalldevs() {
   pfring_if_t *list = NULL, *last = NULL, *tmp;
   struct ifaddrs *ifap, *ifa;
@@ -1149,6 +1168,7 @@ pfring_if_t *pfring_mod_findalldevs() {
       tmp->system_name = strdup(ifa->ifa_name);
       tmp->status = !!(ifa->ifa_flags & IFF_UP);
       __read_device_bus_id(ifa->ifa_name, tmp);
+      tmp->ifindex = __get_iface_ifindex(ifa->ifa_name);
 
       if (last == NULL) { last = tmp; list = tmp; }
       else { last->next = tmp; last = last->next; }
