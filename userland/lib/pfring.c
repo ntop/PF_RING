@@ -396,8 +396,8 @@ void pfring_close(pfring *ring) {
 
   pfring_sync_indexes_with_kernel(ring);
 
-  if (getenv("PF_RING_RUNTIME_MANAGER") != NULL)
 #ifdef HAVE_DL_REDIS
+  if (getenv("PF_RING_RUNTIME_MANAGER") != NULL)
     pfring_stop_runtime_manager(ring);
 #endif
 
