@@ -178,6 +178,11 @@ void sigproc(int sig) {
 void processFlow(pfring_flow_update *flow){
   if (verbose) {
     switch (flow->cause) {
+      /* Flow stats update (periodic) */
+      case PF_RING_FLOW_UPDATE_CAUSE_PERIODIC:
+        printf("Flow #%lu periodic update\n", flow->flow_id);
+        break;
+      /* Flow unlearned */
       case PF_RING_FLOW_UPDATE_CAUSE_SW:
         printf("Flow #%lu removed (by FlowWrite)\n", flow->flow_id);
         break;
@@ -266,12 +271,12 @@ void packet_consumer() {
 
   while(!do_shutdown) {
 
-#if 0
-    while (!do_shutdown && pfring_recv_flow(pd, &flow, 0) > 0) {
-      /* Process flow */
-      processFlow(&flow);
+    if (verbose) {
+      while (!do_shutdown && pfring_recv_flow(pd, &flow, 0) > 0) {
+        /* Process flow */
+        processFlow(&flow);
+      }
     }
-#endif
 
     if (pfring_recv(pd, &buffer_p, NO_ZC_BUFFER_LEN, &hdr, 0) > 0) {
       /* Process packet */
