@@ -55,7 +55,7 @@
 pfring *pd = NULL;
 int num_threads = 1;
 static struct timeval startTime;
-u_int8_t do_shutdown = 0, add_rules = 0, quiet = 0, verbose = 0;
+u_int8_t do_shutdown = 0, add_rules = 1, quiet = 0, verbose = 0;
 
 struct app_stats {
   u_int64_t numPkts[MAX_NUM_THREADS];
@@ -213,7 +213,7 @@ void processPacket(const struct pfring_pkthdr *h,
   stats->numPkts[threadId]++;
   stats->numBytes[threadId] += h->len+24 /* 8 Preamble + 4 CRC + 12 IFG */ + 1000;
 
-  if (verbose) {
+  if (verbose == 2) {
 
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->len);
@@ -229,33 +229,41 @@ void processPacket(const struct pfring_pkthdr *h,
     } else {
       printf("[-]");
     }
-
-    printf("\n");
   }
 
-  memset((void *) &h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
-  pfring_parse_pkt((u_char *) p, (struct pfring_pkthdr *) h, 5, 0, 1);
+  if (h->extended_hdr.flags & PKT_FLAGS_FLOW_MISS) {
+    /* Miss: add to hw flow table */
 
-  /* Discard all future packets for this flow */
+    memset((void *) &h->extended_hdr.parsed_pkt, 0, sizeof(struct pkt_parsing_info));
+    pfring_parse_pkt((u_char *) p, (struct pfring_pkthdr *) h, 5, 0, 1);
 
-  if (add_rules && h->extended_hdr.parsed_pkt.ip_version == 4 /* TODO IPv6 */) {
-    hw_filtering_rule rule = { 0 };
-    generic_flow_tuple_hw_rule *r = &rule.rule_family.flow_tuple_rule;
-    rule.rule_family_type = generic_flow_tuple_rule;
+    /* Discard all future packets for this flow */
 
-    r->action = ((add_rules == 1) ? flow_drop_rule : flow_pass_rule);
-    r->flow_id = flow_id++;
-    r->ip_version = h->extended_hdr.parsed_pkt.ip_version;
-    r->src_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
-    r->dst_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_dst;
-    r->src_port = h->extended_hdr.parsed_pkt.l4_src_port;
-    r->dst_port = h->extended_hdr.parsed_pkt.l4_dst_port;
-    r->protocol = h->extended_hdr.parsed_pkt.l3_proto; 
+    if (add_rules && h->extended_hdr.parsed_pkt.ip_version == 4 /* TODO IPv6 */) {
+      hw_filtering_rule rule = { 0 };
+      generic_flow_tuple_hw_rule *r = &rule.rule_family.flow_tuple_rule;
+      rule.rule_family_type = generic_flow_tuple_rule;
 
-    if (pfring_add_hw_rule(pd, &rule) < 0) {
-      fprintf(stderr, "pfring_add_hw_rule failure\n");
+      r->action = ((add_rules == 1) ? flow_drop_rule : flow_pass_rule);
+      r->flow_id = flow_id++;
+      r->ip_version = h->extended_hdr.parsed_pkt.ip_version;
+      r->src_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_src;
+      r->dst_ip.v4 = h->extended_hdr.parsed_pkt.ipv4_dst;
+      r->src_port = h->extended_hdr.parsed_pkt.l4_src_port;
+      r->dst_port = h->extended_hdr.parsed_pkt.l4_dst_port;
+      r->protocol = h->extended_hdr.parsed_pkt.l3_proto; 
+
+      if (pfring_add_hw_rule(pd, &rule) < 0) {
+        fprintf(stderr, "pfring_add_hw_rule failure\n");
+      } else {
+        if (verbose == 2)
+          printf("[CALL-OFFLOAD]");
+      }
     }
   }
+
+  if (verbose == 2)
+    printf("\n");
 }
 
 /* *************************************** */
@@ -271,7 +279,7 @@ void packet_consumer() {
 
   while(!do_shutdown) {
 
-    if (verbose) {
+    if (verbose >= 1) {
       while (!do_shutdown && pfring_recv_flow(pd, &flow, 0) > 0) {
         /* Process flow */
         processFlow(&flow);
@@ -298,9 +306,10 @@ void printHelp(void) {
   printf("Flow processing based on hardware offload (Napatech Flow Manager)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");
-  printf("-r <1|2>        Add hardware flow rules to Drop (1) or Pass (2) packets\n");
+  printf("-r <0|1|2>      Add hardware flow rules to Drop (1) or Pass (2) packets (Default: 1)\n");
+  printf("-u              Enable periodic updates\n");
   printf("-g <core>       CPU core affinity\n");
-  printf("-v              Verbose\n");
+  printf("-v <level>      Verbose (1: flows, 2: packets)\n");
   printf("-q              Quiet\n");
 }
 
@@ -322,11 +331,10 @@ int main(int argc, char* argv[]) {
   int promisc, snaplen = 1518, rc;
   u_int32_t flags = 0;
   int bind_core = -1;
+  int periodic_updates = 0;
   packet_direction direction = rx_only_direction;
 
-  flags |= PF_RING_FLOW_OFFLOAD;
-
-  while ((c = getopt(argc,argv,"g:hi:r:vq")) != '?') {
+  while ((c = getopt(argc,argv,"g:hi:r:uv:q")) != '?') {
     if ((c == 255) || (c == -1)) break;
 
     switch(c) {
@@ -343,8 +351,11 @@ int main(int argc, char* argv[]) {
     case 'r':
       add_rules = atoi(optarg);
       break;
+    case 'u':
+      periodic_updates = 1;
+      break;
     case 'v':
-      verbose = 1;
+      verbose = atoi(optarg);
       break;
     case 'q':
       quiet = 1;
@@ -361,7 +372,9 @@ int main(int argc, char* argv[]) {
 
   promisc = 1;
 
+  flags |= PF_RING_FLOW_OFFLOAD;
   if (promisc) flags |= PF_RING_PROMISC;
+  if (!periodic_updates) flags |= PF_RING_FLOW_OFFLOAD_NOUPDATES;
 
   pd = pfring_open(device, snaplen, flags);
 

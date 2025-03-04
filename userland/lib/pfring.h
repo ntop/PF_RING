@@ -390,7 +390,7 @@ struct __pfring {
 #define PF_RING_VSS_APCON_TIMESTAMP    (1 << 15) /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
 #define PF_RING_ZC_IPONLY_RSS	       (1 << 16) /**< pfring_open() flag: Compute RSS on src/dst IP only (not 4-tuple) */ 
 #define PF_RING_FLOW_OFFLOAD	       (1 << 17) /**< pfring_open() flag: Enable Flow offload (Flow Manager on Napatech) */ 
-#define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Deprecated */
+#define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Disable periodic updates when PF_RING_FLOW_OFFLOAD is used */
 #define PF_RING_KEEP_CRC               (1 << 19) /**< pfring_open() flag: Do not calculate/add CRC/FCS when transmitting frames */
 #define PF_RING_L7_FILTERING	       (1 << 20) /**< pfring_open() flag: Enable L7 filtering support based on PF_RING FT (Flow Table with nDPI support) */
 #define PF_RING_DO_NOT_STRIP_FCS       (1 << 21) /**< pfring_open() flag: Do not strip the FCS (CRC), when not stripped out by the adapter (on standard adapters use this in combination with 'ethtool -K DEV rx-fcs on rx-all on') */
