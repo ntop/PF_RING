@@ -176,29 +176,27 @@ void sigproc(int sig) {
 /* ******************************** */
 
 void processFlow(pfring_flow_update *flow){
-  if (verbose) {
-    switch (flow->cause) {
-      /* Flow stats update (periodic) */
-      case PF_RING_FLOW_UPDATE_CAUSE_PERIODIC:
-        printf("Flow #%lu periodic update\n", flow->flow_id);
-        break;
-      /* Flow unlearned */
-      case PF_RING_FLOW_UPDATE_CAUSE_SW:
-        printf("Flow #%lu removed (by FlowWrite)\n", flow->flow_id);
-        break;
-      case PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT:
-        printf("Flow #%lu removed (timeout)\n", flow->flow_id);
-        break;
-      case PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM:
-        printf("Flow #%lu removed (TCP termination)\n", flow->flow_id);
-        break;
-      case PF_RING_FLOW_UPDATE_CAUSE_PROBE:
-        printf("Flow #%lu removed (Software probe?)\n", flow->flow_id);
-        break;
-      default:
-        printf("Flow #%lu removed: unknown cause\n", flow->flow_id);
-        break;
-    }
+  switch (flow->cause) {
+    /* Flow stats update (periodic) */
+    case PF_RING_FLOW_UPDATE_CAUSE_PERIODIC:
+      printf("Flow #%lu periodic update\n", flow->flow_id);
+      break;
+    /* Flow unlearned */
+    case PF_RING_FLOW_UPDATE_CAUSE_SW:
+      printf("Flow #%lu removed (by FlowWrite)\n", flow->flow_id);
+      break;
+    case PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT:
+      printf("Flow #%lu removed (timeout)\n", flow->flow_id);
+      break;
+    case PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM:
+      printf("Flow #%lu removed (TCP termination)\n", flow->flow_id);
+      break;
+    case PF_RING_FLOW_UPDATE_CAUSE_PROBE:
+      printf("Flow #%lu removed (Software probe?)\n", flow->flow_id);
+      break;
+    default:
+      printf("Flow #%lu removed: unknown cause\n", flow->flow_id);
+      break;
   }
 }
 
@@ -309,7 +307,7 @@ void printHelp(void) {
   printf("-r <0|1|2>      Add hardware flow rules to Drop (1) or Pass (2) packets (Default: 1)\n");
   printf("-u              Enable periodic updates\n");
   printf("-g <core>       CPU core affinity\n");
-  printf("-v <level>      Verbose (1: flows, 2: packets)\n");
+  printf("-v <level>      Verbose (1: flows, 2: packets+flows)\n");
   printf("-q              Quiet\n");
 }
 
