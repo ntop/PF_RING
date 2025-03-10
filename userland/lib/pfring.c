@@ -195,7 +195,6 @@ pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) 
   ring->disable_timestamp   = !!(flags & PF_RING_DO_NOT_TIMESTAMP);
   ring->chunk_mode_enabled  = !!(flags & PF_RING_CHUNK_MODE);
   ring->ixia_timestamp_enabled = !!(flags & PF_RING_IXIA_TIMESTAMP);
-  ring->vss_apcon_timestamp_enabled = !!(flags & PF_RING_VSS_APCON_TIMESTAMP);
   ring->force_userspace_bpf = !!(flags & (PF_RING_USERSPACE_BPF|PF_RING_TX_BPF));
   ring->ft_enabled          = !!(flags & PF_RING_L7_FILTERING);
 
@@ -505,13 +504,10 @@ int pfring_loop(pfring *ring, pfringProcesssPacket looper,
 
       if (ring->flags & (
             PF_RING_IXIA_TIMESTAMP | 
-            PF_RING_VSS_APCON_TIMESTAMP |
             PF_RING_METAWATCH_TIMESTAMP |
             PF_RING_ARISTA_TIMESTAMP)) {
         if(ring->ixia_timestamp_enabled)
           pfring_handle_ixia_hw_timestamp(buffer, &hdr);
-        else if(ring->vss_apcon_timestamp_enabled)
-          pfring_handle_vss_apcon_hw_timestamp(buffer, &hdr);
         else if(ring->flags & PF_RING_METAWATCH_TIMESTAMP)
           pfring_handle_metawatch_hw_timestamp(buffer, &hdr);
         else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {
@@ -585,13 +581,10 @@ recv_next:
 
     if (unlikely(rc > 0 && ring->flags & (
           PF_RING_IXIA_TIMESTAMP | 
-          PF_RING_VSS_APCON_TIMESTAMP |
           PF_RING_METAWATCH_TIMESTAMP |
           PF_RING_ARISTA_TIMESTAMP))) {
       if(ring->ixia_timestamp_enabled)
         pfring_handle_ixia_hw_timestamp(*buffer, hdr);
-      else if(ring->vss_apcon_timestamp_enabled)
-        pfring_handle_vss_apcon_hw_timestamp(*buffer, hdr);
       else if(ring->flags & PF_RING_METAWATCH_TIMESTAMP)
         pfring_handle_metawatch_hw_timestamp(*buffer, hdr);
       else if(ring->flags & PF_RING_ARISTA_TIMESTAMP) {

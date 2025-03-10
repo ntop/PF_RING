@@ -77,12 +77,3 @@ struct arista_7280_pkt_hw_ts {
 
 /* *********************************************** */
 
-#define VSS_APCON_TS_LEN       sizeof(struct vss_apcon_hw_ts)
-
-struct vss_apcon_hw_ts {
-  u_int32_t sec;
-  u_int32_t nsec;
-  u_int32_t crc;
-} __attribute__((__packed__));
-
-/* *********************************************** */

@@ -202,7 +202,7 @@ struct __pfring {
   u_int8_t disable_timestamp;
   u_int8_t ixia_timestamp_enabled;
 
-  u_int8_t vss_apcon_timestamp_enabled;
+  u_int8_t __padding_0;
   u_int8_t chunk_mode_enabled;
   u_int8_t userspace_bpf;
   u_int8_t force_userspace_bpf;
@@ -351,7 +351,7 @@ struct __pfring {
 
   u_int8_t reentrant;
   u_int8_t break_recv_loop;
-  u_int16_t __padding;
+  u_int16_t __padding_1;
   u_int32_t num_poll_calls;
 
   pfring_rwlock_t rx_lock;
@@ -387,7 +387,7 @@ struct __pfring {
 #define PF_RING_IXIA_TIMESTAMP	       (1 << 12) /**< pfring_open() flag: Enable ixiacom.com hardware timestamp support+stripping. */
 #define PF_RING_USERSPACE_BPF	       (1 << 13) /**< pfring_open() flag: Force userspace bpf even with standard drivers (not only with ZC). */
 #define PF_RING_ZC_NOT_REPROGRAM_RSS   (1 << 14) /**< pfring_open() flag: Do not touch/reprogram hw RSS */ 
-#define PF_RING_VSS_APCON_TIMESTAMP    (1 << 15) /**< pfring_open() flag: Enable apcon.com/vssmonitoring.com hardware timestamp support+stripping. */
+#define PF_RING_VSS_APCON_TIMESTAMP    (1 << 15) /**< pfring_open() flag: Deprecated */
 #define PF_RING_ZC_IPONLY_RSS	       (1 << 16) /**< pfring_open() flag: Compute RSS on src/dst IP only (not 4-tuple) */ 
 #define PF_RING_FLOW_OFFLOAD	       (1 << 17) /**< pfring_open() flag: Enable Flow offload (Flow Manager on Napatech) */ 
 #define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Disable periodic updates when PF_RING_FLOW_OFFLOAD is used */
@@ -1342,24 +1342,6 @@ int pfring_read_arista_7150_hw_timestamp(u_char *buffer, u_int32_t buffer_len, u
  * @return 0 on success, a negative value otherwise.
  */
 int pfring_handle_arista_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
-
-/**
- * Reads a VSS/APCON-formatted timestamp from an incoming packet and puts it into the timestamp variable.
- * @param buffer            Incoming packet buffer.
- * @param buffer_len        Incoming packet buffer length.
- * @param ts                If found the hardware timestamp will be placed here
- * @return The length of the VSS/APCON timestamp
- */
-int pfring_read_vss_apcon_hw_timestamp(u_char *buffer, u_int32_t buffer_len, struct timespec *ts);
-
-/**
- * Strip an VSS/APCON-formatted timestamp from an incoming packet. If the timestamp is found, the
- * hdr parameter (caplen and len fields) are decreased by the size of the timestamp.
- * @param buffer            Incoming packet buffer.
- * @param hdr               This is an in/out parameter: it is used to read the original packet len, and it is updated (size decreased) if the hw timestamp is found
- * @return 0 on success, a negative value otherwise.
- */
-void pfring_handle_vss_apcon_hw_timestamp(u_char* buffer, struct pfring_pkthdr *hdr);
 
 /**
  * Get interface speed.
