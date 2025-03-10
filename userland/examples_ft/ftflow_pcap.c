@@ -237,7 +237,7 @@ void process_packet(u_char *_deviceId, const struct pcap_pkthdr *h, const u_char
     char buffer[256];
     buffer[0] = '\0';
     pfring_print_pkt(buffer, sizeof(buffer), p, h->len, h->caplen);
-    printf("[Packet]%s %s", action == PFRING_FT_ACTION_DISCARD ? " [discard]" : "", buffer);
+    printf("[Packet]%s %s\n", action == PFRING_FT_ACTION_DISCARD ? " [discard]" : "", buffer);
   }
 }
 
