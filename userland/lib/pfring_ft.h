@@ -155,6 +155,7 @@ typedef struct {
   pfring_ft_pcap_pkthdr *hdr;
   pfring_ft_ext_pkthdr *ext_hdr;
   pfring_ft_direction direction;
+  pfring_ft_action action;
   u_int16_t vlan_id;
   u_int8_t ip_version;
   u_int8_t l4_proto;
