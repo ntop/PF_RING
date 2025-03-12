@@ -176,28 +176,51 @@ void sigproc(int sig) {
 /* ******************************** */
 
 void processFlow(pfring_flow_update *flow){
+
+  printf("Flow #%lu ", flow->flow_id);
+
   switch (flow->cause) {
     /* Flow stats update (periodic) */
     case PF_RING_FLOW_UPDATE_CAUSE_PERIODIC:
-      printf("Flow #%lu periodic update\n", flow->flow_id);
+      printf("periodic update");
       break;
     /* Flow unlearned */
     case PF_RING_FLOW_UPDATE_CAUSE_SW:
-      printf("Flow #%lu removed (by FlowWrite)\n", flow->flow_id);
+      printf("removed (by FlowWrite)");
       break;
     case PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT:
-      printf("Flow #%lu removed (timeout)\n", flow->flow_id);
+      printf("removed (timeout)");
       break;
     case PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM:
-      printf("Flow #%lu removed (TCP termination)\n", flow->flow_id);
+      printf("removed (TCP termination)");
       break;
     case PF_RING_FLOW_UPDATE_CAUSE_PROBE:
-      printf("Flow #%lu removed (Software probe?)\n", flow->flow_id);
+      printf("removed (Software probe?)");
       break;
     default:
-      printf("Flow #%lu removed: unknown cause\n", flow->flow_id);
+      printf("(Unknown cause)");
       break;
   }
+
+  switch (flow->cause) {
+    case PF_RING_FLOW_UPDATE_CAUSE_PERIODIC:
+    case PF_RING_FLOW_UPDATE_CAUSE_SW:
+    case PF_RING_FLOW_UPDATE_CAUSE_TIMEOUT:
+    case PF_RING_FLOW_UPDATE_CAUSE_TCP_TERM:
+    case PF_RING_FLOW_UPDATE_CAUSE_PROBE:
+      printf(" flags=%02x/%02x packets=%u/%u bytes=%ju/%ju",
+             flow->flags_out,
+             flow->flags_in,
+             flow->packets_out,
+             flow->packets_in,
+             flow->bytes_out,
+             flow->bytes_in);
+      break;
+    default:
+      break;
+  }
+
+  printf("\n");
 }
 
 /* ******************************** */

@@ -724,16 +724,16 @@ typedef struct {
 #define PF_RING_FLOW_UPDATE_CAUSE_PROBE    4
 #define PF_RING_FLOW_UPDATE_CAUSE_UNKNOWN  5
   u_int8_t cause;
-  u_int8_t reserved0;
-  u_int16_t reserved1;
+  u_int8_t padding_0;
+  u_int16_t padding_1;
 
-  u_int16_t flags_a;
-  u_int16_t flags_b;
+  u_int16_t flags_out;
+  u_int16_t flags_in;
 
-  u_int32_t packets_a;
-  u_int32_t packets_b;
-  u_int64_t bytes_a;
-  u_int64_t bytes_b;
+  u_int32_t packets_out;
+  u_int32_t packets_in;
+  u_int64_t bytes_out;
+  u_int64_t bytes_in;
 
   struct pfring_timespec last_seen;
 } __attribute__((packed))
