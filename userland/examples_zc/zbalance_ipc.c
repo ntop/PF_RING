@@ -72,6 +72,7 @@ pfring_zc_cluster *zc;
 struct {
   u_int32_t num_devices;
   u_int32_t num_real_devices;
+  u_int32_t num_rss_queues; /* Total number of RSS queues for all devides */
   u_int32_t num_in_queues;
   int bind_worker_core;
   char *device_list;
@@ -281,6 +282,7 @@ void print_stats() {
   char time_buf[128];
   double duration;
   int i, b, in_use;
+  u_int32_t tot_num_rss_queues = 0;
 
   if (start_time.tv_sec == 0)
     gettimeofday(&start_time, NULL);
@@ -291,10 +293,13 @@ void print_stats() {
 
   duration = delta_time(&end_time, &start_time);
 
-  for (b = 0; b < num_balancers; b++)
-    for (i = 0; i < balancer[b].num_devices; i++)
+  for (b = 0; b < num_balancers; b++) {
+    for (i = 0; i < balancer[b].num_devices; i++) {
       if (pfring_zc_stats(balancer[b].inzqs[i], &stats) == 0)
         tot_recv += stats.recv, tot_drop += stats.drop;
+      tot_num_rss_queues += balancer[b].num_rss_queues;
+    }
+  }
 
   if (!daemon_mode && !proc_stats_only) {
     trace(TRACE_INFO, "=========================");
@@ -345,9 +350,12 @@ void print_stats() {
 
   snprintf(stats_buf, sizeof(stats_buf), 
            "ClusterId:    %d\n"
+           "TotIFQueues:  %d/%d\n"
            "TotQueues:    %d\n"
            "Applications: %d\n", 
            cluster_id,
+           num_balancers,
+           tot_num_rss_queues,
            num_consumer_queues,
            num_apps);
 
@@ -1429,6 +1437,8 @@ int main(int argc, char* argv[]) {
           pfring_zc_destroy_cluster(zc);
           return -1;
         }
+
+        balancer[b].num_rss_queues += pfring_zc_get_num_rx_channels(balancer[b].inzqs[i]);
 
       } else { /* create sw queue as ingress device */
         pfring_zc_queue *ext_q = NULL;

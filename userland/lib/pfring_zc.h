@@ -626,12 +626,22 @@ pfring_zc_get_queue_settings(
 );
 
 /**
- * Read queue speed.
+ * Read queue speed (in case of device queue).
  * @param queue The queue handle.
  * @return      The queue speed in Mbit/s, 0 if unknown.
  */
 u_int32_t
 pfring_zc_get_queue_speed(
+  pfring_zc_queue *queue
+);
+
+/**
+ * Read total number of RSS queues (in case of device).
+ * @param queue The queue handle.
+ * @return      The number of RSS queues for the bound device.
+ */
+u_int32_t
+pfring_zc_get_num_rx_channels(
   pfring_zc_queue *queue
 );
 

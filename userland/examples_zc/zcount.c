@@ -392,6 +392,8 @@ int main(int argc, char* argv[]) {
     goto cleanup;
   }
 
+  printf("# Device RX channels: %d\n", pfring_zc_get_num_rx_channels(zq));
+
   if (check_license || print_maintenance) {
     if (strncmp(device, "zc:", 3) == 0) {
       u_int32_t maintenance;
