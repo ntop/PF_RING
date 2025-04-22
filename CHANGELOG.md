@@ -1,6 +1,77 @@
 # CHANGELOG
 
 ---------------------------------------
+2025-04-24 PF_RING 9.0
+
+* Key Features
+ - Consolidated Napatech Flow Manager support (now with periodic flow updates)
+ - Flow tracking on NVIDIA DOCA Flow CT (BlueField 3 and ConnectX 6/7)
+
+* PF_RING Library
+ - Add PF_RING_FLOW_UPDATE_CAUSE_PERIODIC to generic flow offload messages
+ - Add support for Arista 7280 timestamps
+ - Add ifindex to interface list returned by pfring_findalldevs()
+ - Add PF_RING_HW_TIMESTAMP_UNSYNC flag to avoid setting the hw clock using system time (e.g. when using PTP)
+
+* PF_RING Kernel Module
+ - Set interface name under /proc for non-kernel devices
+ - Add SO_GET_CLUSTER_OBJECT_INFO to read ZC queue status
+
+* ZC Library
+ - New API calls to check if a queue is locked and in use (pfring_zc_ipc_queue_in_use, pfring_zc_ipc_queue_in_use_from_cluster, pfring_zc_ipc_queue_in_use_from_queue)
+ - Add pfring_zc_get_num_rx_channels API (print number of device queue in zcount and zbalance_ipc)
+ - Implemented GTPv0 balancing in built-in hash
+ - Add PF_RING_ZC_DEVICE_HW_TIMESTAMP_UNSYNC flag to avoid setting the hw clock using system time (e.g. when using PTP)
+
+* FT Library
+ - Add PFRING_FT_TABLE_FLAGS_NO_GUESS flag to disable protocol guess
+ - Add PFRING_FT_IGNORE_VLAN to ignore VLAN in flow key
+ - Add action to pfring_ft_packet_metadata to be used in packet callbacks
+ - Fix flow slices export (duration)
+ - Fix shunting
+
+* PF_RING Capture Modules and ZC Drivers
+ - Napatech improvements
+   - Add support for periodic flow updates with the latest Flow Manager API
+   - Add support for NT_TIMESTAMP_TYPE_UNIX_NANOTIME
+   - Handle PF_RING_FLOW_OFFLOAD_NOUPDATES to disable periodic updates
+   - Fix flow ID (32-bit on API v2) on new Flow Manager API
+ - NVIDIA (Mellanox) ConnectX improvements
+   - RSS limit set to 64 queues
+   - Add PF_RING_RSS env var to set number of rss queues (rather then reading system conf)
+   - Fix BPF rules
+ - Intel improvements
+   - Add MAC/VLAN support in RSS
+   - Add rss_scheme parameter to select rss hash at driver load
+   - Add irdma kernel module - required by ice on some kernel version
+ - Update support for Silicom FPGA (Fiberblaze) adapters
+
+* Examples
+ - zbalance_ipc
+   - Fail on bad or unsupported BPF
+   - Add -0 option to disable RSS (all traffic to queue 0)
+ - pfcount 
+   - Add ifindex to interface list (printed with -L -v 1)
+   - Fix -L header
+ - zcount
+   - Add -U option to set PF_RING_ZC_DEVICE_HW_TIMESTAMP_UNSYNC
+ - ftflow
+   - Add -f <bpf> to ftflow. Update FT libs.
+   - Fix uninitialized memory and minor leaks
+ - ftflow_pcap
+   - Add -N option to disable L7 protocol guess
+ - pfflow_offload improvements for Napatech Flow Manager
+   - Add -u to enable periodic updates
+   - Print flow updates
+
+* Misc
+ - Add ARM support for PF_RING FT
+ - Add support for /etc/pf_ring/keepoffload (keep interfaces offloads enabled)
+ - Fix pf_ringctl script execution on Rocky9 and new RH systems based on systemd
+ - Fix compilation on RH9
+ - Deprecate apcon/vss timestamps
+
+---------------------------------------
 2024-08-05 PF_RING 8.8
 
 * Key Features
