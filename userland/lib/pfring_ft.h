@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 89
+#define FT_API_VERSION 95
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
