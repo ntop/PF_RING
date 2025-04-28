@@ -23,7 +23,7 @@
 #endif /* __KERNEL__ */
 
 /* Versioning */
-#define RING_VERSION                "8.9.0"
+#define RING_VERSION                "9.1.0"
 #define RING_VERSION_NUM           0x080900
 
 /* Increment whenever there is a change in some shared data structure
