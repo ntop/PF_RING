@@ -8,7 +8,9 @@ Napatech module at runtime.
 Prerequisite
 ------------
 
-Napatech drivers and SDK installed. Latest Napatech SDK is available for download at https://www.napatech.com/downloads/.
+Napatech drivers and SDK installed (12.11.24 or newer).
+
+The Napatech SDK is available for download at https://www.napatech.com/downloads/.
 
 After installing the Napatech SDK, please make sure the driver is loaded with:
 
