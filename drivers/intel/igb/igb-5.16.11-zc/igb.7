@@ -1,0 +1,1352 @@
+.\" Man page generated from reStructuredText.
+.
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.TH "IGB" "7" "July 15, 2024" "" "Linux igb README"
+.SH NAME
+igb \- igb Linux* Base Driver for Intel(R) Ethernet Network Connection
+.SS Contents
+.INDENT 0.0
+.IP \(bu 2
+\fI\%igb Linux* Base Driver for Intel(R) Ethernet Network Connection\fP
+.INDENT 2.0
+.IP \(bu 2
+\fI\%Important Notes\fP
+.IP \(bu 2
+\fI\%Overview\fP
+.IP \(bu 2
+\fI\%Related Documentation\fP
+.IP \(bu 2
+\fI\%Identifying Your Adapter\fP
+.IP \(bu 2
+\fI\%Building and Installation\fP
+.IP \(bu 2
+\fI\%Command Line Parameters\fP
+.IP \(bu 2
+\fI\%Additional Features and Configurations\fP
+.IP \(bu 2
+\fI\%Known Issues/Troubleshooting\fP
+.IP \(bu 2
+\fI\%Support\fP
+.IP \(bu 2
+\fI\%License\fP
+.IP \(bu 2
+\fI\%Trademarks\fP
+.UNINDENT
+.UNINDENT
+.SH IMPORTANT NOTES
+.SS Configuring SR\-IOV for improved network security
+.sp
+In a virtualized environment, on Intel(R) Ethernet Network Adapters that
+support SR\-IOV, the virtual function (VF) may be subject to malicious behavior.
+Software\-generated layer\-two frames, like IEEE 802.3x (link flow control),
+IEEE 802.1Qbb (priority based flow\-control), and others of this type, are not
+expected and can throttle traffic between the host and the virtual switch,
+reducing performance.
+.sp
+To resolve this issue, and to ensure isolation from unintended traffic streams,
+configure all SR\-IOV enabled ports for VLAN tagging from the administrative
+interface on the PF. This configuration allows unexpected, and potentially
+malicious, frames to be dropped.
+.SH OVERVIEW
+.sp
+This driver supports kernel versions 2.6.30 or newer. However, some features
+may require a newer kernel version. The associated Virtual Function (VF) driver
+for this driver is igbvf.
+.sp
+Driver information can be obtained using ethtool, lspci, and ip.
+.sp
+This driver is only supported as a loadable module at this time. Intel is not
+supplying patches against the kernel source to allow for static linking of the
+drivers.
+.sp
+For questions related to hardware requirements, refer to the documentation
+supplied with your Intel adapter. All hardware requirements listed apply to use
+with Linux.
+.sp
+The igb driver supports IEEE 1588 time stamping for kernels 2.6.30 and newer.
+.SH RELATED DOCUMENTATION
+.sp
+See the \(dqIntel(R) Ethernet Adapters and Devices User Guide\(dq for additional
+information on features:
+.INDENT 0.0
+.IP \(bu 2
+\fI\%https://cdrdv2.intel.com/v1/dl/getContent/705831\fP
+.IP \(bu 2
+\fI\%https://www.intel.com/content/www/us/en/download/19373/adapter\-user\-guide\-for\-intel\-ethernet\-adapters.html\fP
+.UNINDENT
+.SH IDENTIFYING YOUR ADAPTER
+.sp
+For information on how to identify your adapter, and for the latest Intel
+network drivers, refer to the Intel Support website:
+\fI\%http://www.intel.com/support\fP\&.
+.SH BUILDING AND INSTALLATION
+.SS How to Manually Build the Driver
+.INDENT 0.0
+.IP 1. 3
+Move the virtual function driver tar file to the directory of your choice.
+For example, use \fB/home/username/igb\fP or \fB/usr/local/src/igb\fP\&.
+.IP 2. 3
+Untar/unzip the archive, where \fB<x.x.x>\fP is the version number for the
+driver tar file:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+tar zxf igb\-<x.x.x>.tar.gz
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.IP 3. 3
+Change to the driver src directory, where \fB<x.x.x>\fP is the version number
+for the driver tar:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+cd igb\-<x.x.x>/src/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.IP 4. 3
+Compile the driver module:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make install
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The binary will be installed as:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+/lib/modules/<KERNEL VER>/updates/drivers/net/ethernet/intel/igb/igb.ko
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+The install location listed above is the default location. This may differ
+for various Linux distributions.
+.IP 5. 3
+Load the module using the modprobe command.
+.sp
+To check the version of the driver and then load it:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+modinfo igb
+modprobe igb
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Alternately, make sure that any older igb drivers are removed from the
+kernel before loading the new module:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rmmod igb; modprobe igb
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.IP 6. 3
+Assign an IP address to the interface by entering the following, where
+\fB<ethX>\fP is the interface name that was shown in dmesg after modprobe:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ip address add <IP_address>/<netmask bits> dev <ethX>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.IP 7. 3
+Verify that the interface works. Enter the following, where \fBIP_address\fP
+is the IP address for another machine on the same subnet as the interface
+that is being tested:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ping <IP_address>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+For certain distributions like (but not limited to) Red Hat Enterprise
+Linux 7 and Ubuntu, once the driver is installed, you may need to update the
+initrd/initramfs file to prevent the OS loading old versions of the igb
+driver.
+.sp
+For Red Hat distributions:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+dracut \-\-force
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For Ubuntu:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+update\-initramfs \-u
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS How to Build a Binary RPM Package of This Driver
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+RPM functionality has only been tested in Red Hat distributions.
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.IP 1. 3
+Run the following command, where \fB<x.x.x>\fP is the version number for the
+driver tar file:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rpmbuild \-tb igb\-<x.x.x>.tar.gz
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 3.0
+.INDENT 3.5
+For the build to work properly, the currently running kernel MUST
+match the version and configuration of the installed kernel sources. If
+you have just recompiled the kernel, reboot the system before building.
+.UNINDENT
+.UNINDENT
+.IP 2. 3
+After building the RPM, the last few lines of the tool output contain the
+location of the RPM file that was built. Install the RPM with one of the
+following commands, where \fB<RPM>\fP is the location of the RPM file:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+rpm \-Uvh <RPM>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+or:
+.INDENT 3.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+dnf/yum localinstall <RPM>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+To compile the driver on some kernel/arch combinations, you may need to
+install a package with the development version of libelf (e.g. libelf\-dev,
+libelf\-devel, elfutils\-libelf\-devel).
+.IP \(bu 2
+When compiling an out\-of\-tree driver, details will vary by distribution.
+However, you will usually need a kernel\-devel RPM or some RPM that provides
+the kernel headers at a minimum. The RPM kernel\-devel will usually fill in
+the link at \fB/lib/modules/\(aquname \-r\(aq/build\fP\&.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS Building the igb Driver with DCA
+.sp
+If your kernel supports Direct Cache Access (DCA), the driver will build by
+default with DCA enabled.
+.SH COMMAND LINE PARAMETERS
+.sp
+If the driver is built as a module, enter optional parameters on the command
+line with the following syntax:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+modprobe igb [<option>=<VAL1>,<VAL2>,...]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+There needs to be a \fB<VAL#>\fP for each network port in the system supported by
+this driver. The values will be applied to each instance, in function order.
+For example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+modprobe igb InterruptThrottleRate=16000,16000
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+In this case, there are two network ports supported by igb in the system.
+.sp
+The default value for each parameter is generally the recommended setting unless
+otherwise noted.
+.SS InterruptThrottleRate
+.sp
+Valid Range:
+.INDENT 0.0
+.IP \(bu 2
+0 = off
+.IP \(bu 2
+1 = dynamic
+.IP \(bu 2
+3 = dynamic conservative
+.IP \(bu 2
+\fB<min_ITR>\-<max_ITR>\fP
+.UNINDENT
+.sp
+Interrupt Throttle Rate (ITR) controls the number of interrupts each interrupt
+vector can generate per second. Increasing ITR lowers latency at the cost of
+increased CPU utilization, though it may help throughput in some circumstances.
+.INDENT 0.0
+.IP \(bu 2
+0 = Setting \fBInterruptThrottleRate\fP to 0 turns off any interrupt moderation
+and may improve small packet latency. However, this is generally not
+suitable for bulk throughput traffic due to the increased CPU utilization
+of the higher interrupt rate.
+.IP \(bu 2
+1 = Setting \fBInterruptThrottleRate\fP to Dynamic mode attempts to moderate
+interrupts per vector while maintaining very low latency. This can
+sometimes cause extra CPU utilization. If planning on deploying igb
+in a latency sensitive environment, this parameter should be considered.
+.IP \(bu 2
+\fB<min_ITR>\-<max_ITR>\fP = 100\-100000
+.sp
+Setting \fBInterruptThrottleRate\fP to a value greater or equal to \fB<min_ITR>\fP
+will program the adapter to send at most that many interrupts
+per second, even if more packets have come in. This reduces interrupt load
+on the system and can lower CPU utilization under heavy load, but will
+increase latency as packets are not processed as quickly.
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+\fBInterruptThrottleRate\fP is NOT supported by 82542, 82543, or
+82544\-based adapters.
+.UNINDENT
+.UNINDENT
+.SS LLI (Low Latency Interrupts)
+.sp
+Low Latency Interrupts (LLI) allow for immediate generation of an interrupt
+upon processing receive packets that match certain criteria as set by the
+parameters described below.
+.sp
+LLI parameters are not enabled when Legacy interrupts are used. You must be
+using MSI or MSI\-X (see \fBcat /proc/interrupts\fP) to successfully use LLI.
+.SS LLIPort
+.sp
+Valid Range: 0\-65535
+.sp
+LLI is configured with the \fBLLIPort\fP command\-line parameter, which specifies
+which TCP port should generate Low Latency Interrupts.
+.sp
+For example, using \fBLLIPort=80\fP would cause the board to generate an immediate
+interrupt upon receipt of any packet sent to TCP port 80 on the local machine.
+.sp
+\fBWARNING:\fP
+.INDENT 0.0
+.INDENT 3.5
+Enabling LLI can result in an excessive number of interrupts/second
+that may cause problems with the system and in some cases may cause a kernel
+panic.
+.UNINDENT
+.UNINDENT
+.SS LLIPush
+.sp
+Valid Range: 0\-1
+.sp
+\fBLLIPush\fP can be set to be enabled or disabled (default). It is most effective
+in an environment with many small transactions.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+Enabling \fBLLIPush\fP may allow a denial of service attack.
+.UNINDENT
+.UNINDENT
+.SS LLISize
+.sp
+Valid Range: 0\-1500
+.sp
+\fBLLISize\fP causes an immediate interrupt if the board receives a packet smaller
+than the specified size.
+.SS IntMode
+.sp
+Valid Range: 0\-2
+.INDENT 0.0
+.IP \(bu 2
+0 = Legacy Int
+.IP \(bu 2
+1 = MSI
+.IP \(bu 2
+2 = MSI\-X
+.UNINDENT
+.sp
+\fBIntMode\fP controls the allowed load time control over the type of interrupt
+registered for by the driver. MSI\-X is required for multiple queue
+support, and some kernels and combinations of kernel \fB\&.config\fP options
+will force a lower level of interrupt support.
+.sp
+\fBcat /proc/interrupts\fP will show different values for each type of interrupt.
+.SS RSS
+.sp
+Valid Range: 0\-8
+.INDENT 0.0
+.IP \(bu 2
+0 = Assign up to the lesser value of the number of CPUs or the number of queues
+.IP \(bu 2
+X = Assign X queues, where X is less than or equal to the maximum number of
+queues (8 queues)
+.UNINDENT
+.sp
+The maximum number of queues allowed are:
+.INDENT 0.0
+.IP \(bu 2
+I350\-based adapters: 8 queues
+.IP \(bu 2
+82575\-based adapters: 4 queues
+.IP \(bu 2
+82576\-based and newer adapters: 8 queues
+.IP \(bu 2
+I210\-based adapters: 4 queues
+.IP \(bu 2
+I211\-based adapters: 2 queues
+.UNINDENT
+.sp
+This parameter is also affected by the \fBVMDq\fP parameter in that it will limit
+the queues more. For example, if you set an 82575 device to VMDQ Mode 2, you
+will only be able to set 3 RSS queues. See the following table.
+.TS
+center;
+|l|l|.
+_
+T{
+Model
+T}	T{
+VMDQ Mode
+T}
+_
+T{
+Number
+T}	T{
+0 1 2 3+
+T}
+_
+T{
+82575
+T}	T{
+4 4 3 1
+T}
+_
+T{
+82576
+T}	T{
+8 2 2 2
+T}
+_
+T{
+82580
+T}	T{
+8 1 1 1
+T}
+_
+.TE
+.SS VMDQ
+.sp
+Valid Range:
+.INDENT 0.0
+.IP \(bu 2
+0\-4 on 82575\-based adapters
+.IP \(bu 2
+0\-8 for 82576/82580\-based adapters
+.UNINDENT
+.sp
+Supports enabling VMDq pools as this is needed to support SR\-IOV.
+.INDENT 0.0
+.IP \(bu 2
+0 = Disabled
+.IP \(bu 2
+1 = Sets the netdev as pool 0
+.IP \(bu 2
+2+ = Add additional queues but they currently are not used
+.UNINDENT
+.sp
+This parameter is forced to 1 or more if the \fBmax_vfs\fP module parameter is used.
+In addition, the number of queues available for RSS is limited if this is set
+to 1 or greater.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+When either SR\-IOV mode or VMDq mode is enabled, hardware VLAN filtering
+and VLAN tag stripping/insertion will remain enabled.
+.UNINDENT
+.UNINDENT
+.SS max_vfs
+.sp
+This parameter adds support for SR\-IOV. It causes the driver to spawn up to
+\fBmax_vfs\fP worth of virtual functions.
+.sp
+Valid Range:  0\-7
+.sp
+If the value is greater than 0, it will also force the VMDq parameter to be 1 or
+more.
+.sp
+The parameters for the driver are referenced by position. Thus, if you have a
+dual port adapter, or more than one adapter in your system, and want \fBN\fP virtual
+functions per port, you must specify a number for each port with each parameter
+separated by a comma. This example will spawn 4 VFs on the first port:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+modprobe igb max_vfs=4
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This example will spawn 2 VFs on the first port and 4 VFs on the second port:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+modprobe igb max_vfs=2,4
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBCAUTION:\fP
+.INDENT 0.0
+.INDENT 3.5
+Use caution when loading the driver with these parameters.
+Depending on your system configuration, number of slots, etc., it is impossible
+to predict in all cases where the positions would be on the command line.
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+Neither the device nor the driver control how VFs are mapped into
+config space. Bus layout will vary by operating system. On operating systems
+that support it, you can check sysfs to find the mapping.
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+When either SR\-IOV mode or VMDq mode is enabled, hardware VLAN
+filtering and VLAN tag stripping/insertion will remain enabled. Please remove
+the old VLAN filter before the new VLAN filter is added. For example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ip link set eth0 vf 0 vlan 100      // set vlan 100 for VF 0
+ip link set eth0 vf 0 vlan 0        // Delete vlan 100
+ip link set eth0 vf 0 vlan 200      // set a new vlan 200 for VF 0
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS QueuePairs
+.sp
+Valid Range: 0\-1
+.sp
+If set to 0, when MSI\-X is enabled, the Tx and Rx will attempt to occupy
+separate vectors.
+.sp
+This option can be overridden to 1 if there are not sufficient interrupts
+available. This can occur if any combination of RSS, VMDQ, and \fBmax_vfs\fP
+results in more than 4 queues being used.
+.SS Node
+.sp
+Valid Range: 0\-n
+.INDENT 0.0
+.IP \(bu 2
+0 \- n: where n is the number of the NUMA node that should be used to allocate
+memory for this adapter port.
+.IP \(bu 2
+\-1: uses the driver default of allocating memory on whichever processor is
+running modprobe.
+.UNINDENT
+.sp
+The \fBNode\fP parameter allows you to choose which NUMA node you want to have the
+adapter allocate memory from. All driver structures, in\-memory queues, and
+receive buffers will be allocated on the node specified. This parameter is
+only useful when interrupt affinity is specified; otherwise, part of the
+interrupt time could run on a different core than where the memory is
+allocated, causing slower memory access and impacting throughput, CPU, or both.
+.SS EEE (Energy Efficient Ethernet)
+.sp
+Valid Range: 0\-1
+.INDENT 0.0
+.IP \(bu 2
+0 = Disables EEE
+.IP \(bu 2
+1 = Enables EEE
+.UNINDENT
+.sp
+A link between two EEE\-compliant devices will result in periodic bursts of data
+followed by periods where the link is in an idle state. This Low Power Idle
+(LPI) state is supported at 1 Gbps and 100 Mbps link speeds.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+EEE support requires auto\-negotiation.
+.IP \(bu 2
+Both link partners must support EEE.
+.IP \(bu 2
+EEE is not supported on all Intel(R) Ethernet Network devices or at all link
+speeds.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+Example:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ethtool \-\-show\-eee <ethX>
+ethtool \-\-set\-eee <ethX> [eee on|off]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS DMAC
+.sp
+Valid Range: 0, 1, 250, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000,
+9000, 10000
+.sp
+This parameter enables or disables the DMA Coalescing (DMAC)  feature. Values
+are in microseconds and set the internal DMA Coalescing internal timer.
+.sp
+DMA (Direct Memory Access) allows the network device to move packet data
+directly to the system\(aqs memory, reducing CPU utilization. However, the
+frequency and random intervals at which packets arrive do not allow the system
+to enter a lower power state.
+.sp
+DMA Coalescing allows the adapter to collect packets before it initiates a DMA
+event. This may increase network latency but also increases the chances that
+the system will enter a lower power state.
+.sp
+Turning on DMA Coalescing may save energy with kernel 2.6.32 and newer. DMA
+Coalescing must be enabled across all active ports in order to save platform
+power.
+.SS MDD (Malicious Driver Detection)
+.sp
+Valid Range: 0\-1
+.INDENT 0.0
+.IP \(bu 2
+0 = Disabled
+.IP \(bu 2
+1 = Enabled
+.UNINDENT
+.sp
+This parameter is only relevant for I350 devices operating in SR\-IOV mode.
+When this parameter is set, the driver detects malicious VF driver and
+disables its Tx/Rx queues until a VF driver reset occurs.
+.SH ADDITIONAL FEATURES AND CONFIGURATIONS
+.SS ethtool
+.sp
+The driver utilizes the ethtool interface for driver configuration and
+diagnostics, as well as displaying statistical information. The latest ethtool
+version is required for this functionality. Download it at
+\fI\%https://kernel.org/pub/software/network/ethtool/\fP\&.
+.SS Viewing Link Messages
+.sp
+Link messages will not be displayed to the console if the distribution is
+restricting system messages. In order to see network driver link messages on
+your console, set dmesg to 8 by entering the following:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+dmesg \-n 8
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+This setting is not saved across reboots.
+.UNINDENT
+.UNINDENT
+.SS Configuring the Driver on Different Distributions
+.sp
+Configuring a network driver to load properly when the system is started is
+distribution dependent. Typically, the configuration process involves adding an
+alias line to \fB/etc/modules.conf\fP or \fB/etc/modprobe.conf\fP as well as editing
+other system startup scripts and/or configuration files. Many popular Linux
+distributions ship with tools to make these changes for you.
+.sp
+To learn the proper way to configure a network device for your system, refer to
+your distribution documentation. If during this process you are asked for the
+driver or module name, the name for the Base Driver is igb.
+.sp
+For example, if you install the igb driver for two adapters (eth0 and eth1) and
+want to set the interrupt mode to MSI\-X and MSI, respectively, add the
+following to \fBmodules.conf\fP or \fB/etc/modprobe.conf\fP:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+alias eth0 igb
+alias eth1 igb
+options igb IntMode=2,1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Jumbo Frames
+.sp
+Jumbo Frames support is enabled by changing the Maximum Transmission Unit (MTU)
+to a value larger than the default value of 1500.
+.sp
+Use the ip command to increase the MTU size. For example, enter the following
+where \fB<ethX>\fP is the interface number:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ip link set mtu 9000 dev <ethX>
+ip link set up dev <ethX>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This setting is not saved across reboots.
+.sp
+Add \fBMTU=9000\fP to the following file to make the setting change permanent:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+\- For RHEL: \(ga\(ga/etc/sysconfig/network\-scripts/ifcfg\-<ethX>\(ga\(ga
+\- For SLES: \(ga\(ga/etc/sysconfig/network/<config_file>\(ga\(ga
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+The maximum MTU setting for jumbo frames is 9216. This corresponds to
+the maximum jumbo frame size of 9234 bytes.
+.IP \(bu 2
+Using jumbo frames at 10 or 100 Mbps is not supported and may result in
+poor performance or loss of link.
+.IP \(bu 2
+Packet loss may have a greater impact on throughput when you use jumbo
+frames. If you observe a drop in performance after enabling jumbo frames,
+enabling flow control may mitigate the issue.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS Speed and Duplex Configuration
+.sp
+In addressing speed and duplex configuration issues, you need to distinguish
+between copper\-based adapters and fiber\-based adapters.
+.sp
+In the default mode, an Intel(R) Ethernet Network Adapter using copper
+connections will attempt to auto\-negotiate with its link partner to determine
+the best setting. If the adapter cannot establish link with the link partner
+using auto\-negotiation, you may need to manually configure the adapter and link
+partner to identical settings to establish link and pass packets. This should
+only be needed when attempting to link with an older switch that does not
+support auto\-negotiation or one that has been forced to a specific speed or
+duplex mode. Your link partner must match the setting you choose. 1Gbps speeds
+and higher cannot be forced. Use the autonegotiation advertising setting to
+manually set devices for 1 Gbps and higher.
+.sp
+Speed, duplex, and autonegotiation advertising are configured through the
+ethtool utility.
+.sp
+To see the speed configurations your device supports, run:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ethtool <ethX>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBCAUTION:\fP
+.INDENT 0.0
+.INDENT 3.5
+Only experienced network administrators should force speed and
+duplex or change autonegotiation advertising manually. The settings at the
+switch must always match the adapter settings. Adapter performance may suffer
+or your adapter may not operate if you configure the adapter differently from
+your switch.
+.UNINDENT
+.UNINDENT
+.sp
+An Intel(R) Ethernet Network Adapter using fiber\-based connections, however,
+will not attempt to auto\-negotiate with its link partner since those adapters
+operate only in full duplex and only at their native speed.
+.SS Wake on LAN (WoL) Support
+.sp
+Some adapters do not support Wake on LAN (WoL). To determine if your adapter
+supports WoL, run the following command:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ethtool <ethX>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+WoL is configured through the ethtool utility. If your Linux distribution does
+not include ethtool, download and install it from the following website:
+\fI\%https://kernel.org/pub/software/network/ethtool/\fP\&.
+.sp
+For instructions on enabling WoL with ethtool, refer to the website listed
+above.
+.sp
+WoL will be enabled on the system during the next shutdown or reboot. For this
+driver version, in order to enable WoL, the igb driver must be loaded prior to
+shutting down or suspending the system.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+Wake on LAN is only supported on port A of multi\-port devices.
+.IP \(bu 2
+Wake On LAN is not supported for the Intel(R) Gigabit VT Quad Port Server
+Adapter.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS Multiqueue
+.sp
+In this mode, a separate MSI\-X vector is allocated for each queue and one for
+\(dqother\(dq interrupts such as link status change and errors. All interrupts are
+throttled via interrupt moderation. Interrupt moderation must be used to avoid
+interrupt storms while the driver is processing one interrupt. The moderation
+value should be at least as large as the expected time for the driver to
+process an interrupt. Multiqueue is off by default.
+.sp
+Requirements:
+.INDENT 0.0
+.IP \(bu 2
+MSI\-X support is required for Multiqueue. If MSI\-X is not found, the system
+will fallback to MSI or to Legacy interrupts.
+.IP \(bu 2
+This driver supports multiqueue in kernel versions 2.6.24 and newer.
+.IP \(bu 2
+This driver supports receive multiqueue on all kernels that support MSI\-X.
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+.INDENT 0.0
+.IP \(bu 2
+Do not use MSI\-X with the 2.6.19 or 2.6.20 kernels.
+.IP \(bu 2
+On some kernels a reboot is required to switch between single queue mode
+and multiqueue mode or vice\-versa.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.SS LRO
+.sp
+Large Receive Offload (LRO) is a technique for increasing inbound throughput
+of high\-bandwidth network connections by reducing CPU overhead. It works by
+aggregating multiple incoming packets from a single stream into a larger
+buffer before they are passed higher up the networking stack, thus reducing
+the number of packets that have to be processed. LRO combines multiple
+Ethernet frames into a single receive in the stack, thereby potentially
+decreasing CPU utilization for receives.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+LRO requires 2.4.22 or later kernel version.
+.UNINDENT
+.UNINDENT
+.sp
+\fBIGB_NO_LRO\fP is a compile time flag. You can enable it at compile time to
+add support for LRO from the driver. The flag is used by adding
+\fBCFLAGS_EXTRA=\(dq\-DIGB_NO_LRO\(dq\fP to the make file when it\(aqs being compiled:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make CFLAGS_EXTRA=\(dq\-DIGB_NO_LRO\(dq install
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+You can verify that the driver is using LRO by looking at these counters in
+ethtool:
+.INDENT 0.0
+.TP
+.B lro_aggregated
+Counts total packets that were combined.
+.TP
+.B lro_flushed
+Counts the number of packets flushed out of LRO.
+.TP
+.B lro_recycled
+Counts the number of buffers returned to the ring from recycling.
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+LRO does not support IPv6 and UDP.
+.UNINDENT
+.UNINDENT
+.SS IEEE 1588 Precision Time Protocol (PTP) Hardware Clock (PHC)
+.sp
+Precision Time Protocol (PTP) is used to synchronize clocks in a computer
+network. PTP support varies among Intel devices that support this driver. Use
+the following command to get a definitive list of PTP capabilities supported by
+the device:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ethtool \-T <ethX>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+PTP requires 3.0.0 or later kernel version that has PTP support enabled
+in the kernel and a user\-space software daemon.
+.UNINDENT
+.UNINDENT
+.sp
+\fBIGB_PTP\fP is a compile time flag. The user can enable it at compile time to add
+support for PTP from the driver. The flag is used by editing the make file as
+follows when it is being compiled:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make CFLAGS_EXTRA=\(dq\-DIGB_PTP\(dq install
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+The driver will fail to compile if your kernel does not support PTP.
+.UNINDENT
+.UNINDENT
+.sp
+You can verify that the driver is using PTP by looking at the system log to see
+whether a PHC was attempted to be registered or not. If you have a kernel and
+version of ethtool with PTP support, you can check the PTP support in the
+driver by executing:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ethtool \-T <ethX>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Configuring VLAN Tagging on SR\-IOV Enabled Adapter Ports
+.sp
+To configure VLAN tagging for the ports on an SR\-IOV enabled adapter, use the
+following command. The VLAN configuration should be done before the VF driver
+is loaded or the VM is booted. The VF is not aware of the VLAN tag being
+inserted on transmit and removed on received frames (sometimes called \(dqport
+VLAN\(dq mode):
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ip link set dev <ethX> vf <id> vlan <vlan id>
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+For example, the following will configure PF eth0 and the first VF on VLAN 10:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ip link set dev eth0 vf 0 vlan 10
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS MAC and VLAN Anti\-Spoofing Feature for VFs
+.sp
+When a malicious driver on a Virtual Function (VF) interface attempts to send a
+spoofed packet, it is dropped by the hardware and not transmitted.
+.sp
+An interrupt is sent to the PF driver notifying it of the spoof attempt. When a
+spoofed packet is detected, the PF driver will send the following message to
+the system log (displayed by the dmesg command):
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+Spoof event(s) detected on VF(n)
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+where \fBn\fP = the VF that attempted to do the spoofing.
+.SS Setting MAC Address, VLAN, and Rate Limit Using IProute2 Tool
+.sp
+You can set a MAC address of a Virtual Function (VF), a default VLAN, and the
+rate limit using the IProute2 tool. Download the latest version of the
+IProute2 tool from Sourceforge if your version does not have all the features
+you require.
+.SH KNOWN ISSUES/TROUBLESHOOTING
+.SS MAC address of Virtual Function changes unexpectedly
+.sp
+If a Virtual Function\(aqs MAC address is not assigned in the host, then the VF
+(virtual function) driver will use a random MAC address. This random MAC
+address may change each time the VF driver is reloaded. You can assign a static
+MAC address in the host machine. This static MAC address will survive a VF
+driver reload.
+.SS Software Issues
+.sp
+If your Intel Ethernet Network Connection is not working after installing the
+driver, verify that you have installed the correct driver.
+.sp
+Intel(R) Active Management Technology 2.0, 2.1, and 2.5 are not supported in
+conjunction with the Linux driver.
+.SS Using the igb driver on 2.4 or older 2.6\-based kernels
+.sp
+Due to limited support for PCI\-Express in 2.4 kernels and older 2.6 kernels,
+the igb driver may run into interrupt related problems on some systems, such
+as no link or hanging when bringing up the device.
+.sp
+We recommend the newer 2.6 based kernels, as these kernels correctly configure
+the PCI\-Express configuration space of the adapter and all intervening
+bridges. If you are required to use a 2.4 kernel, use a 2.4 kernel newer than
+2.4.30. For 2.6 kernels, we recommend using the 2.6.21 kernel or newer.
+.sp
+Alternatively, on 2.6 kernels you may disable MSI support in the kernel by
+booting with the \fBpci=nomsi\fP option or permanently disable MSI support in your
+kernel by configuring your kernel with \fBCONFIG_PCI_MSI\fP unset.
+.SS Detected Tx unit hang in quad port adapters
+.sp
+In some cases, ports 3 and 4 don\(aqt pass traffic and report \(dqDetected Tx Unit
+Hang,\(dq followed by \(dqNETDEV WATCHDOG: <ethX>: transmit timed out\(dq errors. Ports 1
+and 2 do not show any errors and will pass traffic.
+.sp
+This issue may be resolved by updating to the latest kernel and BIOS. You
+should use an OS that fully supports Message Signaled Interrupts (MSI) and make
+sure that MSI is enabled in your system\(aqs BIOS.
+.SS Compiling the driver
+.sp
+When trying to compile the driver by running make install, the following error
+may occur:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+Linux kernel source not configured \- missing version.h
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+To solve this issue, create the \fBversion.h\fP file by going to the Linux source
+tree and entering:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make include/linux/version.h
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Performance degradation with Jumbo Frames
+.sp
+Degradation in throughput performance may be observed in some Jumbo frames
+environments. If this is observed, increasing the application\(aqs socket buffer
+size and/or increasing the \fB/proc/sys/net/ipv4/tcp_*mem\fP entry values may help.
+.sp
+See the specific application manual and
+\fB/usr/src/linux*/Documentation/networking/ip\-sysctl.txt\fP for more details.
+.SS Jumbo Frames on Foundry BigIron 8000 switch
+.sp
+There is a known issue using Jumbo frames when connected to a Foundry BigIron
+8000 switch. This is a third\-party limitation. If you experience loss of
+packets, lower the MTU size.
+.SS Multiple interfaces on same Ethernet broadcast network
+.sp
+Due to the default ARP behavior on Linux, it is not possible to have one system
+on two IP networks in the same Ethernet broadcast domain (non\-partitioned
+switch) behave as expected. All Ethernet interfaces will respond to IP traffic
+for any IP address assigned to the system. This results in unbalanced receive
+traffic.
+.sp
+If you have multiple interfaces in a server, either turn on ARP filtering by
+entering the following:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+echo 1 > /proc/sys/net/ipv4/conf/all/arp_filter
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+This only works if your kernel\(aqs version is higher than 2.4.5.
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+This setting is not saved across reboots. The configuration change can
+be made permanent by adding the following line to the file \fB/etc/sysctl.conf\fP:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+net.ipv4.conf.all.arp_filter = 1
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.sp
+Alternatively, you can install the interfaces in separate broadcast domains
+(either in different switches or in a switch partitioned to VLANs).
+.SS Disable Rx Flow Control with ethtool
+.sp
+In order to disable receive flow control using ethtool, you must turn off
+auto\-negotiation on the same command line:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ethtool \-A <ethX> autoneg off rx off
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Unplugging network cable while \fBethtool \-p\fP is running
+.sp
+In kernel versions 2.5.50 and newer, unplugging the network cable while \fBethtool
+\-p\fP is running will cause the system to become unresponsive to keyboard
+commands, except for control\-alt\-delete. Restarting the system should resolve
+the issue.
+.SS Do not use LRO when routing packets
+.sp
+Due to a known general compatibility issue with LRO and routing, do not use LRO
+when routing packets.
+.SS Build error with Asianux 3.0 \- Redefinition of typedef \fBirq_handler_t\fP
+.sp
+Some systems may experience build issues due to the redefinition of
+\fBirq_handler_t\fP\&. To resolve this issue, build the driver using the
+command:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+make CFLAGS_EXTRA=\-DAX_RELEASE_CODE=1 install
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SS Rx page allocation errors
+.sp
+The error, \(dqPage allocation failure. order:0,\(dq can occur under stress with kernels
+2.6.25 and newer. This is caused by the way the Linux kernel reports this
+stressed condition.
+.sp
+Unloading Physical Function (PF) Driver Causes System Reboots When VM is
+Running and VF is Loaded on the VM.
+.sp
+Do not unload the PF driver (igb) while VFs are assigned to guests.
+.SS Host may reboot after removing PF when VF is active in guest
+.sp
+Using kernel versions earlier than 3.2, do not unload the PF driver with
+active VFs. Doing this will cause your VFs to stop working until you reload
+the PF driver and may cause a spontaneous reboot of your system.
+.sp
+Prior to unloading the PF driver, you must first ensure that all VFs are
+no longer active. Do this by shutting down all VMs and unloading the VF driver.
+.SH SUPPORT
+.sp
+For general information, go to the Intel support website at
+\fI\%http://www.intel.com/support/\fP\&.
+.sp
+You can also visit the Intel Wired Networking project hosted by Sourceforge at
+\fI\%http://sourceforge.net/projects/e1000\fP\&.
+.sp
+If an issue is identified with the released source code on a supported kernel
+with a supported adapter, email the specific information related to the issue
+to \fI\%e1000\-devel@lists.sf.net\fP\&.
+.SH LICENSE
+.sp
+This program is free software; you can redistribute it and/or modify it under
+the terms and conditions of the GNU General Public License, version 2, as
+published by the Free Software Foundation.
+.sp
+This program is distributed in the hope it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+.sp
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
+St \- Fifth Floor, Boston, MA 02110\-1301 USA.
+.sp
+The full GNU General Public License is included in this distribution in the
+file called \(dqCOPYING\(dq.
+.SH TRADEMARKS
+.sp
+Intel is a trademark or registered trademark of Intel Corporation or its
+subsidiaries in the United States and/or other countries.
+.sp
+Other names and brands may be claimed as the property of others.
+.SH AUTHOR
+Intel
+.SH COPYRIGHT
+1999 - 2024, Intel Corporation
+.\" Generated by docutils manpage writer.
+.
