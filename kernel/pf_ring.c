@@ -839,12 +839,16 @@ void term_lockless_list(lockless_list *l, u_int8_t free_memory)
 /* ********************************** */
 
 pf_ring_net *netns_lookup(struct net *net) {
-  pf_ring_net *pf_net = net_generic(net, pf_ring_net_id);
+  pf_ring_net *netns = net_generic(net, pf_ring_net_id);
 
-  if (pf_net == NULL)
-    printk("[PF_RING] Namespace lookup failure\n");
+  if (netns == NULL) {
+    printk("[PF_RING] Namespace lookup failure (not found)\n");
+  } else if (netns->magic != RING_MAGIC_VALUE) {
+    printk("[PF_RING] Namespace lookup failure (corruption detected)\n");
+    netns = NULL;
+  }
 
-  return pf_net;
+  return netns;
 }
 
 /* ********************************** */
@@ -858,6 +862,9 @@ static inline int device_net_eq(pf_ring_device *dev_ptr, struct net *net) {
 
 pf_ring_net *netns_add(struct net *net) {
   pf_ring_net *netns = net_generic(net, pf_ring_net_id);
+
+  memset(netns, 0, sizeof(pf_ring_net));
+  netns->magic = RING_MAGIC_VALUE;
 
   netns->net = net;
   ring_proc_init(netns);
@@ -9156,7 +9163,7 @@ static struct notifier_block ring_netdev_notifier = {
 
 static int __net_init ring_net_init(struct net *net)
 {
-  debug_printk(1, "init network namespace [net=%pK]\n", net);
+  debug_printk(1, "init network namespace [net=%p]\n", net);
   netns_add(net);
   return 0;
 }
@@ -9165,7 +9172,7 @@ static int __net_init ring_net_init(struct net *net)
 
 static void __net_exit ring_net_exit(struct net *net)
 {
-  debug_printk(1, "exit network namespace [net=%pK]\n", net);
+  debug_printk(1, "exit network namespace [net=%p]\n", net);
   netns_remove(net);
 }
 
