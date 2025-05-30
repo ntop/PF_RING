@@ -1395,6 +1395,8 @@ struct pf_ring_socket {
 /* **************************************** */
 
 typedef struct {
+  u_int32_t magic;
+
   struct net *net;
 
   /* /proc entry for ring module */
@@ -1411,7 +1413,7 @@ typedef struct {
 
   /* Keep track of number of rings per device (plus any) */
   u_int8_t num_rings_per_device[MAX_NUM_DEV_IDX];
-  u_int8_t num_any_rings;
+  u_int32_t num_any_rings;
 } pf_ring_net;
 
 /* **************************************** */
