@@ -138,6 +138,41 @@ Or to send from all queues and scale the transmission performance:
 
    pfsend_multichannel -i mlx:mlx5_0
 
+Hw Clock
+--------
+
+ConnectX adapters provide hardware packet timestamping by using an internal clock.
+Please make sure the internal hardware clock (PHC) is synced with the system clock
+to avoid applications complaining about time shifts.
+
+Install the linuxptp tool:
+
+.. code-block:: console
+
+   apt install linuxptp
+
+Read the PTP device ID for the ConnectX interface to sync:
+
+.. code-block:: console
+
+   ethtool -T ens4f0np0 | grep 'PTP Hardware Clock'
+   PTP Hardware Clock: 2
+
+Read the current clock from the ptp device (/dev/ptp<id>):
+
+.. code-block:: console
+
+   phc_ctl /dev/ptp2 get
+   phc_ctl[1782789.530]: clock time is 1749026103.583312192 or Wed Jun  4 10:35:03 2025
+
+Synchronize the hardware clock with the system time (or use your preferred synchronization method):
+
+.. code-block:: console
+
+   phc2sys -s CLOCK_REALTIME -c ens4f0np0 -O 0 -m
+
+(run this command for a few seconds to let it adjust the time)
+
 Hw Filtering
 ------------
 
