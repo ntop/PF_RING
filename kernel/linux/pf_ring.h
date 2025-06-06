@@ -24,7 +24,7 @@
 
 /* Versioning */
 #define RING_VERSION                "9.1.0"
-#define RING_VERSION_NUM           0x080900
+#define RING_VERSION_NUM           0x090100
 
 /* Increment whenever there is a change in some shared data structure
  * between kernel and userspace, including ioctl or packet header layout */
