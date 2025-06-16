@@ -7504,6 +7504,7 @@ static inline int pci_enable_pcie_error_reporting(struct pci_dev __always_unused
 /* HAVE_PF_RING */
 #if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
 #define HAVE_ETHTOOL_GET_TS_KERNEL
+#undef CONFIG_PTP_1588_CLOCK /* Due to missing convert_art_to_tsc */
 #endif
 
 #endif
