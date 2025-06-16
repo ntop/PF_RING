@@ -2610,7 +2610,12 @@ static void igb_get_strings(struct net_device *netdev, u32 stringset, u8 *data)
 
 #ifdef HAVE_ETHTOOL_GET_TS_INFO
 static int igb_get_ts_info(struct net_device *dev,
-			   struct ethtool_ts_info *info)
+#ifdef HAVE_ETHTOOL_GET_TS_KERNEL
+			   struct kernel_ethtool_ts_info *info
+#else
+			   struct ethtool_ts_info *info
+#endif
+			   )
 {
 	struct igb_adapter *adapter = netdev_priv(dev);
 

@@ -6991,6 +6991,10 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #define xdp_do_flush_map() do {} while (0)
 #endif
 
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
+#define HAVE_ETHTOOL_GET_TS_KERNEL
+#endif
+
 /*****************************************************************************/
 /*
  * Load the implementations file which actually defines kcompat backports.

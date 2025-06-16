@@ -4959,7 +4959,13 @@ ice_set_rxfh(struct net_device *netdev, const u32 *indir, const u8 *key)
 #endif /* ETHTOOL_GRSSH && ETHTOOL_SRSSH */
 
 static int
-ice_get_ts_info(struct net_device *dev, struct ethtool_ts_info *info)
+ice_get_ts_info(struct net_device *dev,
+#ifdef HAVE_ETHTOOL_GET_TS_KERNEL
+	        struct kernel_ethtool_ts_info *info
+#else
+	        struct ethtool_ts_info *info
+#endif
+		)
 {
 	struct ice_pf *pf = ice_netdev_to_pf(dev);
 
