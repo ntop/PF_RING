@@ -4495,7 +4495,12 @@ static int ixgbe_set_rxfh(struct net_device *netdev, const u32 *indir,
 
 #ifdef HAVE_ETHTOOL_GET_TS_INFO
 static int ixgbe_get_ts_info(struct net_device *dev,
-			     struct ethtool_ts_info *info)
+#ifdef HAVE_ETHTOOL_GET_TS_KERNEL
+			     struct kernel_ethtool_ts_info *info
+#else
+			     struct ethtool_ts_info *info
+#endif
+			     )
 {
 	struct ixgbe_adapter *adapter = netdev_priv(dev);
 

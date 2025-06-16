@@ -7074,6 +7074,9 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
 #define strlcpy(...) (ssize_t)(strscpy(__VA_ARGS__))
 #endif
+#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
+#define HAVE_ETHTOOL_GET_TS_KERNEL
+#endif
 
 /*****************************************************************************/
 /*
