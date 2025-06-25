@@ -1618,7 +1618,7 @@ int main(int argc, char* argv[]) {
         if (outdevs[off] == NULL)
           trace(TRACE_NORMAL, "\tpfcount -i zc:%d@%lu\n", cluster_id, pfring_zc_get_queue_id(balancer[b].outzqs[off]));
         else
-          trace(TRACE_NORMAL, "\t%s\n", outdevs[off]);
+          trace(TRACE_NORMAL, "\tpfcount -i %s\n", outdevs[off]);
         off++;
       }
     }
