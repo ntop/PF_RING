@@ -1042,10 +1042,11 @@ typedef enum {
   /* new types, for L2-only protocols */
   cluster_per_flow_ip_5_tuple,       /* 5-tuple only with IP, 2 tuple with non-IP <src mac, dst mac> */
   cluster_per_inner_flow_ip_5_tuple, /* 5-tuple only with IP, 2 tuple with non-IP <src mac, dst mac> */
-  cluster_per_flow_ip_with_dup_tuple /* 1-tuple: <src ip> and <dst ip> with duplication              */
+  cluster_per_flow_ip_with_dup_tuple, /* 1-tuple: <src ip> and <dst ip> with duplication              */
+  cluster_per_flow_ip_with_dup_tuple_ext /* 1-tuple: <src ip> and <dst ip> with duplication, fan-out on hash(src ip) == hash (dst ip) and port != 443 */
 } cluster_type;
 
-#define MAX_CLUSTER_TYPE_ID cluster_per_flow_ip_with_dup_tuple
+#define MAX_CLUSTER_TYPE_ID cluster_per_flow_ip_with_dup_tuple_ext
 
 struct add_to_cluster {
   u_int16_t cluster_id;

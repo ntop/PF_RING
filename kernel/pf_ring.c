@@ -4432,19 +4432,40 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
         if(num_cluster_queues > 0) {
           u_short num_iterations;
-          u_int32_t cluster_queue_id, cluster_1st_queue_id;
+          u_int32_t cluster_queue_id;
+          u_int32_t cluster_1st_queue_id, cluster_2nd_queue_id;
+          u_int8_t send_to_all_consumers = 0;
           u_int8_t ip_with_dup_sent = 0;
           int sent_on_queue_id = -1;
 
-          if(cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple) {
+          if(cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple ||
+             cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple_ext) {
+            u_int32_t skb_hash_1st, skb_hash_2nd;
             /*
               This is a special mode that might lead to packet duplication and it is
               handled on a custom way
             */
-            skb_hash = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC
-                                       | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
-                                       | HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN),
-              skb_hash_set = 1;
+            skb_hash_1st = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_DST | HASH_PKT_HDR_MASK_MAC
+                                                 | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
+                                                 | HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN);
+
+            skb_hash_2nd = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC
+                                                 | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
+                                                 | HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN);
+
+            cluster_1st_queue_id = skb_hash_1st % num_logical_cluster_queues;
+            cluster_2nd_queue_id = skb_hash_2nd % num_logical_cluster_queues;
+
+            if (cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple_ext) {
+              if (cluster_1st_queue_id == cluster_2nd_queue_id && 
+                  hdr.extended_hdr.parsed_pkt.l4_src_port != 443 &&
+                  hdr.extended_hdr.parsed_pkt.l4_dst_port != 443) {
+                send_to_all_consumers = 1;
+                ip_with_dup_sent = 1;
+              }
+            }
+
+            cluster_queue_id = cluster_1st_queue_id;
           } else {
             if(enable_frag_coherence
                && is_ip_pkt
@@ -4474,10 +4495,9 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
               /* compute hash (once for all clusters) */
               skb_hash = hash_pkt_cluster(cluster_ptr, &hdr), skb_hash_set = 1;
             }
-          }
 
-          cluster_queue_id = skb_hash % num_logical_cluster_queues;
-          cluster_1st_queue_id = cluster_queue_id;
+            cluster_queue_id = skb_hash % num_logical_cluster_queues;
+          }
 
         iterate_cluster_elements:
           /*
@@ -4490,12 +4510,18 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
           for(num_iterations = 0;
               num_iterations < num_logical_cluster_queues;
               num_iterations++) {
-              struct sock *skElement = cluster_ptr->cluster.sk[cluster_queue_id];
+            struct sock *skElement;
+            u_int32_t curr_queue_id;
+
+            if (send_to_all_consumers) curr_queue_id = num_iterations;
+            else curr_queue_id = cluster_queue_id;
+
+            skElement = cluster_ptr->cluster.sk[curr_queue_id];
 
             if(/* Check if there is a producer running on this queue id */
                skElement != NULL
                /* Do not send twice on the same queue in case of cluster_per_flow_ip_with_dup_tuple */
-               && (sent_on_queue_id < 0 || sent_on_queue_id != cluster_queue_id)) {
+               && (send_to_all_consumers || sent_on_queue_id < 0 || sent_on_queue_id != cluster_queue_id)) {
               struct pf_ring_socket *pfr = ring_sk(skElement);
 
               if(pfr != NULL
@@ -4524,8 +4550,11 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
 
                   hdr.len = old_len, hdr.caplen = old_caplen;
                   rc = 1; /* Ring found: we've done our job */
-                  sent_on_queue_id = cluster_queue_id;
-                  break;
+
+                  if (!send_to_all_consumers) {
+                    sent_on_queue_id = cluster_queue_id;
+                    break;
+                  }
 
                 } else if(!(cluster_ptr->cluster.hashing_mode == cluster_round_robin ||
                             cluster_ptr->cluster.relaxed_distribution)
@@ -4540,17 +4569,14 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
                cluster_ptr->cluster.relaxed_distribution) {
               cluster_queue_id = (cluster_queue_id + 1) % num_logical_cluster_queues;
             } else {
-              break;
+              if (!send_to_all_consumers)
+                break;
             }
           } /* for */
 
-          if(cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple
+          if((cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple ||
+              cluster_ptr->cluster.hashing_mode == cluster_per_flow_ip_with_dup_tuple_ext)
              && !ip_with_dup_sent) {
-            u_int32_t cluster_2nd_queue_id = hash_pkt_header(&hdr, HASH_PKT_HDR_MASK_SRC | HASH_PKT_HDR_MASK_MAC
-                                                                | HASH_PKT_HDR_MASK_PROTO | HASH_PKT_HDR_MASK_PORT
-                                                                | HASH_PKT_HDR_RECOMPUTE | HASH_PKT_HDR_MASK_VLAN);
-
-            cluster_2nd_queue_id %= num_logical_cluster_queues;
             if(cluster_2nd_queue_id != cluster_1st_queue_id && 
                cluster_2nd_queue_id != sent_on_queue_id) {
               cluster_queue_id = cluster_2nd_queue_id;
