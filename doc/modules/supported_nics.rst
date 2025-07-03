@@ -6,7 +6,7 @@ Below you can find a comparison of NIC features supported by PF_RING.
 This table below helps you understanding what you can expect when using a given NIC with PF_RING. ntop **does not** endorse any manufacturer (adapters are listed in alphabetical order), so this page is designed to help the reader to select the best NIC/PF_RING comparison for its needs. 
 
 +--------------------------------+------------+-----------+-----------+-----------+
-|                                | Fiberblaze |   Intel   |  Mellanox |  Napatech |
+|                                | Fiberblaze |   Intel   |   NVIDIA  |  Napatech |
 +================================+============+===========+===========+===========+
 | Status                         | Supported  | Supported | Supported | Supported |
 +--------------------------------+------------+-----------+-----------+-----------+
