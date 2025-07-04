@@ -1,9 +1,11 @@
-Supported NICs Comparison
+Adapters Comparison Table
 -------------------------
 
-Below you can find a comparison of NIC features supported by PF_RING.
+Below you can find a comparison table with all network adapters natively supported by PF_RING.
 
-This table below helps you understanding what you can expect when using a given NIC with PF_RING. ntop **does not** endorse any manufacturer (adapters are listed in alphabetical order), so this page is designed to help the reader to select the best NIC/PF_RING comparison for its needs. 
+This table helps you understanding what features they provide and what performance you can expect 
+when using a given NIC with PF_RING. ntop **does not** endorse any manufacturer, so this page is 
+designed to help the reader to select the best NIC for its needs. 
 
 +--------------------------------+------------+-----------+-----------+-----------+
 |                                | Fiberblaze |   Intel   |   NVIDIA  |  Napatech |
