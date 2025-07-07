@@ -48,11 +48,11 @@ Packet Filtering
 PF_RING supports both legacy BPF filters (i.e. those supported by pcap-based applications such as tcpdump), 
 and also two additional types of filters (named wildcard and precise filters, depending on the fact that 
 some or all filter elements are specified) that provide developers a wide choice of options. 
-Filters are evaluated inside the PF_RING module thus in kernel. Some modern adapters such as Intel 82599-based 
-or Silicom Redirector NICs, support hardware-based filters that are also supported by PF_RING via specified 
-API calls (e.g. pfring_add_hw_rule). PF_RING filters (except hw filters) can have an action specified, for 
-telling to the PF_RING kernel module what action needs to be performed when a given packet matches the filter. 
-Actions include pass/don’t pass the filter to the user space application, stop evaluating the filter chain, or 
+Filters are evaluated inside the PF_RING module thus in kernel. Hardware filtering rules are also available
+on selected adapters when using ZC drivers. PF_RING filters (except hardware filters) can have an action
+specified, for telling to the PF_RING kernel module what action needs to be performed when a given packet 
+matches the filter. 
+Actions include pass/don’t pass the packet to the user space application, stop evaluating the filter chain, or 
 reflect packet. In PF_RING, packet reflection is the ability to transmit (unmodified) the packet matching the 
 filter onto a network interface (this except the interface on which the packet has been received). The whole 
 reflection functionality is implemented inside the PF_RING kernel module, and the only activity requested to 
