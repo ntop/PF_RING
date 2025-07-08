@@ -3404,7 +3404,7 @@ fi
 
 if test "x$enable_debug" = xyes; then
   DEBUG=1
-  CFLAGS="-g $CFLAGS"
+  CFLAGS="-g -O0 $CFLAGS"
 else
   CFLAGS="-O2 $CFLAGS"
 fi
