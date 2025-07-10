@@ -60,7 +60,11 @@
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
 #include <net/devlink.h>
 #endif /* CONFIG_NET_DEVLINK */
+#ifdef HAVE_PF_RING
+#include "health.h"
+#else
 #include "devlink/health.h"
+#endif
 #ifdef HAVE_CONFIG_DIMLIB
 #include <linux/dim.h>
 #else

@@ -11,6 +11,7 @@ include $(BUILD_DIR)common.mk
 obj-m += ice.o
 
 ice-objs := ice_main.o		\
+	ice_adapter.o		\
 	ice_controlq.o		\
 	ice_common.o		\
 	ice_nvm.o		\
@@ -25,6 +26,7 @@ ice-objs := ice_main.o		\
 	ice_pf_vsi_vlan_ops.o 	\
 	ice_vsi_vlan_ops.o 	\
 	ice_vsi_vlan_lib.o 	\
+	ice_hwmon.o		\
 	ice_tc_lib.o		\
 	ice_fdir.o		\
 	ice_ethtool_fdir.o	\
@@ -46,10 +48,11 @@ ice-objs := ice_main.o		\
 	ice_flg_rd.o		\
 	ice_xlt_kb.o		\
 	ice_parser_rt.o		\
-	ice_peer_support.o	\
+	ice_aux_support.o	\
 	ice_lag.o		\
 	ice_fwlog.o		\
 	ice_ieps.o		\
+	ice_ieps_lm.o		\
 	ice_gnss.o		\
 	ice_ethtool.o		\
 	ice_idc.o		\
@@ -57,11 +60,15 @@ ice-objs := ice_main.o		\
 
 CFLAGS_ice_main.o := -I$(src)
 
-ice-$(CONFIG_NET_DEVLINK:m=y) += ice_devlink.o ice_fw_update.o ice_eswitch.o ice_repr.o
+ice-$(CONFIG_NET_DEVLINK:m=y) += ice_devlink.o health.o ice_fw_update.o ice_eswitch.o ice_repr.o
 ice-$(CONFIG_RFS_ACCEL) += ice_arfs.o
 ice-$(CONFIG_DEBUG_FS) += ice_debugfs.o
 ice-$(CONFIG_PCI_IOV) += ice_virtchnl.o ice_sriov.o ice_virtchnl_allowlist.o ice_dcf.o ice_virtchnl_fdir.o ice_virtchnl_fsub.o ice_vf_mbx.o ice_vf_vsi_vlan_ops.o ice_vf_adq.o ice_vf_lib.o
+ifneq (${CONFIG_DPLL},)
+ice-$(CONFIG_PTP_1588_CLOCK:m=y) += ice_ptp.o ice_ptp_hw.o ice_dpll.o
+else
 ice-$(CONFIG_PTP_1588_CLOCK:m=y) += ice_ptp.o ice_ptp_hw.o
+endif
 ice-$(CONFIG_PTP_1588_CLOCK:m=y) += ice_cpi.o
 ice-$(CONFIG_PTP_1588_CLOCK:m=y) += ice_tspll.o
 ifndef CONFIG_PLDMFW
