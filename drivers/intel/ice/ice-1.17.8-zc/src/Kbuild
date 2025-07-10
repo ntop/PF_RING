@@ -100,6 +100,10 @@ ice-y += kcompat_gnss.o
 endif
 endif
 
+ifeq ($(shell grep HAVE_XARRAY_API $(src)/kcompat_generated_defs.h),)
+ice-y += kcompat_xarray.o
+endif
+
 #ifneq (${ENABLE_LM_SUPPORT},)
 ifneq ($(shell grep HAVE_LMV1_SUPPORT $(src)/kcompat_generated_defs.h),)
 obj-$(CONFIG_VFIO_PCI_CORE:y=m) += ice-vfio-pci.o
