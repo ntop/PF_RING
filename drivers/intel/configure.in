@@ -14,7 +14,7 @@ IXGBE_VERSION=5.19.6
 IXGBEVF_VERSION=4.18.9
 I40E_VERSION=2.24.6
 IAVF_VERSION=4.9.5
-ICE_VERSION=1.12.7
+ICE_VERSION=1.17.8
 
 PF_RING_VERSION=`../../package/version.sh --release`
 REVISION=`../../package/version.sh --revision`
