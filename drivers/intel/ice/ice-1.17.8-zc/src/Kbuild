@@ -63,7 +63,21 @@ CFLAGS_ice_main.o := -I$(src)
 ice-$(CONFIG_NET_DEVLINK:m=y) += ice_devlink.o health.o ice_fw_update.o ice_eswitch.o ice_repr.o
 ice-$(CONFIG_RFS_ACCEL) += ice_arfs.o
 ice-$(CONFIG_DEBUG_FS) += ice_debugfs.o
-ice-$(CONFIG_PCI_IOV) += ice_virtchnl.o ice_sriov.o ice_virtchnl_allowlist.o ice_dcf.o ice_virtchnl_fdir.o ice_virtchnl_fsub.o ice_vf_mbx.o ice_vf_vsi_vlan_ops.o ice_vf_adq.o ice_vf_lib.o
+
+ice-$(CONFIG_PCI_IOV) +=		\
+	ice_virtchnl.o			\
+	ice_sriov.o			\
+	ice_virtchnl_allowlist.o	\
+	ice_dcf.o			\
+	ice_virtchnl_fdir.o		\
+	ice_virtchnl_fsub.o		\
+	ice_vf_mbx.o			\
+	ice_vf_vsi_vlan_ops.o		\
+	ice_vf_adq.o			\
+	ice_vf_lib.o
+
+ice-$(CONFIG_VFIO_MDEV:m=y) += ice_vdcm.o ice_siov.o
+
 ifneq (${CONFIG_DPLL},)
 ice-$(CONFIG_PTP_1588_CLOCK:m=y) += ice_ptp.o ice_ptp_hw.o ice_dpll.o
 else
@@ -86,7 +100,8 @@ ice-y += kcompat_gnss.o
 endif
 endif
 
-ifneq (${ENABLE_LM_SUPPORT},)
+#ifneq (${ENABLE_LM_SUPPORT},)
+ifneq ($(shell grep HAVE_LMV1_SUPPORT $(src)/kcompat_generated_defs.h),)
 obj-$(CONFIG_VFIO_PCI_CORE:y=m) += ice-vfio-pci.o
 
 ice-vfio-pci-y := ice_vfio_pci.o
