@@ -1101,8 +1101,12 @@ static int __get_iface_ifindex(const char *ifname) {
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name)-1);
 
-  if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1)
+  if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1) {
+    close(sockfd);
     return -1;
+  }
+
+  close(sockfd);
 
   return ifr.ifr_ifindex;
 }
