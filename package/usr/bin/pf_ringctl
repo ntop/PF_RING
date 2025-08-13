@@ -371,7 +371,7 @@ load_driver() {
 			DRIVER_INSTALLED=1
 		fi
 
-		if [ ${1} == "iavf" ] || [ ${1} == "ixgbevf" ]; then
+		if [ ${1} == "iavf" ] || [ ${1} == "ixgbevf" ] || [ ${1} == "ice" ]; then
 			# Setting configured number of RSS queues (or default)
 			configure_rss ${1} ${2} ${1}
 		fi
