@@ -10,6 +10,10 @@
 #include "ice_vsi_vlan_ops.h"
 #include "ice_irq.h"
 
+#ifdef HAVE_PF_RING
+extern int RSS[ICE_MAX_NIC];
+#endif
+
 /**
  * ice_lut_type_to_qs_num - Return the default number of queues per LUT
  *
@@ -265,6 +269,12 @@ static void ice_vsi_set_num_qs(struct ice_vsi *vsi)
 	struct device *dev = ice_pf_to_dev(pf);
 	int num_local_cpus = ice_get_num_local_cpus(dev);
 	u16 norm_queues = ice_normalize_cpu_count(num_local_cpus);
+
+#ifdef HAVE_PF_RING
+	if (RSS[pf->instance] != 0) {
+		norm_queues = min_t(int, norm_queues, RSS[pf->instance]);
+	}
+#endif
 
 	lut_type_max_qs = ice_lut_type_to_qs_num(vsi->rss_lut_type);
 
