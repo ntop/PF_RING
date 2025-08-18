@@ -277,7 +277,7 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
 
 /* ************************************************* */
 
-const static ip_addr ip_zero = { IN6ADDR_ANY_INIT };
+static const ip_addr ip_zero = { IN6ADDR_ANY_INIT };
 
 static u_int8_t pfring_enabled = 1;
 
