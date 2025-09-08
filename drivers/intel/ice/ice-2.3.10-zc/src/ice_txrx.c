@@ -291,6 +291,18 @@ static bool ice_clean_tx_irq(struct ice_tx_ring *tx_ring, int napi_budget)
 	struct ice_tx_desc *tx_desc;
 	struct ice_tx_buf *tx_buf;
 
+#ifdef HAVE_PF_RING
+	//if (unlikely(enable_debug))
+	//	printk("[PF_RING-ZC] %s(%s) called [usage_counter=%u]\n", 
+	//        	__FUNCTION__, tx_ring->netdev->name,
+	//        	atomic_read(&ice_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter));
+
+#ifdef ICE_TX_ENABLE
+	if (atomic_read(&ice_netdev_to_pf(tx_ring->netdev)->pfring_zc.usage_counter) > 0)
+		return true;
+#endif
+#endif
+
 	/* get the bql data ready */
 #ifdef HAVE_XDP_SUPPORT
 	if (!ice_ring_is_xdp(tx_ring))
