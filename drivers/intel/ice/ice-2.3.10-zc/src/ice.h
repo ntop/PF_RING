@@ -162,19 +162,28 @@ extern const char ice_drv_ver[];
 #define ICE_MAX_CSR_SPACE	(8 * 1024 * 1024 - 64 * 1024)
 #endif /* CONFIG_DEBUG_FS */
 #define ICE_REQ_DESC_MULTIPLE	32
+
 #define ICE_MIN_NUM_DESC	64
+#ifdef HAVE_PF_RING
+#define ICE_MAX_NUM_DESC	4096
+#define ICE_MAX_NUM_DESC_E810	ICE_MAX_NUM_DESC
+#define ICE_MAX_NUM_DESC_E830	ICE_MAX_NUM_DESC
+#define ICE_DFLT_NUM_RX_DESC	4096
+#define ICE_DFLT_NUM_TX_DESC	4096
+#else /* HAVE_PF_RING */
 #define ICE_MAX_NUM_DESC_E810	8160
 #define ICE_MAX_NUM_DESC_E830	8096
-#define ICE_MAX_NUM_DESC_BY_MAC(hw) ((hw)->mac_type == ICE_MAC_E830 ? \
-				     ICE_MAX_NUM_DESC_E830 : \
-				     ICE_MAX_NUM_DESC_E810)
-#define ICE_DFLT_MIN_RX_DESC	512
-#define ICE_DFLT_NUM_TX_DESC	256
 #ifdef CONFIG_ICE_USE_SKB
 #define ICE_DFLT_NUM_RX_DESC    512
 #else
 #define ICE_DFLT_NUM_RX_DESC	2048
 #endif /* CONFIG_ICE_USE_SKB */
+#define ICE_DFLT_NUM_TX_DESC	256
+#endif /* HAVE_PF_RING */
+#define ICE_MAX_NUM_DESC_BY_MAC(hw) ((hw)->mac_type == ICE_MAC_E830 ? \
+				     ICE_MAX_NUM_DESC_E830 : \
+				     ICE_MAX_NUM_DESC_E810)
+#define ICE_DFLT_MIN_RX_DESC	512
 
 #define ICE_DFLT_TXQ_VMDQ_VSI	1
 #define ICE_DFLT_RXQ_VMDQ_VSI	1
@@ -1174,7 +1183,7 @@ struct ice_pf {
 #ifdef HAVE_HWMON_DEVICE_REGISTER_WITH_INFO
 	struct device *hwmon_dev;
 #endif
-  #ifdef HAVE_PF_RING
+#ifdef HAVE_PF_RING
 	u16 instance; /* A unique number per ice_pf instance in the system */
 	struct {
 		atomic_t usage_counter;
