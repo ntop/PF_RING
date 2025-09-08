@@ -101,7 +101,9 @@
 #else /* >= 8.4 */
 #undef NEED_DEVLINK_PORT_ATTRS_SET_STRUCT
 #undef HAVE_XDP_QUERY_PROG
+#ifndef HAVE_PF_RING
 #define HAVE_AF_XDP_ZC_SUPPORT
+#endif
 #define HAVE_MEM_TYPE_XSK_BUFF_POOL
 #define HAVE_NDO_XSK_WAKEUP
 #define XSK_UMEM_RETURNS_XDP_DESC
@@ -131,7 +133,9 @@
 /*****************************************************************************/
 #if (RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(9,0))
 #else /* >= 9.0 */
+#ifndef HAVE_PF_RING
 #define HAVE_XDP_BUFF_RXQ
+#endif
 #endif /* 9.0 */
 
 /*****************************************************************************/

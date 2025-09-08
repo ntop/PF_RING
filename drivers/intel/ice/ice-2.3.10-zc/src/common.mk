@@ -17,6 +17,9 @@
 #####################
 
 SHELL := $(shell which bash)
+
+#HAVE_PF_RING_DKMS BUILD_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 src ?= $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 readlink = $(shell readlink -f ${1})
 
@@ -387,6 +390,7 @@ export INSTALL_MOD_DIR ?= updates/drivers/net/ethernet/intel/${DRIVER}
 # If the check_aux_bus script exists, then this driver depends on the
 # auxiliary module. Run the script to determine if we need to include
 # auxiliary files with this build.
+#HAVE_PF_RING_DKMS CHECK_AUX_BUS ?= ${BUILD_DIR}/check_aux_bus
 CHECK_AUX_BUS ?= ../scripts/check_aux_bus
 ifneq ($(call test_file,${CHECK_AUX_BUS}),)
 NEED_AUX_BUS := $(shell ${CHECK_AUX_BUS} --ksrc="${KSRC}" --build-kernel="${BUILD_KERNEL}" >/dev/null 2>&1; echo $$?)
@@ -398,7 +402,9 @@ export INSTALL_AUX_DIR ?= updates/drivers/net/ethernet/intel/auxiliary
 
 # If we're installing auxiliary bus out-of-tree, the following steps are
 # necessary to ensure the relevant files get put in place.
-AUX_BUS_HEADERS ?= linux/auxiliary_bus.h auxiliary_compat.h kcompat_generated_defs.h
+#HAVE_PF_RING
+#AUX_BUS_HEADERS ?= linux/auxiliary_bus.h auxiliary_compat.h kcompat_generated_defs.h
+AUX_BUS_HEADERS ?= auxiliary_bus.h auxiliary_compat.h kcompat_generated_defs.h
 ifeq (${NEED_AUX_BUS},2)
 define auxiliary_post_install
 	install -D -m 644 Module.symvers ${INSTALL_MOD_PATH}/lib/modules/${KVER}/extern-symvers/intel_auxiliary.symvers

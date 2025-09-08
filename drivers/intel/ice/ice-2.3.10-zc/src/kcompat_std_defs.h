@@ -75,8 +75,10 @@
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,16,0))
 #define NEED_TC_CLS_CAN_OFFLOAD_AND_CHAIN0
 #else /* >= 4,16,0 */
+#ifndef HAVE_PF_RING
 #define HAVE_XDP_BUFF_RXQ
 #define HAVE_XDP_RXQ_INFO_REG_3_PARAMS
+#endif
 #endif /* 4,16,0 */
 
 /*****************************************************************************/

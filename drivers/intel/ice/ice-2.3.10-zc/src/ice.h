@@ -60,7 +60,11 @@
 #if IS_ENABLED(CONFIG_NET_DEVLINK)
 #include <net/devlink.h>
 #endif /* CONFIG_NET_DEVLINK */
+#ifdef HAVE_PF_RING
+#include "health.h"
+#else
 #include "devlink/health.h"
+#endif
 #ifdef HAVE_CONFIG_DIMLIB
 #include <linux/dim.h>
 #else
@@ -83,7 +87,11 @@
 #include "ice_flow.h"
 #include "ice_sched.h"
 #ifdef USE_INTEL_AUX_BUS
+#ifdef HAVE_PF_RING
+#include "auxiliary_bus.h"
+#else
 #include "linux/auxiliary_bus.h"
+#endif
 #else
 #include <linux/auxiliary_bus.h>
 #endif /* USE_INTEL_AUX_BUS */

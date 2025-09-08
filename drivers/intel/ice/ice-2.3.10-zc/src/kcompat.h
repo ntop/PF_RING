@@ -2233,7 +2233,9 @@ int _kc_eth_platform_get_mac_address(struct device *dev __maybe_unused,
 #endif
 #endif /* < 4.8.0 */
 #define HAVE_NETIF_NAPI_ADD_CALLS_NAPI_HASH_ADD
+#ifndef HAVE_PF_RING /* Disable LAG support */
 #define HAVE_NETDEV_UPPER_INFO
+#endif
 #endif /* 4.5.0 */
 
 /*****************************************************************************/
@@ -2627,7 +2629,9 @@ struct _kc_bpf_prog {
 	({ unsigned long long _tmp = (ll); do_div(_tmp, d); _tmp; })
 #endif /* DIV_ROUND_DOWN_ULL */
 #else /* > 4.14 */
+#ifndef HAVE_PF_RING
 #define HAVE_XDP_SUPPORT
+#endif
 #endif /* 4.14.0 */
 
 /*****************************************************************************/
@@ -2781,6 +2785,7 @@ void _kc_ethtool_intersect_link_masks(struct ethtool_link_ksettings *dst,
 #define pci_info(pdev, fmt, arg...)	dev_info(&(pdev)->dev, fmt, ##arg)
 #define pci_dbg(pdev, fmt, arg...)	dev_dbg(&(pdev)->dev, fmt, ##arg)
 
+#ifndef HAVE_PF_RING
 #ifndef array_index_nospec
 static inline unsigned long _kc_array_index_mask_nospec(unsigned long index,
 							unsigned long size)
@@ -2806,6 +2811,7 @@ static inline unsigned long _kc_array_index_mask_nospec(unsigned long index,
 	(typeof(_i)) (_i & _mask);					\
 })
 #endif /* array_index_nospec */
+#endif /* HAVE_PF_RING */
 #ifndef sizeof_field
 #define sizeof_field(TYPE, MEMBER) (sizeof((((TYPE *)0)->MEMBER)))
 #endif /* sizeof_field */
@@ -2882,7 +2888,9 @@ static inline void __kc_metadata_dst_free(void *md_dst)
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4,20,0))
 #define HAVE_XDP_UMEM_PROPS
 #else /* >= 4.20.0 */
+#ifndef HAVE_PF_RING
 #define HAVE_AF_XDP_ZC_SUPPORT
+#endif
 #define HAVE_ETF_SUPPORT /* Earliest TxTime First */
 #endif /* 4.20.0 */
 
