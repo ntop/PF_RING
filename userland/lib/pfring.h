@@ -395,7 +395,7 @@ struct __pfring {
 #define PF_RING_L7_FILTERING	       (1 << 20) /**< pfring_open() flag: Enable L7 filtering support based on PF_RING FT (Flow Table with nDPI support) */
 #define PF_RING_DO_NOT_STRIP_FCS       (1 << 21) /**< pfring_open() flag: Do not strip the FCS (CRC), when not stripped out by the adapter (on standard adapters use this in combination with 'ethtool -K DEV rx-fcs on rx-all on') */
 #define PF_RING_TX_BPF	               (1 << 22) /**< pfring_open() flag: Evaluate bpf also for transmitted packets (this also force userspace bpf). */
-#define PF_RING_FLOW_OFFLOAD_TUNNEL    (1 << 23) /**< pfring_open() flag: Deprecated */
+#define PF_RING_FLOW_OFFLOAD_RESET     (1 << 23) /**< pfring_open() flag: Reset hardware flow table when PF_RING_FLOW_OFFLOAD is used */
 #define PF_RING_DISCARD_INJECTED_PKTS  (1 << 24) /**< pfring_open() flag: Discard packets injected through the stack module (this avoid loops in MITM applications) */
 #define PF_RING_ARISTA_TIMESTAMP       (1 << 25) /**< pfring_open() flag: Enable Arista 7150 hardware timestamp support and stripping */
 #define PF_RING_METAWATCH_TIMESTAMP    (1 << 26) /**< pfring_open() flag: Enable Arista 7130 MetaWatch hardware timestamp support and stripping */
