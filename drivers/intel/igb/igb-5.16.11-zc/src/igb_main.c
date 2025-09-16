@@ -1746,7 +1746,7 @@ zc_dev_model pfring_zc_dev_model(struct e1000_hw *hw)
 {
 	switch (hw->mac.type) {
 		case e1000_82580:
-		case e1000_i350:  return intel_igb_82580;
+		case e1000_i350:  return intel_igb_ts;
 		default:	  return intel_igb;
 	}
 }

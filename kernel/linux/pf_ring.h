@@ -950,7 +950,7 @@ typedef enum {
   intel_ixgbe,
   intel_ixgbe_82598,
   intel_ixgbe_82599,
-  intel_igb_82580,
+  intel_igb_ts,
   intel_e1000,
   intel_ixgbe_82599_ts,
   intel_i40e,

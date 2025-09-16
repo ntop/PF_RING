@@ -580,7 +580,7 @@ int main(int argc, char* argv[]) {
 
 	if(hdr.extended_hdr.timestamp_ns) {
 	  s = ((hdr.extended_hdr.timestamp_ns / 1000000000) + thiszone) % 86400;
-	  /* "else" intel_igb_82580 has 40 bit ts, using gettimeofday seconds:
+	  /* "else" intel_igb_ts (i350/82580) has 40 bit ts, using gettimeofday seconds:
 	   * be careful with drifts mixing sys time and hw timestamp */
 	  usec = (hdr.extended_hdr.timestamp_ns / 1000) % 1000000;
 	  nsec = hdr.extended_hdr.timestamp_ns % 1000;

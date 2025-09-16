@@ -1296,7 +1296,7 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
       case intel_igb:
         dev_family = "Intel igb";
         break;
-      case intel_igb_82580:
+      case intel_igb_ts:
         dev_family = "Intel igb 82580/i350 HW TS";
         break;
       case intel_ixgbe:
