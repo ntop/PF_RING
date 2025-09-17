@@ -2216,7 +2216,8 @@ static inline u_int32_t hash_pkt_header(struct pfring_pkthdr *hdr, u_int32_t fla
 
 static int parse_raw_pkt(u_char *data, u_int32_t data_len,
                          struct pfring_pkthdr *hdr,
-                         u_int16_t *ip_id)
+                         u_int16_t *ip_id,
+                         u_int32_t full_len)
 {
   struct ethhdr *eh = (struct ethhdr *)data;
   u_int32_t displ = sizeof(struct ethhdr), ip_len, fragment_offset = 0, tunnel_offset = 0;
@@ -2338,7 +2339,7 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
 
     ipv6 = (struct kcompact_ipv6_hdr*)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset]);
 
-    if (ipv6->version != 6 || ipv6->payload_len > data_len) return (0);
+    if (ipv6->version != 6 || ntohs(ipv6->payload_len) > full_len) return (0);
 
     ip_len = sizeof(struct kcompact_ipv6_hdr);
 
@@ -2369,8 +2370,9 @@ static int parse_raw_pkt(u_char *data, u_int32_t data_len,
            hdr->extended_hdr.parsed_pkt.l3_proto == NEXTHDR_FRAGMENT) {
       struct kcompact_ipv6_opt_hdr *ipv6_opt;
 
-      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len + sizeof(struct kcompact_ipv6_opt_hdr))
+      if(data_len < hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len + sizeof(struct kcompact_ipv6_opt_hdr)) {
         return 1;
+      }
 
       ipv6_opt = (struct kcompact_ipv6_opt_hdr *)(&data[hdr->extended_hdr.parsed_pkt.offset.l3_offset + ip_len]);
       ip_len += sizeof(struct kcompact_ipv6_opt_hdr);
@@ -2693,7 +2695,8 @@ static int parse_pkt(struct sk_buff *skb,
                      u_int16_t *ip_id)
 {
   u_char buffer[128]; /* Enough for standard and tunneled headers */
-  int data_len = min((int) skb->len + skb_displ, (int) sizeof(buffer));
+  u_int32_t full_len = skb->len + skb_displ;
+  int data_len = min((int) full_len, (int) sizeof(buffer));
   u_int16_t vlan_id;
   int rc;
 
@@ -2701,7 +2704,7 @@ static int parse_pkt(struct sk_buff *skb,
 
   skb_copy_bits(skb, -skb_displ, buffer, data_len);
 
-  rc = parse_raw_pkt(buffer, data_len, hdr, ip_id);
+  rc = parse_raw_pkt(buffer, data_len, hdr, ip_id, full_len);
 
   /* Check for stripped vlan id (hw offload) */
 
