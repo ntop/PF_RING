@@ -227,9 +227,16 @@ struct eth_vlan_hdr {
 #define NEXTHDR_MOBILITY        135
 
 struct kcompact_ipv6_hdr {
-  u_int32_t         flow_lbl:24,
-    priority:4,
-    version:4;
+#if defined(__LITTLE_ENDIAN_BITFIELD)
+  u_int8_t priority:4,
+           version:4;
+#elif defined(__BIG_ENDIAN_BITFIELD)
+  u_int8_t version:4,
+           priority:4;
+#else
+#error	"Please fix <asm/byteorder.h>"
+#endif
+  u_int8_t              flow_lbl[3];
   u_int16_t         payload_len;
   u_int8_t          nexthdr;
   u_int8_t          hop_limit;
