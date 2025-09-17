@@ -18,8 +18,20 @@
 
 #ifdef __KERNEL__
 #include <linux/in6.h>
-#else
+
+#else /* Userspace*/
+
 #include <netinet/in.h>
+
+#include <endian.h>
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define __LITTLE_ENDIAN_BITFIELD
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define __BIG_ENDIAN_BITFIELD
+#else
+# error "Unknown byte order"
+#endif
+
 #endif /* __KERNEL__ */
 
 /* Versioning */
@@ -233,8 +245,6 @@ struct kcompact_ipv6_hdr {
 #elif defined(__BIG_ENDIAN_BITFIELD)
   u_int8_t version:4,
            priority:4;
-#else
-#error	"Please fix <asm/byteorder.h>"
 #endif
   u_int8_t              flow_lbl[3];
   u_int16_t         payload_len;
