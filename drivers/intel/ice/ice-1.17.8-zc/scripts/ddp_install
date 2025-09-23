@@ -1,5 +1,0 @@
-#!/bin/bash
-# HAVE_PF_RING
-
-mkdir -p /lib/firmware/updates/intel/ice/ddp
-cp ice.pkg /lib/firmware/updates/intel/ice/ddp/
