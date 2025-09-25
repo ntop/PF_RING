@@ -211,6 +211,10 @@ struct msix_entry {
 #define NETIF_F_NTUPLE BIT(27)
 #endif
 
+#ifndef NETIF_F_FCOE_MTU
+#define NETIF_F_FCOE_MTU       BIT(26)
+#endif
+
 #ifndef NETIF_F_ALL_FCOE
 #define NETIF_F_ALL_FCOE	(NETIF_F_FCOE_CRC | NETIF_F_FCOE_MTU | \
 				 NETIF_F_FSO)
@@ -3177,11 +3181,6 @@ static inline unsigned long dev_trans_start(struct net_device *dev)
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,32) )
 #undef netdev_tx_t
 #define netdev_tx_t int
-#if defined(CONFIG_FCOE) || defined(CONFIG_FCOE_MODULE)
-#ifndef NETIF_F_FCOE_MTU
-#define NETIF_F_FCOE_MTU       BIT(26)
-#endif
-#endif /* CONFIG_FCOE || CONFIG_FCOE_MODULE */
 
 #if ( LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0) )
 static inline int _kc_pm_runtime_get_sync()
@@ -7095,8 +7094,13 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #define strlcpy(...) (void)(strscpy(__VA_ARGS__))
 #endif
 
-#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
+/*****************************************************************************/
+/* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)) \
+    || (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
+#ifndef HAVE_ETHTOOL_GET_TS_KERNEL
 #define HAVE_ETHTOOL_GET_TS_KERNEL
+#endif
 #endif
 
 /*****************************************************************************/

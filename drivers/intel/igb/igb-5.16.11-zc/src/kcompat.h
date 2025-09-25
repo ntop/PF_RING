@@ -6945,11 +6945,6 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #define HAVE_GRO_HEADER
 #endif /* >=5.12.0 */
 
-/* HAVE_PF_RING */
-#if (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
-#define HAVE_ETHTOOL_GET_TS_KERNEL
-#endif
-
 /*****************************************************************************/
 /* HAVE_PF_RING */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,8,0))
@@ -6958,7 +6953,8 @@ _kc_napi_busy_loop(unsigned int napi_id,
 
 /*****************************************************************************/
 /* HAVE_PF_RING */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6,12,0)) \
+    || (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
 #ifndef HAVE_ETHTOOL_GET_TS_KERNEL
 #define HAVE_ETHTOOL_GET_TS_KERNEL
 #endif
