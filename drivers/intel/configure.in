@@ -21,7 +21,8 @@ REVISION=`../../package/version.sh --revision`
 
 HAS_AUX_BUS=`./ice/ice-$ICE_VERSION-zc/scripts/check_aux_bus && echo 1 || echo 0`
 
-KERNEL_VERS_MAJ=`uname -r |cut -d. -f1`
+KERNEL_VERS_MAJ=`uname -r | cut -d. -f1`
+KERNEL_VERS_MIN=`uname -r | cut -d. -f2`
 
 if test "$HAS_AUX_BUS" = "0"; then
   # BUILT_MODULE_NAME[1]="intel_auxiliary"
@@ -38,9 +39,16 @@ else
   HAVE_ICE=y
 fi
 
+if test "$KERNEL_VERS_MAJ" -gt 6 || ( test "$KERNEL_VERS_MAJ" -eq 6 && test "$KERNEL_VERS_MIN" -ge 12 ); then
+  # Kernel >=6.12 (no longer supported)
+  HAVE_E1000E=n
+else
+  HAVE_E1000E=y
+fi
+
 AC_SUBST(PF_RING_VERSION)
 AC_SUBST(REVISION)
-AC_SUBST(HAVE_ICE)
+AC_SUBST(HAVE_E1000E)
 AC_SUBST(E1000E)
 AC_SUBST(E1000E_VERSION)
 AC_SUBST(IGB)
@@ -53,6 +61,7 @@ AC_SUBST(I40E)
 AC_SUBST(I40E_VERSION)
 AC_SUBST(IAVF)
 AC_SUBST(IAVF_VERSION)
+AC_SUBST(HAVE_ICE)
 AC_SUBST(ICE)
 AC_SUBST(ICE_VERSION)
 AC_SUBST(AUX_BUILT_MODULE_NAME)
