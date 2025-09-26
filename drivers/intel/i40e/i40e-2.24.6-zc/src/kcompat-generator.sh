@@ -243,6 +243,7 @@ function gen-other() {
 	gen NEED_U64_STATS_READ if fun u64_stats_read absent in "$ush"
 	gen NEED_U64_STATS_SET if fun u64_stats_set absent in "$ush"
 	gen HAVE_LMV1_SUPPORT if macro VFIO_REGION_TYPE_MIGRATION in include/uapi/linux/vfio.h
+	gen HAVE_ASSIGN_STR_2_PARAMS if macro __assign_str matches src in include/trace/stages/stage6_event_callback.h include/trace/trace_events.h include/trace/ftrace.h
 }
 
 # all the generations, extracted from main() to keep normal code and various

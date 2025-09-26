@@ -98,7 +98,7 @@ DECLARE_EVENT_CLASS(
 		__entry->ring = ring;
 		__entry->desc = desc;
 		__entry->buf = buf;
-		__assign_str(devname, ring->netdev->name);
+		_kc__assign_str(devname, ring->netdev->name);
 	),
 
 	TP_printk(
@@ -143,7 +143,7 @@ DECLARE_EVENT_CLASS(
 		__entry->ring = ring;
 		__entry->desc = desc;
 		__entry->skb = skb;
-		__assign_str(devname, ring->netdev->name);
+		_kc__assign_str(devname, ring->netdev->name);
 	),
 
 	TP_printk(
@@ -185,7 +185,7 @@ DECLARE_EVENT_CLASS(
 	TP_fast_assign(
 		__entry->skb = skb;
 		__entry->ring = ring;
-		__assign_str(devname, ring->netdev->name);
+		_kc__assign_str(devname, ring->netdev->name);
 	),
 
 	TP_printk(

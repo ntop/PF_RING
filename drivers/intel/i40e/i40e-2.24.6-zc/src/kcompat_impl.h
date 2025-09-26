@@ -2334,4 +2334,10 @@ void keee_to_eee(struct ethtool_eee *eee,
 		 const struct ethtool_keee *keee);
 #endif /* !HAVE_ETHTOOL_KEEE */
 
+#ifdef HAVE_ASSIGN_STR_2_PARAMS
+#define _kc__assign_str(dst, src) __assign_str(dst, src)
+#else
+#define _kc__assign_str(dst, src) __assign_str(dst)
+#endif
+
 #endif /* _KCOMPAT_IMPL_H_ */
