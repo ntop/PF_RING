@@ -2045,4 +2045,10 @@ pci_enable_pcie_error_reporting(struct pci_dev __always_unused *dev)
 #define pci_disable_pcie_error_reporting(dev) do {} while (0)
 #endif /* NEED_PCI_ENABLE_PCIE_ERROR_REPORTING */
 
+#ifdef HAVE_ASSIGN_STR_2_PARAMS
+#define _kc__assign_str(dst, src) __assign_str(dst, src)
+#else
+#define _kc__assign_str(dst, src) __assign_str(dst)
+#endif
+
 #endif /* _KCOMPAT_IMPL_H_ */
