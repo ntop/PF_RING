@@ -15,7 +15,7 @@ This table below helps you understanding what features are delivered by each Int
 +---------------------------+------------+------------+------------+------------+-----------+-----------+------------+-----------+
 |                           |   e1000e   |     igb    |    ixgbe   |   ixgbevf  |    i40e   |    iavf   |    fm10k   |    ice    |
 +===========================+============+============+============+============+===========+===========+============+===========+
-| Status                    |  Supported |  Supported |  Supported | Supported  | Supported | Supported | Deprecated | Supported |
+| Status                    |     EOL    |  Supported |  Supported | Supported  | Supported | Supported | Deprecated | Supported |
 +---------------------------+------------+------------+------------+------------+-----------+-----------+------------+-----------+
 | Max Port Speed (Gbit)     |      1     |      1     |     10     |     10     |     40    |     40    |     100    |    100    |
 +---------------------------+------------+------------+------------+------------+-----------+-----------+------------+-----------+
