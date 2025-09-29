@@ -4647,6 +4647,7 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 
 void register_device_handler(void)
 {
+  memset(&prot_hook, 0, sizeof(struct packet_type));
   prot_hook.func = packet_rcv;
   prot_hook.type = htons(ETH_P_ALL);
   dev_add_pack(&prot_hook);
