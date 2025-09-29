@@ -364,41 +364,6 @@ int main(int argc, char* argv[]) {
   u_int8_t dont_strip_hw_ts = 0;
   int direction = PCAP_D_INOUT;
 
-#if 0
-  struct sched_param schedparam;
-
-  schedparam.sched_priority = 99;
-  if(sched_setscheduler(0, SCHED_FIFO, &schedparam) == -1) {
-    printf("error while setting the scheduler, errno=%i\n",errno);
-    exit(1);
-  }
-
-  mlockall(MCL_CURRENT|MCL_FUTURE);
-
-#define TEST_PROCESSOR_AFFINITY
-#ifdef TEST_PROCESSOR_AFFINITY
-  {
-   unsigned long new_mask = 1;
-   unsigned int len = sizeof(new_mask);
-   unsigned long cur_mask;
-   pid_t p = 0; /* current process */
-   int ret;
-
-   ret = sched_getaffinity(p, len, NULL);
-   printf(" sched_getaffinity = %d, len = %u\n", ret, len);
-
-   ret = sched_getaffinity(p, len, &cur_mask);
-   printf(" sched_getaffinity = %d, cur_mask = %08lx\n", ret, cur_mask);
-
-   ret = sched_setaffinity(p, len, &new_mask);
-   printf(" sched_setaffinity = %d, new_mask = %08lx\n", ret, new_mask);
-
-   ret = sched_getaffinity(p, len, &cur_mask);
-   printf(" sched_getaffinity = %d, cur_mask = %08lx\n", ret, cur_mask);
- }
-#endif
-#endif
-
   startTime.tv_sec = 0;
   thiszone = gmt_to_local(0);
 

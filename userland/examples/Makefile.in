@@ -57,7 +57,7 @@ PFPROGS   = pfcount pfcount_multichannel pfsend_multichannel preflect \
 	    pfflow_offload pfbridge alldevs pcap2nspcap \
 	    pfcount_82599 pfsystest pfsend pflatency pftimeline
 
-PCAPPROGS = pcount pfwrite
+PCAPPROGS = pcount pfwrite psend
 TARGETS   = ${PFPROGS} ${PCAPPROGS}
 
 RCOBJS    = ringc.o interval.o
@@ -117,6 +117,9 @@ pfflow_offload: pfflow_offload.o ${LIBPFRING}
 
 pcount: pcount.o ${LIBPFRING}
 	${CC} ${CFLAGS} pcount.o ${LIBS} -o $@
+
+psend: psend.o ${LIBPFRING}
+	${CC} ${CFLAGS} psend.o ${LIBS} -o $@
 
 alldevs: alldevs.o ${LIBPFRING}
 	${CC} ${CFLAGS} alldevs.o ${LIBS} -o $@
