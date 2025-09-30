@@ -16,17 +16,21 @@ insmod ../../../../../kernel/pf_ring.ko
 #modprobe configfs
 modprobe gnss
 
+if [ -f "./intel_auxiliary.ko" ]; then
+  insmod ./intel_auxiliary.ko
+fi
+
 mkdir -p /lib/firmware/updates/intel/ice/ddp
 cp -f ../ddp/ice-*.pkg /lib/firmware/updates/intel/ice/ddp/ice.pkg
 
 # Load the driver
-insmod ./ice.ko RSS=1,1
+#insmod ./ice.ko RSS=1,1
 
 # Load the driver - Debug
 #insmod ./ice.ko enable_debug=1 RSS=1,1
 
 # Load the driver - Enable RSS
-#insmod ./ice.ko RSS=4,4,4,4
+insmod ./ice.ko RSS=4,4,4,4
 
 # Load the driver - Enable RSS - Debug
 #insmod ./ice.ko RSS=4,4,4,4 enable_debug=1
