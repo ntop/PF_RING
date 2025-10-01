@@ -1732,7 +1732,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 VERS=`../version.sh --release`
 MAJOR_VERS=`../version.sh --major`
-PLATFORM=`uname -p`
+PLATFORM=`uname -m`
 
 LIBPCAP_VERS=`../version.sh --libpcap-version`
 

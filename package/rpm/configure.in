@@ -2,7 +2,7 @@ AC_INIT([Makefile.in], 1.0)
 
 VERS=`../version.sh --release`
 MAJOR_VERS=`../version.sh --major`
-PLATFORM=`uname -p`
+PLATFORM=`uname -m`
 
 LIBPCAP_VERS=`../version.sh --libpcap-version`
 
