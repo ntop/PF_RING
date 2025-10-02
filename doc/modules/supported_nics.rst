@@ -47,7 +47,6 @@ Note:
    :header-rows: 1
 
    * - 
-     - e1000e
      - igb
      - ixgbe
      - i40e

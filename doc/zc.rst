@@ -54,8 +54,6 @@ available:
 
 - 1 Gbit
 
-  - e1000e (RX and TX)
-     - Supported cards: Intel 8254x/8256x/82571/82572/82573/82574/82583
   - igb    (RX and TX)
      - Supported cards: Intel 82575/82576/82580/I210/I350
 

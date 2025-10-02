@@ -38,7 +38,6 @@ it can be done in a few steps:
    Name: em1                  Driver: igb        [Supported by ZC]                 
    Name: p1p2                 Driver: ixgbe      [Supported by ZC]                     
    Name: p1p1                 Driver: ixgbe      [Supported by ZC]                     
-   Name: em2                  Driver: e1000e     [Supported by ZC]
 
 3. Configure and load the driver specifying the driver model and (optionally) the number of RSS queues per interface:
 
@@ -54,7 +53,6 @@ it can be done in a few steps:
    Name: em1                  Driver: igb        [Supported by ZC]                 
    Name: p1p2                 Driver: ixgbe      [Running ZC]                     
    Name: p1p1                 Driver: ixgbe      [Running ZC]                     
-   Name: em2                  Driver: e1000e     [Supported by ZC]
 
 Manual Configuration
 --------------------
@@ -62,12 +60,12 @@ Manual Configuration
 The init script acts as follows:
 
 1. it loads the pf_ring.ko kernel module reading the module parameters from /etc/pf_ring/pf_ring.conf
-2. it scans /etc/pf_ring/zc/{e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}/ searching for the drivers configuration files:
+2. it scans /etc/pf_ring/zc/{igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}/ searching for the drivers configuration files:
 
-   - {e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.conf containing the driver parameters
-   - {e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.start that should be just an empty file
+   - {igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.conf containing the driver parameters
+   - {igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.start that should be just an empty file
 
-3. it loads the drivers whose corresponding {e1000e,igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.start file is present, unloading the vanilla driver.
+3. it loads the drivers whose corresponding {igb,ixgbe,ixgbevf,i40e,iavf,ice,mlx}.start file is present, unloading the vanilla driver.
 4. if a ZC driver has been loaded, it configures hugepages reading the configuration from /etc/pf_ring/hugepages.conf. Each line (one per CPU) of the configuration file should contain:
 
 .. code-block:: console
