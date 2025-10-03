@@ -1663,7 +1663,7 @@ static void iavf_up_complete(struct iavf_adapter *adapter)
 				rx_ring->queue_index, /* channel id */
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
-				intel_i40e_vf,
+				intel_i40e_ice_vf,
 				(unsigned char *)rx_ring->netdev->dev_addr,
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
@@ -1771,7 +1771,7 @@ void iavf_down(struct iavf_adapter *adapter)
 				rx_ring->queue_index, /* Channel Id */
 				rx_ring->netdev,
 				rx_ring->dev, /* for DMA mapping */
-				intel_i40e_vf,
+				intel_i40e_ice_vf,
 				(unsigned char *)rx_ring->netdev->dev_addr,
 				&rx_ring->pfring_zc.rx_tx.rx.packet_waitqueue,
 				&rx_ring->pfring_zc.rx_tx.rx.interrupt_received,
