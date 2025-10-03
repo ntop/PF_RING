@@ -357,6 +357,10 @@ load_driver() {
 		DRV_PRE_SCRIPT="${PF_RING_CONFIG_DIR}/${2}/${1}/${1}.pre"
 		if [ -x ${DRV_PRE_SCRIPT} ]; then
 			${DRV_PRE_SCRIPT}
+			if [ ${1} == "iavf" ] || [ ${1} == "ixgbevf" ]; then
+				# Sleep a bit (pre is usually used to create VFs)
+				sleep 1
+			fi
 		fi
 
 		/sbin/modprobe ${1}_${2} ${DRV_PARAM}
