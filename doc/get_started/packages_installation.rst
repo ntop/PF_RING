@@ -199,6 +199,9 @@ adding at least the *pci=assign-busses* parameter to the grub parameters. Exampl
    cat /etc/default/grub | grep GRUB_CMDLINE_LINUX_DEFAULT
    GRUB_CMDLINE_LINUX_DEFAULT="iommu=1 msi=1 pci=assign-busses intel_iommu=on"
 
+Note: enabling iommu and intel_iommu may create issues on some systems and it may be required
+to turn them off, please also check the *AMD Processors* and *Intel Processors* sections.
+
 This change needs to be applied with update-grub and the system should be restarted.
 
 .. code-block:: console
