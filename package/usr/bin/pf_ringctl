@@ -27,6 +27,8 @@ PF_RING="pf_ring"
 PF_RING_CONFIG_DIR="/etc/pf_ring"
 DRIVERS_FLAVOR=("zc")
 DKMS_DRIVERS=('e1000e' 'igb' 'ixgbe' 'ixgbevf' 'i40e' 'ice' 'iavf')
+# Same as DKMS_DRIVERS but in reverse order based on driver dependencies (iavf depends on ice and i40e)
+DKMS_DRIVERS_UNLOAD=('e1000e' 'igb' 'ixgbevf' 'ixgbe' 'iavf' 'i40e' 'ice')
 ERROR=0
 DRIVER_INSTALLED=0
 HUGEPAGES_CONFIG="${PF_RING_CONFIG_DIR}/hugepages.conf"
@@ -476,7 +478,7 @@ unload_driver() {
 unload_zc() {
 	UNLOAD_HUGEPAGES=0
 	for F in ${DRIVERS_FLAVOR[@]} ; do
-		for D in ${DKMS_DRIVERS[@]} ; do
+		for D in ${DKMS_DRIVERS_UNLOAD[@]} ; do
 			if [ `/sbin/lsmod | grep -w ^${D}_${F} |wc -l ` -eq 1 ]; then
 				unload_driver ${D} ${F}
 				if [ ${F} == "zc" ] && [ ${DO_NOT_LOAD_HUGEPAGES} -eq 0 ]; then
