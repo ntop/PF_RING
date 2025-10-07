@@ -363,15 +363,22 @@ load_driver() {
 			fi
 		fi
 
-		/sbin/modprobe ${1}_${2} ${DRV_PARAM}
+		#/sbin/modprobe ${1}_${2} ${DRV_PARAM}
+		output=$(/sbin/modprobe ${1}_${2} ${DRV_PARAM} 2>&1)
+
 		if [ `echo $?` -gt 0 ]; then
 			echo "Error loading driver ${1}-${2}"
-			# last resort: try rebuilding dkms driver
-			rebuild_dkms ${1}-${2}
-			# attempt to load the driver now that it has been rebuilt
-			/sbin/modprobe ${1}_${2} ${DRV_PARAM}
-			if [ `echo $?` -eq 0 ]; then
-				DRIVER_INSTALLED=1
+			if echo "$output" | grep -q "Device or resource busy"; then
+				# busy?
+				:
+			else
+				# last resort: try rebuilding dkms driver
+				rebuild_dkms ${1}-${2}
+				# attempt to load the driver now that it has been rebuilt
+				/sbin/modprobe ${1}_${2} ${DRV_PARAM}
+				if [ `echo $?` -eq 0 ]; then
+					DRIVER_INSTALLED=1
+				fi
 			fi
 		else 
 			DRIVER_INSTALLED=1
