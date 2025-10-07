@@ -360,6 +360,13 @@ load_driver() {
 			if [ ${1} == "iavf" ] || [ ${1} == "ixgbevf" ]; then
 				# Sleep a bit (pre is usually used to create VFs)
 				sleep 1
+
+				# Make sure the kernel driver has not been loaded
+				/sbin/modprobe -r ${1}
+				if [ `echo $?` -gt 0 ]; then
+					echo "Error unloading driver ${1}"
+					return
+				fi
 			fi
 		fi
 
@@ -367,7 +374,7 @@ load_driver() {
 		output=$(/sbin/modprobe ${1}_${2} ${DRV_PARAM} 2>&1)
 
 		if [ `echo $?` -gt 0 ]; then
-			echo "Error loading driver ${1}-${2}"
+			echo "Error loading driver ${1}-${2}: ${output}"
 			if echo "$output" | grep -q "Device or resource busy"; then
 				# busy?
 				:
