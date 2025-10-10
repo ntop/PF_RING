@@ -924,9 +924,6 @@ void deallocateRing(void);
 struct ring_sock {
   struct sock           sk; /* It MUST be the first element */
   struct pf_ring_socket *pf_ring_sk;
-  /* FIXX Do we really need the following items? */
-  //struct packet_type    prot_hook;
-  //spinlock_t                bind_lock;
 };
 #endif
 
@@ -1415,6 +1412,10 @@ typedef struct {
   u_int32_t magic;
 
   struct net *net;
+
+#ifndef SINGLE_PROT_HOOK
+  struct packet_type prot_hook;
+#endif
 
   /* /proc entry for ring module */
   struct proc_dir_entry *proc;
