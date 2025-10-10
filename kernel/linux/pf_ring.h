@@ -1408,6 +1408,10 @@ struct pf_ring_socket {
 
 /* **************************************** */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,11,0)
+#define SINGLE_PROT_HOOK
+#endif
+
 typedef struct {
   u_int32_t magic;
 
