@@ -300,8 +300,10 @@ static atomic_t ring_table_size;
 */
 static lockless_list delayed_memory_table;
 
+#ifdef SINGLE_PROT_HOOK
 /* Protocol hook */
-static struct packet_type prot_hook;
+static struct packet_type init_prot_hook;
+#endif
 
 /* List of virtual filtering devices */
 static struct list_head virtual_filtering_devices_list;
@@ -474,8 +476,12 @@ int bpf_filter_skb(struct sk_buff *skb,
 int sample_packet(struct pf_ring_socket *pfr);
 u_int32_t default_rehash_rss_func(struct sk_buff *skb, struct pfring_pkthdr *hdr);
 void set_ring_num_channels(struct pf_ring_socket *pfr, u_int32_t num_rx_channels);
-void register_device_handler(void);
-void unregister_device_handler(void);
+void register_device_handler(struct packet_type *prot_hook
+#ifndef SINGLE_PROT_HOOK
+		, struct net *net
+#endif
+		);
+void unregister_device_handler(struct packet_type *prot_hook);
 void reserve_memory(unsigned long base, unsigned long mem_len);
 void unreserve_memory(unsigned long base, unsigned long mem_len);
 unsigned int ring_poll(struct file *file,
@@ -874,6 +880,10 @@ pf_ring_net *netns_add(struct net *net) {
   /* none_device */
   map_ifindex(netns, NONE_IFINDEX);
 
+#ifndef SINGLE_PROT_HOOK
+  register_device_handler(&netns->prot_hook, net);
+#endif
+
   return netns;
 }
 
@@ -882,7 +892,13 @@ pf_ring_net *netns_add(struct net *net) {
 static int netns_remove(struct net *net)
 {
   pf_ring_net *netns = net_generic(net, pf_ring_net_id);
+
+#ifndef SINGLE_PROT_HOOK
+  unregister_device_handler(&netns->prot_hook);
+#endif
+
   ring_proc_term(netns);
+
   return 0;
 }
 
@@ -4645,19 +4661,30 @@ static int packet_rcv(struct sk_buff *skb, struct net_device *dev,
 
 /* ********************************** */
 
-void register_device_handler(void)
+void register_device_handler(struct packet_type *prot_hook
+#ifndef SINGLE_PROT_HOOK
+		, struct net *net
+#endif
+		)
 {
-  memset(&prot_hook, 0, sizeof(struct packet_type));
-  prot_hook.func = packet_rcv;
-  prot_hook.type = htons(ETH_P_ALL);
-  dev_add_pack(&prot_hook);
+  memset(prot_hook, 0, sizeof(struct packet_type));
+
+  prot_hook->type = htons(ETH_P_ALL);
+  prot_hook->dev = NULL; /* capture from all devices */
+  prot_hook->func = packet_rcv;
+#ifndef SINGLE_PROT_HOOK
+  prot_hook->af_packet_net = net; /* namespace */
+  prot_hook->af_packet_priv = NULL;
+#endif
+
+  dev_add_pack(prot_hook);
 }
 
 /* ********************************** */
 
-void unregister_device_handler(void)
+void unregister_device_handler(struct packet_type *prot_hook)
 {
-  dev_remove_pack(&prot_hook); /* Remove protocol hook */
+  dev_remove_pack(prot_hook); /* Remove protocol hook */
 }
 
 /* ********************************** */
@@ -9220,7 +9247,9 @@ static void __exit ring_exit(void)
 
   pfring_enabled = 0;
 
-  unregister_device_handler();
+#ifdef SINGLE_PROT_HOOK
+  unregister_device_handler(&init_prot_hook);
+#endif
 
   list_del(&any_device_element.device_list);
   list_for_each_safe(ptr, tmp_ptr, &ring_aware_device_list) {
@@ -9337,7 +9366,9 @@ static int __init ring_init(void)
   register_pernet_subsys(&ring_net_ops);
   register_netdevice_notifier(&ring_netdev_notifier);
 
-  register_device_handler();
+#ifdef SINGLE_PROT_HOOK
+  register_device_handler(&init_prot_hook);
+#endif
 
   printk("[PF_RING] pf_ring initialized correctly\n");
 
