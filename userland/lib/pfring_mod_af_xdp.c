@@ -367,8 +367,11 @@ int pfring_mod_af_xdp_recv(pfring *ring, u_char** buffer, u_int buffer_len, stru
         hdr->caplen = buffer_len;
 
       memcpy(*buffer, pkt_data, hdr->caplen);
-      memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
-      pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
+
+      if (!ring->disable_parsing) {
+        memset(&hdr->extended_hdr.parsed_pkt, 0, sizeof(hdr->extended_hdr.parsed_pkt));
+        pfring_parse_pkt(*buffer, hdr, 4, 0 /* ts */, 1 /* hash */);
+      }
     }
 
     hdr->caplen = min_val(hdr->caplen, ring->caplen);
