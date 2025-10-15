@@ -2592,25 +2592,28 @@ parse_tunnel_ip:
     } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {    /* GRE */
       struct gre_header *gre;
       int gre_offset;
+      u_int16_t gre_flags_and_version;
+      u_int16_t gre_proto;
 
       if(data_len < hdr->extended_hdr.parsed_pkt.offset.l4_offset + sizeof(struct gre_header)) return(1);
       gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
 
-      gre->flags_and_version = ntohs(gre->flags_and_version);
-      gre->proto = ntohs(gre->proto);
+      gre_flags_and_version = ntohs(gre->flags_and_version);
+      gre_proto = ntohs(gre->proto);
+
       gre_offset = sizeof(struct gre_header);
-      if((gre->flags_and_version & GRE_HEADER_VERSION) == 0) {
-        if(gre->flags_and_version & (GRE_HEADER_CHECKSUM | GRE_HEADER_ROUTING)) gre_offset += 4;
-        if(gre->flags_and_version & GRE_HEADER_KEY) {
+      if((gre_flags_and_version & GRE_HEADER_VERSION) == 0) {
+        if(gre_flags_and_version & (GRE_HEADER_CHECKSUM | GRE_HEADER_ROUTING)) gre_offset += 4;
+        if(gre_flags_and_version & GRE_HEADER_KEY) {
           u_int32_t *tunnel_id = (u_int32_t*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset+gre_offset]);
           gre_offset += 4;
           hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id = ntohl(*tunnel_id);
         }
-        if(gre->flags_and_version & GRE_HEADER_SEQ_NUM)  gre_offset += 4;
+        if(gre_flags_and_version & GRE_HEADER_SEQ_NUM)  gre_offset += 4;
 
         hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + gre_offset;
 
-        if(gre->proto == ETH_P_IP /* IPv4 */) {
+        if(gre_proto == ETH_P_IP /* IPv4 */) {
           struct iphdr *tunneled_ip;
 
           if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(struct iphdr))) return(1);
@@ -2624,7 +2627,7 @@ parse_tunnel_ip:
           fragment_offset = tunneled_ip->frag_off & htons(IP_OFFSET); /* fragment, but not the first */
           ip_len = tunneled_ip->ihl*4;
           tunnel_offset = hdr->extended_hdr.parsed_pkt.offset.payload_offset + ip_len;
-        } else if(gre->proto == ETH_P_IPV6 /* IPv6 */) {
+        } else if(gre_proto == ETH_P_IPV6 /* IPv6 */) {
           struct kcompact_ipv6_hdr* tunneled_ipv6;
 
           if(data_len < (hdr->extended_hdr.parsed_pkt.offset.payload_offset+sizeof(struct kcompact_ipv6_hdr))) return(1);
