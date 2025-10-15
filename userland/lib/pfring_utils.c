@@ -458,20 +458,19 @@ int pfring_parse_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int8_t level /* 
   } else if(hdr->extended_hdr.parsed_pkt.l3_proto == IPPROTO_GRE /* 0x47 */) {
     struct gre_header *gre = (struct gre_header*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset]);
     int gre_offset;
-
-    gre->flags_and_version = ntohs(gre->flags_and_version);
-    gre->proto = ntohs(gre->proto);
+    u_int16_t gre_flags_and_version = ntohs(gre->flags_and_version);
+    u_int16_t gre_proto = ntohs(gre->proto);
 
     gre_offset = sizeof(struct gre_header);
 
-    if((gre->flags_and_version & GRE_HEADER_VERSION) == 0) {
-      if(gre->flags_and_version & (GRE_HEADER_CHECKSUM | GRE_HEADER_ROUTING)) gre_offset += 4;
-      if(gre->flags_and_version & GRE_HEADER_KEY) {
+    if((gre_flags_and_version & GRE_HEADER_VERSION) == 0) {
+      if(gre_flags_and_version & (GRE_HEADER_CHECKSUM | GRE_HEADER_ROUTING)) gre_offset += 4;
+      if(gre_flags_and_version & GRE_HEADER_KEY) {
         u_int32_t *tunnel_id = (u_int32_t*)(&data[hdr->extended_hdr.parsed_pkt.offset.l4_offset+gre_offset]);
         gre_offset += 4;
 	hdr->extended_hdr.parsed_pkt.tunnel.tunnel_id = ntohl(*tunnel_id);
       }
-      if(gre->flags_and_version & GRE_HEADER_SEQ_NUM)  gre_offset += 4;
+      if(gre_flags_and_version & GRE_HEADER_SEQ_NUM)  gre_offset += 4;
 
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset + gre_offset;
 
@@ -480,8 +479,8 @@ int pfring_parse_pkt(u_char *data, struct pfring_pkthdr *hdr, u_int8_t level /* 
       if (level < 5)
         goto TIMESTAMP;
 
-      if (gre->proto == ETH_P_IP /* IPv4 */ || gre->proto == ETH_P_IPV6 /* IPv6 */)
-        analyzed += __pfring_parse_tunneled_pkt(data, hdr, gre->proto == ETH_P_IP ? 4 : 6, hdr->extended_hdr.parsed_pkt.offset.payload_offset);
+      if (gre_proto == ETH_P_IP /* IPv4 */ || gre_proto == ETH_P_IPV6 /* IPv6 */)
+        analyzed += __pfring_parse_tunneled_pkt(data, hdr, gre_proto == ETH_P_IP ? 4 : 6, hdr->extended_hdr.parsed_pkt.offset.payload_offset);
 
     } else { /* TODO handle other GRE versions */
       hdr->extended_hdr.parsed_pkt.offset.payload_offset = hdr->extended_hdr.parsed_pkt.offset.l4_offset;
