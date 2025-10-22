@@ -9366,7 +9366,10 @@ static int __init ring_init(void)
   strcpy(none_device_element.device_name, "none");
 
   sock_register(&ring_family_ops);
+
+  /* Allocate pf_ring_net for all namespaces (used with net_generic) */
   register_pernet_subsys(&ring_net_ops);
+
   register_netdevice_notifier(&ring_netdev_notifier);
 
 #ifdef SINGLE_PROT_HOOK
