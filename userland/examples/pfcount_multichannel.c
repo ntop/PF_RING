@@ -186,7 +186,7 @@ void printHelp(void) {
   printf("-i <device>     Device name (No device@channel)\n");
 
   printf("-e <direction>  0=RX+TX, 1=RX only, 2=TX only\n");
-  printf("-P <0|1>        Enable (1 - default) or disable (0) promisc\n");
+  printf("-J              Do not enable promiscuous mode\n");
   printf("-l <len>        Capture length\n");
   printf("-m              Print more metadata with -v (extended packet header)\n");
   printf("-w <watermark>  Watermark\n");
@@ -350,7 +350,7 @@ int main(int argc, char* argv[]) {
   thiszone = gmt_to_local(0);
   numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 
-  while((c = getopt(argc,argv,"hi:I:l:mvae:w:b:rp:P:g:")) != -1) {
+  while((c = getopt(argc,argv,"hi:I:Jl:mvae:w:b:rp:g:")) != -1) {
     switch(c) {
     case 'h':
       printHelp();
@@ -378,6 +378,9 @@ int main(int argc, char* argv[]) {
       src_ip_rule = ntohl(inet_addr(optarg));
       src_ip_rule_set = 1;
       break;
+    case 'J':
+      promisc = 0;
+      break;
     case 'm':
       use_extended_pkt_header = 1;
       break;
@@ -396,9 +399,6 @@ int main(int argc, char* argv[]) {
       break;
     case 'p':
       poll_duration = atoi(optarg);
-      break;
-    case 'P':
-      promisc = atoi(optarg);
       break;
     case 'g':
       bind_mask = strdup(optarg);
