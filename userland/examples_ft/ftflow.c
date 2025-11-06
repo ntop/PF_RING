@@ -274,7 +274,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
          action_to_string(pfring_ft_flow_get_action(flow)));
 
   switch(v->l7_protocol.master_protocol) {
-    case 5:
+    case 5: /* DNS */
       if (v->l7_metadata.dns.query != NULL)
         printf(", query: %s", v->l7_metadata.dns.query);
       printf(", queryType: %u, replyCode: %u",
@@ -282,7 +282,7 @@ void processFlow(pfring_ft_flow *flow, void *user){
         v->l7_metadata.dns.replyCode);
       break;
 
-    case 7:
+    case 7: /* HTTP */
       if (v->l7_metadata.http.serverName != NULL)
         printf(", hostName: %s", v->l7_metadata.http.serverName);
       if (v->l7_metadata.http.url != NULL)
@@ -291,16 +291,14 @@ void processFlow(pfring_ft_flow *flow, void *user){
         printf(", responseCode: %u", v->l7_metadata.http.responseCode);
       break;
 
-    case 91:
+    case 91: /* TLS */
       if (v->l7_metadata.tls.serverName != NULL)
         printf(", hostName: %s", v->l7_metadata.tls.serverName);
 #ifdef PRINT_NDPI_INFO
       if (enable_l7_extra) {
         struct ndpi_flow_struct *ndpi_flow = pfring_ft_flow_get_ndpi_handle(flow);
-        if (ndpi_flow->protos.tls_quic.ja3_server[0])
-          printf(", ja3s: '%s'", ndpi_flow->protos.tls_quic.ja3_server);
-        if (ndpi_flow->protos.tls_quic.ja3_client[0])
-          printf(", ja3c: '%s'", ndpi_flow->protos.tls_quic.ja3_client);
+        if (ndpi_flow->protos.tls_quic.ja4_client[0])
+          printf(", ja4c: '%s'", ndpi_flow->protos.tls_quic.ja4_client);
       }
 #endif
       break;
