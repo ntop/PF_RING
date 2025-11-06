@@ -1,6 +1,53 @@
 # CHANGELOG
 
 ---------------------------------------
+2025-11- PF_RING 9.2
+
+* PF_RING Library
+ - Fix fd leak in pfring_findalldevs
+ - Fix IPv6 decoding
+ - Define endianess macros compatible with kernel in userspace
+
+* PF_RING Kernel Module
+ - Enhanced namespace and container support
+ - Implement cluster type cluster_per_flow_ip_with_dup_tuple_ext
+ - Fix GRE parsing: do not modify packet content
+ - Reset packet_type struct
+ - Fix compilation on old kernels
+
+* ZC Library
+ - Add GTP-over-GRE support for zbalance GTP hash
+
+* FT Library
+ - nDPI API updates
+ - Fix CAPWAB decoding
+
+* PF_RING Capture Modules and ZC Drivers
+ - NVIDIA (Mellanox) ConnectX improvements
+   - Add support for non-promisc mode, both with single queue and RSS
+ - Napatech improvements
+   - Add PF_RING_FLOW_OFFLOAD_RESET flag to reset hardware flow table when using PF_RING_FLOW_OFFLOAD
+ - Intel improvements
+   - New ice-zc driver v.2.3.10
+     - Rework shutdown procedure to avoid crash on shutdown
+   - New igb-zc driver v.5.16.11
+   - Disable e1000e compilation on kernel 6.12 or later (EOL)
+   - Rename intel_igb_82580 to intel_igb_ts (includes i350/82580)
+   - Load ice before iavf to prevent initialization issues
+   - Fix VF configuration and driver auto-loading
+
+* Examples
+ - pfcount_multichannel
+   - Add -J option to disable promisc mode
+ - ftflow
+   - Update access to ndpi metadata
+ - New psend example
+
+* Misc
+ - Support for Debian 13
+ - Support for Linux kernel 6.12 and newer
+
+---------------------------------------
 2025-04-24 PF_RING 9.0
 
 * Key Features
