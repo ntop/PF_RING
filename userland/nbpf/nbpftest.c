@@ -351,17 +351,13 @@ void fiberblaze_dump_rules(nbpf_rule_list_item_t *pun) {
 
 /* *********************************************************** */
 
-#ifdef HAVE_NDPI 
+#ifdef HAVE_NDPI
 void init_ndpi_mod() {
-  NDPI_PROTOCOL_BITMASK all;
-
   ndpi_mod = ndpi_init_detection_module(NULL);
 
   if (ndpi_mod == NULL)
     return;
 
-  NDPI_BITMASK_SET_ALL(all);
-  ndpi_set_protocol_detection_bitmask2(ndpi_mod, &all);
   ndpi_finalize_initialization(ndpi_mod);
 }
 
