@@ -1,7 +1,7 @@
 # CHANGELOG
 
 ---------------------------------------
-2025-11- PF_RING 9.2
+2025-11-17 PF_RING 9.2
 
 * PF_RING Library
  - Fix fd leak in pfring_findalldevs
