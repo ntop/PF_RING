@@ -32,7 +32,7 @@ service_restart () {
 		deb-systemd-invoke enable pf_ring > /dev/null
 		deb-systemd-invoke restart pf_ring || echo "Failure restarting pf_ring"
 		deb-systemd-invoke restart cluster || echo "Failure restarting cluster"
-	elif hash systemctl 2>/dev/null; then    
+	elif hash systemctl 2>/dev/null; then
 		systemctl enable pf_ring > /dev/null
 		systemctl restart pf_ring || echo "Failure restarting pf_ring"
 		systemctl restart cluster || echo "Failure restarting cluster"
