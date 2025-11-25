@@ -28,6 +28,7 @@ PF_RING is a high speed packet capture library that turns a commodity PC into an
    :caption: Developer's Guide
 
    api/index
+   debug
 
 .. toctree::
    :caption: Other Products
