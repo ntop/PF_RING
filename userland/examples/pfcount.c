@@ -686,6 +686,16 @@ void dummyProcessPacket(const struct pfring_pkthdr *h,
 
 /* *************************************** */
 
+char *get_pad(char *buf, int buf_len, int pad_len) {
+  int i;
+  for (i = 0; i < pad_len && i < buf_len-1; i++)
+    buf[i] = ' ';
+  buf[i] = '\0';
+  return buf;
+}
+
+/* *************************************** */
+
 void printDevs(u_int8_t json) {
   pfring_if_t *dev;
   int i = 0;
@@ -695,7 +705,7 @@ void printDevs(u_int8_t json) {
   if (json)
     printf("{\"interfaces\":[");
   else if (verbose)
-    printf("Name\tSystemName\tModule\tMAC\tIfIndex\tBusID\tNumaNode\tStatus\tLicense\tExpiration\tModuleVersion\n");
+    printf("Name            SystemName      Module          MAC               IfIndex       BusID           NumaNode        Status  License         Expiration Link    ModuleVersion\n");
   else
     printf("Available devices (-i):\n");
 
@@ -725,16 +735,21 @@ void printDevs(u_int8_t json) {
         printf(",");
 
     } else if (verbose) {
-      printf("%s\t%s\t%s\t%s\t%d\t%04X:%02X:%02X.%X\t%d\t%s\t%s\t%ld\t%s\n",
-        dev->name, dev->system_name ? dev->system_name : "unknown", dev->module,
-        dev->sn ? dev->sn : mac,
-        dev->ifindex > 0 ? dev->ifindex : -1,
-        dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function,
-        busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function),
-        dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"), 
-        dev->license ? "Valid" : (dev->license_expiration ? "Expired" : "NotFound"), 
-        dev->license_expiration,
-        dev->module_version ? dev->module_version : "");
+      char buf[64];
+      char *system_name = dev->system_name ? dev->system_name : "unknown";
+      printf("%s%s", dev->name, get_pad(buf, sizeof(buf), 16-strlen(dev->name)));
+      printf("%s%s", system_name, get_pad(buf, sizeof(buf), 16-strlen(system_name)));
+      printf("%s%s", dev->module, get_pad(buf, sizeof(buf), 16-strlen(dev->module)));
+      printf("%s ", dev->sn ? dev->sn : mac);
+      printf("%d     \t", dev->ifindex > 0 ? dev->ifindex : -1);
+      printf("%04X:%02X:%02X.%X\t", dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function);
+      printf("%d      \t", busid2node(dev->bus_id.slot, dev->bus_id.bus, dev->bus_id.device, dev->bus_id.function));
+      printf("%s\t", dev->status > 0 ? "Up" : (dev->status == 0 ? "Down" : "Unknown"));
+      printf("%s\t", dev->license ? "Valid   " : (dev->license_expiration ? "Expired " : "NotFound"));
+      printf("%ld%s", dev->license_expiration, get_pad(buf, sizeof(buf), dev->license_expiration ? 1 : 10));
+      printf("%s ", dev->system_name ? (pfring_get_ethtool_link_speed(dev->system_name) ? "Up     " : "Down   ") : "Unknown");
+      printf("%s\t", dev->module_version ? dev->module_version : "-");
+      printf("\n");
 
     } else {
       printf(" %d. %s\n", i++, dev->name);

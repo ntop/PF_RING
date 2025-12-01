@@ -1020,13 +1020,9 @@ u_int32_t pfring_get_ethtool_link_speed(const char *ifname) {
 
     rc = ioctl(sock, SIOCETHTOOL, &ifr);
 
-    if (rc == 0) {
-
+    if (rc == 0)
       speed = ethtool_cmd_speed(&edata);
-
-    } else {
-      fprintf(stderr, "error reading link speed on %s\n", ifname);
-    }  
+    //else fprintf(stderr, "error reading link speed on %s\n", ifname);
   }  
 
   close(sock);
