@@ -5,27 +5,75 @@ VERSION=MODULE_VERSION
 
 set -e
 
+service_stop () {
+	echo "Stopping pf_ring.."
+	if hash deb-systemd-invoke 2>/dev/null; then
+		deb-systemd-invoke stop pf_ring
+		deb-systemd-invoke stop cluster
+	elif hash systemctl 2>/dev/null; then
+		/bin/systemctl stop pf_ring
+		/bin/systemctl stop cluster
+		/bin/systemctl stop 'cluster@*' --all
+		/bin/systemctl daemon-reload
+		/bin/systemctl reset-failed
+	else
+		/etc/init.d/pf_ring stop
+		/etc/init.d/cluster stop
+	fi
+}
+
+service_disable () {
+	echo "Stopping pf_ring.."
+	if hash deb-systemd-invoke 2>/dev/null; then
+		deb-systemd-invoke disable pf_ring > /dev/null
+		deb-systemd-invoke disable cluster > /dev/null
+	elif hash systemctl 2>/dev/null; then
+		/bin/systemctl disable pf_ring > /dev/null
+		/bin/systemctl disable cluster > /dev/null
+		/bin/systemctl disable 'cluster@' --all > /dev/null
+	fi
+}
+
 case "$1" in
-    remove|upgrade|deconfigure)
-      if [  "`dkms status -m $NAME`" ]; then
-         dkms remove -m $NAME -v $VERSION --all
-      fi
-      if [  "`ls /usr/src/$NAME-$VERSION 2> /dev/null`" ]; then
-         rm -rf /usr/src/$NAME-$VERSION
-      fi
-      # Also cleanup old installations (to be removed at some point)
-      if [  "`ls /usr/src/$NAME-* 2> /dev/null`" ]; then
-         rm -rf /usr/src/$NAME-*
-      fi
-    ;;
+	remove|deconfigure)
+		service_stop
+		service_disable
+	;;
 
-    failed-upgrade)
-    ;;
+	upgrade)
+		service_stop
+	;;
 
-    *)
-        echo "prerm called with unknown argument \`$1'" >&2
-        exit 1
-    ;;
+	failed-upgrade)
+	;;
+
+	*)
+		echo "prerm called with unknown argument \`$1'" >&2
+		exit 1
+	;;
+esac
+
+case "$1" in
+	remove|upgrade|deconfigure)
+	  if [  "`dkms status -m $NAME`" ]; then
+		 dkms remove -m $NAME -v $VERSION --all
+	  fi
+	  if [  "`ls /usr/src/$NAME-$VERSION 2> /dev/null`" ]; then
+		 rm -rf /usr/src/$NAME-$VERSION
+	  fi
+	  # Also cleanup old installations (to be removed at some point)
+	  if [  "`ls /usr/src/$NAME-* 2> /dev/null`" ]; then
+		 rm -rf /usr/src/$NAME-*
+	  fi
+	;;
+
+	failed-upgrade)
+	;;
+
+	*)
+		echo "prerm called with unknown argument \`$1'" >&2
+		exit 1
+	;;
 esac
 
 #DEBHELPER#
