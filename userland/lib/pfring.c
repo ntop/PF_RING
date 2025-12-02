@@ -146,6 +146,18 @@ static pfring_module_info pfring_module_list[] = {
 
 /* **************************************************** */
 
+int pfring_is_module_prefix(const char *prefix) {
+  int i = -1;
+
+  while (pfring_module_list[++i].name)
+    if (strcmp(pfring_module_list[i].name, prefix) == 0)
+      return 1;
+
+  return 0;
+}
+
+/* **************************************************** */
+
 pfring *pfring_open(const char *device_name, u_int32_t caplen, u_int32_t flags) {
   int i = -1;
   int mod_found = 0;

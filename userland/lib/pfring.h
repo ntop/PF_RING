@@ -1369,6 +1369,11 @@ pfring_if_t *pfring_findalldevs(void);
  */
 void pfring_freealldevs(pfring_if_t *list);
 
+/**
+ * Check if the prefix is a valid pf_ring module prefix
+ */
+int pfring_is_module_prefix(const char *prefix);
+
 /* ********************************* */
 
 int pfring_parse_bpf_filter(const char *filter_buffer, u_int caplen,
