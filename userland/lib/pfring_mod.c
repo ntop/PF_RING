@@ -893,13 +893,34 @@ int pfring_mod_get_device_ifindex(pfring *ring, char *device_name, int *if_index
 
   memset(buffer, 0, sizeof(buffer));
   strncpy(buffer, device_name, sizeof(buffer) - 1);
-  
+ 
+  /* Device ifindex lookup via PF_RING */ 
   rc = getsockopt(ring->fd, 0, SO_GET_DEVICE_IFINDEX, buffer, &len);
 
-  if (rc < 0)
-    return rc;
+  if (rc < 0) {
+    /* Try with a DGRAM socket in case interface is an alias */
+    int sockfd;
+    struct ifreq ifr;
 
-  memcpy(if_index, buffer, sizeof(*if_index));
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0)
+      return rc;
+
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, device_name, sizeof(ifr.ifr_name)-1);
+
+    if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1) {
+      close(sockfd);
+      return rc;
+    }
+
+    *if_index = ifr.ifr_ifindex;
+
+    close(sockfd);
+  } else {
+    memcpy(if_index, buffer, sizeof(*if_index));
+  }
+
   return 0;
 }
 
