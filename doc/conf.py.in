@@ -21,8 +21,8 @@ sys.path.append("breathe/")
 # ones.
 extensions = [
     "sphinxcontrib.jquery",
-    'sphinx.ext.intersphinx',
-    'breathe'
+    'sphinx.ext.intersphinx' #,
+#    'breathe'
 ]
 
 breathe_projects = { "apidoc" : "doxygen/xml/" }
