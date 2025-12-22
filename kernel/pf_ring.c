@@ -4064,8 +4064,7 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
 
   flags |= HASH_PKT_HDR_MASK_MAC;  /* Mask off the MAC addresses for IP packets */
 
-  switch (cluster_mode)
-  {
+  switch (cluster_mode) {
   case cluster_per_flow_5_tuple:
   case cluster_per_inner_flow_5_tuple:
     flags |= mask_5_tuple;
@@ -4073,12 +4072,11 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
 
   case cluster_per_flow_tcp_5_tuple:
   case cluster_per_inner_flow_tcp_5_tuple:
-    if(l3_proto == IPPROTO_TCP)
-    {
+    if(l3_proto == IPPROTO_TCP) {
       flags |= mask_5_tuple;
       break;
-    }
-    /* else, fall through, because it's like 2-tuple for non-TCP packets */
+    } /* else use 2-tuple for non-TCP packets */
+    /* fall through */
 
   case cluster_per_flow_2_tuple:
   case cluster_per_inner_flow_2_tuple:
