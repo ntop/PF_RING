@@ -5466,7 +5466,12 @@ static int is_netdev_promisc(struct net_device *netdev) {
   debug_printk(1, "checking promisc for %s\n", netdev->name);
 
   rtnl_lock();
+
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
   if_flags = (short) dev_get_flags(netdev);
+#else
+  if_flags = (short) netif_get_flags(netdev);
+#endif
   rtnl_unlock();
 
   return !!(if_flags & IFF_PROMISC);
@@ -5481,7 +5486,12 @@ static void set_netdev_promisc(struct net_device *netdev) {
 
   rtnl_lock();
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
   if_flags = (short) dev_get_flags(netdev);
+#else
+  if_flags = (short) netif_get_flags(netdev);
+#endif
+
   if(!(if_flags & IFF_PROMISC)) {
     if_flags |= IFF_PROMISC;
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0) && \
@@ -5504,7 +5514,12 @@ static void unset_netdev_promisc(struct net_device *netdev) {
 
   rtnl_lock();
 
+#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
   if_flags = (short) dev_get_flags(netdev);
+#else
+  if_flags = (short) netif_get_flags(netdev);
+#endif
+
   if(if_flags & IFF_PROMISC) {
     if_flags &= ~IFF_PROMISC;
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0) && \
