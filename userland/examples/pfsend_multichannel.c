@@ -1,5 +1,5 @@
 /*
- * (C) 2003-25 - ntop 
+ * (C) 2003-26 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -177,7 +177,7 @@ void my_sigalarm(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfcount_multichannel\n(C) 2005-25 ntop\n\n");
+  printf("pfcount_multichannel\n(C) 2005-26 ntop\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name (No device@channel)\n");
   printf("-l <len>        Packet length\n");

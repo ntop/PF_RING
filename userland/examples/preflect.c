@@ -1,5 +1,5 @@
 /*
- * (C) 2003-25 - ntop 
+ * (C) 2003-26 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ void dummyProcesssPacket(u_char *_deviceId,
 
 void printHelp(void) {
 
-  printf("preflect\n(C) 2010-25 ntop\n");
+  printf("preflect\n(C) 2010-26 ntop\n");
   printf("-h              [Print help]\n");
   printf("-i <device>     [In device name]\n");
   printf("-o <device>     [Out device name]\n");

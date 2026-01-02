@@ -1,5 +1,5 @@
 /*
- * (C) 2024-25 - ntop
+ * (C) 2024-26 - ntop
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -323,7 +323,7 @@ void packet_consumer() {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("pfflow_offload - (C) 2024-25 ntop\n");
+  printf("pfflow_offload - (C) 2024-26 ntop\n");
   printf("Flow processing based on hardware offload (Napatech Flow Manager)\n\n");
   printf("-h              Print this help\n");
   printf("-i <device>     Device name. Use:\n");

@@ -1,5 +1,5 @@
 /*
- * (C) 2003-25 - ntop 
+ * (C) 2003-26 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -162,7 +162,7 @@ void sigproc(int sig) {
 /* *************************************** */
 
 void printHelp(void) {
-  printf("zcount - (C) 2014-25 ntop\n");
+  printf("zcount - (C) 2014-26 ntop\n");
   printf("Using PF_RING v.%s\n", pfring_zc_version());
   printf("A simple packet counter application.\n\n");
   printf("Usage:   zcount -i <device> -c <cluster id>\n"
@@ -177,7 +177,7 @@ void printHelp(void) {
   printf("-H              High stats refresh rate (workaround for drop counter on 1G Intel cards)\n");
   printf("-X              Enable hardware timestamp (when supported)\n");
   printf("-U              Do not set the hardware clock when using -X (e.g. when using PTP)\n");
-  printf("-s <time>       Set hardware timestamp (when supported). Format example: '2022-09-25 14:30:55.123456789'\n");
+  printf("-s <time>       Set hardware timestamp (when supported). Format example: '2022-09-26 14:30:55.123456789'\n");
   printf("-d <nsec>       Adjust hardware timestamp using a signed nsec delta (when supported)'\n");
   printf("-S <core id>    Pulse-time thread for inter-packet time check\n");
   printf("-T              Capture also TX (standard kernel drivers only)\n");

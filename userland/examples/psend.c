@@ -1,5 +1,5 @@
 /*
- * (C) 2003-25 - ntop 
+ * (C) 2003-26 - ntop 
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -141,7 +141,7 @@ void printHelp(void) {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_if_t *devpointer;
 
-  printf("pcount\n(C) 2003-25 ntop\n");
+  printf("pcount\n(C) 2003-26 ntop\n");
   printf("-h              Print help\n");
   printf("-i <device>     Device name\n");
   printf("-l <len>        Packet length (default: %u)\n", DEFAULT_PACKET_LEN);
