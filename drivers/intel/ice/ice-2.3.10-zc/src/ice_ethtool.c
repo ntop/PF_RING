@@ -4526,7 +4526,10 @@ static u64 ice_parse_hash_flds(struct ethtool_rxnfc *nfc)
 
 #ifdef HAVE_PF_RING
 	if (nfc->data & RXH_L2DA) {
-		//hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
+		/* Note: RXH_L2DA uses Dest MAC addr only, or both, depending on driver
+		 * implementation. Here we are using both to consider the MAC pair.
+		 * Configuration example: ethtool -N eno1  rx-flow-hash tcp4 m */
+		hfld |= ICE_FLOW_HASH_FLD_ETH_SA; /* Source MAC Addr */
 		hfld |= ICE_FLOW_HASH_FLD_ETH_DA; /* Destination MAC Addr */
 	}
 
