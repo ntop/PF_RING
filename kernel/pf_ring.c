@@ -4925,8 +4925,8 @@ void reserve_memory(unsigned long base, unsigned long mem_len)
 {
   struct page *page, *page_end;
 
-  page_end = virt_to_page(base + mem_len - 1);
-  for(page = virt_to_page(base); page <= page_end; page++)
+  page_end = virt_to_page((void *) (base + mem_len - 1));
+  for(page = virt_to_page((void *) base); page <= page_end; page++)
     SetPageReserved(page);
 }
 
@@ -4934,8 +4934,8 @@ void unreserve_memory(unsigned long base, unsigned long mem_len)
 {
   struct page *page, *page_end;
 
-  page_end = virt_to_page(base + mem_len - 1);
-  for(page = virt_to_page(base); page <= page_end; page++)
+  page_end = virt_to_page((void *) base + mem_len - 1);
+  for(page = virt_to_page((void *) base); page <= page_end; page++)
     ClearPageReserved(page);
 }
 
