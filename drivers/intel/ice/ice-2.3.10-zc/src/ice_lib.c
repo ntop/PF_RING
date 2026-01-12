@@ -12,6 +12,7 @@
 
 #ifdef HAVE_PF_RING
 extern int RSS[ICE_MAX_NIC];
+extern int rss_scheme;
 #endif
 
 /**
@@ -2069,6 +2070,10 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 	struct device *dev;
 	u8 *lut, *key;
 	int err;
+#ifdef HAVE_PF_RING
+	struct ice_hw *hw = &pf->hw;
+	u16 reg;
+#endif
 
 	dev = ice_pf_to_dev(pf);
 #ifdef NETIF_F_HW_TC
@@ -2124,6 +2129,28 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 	err = ice_set_rss_key(vsi, key);
 	if (err)
 		ice_dev_err_errno(dev, err, "set_rss_key failed");
+
+#ifdef HAVE_PF_RING
+	/* Enable registers for symmetric RSS
+	 * Bits 7:6 - Hash Scheme
+	 * 00b = Toeplitz Hash
+	 * 01b = Symmetric Toeplitz
+	 * 10b = Simple XOR
+	 * 11b = Reserved
+	*/
+	reg = rd32(hw, VSIQF_HASH_CTL(vsi->vsi_num));
+	if (rss_scheme == 1) { /* Asymmetric Toeplitz */
+		dev_info(ice_pf_to_dev(pf), "Setting RSS hash to Asymmetric Toeplitz\n");
+		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (0);
+	} else if (rss_scheme == 2) { /* Simple XOR */
+		dev_info(ice_pf_to_dev(pf), "Setting RSS hash to Simple XOR\n");
+		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (2 << VSIQF_HASH_CTL_HASH_SCHEME_S);
+	} else { /* Symmetric Toeplitz (Default) */
+		dev_info(ice_pf_to_dev(pf), "Setting RSS hash to Symmetric Toeplitz\n");
+		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (1 << VSIQF_HASH_CTL_HASH_SCHEME_S);
+	}
+	wr32(hw, VSIQF_HASH_CTL(vsi->vsi_num), reg); 
+#endif
 
 	kfree(key);
 ice_vsi_cfg_rss_exit:
