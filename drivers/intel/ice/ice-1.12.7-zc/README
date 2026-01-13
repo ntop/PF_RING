@@ -1,0 +1,2810 @@
+ice Linux* Base Driver for the Intel(R) Ethernet 800 Series
+===============================================================================
+
+June 23, 2023
+
+===============================================================================
+
+Contents
+--------
+
+- Overview
+- Identifying Your Adapter
+- Important Notes
+- Building and Installation
+- Command Line Parameters
+- Additional Features & Configurations
+- Performance Optimization
+- Known Issues/Troubleshooting
+
+
+Overview
+========
+This driver supports kernel versions 3.10.0 and newer. However, some features
+may require a newer kernel version. The associated Virtual Function (VF) driver
+for this driver is iavf. The associated RDMA driver for this driver is irdma.
+
+Driver information can be obtained using ethtool, devlink, lspci, and ip.
+Instructions on updating ethtool can be found in the section Additional
+Configurations later in this document.
+
+This driver is only supported as a loadable module at this time. Intel is not
+supplying patches against the kernel source to allow for static linking of the
+drivers.
+
+For questions related to hardware requirements, refer to the documentation
+supplied with your Intel adapter. All hardware requirements listed apply to use
+with Linux.
+
+This driver supports XDP (Express Data Path) on kernel 4.14 and later and
+AF_XDP zero-copy on kernel 4.18 and later. Note that XDP is blocked for frame
+sizes larger than 3KB.
+
+
+Identifying Your Adapter
+========================
+The driver is compatible with devices based on the following:
+  * Intel(R) Ethernet Controller E810-C
+  * Intel(R) Ethernet Controller E810-XXV
+  * Intel(R) Ethernet Connection E822-C
+  * Intel(R) Ethernet Connection E822-L
+  * Intel(R) Ethernet Connection E823-C
+  * Intel(R) Ethernet Connection E823-L
+
+For information on how to identify your adapter, and for the latest Intel
+network drivers, refer to the Intel Support website:
+http://www.intel.com/support
+
+
+Important Notes
+===============
+
+Configuring SR-IOV for improved network security
+------------------------------------------------
+In a virtualized environment, on Intel(R) Ethernet Network Adapters that
+support SR-IOV or Intel(R) Scalable I/O Virtualization (Intel(R) Scalable IOV),
+the virtual function (VF) may be subject to malicious behavior.
+Software-generated layer two frames, like IEEE 802.3x (link flow control), IEEE
+802.1Qbb (priority based flow-control), and others of this type, are not
+expected and can throttle traffic between the host and the virtual switch,
+reducing performance. To resolve this issue, and to ensure isolation from
+unintended traffic streams, configure all SR-IOV or Intel Scalable IOV enabled
+ports for VLAN tagging from the administrative interface on the PF. This
+configuration allows unexpected, and potentially malicious, frames to be
+dropped.
+
+See "Configuring VLAN Tagging on SR-IOV Enabled Adapter Ports" or "Intel(R)
+Scalable I/O Virtualization Support" later in this README for configuration
+instructions.
+
+
+Do not unload port driver if VF with active VM is bound to it
+-------------------------------------------------------------
+Do not unload a port's driver if a Virtual Function (VF) with an active Virtual
+Machine (VM) is bound to it. Doing so will cause the port to appear to hang.
+Once the VM shuts down, or otherwise releases the VF, the command will complete.
+
+
+Firmware Recovery Mode
+----------------------
+A device will enter Firmware Recovery mode if it detects a problem that
+requires the firmware to be reprogrammed. When a device is in Firmware Recovery
+mode it will not pass traffic or allow any configuration; you can only attempt
+to recover the device's firmware. Refer to the Intel(R) Ethernet Adapters and
+Devices User Guide for details on Firmware Recovery Mode and how to recover
+from it.
+
+
+Important notes for SR-IOV, RDMA, and Link Aggregation
+------------------------------------------------------
+The VF driver will not block teaming/bonding/link aggregation, but this is not
+a supported feature. Do not expect failover or load balancing on the VF
+interface.
+
+LAG and RDMA are compatible only in certain conditions. See the "RDMA (Remote
+Direct Memory Access)" section later in this README for more information.
+
+Bridging and MACVLAN are also affected by this. If you wish to use bridging or
+MACVLAN with RDMA/SR-IOV, you must set up bridging or MACVLAN before enabling
+RDMA or SR-IOV. If you are using bridging or MACVLAN in conjunction with SR-IOV
+and/or RDMA, and you want to remove the interface from the bridge or MACVLAN,
+you must follow these steps:
+1. Remove RDMA if it is active
+2. Destroy SR-IOV VFs if they exist
+3. Remove the interface from the bridge or MACVLAN
+4. Reactivate RDMA and recreate SR-IOV VFs as needed
+
+
+Building and Installation
+=========================
+The ice driver requires the Dynamic Device Personalization (DDP) package file
+to enable advanced features (such as dynamic tunneling, Intel(R) Ethernet Flow
+Director, RSS, and ADQ, or others). The driver installation process installs
+the default DDP package file and creates a soft link ice.pkg to the physical
+package ice-x.x.x.x.pkg in the firmware root directory (typically
+/lib/firmware/ or /lib/firmware/updates/). The driver install process also puts
+both the driver module and the DDP file in the initramfs/initrd image.
+
+NOTE: When the driver loads, it looks for intel/ice/ddp/ice.pkg in the firmware
+root. If this file exists, the driver will download it into the device. If not,
+the driver will go into Safe Mode where it will use the configuration contained
+in the device's NVM. This is NOT a supported configuration and many advanced
+features will not be functional. See "Dynamic Device Personalization" later for
+more information.
+
+
+To manually build the driver
+----------------------------
+1. Move the base driver tar file to the directory of your choice.
+   For example, use '/home/username/ice' or '/usr/local/src/ice'.
+
+2. Untar/unzip the archive, where <x.x.x> is the version number for the
+   driver tar file:
+
+   # tar zxf ice-<x.x.x>.tar.gz
+
+3. Change to the driver src directory, where <x.x.x> is the version number
+   for the driver tar:
+
+   # cd ice-<x.x.x>/src/
+
+4. Compile the driver module:
+
+   # make install
+
+   The binary will be installed as:
+   /lib/modules/<KERNEL VER>/updates/drivers/net/ethernet/intel/ice/ice.ko
+
+   The install location listed above is the default location. This may differ
+   for various Linux distributions.
+
+   NOTE: To build the driver using the schema for unified ethtool statistics
+   defined in https://sourceforge.net/p/e1000/wiki/Home/, use the following
+   command:
+
+   # make CFLAGS_EXTRA='-DUNIFIED_STATS' install
+
+   NOTE: To compile the driver with ADQ (Application Device Queues) flags set,
+   use the following command, where <nproc> is the number of logical cores:
+
+   # make -j<nproc> CFLAGS_EXTRA='-DADQ_PERF_COUNTERS' install
+
+   (This will also apply the above 'make install' command.)
+
+   NOTE: You may see warnings from depmod related to unknown RDMA symbols
+   during the make of the OOT base driver. These warnings are normal and
+   appear because the in-tree RDMA driver will not work with the OOT base
+   driver. To address the issue, you need to install the latest OOT versions
+   of the base and RDMA drivers.
+
+
+5. Load the module using the modprobe command.
+
+   To check the version of the driver and then load it:
+
+   # modinfo ice
+   # modprobe ice
+
+   Alternately, make sure that any older ice drivers are removed from the
+   kernel before loading the new module:
+
+   # rmmod ice; modprobe ice
+
+NOTE: To enable verbose debug messages in the kernel log, use the dynamic debug
+feature (dyndbg). See "Dynamic Debug" later in this README for more information.
+
+6. Assign an IP address to the interface by entering the following,
+   where <ethX> is the interface name that was shown in dmesg after modprobe:
+
+   # ip address add <IP_address>/<netmask bits> dev <ethX>
+
+7. Verify that the interface works. Enter the following, where IP_address
+   is the IP address for another machine on the same subnet as the interface
+   that is being tested:
+
+   # ping <IP_address>
+
+ 
+To build a binary RPM package of this driver
+--------------------------------------------
+Note: RPM functionality has only been tested in Red Hat distributions.
+
+1. Run the following command, where <x.x.x> is the version number for the
+   driver tar file.
+
+   # rpmbuild -tb ice-<x.x.x>.tar.gz
+
+   NOTE: For the build to work properly, the currently running kernel MUST
+   match the version and configuration of the installed kernel sources. If
+   you have just recompiled the kernel, reboot the system before building.
+
+2. After building the RPM, the last few lines of the tool output contain the
+   location of the RPM file that was built. Install the RPM with one of the
+   following commands, where <RPM> is the location of the RPM file:
+
+   # rpm -Uvh <RPM>
+       or
+   # dnf/yum localinstall <RPM>
+
+3. If your distribution or kernel does not contain inbox support for auxiliary
+   bus, you must also install the auxiliary RPM:
+
+   # rpm -Uvh <ice RPM> <auxiliary RPM>
+       or
+   # dnf/yum localinstall <ice RPM> <auxiliary RPM>
+
+NOTE: On some distributions, the auxiliary RPM may fail to install due to
+missing kernel-devel headers. To workaround this issue, specify '--excludepath'
+during installation. For example:
+
+# rpm -Uvh auxiliary-1.0.0-1.x86_64.rpm
+--excludepath=/lib/modules/3.10.0-957.el7.x86_64/source/include/linux/auxiliary_
+bus.h
+
+NOTES:
+- To compile the driver on some kernel/arch combinations, you may need to
+install a package with the development version of libelf (e.g. libelf-dev,
+libelf-devel, elfutils-libelf-devel).
+- When compiling an out-of-tree driver, details will vary by distribution.
+However, you will usually need a kernel-devel RPM or some RPM that provides the
+kernel headers at a minimum. The RPM kernel-devel will usually fill in the link
+at /lib/modules/'uname -r'/build.
+
+
+Command Line Parameters
+=======================
+The only command line parameter the ice driver supports is the debug parameter
+that can control the default logging verbosity of the driver. (Note: dyndbg
+also provides dynamic debug information.)
+
+In general, use ethtool and other OS-specific commands to configure
+user-changeable parameters after the driver is loaded.
+
+
+Additional Features and Configurations
+======================================
+
+ethtool
+-------
+The driver utilizes the ethtool interface for driver configuration and
+diagnostics, as well as displaying statistical information. The latest ethtool
+version is required for this functionality. Download it at:
+https://kernel.org/pub/software/network/ethtool/
+
+
+Viewing Link Messages
+---------------------
+Link messages will not be displayed to the console if the distribution is
+restricting system messages. In order to see network driver link messages on
+your console, set dmesg to eight by entering the following:
+
+# dmesg -n 8
+
+NOTE: This setting is not saved across reboots.
+
+
+Dynamic Device Personalization
+------------------------------
+Dynamic Device Personalization (DDP) allows you to change the packet processing
+pipeline of a device by applying a profile package to the device at runtime.
+Profiles can be used to, for example, add support for new protocols, change
+existing protocols, or change default settings. DDP profiles can also be rolled
+back without rebooting the system.
+
+The ice driver automatically installs the default DDP package file during
+driver installation. NOTE: It's important to do 'make install' during initial
+ice driver installation so that the driver loads the DDP package automatically.
+
+The DDP package loads during device initialization. The driver looks for
+intel/ice/ddp/ice.pkg in your firmware root (typically /lib/firmware/ or
+/lib/firmware/updates/) and checks that it contains a valid DDP package file.
+
+If the driver is unable to load the DDP package, the device will enter Safe
+Mode. Safe Mode disables advanced and performance features and supports only
+basic traffic and minimal functionality, such as updating the NVM or
+downloading a new driver or DDP package. Safe Mode only applies to the affected
+physical function and does not impact any other PFs. See the "Intel(R) Ethernet
+Adapters and Devices User Guide" for more details on DDP and Safe Mode.
+
+NOTES:
+- If you encounter issues with the DDP package file, you may need to download
+an updated driver or DDP package file. See the log messages for more
+information.
+
+- The ice.pkg file is a symbolic link to the default DDP package file installed
+by the Linux-firmware software package or the ice out-of-tree driver
+installation.
+
+- You cannot update the DDP package if any PF drivers are already loaded. To
+overwrite a package, unload all PFs and then reload the driver with the new
+package.
+
+- Only the first loaded PF per device can download a package for that device.
+
+You can install specific DDP package files for different physical devices in
+the same system. To install a specific DDP package file:
+
+1. Download the DDP package file you want for your device.
+
+2. Rename the file ice-xxxxxxxxxxxxxxxx.pkg, where 'xxxxxxxxxxxxxxxx' is the
+unique 64-bit PCI Express device serial number (in hex) of the device you want
+the package downloaded on. The filename must include the complete serial number
+(including leading zeros) and be all lowercase. For example, if the 64-bit
+serial number is b887a3ffffca0568, then the file name would be
+ice-b887a3ffffca0568.pkg.
+
+To find the serial number from the PCI bus address, you can use the following
+command:
+
+# lspci -vv -s af:00.0 | grep -i Serial
+Capabilities: [150 v1] Device Serial Number b8-87-a3-ff-ff-ca-05-68
+
+You can use the following command to format the serial number without the
+dashes:
+
+# lspci -vv -s af:00.0 | grep -i Serial | awk '{print $7}' | sed s/-//g
+b887a3ffffca0568
+
+3. Copy the renamed DDP package file to /lib/firmware/updates/intel/ice/ddp/.
+If the directory does not yet exist, create it before copying the file.
+
+4. Unload all of the PFs on the device.
+
+5. Reload the driver with the new package.
+
+NOTE: The presence of a device-specific DDP package file overrides the loading
+of the default DDP package file (ice.pkg).
+
+
+RDMA (Remote Direct Memory Access)
+----------------------------------
+Remote Direct Memory Access, or RDMA, allows a network device to transfer data
+directly to and from application memory on another system, increasing
+throughput and lowering latency in certain networking environments.
+
+The ice driver supports the following RDMA protocols:
+- iWARP (Internet Wide Area RDMA Protocol)
+- RoCEv2 (RDMA over Converged Ethernet)
+The major difference is that iWARP performs RDMA over TCP, while RoCEv2 uses
+UDP.
+
+RDMA requires auxiliary bus support. Refer to "Auxiliary Bus" in this
+README for more information.
+
+Devices based on the Intel(R) Ethernet 800 Series do not support RDMA when
+operating in multiport mode with more than 4 ports.
+
+For detailed installation and configuration information for RDMA, see the
+README file in the irdma driver tarball.
+
+
+RDMA in the VF
+--------------
+Devices based on the Intel(R) Ethernet 800 Series support RDMA in a Linux VF,
+on supported Windows or Linux hosts.
+
+The iavf driver supports the following RDMA protocols in the VF:
+- iWARP (Internet Wide Area RDMA Protocol)
+- RoCEv2 (RDMA over Converged Ethernet)
+
+Refer to the README inside the irdma driver tarball for details on configuring
+RDMA in the VF.
+
+NOTE: To support VF RDMA, load the irdma driver on the host before creating
+VFs. Otherwise VF RDMA support may not be negotiated between the VF and PF
+driver.
+
+
+Auxiliary Bus
+-------------
+Inter-Driver Communication (IDC) is the mechanism in which LAN drivers (such as
+ice) communicate with peer drivers (such as irdma). Starting in kernel 5.11,
+Intel LAN and RDMA drivers use an auxiliary bus mechanism for IDC.
+
+RDMA functionality requires use of the auxiliary bus.
+
+If your kernel supports the auxiliary bus, the LAN and RDMA drivers will use
+the inbox auxiliary bus for IDC. For kernels lower than 5.11, the base driver
+will automatically install an out-of-tree auxiliary bus module.
+
+
+NVM Express* (NVMe) over TCP and Fabrics
+----------------------------------------
+RDMA provides a high throughput, low latency means to directly access NVM
+Express* (NVMe*) drives on a remote server.
+
+Refer to the following for details on supported operating systems and how to
+set up and configure your server and client systems:
+- NVM Express over TCP for Intel(R) Ethernet Products Configuration Guide
+- NVM Express over Fabrics for Intel(R) Ethernet Products with RDMA
+Configuration Guide
+
+Both guides are available on the Intel Technical Library at:
+https://www.intel.com/content/www/us/en/design/products-and-solutions/networking
+-and-io/ethernet-controller-e810/technical-library.html
+
+
+Link Aggregation and RDMA
+-------------------------
+Link aggregation (LAG) and RDMA are compatible only if all the following are
+true:
+- You are using an Intel Ethernet 810 Series device with the latest drivers and
+NVM installed.
+- RDMA technology is set to RoCEv2.
+- LAG configuration is active-backup.
+- Bonding is between two ports within the same device.
+- The QoS configuration of the two ports matches prior to the bonding of the
+devices.
+
+If the above conditions are not met:
+- The PF driver will not enable RDMA.
+- RDMA peers will not be able to register with the PF.
+
+NOTE: The first interface added to an aggregate (bond) is assigned as the
+"primary" interface for RDMA and LAG functionality. If LAN interfaces are
+assigned to the bond and you remove the primary interface from the bond, RDMA
+will not function properly over the bonded interface. To address the issue,
+remove all interfaces from the bond and add them again. Interfaces that are not
+assigned to the bond will operate normally.
+
+
+Application Device Queues (ADQ)
+-------------------------------
+Application Device Queues (ADQ) allow you to dedicate one or more queues to a
+specific application. This can reduce latency for the specified application,
+and allow Tx traffic to be rate limited per application.
+
+The ADQ information contained here is specific to the ice driver. For more
+details, refer to the E810 ADQ Configuration Guide at:
+https://cdrdv2.intel.com/v1/dl/getContent/609008
+
+Requirements:
+- Kernel version: Varies by feature. Refer to the E810 ADQ Configuration Guide
+for more information on required kernel versions for different ADQ features.
+- Operating system: Red Hat* Enterprise Linux* 7.5+ or SUSE* Linux Enterprise
+Server* 12+
+- The latest ice driver and NVM image (Note: You must compile the ice driver
+with the ADQ flag as shown in the "Building and Installation" section.)
+- The sch_mqprio, act_mirred and cls_flower modules must be loaded. For example:
+# modprobe sch_mqprio
+# modprobe act_mirred
+# modprobe cls_flower
+- The latest version of iproute2
+We recommend the following installation method:
+# cd iproute2
+# ./configure
+# make DESTDIR=/opt/iproute2 install
+# ln -s /opt/iproute2/sbin/tc /usr/local/sbin/tc
+
+When ADQ is enabled:
+- You cannot change RSS parameters, the number of queues, or the MAC address in
+the PF or VF. Delete the ADQ configuration before changing these settings.
+- The driver supports subnet masks for IP addresses in the PF and VF. When you
+add a subnet mask filter, the driver forwards packets to the ADQ VSI instead of
+the main VSI.
+- When the PF adds or deletes a port VLAN filter for the VF, it will extend to
+all the VSIs within that VF.
+- The driver supports ADQ and GTP filters in the PF. Note: You must have a DDP
+package that supports GTP; the default OS package does not. Download the
+appropriate package from your hardware vendor and load it on your device.
+- ADQ allows tc ingress filters that include any destination MAC address.
+- You can configure up to 256 queue pairs (256 MSI-X interrupts) per PF.
+
+See "Creating traffic class filters" in this README for more information on
+configuring filters, including examples. See the E810 ADQ Configuration Guide
+for detailed instructions.
+
+ADQ KNOWN ISSUES:
+- The latest RHEL and SLES distros have kernels with back-ported support for
+ADQ. For all other Linux distributions, you must use LTS Linux kernel v4.19.58
+or higher to use ADQ. The latest out-of-tree driver is required for ADQ on all
+operating systems.
+
+- You must clear ADQ configuration in the reverse order of the initial
+configuration steps. Issues may result if you do not execute the steps to clear
+ADQ configuration in the correct order.
+
+- ADQ configuration is not supported on a bonded or teamed ice interface.
+Issuing the ethtool or tc commands to a bonded ice interface will result in
+error messages from the ice driver to indicate the operation is not supported.
+
+- If the application stalls, the application-specific queues may stall for up
+to two seconds. Configuring only one application per Traffic Class (TC) channel
+may resolve the issue.
+
+- DCB and ADQ cannot coexist. A switch with DCB enabled might remove the ADQ
+configuration from the device. To resolve the issue, do not enable DCB on the
+switch ports being used for ADQ. You must disable LLDP on the interface and
+stop the firmware LLDP agent using the following command:
+   # ethtool --set-priv-flags <ethX> fw-lldp-agent off
+
+- MACVLAN offloads and ADQ are mutually exclusive. System instability may occur
+if you enable l2-fwd-offload and then set up ADQ, or if you set up ADQ and then
+enable l2-fwd-offload.
+
+- NOTE (unrelated to Intel drivers): The version 5.8.0 Linux kernel introduced
+a bug that broke the interrupt affinity setting mechanism, which breaks the
+ability to pin interrupts to ADQ hardware queues. Use an earlier or later
+version of the Linux kernel.
+
+- A core-level reset of an ADQ-configured PF port (rare events usually
+triggered by other failures in the device or ice driver) results in loss of ADQ
+configuration. To recover, reapply the ADQ configuration to the PF interface.
+
+-  Commands such as 'tc qdisc add' and 'ethtool -L' will cause the driver to
+close the associated RDMA interface and reopen it. This will disrupt RDMA
+traffic for 3-5 seconds until the RDMA interface is available again for
+traffic.
+
+-  Commands such as 'tc qdisc add' and 'ethtool -L' will clear other tuning
+settings such as interrupt affinity. These tuning settings will need to be
+reapplied. When the number of queues are increased using 'ethtool -L', the new
+queues will have the same interrupt moderation settings as queue 0 (i.e., Tx
+queue 0 for new Tx queues and Rx queue 0 for new Rx queues). You can change
+this using the ethtool per-queue coalesce commands.
+
+- TC filters may not get offloaded in hardware if you apply them immediately
+after issuing the 'tc qdisc add' command. We recommend you wait 5 seconds after
+issuing 'tc qdisc add' before adding TC filters. Dmesg will report the error if
+TC filters fail to add properly.
+
+
+Setting up ADQ
+--------------
+To set up the adapter for ADQ, where <ethX> is the interface in use:
+1. Reload the ice driver to remove any previous TC configuration:
+
+   # rmmod ice
+   # modprobe ice
+
+2. Enable hardware TC offload on the interface:
+
+   # ethtool -K <ethX> hw-tc-offload on
+
+3. Disable LLDP on the interface, if it isn't already:
+
+   # ethtool --set-priv-flags <ethX> fw-lldp-agent off
+
+4. Verify settings:
+
+   # ethtool -k <ethX> | grep "hw-tc"
+   # ethtool --show-priv-flags <ethX>
+
+
+ADQ Configuration Script
+------------------------
+Intel also provides a script to configure ADQ. This script allows you configure
+ADQ-specific parameters such as traffic classes, priority, filters, and ethtool
+parameters.
+
+Refer to the README.md file in scripts/adqsetup inside the driver tarball for
+more information.
+
+The script and README are also available as part of the Python Package Index:
+https://pypi.org/project/adqsetup
+
+
+Using ADQ with independent pollers
+----------------------------------
+The ice driver supports ADQ acceleration using independent pollers. Independent
+pollers are kernel threads invoked by interrupts and are used for busy polling
+on behalf of the application.
+
+You can configure the number of queues per poller and poller timeout per ADQ
+traffic class (TC) or queue group using the 'devlink dev param' interface.
+
+To set the number of queue pairs per poller, use the following:
+
+# devlink dev param set <pci/D:b:d.f> name tc<x>_qps_per_poller value <num>
+cmode runtime
+
+Where:
+- <pci/D:b:d.f> is the PCI address of the device
+(pci/Domain:bus:device.function).
+- tc<x> is the traffic class number.
+- <num> is the number of queues of the corresponding traffic class that each
+poller would poll.
+
+To set the timeout for the independent poller, use the following:
+
+# devlink dev param set <pci/D:b:d.f> name tc<x>_poller_timeout value <num>
+cmode runtime
+
+Where:
+- <pci/D:b:d.f> is the PCI address of the device
+(pci/Domain:bus:device.function).
+- tc<x> is the traffic class number.
+- <num> is a nonzero integer value in jiffies.
+
+For example:
+
+- To configure 3 queues of TC1 to be polled by each independent poller:
+
+# devlink dev param set pci/0000:3b:00.0 name tc1_qps_per_poller value 3 cmode
+runtime
+
+- To set the timeout value in jiffies for TC1 when no traffic is flowing:
+
+# devlink dev param set pci/0000:3b:00.0 name tc1_poller_timeout value 1000
+cmode runtime
+
+
+Configuring ADQ flows per traffic class
+---------------------------------------
+The ice OOT driver allows you to configure inline Intel(R) Ethernet Flow
+Director (Intel(R) Ethernet FD) filters per traffic class (TC) using the
+devlink interface. Inline Intel Ethernet FD allows uniform distribution of
+flows among queues in a TC.
+
+NOTE:
+- This functionality requires Linux kernel version 5.6 or newer and is
+supported only with the OOT ice driver.
+- You must enable Transmit Packet Steering (XPS) using receive queues for this
+feature to work correctly.
+- Per-TC filters set with devlink are not compatible with Intel Ethernet FD
+filters set via ethtool.
+
+Use the following to configure inline Intel Ethernet FD filters per TC:
+
+# devlink dev param set <pci/D:b:d.f> name tc<x>_inline_fd value <setting>
+cmode runtime
+
+Where:
+- <pci/D:b:d.f> is the PCI address of the device
+(pci/Domain:bus:device.function).
+- tc<x> is the traffic class number.
+- <setting> is true to enable inline per-TC Intel Ethernet FD, or false to
+disable it.
+
+For example, to enable inline Intel Ethernet FD for TC1:
+
+# devlink dev param set pci/0000:af:00.0 name tc1_inline_fd value true cmode
+runtime
+
+To show the current inline Intel Ethernet FD setting:
+
+# devlink dev param show <pci/D:b:d.f> name tc<x>_inline_fd
+
+For example, to show the inline Intel Ethernet FD setting for TC2 for the
+specified device:
+
+# devlink dev param show pci/0000:af:00.0 name tc2_inline_fd
+
+
+Creating traffic classes
+------------------------
+NOTE: These instructions are not specific to ADQ configuration. Refer to the tc
+and tc-flower man pages for more information on creating traffic classes (TCs).
+
+To create traffic classes on the interface:
+
+1. Use the tc command to create traffic classes. You can create a maximum of
+   16 TCs per interface.
+
+   # tc qdisc add dev <ethX> root mqprio num_tc <tcs> map <priorities>
+     queues <count1@offset1 ...> hw 1 mode channel shaper bw_rlimit
+     min_rate <min_rate1 ...> max_rate <max_rate1 ...>
+   Where:
+      num_tc <tcs>: The number of TCs to use.
+      map <priorities>: The map of priorities to TCs. You can map up to
+          16 priorities to TCs.
+      queues <count1@offset1 ...>: For each TC, <num queues>@<offset>. The max
+          total number of queues for all TCs is the number of cores.
+      hw 1 mode channel: 'channel' with 'hw' set to 1 is a new hardware offload
+          mode in mqprio that makes full use of the mqprio options, the TCs,
+          the queue configurations, and the QoS parameters.
+      shaper bw_rlimit: For each TC, sets the minimum and maximum bandwidth
+          rates. The totals must be equal to or less than the port speed. This
+          parameter is optional and is required only to set up the Tx rates.
+      min_rate <min_rate1>: Sets the minimum bandwidth rate limit for each TC.
+      max_rate <max_rate1 ...>: Sets the maximum bandwidth rate limit for each
+          TC. You can set a min and max rate together.
+
+NOTE:
+- If you set max_rate to less than 50Mbps, then max_rate is rounded up to
+50Mbps and a warning is logged in dmesg.
+- See the mqprio man page and the examples below for more information.
+
+2. Verify the bandwidth limit using network monitoring tools such as ifstat or
+sar -n DEV [interval] [number of samples]
+
+NOTE: Setting up channels via ethtool (ethtool -L) is not supported when the
+TCs are configured using mqprio.
+
+3. Enable hardware TC offload on the interface:
+
+   # ethtool -K <ethX> hw-tc-offload on
+
+4. Add clsact qdisc to enable adding ingress/egress filters for Rx/Tx:
+
+   # tc qdisc add dev <ethX> clsact
+
+5. Verify successful TC creation after qdisc is created:
+
+   # tc qdisc show dev <ethX> ingress
+
+
+TRAFFIC CLASS EXAMPLES:
+See the tc and tc-flower man pages for more information on traffic control and
+TC flower filters.
+
+- To set up two TCs (tc0 and tc1), with 16 queues each, priorities 0-3 for
+  tc0 and 4-7 for tc1, and max Tx rate set to 1Gbit for tc0 and 3Gbit for tc1:
+
+  # tc qdisc add dev ens4f0 root mqprio num_tc 2 map 0 0 0 0 1 1 1 1 queues
+    16@0 16@16 hw 1 mode channel shaper bw_rlimit max_rate 1Gbit 3Gbit
+  Where:
+      map 0 0 0 0 1 1 1 1: Sets priorities 0-3 to use tc0 and 4-7 to use tc1
+      queues 16@0 16@16: Assigns 16 queues to tc0 at offset 0 and 16 queues
+          to tc1 at offset 16
+
+- To create 8 TCs with 256 queues spread across all the TCs, when ADQ is
+enabled:
+
+  # tc qdisc add dev <ethX> root mqprio num_tc 8 map 0 1 2 3 4 5 6 7
+    queues 2@0 4@2 8@6 16@14 32@30 64@62 128@126 2@254 hw 1 mode channel
+
+- To set a minimum rate for a TC:
+
+  # tc qdisc add dev ens4f0 root mqprio num_tc 2 map 0 0 0 0 1 1 1 1 queues
+    4@0 8@4 hw 1 mode channel shaper bw_rlimit min_rate 25Gbit 50Gbit
+
+- To set a maximum data rate for a TC:
+
+  # tc qdisc add dev ens4f0 root mqprio num_tc 2 map 0 0 0 0 1 1 1 1 queues
+    4@0 8@4 hw 1 mode channel shaper bw_rlimit max_rate 25Gbit 50Gbit
+
+- To set both minimum and maximum data rates together:
+
+  # tc qdisc add dev ens4f0 root mqprio num_tc 2 map 0 0 0 0 1 1 1 1 queues
+    4@0 8@4 hw 1 mode channel shaper bw_rlimit min_rate 10Gbit 20Gbit
+    max_rate 25Gbit 50Gbit
+
+
+Creating traffic class filters
+------------------------------
+NOTE: These instructions are not specific to ADQ configuration.
+
+After creating traffic classes, use the tc command to create filters for
+traffic. Refer to the tc and tc-flower man pages for more information.
+
+To view all TC filters:
+
+  # tc filter show dev <ethX> ingress
+  # tc filter show dev <ethX> egress
+
+For detailed configuration information and example code for switchdev mode on
+Intel Ethernet 800 Series devices, refer to the configuration guide at
+https://cdrdv2.intel.com/v1/dl/getContent/645272.
+
+TC FILTER EXAMPLES:
+To configure TCP TC filters, where:
+      protocol: Encapsulation protocol (valid options are IP and 802.1Q).
+      prio: Priority.
+      flower: Flow-based traffic control filter.
+      dst_ip: IP address of the device.
+      ip_proto: IP protocol to use (TCP or UDP).
+      dst_port: Destination port.
+      src_port: Source port.
+      skip_sw: Flag to add the rule only in hardware.
+      hw_tc: Route incoming traffic flow to this hardware TC. The TC count
+          starts at 0. For example, 'hw_tc 1' indicates that the filter
+          is on the second TC.
+      vlan_id: VLAN ID.
+
+- TCP: Destination IP + L4 Destination Port
+  To route incoming TCP traffic with a matching destination IP address and
+  destination port to the given TC:
+
+  # tc filter add dev <ethX> protocol ip ingress prio 1 flower dst_ip
+    <ip_address> ip_proto tcp dst_port <port_number> skip_sw hw_tc 1
+
+- TCP: Source IP + L4 Source Port
+  To route outgoing TCP traffic with a matching source IP address and
+  source port to the given TC associated with the given priority:
+
+  # tc filter add dev <ethX> protocol ip egress prio 1 flower src_ip
+    <ip_address> ip_proto tcp src_port <port_number> action skbedit priority 1
+
+
+- TCP: Destination IP + L4 Destination Port + VLAN Protocol
+  To route incoming TCP traffic with a matching destination IP address and
+  destination port to the given TC using the VLAN protocol (802.1Q):
+
+  # tc filter add dev <ethX> protocol 802.1Q ingress prio 1 flower
+    dst_ip <ip address> eth_type ipv4 ip_proto tcp dst_port <port_number>
+    vlan_id <vlan_id> skip_sw hw_tc 1
+
+
+- To add a GTP filter:
+
+  # tc filter add dev <ethX> protocol ip parent ffff: prio 1 flower
+    src_ip 16.0.0.0/16 ip_proto udp dst_port 5678 enc_dst_port 2152
+    enc_key_id <tunnel_id> skip_sw hw_tc 1
+
+  Where:
+    dst_port: inner destination port of application (5678)
+    enc_dst_port: outer destination port (for GTP user data tunneling occurs
+        on UDP port 2152)
+    enc_key_id: tunnel ID (vxlan ID)
+
+
+NOTE: You can add multiple filters to the device, using the same recipe (and
+requires no additional recipe resources), either on the same interface or on
+different interfaces. Each filter uses the same fields for matching, but can
+have different match values.
+  # tc filter add dev <ethX> protocol ip ingress prio 1 flower ip_proto
+    tcp dst_port <port_number> skip_sw hw_tc 1
+  # tc filter add dev <ethX> protocol ip egress prio 1 flower ip_proto tcp
+    src_port <port_number> action skbedit priority 1
+
+For example:
+
+  # tc filter add dev ens4f0 protocol ip ingress prio 1 flower ip_proto
+     tcp dst_port 5555 skip_sw hw_tc 1
+  # tc filter add dev ens4f0 protocol ip egress prio 1 flower ip_proto
+    tcp src_port 5555 action skbedit priority 1
+
+
+Using TC filters to forward to a queue
+--------------------------------------
+The ice driver supports directing traffic based on L2/L3/L4 fields in the
+packet to specific Rx queues, using the TC filter's class ID. Note: This
+functionality can be used with or without ADQ.
+
+To add filters for the desired queue, use the following tc command:
+
+# tc filter add dev <ethX> ingress prio 1 protocol all flower src_mac
+<mac_address> skip_sw classid ffff:<queue_id>
+
+Where:
+- <mac_address> is the MAC address(es) you want to direct to the Rx queue
+- <queue_id> is the Rx queue ID number in hexadecimal
+
+For example, to direct a single MAC address to queue 10:
+
+# ethtool -K ens801 hw-tc-offload on
+# tc qdisc add dev ens801 clsact
+# tc filter add dev ens801 ingress prio 1 protocol all flower src_mac
+68:dd:ac:dc:19:00 skip_sw classid ffff:b
+
+To direct 4 source MAC addresses to Rx queues 10-13:
+
+# ethtool -K ens801 hw-tc-offload on
+# tc qdisc add dev ens801 clsact
+# tc filter add dev ens801 ingress prio 1 protocol all flower src_mac
+68:dd:ac:dc:19:00 skip_sw classid ffff:b
+# tc filter add dev ens801 ingress prio 1 protocol all flower src_mac
+68:dd:ac:dc:19:01 skip_sw classid ffff:c
+# tc filter add dev ens801 ingress prio 1 protocol all flower src_mac
+68:dd:ac:dc:19:02 skip_sw classid ffff:d
+# tc filter add dev ens801 ingress prio 1 protocol all flower src_mac
+68:dd:ac:dc:19:03 skip_sw classid ffff:e
+
+
+Intel(R) Ethernet Flow Director
+-------------------------------
+The Intel(R) Ethernet Flow Director (Intel(R) Ethernet FD) performs the
+following tasks:
+
+- Directs receive packets according to their flows to different queues
+- Enables tight control on routing a flow in the platform
+- Matches flows and CPU cores for flow affinity
+
+NOTE: An included script (set_irq_affinity) automates setting the IRQ to CPU
+affinity.
+
+NOTE: This driver supports the following flow types:
+- IPv4
+- TCPv4
+- UDPv4
+- SCTPv4
+- IPv6
+- TCPv6
+- UDPv6
+- SCTPv6
+Each flow type supports valid combinations of IP addresses (source or
+destination) and UDP/TCP/SCTP ports (source and destination). You can supply
+only a source IP address, a source IP address and a destination port, or any
+combination of one or more of these four parameters.
+
+NOTE: This driver allows you to filter traffic based on a user-defined flexible
+two-byte pattern and offset by using the ethtool user-def and mask fields. Only
+L3 and L4 flow types are supported for user-defined flexible filters. For a
+given flow type, you must clear all Intel Ethernet Flow Director filters before
+changing the input set (for that flow type).
+
+NOTE: Intel Ethernet Flow Director filters impact only LAN traffic. RDMA
+filtering occurs before Intel Ethernet Flow Director, so Intel Ethernet Flow
+Director filters will not impact RDMA.
+
+The following table summarizes supported Intel Ethernet Flow Director features
+across Intel(R) Ethernet controllers.
+
+---------------------------------------------------------------------------
+Feature             500 Series      700 Series         800 Series
+===========================================================================
+VF FLOW DIRECTOR    Supported       Routing to VF      Not supported
+                                    not supported
+---------------------------------------------------------------------------
+IP ADDRESS RANGE    Supported       Not supported      Field masking
+FILTER
+---------------------------------------------------------------------------
+IPv6 SUPPORT        Supported       Supported          Supported
+---------------------------------------------------------------------------
+CONFIGURABLE        Configured      Configured         Configured
+INPUT SET           per port        globally           per port
+---------------------------------------------------------------------------
+ATR                 Supported       Supported          Not supported
+---------------------------------------------------------------------------
+FLEX BYTE FILTER    Starts at       Starts at          Starts at
+                    beginning       beginning of       beginning
+                    of packet       payload            of packet
+---------------------------------------------------------------------------
+TUNNELED PACKETS    Filter matches  Filter matches     Filter matches
+                    outer header    inner header       inner header
+---------------------------------------------------------------------------
+
+
+Intel Ethernet Flow Director Filters
+------------------------------------
+Intel Ethernet Flow Director filters are used to direct traffic that matches
+specified characteristics. They are enabled through ethtool's ntuple interface.
+To enable or disable the Intel Ethernet Flow Director and these filters:
+
+# ethtool -K <ethX> ntuple <off|on>
+
+NOTE: When you disable ntuple filters, all the user programmed filters are
+flushed from the driver cache and hardware. All needed filters must be re-added
+when ntuple is re-enabled.
+
+To display all of the active filters:
+
+# ethtool -u <ethX>
+
+To add a new filter:
+
+# ethtool -U <ethX> flow-type <type> src-ip <ip> [m <ip_mask>] dst-ip <ip> [m
+<ip_mask>] src-port <port> [m <port_mask>] dst-port <port> [m <port_mask>]
+action <queue>
+  Where:
+    <ethX> - the Ethernet device to program
+    <type> - can be ip4, tcp4, udp4, sctp4, ip6, tcp6, udp6, sctp6
+    <ip> - the IP address to match on
+    <ip_mask> - the IPv4 address to mask on
+              NOTE: These filters use inverted masks. An inverted mask with 0
+              means exactly match while with 0xF means DON'T CARE. Please
+              refer to the examples for more details about inverted masks.
+    <port> - the port number to match on
+    <port_mask> - the 16-bit integer for masking
+              NOTE: These filters use inverted masks.
+    <queue> - the queue to direct traffic toward (-1 discards the
+              matched traffic)
+
+To delete a filter:
+
+# ethtool -U <ethX> delete <N>
+  Where <N> is the filter ID displayed when printing all the active filters,
+  and may also have been specified using "loc <N>" when adding the filter.
+
+EXAMPLES:
+To add a filter that directs packet to queue 2:
+
+# ethtool -U <ethX> flow-type tcp4 src-ip 192.168.10.1 dst-ip \
+192.168.10.2 src-port 2000 dst-port 2001 action 2 [loc 1]
+
+To set a filter using only the source and destination IP address:
+
+# ethtool -U <ethX> flow-type tcp4 src-ip 192.168.10.1 dst-ip \
+192.168.10.2 action 2 [loc 1]
+
+To set a filter based on a user-defined pattern and offset:
+
+# ethtool -U <ethX> flow-type tcp4 src-ip 192.168.10.1 dst-ip \
+192.168.10.2 user-def 0x4FFFF action 2 [loc 1]
+
+  where the value of the user-def field contains the offset (4 bytes) and
+  the pattern (0xffff).
+
+To match TCP traffic sent from 192.168.0.1, port 5300, directed to 192.168.0.5,
+port 80, and then send it to queue 7:
+
+# ethtool -U enp130s0 flow-type tcp4 src-ip 192.168.0.1 dst-ip 192.168.0.5
+src-port 5300 dst-port 80 action 7
+
+To add a TCPv4 filter with a partial mask for a source IP subnet. Here the
+matched src-ip is 192.*.*.* (inverted mask):
+
+# ethtool -U <ethX> flow-type tcp4 src-ip 192.168.0.0 m 0.255.255.255 dst-ip
+192.168.5.12 src-port 12600 dst-port 31 action 12
+
+NOTES:
+For each flow-type, the programmed filters must all have the same matching
+input set. For example, issuing the following two commands is acceptable:
+
+# ethtool -U enp130s0 flow-type ip4 src-ip 192.168.0.1 src-port 5300 action 7
+# ethtool -U enp130s0 flow-type ip4 src-ip 192.168.0.5 src-port 55 action 10
+
+Issuing the next two commands, however, is not acceptable, since the first
+specifies src-ip and the second specifies dst-ip:
+
+# ethtool -U enp130s0 flow-type ip4 src-ip 192.168.0.1 src-port 5300 action 7
+# ethtool -U enp130s0 flow-type ip4 dst-ip 192.168.0.5 src-port 55 action 10
+
+The second command will fail with an error. You may program multiple filters
+with the same fields, using different values, but, on one device, you may not
+program two tcp4 filters with different matching fields.
+
+The ice driver does not support matching on a subportion of a field, thus
+partial mask fields are not supported.
+
+
+Flex Byte Intel Ethernet Flow Director Filters
+----------------------------------------------
+The driver also supports matching user-defined data within the packet payload.
+This flexible data is specified using the "user-def" field of the ethtool
+command in the following way:
++----------------------------+--------------------------+
+| 31    28    24    20    16 | 15    12    8    4    0  |
++----------------------------+--------------------------+
+| offset into packet payload | 2 bytes of flexible data |
++----------------------------+--------------------------+
+
+For example,
+  ... user-def 0x4FFFF ...
+
+tells the filter to look 4 bytes into the payload and match that value against
+0xFFFF. The offset is based on the beginning of the payload, and not the
+beginning of the packet. Thus
+
+  flow-type tcp4 ... user-def 0x8BEAF ...
+
+would match TCP/IPv4 packets which have the value 0xBEAF 8 bytes into the
+TCP/IPv4 payload.
+
+Note that ICMP headers are parsed as 4 bytes of header and 4 bytes of payload.
+Thus to match the first byte of the payload, you must actually add 4 bytes to
+the offset. Also note that ip4 filters match both ICMP frames as well as raw
+(unknown) ip4 frames, where the payload will be the L3 payload of the IP4 frame.
+
+The maximum offset is 64. The hardware will only read up to 64 bytes of data
+from the payload. The offset must be even because the flexible data is 2 bytes
+long and must be aligned to byte 0 of the packet payload.
+
+The user-defined flexible offset is also considered part of the input set and
+cannot be programmed separately for multiple filters of the same type. However,
+the flexible data is not part of the input set and multiple filters may use the
+same offset but match against different data.
+
+
+RSS Hash Flow
+-------------
+Allows you to set the hash bytes per flow type and any combination of one or
+more options for Receive Side Scaling (RSS) hash byte configuration.
+
+# ethtool -N <ethX> rx-flow-hash <type> <option>
+
+Where <type> is:
+  tcp4	signifying TCP over IPv4
+  udp4	signifying UDP over IPv4
+  tcp6	signifying TCP over IPv6
+  udp6	signifying UDP over IPv6
+And <option> is one or more of:
+  s	Hash on the IP source address of the Rx packet.
+  d	Hash on the IP destination address of the Rx packet.
+  f	Hash on bytes 0 and 1 of the Layer 4 header of the Rx packet.
+  n	Hash on bytes 2 and 3 of the Layer 4 header of the Rx packet.
+
+For example, to hash on the source and destination IP address for TCP IPv4
+traffic, use the following:
+
+# ethtool -N <ethX> rx-flow-hash tcp4 sd
+
+To hash on the source and destination ports for UDP IPv6 traffic, use the
+following:
+
+# ethtool -N <ethX> rx-flow-hash udp6 sdfn
+
+
+Accelerated Receive Flow Steering (aRFS)
+----------------------------------------
+Devices based on the Intel(R) Ethernet 800 Series support Accelerated Receive
+Flow Steering (aRFS) on the PF. aRFS is a load-balancing mechanism that allows
+you to direct packets to the same CPU where an application is running or
+consuming the packets in that flow.
+
+NOTES:
+- aRFS requires that ntuple filtering is enabled via ethtool.
+- aRFS support is limited to the following packet types:
+    - TCP over IPv4 and IPv6
+    - UDP over IPv4 and IPv6
+    - Nonfragmented packets
+- aRFS only supports Intel Ethernet Flow Director filters, which consist of the
+source/destination IP addresses and source/destination ports.
+- aRFS and ethtool's ntuple interface both use the device's Intel Ethernet Flow
+Director. aRFS and ntuple features can coexist, but you may encounter
+unexpected results if there's a conflict between aRFS and ntuple requests. See
+"Intel(R) Ethernet Flow Director" for additional information.
+ 
+To set up aRFS:
+1. Enable the Intel Ethernet Flow Director and ntuple filters using ethtool.
+
+   # ethtool -K <ethX> ntuple on
+
+2. Set up the number of entries in the global flow table. For example:
+
+   # NUM_RPS_ENTRIES=16384
+   # echo $NUM_RPS_ENTRIES > /proc/sys/net/core/rps_sock_flow_entries
+
+3. Set up the number of entries in the per-queue flow table. For example:
+
+   # NUM_RX_QUEUES=64
+   # for file in /sys/class/net/$IFACE/queues/rx-*/rps_flow_cnt; do
+   # echo $(($NUM_RPS_ENTRIES/$NUM_RX_QUEUES)) > $file;
+   # done
+
+4. Disable the IRQ balance daemon (this is only a temporary stop of the service
+   until the next reboot).
+
+   # systemctl stop irqbalance
+
+5. Configure the interrupt affinity.
+
+   # set_irq_affinity <ethX>
+
+
+To disable aRFS using ethtool:
+
+# ethtool -K <ethX> ntuple off
+
+NOTE: This command will disable ntuple filters and clear any aRFS filters in
+software and hardware.
+
+Example Use Case:
+1. Set the server application on the desired CPU (e.g., CPU 4).
+
+   # taskset -c 4 netserver
+
+2. Use netperf to route traffic from the client to CPU 4 on the server with
+   aRFS configured. This example uses TCP over IPv4.
+
+   # netperf -H <Host IPv4 Address> -t TCP_STREAM
+
+
+Enabling Virtual Functions (VFs) for SR-IOV
+-------------------------------------------
+Use sysfs to enable virtual functions (VF).
+
+For example, you can create 4 VFs as follows:
+
+# echo 4 > /sys/class/net/<ethX>/device/sriov_numvfs
+
+To disable VFs, write 0 to the same file:
+
+# echo 0 > /sys/class/net/<ethX>/device/sriov_numvfs
+
+The maximum number of VFs for the ice driver is 256 total (all ports). To check
+how many VFs each PF supports, use the following command:
+
+# cat /sys/class/net/<ethX>/device/sriov_totalvfs
+The VF driver will not block teaming/bonding/link aggregation, but this is not
+a supported feature. Do not expect failover or load balancing on the VF
+interface.
+
+
+SR-IOV Live Migration
+---------------------
+You can use VFIO Device Migration to move an active virtual machine (VM)
+between different physical machines so it does not lose its network connection.
+After migrating, the virtual function (VF) will continue most Ethernet
+operations without further interruption. During migration, data and VIRTCHNL
+operations are sent to a buffer so the can br recreated when the migration
+completes. If the memory allocated for the command buffer is exceeded, the
+system will drop the buffer and disable the live migration capability for the
+VF. You must reset the VF for live migration to be re-enabled.
+
+NOTES:
+- Live migration requires kernel version 5.15 to 5.17
+- You cannot migrate a VM if it has a VF that is using RDMA.
+- You can only migrate the VF to a device in the same family with a similar
+firmware version. For example, you can migrate a VF from one 810 device to
+another, but not from an 810 device to an 820 device.
+- Any VF properties that are set by the PF will not be migrated. Make sure that
+both devices have the same PF-set properties.
+
+Refer to https://qemu.readthedocs.io/en/latest/devel/vfio-migration.html for
+more details.
+
+
+Intel(R) Scalable I/O Virtualization Support
+--------------------------------------------
+Intel(R) Scalable I/O Virtualization (Intel(R) Scalable IOV) allows you to
+share a physical device across multiple virtual machines and applications.
+Intel Scalable IOV provides your system the ability to share device resources
+with different address domains using different abstractions. For example,
+application processes may access a device using system calls and VMs may access
+a device through virtual device interfaces.
+
+For more information, please refer to the Intel Scalable I/O Virtualization
+Technical Specification
+<https://software.intel.com/sites/default/files/managed/cc/0e/intel-scalable-io-
+virtualization-technical-specification.pdf> (login required)
+
+The VF driver will not block teaming/bonding/link aggregation, but this is not
+a supported feature. Do not expect failover or load balancing on the VF
+interface.
+
+Intel Scalable IOV is not available in the kernel driver. Download and install
+the current ice driver to use this feature. Refer to the SUPPORT section for
+where to download the current driver.
+
+Requirements
+------------
+
+* Your system platform must support Intel Scalable IOV
+* A network device based on an Intel(R) Ethernet 800 Series controller
+* The host operating system must be a Linux distro using kernel version 5.12 -
+5.15
+* The host PF driver must be version 1.9.0, or later
+* The guest operating system must be Linux
+* The guest iAVF driver must be version 4.5.0, or later
+
+Enabling Intel Scalable IOV
+---------------------------
+
+You can use Intel's Ethernet Port Configuration Tool (EPCT) to enable Intel
+Scalable IOV. If the EPCT tool is not available, you can also enable Intel
+Scalable IOV through your system's HII interface (if it has one). The
+recommended method is to use the EPCT tool. To enable or disable Intel Scalable
+IOV using the EPCT tool, use one of these commands:
+#epct -nic=1 -set 'siov enable'
+#epct -nic=1 -set 'siov disable'
+Where -nic=1 specifies the Intel Ethernet device. See the EPCT tool
+documentation for instructions on how to determine the NIC number of your
+device.
+
+If the EPCT tool is not available, and your system has an HII interface, you
+can use the HII interface to enable/disable Intel Scalable IOV. Find the 'Intel
+Scalable IOV (Scalable IOV)' setting and select your desired value.
+
+
+Enabling Intel(R) Scalable I/O Virtualization Virtual Devices
+-------------------------------------------------------------
+Use the following steps to enable Intel(R) Scalable I/O Virtualization
+(Intel(R) Scalable IOV) virtual devices (VDEVs):
+Create an mdev
+# echo "83b8f4f2-509f-382f-3c1e-e6bfe0fa1001" | sudo tee
+/sys/class/mdev_bus/0000:38:00.0/mdev_supported_types/ice-ivdm/create
+Use qemu to launch a VM with four processors
+# sudo ./x86_64-softmmu/qemu-system-x86_64 \
+	-enable-kvm \
+	-m 1G \
+	-smp 4 \
+	-device
+	vfio-pci,sysfsdev=/sys/bus/mdev/devices/83b8f4f2-509f-382f-3c1e-e6bfe0fa
+1001 \
+	-drive file=../../img/test.qcow2 \
+	-nic user,hostfwd=tcp::5555-:22 \
+	-monitor stdio
+
+
+Displaying VF Statistics on the PF
+----------------------------------
+Use the following command to display the statistics for the PF and its VFs:
+
+# ip -s link show dev <ethX>
+
+NOTE: The output of this command can be very large due to the maximum number of
+possible VFs.
+
+The PF driver will display a subset of the statistics for the PF and for all
+VFs that are configured. The PF will always print a statistics block for each
+of the possible VFs, and it will show zero for all unconfigured VFs.
+
+
+Configuring VLAN Tagging on SR-IOV Enabled Adapter Ports
+--------------------------------------------------------
+To configure VLAN tagging for the ports on an SR-IOV enabled adapter, use the
+following command. The VLAN configuration should be done before the VF driver
+is loaded or the VM is booted. The VF is not aware of the VLAN tag being
+inserted on transmit and removed on received frames (sometimes called "port
+VLAN" mode).
+
+# ip link set dev <ethX> vf <id> vlan <vlan id>
+
+For example, the following will configure PF eth0 and the first VF on VLAN 10:
+
+# ip link set dev eth0 vf 0 vlan 10
+
+
+Enabling a VF link if the port is disconnected
+----------------------------------------------
+If the physical function (PF) link is down, you can force link up (from the
+host PF) on any virtual functions (VF) bound to the PF. Note that this requires
+kernel support (Red Hat kernel 3.10.0-327 or newer, upstream kernel 3.11.0 or
+newer) and associated iproute2 user space support.
+
+For example, to force link up on VF 0 bound to PF eth0:
+
+# ip link set eth0 vf 0 state enable
+
+Note: If the command does not work, it may not be supported by your system.
+
+
+Setting the MAC Address for a VF
+--------------------------------
+To change the MAC address for the specified VF:
+
+# ip link set <ethX> vf 0 mac <address>
+
+For example:
+
+# ip link set <ethX> vf 0 mac 00:01:02:03:04:05
+
+This setting lasts until the PF is reloaded.
+
+NOTE: For untrusted VFs, assigning a MAC address for a VF from the host will
+disable any subsequent requests to change the MAC address from within the VM.
+This is a security feature. The VM is not aware of this restriction, so if this
+is attempted in the VM, it will trigger MDD events. Trusted VFs are allowed to
+change the MAC address from within the VM.
+
+
+Trusted VFs and VF Promiscuous Mode
+-----------------------------------
+This feature allows you to designate a particular VF as trusted and allows that
+trusted VF to request selective promiscuous mode on the Physical Function (PF).
+
+To set a VF as trusted or untrusted, enter the following command in the
+Hypervisor:
+
+# ip link set dev <ethX> vf 1 trust [on|off]
+
+NOTE: It's important to set the VF to trusted before setting promiscuous mode.
+If the VM is not trusted, the PF will ignore promiscuous mode requests from the
+VF. If the VM becomes trusted after the VF driver is loaded, you must make a
+new request to set the VF to promiscuous.
+
+Once the VF is designated as trusted, use the following commands in the VM to
+set the VF to promiscuous mode. For promiscuous all:
+
+# ip link set <ethX> promisc on
+    Where <ethX> is a VF interface in the VM
+
+For promiscuous Multicast:
+
+# ip link set <ethX> allmulticast on
+    Where <ethX> is a VF interface in the VM
+
+NOTE: By default, the ethtool private flag vf-true-promisc-support is set to
+"off," meaning that promiscuous mode for the VF will be limited. To set the
+promiscuous mode for the VF to true promiscuous and allow the VF to see all
+ingress traffic, use the following command:
+
+# ethtool --set-priv-flags <ethX> vf-true-promisc-support on
+
+The vf-true-promisc-support private flag does not enable promiscuous mode;
+rather, it designates which type of promiscuous mode (limited or true) you will
+get when you enable promiscuous mode using the 'ip link' commands above. You
+can toggle the vf-true-promisc-support flag separately for all PFs.
+
+Next, add a VLAN interface on the VF interface. For example:
+
+# ip link add link eth2 name eth2.100 type vlan id 100
+
+Note that the order in which you set the VF to promiscuous mode and add the
+VLAN interface does not matter (you can do either first). The result in this
+example is that the VF will get all traffic that is tagged with VLAN 100.
+
+
+Virtual Function (VF) Tx Rate Limit
+-----------------------------------
+Use the ip command to configure the maximum or minimum Tx rate limit for a VF
+from the PF interface.
+
+For example, to set a maximum Tx rate limit of 8000Mbps for VF 0:
+
+# ip link set eth0 vf 0 max_tx_rate 8000
+
+For example, to set a minimum Tx rate limit of 1000Mbps for VF 0:
+
+# ip link set eth0 vf 0 min_tx_rate 1000
+
+NOTE:
+- If DCB or ADQ are enabled on a PF, you cannot set a minimum Tx rate on the
+VFs associated with that PF.
+- If both DCB and ADQ are disabled on a PF, then you can set a minimum Tx rate
+on the VFs associated with that PF.
+- If you set a minimum Tx rate limit on a PF for SR-IOV VFs and then apply a
+DCB or ADQ configuration, the PF cannot guarantee the minimum Tx rate limits
+for those VFs.
+- If you set a minimum Tx rate on VFs across multiple ports that have an
+aggregate bandwidth over 100Gbps, the PFs cannot guarantee the minimum Tx rate
+set for the VFs.
+
+
+Malicious Driver Detection (MDD) for VFs
+----------------------------------------
+Some Intel Ethernet devices use Malicious Driver Detection (MDD) to detect
+malicious traffic from the VF and disable Tx/Rx queues or drop the offending
+packet until a VF driver reset occurs. You can view MDD messages in the PF's
+system log using the dmesg command.
+
+- If the PF driver logs MDD events from the VF, confirm that the correct VF
+driver is installed.
+- To restore functionality, you can manually reload the VF or VM or enable
+automatic VF resets.
+- When automatic VF resets are enabled, the PF driver will immediately reset
+the VF and reenable queues when it detects MDD events on the receive path.
+- If automatic VF resets are disabled, the PF will not automatically reset the
+VF when it detects MDD events.
+
+To enable or disable automatic VF resets, use the following command:
+
+# ethtool --set-priv-flags <ethX> mdd-auto-reset-vf on|off
+
+
+MAC and VLAN Anti-Spoofing Feature for VFs
+------------------------------------------
+When a malicious driver on a Virtual Function (VF) interface attempts to send a
+spoofed packet, it is dropped by the hardware and not transmitted.
+
+NOTE: This feature can be disabled for a specific VF:
+
+# ip link set <ethX> vf <vf id> spoofchk {off|on}
+
+
+VLAN Pruning
+------------
+The ice driver allows you to enable or disable VLAN pruning for the VF VSI
+using the ethtool private flag vf-vlan-pruning.
+
+NOTE:
+- You cannot change this private flag while any VFs are active.
+- If a port VLAN is configured, VLAN pruning will always be enabled.
+- When VLAN pruning is enabled, the interface will:
+    - Discard all packets with a VLAN tag when Rx VLAN filtering is disabled.
+    - Discard untagged packets when Rx VLAN filtering is enabled.
+
+To disable or enable VLAN pruning on all VFs, do the following:
+1. Deinitialize any VFs.
+2. On the PF, use the following command:
+
+# ethtool --set-priv-flags <ethX> vf-vlan-pruning on|off
+  Where:
+  on - enables VLAN pruning
+  off - disables VLAN pruning (default)
+
+3. Initialize and configure any VFs.
+
+VLAN pruning will then be disabled or enabled on any of these VFs, depending on
+the flag you set.
+
+
+Switchdev mode
+--------------
+The PF driver supports legacy and switchdev eSwitch modes. Switchdev mode
+allows the driver to create additional port representor netdevs that enable a
+control plane running on the host to configure filters for the VFs and also
+handle default/exception traffic from the uplink and the VFs.
+
+The driver loads in legacy mode by default. You can configure eSwitch modes
+independently per physical port using the devlink command. You can change
+between eSwitch modes only if no VFs have been created. If SR-IOV is enabled
+and VFs are bound to the PF, you must do the following before changing between
+switchdev and legacy mode:
+- Unload all VFs that were bound
+- Set the number of VFs on the PF to zero
+
+NOTE:
+- ADQ, trusted VFs, L2 forwarding, and S-IOV are not supported in switchdev
+mode.
+- Switchdev mode is not persistent across reboots or driver reloads.
+
+To configure the device in switchdev mode, enter the following, where
+<pci/0000:##:##.#> is the PCI address of the PF:
+
+# devlink dev eswitch set <pci/0000:##:##.#> mode switchdev
+
+For example:
+# devlink dev eswitch set pci/0000:17:00.0 mode switchdev
+
+To configure the device in legacy mode:
+
+# devlink dev eswitch set <pci/0000:##:##.#> mode legacy
+
+To check the current eSwitch mode:
+
+# devlink dev eswitch show <pci/0000:##:##.#>
+
+The ice driver supports the following hardware offloads in switchdev mode:
+- Supported filter conditions:
+    L2: Source/Destination MAC addresses, VLAN ID
+    L3: Source/Destination IP addresses (IPv4, IPv6), IP protocol (TCP, UDP),
+        ToS (IPv4), Traffic Class (IPv6), TTL (IPv4)
+    L4: Source and Destination port
+    VXLAN/GRETAP/GENEVE: VNI/GRE Key, Outer Destination IP, Inner Source IP,
+        Inner Destination IP, Inner Destination MAC, TCP/UDP Source port and
+        Destination port
+    GTP: TEID, PDU type, QFI, Outer Destination IP, Outer Source IP
+- Supported filter actions: redirect, drop
+
+NOTE: GTP support requires kernel 5.18 and iproute2 5.18 or newer. On older
+kernel versions, the DCF method provides the same functionality.
+
+For detailed configuration information and example code for switchdev mode on
+Intel Ethernet 800 Series devices, refer to the configuration guide at
+https://cdrdv2.intel.com/v1/dl/getContent/645272.
+
+At a high level, do the following to offload TC filters to the hardware and
+create switch rules in switchdev mode:
+1. Verify that switchdev mode is enabled.
+2. Enable hw-tc-offload on the VF port representor (VF_PR).
+3. For tunnel interfaces: Use the ip link command to create the tunnel.
+4. Use the tc-flower command to create the switch rule.
+5. Verify the offloaded flow in hardware.
+
+Switchdev mode supports the following ip link commands to configure the VF:
+* mac
+* vlan, vxlan, geneve, gre, nvgre, gtp, qos, proto
+* max_tx_rate
+* min_tx_rate
+* spoofchk
+* query_rss
+* state
+* node_guid
+* port_guid
+NOTE: 'trust' is not supported. 'rate' is supported but deprecated; use
+'max_tx_rate' instead.
+
+To limit the VF's interrupt rate for Rx and Tx in switchdev mode, use the
+following command, where <vf_pr> is the designated VF port representor and <N>
+is the desired cap for the interrupt rate:
+
+# ethtool -C <vf_pr> rx-usecs-high <N>
+
+
+Jumbo Frames
+------------
+Jumbo Frames support is enabled by changing the Maximum Transmission Unit (MTU)
+to a value larger than the default value of 1500.
+
+Use the ip command to increase the MTU size. For example, enter the following
+where <ethX> is the interface number:
+
+# ip link set mtu 9000 dev <ethX>
+# ip link set up dev <ethX>
+
+This setting is not saved across reboots.
+
+Add 'MTU=9000' to the following file to make the setting change permanent:
+  /etc/sysconfig/network-scripts/ifcfg-<ethX> for RHEL
+      or
+  /etc/sysconfig/network/<config_file> for SLES
+
+NOTE: The maximum MTU setting for jumbo frames is 9702. This corresponds to the
+maximum jumbo frame size of 9728 bytes.
+
+NOTE: This driver will attempt to use multiple page sized buffers to receive
+each jumbo packet. This should help to avoid buffer starvation issues when
+allocating receive packets.
+
+NOTE: Packet loss may have a greater impact on throughput when you use jumbo
+frames. If you observe a drop in performance after enabling jumbo frames,
+enabling flow control may mitigate the issue.
+
+
+Speed and Duplex Configuration
+------------------------------
+You cannot set speed, duplex, or autonegotiation settings using ethtool.
+
+
+To see the speed configurations your device supports, run the following:
+
+# ethtool <ethX>
+
+To have your device advertise supported speeds, use the following:
+
+# ethtool -s <ethX> advertise N
+  Where N is a bitmask of the desired speeds.
+
+For example, to have your device advertise 10000baseSR Full, use:
+
+# ethtool -s <ethX> advertise 0x80000000000
+
+For more details, please refer to the ethtool man page.
+
+
+Data Center Bridging (DCB)
+--------------------------
+NOTE: The kernel assumes that TC0 is available, and will disable Priority Flow
+Control (PFC) on the device if TC0 is not available. To fix this, ensure TC0 is
+enabled when setting up DCB on your switch.
+
+DCB is a configuration Quality of Service implementation in hardware. It uses
+the VLAN priority tag (802.1p) to filter traffic. That means that there are 8
+different priorities that traffic can be filtered into. It also enables
+priority flow control (802.1Qbb) which can limit or eliminate the number of
+dropped packets during network stress. Bandwidth can be allocated to each of
+these priorities, which is enforced at the hardware level (802.1Qaz).
+
+DCB is normally configured on the network using the DCBX protocol (802.1Qaz), a
+specialization of LLDP (802.1AB). The ice driver supports the following
+mutually exclusive variants of DCBX support:
+1) Firmware-based LLDP Agent
+2) Software-based LLDP Agent
+
+In firmware-based mode, firmware intercepts all LLDP traffic and handles DCBX
+negotiation transparently for the user. In this mode, the adapter operates in
+"willing" DCBX mode, receiving DCB settings from the link partner (typically a
+switch). The local user can only query the negotiated DCB configuration. For
+information on configuring DCBX parameters on a switch, please consult the
+switch manufacturer's documentation.
+
+In software-based mode, LLDP traffic is forwarded to the network stack and user
+space, where a software agent can handle it. In this mode, the adapter can
+operate in either "willing" or "nonwilling" DCBX mode and DCB configuration can
+be both queried and set locally. This mode requires the FW-based LLDP Agent to
+be disabled.
+
+NOTE:
+- You can enable and disable the firmware-based LLDP Agent using an ethtool
+private flag. Refer to the "FW-LLDP (Firmware Link Layer Discovery Protocol)"
+section in this README for more information.
+- In software-based DCBX mode, you can configure DCB parameters using software
+LLDP/DCBX agents that interface with the Linux kernel's DCB Netlink API. We
+recommend using OpenLLDP as the DCBX agent when running in software mode. For
+more information, see the OpenLLDP man pages and
+https://github.com/intel/openlldp.
+- The driver implements the DCB netlink interface layer to allow the user space
+to communicate with the driver and query DCB configuration for the port.
+- iSCSI with DCB is not supported.
+
+
+L3 QoS mode
+-----------
+The ice driver supports setting DSCP-based Layer 3 Quality of Service (L3 QoS)
+in the PF driver. The driver initializes in L2 QoS mode. L3 QoS mode is:
+- Automatically enabled when the first DSCP/ToS to TC mapping is defined
+- Automatically disabled when the last DSCP/ToS to TC mapping is removed
+
+The following is an example of how to map a DSCP/ToS to a TC:
+
+# lldptool -T -i <ethX> -V APP app=<prio>,<sel>,<pid>
+  where:
+    <prio>: The TC assigned to the DSCP/ToS code point
+    <sel>: 5 for DSCP to TC mapping
+    <pid>: The DSCP/ToS code point
+
+For example, to map packets containing DSCP value 63 to traffic class 0 on
+interface eth0:
+
+# lldptool -T -i eth0 -V APP app=63,5,0
+
+To remove a mapping, use the following:
+
+# lldptool -T -I <ethX> -V APP -d app=<prio>,<sel>,<pid>
+
+To view the currently configured mappings, use the following:
+
+# lldptool -t -i <ethX> -V APP -c
+
+NOTE:
+- L3 QoS mode is not available when FW-LLDP is enabled. You also cannot enable
+FW-LLDP if L3 QoS mode is active. Disable FW-LLDP before switching to L3 QoS
+mode. Refer to the "FW-LLDP (Firmware Link Layer Discovery Protocol)" section
+in this README for more information on disabling FW-LLDP.
+- Once a mapping has been submitted for a DSCP value, another mapping for that
+value will not be accepted until the first one has been deleted.
+
+
+FW-LLDP (Firmware Link Layer Discovery Protocol)
+------------------------------------------------
+Use ethtool to change FW-LLDP settings. The FW-LLDP setting is per port and
+persists across boots.
+
+To enable LLDP:
+
+# ethtool --set-priv-flags <ethX> fw-lldp-agent on
+
+To disable LLDP:
+
+# ethtool --set-priv-flags <ethX> fw-lldp-agent off
+
+To check the current LLDP setting:
+
+# ethtool --show-priv-flags <ethX>
+
+NOTE: You must enable the UEFI HII "LLDP Agent" attribute for this setting to
+take effect. If "LLDP AGENT" is set to disabled, you cannot enable it from the
+OS.
+
+
+Forward Error Correction (FEC)
+------------------------------
+Allows you to set the Forward Error Correction (FEC) mode. FEC improves link
+stability, but increases latency. Many high quality optics, direct attach
+cables, and backplane channels provide a stable link without FEC.
+
+NOTE:
+For devices to benefit from this feature, link partners must have FEC enabled.
+
+If you enable the flag 'allow-no-fec-modules-in-auto', Auto FEC negotiation
+will include 'No FEC' in case your link partner does not have FEC enabled or is
+not FEC capable.
+# ethtool --set-priv-flags <ethX> allow-no-fec-modules-in-auto on
+
+NOTE:
+
+On kernels older than 4.14, use the following private flags to disable
+FEC modes:
+  rs-fec (0 to disable, 1 to enable)
+  base-r-fec (0 to disable, 1 to enable)
+On kernel 4.14 or later, use ethtool to get/set the following FEC modes:
+  No FEC
+  Auto FEC
+  BASE-R FEC
+  RS-FEC
+
+
+Link-Level Flow Control (LFC)
+-----------------------------
+Ethernet Flow Control (IEEE 802.3x) can be configured with ethtool to enable
+receiving and transmitting pause frames for ice. When transmit is enabled,
+pause frames are generated when the receive packet buffer crosses a predefined
+threshold. When receive is enabled, the transmit unit will halt for the time
+delay specified when a pause frame is received.
+
+NOTE: You must have a flow control capable link partner.
+
+Flow Control is disabled by default.
+
+Use ethtool to change the flow control settings.
+
+To enable or disable Rx or Tx Flow Control:
+
+# ethtool -A <ethX> rx <on|off> tx <on|off>
+
+Note: This command only enables or disables Flow Control if auto-negotiation is
+disabled. If auto-negotiation is enabled, this command changes the parameters
+used for auto-negotiation with the link partner.
+
+Note: Flow Control auto-negotiation is part of link auto-negotiation. Depending
+on your device, you may not be able to change the auto-negotiation setting.
+
+NOTE:
+- The ice driver requires flow control on both the port and link partner. If
+flow control is disabled on one of the sides, the port may appear to hang on
+heavy traffic.
+- You may encounter issues with link-level flow control (LFC) after disabling
+DCB. The LFC status may show as enabled but traffic is not paused. To resolve
+this issue, disable and reenable LFC using ethtool:
+
+ # ethtool -A <ethX> rx off tx off
+ # ethtool -A <ethX> rx on tx on
+
+
+Limiting the Maximum Bitrate for a Transmit Queue
+-------------------------------------------------
+The ice driver supports limiting the transmit queue bit rate with the
+tx_maxrate sysfs entry. Use this entry to set a maximum bitrate in Mbps. A
+value of zero means no limiting.
+Setting the bit rate for transmit queue 1 to 300 Mbps:
+# echo 300 > /sys/class/<ethx>/queues/tx-1/tx_maxrate
+Removing the limit:
+# echo 0 > /sys/class/<ethx>/queues/tx-1/tx_maxrate
+NAPI
+----
+This driver supports NAPI (Rx polling mode). For more information on NAPI, see
+https://www.linuxfoundation.org/collaborate/workgroups/networking/napi.
+
+
+MACVLAN
+-------
+This driver supports MACVLAN. Kernel support for MACVLAN can be tested by
+checking if the MACVLAN driver is loaded. You can run 'lsmod | grep macvlan' to
+see if the MACVLAN driver is loaded or run 'modprobe macvlan' to try to load
+the MACVLAN driver.
+
+NOTE:
+- In passthru mode, you can only set up one MACVLAN device. It will inherit the
+MAC address of the underlying PF (Physical Function) device.
+
+ice devices support L2 Forwarding Offload. This will offload the processing
+required for L2 Forwarding from the system processors to the ice device.
+Perform the following steps to enable L2 Forwarding Offload:
+
+1. Enable L2 Forwarding offload:
+
+   # ethtool -K <ethX> l2-fwd-offload on
+
+2. Create the MACVLAN netdevs and bind them to the PF.
+
+3. Bring up/enable the MACVLAN netdevs.
+
+NOTE: MACVLAN offloads and ADQ are mutually exclusive. System instability may
+occur if you enable l2-fwd-offload and then set up ADQ, or if you set up ADQ
+and then enable l2-fwd-offload.
+
+
+IEEE 802.1ad (QinQ) Support
+---------------------------
+The IEEE 802.1ad standard, informally known as QinQ, allows for multiple VLAN
+IDs within a single Ethernet frame. VLAN IDs are sometimes referred to as
+"tags," and multiple VLAN IDs are thus referred to as a "tag stack." Tag stacks
+allow L2 tunneling and the ability to separate traffic within a particular VLAN
+ID, among other uses.
+
+The following are examples of how to configure 802.1ad (QinQ):
+
+# ip link add link eth0 eth0.24 type vlan proto 802.1ad id 24
+# ip link add link eth0.24 eth0.24.371 type vlan proto 802.1Q id 371
+  Where "24" and "371" are example VLAN IDs.
+
+NOTES:
+- 802.1ad (QinQ) is supported in 3.19 and later kernels.
+- VLAN protocols use the following EtherTypes:
+    802.1Q = EtherType 0x8100
+    802.1ad = EtherType 0x88A8
+- For QinQ traffic to work at MTU 1500, the L2 peer (switch port or another
+NIC) should be able to receive Ethernet frames of 1526 bytes. Some third-party
+NICs support a maximum Ethernet frame size of 1522 bytes at MTU 1500, which
+will cause QinQ traffic to fail. To work around this issue, restrict the MTU on
+the Intel Ethernet device to 1496.
+
+
+Double VLANs
+------------
+Devices based on the Intel(R) Ethernet 800 Series can process up to two VLANs
+in a packet when all the following are installed:
+- ice driver version 1.4.0 or later
+- NVM version 2.4 or later
+- ice DDP package version 1.3.21 or later
+If you don't use the versions above, the only supported VLAN configuration is
+single 802.1Q VLAN traffic.
+
+When two VLAN tags are present in a packet, the outer VLAN tag can be either
+802.1Q or 802.1ad. The inner VLAN tag must always be 802.1Q.
+
+Note the following limitations:
+- For each VF, the PF can only allow VLAN hardware offloads (insertion and
+stripping) of one type, either 802.1Q or 802.1ad.
+- You can't enable or disable outer or single 802.1Q or 802.1ad filtering
+separately. They are either both on or both off.
+- In SR-IOV mode, the VF may not receive all network traffic based on the inner
+VLAN header when VF true promiscuous mode (vf-true-promisc-support) and double
+VLANs are enabled.
+
+To enable outer or single 802.1Q VLAN insertion and stripping and disable
+802.1ad VLAN insertion and stripping:
+# ethtool -K <ethX> rxvlan on txvlan on rx-vlan-stag-hw-parse off
+tx-vlan-stag-hw-insert off
+
+To enable outer or single 802.1ad VLAN insertion and stripping and disable
+802.1Q VLAN insertion and stripping:
+# ethtool -K <ethX> rxvlan off txvlan off rx-vlan-stag-hw-parse on
+tx-vlan-stag-hw-insert on
+
+To enable outer or single VLAN filtering:
+# ethtool -K <ethX> rx-vlan-filter on rx-vlan-stag-filter on
+
+To disable outer or single VLAN filtering:
+# ethtool -K <ethX> rx-vlan-filter off rx-vlan-stag-filter off
+
+
+Combining QinQ with SR-IOV VFs
+------------------------------
+We recommend you always configure a port VLAN for the VF from the PF. If a port
+VLAN is not configured, the VF driver may only offload VLANs via software. The
+PF allows all VLAN traffic to reach the VF, and the VF manages all VLAN traffic.
+
+When the device is configured for double VLANs and the PF has configured a port
+VLAN:
+- The VF can only offload guest VLANs for 802.1Q traffic.
+- The VF can only configure VLAN filtering rules for guest VLANs using 802.1Q
+traffic.
+
+However, when the device is configured for double VLANs and the PF has NOT
+configured a port VLAN:
+- You must use iavf driver version 4.1.0 or later to offload and filter VLANs.
+- The PF turns on VLAN pruning and antispoof in the VF's VSI by default. The VF
+will not transmit or receive any tagged traffic until the VF requests a VLAN
+filter.
+- The VF can offload (insert and strip) the outer VLAN tag of 802.1Q or 802.1ad
+traffic.
+- The VF can create filter rules for the outer VLAN tag of both 802.1Q and
+802.1ad traffic.
+
+If the PF does not support double VLANs, the VF can hardware offload single
+802.1Q VLANs without a port VLAN.
+
+When the PF is enabled for double VLANs, for iavf drivers before version 4.1.x:
+- VLAN hardware offloads and filtering are supported only when the PF has
+configured a port VLAN.
+- VLAN filtering, insertion, and stripping will be software offloaded when no
+port VLAN is configured.
+
+To see VLAN filtering and offload capabilities, use the following command:
+
+# ethtool -k <ethX> | grep vlan
+
+
+IEEE 1588 Precision Time Protocol (PTP) Hardware Clock (PHC)
+------------------------------------------------------------
+Precision Time Protocol (PTP) is used to synchronize clocks in a computer
+network. PTP support varies among Intel devices that support this driver. Use
+'ethtool -T <ethX>' to get a definitive list of PTP capabilities supported by
+the device.
+
+NOTE: You can only change the state of the Clock Generation Unit (CGU) Fast
+Lock flag (cgu-fast-lock) on PF0.
+
+A detailed user guide is available for the following devices. Refer to it for
+advanced configuration of this feature.
+- Intel(R) Ethernet Network Adapter E810-XXV-4T:
+  https://cdrdv2.intel.com/v1/dl/getContent/646265
+
+- Intel(R) Ethernet Network Adapter E810-C-Q2T:
+  https://cdrdv2.intel.com/v1/dl/getContent/722960
+
+
+Some devices support hardware-generated timestamps. The ice driver uses these
+timestamps to synchronize clocks on the platform and report precise timestamps
+on packets. Use the following hwstamp_ctl command, which is available in the
+linuxptp utility, to enable this setting:
+
+# hwstamp_ctl -i <ethX> -t 1 -r 1
+
+
+SyncE Support
+-------------
+On hardware that supports Synchronous Ethernet (SyncE), the ice driver has
+interfaces that allow you to synchronize frequencies with other SyncE-supported
+ports. After you manually configure SyncE, the device dynamically selects the
+best quality signal from the ones that are available. Then, once the signal is
+locked, it synchronizes its frequency clock to it. The best quality signal is
+determined based on the topology configured with the ice SyncE interfaces.
+
+A detailed user guide is available for the following devices. Refer to it for
+advanced configuration of this feature.
+- Intel(R) Ethernet Network Adapter E810-XXV-4T:
+  https://cdrdv2.intel.com/v1/dl/getContent/646265
+
+- Intel(R) Ethernet Network Adapter E810-C-Q2T:
+  https://cdrdv2.intel.com/v1/dl/getContent/722960
+
+NOTE: You can only change the state of the Clock Generation Unit (CGU) Fast
+Lock flag (cgu-fast-lock) on PF0.
+
+
+Tunnel/Overlay Stateless Offloads
+---------------------------------
+Supported tunnels and overlays include VXLAN, GENEVE, and others depending on
+hardware and software configuration. Stateless offloads are enabled by default.
+ 
+To view the current state of all offloads:
+
+# ethtool -k <ethX>
+
+
+UDP Segmentation Offload
+------------------------
+Allows the adapter to offload transmit segmentation of UDP packets with
+payloads up to 64K into valid Ethernet frames. Because the adapter hardware is
+able to complete data segmentation much faster than operating system software,
+this feature may improve transmission performance.
+In addition, the adapter may use fewer CPU resources.
+
+NOTE:
+- UDP transmit segmentation offload requires Linux kernel 4.18 or later.
+- The application sending UDP packets must support UDP segmentation offload.
+
+To enable/disable UDP Segmentation Offload, issue the following command:
+
+# ethtool -K <ethX> tx-udp-segmentation [off|on]
+
+
+Runtime Control of CRC/FCS Stripping
+------------------------------------
+The frame check sequence (FCS) is a four-octet cyclic redundancy check (CRC)
+that allows the driver to detect corrupted data within a received Ethernet
+frame.
+
+The ice driver allows you to disable or enable FCS/CRC stripping using the
+ethtool command.
+
+NOTE:
+- FCS/CRC stripping is enabled by default.
+- The driver enforces valid combinations of FCS/CRC and VLAN stripping. You can
+only disable FCS/CRC stripping if VLAN stripping is also disabled on the PF.
+- Disabling FCS/CRC stripping may help when debugging issues. XDP programs can
+also use FCS/CRC for their purposes.
+
+Use the following ethtool command to enable or disable FCS/CRC stripping:
+
+# ethtool -K <ethX> rx-fcs on|off
+
+To check the status of FCS/CRC stripping, look for the 'rx-fcs' information
+reported from ethtool:
+
+# ethtool -k <ethX>
+
+
+Using Devlink to update a device's NVM
+--------------------------------------
+When you update the NVM on some devices, the update may use the devlink
+interface, rather than the ethtool interface. This will happen if the following
+are true:
+- You are updating an Intel Ethernet 800 Series device.
+- Your system is running a distro that supports the "devlink dev flash" command.
+- The firmware currently installed on the device supports it.
+- The new NVM conforms to the correct PLDM format.
+
+Most of the functionality and commands are the same with the following
+exceptions:
+- You cannot update a device in Recovery Mode. (To update a device in recovery
+mode, you must download and install the Intel Ethernet driver set.)
+- You cannot update the OROM or Netlist as a separate update, only as part of a
+full NVM update.
+- If you specified a preservation level of PRESERVE_ALL, the system will
+immediately perform an EMPR reset after the NVM update.
+
+On devices that support it, you can also use the devlink command line directly
+to update the device NVM. However, we recommend that you use NVMUpdate.
+
+# devlink dev flash pci/0000:3b:00.0 file filename.bin
+
+Where :
+- pci/0000:3b:00.0 – The device you wish to update. You can get a list of
+devices with the "devlink dev info" command.
+- filename.bin – The file that contains the new NVM image.
+
+
+Port Split Configuration Using Devlink
+--------------------------------------
+Most CVL devices support changing their port split configuration to suit your
+needs. For example, a dual port device may support two 100Gbps links, two 50
+Gbps links, and (with the correct cables) four 25 Gbps links, etc. The
+supported port split configurations are defined in the device's NVM. You can
+use a tool like Intel's Ethernet Port Configuration Tool (EPCT) to query and
+set this configuration. If no such tool is available, you can use devlink to
+cycle through a device's possible prt split configurations. If you use devlink
+to change the configuration, you must check the log to determine which
+configuration was selected. If you use devlink, you specify the number of ports
+you want configured on the device. Each time you call devlink with that port
+count, the driver will check the device's current configuration and then move
+to the next configuration with the specified number of ports. For example, if
+your device has two four-port configurations defined in its NVM, the first time
+you called devlink, it would select the first configuration. The second time
+you called devlink, it would select the second configuration. If you called
+devlink again, it would select the first configuration. There is no direct
+feedback mechanism; you must check the log to determine which configuration was
+set. Use the following command:
+
+# devlink port split <pci/D:b:d.f>/0 count <num>
+
+Where:
+- <pci/D:b:d.f>/0 is the PCI address of the device
+(pci/Domain:bus:device.function). /0 is the PORT_INDEX
+- <num> is the desired port split count.
+
+NOTES:
+- If you successfully change a port's configuration, the driver logs an
+information message: "Reboot required to finish port split" and the port split
+configuration selected. This is the only indication of success.
+- If you request an unsupported count value parameter in devlink port split,
+the driver logs an information message: "Port split requested unsupported port
+config".
+- If you try to change the configuration on a PF that is not PF 0, the driver
+returns the error "Port cannot be split."
+
+For example, if your device had the following configurations defined in its NVM:
+
+ice 0000:16:00.0:  Status  Split      Quad 0        _ Quad 1
+ice 0000:16:00.0:          count  L0  L1  L2  L3  L4  L5  L6  L7
+ice 0000:16:00.0: Active   2     100   -   -   - 100   -   -   -
+ice 0000:16:00.0:          2      50   -  50   -   -   -   -   -
+ice 0000:16:00.0:          4      25  25  25  25   -   -   -   -
+ice 0000:16:00.0:          4      25  25   -   -  25  25   -   -
+ice 0000:16:00.0:          8      10  10  10  10  10  10  10  10
+ice 0000:16:00.0:          1     100   -   -   -   -   -   -   -
+
+If you call
+
+# devlink port split pci/0000.16:00.0/0 count 4
+
+Your device will be configured for
+
+ice 0000:16:00.0:          4      25  25  25  25   -   -   -   -
+
+If you call the same command again, your device will be configured for
+
+ice 0000:16:00.0:          4      25  25   -   -  25  25   -   -
+
+If you call the same command a third time, your device will cycle back to the
+top of its 4-port configurations (because there are only two 4-port
+configurations defined it its NVM) and will be set to
+
+ice 0000:16:00.0:          4      25  25  25  25   -   -   -   -
+
+
+Firmware Logs
+-------------
+The ice driver allows you to generate firmware logs for supported categories of
+events, to help debug issues with Customer Support. Firmware logs are enabled
+by default. Refer to the Intel(R) Ethernet Adapters and Devices User Guide for
+an overview of this feature and additional tips.
+
+At a high level, you must do the following to capture a firmware log:
+
+1. Set the configuration for the firmware log.
+2. Perform the necessary steps to generate the issue you are trying to debug.
+3. Capture the firmware log.
+4. Stop capturing the firmware log.
+5. Reset your firmware log settings as needed.
+6. Work with Customer Support to debug your issue.
+
+NOTE: Firmware logs are generated in a binary format and must be decoded by
+Customer Support. Information collected is related only to firmware and
+hardware for debug purposes.
+
+Firmware logs are printed to dmesg. The driver groups these events into
+categories, called "modules." Supported modules include:
+* 00000001 - General (Bit 0)
+* 00000002 - Control (Bit 1)
+* 00000004 - Link Management (Bit 2)
+* 00000008 - Link Topology Detection (Bit 3)
+* 00000010 - Link Control Technology (Bit 4)
+* 00000020 - I2C (Bit 5)
+* 00000040 - SDP (Bit 6)
+* 00000080 - MDIO (Bit 7)
+* 00000100 - Admin Queue (Bit 8)
+* 00000200 - Host DMA (Bit 9)
+* 00000400 - LLDP (Bit 10)
+* 00000800 - DCBx (Bit 11)
+* 00001000 - DCB (Bit 12)
+* 00002000 - XLR (function-level resets; Bit 13)
+* 00004000 - NVM (Bit 14)
+* 00008000 - Authentication (Bit 15)
+* 00010000 - VPD (Vital Product Data; Bit 16)
+* 00020000 - IOSF (Intel On-Chip System Fabric, Bit 17)
+* 00040000 - Parser (Bit 18)
+* 00080000 - Switch (Bit 19)
+* 00100000 - Scheduler (Bit 20)
+* 00200000 - TX Queue Management (Bit 21)
+* 00400000 - ACL (Access Control List; Bit 22)
+* 00800000 - Post (Bit 23)
+* 01000000 - Watchdog (Bit 24)
+* 02000000 - Task Dispatcher (Bit 25)
+* 04000000 - Manageability (Bit 26)
+* 08000000 - SyncE (Bit 27)
+* 10000000 - Health (Bit 28)
+* 20000000 - Time Sync (Bit 29)
+* 40000000 - PF Registration (Bit 30)
+* 80000000 - Module Version (Bit 31)
+
+You can change the verbosity level of the firmware logs. You can set only one
+log level per module, and each level includes the verbosity levels lower than
+it. For instance, setting the level to "normal" will also log warning and error
+messages. Available verbosity levels are:
+ 0 = none
+ 1 = error
+ 2 = warning
+ 3 = normal
+ 4 = verbose
+
+NOTE:
+- Firmware logs can overrun the dmesg buffer. Before loading the driver,
+redirect dmesg to a file.
+- Use a bitmap to set the desired verbosity level for the module(s). NOTE: You
+must have dynamic debug enabled in the kernel.
+- You cannot change firmware log parameters at runtime. You must reload the
+driver for changes to take effect.
+
+Do the following to capture a firmware log in Linux:
+
+1. Remove the driver:
+
+# rmmod ice
+
+2. Redirect the firmware log from dmesg to a file:
+
+# dmesg -w > filename.log
+
+3. Load the driver using the following command, changing the events and level
+values as needed:
+
+# sudo insmod ice.ko dyndbg="+p" fwlog_events=<bitmask> fwlog_level=<level 0-4>
+
+4. Perform the necessary steps to generate the issue you are trying to debug.
+
+5. Work with Customer Support to decode your firmware log file and debug the
+issue.
+
+NOTE: To disable firmware logging completely, remove the driver and reload it.
+Firmware logging will remain disabled until you enable it again.
+
+CODE EXAMPLES:
+To set all events to log warning messages, use the following command:
+
+# sudo insmod ice.ko dyndbg="+p" fwlog_events=0x0FFFFFFF fwlog_level=2
+
+To log verbose, normal, warning, and error messages for the ACL (Bit 22),
+Switch (Bit 19), and Parser (Bit 18) modules, for example, use the following:
+
+# sudo insmod ice.ko dyndbg="+p" fwlog_events=0x4C0000 fwlog_level=4
+
+To dump the firmware logging configuration to dmesg, use the following commands:
+
+# echo dump fwlog > command
+# dmesg
+
+
+Hierarchical QoS (HQoS) Transmit Scheduler
+------------------------------------------
+You can configure a custom transmit scheduler tree structure to shape transmit
+traffic for specific needs. You change the tree structure by creating parent
+nodes on the device and then assigning child nodes (VFs)to the parent node. You
+can also change the transmit rate management configuration for each node.
+
+NOTES:
+- Reconfiguring the scheduler topology should only be done by an expert.
+Modifying the scheduler topology may adversly impact your device's network
+availability and throughput. Do not do this unless you are willing to take
+these risks. After modifying the scheduler topology, if your device does not
+perform as expected, you should return the device to the default topology.
+- Modifying the Hierarchical QoS (HQoS) Transmit Scheduler requires Kernel 6.2,
+or later.
+- Modifying the Hierarchical QoS (HQoS) Transmit Scheduler is not compatible
+with ADQ, DCB, RDMA, or other custom scheduler tree features.
+
+To create a devlink-rate parent group:
+# devlink port function rate add <dev/port>/<group>
+where <dev/port> is the pci bus:device:function of the device
+<group> is a new parent group
+
+For example:
+# devlink port function rate add pci/0000:03:00.0/operators
+creates the "operators" group on the specified device
+
+To create a new child node in a parent group:
+# devlink port function rate add <dev/port>/<child> parent <group>
+where <dev/port> is the pci bus:device:function of the device
+<child> is a new child node
+<group> is an existing parent group
+For example:
+# devlink port function rate add pci/0000:03:00.0/class_1 parent operators
+creates the "class_1" child node in the "operators" parent group.
+
+To display a device's current tree structure:
+# devlink port function rate show <dev/port>
+where <dev/port> is the pci bus:device:function of the device
+For example:
+# devlink port function rate show pci/0000:03:00.0
+
+Example output:
+pci/0000:03:00.0/node_0 type node (root)
+pci/0000:03:00.0/operators type node tx_share 20Mbit tx_max 100Mbit tx_priority
+2 tx_weight 5
+pci/0000:03:00.0/class_1 type node parent operators
+pci/0000:03:00.0/1 type leaf parent class_1
+Refer to the devlink-rate MAN page and other documentation for details.
+
+
+
+Performance Optimization
+========================
+Driver defaults are meant to fit a wide variety of workloads, but if further
+optimization is required, we recommend experimenting with the following
+settings.
+
+
+Transmit/Receive Queue Allocation
+---------------------------------
+The driver allocates a number of transmit/receive queue pairs equal to the
+number of local node CPU threads with the following constraints:
+* The driver will allocate a minimum of 8 queue pairs, or the total number of
+CPUs, whichever is lower
+* The driver will allocate a maximum of 64 queue pairs. Or 256 for the iavf
+driver.
+
+You can set the number of queues symmetrical or asymmetrical using the ethtool
+-L command. For example:
+Setting 16 queue pairs for the interface
+   # ethtool -L <ethX> combined 16
+   # ethtool -L <ethX> tx 16 rx 16
+
+Setting 16 Tx queues and 8 Rx queues
+   # ethtool -L <ethX> tx 16 rx 8
+
+NOTE: You cannot configure less than 1 Rx or 1 Tx queue. Attempts to do so will
+be rejected by the driver.
+NOTE: You cannot configure more Tx/Rx queues than there are MSI-X interrupts
+available. Attempts to do so will be rejected by the driver.
+
+
+IRQ to Adapter Queue Alignment
+------------------------------
+Pin the adapter's IRQs to specific cores by disabling the irqbalance service
+and using the included set_irq_affinity script. Please see the script's help
+text for further options.
+
+ - The following settings will distribute the IRQs across all the cores
+   evenly:
+
+   # scripts/set_irq_affinity -x all <interface1> , [ <interface2>, ... ]
+
+ - The following settings will distribute the IRQs across all the cores that
+   are local to the adapter (same NUMA node):
+
+   # scripts/set_irq_affinity -x local <interface1> ,[ <interface2>, ... ]
+
+ - For very CPU-intensive workloads, we recommend pinning the IRQs to all
+   cores.
+
+
+Rx Descriptor Ring Size
+-----------------------
+To reduce the number of Rx packet discards, increase the number of Rx
+descriptors for each Rx ring using ethtool.
+
+ - Check if the interface is dropping Rx packets due to buffers being full
+   (rx_dropped.nic can mean that there is no PCIe bandwidth):
+
+   # ethtool -S <ethX> | grep "rx_dropped"
+
+ - If the previous command shows drops on queues, it may help to increase
+   the number of descriptors using 'ethtool -G':
+
+   # ethtool -G <ethX> rx <N>
+   Where <N> is the desired number of ring entries/descriptors
+
+   This can provide temporary buffering for issues that create latency while
+   the CPUs process descriptors.
+
+
+
+Interrupt Rate Limiting
+-----------------------
+This driver supports an adaptive interrupt throttle rate (ITR) mechanism that
+is tuned for general workloads. The user can customize the interrupt rate
+control for specific workloads, via ethtool, adjusting the number of
+microseconds between interrupts.
+
+To set the interrupt rate manually, you must disable adaptive mode:
+
+# ethtool -C <ethX> adaptive-rx off adaptive-tx off
+
+For lower CPU utilization:
+ - Disable adaptive ITR and lower Rx and Tx interrupts. The examples below
+   affect every queue of the specified interface.
+
+ - Setting rx-usecs and tx-usecs to 80 will limit interrupts to about
+   12,500 interrupts per second per queue:
+
+   # ethtool -C <ethX> adaptive-rx off adaptive-tx off rx-usecs 80
+   tx-usecs 80
+
+For reduced latency:
+ - Disable adaptive ITR and ITR by setting rx-usecs and tx-usecs to 0
+   using ethtool:
+
+   # ethtool -C <ethX> adaptive-rx off adaptive-tx off rx-usecs 0
+   tx-usecs 0
+
+Per-queue interrupt rate settings:
+ - The following examples are for queues 1 and 3, but you can adjust other
+   queues.
+
+ - To disable Rx adaptive ITR and set static Rx ITR to 10 microseconds or
+   about 100,000 interrupts/second, for queues 1 and 3:
+
+   # ethtool --per-queue <ethX> queue_mask 0xa --coalesce adaptive-rx off
+   rx-usecs 10
+
+ - To show the current coalesce settings for queues 1 and 3:
+
+   # ethtool --per-queue <ethX> queue_mask 0xa --show-coalesce
+
+Bounding interrupt rates using rx-usecs-high:
+ - Valid Range: 0-236 (0=no limit)
+
+   The range of 0-236 microseconds provides an effective range of 4,237 to
+   250,000 interrupts per second. The value of rx-usecs-high can be set
+   independently of rx-usecs and tx-usecs in the same ethtool command, and is
+   also independent of the adaptive interrupt moderation algorithm. The
+   underlying hardware supports granularity in 4-microsecond intervals, so
+   adjacent values may result in the same interrupt rate.
+
+ - The following command would disable adaptive interrupt moderation, and allow
+   a maximum of 5 microseconds before indicating a receive or transmit was
+   complete. However, instead of resulting in as many as 200,000 interrupts per
+   second, it limits total interrupts per second to 50,000 via the rx-usecs-high
+   parameter.
+
+   # ethtool -C <ethX> adaptive-rx off adaptive-tx off rx-usecs-high 20
+   rx-usecs 5 tx-usecs 5
+
+
+Virtualized Environments
+------------------------
+In addition to the other suggestions in this section, the following may be
+helpful to optimize performance in VMs.
+
+ - Using the appropriate mechanism (vcpupin) in the VM, pin the CPUs to
+   individual LCPUs, making sure to use a set of CPUs included in the
+   device's local_cpulist: /sys/class/net/<ethX>/device/local_cpulist.
+
+ - Configure as many Rx/Tx queues in the VM as available. (See the iavf driver
+   documentation for the number of queues supported.) For example:
+
+   # ethtool -L <virt_interface> rx <max> tx <max>
+
+
+Transmit Balancing
+------------------
+Some Intel(R) Ethernet 800 Series devices allow you to enable a transmit
+balancing feature to improve transmit performance under certain conditions.
+When the feature is enabled, you should experience more consistent transmit
+performance across queues and/or PFs and VFs.
+
+By default, transmit balancing is disabled in the NVM. To enable this feature,
+use one of the following to persistently change the setting for the device:
+- Use the Ethernet Port Configuration Tool (EPCT) to enable the tx_balancing
+option. Refer to the EPCT readme for more information.
+- Enable the Transmit Balancing device setting in UEFI HII.
+- Enable transmit balancing via Linux devlink (see below).
+
+When the driver loads, it reads the transmit balancing setting from the NVM and
+configures the device accordingly.
+
+NOTE:
+- The user selection for transmit balancing in EPCT, HII, or Linux devlink is
+persistent across reboots. You must reboot the system for the selected setting
+to take effect.
+- This setting is device wide.
+- The driver, NVM, and DDP package must all support this functionality to
+enable the feature.
+
+To set the transmit balancing feature via devlink:
+
+# devlink dev param set <pci/D:b:d.f> name txbalancing value <setting> cmode
+permanent
+
+Where:
+- <pci/D:b:d.f> is the PCI address of the PF.
+- <setting> is true to enable transmit balancing, or false to disable transmit
+balancing.
+
+To show the current transmit balancing setting:
+
+# devlink dev param show [ <pci> name txbalancing ]
+
+
+MSI-X Vector Allocation
+-----------------------
+The ice driver automatically allocates MSI-X vectors for PF, VF, and RDMA from
+a pool of 2048 vectors. If there are 8, or fewer, local node CPU threads, the
+driver will automatically allocate 8 vectors for each PF. This scales up by
+allocating one vector per local node CPU thread, up to 64 vectors. The driver
+will not automatically allocate more than 64 MSI-X vectors for each PF. RDMA
+requires one more MSI-X vector than the PF allocation, so the driver will
+automatically allocation 9-65 MSI-X vectors for RDMA.
+
+Setting MSI-X Vector Allocation
+-------------------------------
+You can use sysfs to override the automatic MSI-X vector allocation for a
+particular PF or RDMA function, or for the pool of vectors used by the VFs
+bound to a PF.
+
+# devlink resource set <pci/D:b:d.f> msix/<parameter> size <num>
+
+Where:
+- <pci/D:b:d.f> is the PCI address of the device
+(pci/Domain:bus:device.function)
+- <parameter> is one of the following:
+  * For a PF use the msix_eth parameter
+  * For an RDMA function use the msix_rdma parameter
+  * For the pool of vectors used by the VFs use the msix_vf parameter
+- <num> is the number of MSI-X vector to assign to the function
+
+For example, to set a PF to use 320 MSI-X vectors:
+
+# devlink resource set pci/0000:31:00.1 msix/msix_eth size 320
+
+NOTE: For this change to take affect you must reinitialize the driver after you
+make this change. Reinitializing the driver may drop some netdev
+configurations, including reset or downtime. Refer to the Devlink Reload
+documentation for more information.
+
+You can set the allocation for a particular VF with the sriov_vf_msix_count
+sysfs parameter.
+
+# echo <num> > /sys/bus/pci/devices/D:b:d.f/sriov_vf_msix_count
+
+Where:
+- <D:b:d.f> is the PCI address of the device (Domain:bus:device.function)
+- <num> is the number of MSI-X vector allocate to the particular VF
+
+For example, to set a VF to 64 MSI-X vectors, use
+
+# echo 64 > /sys/bus/pci/devices/0000:31:00.2/sriov_vf_msix_count
+
+Current MSI-X Allocation
+------------------------
+You can check the current MSI-X vector allocation by using the devlink resource
+show parameter. For example:
+
+# devlink resource show pci/0000:31:00.1
+
+Might return:
+
+  name: msix size 520 occ 262 unit entry dpipe_tables none
+  resources:
+    name msix_misc size 4 unit entry dpipe_tables none
+    name: msix_eth size 48 occ 24 unit
+    name: msix_vf size 48 occ 24 unit
+    name: msix_rdma size 48 occ 24 unit
+
+Increasing the automatic allocation limit
+-----------------------------------------
+The ice driver supports changing the automatic MSI-X vector allocation for PFs
+and VFs to spread the RSS load across more cores. Each PF has its own LUT,
+while all VFs use the global LUT. Each PF LUT allows for 2048 MSI-X vectors.
+The VF default is a limit of 64 MSI-X vectors, but you can increase this to 512
+vectors if there are enough resources in the global LUT. You can also assign a
+PF's LUT to a bound VF, increasing the VF's MSI-X vector limit to 2048, but
+decreasing the PF's limit to 512. Use the rss_lut_pf_attr and rss_lut_vf_attr
+sysfs parameters to manage this.
+
+NOTES:
+- Before changing rss_lut_vf_attr, you must first set sriov_drivers_autoprobe
+to zero. After changing rss_lut_vf_attr, you can set sriov_drivers_autoprobe
+back to 1.
+- You must reload the iavf driver after making these changes.
+
+Set a VF's limit to 512, using the global LUT:
+# echo 0 > /sys/bus/pci/devices/<ethx>/sriov_drivers_autoprobe
+# echo 512 > /sys/bus/pci/devices/<ethx>/rss_lut_vf_attr
+
+Set a VF to use its PF's LUT:
+# echo 0 > /sys/bus/pci/devices/<ethx>/sriov_drivers_autoprobe
+# echo 512 > /sys/bus/pci/devices/<ethx>/rss_lut_pf_attr
+# echo 2048 > /sys/bus/pci/devices/<ethx>/rss_lut_vf_attr
+
+Set a PF back to using its PF LUT.
+# echo 0 > /sys/bus/pci/devices/<ethx>/sriov_drivers_autoprobe
+# echo 512 > /sys/bus/pci/devices/<ethx>/rss_lut_vf_attr
+# echo 2048 > /sys/bus/pci/devices/<ethx>/rss_lut_pf_attr
+
+
+Known Issues/Troubleshooting
+============================
+
+Receive Error counts may be higher than the actual packet error count
+---------------------------------------------------------------------
+When a packet is received with more than one error, two bad packets may be
+reported. This affects all devices based on 10G, or faster, controllers.
+
+
+Dynamic Debug
+-------------
+If you encounter unexpected issues during driver load, some of the most useful
+information for developers to receive in a bug report can include driver
+logging. This logging uses a kernel feature called Dynamic Debug, which is
+generally enabled in most kernel configurations (CONFIG_DYNAMIC_DEBUG=y).
+
+To load the driver with dynamic debug enabled, run modprobe with the dyndbg
+parameter:
+
+# modprobe ice dyndbg=+p
+
+The driver will then load and print debugging information into the kernel log
+(dmesg) and is usually logged into the system log viewable by journalctl or in
+/var/log/messages. Saving this information to a file and attaching it to any
+bug report can help shorten the reproduction and debugging time for a developer.
+
+To enable dynamic debug during runtime operation of the driver, use this
+command:
+
+# echo "module ice +p" > /sys/kernel/debug/dynamic_debug/control
+
+For more details, see the Dynamic Debug documentation included in the Linux
+kernel instructions.
+
+
+PF Message Queue Overflow
+-------------------------
+The device driver can detect some types of anomalous behavior. When it does, it
+will log the VF MAC address and associated PF MAC address. Using this
+information, you can check the virtual machine (VM) that is using the VF MAC
+address to ensure that the VM is operating correctly.
+
+
+'ethtool -S' does not display Tx/Rx packet statistics
+-----------------------------------------------------
+Issuing the command 'ethtool -S' does not display Tx/Rx packet statistics. This
+is by convention. Use other tools (such as the 'ip' command) that display
+standard netdev statistics such as Tx/Rx packet statistics.
+
+
+'ethtool -S' rx_bytes and ip stats rx_bytes don't match statistics
+------------------------------------------------------------------
+The rx_bytes value of ethtool does not match the rx_bytes value of Netdev, due
+to the 4-byte CRC being stripped by the device. The difference between the two
+rx_bytes values will be 4 x the number of Rx packets. For example, if Rx
+packets are 10 and Netdev (software statistics) displays rx_bytes as "X", then
+ethtool (hardware statistics) will display rx_bytes as "X+40" (4 bytes CRC x 10
+packets).
+
+
+Unexpected Issues when the device driver and DPDK share a device
+----------------------------------------------------------------
+Unexpected issues may result when an ice device is in multi driver mode and the
+kernel driver and DPDK driver are sharing the device. This is because access to
+the global NIC resources is not synchronized between multiple drivers. Any
+change to the global NIC configuration (writing to a global register, setting
+global configuration by AQ, or changing switch modes) will affect all ports and
+drivers on the device. Loading DPDK with the "multi-driver" module parameter
+may mitigate some of the issues.
+
+
+Fiber optics and auto-negotiation
+---------------------------------
+Modules based on 100GBASE-SR4, active optical cable (AOC), and active copper
+cable (ACC) do not support auto-negotiation per the IEEE specification. To
+obtain link with these modules, you must turn off auto-negotiation on the link
+partner's switch ports.
+
+
+'ethtool -a' autonegotiate result may vary between drivers
+----------------------------------------------------------
+For kernel versions 4.6 or higher, 'ethtool -a' will show the advertised and
+negotiated autoneg settings. For kernel versions below 4.6, ethtool will only
+report the negotiated link status.
+
+The issue is cosmetic and does not affect functionality. Installing the latest
+ice driver and upgrading your kernel to version 4.6 or higher will resolve the
+issue.
+
+
+AF_XDP fails to allocate buffers
+--------------------------------
+On kernels older than 5.3, you may see an undesirable CPU load during packet
+processing if you enable AF_XDP in native mode and the Rx ring size is larger
+than the UMEM fill queue. This is due to a known issue in the kernel and was
+fixed in 5.3. To address the issue, upgrade your kernel to 5.3 or newer.
+
+
+SCTP checksum offloads aren't indicated on Geneve tunnel
+--------------------------------------------------------
+For SCTP traffic over a Geneve tunnel, the SCTP checksum isn't offloaded to the
+device, even when tx-checksum-sctp is on. This is due to a limitation in the
+Linux kernel. However, for Rx traffic, the SCTP checksum is verified if
+rx-checksumming is on. For both Tx and Rx traffic, you can offload the outer
+UDP checksum to the device.
+
+
+CentOS 7.2 Issues
+-----------------
+The following issues are specific to CentOS 7.2. Upgrading to the latest
+version of the operating system will resolve these issues.
+- base-r-fec mode is supposed to be on by default. On CentOS 7.2, Ethtool
+--show-priv-flags shows that it is off, instead of on.
+- ethtool -m <ethX> does not display optical module information as expected.
+- You cannot create an ipv6 Intel(R) Ethernet Flow Director rule. For example:
+# ethtool -U p1p1 flow-type tcp6 src-ip 3001:1::2:1:1 dst-ip 3001:1::1:1:1
+src-port 22 dst-port 23 action 10
+Returns a bad syntax error.
+
+
+Incorrect link speed reported on older VF drivers
+-------------------------------------------------
+Linux distributions with older iavf or i40evf drivers (including Red Hat
+Enterprise Linux 8) may show an incorrect link speed on VF interfaces. This
+issue is cosmetic and does not affect VF functionality. To resolve the issue,
+download the latest iavf driver.
+
+
+Older VF drivers on Intel Ethernet 800 Series adapters
+------------------------------------------------------
+Some Windows* VF drivers from Release 22.9 or older may encounter errors when
+loaded on a PF based on the Intel Ethernet 800 Series on Linux KVM. You may see
+errors and the VF may not load. This issue does not occur starting with the
+following Windows VF drivers:
+- v40e64, v40e65: Version 1.5.65.0 and newer
+
+To resolve this issue, download and install the latest iavf driver.
+
+
+'VF X failed opcode 24' error message in dmesg on host
+------------------------------------------------------
+With a Microsoft Windows Server 2019 guest machine running on a Linux host, you
+may see 'VF <vf_number> failed opcode 24' error messages in dmesg on the host.
+This error is benign and does not affect traffic. Installing the latest iavf
+driver in the guest will resolve the issue.
+
+
+Windows guest OSs on a Linux host may not pass traffic across VLANs
+-------------------------------------------------------------------
+The VF is not aware of the VLAN configuration if you use Load Balancing and
+Failover (LBFO) to configure VLANs in a Windows guest. VLANs configured using
+LBFO on a VF driver may result in failure to pass traffic.
+
+
+SR-IOV virtual functions have identical MAC addresses
+-----------------------------------------------------
+When you create multiple SR-IOV virtual functions, the VFs may have identical
+MAC addresses. Only one VF will pass traffic, and all traffic on other VFs with
+identical MAC addresses will fail. This is related to the
+"MACAddressPolicy=persistent" setting in
+/usr/lib/systemd/network/99-default.link.
+
+To resolve this issue, edit the /usr/lib/systemd/network/99-default.link file
+and change the MACAddressPolicy line to "MACAddressPolicy=none". For more
+information, see the systemd.link man page.
+
+
+MDD events in dmesg when creating maximum number of VLANs on the VF
+-------------------------------------------------------------------
+When you create the maximum number of VLANs on the VF, you may see MDD events
+in dmesg on the host. This is due to the asynchronous design of the iavf
+driver. It always reports success to any VLAN requests, but the requests may
+fail later. The guest OS could try to send traffic on a VLAN that is not
+configured on the VF, which will cause a Malicious Driver Detection (MDD) event
+in dmesg on the host.
+
+This issue is cosmetic. You do not need to reload the PF driver.
+
+
+'ip address' or 'ip link' command displays an error on a single-port NIC
+with 245+ VFs
+------------------------------------------------------------------------
+When you use the 'ip address' or 'ip link' command on a Linux host configured
+with 245 or more VFs on a single-port adapter, you may encounter a "Buffer too
+small for object" error. This is due to a known issue in the iproute2 tools.
+Please use ifconfig instead of iproute2. You can install ifconfig via the
+net-tools-deprecated package.
+
+
+Support
+=======
+For general information, go to the Intel support website at:
+http://www.intel.com/support/
+
+or the Intel Wired Networking project hosted by Sourceforge at:
+http://sourceforge.net/projects/e1000
+
+If an issue is identified with the released source code on a supported kernel
+with a supported adapter, email the specific information related to the issue
+to e1000-devel@lists.sf.net.
+
+
+License
+=======
+This program is free software; you can redistribute it and/or modify it under
+the terms and conditions of the GNU General Public License, version 2, as
+published by the Free Software Foundation.
+
+This program is distributed in the hope it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
+St - Fifth Floor, Boston, MA 02110-1301 USA.
+
+The full GNU General Public License is included in this distribution in the
+file called "COPYING".
+
+Copyright(c) 2017 - 2023 Intel Corporation.
+
+
+Trademarks
+==========
+Intel is a trademark or registered trademark of Intel Corporation or its
+subsidiaries in the United States and/or other countries.
+
+* Other names and brands may be claimed as the property of others.
+
+

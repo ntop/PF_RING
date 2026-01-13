@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2018-2023 Intel Corporation
+
+# updates for the system pci.ids file
+#
+# IMPORTANT!  Entries in this list must be sorted as they
+#             would appear in the system pci.ids file.  Entries
+#             are sorted by ven, dev, subven, subdev
+#             (numerical order).
+#
+8086  Intel Corporation
+	124c  Ethernet Connection E823-L for backplane
+	124d  Ethernet Connection E823-L for SFP
+	124e  Ethernet Connection E823-L/X557-AT 10GBASE-T
+	124f  Ethernet Connection E823-L 1GbE
+	151d  Ethernet Connection E823-L for QSFP
+	1591  Ethernet Controller E810-C for backplane
+		8086 bcce  Ethernet Controller E810-C for Intel Open FPGA Stack
+	1592  Ethernet Controller E810-C for QSFP
+		1137 02bf  E810CQDA2 2x100 GbE QSFP28 PCIe NIC
+		8086 0001  Ethernet Network Adapter E810-C-Q1
+		8086 0002  Ethernet Network Adapter E810-C-Q2
+		8086 0005  Ethernet Network Adapter E810-C-Q1 for OCP3.0
+		8086 0006  Ethernet Network Adapter E810-C-Q2 for OCP3.0
+		8086 000a  Ethernet Network Adapter E810-C-Q1 for OCP
+		8086 000b  Ethernet 100G 2P E810-C Adapter
+		8086 000c  Ethernet 100G 2P E810-C OCP
+		8086 000d  Ethernet Network Adapter E810-L-Q2 for OCP3.0
+		8086 000e  Ethernet Network Adapter E810-2C-Q2
+		8086 000f  Ethernet Network Adapter E810-C-Q2T
+		8086 0010  Ethernet 100G 2P E810-C-stg Adapter
+		8086 0011  Ethernet Network Adapter E810-C-Q1 for OCP3.0
+		8086 0012  Ethernet 100G 2P E810-C-st Adapter
+		8086 0013  Ethernet Network Adapter E810-C-Q1 for OCP 3.0
+	1593  Ethernet Controller E810-C for SFP
+		1137 02c3  E810XXVDA4 4x25/10 GbE SFP28 PCIe NIC
+		1137 02e9  E810XXVDA4TG 4x25/10 GbE SFP28 PCIe NIC
+		1137 02ea  E810XXVDA4T 4x25/10 GbE SFP28 PCIe NIC
+		8086 0005  Ethernet Network Adapter E810-XXV-4
+		8086 0007  Ethernet Network Adapter E810-XXV-4
+		8086 000a  Ethernet 25G 4P E810-XXV Adapter
+		8086 000c  Ethernet Network Adapter E810-XXV-4 for OCP 3.0
+		8086 000d  Ethernet 25G 4P E810-XXV OCP
+		8086 000e  Ethernet Network Adapter E810-XXV-4T
+		8086 000f  Ethernet 25G 4P E810-XXV-stg Adapter
+		8086 0010  Ethernet 25G 4P E810-XXV-st Adapter
+		8086 4010  Ethernet Network Adapter E810-XXV-4
+		8086 4013  Ethernet Network Adapter E810-XXV-4 for OCP 3.0
+	1599  Ethernet Controller E810-XXV for backplane
+		8086 0001  Ethernet 25G 2P E810-XXV-k Mezz
+	159a  Ethernet Controller E810-XXV for QSFP
+	159b  Ethernet Controller E810-XXV for SFP
+		1137 02be  E810XXVDA2 2x25/10 GbE SFP28 PCIe NIC
+		8086 0001  Ethernet 25G 2P E810-XXV OCP
+		8086 0002  Ethernet 25G 2P E810-XXV Adapter
+		8086 0003  Ethernet Network Adapter E810-XXV-2
+		8086 0005  Ethernet Network Adapter E810-XXV-2 for OCP 3.0
+		8086 4001  Ethernet Network Adapter E810-XXV-2
+		8086 4002  Ethernet Network Adapter E810-XXV-2 for OCP 3.0
+		8086 4003  Ethernet Network Adapter E810-XXV-2
+		8086 4015  Ethernet Network Adapter E810-XXV-2 for OCP 3.0
+	1888  Ethernet Connection C800 series
+	188a  Ethernet Connection E823-C for backplane
+	188b  Ethernet Controller E823-C for QSFP
+	188c  Ethernet Controller E823-C for SFP
+		1028 0abd  Ethernet Connection 25G 4P E823-C LOM
+		17aa 405e  E823 25G/10G Ethernet LOM Controller
+		8086 0001  Ethernet Connection E823-C for SFP
+	188d  Ethernet Connection E823-C/X557-AT 10GBASE-T
+	188e  Ethernet Connection E823-C 1GbE
+		17aa 405f  E823 1G Ethernet LOM Controller
+	1890  Ethernet Connection E822-C for backplane
+	1891  Ethernet Controller E822-C for QSFP
+	1892  Ethernet Controller E822-C for SFP
+	1893  Ethernet Connection E822-C/X557-AT 10GBASE-T
+	1894  Ethernet Connection E822-C 1GbE
+	1897  Ethernet Connection E822-L for backplane
+	1898  Ethernet Connection E822-L for SFP
+	1899  Ethernet Connection E822-L/X557-AT 10GBASE-T
+	189a  Ethernet Connection E822-L 1GbE
+	579c  Ethernet Connection E825-C for backplane
+	579d  Ethernet Connection E825-C for QSFP
+	579e  Ethernet Connection E825-C for SFP
+	579f  Ethernet Connection E825-C 1GbE
