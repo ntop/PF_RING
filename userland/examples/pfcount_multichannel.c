@@ -286,7 +286,7 @@ void* packet_consumer_thread(void* _id) {
          fprintf(stderr, "Error while binding thread %ld to core %ld: errno=%i\n", 
                  thread_id, core_id, s);
       else {
-         printf("Set thread %lu on core %lu/%u\n", thread_id, core_id, numCPU);
+         printf("Running capture thread %lu on core %lu/%u\n", thread_id, core_id, numCPU);
       }
    }
 #endif
@@ -425,7 +425,7 @@ int main(int argc, char* argv[]) {
   if ((threads = calloc(MAX_NUM_THREADS, sizeof(struct thread_stats))) == NULL)
     return -1;
 
-  printf("Capturing from %s\n", device);
+  printf("Setting up sockets on %s...\n", device);
 
   if (promisc)
     flags |= PF_RING_PROMISC;
