@@ -5,6 +5,7 @@ FAMILY=ice
 # Remove old modules (if loaded)
 rmmod irdma
 rmmod ice
+rmmod intel_auxiliary
 rmmod pf_ring
 
 # We assume that you have compiled PF_RING
