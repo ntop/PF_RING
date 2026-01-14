@@ -2131,6 +2131,14 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 		ice_dev_err_errno(dev, err, "set_rss_key failed");
 
 #ifdef HAVE_PF_RING
+
+#ifdef DEBUG_RSS
+	/* Check for E810-C rev 02 - might need special handling */
+	if (hw->device_id == ICE_DEV_ID_E810C_QSFP && hw->revision_id == 0x02) {
+		dev_info(ice_pf_to_dev(pf), "DEBUG RSS: E810-C rev 02\n");
+	}
+#endif
+
 	/* Enable registers for symmetric RSS
 	 * Bits 7:6 - Hash Scheme
 	 * 00b = Toeplitz Hash
@@ -2139,6 +2147,13 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 	 * 11b = Reserved
 	*/
 	reg = rd32(hw, VSIQF_HASH_CTL(vsi->vsi_num));
+
+#ifdef DEBUG_RSS
+	dev_info(ice_pf_to_dev(pf), "DEBUG RSS: Device ID=0x%04x, PCI Rev=0x%02x, VSI=%d\n",
+		 hw->device_id, hw->revision_id, vsi->vsi_num);
+	dev_info(ice_pf_to_dev(pf), "DEBUG RSS: VSIQF_HASH_CTL before: 0x%08x\n", reg);
+#endif
+
 	if (rss_scheme == 1) { /* Asymmetric Toeplitz */
 		dev_info(ice_pf_to_dev(pf), "Setting RSS hash to Asymmetric Toeplitz\n");
 		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (0);
@@ -2149,7 +2164,19 @@ int ice_vsi_cfg_rss_lut_key(struct ice_vsi *vsi)
 		dev_info(ice_pf_to_dev(pf), "Setting RSS hash to Symmetric Toeplitz\n");
 		reg = (reg & (~VSIQF_HASH_CTL_HASH_SCHEME_M)) | (1 << VSIQF_HASH_CTL_HASH_SCHEME_S);
 	}
+
+#ifdef DEBUG_RSS
+	dev_info(ice_pf_to_dev(pf), "DEBUG RSS: VSIQF_HASH_CTL writing: 0x%08x\n", reg);
+#endif
+
 	wr32(hw, VSIQF_HASH_CTL(vsi->vsi_num), reg); 
+
+#ifdef DEBUG_RSS
+	ice_flush(hw);
+	reg = rd32(hw, VSIQF_HASH_CTL(vsi->vsi_num));
+	dev_info(ice_pf_to_dev(pf), "DEBUG RSS: VSIQF_HASH_CTL readback: 0x%08x\n", reg);
+#endif
+
 #endif
 
 	kfree(key);

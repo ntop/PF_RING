@@ -4027,6 +4027,16 @@ ice_rss_update_symm(struct ice_hw *hw,
 	mutex_unlock(&hw->blk[ICE_BLK_RSS].es.prof_map_lock);
 	if (!map)
 		return;
+
+#ifdef DEBUG_RSS
+	pr_info("DEBUG RSS: ice_rss_update_symm (prof->cfg.symm=%d)\n", prof->cfg.symm);
+#endif
+#if 0
+	if (hw->device_id == ICE_DEV_ID_E810C_QSFP && hw->revision_id == 0x02) {
+		ice_flush(hw);
+	}
+#endif
+
 	/* clear to default */
 	for (m = 0; m < 6; m++)
 		wr32(hw, GLQF_HSYMM(prof_id, m), 0);
@@ -4058,6 +4068,10 @@ ice_rss_update_symm(struct ice_hw *hw,
 		struct ice_flow_seg_xtrct *sctp_dst =
 			&seg->fields[ICE_FLOW_FIELD_IDX_SCTP_DST_PORT].xtrct;
 
+#ifdef DEBUG_RSS
+		pr_info("DEBUG RSS: Configuring symmetric hash for prof_id=%d\n", prof_id);
+#endif
+
 		/* xor IPv4 */
 		if (ipv4_src->prot_id != 0 && ipv4_dst->prot_id != 0)
 			ice_rss_config_xor(hw, prof_id,
@@ -4082,6 +4096,10 @@ ice_rss_update_symm(struct ice_hw *hw,
 		if (sctp_src->prot_id != 0 && sctp_dst->prot_id != 0)
 			ice_rss_config_xor(hw, prof_id,
 					   sctp_src->idx, sctp_dst->idx, 1);
+#ifdef DEBUG_RSS
+	} else {
+		pr_info("DEBUG RSS: Symmetric hash disabled for prof_id=%d\n", prof_id);
+#endif
 	}
 }
 

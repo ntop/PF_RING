@@ -7355,6 +7355,10 @@ ice_probe(struct pci_dev *pdev, const struct pci_device_id __always_unused *ent)
 	hw->vendor_id = pdev->vendor;
 	hw->device_id = pdev->device;
 	pci_read_config_byte(pdev, PCI_REVISION_ID, &hw->revision_id);
+
+	dev_info(&pdev->dev, "Detected device 0x%04x PCI Revision 0x%02x\n",
+		hw->device_id, hw->revision_id);
+
 	hw->subsystem_vendor_id = pdev->subsystem_vendor;
 	hw->subsystem_device_id = pdev->subsystem_device;
 	hw->bus.bus_num = pdev->bus->number;
