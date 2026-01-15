@@ -4303,6 +4303,11 @@ ice_add_rss_cfg_sync(struct ice_hw *hw, u16 vsi_handle,
 		goto exit;
 	}
 
+#ifdef HAVE_PF_RING
+	/* Set symm before calling ice_add_rss_list (used on restore in ice_replay_rss_cfg) */
+	prof->cfg.symm = cfg->symm;
+#endif
+
 	status = ice_add_rss_list(hw, vsi_handle, prof);
 
 	prof->cfg.symm = cfg->symm;
