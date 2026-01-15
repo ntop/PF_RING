@@ -50,8 +50,6 @@
 
 #ifdef HAVE_PF_RING
 
-#define DEBUG_RSS
-
 #define ICE_ZC_IRQ
 #define ICE_TX_ENABLE
 //#define ICE_RX_TAIL_RESET

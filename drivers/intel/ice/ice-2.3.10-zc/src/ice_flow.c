@@ -4028,15 +4028,6 @@ ice_rss_update_symm(struct ice_hw *hw,
 	if (!map)
 		return;
 
-#ifdef DEBUG_RSS
-	pr_info("DEBUG RSS: ice_rss_update_symm (prof->cfg.symm=%d)\n", prof->cfg.symm);
-#endif
-#if 0
-	if (hw->device_id == ICE_DEV_ID_E810C_QSFP && hw->revision_id == 0x02) {
-		ice_flush(hw);
-	}
-#endif
-
 	/* clear to default */
 	for (m = 0; m < 6; m++)
 		wr32(hw, GLQF_HSYMM(prof_id, m), 0);
@@ -4068,10 +4059,6 @@ ice_rss_update_symm(struct ice_hw *hw,
 		struct ice_flow_seg_xtrct *sctp_dst =
 			&seg->fields[ICE_FLOW_FIELD_IDX_SCTP_DST_PORT].xtrct;
 
-#ifdef DEBUG_RSS
-		pr_info("DEBUG RSS: Configuring symmetric hash for prof_id=%d\n", prof_id);
-#endif
-
 		/* xor IPv4 */
 		if (ipv4_src->prot_id != 0 && ipv4_dst->prot_id != 0)
 			ice_rss_config_xor(hw, prof_id,
@@ -4096,10 +4083,6 @@ ice_rss_update_symm(struct ice_hw *hw,
 		if (sctp_src->prot_id != 0 && sctp_dst->prot_id != 0)
 			ice_rss_config_xor(hw, prof_id,
 					   sctp_src->idx, sctp_dst->idx, 1);
-#ifdef DEBUG_RSS
-	} else {
-		pr_info("DEBUG RSS: Symmetric hash disabled for prof_id=%d\n", prof_id);
-#endif
 	}
 }
 
@@ -4321,6 +4304,11 @@ ice_add_rss_cfg_sync(struct ice_hw *hw, u16 vsi_handle,
 		goto exit;
 	}
 
+#ifdef HAVE_PF_RING
+	/* Set symm before calling ice_add_rss_list (used on restore in ice_replay_rss_cfg) */
+	prof->cfg.symm = cfg->symm;
+#endif
+
 	status = ice_add_rss_list(hw, vsi_handle, prof);
 
 	prof->cfg.symm = cfg->symm;
@@ -4356,6 +4344,7 @@ ice_add_rss_cfg(struct ice_hw *hw, u16 vsi_handle,
 
 	mutex_lock(&hw->rss_locks);
 	local_cfg = *cfg;
+
 	if (cfg->hdr_type < ICE_RSS_ANY_HEADERS) {
 		status = ice_add_rss_cfg_sync(hw, vsi_handle, &local_cfg);
 	} else {
