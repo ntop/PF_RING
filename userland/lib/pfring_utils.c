@@ -14,6 +14,7 @@
 #include "pfring.h"
 #include "pfring_utils.h"
 
+#include <stdarg.h>
 #include <dlfcn.h> /* dlXXXX (e.g. dlopen()) */
 #include <linux/if.h>
 #ifdef ENABLE_HW_TIMESTAMP
@@ -519,6 +520,27 @@ TIMESTAMP:
 
 /* ****************************************************** */
 
+/* Safe implementation of snprintf which returns the number of bytes *actually* written */
+static void __pfring_snprintf(char *buff, u_int buff_len, int *buff_used, const char *fmt, ...) {
+  va_list args;
+  int ret;
+
+  if (*buff_used >= buff_len)
+    return;
+
+  va_start(args, fmt);
+  ret = vsnprintf(&buff[*buff_used], buff_len - *buff_used, fmt, args);
+  va_end(args);
+
+  if (ret > 0) {
+    *buff_used += ret;
+    if (*buff_used >= buff_len)
+      *buff_used = buff_len - 1;
+  }
+}
+
+/* ****************************************************** */
+
 static char *etheraddr2string(const u_char *ep, char *buf) {
   char *hex = "0123456789ABCDEF";
   u_int i, j;
@@ -620,97 +642,97 @@ int pfring_print_parsed_pkt(char *buff, u_int buff_len, const u_char *p, const s
   char buf1[32], buf2[32];
   int buff_used = 0;
 
-  buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+  __pfring_snprintf(buff, buff_len, &buff_used,
     "[%s -> %s] ",
     etheraddr2string(h->extended_hdr.parsed_pkt.smac, buf1),
     etheraddr2string(h->extended_hdr.parsed_pkt.dmac, buf2));
 
   if (h->extended_hdr.parsed_pkt.offset.vlan_offset) {
-    buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+    __pfring_snprintf(buff, buff_len, &buff_used,
       "[vlan %u] ", h->extended_hdr.parsed_pkt.vlan_id);
     if (h->extended_hdr.parsed_pkt.qinq_vlan_id)
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "[QinQ-vlan %u] ", h->extended_hdr.parsed_pkt.qinq_vlan_id);
   }
 
   if (h->extended_hdr.parsed_pkt.eth_type == 0x0800 /* IPv4*/ || h->extended_hdr.parsed_pkt.eth_type == 0x86DD /* IPv6*/) {
 
     if(h->extended_hdr.parsed_pkt.eth_type == 0x0800 /* IPv4*/ ) {
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "[IPv4][%s:%d ", intoa(h->extended_hdr.parsed_pkt.ipv4_src), h->extended_hdr.parsed_pkt.l4_src_port);
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "-> %s:%d] ", intoa(h->extended_hdr.parsed_pkt.ipv4_dst), h->extended_hdr.parsed_pkt.l4_dst_port);
     } else {
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "[IPv6][%s:%d ",    in6toa(h->extended_hdr.parsed_pkt.ipv6_src), h->extended_hdr.parsed_pkt.l4_src_port);
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "-> %s:%d] ", in6toa(h->extended_hdr.parsed_pkt.ipv6_dst), h->extended_hdr.parsed_pkt.l4_dst_port);
     }
 
-    buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+    __pfring_snprintf(buff, buff_len, &buff_used,
       "[l3_proto=%s]", proto2str(h->extended_hdr.parsed_pkt.l3_proto));
 
     if(h->extended_hdr.parsed_pkt.tunnel.tunnel_id != NO_TUNNEL_ID) {
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "[TEID=0x%08X][tunneled_proto=%s]",
         h->extended_hdr.parsed_pkt.tunnel.tunnel_id,
         proto2str(h->extended_hdr.parsed_pkt.tunnel.tunneled_proto));
 
       if(h->extended_hdr.parsed_pkt.eth_type == 0x0800 /* IPv4*/ ) {
-        buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+        __pfring_snprintf(buff, buff_len, &buff_used,
 	  "[IPv4][%s:%d ",
           intoa(h->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v4),
           h->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port);
-        buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+        __pfring_snprintf(buff, buff_len, &buff_used,
 	  "-> %s:%d] ",
           intoa(h->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v4),
           h->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port);
       } else {
-        buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+        __pfring_snprintf(buff, buff_len, &buff_used,
 	  "[IPv6][%s:%d ",
           in6toa(h->extended_hdr.parsed_pkt.tunnel.tunneled_ip_src.v6),
           h->extended_hdr.parsed_pkt.tunnel.tunneled_l4_src_port);
-        buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+        __pfring_snprintf(buff, buff_len, &buff_used,
 	  "-> %s:%d] ",
           in6toa(h->extended_hdr.parsed_pkt.tunnel.tunneled_ip_dst.v6),
           h->extended_hdr.parsed_pkt.tunnel.tunneled_l4_dst_port);
       }
     }
 
-    buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+    __pfring_snprintf(buff, buff_len, &buff_used,
       "[hash=%u]",
       h->extended_hdr.pkt_hash);
 
     if (h->extended_hdr.parsed_pkt.l3_proto == IPPROTO_TCP)
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "[tos=%d][tcp_seq_num=%u]",
         h->extended_hdr.parsed_pkt.ipv4_tos,
         h->extended_hdr.parsed_pkt.tcp.seq_num);
 
   } else if(h->extended_hdr.parsed_pkt.eth_type == 0x0806 /* ARP */) {
-    buff_used += snprintf(&buff[buff_used], buff_len - buff_used, "[ARP]");
+    __pfring_snprintf(buff, buff_len, &buff_used, "[ARP]");
     if (buff_len >= h->extended_hdr.parsed_pkt.offset.l3_offset+30) {
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "[Sender=%s/%s]",
         etheraddr2string(&p[h->extended_hdr.parsed_pkt.offset.l3_offset+8], buf1),
         intoa(ntohl(*((u_int32_t *) &p[h->extended_hdr.parsed_pkt.offset.l3_offset+14]))));
-      buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+      __pfring_snprintf(buff, buff_len, &buff_used,
         "[Target=%s/%s]",
         etheraddr2string(&p[h->extended_hdr.parsed_pkt.offset.l3_offset+18], buf2),
         intoa(ntohl(*((u_int32_t *) &p[h->extended_hdr.parsed_pkt.offset.l3_offset+24]))));
     }
 
   } else if(h->extended_hdr.parsed_pkt.eth_type == 0x0027 /* STP */) {
-    buff_used += snprintf(&buff[buff_used], buff_len - buff_used, "[STP]");
+    __pfring_snprintf(buff, buff_len, &buff_used, "[STP]");
 
   } else {
-    buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+    __pfring_snprintf(buff, buff_len, &buff_used,
       "[eth_type=0x%04X]", h->extended_hdr.parsed_pkt.eth_type);
   }
 
-  buff_used += snprintf(&buff[buff_used], buff_len - buff_used,
+  __pfring_snprintf(buff, buff_len, &buff_used,
     " [caplen=%d][len=%d][eth_offset=%d][l3_offset=%d][l4_offset=%d][payload_offset=%d]",
-    h->caplen, h->len, 
+    h->caplen, h->len,
     h->extended_hdr.parsed_pkt.offset.eth_offset,
     h->extended_hdr.parsed_pkt.offset.l3_offset,
     h->extended_hdr.parsed_pkt.offset.l4_offset,
