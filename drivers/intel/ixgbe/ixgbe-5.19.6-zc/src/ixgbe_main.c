@@ -12647,7 +12647,11 @@ static int ixgbe_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
 #ifdef HAVE_NDO_FDB_ADD_VID
 			     u16 vid,
 #endif
-#ifdef HAVE_NDO_FDB_ADD_EXTACK
+#ifdef HAVE_NDO_FDB_ADD_NOTIFY
+			     u16 flags,
+			     bool __always_unused *notified,
+			     struct netlink_ext_ack __always_unused *extack)
+#elif defined(HAVE_NDO_FDB_ADD_EXTACK)
 			     u16 flags,
 			     struct netlink_ext_ack __always_unused *extack)
 #else
