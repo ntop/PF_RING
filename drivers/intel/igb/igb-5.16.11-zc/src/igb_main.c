@@ -2493,7 +2493,13 @@ static int igb_set_features(struct net_device *netdev,
 #endif /* HAVE_NDO_SET_FEATURES */
 
 #ifdef HAVE_FDB_OPS
-#if defined(HAVE_NDO_FDB_ADD_EXTACK)
+#if defined(HAVE_NDO_FDB_ADD_NOTIFY)
+static int
+igb_ndo_fdb_add(struct ndmsg *ndm, struct nlattr __always_unused *tb[],
+		struct net_device *dev, const unsigned char *addr, u16 vid,
+		u16 flags, bool __always_unused *notified,
+		struct netlink_ext_ack __always_unused *extack)
+#elif defined(HAVE_NDO_FDB_ADD_EXTACK)
 static int
 igb_ndo_fdb_add(struct ndmsg *ndm, struct nlattr __always_unused *tb[],
 		struct net_device *dev, const unsigned char *addr, u16 vid,
@@ -3738,7 +3744,14 @@ static void igb_remove(struct pci_dev *pdev)
 		del_timer_sync(&adapter->dma_err_timer);
 	del_timer_sync(&adapter->phy_info_timer);
 
+#if 1 /* Deprecated */
 	flush_scheduled_work();
+#else /* Patch */
+	cancel_work_sync(&adapter->reset_task);
+	cancel_work_sync(&adapter->watchdog_task);
+	if (adapter->flags & IGB_FLAG_DETECT_BAD_DMA)
+		cancel_work_sync(&adapter->dma_err_task);
+#endif
 
 #ifdef IGB_DCA
 	if (adapter->flags & IGB_FLAG_DCA_ENABLED) {
