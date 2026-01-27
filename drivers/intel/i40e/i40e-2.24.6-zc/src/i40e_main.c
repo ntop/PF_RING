@@ -14939,7 +14939,12 @@ static int i40e_get_phys_port_id(struct net_device *netdev,
  * @extack: netdev extended ack structure
  */
 #ifdef HAVE_FDB_OPS
-#if defined(HAVE_NDO_FDB_ADD_EXTACK)
+#if defined(HAVE_NDO_FDB_ADD_NOTIFY)
+static int i40e_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
+			    struct net_device *dev, const unsigned char *addr,
+			    u16 vid, u16 flags, bool *notified,
+			    struct netlink_ext_ack *extack)
+#elif defined(HAVE_NDO_FDB_ADD_EXTACK)
 static int i40e_ndo_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
 			    struct net_device *dev, const unsigned char *addr,
 			    u16 vid, u16 flags, struct netlink_ext_ack *extack)
