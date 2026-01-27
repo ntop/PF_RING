@@ -168,6 +168,7 @@ function gen-netdevice() {
 	gen HAVE_NDO_ETH_IOCTL if fun ndo_eth_ioctl in "$ndh"
 	gen HAVE_NDO_EXTENDED_SET_TX_MAXRATE if method ndo_set_tx_maxrate of net_device_ops_extended in "$ndh"
 	gen HAVE_NDO_FDB_ADD_VID    if method ndo_fdb_del of net_device_ops matches 'u16 vid' in "$ndh"
+	gen HAVE_NDO_FDB_ADD_NOTIFY if method ndo_fdb_add of net_device_ops matches 'bool' in "$ndh"
 	gen HAVE_NDO_FDB_DEL_EXTACK if method ndo_fdb_del of net_device_ops matches extack in "$ndh"
 	gen HAVE_NDO_GET_DEVLINK_PORT if method ndo_get_devlink_port of net_device_ops in "$ndh"
 	gen HAVE_NDO_UDP_TUNNEL_CALLBACK if method ndo_udp_tunnel_add of net_device_ops in "$ndh"
