@@ -3107,6 +3107,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 #else
     (skb->dev->priv_flags & IFF_EBRIDGE) ||
 #endif
+    (netif_is_bond_master(skb->dev)) ||
     (enable_tx_capture && pfr->direction != rx_only_direction) ||
     (pfr->num_channels_per_ring > 1) ||
     (pfr->channel_id_mask == RING_ANY_CHANNEL && lock_rss_queues(skb->dev)) ||
