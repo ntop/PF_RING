@@ -41,7 +41,9 @@
 #include <pcap.h>
 
 #include "pfring.h"
+
 #include "pfutils.c"
+
 #include "third-party/patricia.c"
 
 struct ip_header {

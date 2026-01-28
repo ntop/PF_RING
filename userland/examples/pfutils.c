@@ -42,6 +42,8 @@
 #define ETH_ALEN 6
 #endif
 
+#include "pfring.h"
+
 #ifdef HAVE_PF_RING_ZC
 #include "pfring_zc.h"
 #endif
