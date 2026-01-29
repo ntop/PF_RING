@@ -1844,6 +1844,9 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
           seq_printf(m, "Insert Offset          : %lu\n", (unsigned long)fsi->insert_off);
           seq_printf(m, "Remove Offset          : %lu\n", (unsigned long)fsi->remove_off);
           seq_printf(m, "Num Free Slots         : %lu\n",  (unsigned long)get_num_ring_free_slots(pfr));
+          seq_printf(m, "Skb Bond Master        : %lu\n", (unsigned long)fsi->skb_bond_master_count);
+          seq_printf(m, "Socket Bond Master     : %lu\n", (unsigned long)fsi->skt_bond_master_count);
+          seq_printf(m, "Socket Bond Slave Of   : %lu\n", (unsigned long)fsi->skt_bond_slave_of_count);
         }
         if(pfr->mode != recv_only_mode) {
           seq_printf(m, "TX: Send Ok            : %lu\n", (unsigned long)fsi->good_pkt_sent);
@@ -3085,6 +3088,29 @@ static inline void set_skb_time(struct sk_buff *skb, struct pfring_pkthdr *hdr)
 /* ********************************** */
 
 /*
+ * Check if skb->dev is a bond slave and the master matches the device the socket is bound to.
+ */
+static inline int is_bond_slave_of(struct sk_buff *skb, struct net_device *dev)
+{
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
+  struct net_device *master;
+
+  if(!(skb->dev->flags & IFF_SLAVE))
+    return 0;
+
+  rcu_read_lock();
+  master = netdev_master_upper_dev_get_rcu(skb->dev);
+  rcu_read_unlock();
+
+  return (master != NULL && master == dev);
+#else
+  return ((skb->dev->flags & IFF_SLAVE) && (skb->dev->master == dev));
+#endif
+}
+
+/* ********************************** */
+
+/*
   Generic function for copying either a skb or a raw
   memory block to the ring buffer
 
@@ -3098,6 +3124,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
                                     int displ, int offset,
                                     void *raw_data, uint raw_data_len)
 {
+  FlowSlotInfo *fsi = pfr->slots_info;
   u_char *ring_bucket;
   u_int64_t off;
   u_short do_lock = (
@@ -3108,6 +3135,8 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
     (skb->dev->priv_flags & IFF_EBRIDGE) ||
 #endif
     (netif_is_bond_master(skb->dev)) ||
+    (netif_is_bond_master(pfr->ring_dev->dev)) ||
+    // (is_bond_slave_of(skb, pfr->ring_dev->dev)) ||
     (enable_tx_capture && pfr->direction != rx_only_direction) ||
     (pfr->num_channels_per_ring > 1) ||
     (pfr->channel_id_mask == RING_ANY_CHANNEL && lock_rss_queues(skb->dev)) ||
@@ -3116,6 +3145,10 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
     (pfr->cluster_id != 0) ||
     (force_ring_lock)
   );
+
+  if (netif_is_bond_master(skb->dev)) fsi->skb_bond_master_count++;
+  if (netif_is_bond_master(pfr->ring_dev->dev)) fsi->skt_bond_master_count++;
+  if (is_bond_slave_of(skb, pfr->ring_dev->dev)) fsi->skt_bond_slave_of_count++;
 
   if(pfr->ring_slots == NULL) return(0);
 
@@ -4301,8 +4334,34 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   if(dev_index < 0)
     return 0;
 
-  if(netns->num_any_rings == 0 && netns->num_rings_per_device[dev_index] == 0)
+  if(netns->num_any_rings == 0 && netns->num_rings_per_device[dev_index] == 0) {
+#if 0
+    /* Check if this is a bond slave and there are rings on the master */
+    if(skb->dev->flags & IFF_SLAVE) {
+      struct net_device *master;
+      int master_dev_index;
+
+      rcu_read_lock();
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
+      master = netdev_master_upper_dev_get_rcu(skb->dev);
+#else
+      master = skb->dev->master;
+#endif
+      rcu_read_unlock();
+
+      if(master == NULL)
+        return 0;
+
+      master_dev_index = ifindex_to_pf_index(netns, master->ifindex);
+      if(master_dev_index < 0 || netns->num_rings_per_device[master_dev_index] == 0)
+        return 0;
+    } else {
+      return 0;
+    }
+#else
     return 0;
+#endif
+  }
 
 #ifdef PROFILING
   uint64_t rdt = _rdtsc(), rdt1, rdt2;
@@ -4397,9 +4456,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
          && (
              test_bit(dev_index, pfr->pf_dev_mask)
              || (pfr->ring_dev == &any_device_element /* any */)
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
-             || ((skb->dev->flags & IFF_SLAVE) && (pfr->ring_dev->dev == skb->dev->master))
-#endif
+             || is_bond_slave_of(skb, pfr->ring_dev->dev) /* bond slave */
             )
          && (pfr->ring_dev != &none_device_element) /* Not a dummy socket bound to "none" */
          && (pfr->cluster_id == 0 /* No cluster */ )
@@ -4549,9 +4606,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
                  && net_eq(dev_net(skb->dev), sock_net(skElement)) /* same namespace */
                  && pfr->ring_slots != NULL
                  && (test_bit(dev_index, pfr->pf_dev_mask)
-  #if(LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0))
-                     || ((skb->dev->flags & IFF_SLAVE) && (pfr->ring_dev->dev == skb->dev->master))
-  #endif
+                     || is_bond_slave_of(skb, pfr->ring_dev->dev) /* bond slave */
                     )
                  && is_valid_skb_direction(pfr->direction, recv_packet)
                  && ((pfr->vlan_id == RING_ANY_VLAN) /* Accept all VLANs... */

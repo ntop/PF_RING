@@ -887,8 +887,17 @@ typedef struct flowSlotInfo {
   u_int64_t kernel_tot_read;
   u_int64_t tot_fwd_ok, tot_fwd_notok;
   u_int64_t good_pkt_sent, pkt_send_error;
-  /* <-- 64 bytes here, should be enough to avoid some L1 VIVT coherence issues (32 ~ 64bytes lines) */
-  char padding[128-104];
+  /* <-- more than 64 bytes here, should be enough to avoid some L1 VIVT coherence issues (32 ~ 64bytes lines) */
+
+  //104 bytes here
+  //char padding[128-104];
+
+  u_int64_t skb_bond_master_count;
+  u_int64_t skt_bond_master_count;
+  u_int64_t skt_bond_slave_of_count;
+
+  //128 bytes here
+
   /* <-- 128 bytes here, should be enough to avoid false sharing in most L2 (64 ~ 128bytes lines) */
   char k_padding[4096-128];
   /* <-- 4096 bytes here, to get a page aligned block writable by kernel side only */
