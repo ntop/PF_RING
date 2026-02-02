@@ -3134,7 +3134,7 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
 #else
     (skb->dev->priv_flags & IFF_EBRIDGE) ||
 #endif
-    (netif_is_bond_master(skb->dev)) ||
+    //(netif_is_bond_master(skb->dev)) ||
     (netif_is_bond_master(pfr->ring_dev->dev)) ||
     // (is_bond_slave_of(skb, pfr->ring_dev->dev)) ||
     (enable_tx_capture && pfr->direction != rx_only_direction) ||
@@ -4456,7 +4456,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
          && (
              test_bit(dev_index, pfr->pf_dev_mask)
              || (pfr->ring_dev == &any_device_element /* any */)
-             || is_bond_slave_of(skb, pfr->ring_dev->dev) /* bond slave */
+             //|| is_bond_slave_of(skb, pfr->ring_dev->dev) /* bond slave */
             )
          && (pfr->ring_dev != &none_device_element) /* Not a dummy socket bound to "none" */
          && (pfr->cluster_id == 0 /* No cluster */ )
@@ -4606,7 +4606,7 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
                  && net_eq(dev_net(skb->dev), sock_net(skElement)) /* same namespace */
                  && pfr->ring_slots != NULL
                  && (test_bit(dev_index, pfr->pf_dev_mask)
-                     || is_bond_slave_of(skb, pfr->ring_dev->dev) /* bond slave */
+                     //|| is_bond_slave_of(skb, pfr->ring_dev->dev) /* bond slave */
                     )
                  && is_valid_skb_direction(pfr->direction, recv_packet)
                  && ((pfr->vlan_id == RING_ANY_VLAN) /* Accept all VLANs... */
