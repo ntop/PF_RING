@@ -462,13 +462,13 @@ pf_ring_device *pf_ring_device_name_lookup(struct net *net /* namespace */, char
 int check_perfect_rules(struct sk_buff *skb,
                         struct pf_ring_socket *pfr,
                         struct pfring_pkthdr *hdr,
-                        int *fwd_pkt,
+                        int *pass_pkt,
                         int displ,
                         sw_filtering_hash_bucket **p_hash_bucket);
 int check_wildcard_rules(struct sk_buff *skb,
                          struct pf_ring_socket *pfr,
                          struct pfring_pkthdr *hdr,
-                         int *fwd_pkt,
+                         int *pass_pkt,
                          int displ);
 int bpf_filter_skb(struct sk_buff *skb,
                    struct pf_ring_socket *pfr,
@@ -3648,7 +3648,7 @@ static int reflect_packet(struct sk_buff *skb,
 int check_perfect_rules(struct sk_buff *skb,
                         struct pf_ring_socket *pfr,
                         struct pfring_pkthdr *hdr,
-                        int *fwd_pkt,
+                        int *pass_pkt,
                         int displ,
                         sw_filtering_hash_bucket **p_hash_bucket)
 {
@@ -3685,29 +3685,29 @@ int check_perfect_rules(struct sk_buff *skb,
 
     switch(behaviour) {
     case forward_packet_and_stop_rule_evaluation:
-      *fwd_pkt = 1;
+      *pass_pkt = 1;
       break;
     case dont_forward_packet_and_stop_rule_evaluation:
-      *fwd_pkt = 0;
+      *pass_pkt = 0;
       break;
     case execute_action_and_stop_rule_evaluation:
-      *fwd_pkt = 0;
+      *pass_pkt = 0;
       break;
     case execute_action_and_continue_rule_evaluation:
-      *fwd_pkt = 0;
+      *pass_pkt = 0;
       hash_found = 0;        /* This way we also evaluate the list of rules */
       break;
     case forward_packet_add_rule_and_stop_rule_evaluation:
-      *fwd_pkt = 1;
+      *pass_pkt = 1;
       break;
     case reflect_packet_and_stop_rule_evaluation:
     case bounce_packet_and_stop_rule_evaluation:
-      *fwd_pkt = 0;
+      *pass_pkt = 0;
       reflect_packet(skb, pfr, hash_bucket->rule.internals.reflector_dev, displ, behaviour, 1);
       break;
     case reflect_packet_and_continue_rule_evaluation:
     case bounce_packet_and_continue_rule_evaluation:
-      *fwd_pkt = 0;
+      *pass_pkt = 0;
       reflect_packet(skb, pfr, hash_bucket->rule.internals.reflector_dev, displ, behaviour, 1);
       hash_found = 0;        /* This way we also evaluate the list of rules */
       break;
@@ -3722,7 +3722,7 @@ int check_perfect_rules(struct sk_buff *skb,
 int check_wildcard_rules(struct sk_buff *skb,
                          struct pf_ring_socket *pfr,
                          struct pfring_pkthdr *hdr,
-                         int *fwd_pkt,
+                         int *pass_pkt,
                          int displ)
 {
   struct list_head *ptr, *tmp_ptr;
@@ -3747,12 +3747,12 @@ int check_wildcard_rules(struct sk_buff *skb,
       hdr->extended_hdr.parsed_pkt.last_matched_rule_id = entry->rule.rule_id;
 
       if(behaviour == forward_packet_and_stop_rule_evaluation) {
-        *fwd_pkt = 1;
+        *pass_pkt = 1;
         break;
       } else if(behaviour == forward_packet_add_rule_and_stop_rule_evaluation) {
         sw_filtering_hash_bucket  *hash_bucket  = NULL;
         int rc = 0;
-        *fwd_pkt = 1;
+        *pass_pkt = 1;
 
         /* we have done with rule evaluation,
          * now we need a write_lock to add rules */
@@ -3796,15 +3796,15 @@ int check_wildcard_rules(struct sk_buff *skb,
 
         break;
       } else if(behaviour == dont_forward_packet_and_stop_rule_evaluation) {
-        *fwd_pkt = 0;
+        *pass_pkt = 0;
         break;
       }
 
       if(entry->rule.rule_action == forward_packet_and_stop_rule_evaluation) {
-        *fwd_pkt = 1;
+        *pass_pkt = 1;
         break;
       } else if(entry->rule.rule_action == dont_forward_packet_and_stop_rule_evaluation) {
-        *fwd_pkt = 0;
+        *pass_pkt = 0;
         break;
       } else if(entry->rule.rule_action == execute_action_and_stop_rule_evaluation) {
         printk("[PF_RING] *** execute_action_and_stop_rule_evaluation\n");
@@ -3815,12 +3815,12 @@ int check_wildcard_rules(struct sk_buff *skb,
            will be evaluated */
       } else if((entry->rule.rule_action == reflect_packet_and_stop_rule_evaluation)
                 || (entry->rule.rule_action == bounce_packet_and_stop_rule_evaluation)) {
-        *fwd_pkt = 0;
+        *pass_pkt = 0;
         reflect_packet(skb, pfr, entry->rule.internals.reflector_dev, displ, entry->rule.rule_action, 1);
         break;
       } else if((entry->rule.rule_action == reflect_packet_and_continue_rule_evaluation)
                 || (entry->rule.rule_action == bounce_packet_and_continue_rule_evaluation)) {
-        *fwd_pkt = 1;
+        *pass_pkt = 1;
         reflect_packet(skb, pfr, entry->rule.internals.reflector_dev, displ, entry->rule.rule_action, 1);
       }
     } else {
@@ -3952,7 +3952,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
                            int channel_id,
                            u_int32_t num_rx_channels)
 {
-  int fwd_pkt = 0, rc = 0;
+  int pass_pkt = 0, rc = 0;
   u_int8_t hash_found = 0;
   u32 remainder;
 
@@ -3981,7 +3981,7 @@ static int add_skb_to_ring(struct sk_buff *skb,
   }
 
   /* Extensions */
-  fwd_pkt = pfr->sw_filtering_rules_default_accept_policy;
+  pass_pkt = pfr->sw_filtering_rules_default_accept_policy;
 
   /* ************************** */
 
@@ -3996,24 +3996,24 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
     read_lock_bh(&pfr->ring_rules_lock);
 
-    hash_found = check_perfect_rules(skb, pfr, hdr, &fwd_pkt, displ, &hash_bucket);
+    hash_found = check_perfect_rules(skb, pfr, hdr, &pass_pkt, displ, &hash_bucket);
 
     if(hash_found) {
       hash_bucket->rule.internals.jiffies_last_match = jiffies;
       hash_bucket->match++;
       pfr->sw_filtering_hash_match++;
 
-      if(!fwd_pkt && pfr->filtering_sample_rate) {
+      if(!pass_pkt && pfr->filtering_sample_rate) {
         /* If there is a filter for the session, let 1 packet every first 'filtering_sample_rate' packets, to pass the filter.
          * Note that the above rate keeps the ratio defined by 'FILTERING_SAMPLING_RATIO' */
         div_u64_rem(hash_bucket->match, pfr->filtering_sampling_size, &remainder);
         if(remainder < FILTERING_SAMPLING_RATIO) {
           hash_bucket->match_forward++;
-          fwd_pkt=1;
+          pass_pkt=1;
         }
       }
 
-      if(fwd_pkt == 0) {
+      if(pass_pkt == 0) {
         hash_bucket->filtered++;
         pfr->sw_filtering_hash_filtered++;
       }
@@ -4026,11 +4026,11 @@ static int add_skb_to_ring(struct sk_buff *skb,
 
   /* [2.2] Search rules list */
   if((!hash_found) && (pfr->num_sw_filtering_rules > 0)) {
-    if(check_wildcard_rules(skb, pfr, hdr, &fwd_pkt, displ) != 0)
-      fwd_pkt = 0;
+    if(check_wildcard_rules(skb, pfr, hdr, &pass_pkt, displ) != 0)
+      pass_pkt = 0;
   }
 
-  if(fwd_pkt) { /* We accept the packet: it needs to be queued */
+  if(pass_pkt) { /* We accept the packet: it needs to be queued */
 
     /* [3] Packet sampling */
     if(pfr->sample_rate > 1) {
