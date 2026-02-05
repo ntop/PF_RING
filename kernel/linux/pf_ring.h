@@ -1212,6 +1212,8 @@ typedef struct {
   u_int8_t do_not_remove_promisc; /* promisc was set before any socket */
   atomic_t promisc_users; /* number of rings with promisc set bound to this device */
 
+  u_int64_t packets[MAX_NUM_RX_CHANNELS];
+
   /* Entry in the /proc filesystem */
   struct proc_dir_entry *proc_entry;
   struct proc_dir_entry *proc_info_entry;

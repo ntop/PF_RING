@@ -1300,6 +1300,8 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     pf_ring_device *dev_ptr = (pf_ring_device*)m->private;
     struct net_device *dev = dev_ptr->dev;
     char dev_buf[16] = { 0 }, *dev_family = "???";
+    u_int64_t packets = 0;
+    int i;
 
     if(dev_ptr->is_zc_device) {
       switch(dev_ptr->zc_dev_model) {
@@ -1380,6 +1382,10 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     seq_printf(m, "TX Queues:    %d\n", dev->real_num_tx_queues);
     seq_printf(m, "RX Queues:    %d\n",
                dev_ptr->is_zc_device ? dev_ptr->num_zc_dev_rx_queues : get_num_rx_queues(dev));
+
+    for (i = 0; i < MAX_NUM_RX_CHANNELS; i++)
+      packets += dev_ptr->packets[i];
+    seq_printf(m, "Packets:      %llu\n", packets);
 
     if(dev_ptr->is_zc_device) {
       zc_dev_list *zc_dev_ptr = pf_ring_zc_dev_net_device_lookup(dev, 0);
@@ -4306,11 +4312,9 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   u_int8_t skb_hash_set = 0;
   int dev_index;
   pf_ring_net *netns;
+  pf_ring_device *dev_ptr;
 
-  /* Check if there's at least one PF_RING ring defined that
-     could receive the packet: if none just stop here */
-
-  if(atomic_read(&ring_table_size) == 0)
+  if(!skb /* Invalid skb */)
     return(0);
 
   /* this should not happen, if this is not the case we should create a dummy
@@ -4319,6 +4323,25 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
     printk("[PF_RING] skb->dev is not set\n");
     return 0;
   }
+
+  if(channel_id < 0 /* unknown: any channel */) {
+    channel_id = skb_get_rx_queue(skb);
+    if (channel_id < 0 || channel_id >= 0xff /* unknown */)
+      channel_id = 0;
+  }
+
+  if(channel_id > MAX_NUM_RX_CHANNELS) {
+    channel_id = channel_id % MAX_NUM_RX_CHANNELS;
+  }
+
+  // Debug
+  dev_ptr = pf_ring_device_ifindex_lookup(dev_net(skb->dev), skb->dev->ifindex);
+  if (dev_ptr) dev_ptr->packets[channel_id]++;
+
+  /* Check if there's at least one PF_RING ring defined that
+     could receive the packet: if none just stop here */
+  if(atomic_read(&ring_table_size) == 0)
+    return(0);
 
   if(recv_packet && real_skb) {
     displ = skb->dev->hard_header_len;
@@ -4334,50 +4357,14 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   if(dev_index < 0)
     return 0;
 
-  if(netns->num_any_rings == 0 && netns->num_rings_per_device[dev_index] == 0) {
-#if 0
-    /* Check if this is a bond slave and there are rings on the master */
-    if(skb->dev->flags & IFF_SLAVE) {
-      struct net_device *master;
-      int master_dev_index;
-
-      rcu_read_lock();
-#if(LINUX_VERSION_CODE >= KERNEL_VERSION(3,8,0))
-      master = netdev_master_upper_dev_get_rcu(skb->dev);
-#else
-      master = skb->dev->master;
-#endif
-      rcu_read_unlock();
-
-      if(master == NULL)
-        return 0;
-
-      master_dev_index = ifindex_to_pf_index(netns, master->ifindex);
-      if(master_dev_index < 0 || netns->num_rings_per_device[master_dev_index] == 0)
-        return 0;
-    } else {
-      return 0;
-    }
-#else
+  if(netns->num_any_rings == 0 && netns->num_rings_per_device[dev_index] == 0)
     return 0;
-#endif
-  }
 
 #ifdef PROFILING
   uint64_t rdt = _rdtsc(), rdt1, rdt2;
 #endif
 
-  if(channel_id == -1 /* unknown: any channel */) {
-    channel_id = skb_get_rx_queue(skb);
-    if (channel_id >= 0xff /* unknown */)
-      channel_id = 0;
-  }
-
-  if(channel_id > MAX_NUM_RX_CHANNELS) {
-    channel_id = channel_id % MAX_NUM_RX_CHANNELS;
-  }
-
-  if((!skb) /* Invalid skb */ ||((!enable_tx_capture) && (!recv_packet))) {
+  if(!enable_tx_capture && !recv_packet) {
     /* An outgoing packet is about to be sent out but we decided not to handle transmitted packets. */
     return(0);
   }
