@@ -889,14 +889,7 @@ typedef struct flowSlotInfo {
   u_int64_t good_pkt_sent, pkt_send_error;
   /* <-- more than 64 bytes here, should be enough to avoid some L1 VIVT coherence issues (32 ~ 64bytes lines) */
 
-  //104 bytes here
-  //char padding[128-104];
-
-  u_int64_t skb_bond_master_count;
-  u_int64_t skt_bond_master_count;
-  u_int64_t skt_bond_slave_of_count;
-
-  //128 bytes here
+  char padding[128-104];
 
   /* <-- 128 bytes here, should be enough to avoid false sharing in most L2 (64 ~ 128bytes lines) */
   char k_padding[4096-128];
@@ -1211,8 +1204,6 @@ typedef struct {
 
   u_int8_t do_not_remove_promisc; /* promisc was set before any socket */
   atomic_t promisc_users; /* number of rings with promisc set bound to this device */
-
-  u_int64_t packets[MAX_NUM_RX_CHANNELS];
 
   /* Entry in the /proc filesystem */
   struct proc_dir_entry *proc_entry;

@@ -1300,8 +1300,6 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     pf_ring_device *dev_ptr = (pf_ring_device*)m->private;
     struct net_device *dev = dev_ptr->dev;
     char dev_buf[16] = { 0 }, *dev_family = "???";
-    u_int64_t packets = 0;
-    int i;
 
     if(dev_ptr->is_zc_device) {
       switch(dev_ptr->zc_dev_model) {
@@ -1382,10 +1380,6 @@ static int ring_proc_dev_get_info(struct seq_file *m, void *data_not_used)
     seq_printf(m, "TX Queues:    %d\n", dev->real_num_tx_queues);
     seq_printf(m, "RX Queues:    %d\n",
                dev_ptr->is_zc_device ? dev_ptr->num_zc_dev_rx_queues : get_num_rx_queues(dev));
-
-    for (i = 0; i < MAX_NUM_RX_CHANNELS; i++)
-      packets += dev_ptr->packets[i];
-    seq_printf(m, "Packets:      %llu\n", packets);
 
     if(dev_ptr->is_zc_device) {
       zc_dev_list *zc_dev_ptr = pf_ring_zc_dev_net_device_lookup(dev, 0);
@@ -1850,9 +1844,6 @@ static int ring_proc_get_info(struct seq_file *m, void *data_not_used)
           seq_printf(m, "Insert Offset          : %lu\n", (unsigned long)fsi->insert_off);
           seq_printf(m, "Remove Offset          : %lu\n", (unsigned long)fsi->remove_off);
           seq_printf(m, "Num Free Slots         : %lu\n",  (unsigned long)get_num_ring_free_slots(pfr));
-          seq_printf(m, "Skb Bond Master        : %lu\n", (unsigned long)fsi->skb_bond_master_count);
-          seq_printf(m, "Socket Bond Master     : %lu\n", (unsigned long)fsi->skt_bond_master_count);
-          seq_printf(m, "Socket Bond Slave Of   : %lu\n", (unsigned long)fsi->skt_bond_slave_of_count);
         }
         if(pfr->mode != recv_only_mode) {
           seq_printf(m, "TX: Send Ok            : %lu\n", (unsigned long)fsi->good_pkt_sent);
@@ -3130,7 +3121,6 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
                                     int displ, int offset,
                                     void *raw_data, uint raw_data_len)
 {
-  FlowSlotInfo *fsi = pfr->slots_info;
   u_char *ring_bucket;
   u_int64_t off;
   u_short do_lock = (
@@ -3151,10 +3141,6 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
     (pfr->cluster_id != 0) ||
     (force_ring_lock)
   );
-
-  if (netif_is_bond_master(skb->dev)) fsi->skb_bond_master_count++;
-  if (netif_is_bond_master(pfr->ring_dev->dev)) fsi->skt_bond_master_count++;
-  if (is_bond_slave_of(skb, pfr->ring_dev->dev)) fsi->skt_bond_slave_of_count++;
 
   if(pfr->ring_slots == NULL) return(0);
 
@@ -4312,7 +4298,6 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   u_int8_t skb_hash_set = 0;
   int dev_index;
   pf_ring_net *netns;
-  pf_ring_device *dev_ptr;
 
   if(!skb /* Invalid skb */)
     return(0);
@@ -4324,6 +4309,11 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
     return 0;
   }
 
+  /* Check if there's at least one PF_RING ring defined that
+     could receive the packet: if none just stop here */
+  if(atomic_read(&ring_table_size) == 0)
+    return(0);
+
   if(channel_id < 0 /* unknown: any channel */) {
     channel_id = skb_get_rx_queue(skb);
     if (channel_id < 0 || channel_id >= 0xff /* unknown */)
@@ -4333,15 +4323,6 @@ int pf_ring_skb_ring_handler(struct sk_buff *skb,
   if(channel_id > MAX_NUM_RX_CHANNELS) {
     channel_id = channel_id % MAX_NUM_RX_CHANNELS;
   }
-
-  // Debug
-  dev_ptr = pf_ring_device_ifindex_lookup(dev_net(skb->dev), skb->dev->ifindex);
-  if (dev_ptr) dev_ptr->packets[channel_id]++;
-
-  /* Check if there's at least one PF_RING ring defined that
-     could receive the packet: if none just stop here */
-  if(atomic_read(&ring_table_size) == 0)
-    return(0);
 
   if(recv_packet && real_skb) {
     displ = skb->dev->hard_header_len;
