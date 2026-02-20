@@ -277,7 +277,7 @@ static inline void printk_addr(u_int8_t ip_version, ip_addr *addr, u_int16_t por
 
 /* ************************************************* */
 
-const static ip_addr ip_zero = { IN6ADDR_ANY_INIT };
+static const ip_addr ip_zero = { IN6ADDR_ANY_INIT };
 
 static u_int8_t pfring_enabled = 1;
 
@@ -4077,8 +4077,7 @@ static int hash_pkt_cluster(ring_cluster_element *cluster_ptr,
     {
       flags |= mask_5_tuple;
       break;
-    }
-    /* else, fall through, because it's like 2-tuple for non-TCP packets */
+    } /* else, fall through, because it's like 2-tuple for non-TCP packets */
 
   case cluster_per_flow_2_tuple:
   case cluster_per_inner_flow_2_tuple:
@@ -5442,7 +5441,13 @@ static int is_netdev_promisc(struct net_device *netdev) {
   debug_printk(1, "checking promisc for %s\n", netdev->name);
 
   rtnl_lock();
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0)
   if_flags = (short) dev_get_flags(netdev);
+#else
+  if_flags = netdev->flags;
+#endif
+
   rtnl_unlock();
 
   return !!(if_flags & IFF_PROMISC);
@@ -5457,7 +5462,12 @@ static void set_netdev_promisc(struct net_device *netdev) {
 
   rtnl_lock();
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0)
   if_flags = (short) dev_get_flags(netdev);
+#else
+  if_flags = netdev->flags;
+#endif
+
   if(!(if_flags & IFF_PROMISC)) {
     if_flags |= IFF_PROMISC;
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0) && \
@@ -5480,7 +5490,12 @@ static void unset_netdev_promisc(struct net_device *netdev) {
 
   rtnl_lock();
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0)
   if_flags = (short) dev_get_flags(netdev);
+#else
+  if_flags = netdev->flags;
+#endif
+
   if(if_flags & IFF_PROMISC) {
     if_flags &= ~IFF_PROMISC;
 #if(LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0) && \
