@@ -294,3 +294,22 @@ The status of the service can be controlled with:
 .. code-block:: console
 
    systemctl status cluster@10
+
+When using a cluster to feed nprobe or n2disk, it is highly recommended
+to use the following naming scheme to make service dependencies explicit:
+
+APPLICATION-cluster_CLUSTERID-INSTANCEID.conf
+
+For example when using nprobe and attaching to cluster 10 queue 0 the configuration
+file path would be:
+
+.. code-block:: console
+
+   /etc/nprobe/nprobe-cluster_10-0.conf
+
+The service can be controlled with:
+
+.. code-block:: console
+
+   systemctl status nprobe@cluster_10-0
+
