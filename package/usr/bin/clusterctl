@@ -325,7 +325,7 @@ case "$1" in
 	;;
 
   *)
-	echo "Usage: ${0} {start|stop|restart|status} [cluster ID(s)]"
+	echo "Usage: ${0} {start|stop|restart|status|start-deps|stop-deps} [cluster ID(s)]"
 	exit 1
 esac
 
