@@ -5,7 +5,7 @@
 
 FORCESTART=0
 
-restart_cluster_id_deps() {
+start_cluster_id_deps() {
 	CLUSTER_ID=$1
 
 	START_NPROBE_INSTANCES="$(/bin/ls /etc/nprobe/nprobe-cluster_${CLUSTER_ID}-*.conf 2>/dev/null)"
@@ -70,8 +70,6 @@ start_cluster_id() {
 			CLUSTER_MASTER_BINARY=/usr/bin/zbalance_ipc
 			$CLUSTER_MASTER_BINARY /etc/cluster/cluster-${CLUSTER_ID}.conf >> /var/log/cluster/cluster-${CLUSTER_ID}.log 2>&1 &
 		fi
-
-		restart_cluster_id_deps $CLUSTER_ID
 	else
 		echo "cluster $CLUSTER_ID not enabled"
 	fi
@@ -293,8 +291,8 @@ case "$1" in
 	start_cluster "$PARAM_CLUSTER_ID";
 	;;
 
-  restart-deps)
-	restart_cluster_id_deps "$PARAM_CLUSTER_ID";
+  start-deps)
+	start_cluster_id_deps "$PARAM_CLUSTER_ID";
 	;;
 
   start-if-enabled)
