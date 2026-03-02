@@ -333,3 +333,5 @@ Or to restart all services (e.g. nprobe) requiring a specific cluster instance (
    clusterctl stop-deps 10
    clusterctl start-deps 10
 
+By omitting the cluster ID, the specified action applies to all cluster instances.
+
