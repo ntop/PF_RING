@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 95
+#define FT_API_VERSION 101
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -294,6 +294,7 @@ typedef void
 #define PFRING_FT_IGNORE_HW_HASH        (1 << 3) /**< pfring_ft_create_table() flag: ignore hw packet hash (e.g. when it's asymmetric leading to one flow per direction) */
 #define PFRING_FT_IGNORE_VLAN           (1 << 4) /**< pfring_ft_create_table() flag: do not include vlan in flow key */
 #define PFRING_FT_TABLE_FLAGS_NO_GUESS  (1 << 5) /**< pfring_ft_create_table() flag: do not guess the protocol when not detected with DPI */
+#define PFRING_FT_KEY_EXT_MAC           (1 << 6) /**< pfring_ft_create_table() flag: include source and destination MAC address in the flow key */
 
 /**
  * Create a new flow table.
