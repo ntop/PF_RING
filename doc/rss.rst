@@ -313,3 +313,23 @@ The service can be controlled with:
 
    systemctl status nprobe@cluster_10-0
 
+A clusterctl utility is also provided in order simplify the management of cluster servicies
+and dependencies.
+
+.. code-block:: console
+
+   Usage: clusterctl {start|stop|restart|status|start-deps|stop-deps} [cluster ID(s)]
+
+For example, to start all enabled cluster services:
+
+.. code-block:: console
+
+   clusterctl start
+
+Or to restart all services (e.g. nprobe) requiring a specific cluster instance (ID = 10):
+
+.. code-block:: console
+
+   clusterctl stop-deps 10
+   clusterctl start-deps 10
+
