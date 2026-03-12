@@ -88,7 +88,10 @@ void nbpf_syntax_error(char *format, ...) {
   memset(buf, 0, sizeof(buf));
   vsnprintf(buf, sizeof(buf)-1, format, va_ap);
   while(buf[strlen(buf)-1] == '\n') buf[strlen(buf)-1] = '\0';
-  /* fprintf(stderr, "Error: %s\n", buf); */
+
+#ifdef WIN32
+  fprintf(stderr, "Error: %s\n", buf);
+#endif
   va_end(va_ap);
 }
 
