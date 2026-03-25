@@ -779,9 +779,11 @@ init_config() {
 }
 ########
 
-echo "$(/bin/date) pf_ringctl $1" >> /var/log/ntop-systemd.log
+ACTION=$1
 
-case "$1" in
+echo "$(/bin/date) pf_ringctl $ACTION called" >> /var/log/ntop-systemd.log
+
+case "$ACTION" in
   start)
 	FORCESTART=1
 	start_pf_ring;
@@ -815,6 +817,6 @@ case "$1" in
 	exit 1
 esac
 
-echo "$(/bin/date) pf_ringctl done" >> /var/log/ntop-systemd.log
+echo "$(/bin/date) pf_ringctl $ACTION done" >> /var/log/ntop-systemd.log
 
 exit 0
