@@ -34,6 +34,8 @@ service_disable () {
 	fi
 }
 
+echo "$(/bin/date) pfring prerm $1 called" >> /var/log/ntop-systemd.log
+
 case "$1" in
 	remove|deconfigure)
 		service_stop
@@ -75,6 +77,8 @@ case "$1" in
 		exit 1
 	;;
 esac
+
+echo "$(/bin/date) pfring prerm $1 done" >> /var/log/ntop-systemd.log
 
 #DEBHELPER#
 
