@@ -285,6 +285,8 @@ PARAM_CLUSTER_ID=$2
 
 logger "cluster $1 $2"
 
+echo "$(/bin/date) clusterctl $ACTION called" >> /var/log/ntop-systemd.log
+
 case "$1" in
   start)
 	FORCESTART=1
@@ -328,5 +330,7 @@ case "$1" in
 	echo "Usage: ${0} {start|stop|restart|status|start-deps|stop-deps} [cluster ID(s)]"
 	exit 1
 esac
+
+echo "$(/bin/date) clusterctl $ACTION done" >> /var/log/ntop-systemd.log
 
 exit 0
