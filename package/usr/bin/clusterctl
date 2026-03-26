@@ -281,13 +281,14 @@ get_status() {
 
 ########
 
+ACTION=$1
 PARAM_CLUSTER_ID=$2
 
-logger "cluster $1 $2"
+logger "cluster $ACTION $PARAM_CLUSTER_ID"
 
 echo "$(/bin/date) clusterctl $ACTION called" >> /var/log/ntop-systemd.log
 
-case "$1" in
+case "$ACTION" in
   start)
 	FORCESTART=1
 	start_cluster "$PARAM_CLUSTER_ID";
