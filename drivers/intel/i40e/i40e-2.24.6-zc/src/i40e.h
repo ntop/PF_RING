@@ -245,7 +245,7 @@ enum i40e_interrupt_policy {
 
 struct i40e_lump_tracking {
 	u16 num_entries;
-	u16 list[0];
+	u16 list[];
 #define I40E_PILE_VALID_BIT  0x8000
 #define I40E_IWARP_IRQ_PILE_ID  (I40E_PILE_VALID_BIT - 2)
 };
@@ -447,13 +447,13 @@ int i40e_ddp_flash(struct net_device *netdev, struct ethtool_flash *flash);
 
 struct i40e_ddp_profile_list {
 	u32 p_count;
-	struct i40e_profile_info p_info[0];
+	struct i40e_profile_info p_info[];
 };
 
 struct i40e_ddp_old_profile_list {
 	struct list_head list;
 	size_t old_ddp_size;
-	u8 old_ddp_buf[0];
+	u8 old_ddp_buf[];
 };
 
 /* macros related to FLX_PIT */
