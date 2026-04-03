@@ -5836,7 +5836,11 @@ static int packet_ring_bind(struct sock *sk, pf_ring_device *dev)
 /* ************************************* */
 
 /* Bind to a device */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,19,0)
+static int ring_bind(struct socket *sock, struct sockaddr_unsized *sa, int addr_len)
+#else
 static int ring_bind(struct socket *sock, struct sockaddr *sa, int addr_len)
+#endif
 {
   struct sock *sk = sock->sk;
   struct net *net = sock_net(sk);
