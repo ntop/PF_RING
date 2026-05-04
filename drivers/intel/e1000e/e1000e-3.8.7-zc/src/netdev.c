@@ -5410,7 +5410,11 @@ u64 e1000e_read_systim(struct e1000_adapter *adapter,
  * e1000e_cyclecounter_read - read raw cycle counter (user by time counter)
  * @cc: cyclecounter structre
  **/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
 static u64 e1000e_cyclecounter_read(struct cyclecounter *cc)
+#else
+static u64 e1000e_cyclecounter_read(const struct cyclecounter *cc)
+#endif
 {
 	struct e1000_adapter *adapter = container_of(cc, struct e1000_adapter,
 						     cc);
