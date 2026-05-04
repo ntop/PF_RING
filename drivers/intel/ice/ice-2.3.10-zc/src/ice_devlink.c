@@ -446,8 +446,14 @@ enum ice_devlink_param_id {
  *
  * Returns: zero on success, or an error code on failure.
  */
+#ifdef HAVE_DEVLINK_PARAMS_GET_EXTACK
+static int
+ice_devlink_minsrev_get(struct devlink *devlink, u32 id, struct devlink_param_gset_ctx *ctx,
+			struct netlink_ext_ack *extack)
+#else
 static int
 ice_devlink_minsrev_get(struct devlink *devlink, u32 id, struct devlink_param_gset_ctx *ctx)
+#endif /* HAVE_DEVLINK_PARAMS_GET_EXTACK */
 {
 	struct ice_pf *pf = devlink_priv(devlink);
 	struct device *dev = ice_pf_to_dev(pf);
@@ -675,9 +681,16 @@ exit_release_res:
  *
  * Return: zero on success and negative value on failure.
  */
+#ifdef HAVE_DEVLINK_PARAMS_GET_EXTACK
+static int ice_devlink_tx_sched_layers_get(struct devlink *devlink,
+					   u32 __always_unused id,
+					   struct devlink_param_gset_ctx *ctx,
+					   struct netlink_ext_ack *extack)
+#else
 static int ice_devlink_tx_sched_layers_get(struct devlink *devlink,
 					   u32 __always_unused id,
 					   struct devlink_param_gset_ctx *ctx)
+#endif /* HAVE_DEVLINK_PARAMS_GET_EXTACK */
 {
 	struct ice_aqc_nvm_tx_topo_user_sel usr_sel = {};
 	struct ice_pf *pf = devlink_priv(devlink);
@@ -825,8 +838,14 @@ static int ice_devlink_loopback_str_to_mode(const char *mode_str)
  *
  * Returns zero on success.
  */
+#ifdef HAVE_DEVLINK_PARAMS_GET_EXTACK
+static int ice_devlink_loopback_get(struct devlink *devlink, u32 id,
+				    struct devlink_param_gset_ctx *ctx,
+				    struct netlink_ext_ack *extack)
+#else
 static int ice_devlink_loopback_get(struct devlink *devlink, u32 id,
 				    struct devlink_param_gset_ctx *ctx)
+#endif /* HAVE_DEVLINK_PARAMS_GET_EXTACK */
 {
 	struct ice_pf *pf = devlink_priv(devlink);
 	struct ice_port_info *pi = pf->hw.port_info;
@@ -2947,9 +2966,16 @@ ice_get_tc_param_ch_vsi(struct ice_pf *pf, u32 id, u32 start_id)
  *
  * Returns: zero on success, or an error code on failure.
  */
+#ifdef HAVE_DEVLINK_PARAMS_GET_EXTACK
+static int
+ice_devlink_tc_inline_fd_get(struct devlink *devlink, u32 id,
+			     struct devlink_param_gset_ctx *ctx,
+			     struct netlink_ext_ack *extack)
+#else
 static int
 ice_devlink_tc_inline_fd_get(struct devlink *devlink, u32 id,
 			     struct devlink_param_gset_ctx *ctx)
+#endif /* HAVE_DEVLINK_PARAMS_GET_EXTACK */
 {
 	struct ice_pf *pf = devlink_priv(devlink);
 	struct ice_vsi *vsi = pf->vsi[0];
@@ -3042,9 +3068,16 @@ ice_devlink_tc_inline_fd_set(struct devlink *devlink, u32 id,
  *
  * Returns: zero on success, or an error code on failure.
  */
+#ifdef HAVE_DEVLINK_PARAMS_GET_EXTACK
+static int
+ice_devlink_tc_qps_per_poller_get(struct devlink *devlink, u32 id,
+				  struct devlink_param_gset_ctx *ctx,
+				  struct netlink_ext_ack *extack)
+#else
 static int
 ice_devlink_tc_qps_per_poller_get(struct devlink *devlink, u32 id,
 				  struct devlink_param_gset_ctx *ctx)
+#endif /* HAVE_DEVLINK_PARAMS_GET_EXTACK */
 {
 	struct ice_pf *pf = devlink_priv(devlink);
 	struct ice_vsi *ch_vsi;
@@ -3144,9 +3177,16 @@ ice_devlink_tc_qps_per_poller_set(struct devlink *devlink, u32 id,
  *
  * Returns: zero on success, or an error code on failure.
  */
+#ifdef HAVE_DEVLINK_PARAMS_GET_EXTACK
+static int
+ice_devlink_tc_poller_timeout_get(struct devlink *devlink, u32 id,
+				  struct devlink_param_gset_ctx *ctx,
+				  struct netlink_ext_ack *extack)
+#else
 static int
 ice_devlink_tc_poller_timeout_get(struct devlink *devlink, u32 id,
 				  struct devlink_param_gset_ctx *ctx)
+#endif /* HAVE_DEVLINK_PARAMS_GET_EXTACK */
 {
 	struct ice_pf *pf = devlink_priv(devlink);
 	struct ice_vsi *ch_vsi;

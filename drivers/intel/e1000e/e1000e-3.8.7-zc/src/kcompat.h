@@ -7513,4 +7513,20 @@ static inline int pci_enable_pcie_error_reporting(struct pci_dev __always_unused
 
 #endif /* RHEL */
 
+/*****************************************************************************/
+/* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
+#define del_timer(t)		timer_delete(t)
+#define del_timer_sync(t)	timer_delete_sync(t)
+#define from_timer(var, callback_timer, timer_fieldname) \
+	timer_container_of(var, callback_timer, timer_fieldname)
+#ifndef HAVE_ETHTOOL_KEEE
+#define HAVE_ETHTOOL_KEEE
+#endif
+#ifndef HAVE_ETHTOOL_GET_TS_KERNEL
+#define HAVE_ETHTOOL_GET_TS_KERNEL
+#endif
+#undef CONFIG_PTP_1588_CLOCK /* convert_art_to_tsc removed in kernel 7.0 */
+#endif /* >= 7.0.0 */
+
 #endif /* _KCOMPAT_H_ */

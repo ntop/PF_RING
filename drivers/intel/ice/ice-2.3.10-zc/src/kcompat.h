@@ -3113,6 +3113,22 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #endif /* >=5.12.0 */
 
 /*****************************************************************************/
+/* HAVE_PF_RING */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
+#define del_timer(t)		timer_delete(t)
+#define del_timer_sync(t)	timer_delete_sync(t)
+#define from_timer(var, callback_timer, timer_fieldname) \
+	timer_container_of(var, callback_timer, timer_fieldname)
+#define ida_simple_get(ida, start, end, gfp) \
+	ida_alloc_range(ida, start, (end) ? (end) - 1 : ~0U, gfp)
+#define ida_simple_remove(ida, id)	ida_free(ida, id)
+#define HAVE_ETHTOOL_GET_FEC_STATS_HIST
+#define HAVE_DEVLINK_PARAMS_GET_EXTACK
+#define HAVE_DEVL_HEALTH_REPORTER_NO_GRACEFUL_PERIOD
+#define HAVE_DPLL_TRACKER_PARAM
+#endif /* >= 7.0.0 */
+
+/*****************************************************************************/
 /*
  * Load the implementations file which actually defines kcompat backports.
  * Legacy backports still exist in this file, but all new backports must be

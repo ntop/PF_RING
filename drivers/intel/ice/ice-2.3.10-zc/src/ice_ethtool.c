@@ -687,7 +687,11 @@ static int ice_get_port_fec_stats(struct ice_hw *hw, u16 pcs_quad, u16 pcs_port,
  *
  */
 static void ice_get_fec_stats(struct net_device *netdev,
-			      struct ethtool_fec_stats *fec_stats)
+			      struct ethtool_fec_stats *fec_stats
+#ifdef HAVE_ETHTOOL_GET_FEC_STATS_HIST
+			      , struct ethtool_fec_hist __always_unused *hist
+#endif
+			      )
 {
 	struct ice_netdev_priv *np = netdev_priv(netdev);
 	struct ice_port_topology port_topology;
