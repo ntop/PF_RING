@@ -40,6 +40,7 @@
 
 #ifdef HAVE_PF_RING
 #define I40E_32BYTE_RX
+/*
 #ifdef CONFIG_DCB
 #undef CONFIG_DCB
 #ifdef CONFIG_FCOE
@@ -49,6 +50,7 @@
 #undef CONFIG_FCOE_MODULE
 #endif
 #endif
+*/
 #endif
 
 #ifndef IEEE_8021QAZ_APP_SEL_DSCP

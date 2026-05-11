@@ -54,7 +54,7 @@ i40e-objs := i40e_main.o \
 
 CFLAGS_i40e_main.o := -I$(src)
 
-#i40e-$(CONFIG_DCB) += i40e_dcb.o i40e_dcb_nl.o
+i40e-$(CONFIG_DCB) += i40e_dcb.o i40e_dcb_nl.o
 
 #i40e-$(CONFIG_FCOE:m=y) += i40e_fcoe.o
 
