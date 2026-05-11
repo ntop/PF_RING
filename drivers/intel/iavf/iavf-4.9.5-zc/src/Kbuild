@@ -27,7 +27,7 @@ intel_auxiliary-objs := auxiliary.o
 obj-m += intel_auxiliary.o
 endif
 
-EXTRA_CFLAGS += -DHAVE_PF_RING
+ccflags-y += -DHAVE_PF_RING
 KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
 
 KVER=$(shell uname -r)

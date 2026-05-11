@@ -124,9 +124,9 @@ ifeq ($(call is_kcompat_defined,HAVE_LMV1_SUPPORT),1)
 export ENABLE_LM_SUPPORT := 1
 endif
 
-EXTRA_CFLAGS += -DHAVE_PF_RING
+ccflags-y += -DHAVE_PF_RING
 KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
-EXTRA_CFLAGS += -std=gnu11 -Wno-nested-externs
+ccflags-y += -std=gnu11 -Wno-nested-externs
 
 KVER=$(shell uname -r)
 

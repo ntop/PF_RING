@@ -13,7 +13,7 @@ ixgbevf-objs := ixgbevf_main.o \
 
 CFLAGS_ixgbevf_main.o := -I$(src)
 
-EXTRA_CFLAGS += -DHAVE_PF_RING -DIXGBE_NO_HW_RSC -DDISABLE_PACKET_SPLIT
+ccflags-y += -DHAVE_PF_RING -DIXGBE_NO_HW_RSC -DDISABLE_PACKET_SPLIT
 KBUILD_EXTRA_SYMBOLS=${PF_RING_PATH}/Module.symvers
 
 KVER=$(shell uname -r)
