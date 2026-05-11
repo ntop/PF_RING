@@ -6989,6 +6989,9 @@ static inline void _kc_bitmap_set_value8(unsigned long *map,
 #endif
 #else /* >= 5.6.0 */
 #define HAVE_TX_TIMEOUT_TXQUEUE
+#ifndef xdp_do_flush_map
+#define xdp_do_flush_map xdp_do_flush
+#endif
 #endif /* 5.6.0 */
 
 /*****************************************************************************/
