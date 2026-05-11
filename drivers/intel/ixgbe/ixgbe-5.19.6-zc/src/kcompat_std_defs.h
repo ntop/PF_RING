@@ -269,4 +269,12 @@
 #define HAVE_TTY_TERMIOS_CONST_STRUCT
 #endif /* 6.1.0 */
 
+/*****************************************************************************/
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
+/* __napi_alloc_skb() was removed; use napi_alloc_skb() instead */
+#define NEED_NAPI_ALLOC_SKB_NO_GFP
+/* xsk_buff_dma_sync_for_cpu() dropped the pool argument */
+#define NEED_XSK_BUFF_DMA_SYNC_FOR_CPU
+#endif /* 7.0.0 */
+
 #endif /* _KCOMPAT_STD_DEFS_H_ */

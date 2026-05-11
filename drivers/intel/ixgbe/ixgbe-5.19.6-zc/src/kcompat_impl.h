@@ -1091,6 +1091,11 @@ _kc_xsk_buff_dma_sync_for_cpu(struct xdp_buff *xdp,
 #endif /* HAVE_MEM_TYPE_XSK_BUFF_POOL */
 #endif /* NEED_XSK_BUFF_DMA_SYNC_FOR_CPU */
 
+#ifdef NEED_NAPI_ALLOC_SKB_NO_GFP
+/* __napi_alloc_skb() removed in kernel 7.x */
+#define __napi_alloc_skb(napi, len, gfp) napi_alloc_skb(napi, len)
+#endif /* NEED_NAPI_ALLOC_SKB_NO_GFP */
+
 #ifdef NEED_XSK_BUFF_POOL_RENAME
 #define XDP_SETUP_XSK_POOL XDP_SETUP_XSK_UMEM
 #define xsk_get_pool_from_qid xdp_get_umem_from_qid
