@@ -25,7 +25,9 @@ extensions = [
     'breathe'
 ]
 
-breathe_projects = { "apidoc" : "doxygen/xml/" }
+# Commented temporarely
+#breathe_projects = { "apidoc" : "doxygen/xml/" }
+
 breathe_default_project = "apidoc"
 
 # Add any paths that contain templates here, relative to this directory.
