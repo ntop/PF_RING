@@ -25,8 +25,7 @@ extensions = [
     'breathe'
 ]
 
-# Commented temporarely
-#breathe_projects = { "apidoc" : "doxygen/xml/" }
+breathe_projects = { "apidoc" : "doxygen/xml/" }
 
 breathe_default_project = "apidoc"
 
