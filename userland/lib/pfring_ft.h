@@ -63,11 +63,13 @@ typedef enum {
 #define PF_RING_FT_FLOW_FLAGS_L7_GUESS    (1 <<  0) /**< pfring_ft_flow_value.flags: detected L7 protocol is a guess. */
 
 typedef struct {
-  u_int32_t num_protocols; /**< Number of supported L7 protocols */
+  u_int32_t num_protocols;  /**< Number of supported L7 protocols */
+  u_int32_t num_categories; /**< Number of supported nDPI categories */
 
   /* Filtering */
   struct {
     pfring_ft_action *protocol_to_action; /**< Action per L7 protocol */
+    pfring_ft_action *category_to_action; /**< Action per nDPI category */
   } match;
 
   /* Shunting */
@@ -76,6 +78,7 @@ typedef struct {
     u_int8_t tcp_npkts;          /**< Number of packets to forward in case of TCP */
     u_int8_t udp_npkts;          /**< Number of packets to forward in case of UDP */
     u_int8_t *protocol_to_npkts; /**< Number of packets to forward per L7 protocol */
+    u_int8_t *category_to_npkts; /**< Number of packets to forward per nDPI category */
   } shunt;
 } pfring_ft_flow_filter;
 
@@ -666,15 +669,81 @@ pfring_ft_set_filter_all_protocols(
 
 /**
  * Set a filtering rule for a L7 protocol.
- * @param table The flow table handle. 
+ * @param table The flow table handle.
  * @param protocol_name The nDPI protocol name.
  * @param action The action returned by pfring_ft_process() for all packets matching the protocol.
  */
-void 
+void
 pfring_ft_set_filter_protocol_by_name(
   pfring_ft_table *table,
   const char *protocol_name,
   pfring_ft_action action
+);
+
+/**
+ * Set a shunt rule for a nDPI category.
+ * @param table The flow table handle.
+ * @param category_name The nDPI category name.
+ * @param packets The number of packets before shunting the flow returning a discard action from pfring_ft_process().
+ */
+void
+pfring_ft_set_shunt_category_by_name(
+  pfring_ft_table *table,
+  const char *category_name,
+  u_int8_t packets
+);
+
+/**
+ * Set a default action for all nDPI categories. This is usually used to reset all filtering rules
+ * by passing PFRING_FT_ACTION_DEFAULT as action.
+ * @param table The flow table handle.
+ * @param action The action to set for all categories.
+ */
+void
+pfring_ft_set_filter_all_categories(
+  pfring_ft_table *table,
+  pfring_ft_action action
+);
+
+/**
+ * Set a filtering rule for a nDPI category.
+ * @param table The flow table handle.
+ * @param category_name The nDPI category name.
+ * @param action The action returned by pfring_ft_process() for all packets matching the category.
+ */
+void
+pfring_ft_set_filter_category_by_name(
+  pfring_ft_table *table,
+  const char *category_name,
+  pfring_ft_action action
+);
+
+/**
+ * Return the nDPI category name providing the nDPI category ID.
+ * @param table The flow table handle.
+ * @param category The nDPI category ID.
+ * @param buffer The output buffer.
+ * @param buffer_len The output buffer length.
+ * @return The buffer.
+ */
+char *
+pfring_ft_category_name(
+  pfring_ft_table *table,
+  int category,
+  char *buffer,
+  int buffer_len
+);
+
+/**
+ * Return the nDPI category ID providing the category name.
+ * @param table The flow table handle.
+ * @param name The nDPI category name.
+ * @return The nDPI category ID, or -1 if not found.
+ */
+int
+pfring_ft_category_id(
+  pfring_ft_table *table,
+  const char *name
 );
 
 /**
