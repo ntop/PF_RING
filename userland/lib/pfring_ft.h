@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FT_API_VERSION 101
+#define FT_API_VERSION 107
 
 typedef void pfring_ft_table;
 typedef void pfring_ft_list;
@@ -669,7 +669,7 @@ pfring_ft_set_filter_all_protocols(
 
 /**
  * Set a filtering rule for a L7 protocol.
- * @param table The flow table handle.
+ * @param table The flow table handle. 
  * @param protocol_name The nDPI protocol name.
  * @param action The action returned by pfring_ft_process() for all packets matching the protocol.
  */
