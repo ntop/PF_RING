@@ -303,6 +303,8 @@ static lockless_list delayed_memory_table;
 #ifdef SINGLE_PROT_HOOK
 /* Protocol hook */
 static struct packet_type init_prot_hook;
+#else
+static int handler_registered = 0;
 #endif
 
 /* List of virtual filtering devices */
@@ -881,7 +883,16 @@ pf_ring_net *netns_add(struct net *net) {
   map_ifindex(netns, NONE_IFINDEX);
 
 #ifndef SINGLE_PROT_HOOK
+#if 0
   register_device_handler(&netns->prot_hook, net);
+#else
+  /* Note: register the protocol hook once, even with multiple
+   * namespaces, to avoid packet_rcv being called multiple times. */
+  if (!handler_registered) {
+    register_device_handler(&netns->prot_hook, &init_net);
+    handler_registered = 1;
+  }
+#endif
 #endif
 
   return netns;
@@ -4677,7 +4688,7 @@ void register_device_handler(struct packet_type *prot_hook
   prot_hook->dev = NULL; /* capture from all devices */
   prot_hook->func = packet_rcv;
 #ifndef SINGLE_PROT_HOOK
-  prot_hook->af_packet_net = net; /* namespace */
+  prot_hook->af_packet_net = net; /* namespace (this is only used to read the ptype) */
   prot_hook->af_packet_priv = NULL;
 #endif
 
