@@ -22,9 +22,10 @@ nbpftest: $(BPFLIB) nbpftest.c
 lex.yy.c: scanner.l grammar.tab.h
 	$(LEX) scanner.l
 
-grammar.tab.h: grammar.tab.c
-
-grammar.tab.c: grammar.y
+# Bison generates grammar.tab.c and grammar.tab.h together in one invocation.
+# Use grouped targets (&:, GNU make >= 4.3) so parallel make waits for both
+# outputs before proceeding, avoiding a race when compiling lex.yy.c.
+grammar.tab.c grammar.tab.h &: grammar.y
 	$(YACC) -d grammar.y
 
 clean:
