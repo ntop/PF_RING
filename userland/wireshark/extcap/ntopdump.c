@@ -222,6 +222,7 @@ void extcap_config() {
 }
 
 void extcap_capture() {
+  pcap_t *pcap_dead = NULL;
   pcap_dumper_t *dumper = NULL;
   u_char *buffer_p = NULL;
   struct pfring_pkthdr hdr;
@@ -233,18 +234,33 @@ void extcap_capture() {
     return;
   }
 
-  if((dumper = pcap_dump_open(pcap_open_dead(DLT_EN10MB, 16384 /* MTU */), extcap_capture_fifo)) == NULL) {
-    fprintf(stderr, "Unable to open the pcap dumper on %s", extcap_capture_fifo);
+  if((pcap_dead = pcap_open_dead(DLT_EN10MB, 16384 /* MTU */)) == NULL) {
+    fprintf(stderr, "Unable to open the dead pcap handle");
+    free(nbpf);
     return;
   }
-  
+
+  if((dumper = pcap_dump_open(pcap_dead, extcap_capture_fifo)) == NULL) {
+    fprintf(stderr, "Unable to open the pcap dumper on %s", extcap_capture_fifo);
+    pcap_close(pcap_dead);
+    free(nbpf);
+    return;
+  }
+
   if((pd = pfring_open(ntopdump_name, 1520, PF_RING_PROMISC | PF_RING_HW_TIMESTAMP)) == NULL) {
     fprintf(stderr, "Unable to open interface %s", ntopdump_name);
+    pcap_dump_close(dumper);
+    pcap_close(pcap_dead);
+    free(nbpf);
     return;
   }
 
   if ((signal(SIGINT, sigproc) == SIG_ERR) || (signal(SIGTERM, sigproc) == SIG_ERR) || (signal(SIGQUIT, sigproc) == SIG_ERR)) {
     fprintf(stderr, "Unable to install SIGINT/SIGTERM signal handler");
+    pfring_close(pd);
+    pcap_dump_close(dumper);
+    pcap_close(pcap_dead);
+    free(nbpf);
     return;
   }
 
@@ -286,9 +302,10 @@ void extcap_capture() {
   }
 
   pcap_dump_close(dumper);
+  pcap_close(pcap_dead);
   pfring_close(pd);
   free(nbpf);
-  
+
 }
 
 int extcap_print_help() {
