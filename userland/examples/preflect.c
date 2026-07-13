@@ -126,11 +126,13 @@ int main(int argc, char* argv[]) {
 
   if((out_pd = pcap_open_live(out_device, snaplen, promisc, 500, errbuf)) == NULL) {
     printf("pcap_open_live: %s\n", errbuf);
+    pcap_close(pd);
     return(-1);
   }
 
   pcap_loop(pd, -1, dummyProcesssPacket, NULL);
   pcap_close(pd);
+  pcap_close(out_pd);
 
   return(0);
 }
