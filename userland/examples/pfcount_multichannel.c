@@ -198,6 +198,7 @@ void printHelp(void) {
 	 "                binds thread <device>@0 on coreId 7, <device>@1 on coreId 6\n"
 	 "                and so on.\n");
   printf("-r              Rehash RSS packets\n");
+  printf("-x              IP-only RSS hashing for UDP/TCP traffic (NVIDIA Mellanox only)\n");
   printf("-v              Verbose\n");
 }
 
@@ -335,7 +336,7 @@ void sample_filtering_rules() {
 
 int main(int argc, char* argv[]) {
   char *device = NULL, c, *bind_mask = NULL;
-  int snaplen = DEFAULT_SNAPLEN, rc, watermark = 0, rehash_rss = 0;
+  int snaplen = DEFAULT_SNAPLEN, rc, watermark = 0, rehash_rss = 0, ip_only_rss = 0;
   packet_direction direction = rx_only_direction;
   long i;
   u_int16_t cpu_percentage = 0, poll_duration = 0;
@@ -350,7 +351,7 @@ int main(int argc, char* argv[]) {
   thiszone = gmt_to_local(0);
   numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 
-  while((c = getopt(argc,argv,"hi:I:Jl:mvae:w:b:rp:g:")) != -1) {
+  while((c = getopt(argc,argv,"hi:I:Jl:mvae:w:b:rp:g:x")) != -1) {
     switch(c) {
     case 'h':
       printHelp();
@@ -397,6 +398,9 @@ int main(int argc, char* argv[]) {
     case 'r':
       rehash_rss = 1;
       break;
+    case 'x':
+      ip_only_rss = 1;
+      break;
     case 'p':
       poll_duration = atoi(optarg);
       break;
@@ -431,6 +435,7 @@ int main(int argc, char* argv[]) {
     flags |= PF_RING_PROMISC;
   flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   if(use_extended_pkt_header) flags |= PF_RING_LONG_HEADER;
+  if(ip_only_rss) flags |= PF_RING_IP_ONLY_RSS;
 
   num_channels = pfring_open_multichannel(device, snaplen, flags, ring);
   
