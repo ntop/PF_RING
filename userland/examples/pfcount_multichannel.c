@@ -198,7 +198,7 @@ void printHelp(void) {
 	 "                binds thread <device>@0 on coreId 7, <device>@1 on coreId 6\n"
 	 "                and so on.\n");
   printf("-r              Rehash RSS packets\n");
-  printf("-x              IP-only RSS hashing for UDP/TCP traffic (NVIDIA Mellanox only)\n");
+  printf("-x              IP-only RSS hashing for UDP/TCP traffic (Intel ixgbe and NVIDIA Mellanox only)\n");
   printf("-v              Verbose\n");
 }
 
@@ -435,7 +435,7 @@ int main(int argc, char* argv[]) {
     flags |= PF_RING_PROMISC;
   flags |= PF_RING_ZC_SYMMETRIC_RSS;  /* Note that symmetric RSS is ignored by non-ZC drivers */
   if(use_extended_pkt_header) flags |= PF_RING_LONG_HEADER;
-  if(ip_only_rss) flags |= PF_RING_IP_ONLY_RSS;
+  if(ip_only_rss) flags |= PF_RING_ZC_IPONLY_RSS;
 
   num_channels = pfring_open_multichannel(device, snaplen, flags, ring);
   

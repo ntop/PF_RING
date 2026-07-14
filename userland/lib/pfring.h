@@ -387,8 +387,8 @@ struct __pfring {
 #define PF_RING_IXIA_TIMESTAMP	       (1 << 12) /**< pfring_open() flag: Enable ixiacom.com hardware timestamp support+stripping. */
 #define PF_RING_USERSPACE_BPF	       (1 << 13) /**< pfring_open() flag: Force userspace bpf even with standard drivers (not only with ZC). */
 #define PF_RING_ZC_NOT_REPROGRAM_RSS   (1 << 14) /**< pfring_open() flag: Do not touch/reprogram hw RSS */ 
-#define PF_RING_IP_ONLY_RSS            (1 << 15) /**< pfring_open() flag: IP only RSS hashing for UDP/TCP traffic (NVIDIA Mellanox only) */
-#define PF_RING_ZC_IPONLY_RSS	       (1 << 16) /**< pfring_open() flag: Compute RSS on src/dst IP only (not 4-tuple) */ 
+//#define PF_RING_XXX                  (1 << 15) /**< pfring_open() flag: Flag not used */
+#define PF_RING_ZC_IPONLY_RSS	       (1 << 16) /**< pfring_open() flag: Compute RSS on src/dst IP only (Intel ixgbe and NVIDIA Mellanox only) */ 
 #define PF_RING_FLOW_OFFLOAD	       (1 << 17) /**< pfring_open() flag: Enable Flow offload (Flow Manager on Napatech) */ 
 #define PF_RING_FLOW_OFFLOAD_NOUPDATES (1 << 18) /**< pfring_open() flag: Disable periodic updates when PF_RING_FLOW_OFFLOAD is used */
 #define PF_RING_KEEP_CRC               (1 << 19) /**< pfring_open() flag: Do not calculate/add CRC/FCS when transmitting frames */
