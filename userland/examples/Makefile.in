@@ -55,7 +55,7 @@ LIBS       = ${LIBPCAP} ${LIBPFRING} ${LIBPCAP} ${LIBPFRING} `../lib/pfring_conf
 #
 PFPROGS   = pfcount pfcount_multichannel pfsend_multichannel preflect \
 	    pfflow_offload pfbridge alldevs pcap2nspcap \
-	    pfcount_82599 pfsystest pfsend pflatency pftimeline
+	    pfsystest pfsend pflatency pftimeline
 
 PCAPPROGS = pcount pfwrite psend
 TARGETS   = ${PFPROGS} ${PCAPPROGS}
@@ -90,9 +90,6 @@ pfcount_multichannel: pfcount_multichannel.o ${LIBPFRING}
 
 pfsend_multichannel: pfsend_multichannel.o ${LIBPFRING}
 	${CC} ${CFLAGS} pfsend_multichannel.o ${LIBS} -o $@
-
-pfcount_82599: pfcount_82599.o ${LIBPFRING}
-	${CC} ${CFLAGS} pfcount_82599.o ${LIBS} -o $@
 
 preflect: preflect.o ${LIBPFRING}
 	${CC} ${CFLAGS} preflect.o ${LIBS} -o $@
