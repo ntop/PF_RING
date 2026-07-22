@@ -3,6 +3,16 @@ AC_INIT([pfring], 1.0)
 AC_PROG_CC
 AC_CONFIG_FILES(lib/Makefile)
 
+AC_CHECK_PROGS([FLEX], [flex lex])
+if test "x$FLEX" = "x"; then
+  AC_MSG_ERROR([flex not found: please install flex])
+fi
+
+AC_CHECK_PROGS([BISON], [bison yacc])
+if test "x$BISON" = "x"; then
+  AC_MSG_ERROR([bison not found: please install bison])
+fi
+
 AC_CHECK_HEADERS([linux/net_tstamp.h librdi.h])
 
 MACHINE=`$CC -dumpmachine | cut -d '-' -f 1`
