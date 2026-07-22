@@ -18,13 +18,13 @@ OFED SDK to be used by capture frameworks (the *--dpdk* option is available for 
 .. code-block:: console
 
    cd MLNX_OFED_LINUX-*
-   ./mlnxofedinstall --upstream-libs --dpdk
+   ./mlnxofedinstall
 
-Note: the OFED *mlnxofedinstall* script used to be called *install* on old SDK versions:
+Note: *--upstream-libs --dpdk* were required on SDK versions <5.x:
 
 .. code-block:: console
 
-   ./install --upstream-libs --dpdk
+   ./mlnxofedinstall --upstream-libs --dpdk
 
 Compatibility
 -------------
