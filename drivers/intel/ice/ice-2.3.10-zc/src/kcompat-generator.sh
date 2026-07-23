@@ -205,7 +205,12 @@ function gen-flow-dissector() {
 	sgh='include/net/sch_generic.h'
 	tmh='include/net/tc_act/tc_mirred.h'
 
-	gen HAVE_FLOW_DISSECTOR_KEY_PPPOE if enum flow_dissector_key_id matches FLOW_DISSECTOR_KEY_PPPOE in "$fdh" "$fkh"
+	HAVE_PPPOE=0
+	if check enum flow_dissector_key_id matches FLOW_DISSECTOR_KEY_PPPOE in "$fdh" "$fkh" &&
+	   check struct flow_match_pppoe in "$foh"; then
+		HAVE_PPPOE=1
+	fi
+	gen HAVE_FLOW_DISSECTOR_KEY_PPPOE if string "$HAVE_PPPOE" equals 1
 	gen HAVE_FLOW_DISSECTOR_ICMP_ID if enum flow_dissector_key_icmp matches id in "$fdh"
 
 	gen HAVE_FLOW_BLOCK_API if fun flow_block_cb_priv in "$foh"
