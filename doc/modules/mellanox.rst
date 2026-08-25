@@ -50,7 +50,7 @@ pfcount -L -v 1 on Bluefield.
 Configuration
 -------------
 
-Load the required modules:
+Load the required modules (not required when using the pf_ring service, which takes care of this):
 
 .. code-block:: console
 
