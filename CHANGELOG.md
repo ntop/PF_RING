@@ -16,13 +16,17 @@
  - Deprecate quick_mode
 
 * FT Library
+ - Add support for nDPI category filters
  - Add PF_RING_ZC_IPONLY_RSS flag to enable IP-based RSS (when supported by the adapter)
+ - Add PFRING_FT_KEY_EXT_MAC flag to use the MAC address as part of the flow key
+ - Export unique_source_id in flow stats
  - Fix IP-based protocol guess
  - Fix flow stats metadata export
 
 * PF_RING Capture Modules and ZC Drivers
  - NVIDIA (Mellanox) improvements
    - Print Mellanox interface name when listing interfaces
+   - Fix segfault opening a non-existing interface
  - Napatech improvements
    - Fix serial number reporting on F3076x and F2070x
  - Intel improvements
