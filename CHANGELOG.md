@@ -1,6 +1,55 @@
 # CHANGELOG
 
 ---------------------------------------
+2026-08-26 PF_RING 9.4
+
+* PF_RING Library
+ - Add support for Linux alias interfaces
+ - Add PF_RING_IP_ONLY_RSS flag to pfring_open() to enable IP-based RSS (when supported by the adapter)
+ - Add support for multi-timeline extraction (n2disk dump sets) with timestamp-based data aggregation via nPCAP
+
+* PF_RING Kernel Module
+ - Fix packet_rcv being called multiple times with multiple namespaces
+ - Fix bond capture race condition
+ - Add per-interface packet counters printed under /proc
+ - Fix compilation on kernel >= 6.17
+ - Deprecate quick_mode
+
+* FT Library
+ - Add PF_RING_ZC_IPONLY_RSS flag to enable IP-based RSS (when supported by the adapter)
+ - Fix IP-based protocol guess
+ - Fix flow stats metadata export
+
+* PF_RING Capture Modules and ZC Drivers
+ - NVIDIA (Mellanox) improvements
+   - Print Mellanox interface name when listing interfaces
+ - Napatech improvements
+   - Fix serial number reporting on F3076x and F2070x
+ - Intel improvements
+   - New ice-zc driver v.2.5.4 (adds support for E835)
+   - Fix symmetric RSS configuration being reset on ice reload
+   - Change RSS hash function selection on ice according to rss_scheme, enable src MAC in L2 hash
+   - Unload intel_auxiliary before reloading the ice driver
+   - Fix i40e/ixgbe/igb compilation on RHEL 9.7
+   - Fix compilation on kernel 7.x (Ubuntu 26) and kernel < 7.x
+   - Remove e1000e from drivers bundle package (EOL)
+
+* Examples
+ - pfcount
+   - Print link state, improve output formatting
+ - pfcount_multichannel
+   - Add -x option to enable IP-only RSS hashing
+ - Fix preflect
+ - Fix ntopdump wireshark extcap
+ - Remove obsolete pfcount_82599 example
+
+* Misc
+ - Support for Ubuntu 26
+ - Add pfring_is_module_prefix() API
+ - Rework service start/stop sequencing in pfring/pfring-dkms postinst/prerm scripts
+ - Improve cluster service reliability (fix hanging service, avoid circular restart dependencies)
+
+---------------------------------------
 2025-11-17 PF_RING 9.2
 
 * PF_RING Library
