@@ -55,6 +55,10 @@ INSTDIR := $(DESTDIR)/lib/modules/$(BUILD_KERNEL)/kernel/net/pf_ring
 TARGETDIR := $(DESTDIR)/usr/src/$(BUILD_KERNEL)/include/linux/
 KERNEL_SRC := /lib/modules/$(BUILD_KERNEL)/build
 
+ifneq (,$(shell grep -l "sockaddr_unsized" $(KERNEL_SRC)/include/linux/net.h 2>/dev/null))
+  EXTRA_CFLAGS += -DHAVE_SOCKADDR_UNSIZED
+endif
+
 all: Makefile pf_ring.c linux/pf_ring.h
 #	@if test "$(USER)" = "root"; then \
 #		echo "********** WARNING WARNING WARNING **********"; \
