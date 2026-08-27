@@ -35,8 +35,8 @@
 #endif /* __KERNEL__ */
 
 /* Versioning */
-#define RING_VERSION                "9.3.0"
-#define RING_VERSION_NUM           0x090300
+#define RING_VERSION                "9.5.0"
+#define RING_VERSION_NUM           0x090500
 
 /* Increment whenever there is a change in some shared data structure
  * between kernel and userspace, including ioctl or packet header layout */
