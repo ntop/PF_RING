@@ -7112,8 +7112,10 @@ _kc_napi_busy_loop(unsigned int napi_id,
     || (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
 #define del_timer(t)		timer_delete(t)
 #define del_timer_sync(t)	timer_delete_sync(t)
+#ifndef from_timer
 #define from_timer(var, callback_timer, timer_fieldname) \
 	timer_container_of(var, callback_timer, timer_fieldname)
+#endif
 #endif /* >= 7.0.0 || RHEL >= 9.6 */
 
 /*****************************************************************************/
