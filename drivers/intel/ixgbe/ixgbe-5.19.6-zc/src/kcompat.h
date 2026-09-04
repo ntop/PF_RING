@@ -7109,7 +7109,7 @@ _kc_napi_busy_loop(unsigned int napi_id,
 /*****************************************************************************/
 /* HAVE_PF_RING */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0)) \
-    || (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,6)))
+    || (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9,8)))
 #define del_timer(t)		timer_delete(t)
 #define del_timer_sync(t)	timer_delete_sync(t)
 #ifndef from_timer
