@@ -3994,8 +3994,8 @@ then :
   PF_RING_FT_LIB_EXT="_dl"
 fi
 
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking PF_RING FT support" >&5
-printf %s "checking PF_RING FT support... " >&6; }
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking PF_RING FT support (${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT})" >&5
+printf %s "checking PF_RING FT support (${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT})... " >&6; }
       PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
       if test -f "lib/$PF_RING_FT_LIB"; then
         HAVE_PF_RING_FT="-D HAVE_PF_RING_FT"
@@ -4115,8 +4115,8 @@ printf "%s\n" "no" >&6; }
 
 fi
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking Mellanox support (x64 and aarch64)" >&5
-printf %s "checking Mellanox support (x64 and aarch64)... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking Mellanox support (${MACHINE}${LIBARCH})" >&5
+printf %s "checking Mellanox support (${MACHINE}${LIBARCH})... " >&6; }
 MOD_MLX_LIB="libs/libpfring_mlx_${MACHINE}${LIBARCH}.a"
 
 if test -f "lib/${MOD_MLX_LIB}"; then
