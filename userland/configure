@@ -1389,7 +1389,7 @@ Optional Features:
   --enable-redis          Enable Redis support in PF_RING
   --enable-zmq            Enable ZMQ support in PF_RING
   --disable-ft            Disable FT support
-  --disable-ft-dl         Disable dlopen support in FT to link nDPI (requires
+  --disable-ft-dl         Disable dlopen support in FT to link nDPI (forces
                           --enable-ndpi)
   --disable-xdp           Disable XDP/AF_XDP support in PF_RING
   --disable-bpf           Disable BPF support in PF_RING
@@ -3994,6 +3994,13 @@ then :
   PF_RING_FT_LIB_EXT="_dl"
 fi
 
+            if test "x$enable_ft_dl" = "xno"; then
+        if test "x$enable_ndpi" = "xno"; then
+          as_fn_error $? "--disable-ft-dl requires nDPI, do not use it with --disable-ndpi" "$LINENO" 5
+        fi
+        enable_ndpi=yes
+      fi
+
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking PF_RING FT support (${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT})" >&5
 printf %s "checking PF_RING FT support (${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT})... " >&6; }
       PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
@@ -4218,6 +4225,10 @@ printf "%s\n" "yes" >&6; }
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
     fi
+  fi
+
+  if test -z "$HAVE_NDPI" && test "x$enable_ft_dl" = "xno"; then
+    as_fn_error $? "nDPI not found (required by --disable-ft-dl): install libndpi or build it in $HOME/nDPI" "$LINENO" 5
   fi
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for MMDB_lookup_sockaddr in -lmaxminddb" >&5

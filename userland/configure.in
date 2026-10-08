@@ -127,8 +127,16 @@ if [[ $MACHINE == "x86_64" ]] || [[ $MACHINE == "aarch64" ]]; then
 
       dnl> FT dlopen - Default enabled
       PF_RING_FT_LIB_EXT=""
-      AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI (requires --enable-ndpi)]))
+      AC_ARG_ENABLE([ft_dl], AS_HELP_STRING([--disable-ft-dl], [Disable dlopen support in FT to link nDPI (forces --enable-ndpi)]))
       AS_IF([test "x$enable_ft_dl" != "xno"], [PF_RING_FT_LIB_EXT="_dl"])
+
+      dnl> FT without dlopen links nDPI at compile time
+      if test "x$enable_ft_dl" = "xno"; then
+        if test "x$enable_ndpi" = "xno"; then
+          AC_MSG_ERROR([--disable-ft-dl requires nDPI, do not use it with --disable-ndpi])
+        fi
+        enable_ndpi=yes
+      fi
 
       AC_MSG_CHECKING([PF_RING FT support (${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT})])
       PF_RING_FT_LIB="libs/libpfring_ft_${MACHINE}${LIBARCH}${PF_RING_FT_LIB_EXT}.a"
@@ -295,6 +303,10 @@ if test "x$enable_ndpi" = xyes; then
     else
       AC_MSG_RESULT(no)
     fi
+  fi
+
+  if test -z "$HAVE_NDPI" && test "x$enable_ft_dl" = "xno"; then
+    AC_MSG_ERROR([nDPI not found (required by --disable-ft-dl): install libndpi or build it in $HOME/nDPI])
   fi
 
   AC_CHECK_LIB([maxminddb], [MMDB_lookup_sockaddr])
