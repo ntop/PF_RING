@@ -297,8 +297,8 @@ void processFlow(pfring_ft_flow *flow, void *user){
 #ifdef PRINT_NDPI_INFO
       if (enable_l7_extra) {
         struct ndpi_flow_struct *ndpi_flow = pfring_ft_flow_get_ndpi_handle(flow);
-        if (ndpi_flow->protos.tls_quic.ja4_client[0])
-          printf(", ja4c: '%s'", ndpi_flow->protos.tls_quic.ja4_client);
+        if (ndpi_flow->metadata.protos.tls_quic.ja4_client[0])
+          printf(", ja4c: '%s'", ndpi_flow->metadata.protos.tls_quic.ja4_client);
       }
 #endif
       break;
