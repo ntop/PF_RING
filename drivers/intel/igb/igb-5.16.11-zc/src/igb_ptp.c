@@ -72,7 +72,7 @@
 /*
  * SYSTIM read access for the 82576
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
+#ifndef HAVE_CYCLECOUNTER_READ_CONST
 static u64 igb_ptp_read_82576(struct cyclecounter *cc)
 #else
 static u64 igb_ptp_read_82576(const struct cyclecounter *cc)
@@ -95,7 +95,7 @@ static u64 igb_ptp_read_82576(const struct cyclecounter *cc)
 /*
  * SYSTIM read access for the 82580
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
+#ifndef HAVE_CYCLECOUNTER_READ_CONST
 static u64 igb_ptp_read_82580(struct cyclecounter *cc)
 #else
 static u64 igb_ptp_read_82580(const struct cyclecounter *cc)
