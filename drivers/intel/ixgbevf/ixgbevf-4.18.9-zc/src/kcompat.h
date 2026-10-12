@@ -7006,9 +7006,14 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
 #define del_timer(t)		timer_delete(t)
 #define del_timer_sync(t)	timer_delete_sync(t)
+#endif /* >= 7.0.0 */
+
+/* HAVE_PF_RING */
+/* from_timer renamed to timer_container_of (6.16, backported to RHEL 9.8) */
+#if !defined(from_timer) && defined(timer_container_of)
 #define from_timer(var, callback_timer, timer_fieldname) \
 	timer_container_of(var, callback_timer, timer_fieldname)
-#endif /* >= 7.0.0 */
+#endif
 
 /*****************************************************************************/
 /*
