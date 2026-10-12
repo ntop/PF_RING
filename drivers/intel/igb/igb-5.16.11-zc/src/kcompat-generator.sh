@@ -307,6 +307,8 @@ function gen-other() {
 	gen NEED_KREALLOC_ARRAY if fun krealloc_array absent in include/linux/slab.h
 	gen NEED_SYSFS_MATCH_STRING if macro sysfs_match_string absent in include/linux/string.h
 	gen NEED_SYSFS_EMIT if fun sysfs_emit absent in include/linux/sysfs.h
+	# HAVE_PF_RING
+	gen HAVE_CYCLECOUNTER_READ_CONST if method read of cyclecounter matches 'const struct cyclecounter' in include/linux/timecounter.h
 	gen HAVE_TRACE_ENABLED_SUPPORT if implementation of macro __DECLARE_TRACE matches 'trace_##name##_enabled' in include/linux/tracepoint.h
 	gen HAVE_TTY_OP_WRITE_SIZE_T if method write of tty_operations matches size_t in include/linux/tty_driver.h
 	gen HAVE_U64_STATS_FETCH_BEGIN_IRQ if fun u64_stats_fetch_begin_irq in "$ush"
