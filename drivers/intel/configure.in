@@ -39,12 +39,12 @@ else
   HAVE_ICE=y
 fi
 
-if test "$KERNEL_VERS_MAJ" -gt 6 || ( test "$KERNEL_VERS_MAJ" -eq 6 && test "$KERNEL_VERS_MIN" -ge 12 ); then
-  # Kernel >=6.12 (no longer supported)
-  HAVE_E1000E=n
-else
-  HAVE_E1000E=y
-fi
+#if test "$KERNEL_VERS_MAJ" -gt 6 || ( test "$KERNEL_VERS_MAJ" -eq 6 && test "$KERNEL_VERS_MIN" -ge 12 ); then
+#  # Kernel >=6.12 (no longer supported)
+#  HAVE_E1000E=n
+#else
+#  HAVE_E1000E=y
+#fi
 
 AC_SUBST(PF_RING_VERSION)
 AC_SUBST(REVISION)
