@@ -2730,7 +2730,11 @@ static void ice_dpll_release_pins(struct ice_dpll_pin *pins, int count)
 	int i;
 
 	for (i = 0; i < count; i++)
+#ifdef HAVE_DPLL_TRACKER_PARAM
+		dpll_pin_put(pins[i].pin, NULL);
+#else
 		dpll_pin_put(pins[i].pin);
+#endif
 }
 
 /**
@@ -2755,8 +2759,13 @@ ice_dpll_get_pins(struct ice_pf *pf, struct ice_dpll_pin *pins,
 	int i, ret;
 
 	for (i = 0; i < count; i++) {
+#ifdef HAVE_DPLL_TRACKER_PARAM
+		pins[i].pin = dpll_pin_get(clock_id, i + start_idx, THIS_MODULE,
+					   &pins[i].prop, NULL);
+#else
 		pins[i].pin = dpll_pin_get(clock_id, i + start_idx, THIS_MODULE,
 					   &pins[i].prop);
+#endif
 		if (IS_ERR(pins[i].pin)) {
 			ret = PTR_ERR(pins[i].pin);
 			goto release_pins;
@@ -2767,7 +2776,11 @@ ice_dpll_get_pins(struct ice_pf *pf, struct ice_dpll_pin *pins,
 
 release_pins:
 	while (--i >= 0)
+#ifdef HAVE_DPLL_TRACKER_PARAM
+		dpll_pin_put(pins[i].pin, NULL);
+#else
 		dpll_pin_put(pins[i].pin);
+#endif
 	return ret;
 }
 
@@ -2927,7 +2940,11 @@ static void ice_dpll_deinit_rclk_pin(struct ice_pf *pf)
 	if (WARN_ON_ONCE(!vsi || !vsi->netdev))
 		return;
 	dpll_netdev_pin_clear(vsi->netdev);
+#ifdef HAVE_DPLL_TRACKER_PARAM
+	dpll_pin_put(rclk->pin, NULL);
+#else
 	dpll_pin_put(rclk->pin);
+#endif
 }
 
 /**
@@ -3144,7 +3161,11 @@ ice_dpll_deinit_dpll(struct ice_pf *pf, struct ice_dpll *d, bool cgu)
 {
 	if (cgu)
 		dpll_device_unregister(d->dpll, d->ops, d);
+#ifdef HAVE_DPLL_TRACKER_PARAM
+	dpll_device_put(d->dpll, NULL);
+#else
 	dpll_device_put(d->dpll);
+#endif
 }
 
 /**
@@ -3168,7 +3189,11 @@ ice_dpll_init_dpll(struct ice_pf *pf, struct ice_dpll *d, bool cgu,
 	u64 clock_id = pf->dplls.clock_id;
 	int ret;
 
+#ifdef HAVE_DPLL_TRACKER_PARAM
+	d->dpll = dpll_device_get(clock_id, d->dpll_idx, THIS_MODULE, NULL);
+#else
 	d->dpll = dpll_device_get(clock_id, d->dpll_idx, THIS_MODULE);
+#endif
 	if (IS_ERR(d->dpll)) {
 		ret = PTR_ERR(d->dpll);
 		dev_err(ice_pf_to_dev(pf),
@@ -3189,7 +3214,11 @@ ice_dpll_init_dpll(struct ice_pf *pf, struct ice_dpll *d, bool cgu,
 			ice_dpll_update_state(pf, d, true);
 		ret = dpll_device_register(d->dpll, type, ops, d);
 		if (ret) {
+#ifdef HAVE_DPLL_TRACKER_PARAM
+			dpll_device_put(d->dpll, NULL);
+#else
 			dpll_device_put(d->dpll);
+#endif
 			return ret;
 		}
 		d->ops = ops;

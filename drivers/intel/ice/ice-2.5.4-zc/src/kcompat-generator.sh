@@ -181,6 +181,8 @@ function gen-dpll() {
 	gen HAVE_DPLL_ESYNC if method esync_get of dpll_pin_ops in "$dh"
 	gen HAVE_DPLL_LOCK_STATUS_ERROR if method lock_status_get of dpll_device_ops matches status_error in "$dh"
 	gen HAVE_DPLL_PHASE_OFFSET if method phase_offset_get of dpll_pin_ops in "$dh"
+	# HAVE_PF_RING
+	gen HAVE_DPLL_TRACKER_PARAM if fun dpll_device_get matches dpll_tracker in "$dh"
 	gen HAVE_DPLL_PHASE_OFFSET_MONITOR if method phase_offset_monitor_set of dpll_device_ops in "$dh"
 	gen NEED_DPLL_NETDEV_PIN_SET if fun dpll_netdev_pin_set absent in "$dh"
 }
