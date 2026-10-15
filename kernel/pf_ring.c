@@ -3143,6 +3143,8 @@ static inline int copy_data_to_ring(struct sk_buff *skb,
     (enable_tx_capture && pfr->direction != rx_only_direction) ||
     (pfr->num_channels_per_ring > 1) ||
     (pfr->channel_id_mask == RING_ANY_CHANNEL && lock_rss_queues(skb->dev)) ||
+    /* iwlwifi reports 1 queue but it actually uses multiple queues */
+    (skb->dev->ieee80211_ptr != NULL) ||
     (pfr->rehash_rss != NULL && get_num_rx_queues(skb->dev) > 1) ||
     (pfr->num_bound_devices > 1) ||
     (pfr->cluster_id != 0) ||
