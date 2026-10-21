@@ -6171,6 +6171,11 @@ static int ice_request_fw(struct ice_pf *pf, const struct firmware **firmware)
 	 */
 	if (opt_fw_filename) {
 		err = firmware_request_nowarn(firmware, opt_fw_filename, dev);
+#ifdef HAVE_PF_RING
+		if (!err)
+			dev_warn(dev, "Loaded optional device-specific DDP %s (overrides default %s)\n",
+				 opt_fw_filename, ICE_DDP_PKG_FILE);
+#endif
 		kfree(opt_fw_filename);
 		if (!err)
 			return err;
