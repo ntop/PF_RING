@@ -7088,13 +7088,17 @@ _kc_napi_busy_loop(unsigned int napi_id,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(7,0,0))
 #define del_timer(t)		timer_delete(t)
 #define del_timer_sync(t)	timer_delete_sync(t)
-#define UDP_TUNNEL_NIC_INFO_MAY_SLEEP	0
 #define ida_simple_get(ida, start, end, gfp) \
 	ida_alloc_range(ida, start, (end) ? (end) - 1 : ~0U, gfp)
 #define ida_simple_remove(ida, id)	ida_free(ida, id)
 #endif /* >= 7.0.0 */
 
 /* HAVE_PF_RING */
+/* UDP_TUNNEL_NIC_INFO_MAY_SLEEP removed (6.17, backported to Ubuntu 6.8) */
+#ifndef HAVE_UDP_TUNNEL_NIC_INFO_MAY_SLEEP
+#define UDP_TUNNEL_NIC_INFO_MAY_SLEEP	0
+#endif
+
 /* from_timer renamed to timer_container_of (6.16, backported to RHEL 9.8) */
 #if !defined(from_timer) && defined(timer_container_of)
 #define from_timer(var, callback_timer, timer_fieldname) \
