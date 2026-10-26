@@ -245,6 +245,8 @@ function gen-other() {
 	gen NEED_U64_STATS_SET if fun u64_stats_set absent in "$ush"
 	gen HAVE_LMV1_SUPPORT if macro VFIO_REGION_TYPE_MIGRATION in include/uapi/linux/vfio.h
 	gen HAVE_ASSIGN_STR_2_PARAMS if macro __assign_str matches src in include/trace/stages/stage6_event_callback.h include/trace/trace_events.h include/trace/ftrace.h
+	# HAVE_PF_RING: UDP_TUNNEL_NIC_INFO_MAY_SLEEP removed in 6.17 (backported by some distros)
+	gen HAVE_UDP_TUNNEL_NIC_INFO_MAY_SLEEP if enum udp_tunnel_nic_info_flags matches UDP_TUNNEL_NIC_INFO_MAY_SLEEP in include/net/udp_tunnel.h
 }
 
 # all the generations, extracted from main() to keep normal code and various
