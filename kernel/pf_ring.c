@@ -5457,6 +5457,16 @@ unlock:
 
 /* *********************************************** */
 
+static inline unsigned int pf_ring_get_netdev_flags(struct net_device *netdev) {
+#if(LINUX_VERSION_CODE >= KERNEL_VERSION(6,17,0)) || defined(HAVE_NETIF_GET_FLAGS)
+  return netif_get_flags(netdev); /* >=6.17 or RHEL10 backport */
+#else
+  return dev_get_flags(netdev);
+#endif
+}
+
+/* *********************************************** */
+
 static int is_netdev_promisc(struct net_device *netdev) {
   unsigned int if_flags;
 
@@ -5464,11 +5474,7 @@ static int is_netdev_promisc(struct net_device *netdev) {
 
   rtnl_lock();
 
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
-  if_flags = (short) dev_get_flags(netdev);
-#else
-  if_flags = (short) netif_get_flags(netdev);
-#endif
+  if_flags = (short) pf_ring_get_netdev_flags(netdev);
   rtnl_unlock();
 
   return !!(if_flags & IFF_PROMISC);
@@ -5483,11 +5489,7 @@ static void set_netdev_promisc(struct net_device *netdev) {
 
   rtnl_lock();
 
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
-  if_flags = (short) dev_get_flags(netdev);
-#else
-  if_flags = (short) netif_get_flags(netdev);
-#endif
+  if_flags = (short) pf_ring_get_netdev_flags(netdev);
 
   if(!(if_flags & IFF_PROMISC)) {
     if_flags |= IFF_PROMISC;
@@ -5511,11 +5513,7 @@ static void unset_netdev_promisc(struct net_device *netdev) {
 
   rtnl_lock();
 
-#if(LINUX_VERSION_CODE < KERNEL_VERSION(6,17,0))
-  if_flags = (short) dev_get_flags(netdev);
-#else
-  if_flags = (short) netif_get_flags(netdev);
-#endif
+  if_flags = (short) pf_ring_get_netdev_flags(netdev);
 
   if(if_flags & IFF_PROMISC) {
     if_flags &= ~IFF_PROMISC;
