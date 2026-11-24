@@ -55,6 +55,14 @@ INSTDIR := $(DESTDIR)/lib/modules/$(BUILD_KERNEL)/kernel/net/pf_ring
 TARGETDIR := $(DESTDIR)/usr/src/$(BUILD_KERNEL)/include/linux/
 KERNEL_SRC := /lib/modules/$(BUILD_KERNEL)/build
 
+# Check for netif_get_flags presence in netdevice.h to handle RHEL backports
+NETDEVICE_H := $(wildcard $(KERNEL_SRC)/include/linux/netdevice.h $(KERNEL_SRC)/source/include/linux/netdevice.h)
+ifneq (,$(NETDEVICE_H))
+ ifneq (,$(shell grep -sw netif_get_flags $(NETDEVICE_H)))
+  EXTRA_CFLAGS += -DHAVE_NETIF_GET_FLAGS
+ endif
+endif
+
 all: Makefile pf_ring.c linux/pf_ring.h
 #	@if test "$(USER)" = "root"; then \
 #		echo "********** WARNING WARNING WARNING **********"; \
