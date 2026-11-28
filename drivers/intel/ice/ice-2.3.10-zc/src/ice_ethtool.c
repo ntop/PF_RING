@@ -688,7 +688,7 @@ static int ice_get_port_fec_stats(struct ice_hw *hw, u16 pcs_quad, u16 pcs_port,
  */
 static void ice_get_fec_stats(struct net_device *netdev,
 			      struct ethtool_fec_stats *fec_stats
-#ifdef HAVE_ETHTOOL_GET_FEC_STATS_HIST
+#if defined(HAVE_ETHTOOL_GET_FEC_STATS_HIST) || (RHEL_RELEASE_CODE && (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(10,0)))
 			      , struct ethtool_fec_hist __always_unused *hist
 #endif
 			      )
