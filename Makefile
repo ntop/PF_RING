@@ -24,5 +24,5 @@ changelog:
 
 documentation:
 	cd doc/doxygen; doxygen Doxyfile
-	cd doc; ./configure; make html
+	$(MAKE) -C doc dist
 

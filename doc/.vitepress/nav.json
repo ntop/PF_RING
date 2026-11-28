@@ -1,0 +1,215 @@
+{
+ "sidebar": [
+  {
+   "text": "User's Guide",
+   "items": [
+    {
+     "text": "Get Started",
+     "link": "/get_started/",
+     "items": [
+      {
+       "text": "Installing from packages",
+       "link": "/get_started/packages_installation"
+      },
+      {
+       "text": "Installing from GIT",
+       "link": "/get_started/git_installation"
+      }
+     ],
+     "collapsed": true
+    },
+    {
+     "text": "Vanilla PF_RING",
+     "link": "/vanilla"
+    },
+    {
+     "text": "PF_RING ZC (Zero Copy)",
+     "link": "/zc"
+    },
+    {
+     "text": "PF_RING FT (Flow Table)",
+     "link": "/ft"
+    },
+    {
+     "text": "Sample Applications",
+     "link": "/examples"
+    },
+    {
+     "text": "Drivers and Modules",
+     "link": "/modules/",
+     "items": [
+      {
+       "text": "Adapters Comparison Table",
+       "link": "/modules/supported_nics"
+      },
+      {
+       "text": "AF_XDP Support",
+       "link": "/modules/af_xdp"
+      },
+      {
+       "text": "Silicom/Fiberblaze Support",
+       "link": "/modules/fiberblaze"
+      },
+      {
+       "text": "Intel Support",
+       "link": "/modules/intel"
+      },
+      {
+       "text": "NVIDIA/Mellanox Support",
+       "link": "/modules/mellanox"
+      },
+      {
+       "text": "Napatech Support",
+       "link": "/modules/napatech"
+      },
+      {
+       "text": "pcap Support",
+       "link": "/modules/pcap"
+      },
+      {
+       "text": "Linux TCP/IP Stack Injection Module",
+       "link": "/modules/stack"
+      },
+      {
+       "text": "n2disk Timeline Module",
+       "link": "/modules/timeline"
+      }
+     ],
+     "collapsed": true
+    },
+    {
+     "text": "Load Balancing / RSS",
+     "link": "/rss"
+    },
+    {
+     "text": "Filtering",
+     "link": "/filtering/",
+     "items": [
+      {
+       "text": "nBPF",
+       "link": "/filtering/nbpf"
+      },
+      {
+       "text": "Runtime Filtering",
+       "link": "/filtering/runtime"
+      }
+     ],
+     "collapsed": true
+    },
+    {
+     "text": "Containers Support",
+     "link": "/containers/",
+     "items": [
+      {
+       "text": "Network Namespaces",
+       "link": "/containers/namespaces"
+      },
+      {
+       "text": "Using PF_RING with Docker",
+       "link": "/containers/docker"
+      },
+      {
+       "text": "Using PF_RING with CoreOS",
+       "link": "/containers/coreos"
+      }
+     ],
+     "collapsed": true
+    },
+    {
+     "text": "VM Support",
+     "link": "/vm/",
+     "items": [
+      {
+       "text": "PCI Passthrough with PF_RING ZC",
+       "link": "/vm/virsh_hostdev"
+      },
+      {
+       "text": "SR-IOV with PF_RING ZC",
+       "link": "/vm/sriov"
+      },
+      {
+       "text": "QEMU/KVM Support in PF_RING ZC",
+       "link": "/vm/kvm_zc"
+      }
+     ],
+     "collapsed": true
+    },
+    {
+     "text": "IDS/IPSs Integration",
+     "link": "/thirdparty/",
+     "items": [
+      {
+       "text": "Using Zeek with PF_RING",
+       "link": "/thirdparty/bro"
+      },
+      {
+       "text": "Using Suricata with PF_RING",
+       "link": "/thirdparty/suricata"
+      },
+      {
+       "text": "Using Snort with PF_RING",
+       "link": "/thirdparty/snort-daq"
+      },
+      {
+       "text": "Using Snort with PF_RING ZC",
+       "link": "/thirdparty/snort-daq-zc"
+      }
+     ],
+     "collapsed": true
+    },
+    {
+     "text": "Hugepages Support",
+     "link": "/hugepages"
+    },
+    {
+     "text": "Capabilities",
+     "link": "/capabilities"
+    },
+    {
+     "text": "AMD Processors",
+     "link": "/amd"
+    },
+    {
+     "text": "Intel Processors",
+     "link": "/intel"
+    }
+   ]
+  },
+  {
+   "text": "Developer's Guide",
+   "items": [
+    {
+     "text": "API Documentation",
+     "link": "/api/",
+     "items": [
+      {
+       "text": "PF_RING Kernel Internal API",
+       "link": "/api/pfring_k"
+      },
+      {
+       "text": "PF_RING API",
+       "link": "/api/pfring"
+      },
+      {
+       "text": "PF_RING ZC API",
+       "link": "/api/pfring_zc"
+      },
+      {
+       "text": "PF_RING FT API",
+       "link": "/api/pfring_ft"
+      },
+      {
+       "text": "Libpcap API",
+       "link": "/api/libpcap"
+      }
+     ],
+     "collapsed": true
+    },
+    {
+     "text": "Crash Debug",
+     "link": "/debug"
+    }
+   ]
+  }
+ ]
+}

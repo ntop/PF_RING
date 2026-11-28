@@ -12,6 +12,21 @@ Basically everyone who has to handle many packets per second. The term ‘many�
 
 If you want to learn more about PF_RING™ please visit the [User's Guide](https://www.ntop.org/guides/pf_ring) and the [API Documentation](http://www.ntop.org/guides/pf_ring_api/files.html).
 
+### Building the User's Guide
+
+The PF_RING User's Guide is a [VitePress](https://vitepress.dev) project in `doc/` (Markdown pages, same
+URLs as the old Sphinx guide: `/guides/pf_ring/<page>.html`). Requires Node 18+ and `make`.
+
+```
+cd doc
+make dist                 # build the static site into doc/dist (runs npm install if needed)
+make serve                # build, then serve it at http://localhost:4173/guides/pf_ring/   (PORT=8080 make serve)
+npm run dev               # live reload while editing: http://localhost:5173/guides/pf_ring/
+npm run api               # regenerate the API pages (doc/api/) from the Doxygen comments of the headers
+```
+
+The pages are the `.md` files of `doc/`, the sidebar is `doc/.vitepress/nav.json`.
+
 ### Details
 For more information about PF_RING™ and other ntop technologies, please visit [http://ntop.org](http://www.ntop.org/products/packet-capture/pf_ring/)
 

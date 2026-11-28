@@ -1,0 +1,133 @@
+---
+title: "Napatech Support"
+description: "PFRING has native support for Napatech adapters, the Napatech library needs to be installed under /opt/napatech3 in order to enable the Napatech module at ru..."
+outline: [2, 3]
+---
+# Napatech Support
+
+PF_RING has native support for Napatech adapters, the Napatech library needs to be installed under /opt/napatech3 in order to enable the Napatech module at runtime.
+
+## Prerequisite
+
+Napatech drivers and SDK installed (12.11.24 or newer).
+
+The Napatech SDK is available for download at <https://www.napatech.com/downloads/>.
+
+After installing the Napatech SDK, please make sure the driver is loaded with:
+
+```shell
+/opt/napatech3/bin/ntload.sh 
+/opt/napatech3/bin/ntstart.sh 
+```
+
+## Installation
+
+In order to get up and running with Napatech when installing from source code, run the following commands:
+
+```shell
+cd PF_RING/kernel && make && sudo insmod pf_ring.ko
+cd ../userland/lib && ./configure && make
+cd ../libpcap && ./configure && make
+cd ../examples && make
+sudo ./pfcount -i nt:0
+```
+
+Please note that installing from repository, all applications are already compiled with Napatech support
+
+## Capturing Traffic
+
+In order to open a port from the Napatech adapter you should specify nt:\<PORT\>, example:
+
+```shell
+pfcount -i nt:0
+```
+
+In order to open a stream you should specify nt:stream\<ID\>, example:
+
+```shell
+pfcount -i nt:stream0
+```
+
+In case of multiple adapters, it is possible to specify the adapter id for the stream with nt:\<adapter ID\>:stream\<ID\>, example:
+
+```shell
+pfcount -i nt:1:stream0
+```
+
+Streams with port aggregation or distribution (similar to RSS) can be created using the ntpl tool (ntpl -e "\<command\>")
+
+Note: it is possible to open the same stream from multiple applications at the same time (the slowest consumer will affect the others!). Instead it is not possible to open a port multiple times (as the port is reassigned to a new stream every time you open it). In case of multiple applications, it is possible to set the host buffer allowance (please refer to the Napatech documentation for this setting) by using the PF_RING_PACKET_CAPTURE_PRIO environment variable (with a value between 1 and 100, 80 is usually recommended).
+
+## Streams Configuration
+
+Command example for ports (2 and 3) aggregation on a single stream (1):
+
+```shell
+/opt/napatech3/bin/ntpl -e "Delete = All"
+/opt/napatech3/bin/ntpl -e "Assign[streamid=1] = port == 2,3"
+```
+
+Command example for load balancing of all ports across 16 streams:
+
+```shell
+/opt/napatech3/bin/ntpl -e "Delete = All"
+/opt/napatech3/bin/ntpl -e "HashMode = Hash2TupleSorted"
+/opt/napatech3/bin/ntpl -e "Assign[StreamId=(0..15)] = All"
+```
+
+Command example for load balancing port 0 across 4 streams:
+
+```shell
+/opt/napatech3/bin/ntpl -e "Delete = All"
+/opt/napatech3/bin/ntpl -e "HashMode = Hash2TupleSorted"
+/opt/napatech3/bin/ntpl -e "Assign[StreamId=(0..3)] = port == 0"
+```
+
+Command example for merging two ports and load balancing them across 24 streams where the first 12 streams are bond on node 0 and the remaining 12 on numa node 1
+
+```shell
+/opt/napatech3/bin/ntpl -e "Delete=All"
+/opt/napatech3/bin/ntpl -e "HashMode = Hash5TupleSorted"
+/opt/napatech3/bin/ntpl -e "Setup[NUMANode=0]=Streamid==(0..11)"
+/opt/napatech3/bin/ntpl -e "Setup[NUMANode=1]=Streamid==(12..23)"
+/opt/napatech3/bin/ntpl -e "Assign[streamid=(0..23)]=port==0,1"
+```
+
+## Adapter configuration for n2disk
+
+In order to use the Napatech adapter with n2disk the configuration file /opt/napatech3/config/ntservice.ini should contain:
+
+```text
+TimestampFormat = PCAP_NS
+PacketDescriptor = PCAP
+HostBufferSegmentSizeRx = 4
+```
+
+## Napatech and Packet Copy
+
+If you use the PF_RING (non-ZC) API packets are read in zero-copy. Instead if you use PF_RING ZC API, a per-packet copy takes place, which is required to move payload data from Napatech-memory to ZC memory. Keep this in mind!
+
+## Transmission Support
+
+In order to use Napatech in transmission you need to make sure you have configured TX properly. Edit /opt/napatech3/config/ntservice.ini and make sure you have the following sections configured
+
+```text
+[Adapter0]
+..
+HostBuffersTx = [4,16,0]
+..
+```
+
+\[Debug\] RntcTxEnable=1
+
+## Hardware Filtering
+
+Napatech NICs support full-blown hardware filtering out of the box. Thanks to nBPF we convert BPF expressions to hardware filters. This feature is supported transparently, and thus all PF_RING/libpcap-over-PF_RING can benefit from it.
+
+Example:
+
+```shell
+pfcount -i nt:3 -f "tcp and port 80 and src host 192.168.1.1"
+```
+
+As Napatech hardware filters are very advanced, filtering happens all in hardware.
