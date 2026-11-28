@@ -1,4 +1,4 @@
-![pfring][pfring_logo]
+![pfring_logo]
 # PF_RING™
 
 ### Introduction
@@ -33,5 +33,4 @@ For more information about PF_RING™ and other ntop technologies, please visit 
 ## License
 PF_RING™ kernel module and drivers are distributed under the GNU GPLv2 license, LGPLv2.1 for the user-space PF_RING library, and are available in source code format.
 
-[pfring_logo]: http://www.ntop.org/wp-content/uploads/2015/05/pf_ring-logo-150x150.png
-[ntop_logo]: https://camo.githubusercontent.com/58e2a1ecfff62d8ecc9d74633bd1013f26e06cba/687474703a2f2f7777772e6e746f702e6f72672f77702d636f6e74656e742f75706c6f6164732f323031352f30352f6e746f702e706e67
+[pfring_logo]: http://www.ntop.org/images/2025/06/pf_ring-ft-icon.webp
